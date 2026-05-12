@@ -1,0 +1,244 @@
+---
+import Layout from "../layouts/Layout.astro";
+import WorkCard from "../components/WorkCard.astro";
+import Footer from "../components/Footer.astro";
+import { getCaseStudies } from "../lib/notion";
+
+const works = await getCaseStudies();
+---
+
+<Layout title="Jonathan Tollefson — User Experience Architect">
+  <main>
+    <section class="hero">
+      <div class="inner hero-layout">
+        <span class="eyebrow hero-meta">2026 · Minneapolis</span>
+
+        <div class="hero-main">
+          <h1 class="name" aria-label="Jon Tollefson">
+            <span class="chunk" aria-hidden="true">Jon</span>
+            <span class="chunk" aria-hidden="true">Tol</span>
+            <span class="chunk" aria-hidden="true">lef</span>
+            <span class="chunk" aria-hidden="true">son</span>
+          </h1>
+
+          <div class="tagline-wrap">
+            <p class="tagline">
+              <span>Senior product designer.</span>
+              <span>Data-heavy enterprise applications.</span>
+              <span class="muted">Soundbender after hours.</span>
+            </p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section about" id="about" aria-labelledby="about-label">
+      <div class="inner about-grid">
+        <span id="about-label" class="eyebrow">About</span>
+        <div class="prose">
+          <p>
+            Senior product designer working the seam between research, interaction, and front-end. Currently embedded with engineering at CHS on enterprise AI and BI products. Previously: AI tooling for early-stage founders, a bilingual fintech app shipped end-to-end, and a handful of startup engagements.
+          </p>
+          <p>
+            Outside the day job I write about sound. Sound design and product design are the same craft to me. Both build worlds out of structured attention.
+          </p>
+          <p class="muted">
+            Available for senior product and UX roles, contract or direct-hire. Minneapolis, hybrid or remote.
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <section class="section work" id="work" aria-labelledby="work-label">
+      <div class="inner">
+        <span id="work-label" class="eyebrow">Selected work</span>
+        <ol class="list">
+          {works.map((w) => (
+            <li>
+              <WorkCard
+                index={w.order}
+                name={w.name}
+                subtitle={w.subtitle}
+                outcome={w.outcome}
+                tags={w.tags.slice(0, 4)}
+                slug={w.slug}
+                cover={w.cover}
+              />
+            </li>
+          ))}
+        </ol>
+      </div>
+    </section>
+  </main>
+
+  <Footer />
+</Layout>
+
+<style>
+  main {
+    padding-top: var(--space-8);
+  }
+
+  /* Hero — name as 4 stacked "clippings". Each chunk is a solid block
+     (inverted: text-color background, bg-color text). Padding varies per
+     chunk so each clipping is a different size/proportion, mimicking
+     hand-cut magazine cutouts. Tagline gets the same clipping treatment.
+     On-load stagger animation. Smooth theme transitions. */
+  .hero {
+    padding: var(--space-8) 0 var(--space-16);
+  }
+  .hero-layout {
+    min-height: calc(100svh - var(--space-24));
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-8);
+  }
+  .hero-meta {
+    align-self: flex-start;
+  }
+  .hero-main {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: var(--space-8);
+  }
+
+  .name {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
+    margin: 0;
+  }
+  .chunk {
+    display: block;
+    width: fit-content;
+    background: var(--ink);
+    color: var(--ink-fg);
+    font-size: clamp(4rem, 16vw, 9.5rem);
+    font-weight: var(--fw-bold);
+    letter-spacing: var(--ls-display);
+    line-height: 0.82;
+    text-transform: uppercase;
+    transition: background-color 280ms cubic-bezier(0.2, 0, 0, 1),
+                color 280ms cubic-bezier(0.2, 0, 0, 1);
+    animation: clip-in 700ms cubic-bezier(0.2, 0, 0, 1) backwards;
+  }
+  /* Varied padding per chunk = "imperfect clipping" character.
+     Each chunk has different top/right/bottom/left + small horizontal
+     offset, giving the column a ragged, hand-cut feel. */
+  .chunk:nth-child(1) {
+    padding: 0.30em 0.42em 0.10em 0.30em;
+    animation-delay: 60ms;
+  }
+  .chunk:nth-child(2) {
+    padding: 0.08em 0.58em 0.20em 0.16em;
+    margin-left: 0.10em;
+    animation-delay: 140ms;
+  }
+  .chunk:nth-child(3) {
+    padding: 0.10em 0.30em 0.06em 0.48em;
+    animation-delay: 220ms;
+  }
+  .chunk:nth-child(4) {
+    padding: 0.04em 0.52em 0.32em 0.22em;
+    margin-left: 0.06em;
+    animation-delay: 300ms;
+  }
+
+  .tagline-wrap {
+    align-self: flex-start;
+  }
+  .tagline {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    width: fit-content;
+    max-width: 22ch;
+    padding: 0.3em 0 0.3em 1.4rem;
+    background: transparent;
+    color: var(--text);
+    border-left: 2px solid var(--accent);
+    font-size: clamp(1.5rem, 2.6vw, 2.25rem);
+    line-height: 1.25;
+    font-weight: var(--fw-medium);
+    letter-spacing: -0.005em;
+    transition: color 280ms cubic-bezier(0.2, 0, 0, 1),
+                border-color 280ms cubic-bezier(0.2, 0, 0, 1);
+    animation: clip-in 700ms cubic-bezier(0.2, 0, 0, 1) 380ms backwards;
+  }
+  .tagline .muted {
+    color: var(--muted);
+  }
+
+  @keyframes clip-in {
+    from {
+      opacity: 0;
+      transform: translateY(14px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .chunk,
+    .tagline {
+      animation: none;
+    }
+  }
+
+  @media (min-width: 56rem) {
+    .hero-main {
+      flex-direction: row;
+      align-items: center;
+      justify-content: flex-start;
+      gap: var(--space-16);
+    }
+    .tagline-wrap {
+      flex: 0 1 auto;
+      align-self: center;
+    }
+  }
+
+  /* Generic section */
+  .section {
+    padding: var(--space-16) 0;
+    border-top: 1px solid var(--line);
+  }
+
+  /* About */
+  .about-grid {
+    display: grid;
+    gap: var(--space-6);
+  }
+  .prose {
+    display: grid;
+    gap: var(--space-4);
+    max-width: 64ch;
+    font-size: 1.0625rem;
+    line-height: 1.6;
+  }
+  .prose .muted {
+    color: var(--muted);
+  }
+
+  @media (min-width: 56rem) {
+    .about-grid {
+      grid-template-columns: 12rem 1fr;
+      gap: var(--space-16);
+      align-items: start;
+    }
+  }
+
+  /* Work */
+  .work .eyebrow {
+    margin-bottom: var(--space-4);
+  }
+  .list {
+    list-style: none;
+    padding: 0;
+  }
+</style>

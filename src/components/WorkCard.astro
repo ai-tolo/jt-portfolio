@@ -1,0 +1,124 @@
+---
+interface Props {
+  index: number;
+  name: string;
+  subtitle: string;
+  outcome: string;
+  tags: string[];
+  slug: string;
+  cover?: string | null;
+}
+
+const { index, name, subtitle, outcome, tags, slug, cover } = Astro.props;
+const num = String(index).padStart(2, "0");
+---
+
+<a class="card" href={`/case-studies/${slug}`} aria-label={`Read case study: ${name}`}>
+  <div class="cover">
+    {cover ? (
+      <img src={cover} alt="" loading="lazy" />
+    ) : (
+      <div class="cover-empty" aria-hidden="true">
+        <span>{num}</span>
+      </div>
+    )}
+  </div>
+
+  <div class="meta">
+    <span class="num">{num} / {name}</span>
+    <h3 class="title">{subtitle}</h3>
+    <p class="outcome">{outcome}</p>
+    <ul class="tags">
+      {tags.map((t) => <li>{t}</li>)}
+    </ul>
+  </div>
+</a>
+
+<style>
+  .card {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: var(--space-6);
+    padding: var(--space-12) 0;
+    border-top: 1px solid var(--line);
+  }
+  .card:hover .title,
+  .card:focus-visible .title {
+    text-decoration: underline;
+    text-decoration-thickness: 1px;
+    text-underline-offset: 6px;
+  }
+
+  .cover {
+    aspect-ratio: 16 / 10;
+    background: var(--surface-1);
+    overflow: hidden;
+    transition: background-color 280ms cubic-bezier(0.2, 0, 0, 1);
+  }
+  .cover img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+  .cover-empty {
+    height: 100%;
+    display: grid;
+    place-items: center;
+  }
+  .cover-empty span {
+    color: var(--line);
+    font-size: clamp(4rem, 12vw, 8rem);
+    font-weight: var(--fw-bold);
+    letter-spacing: var(--ls-display);
+    line-height: 1;
+  }
+
+  .meta {
+    display: grid;
+    gap: var(--space-4);
+  }
+  .num {
+    font-size: var(--fs-eyebrow);
+    font-weight: var(--fw-semibold);
+    letter-spacing: var(--ls-eyebrow);
+    color: var(--accent);
+    text-transform: uppercase;
+  }
+  .title {
+    font-size: var(--fs-title);
+    font-weight: var(--fw-bold);
+    letter-spacing: var(--ls-title);
+    line-height: var(--lh-title);
+    max-width: 28ch;
+  }
+  .outcome {
+    color: var(--muted);
+    max-width: 56ch;
+  }
+  .tags {
+    list-style: none;
+    padding: 0;
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-2) var(--space-3);
+    color: var(--muted);
+    font-size: var(--fs-small);
+  }
+  .tags li::after {
+    content: "·";
+    margin-left: var(--space-3);
+    color: var(--line);
+  }
+  .tags li:last-child::after {
+    content: "";
+    margin-left: 0;
+  }
+
+  @media (min-width: 56rem) {
+    .card {
+      grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr);
+      gap: var(--space-16);
+      align-items: start;
+    }
+  }
+</style>

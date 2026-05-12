@@ -1,0 +1,505 @@
+---
+// Renders a structured Resume AST as a clean, print-friendly document.
+// Theme-aware on screen, forced to print conventions on @media print.
+
+import type { ResumeAST } from "../lib/resumes";
+import RichText from "./RichText.astro";
+
+interface Props {
+  resume: ResumeAST;
+}
+
+const { resume } = Astro.props;
+const { header, preamble, sections, tailoredFor } = resume;
+---
+
+<article class="resume" lang="en">
+  {tailoredFor && (
+    <p class="tailored" aria-label="Tailored for">
+      <span class="tailored-label">Tailored for</span> {tailoredFor}
+    </p>
+  )}
+
+  <header class="resume-header">
+    <h1 class="name">{header.name}</h1>
+    {header.title && <p class="title">{header.title}</p>}
+    {header.contact.length > 0 && (
+      <p class="contact">
+        {header.contact.map((c, i) => (
+          <>
+            {i > 0 && <span class="sep" aria-hidden="true"> · </span>}
+            <span>{c}</span>
+          </>
+        ))}
+      </p>
+    )}
+  </header>
+
+  {sections.map((s) => {
+    if (s.kind === "summary" || s.kind === "outside") {
+      return (
+        <section class={`section section-${s.kind}`}>
+          <h2 class="section-title">{s.title}</h2>
+          <div class="section-body">
+            {s.paragraphs.map((p) => (
+              <p><RichText rich={p} /></p>
+            ))}
+          </div>
+        </section>
+      );
+    }
+
+    if (s.kind === "experience") {
+      return (
+        <section class="section section-experience">
+          <h2 class="section-title">{s.title}</h2>
+          <div class="section-body">
+            {s.roles.map((r) => (
+              <div class="role">
+                <div class="role-head">
+                  <h3 class="role-company">
+                    {r.company}
+                    {r.location && <span class="role-location"> — {r.location}</span>}
+                  </h3>
+                  {r.dates && <span class="role-dates">{r.dates}</span>}
+                </div>
+                {r.title && <p class="role-title">{r.title}</p>}
+                {r.bullets.length > 0 && (
+                  <ul class="role-bullets">
+                    {r.bullets.map((b) => (
+                      <li><RichText rich={b} /></li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            ))}
+          </div>
+        </section>
+      );
+    }
+
+    if (s.kind === "education") {
+      return (
+        <section class="section section-education">
+          <h2 class="section-title">{s.title}</h2>
+          <div class="section-body">
+            {s.schools.map((sc) => (
+              <div class="school">
+                <div class="school-head">
+                  <h3 class="school-institution">
+                    {sc.institution}
+                    {sc.location && <span class="school-location"> — {sc.location}</span>}
+                  </h3>
+                  {sc.dates && <span class="school-dates">{sc.dates}</span>}
+                </div>
+                {sc.degree && <p class="school-degree">{sc.degree}</p>}
+                {sc.honors && <p class="school-honors">{sc.honors}</p>}
+              </div>
+            ))}
+          </div>
+        </section>
+      );
+    }
+
+    if (s.kind === "tools") {
+      return (
+        <section class="section section-tools">
+          <h2 class="section-title">{s.title}</h2>
+          <dl class="tools-grid">
+            {s.groups.map((g) => (
+              <>
+                <dt>{g.category}</dt>
+                <dd>{g.items.join(", ")}</dd>
+              </>
+            ))}
+          </dl>
+        </section>
+      );
+    }
+
+    // generic fallback
+    return (
+      <section class={`section section-generic`}>
+        <h2 class="section-title">{s.title}</h2>
+        <div class="section-body">
+          {/* Plain blocks are rendered minimally — used as a graceful fallback */}
+          {s.blocks.map((b: any) => {
+            if (b.type === "paragraph") {
+              return <p><RichText rich={b.paragraph.rich_text} /></p>;
+            }
+            if (b.type === "bulleted_list_item") {
+              return <p>• <RichText rich={b.bulleted_list_item.rich_text} /></p>;
+            }
+            return null;
+          })}
+        </div>
+      </section>
+    );
+  })}
+</article>
+
+<style>
+  /* ──── Screen styles ──── */
+  .resume {
+    max-width: 56rem;
+    margin: 0 auto;
+    padding: var(--space-16) var(--content-pad) var(--space-24);
+    font-size: 0.9375rem;
+    line-height: 1.55;
+    color: var(--text);
+  }
+
+  .tailored {
+    font-size: var(--fs-eyebrow);
+    font-weight: var(--fw-semibold);
+    letter-spacing: var(--ls-eyebrow);
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: var(--space-8);
+    border-left: 2px solid var(--accent);
+    padding-left: var(--space-3);
+  }
+  .tailored-label {
+    color: var(--accent);
+  }
+
+  .resume-header {
+    margin-bottom: var(--space-12);
+  }
+  .name {
+    font-size: clamp(2.5rem, 5vw, 3.5rem);
+    font-weight: var(--fw-bold);
+    letter-spacing: var(--ls-display);
+    line-height: 1;
+    margin-bottom: var(--space-2);
+  }
+  .title {
+    font-size: 1.125rem;
+    font-weight: var(--fw-medium);
+    color: var(--muted);
+    margin-bottom: var(--space-3);
+  }
+  .contact {
+    font-size: 0.875rem;
+    color: var(--text);
+    font-weight: var(--fw-medium);
+    opacity: 0.85;
+  }
+  .contact .sep {
+    color: var(--accent);
+    opacity: 0.7;
+  }
+
+  .section {
+    margin-bottom: var(--space-12);
+  }
+  .section-title {
+    font-size: var(--fs-eyebrow);
+    font-weight: var(--fw-semibold);
+    letter-spacing: var(--ls-eyebrow);
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: var(--space-4);
+    padding-bottom: var(--space-2);
+    border-bottom: 1px solid var(--line);
+  }
+
+  .section-summary p,
+  .section-outside p {
+    font-size: 1rem;
+    margin-bottom: var(--space-3);
+    color: var(--text);
+    font-weight: var(--fw-medium);
+    line-height: 1.55;
+  }
+
+  /* Experience */
+  .role {
+    margin-bottom: var(--space-6);
+    page-break-inside: avoid;
+    break-inside: avoid;
+  }
+  .role-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: var(--space-4);
+    margin-bottom: var(--space-1);
+  }
+  .role-company {
+    font-size: 1.0625rem;
+    font-weight: var(--fw-bold);
+    letter-spacing: -0.01em;
+    color: var(--text);
+  }
+  .role-location {
+    font-weight: var(--fw-medium);
+    color: var(--text);
+    opacity: 0.7;
+  }
+  .role-dates {
+    font-size: 0.875rem;
+    color: var(--text);
+    font-weight: var(--fw-medium);
+    opacity: 0.75;
+    white-space: nowrap;
+  }
+  .role-title {
+    font-size: 0.9375rem;
+    font-style: italic;
+    font-weight: var(--fw-medium);
+    color: var(--text);
+    margin-bottom: var(--space-2);
+  }
+  .role-bullets {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+  }
+  .role-bullets li {
+    padding-left: 1.5rem;
+    position: relative;
+    margin-bottom: var(--space-2);
+    line-height: 1.55;
+    font-weight: var(--fw-medium);
+    color: var(--text);
+  }
+  .role-bullets li::before {
+    content: "→";
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 1rem;
+    color: var(--accent);
+    font-weight: var(--fw-bold);
+  }
+
+  /* Education */
+  .school {
+    margin-bottom: var(--space-4);
+    page-break-inside: avoid;
+    break-inside: avoid;
+  }
+  .school-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: var(--space-4);
+    margin-bottom: var(--space-1);
+  }
+  .school-institution {
+    font-size: 1.0625rem;
+    font-weight: var(--fw-bold);
+    letter-spacing: -0.01em;
+    color: var(--text);
+  }
+  .school-location {
+    font-weight: var(--fw-medium);
+    color: var(--text);
+    opacity: 0.7;
+  }
+  .school-dates {
+    font-size: 0.875rem;
+    color: var(--text);
+    font-weight: var(--fw-medium);
+    opacity: 0.75;
+    white-space: nowrap;
+  }
+  .school-degree {
+    font-size: 0.9375rem;
+    font-style: italic;
+    font-weight: var(--fw-medium);
+    color: var(--text);
+  }
+  .school-honors {
+    font-size: 0.875rem;
+    color: var(--text);
+    opacity: 0.75;
+  }
+
+  /* Tools */
+  .tools-grid {
+    display: grid;
+    grid-template-columns: max-content 1fr;
+    column-gap: var(--space-6);
+    row-gap: var(--space-2);
+  }
+  .tools-grid dt {
+    font-weight: var(--fw-bold);
+    font-size: 0.875rem;
+    color: var(--accent);
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
+  }
+  .tools-grid dd {
+    margin: 0;
+    font-size: 0.9375rem;
+    color: var(--text);
+    font-weight: var(--fw-medium);
+  }
+
+  /* ──── Print styles ────
+     Goal: one page, letter size, professional typography. Forces high contrast
+     (no theme colors in print), tight spacing, and hides all chrome (theme
+     selector, cursor, page footer, action buttons). */
+  @media print {
+    :global(body) {
+      background: #ffffff !important;
+      background-image: none !important;
+      color: #111 !important;
+    }
+    :global(.theme-toggle),
+    :global(.cursor-dot),
+    :global(.cursor-ring),
+    :global(.footer),
+    :global(.print-hide) {
+      display: none !important;
+    }
+
+    .resume {
+      max-width: 100%;
+      padding: 0;
+      font-size: 9.25pt;
+      line-height: 1.35;
+      color: #111;
+    }
+
+    .tailored {
+      font-size: 7.5pt;
+      color: #555;
+      border-left-color: #B33A2A;
+      margin-bottom: 10pt;
+      padding-left: 6pt;
+    }
+    .tailored-label {
+      color: #B33A2A;
+    }
+
+    .resume-header {
+      margin-bottom: 10pt;
+    }
+    .name {
+      font-size: 17pt;
+      color: #111;
+      margin-bottom: 1pt;
+      line-height: 1;
+    }
+    .title {
+      font-size: 9.5pt;
+      color: #333;
+      margin-bottom: 4pt;
+    }
+    .contact {
+      font-size: 8pt;
+      color: #333;
+      opacity: 1;
+    }
+    .contact .sep {
+      color: #B33A2A;
+      opacity: 1;
+    }
+
+    .section {
+      margin-bottom: 7pt;
+    }
+    .section-title {
+      color: #B33A2A;
+      border-bottom-color: #B33A2A;
+      font-size: 7.5pt;
+      margin-top: 6pt;
+      margin-bottom: 4pt;
+      padding-bottom: 2pt;
+      letter-spacing: 0.16em;
+    }
+
+    .section-summary p,
+    .section-outside p {
+      font-size: 9pt;
+      margin-bottom: 0;
+      line-height: 1.4;
+    }
+
+    .role {
+      margin-bottom: 5pt;
+    }
+    .role-head {
+      margin-bottom: 0;
+    }
+    .role-company {
+      font-size: 9.5pt;
+      color: #111;
+    }
+    .role-location {
+      color: #555;
+      opacity: 1;
+    }
+    .role-dates {
+      font-size: 8pt;
+      color: #555;
+      opacity: 1;
+    }
+    .role-title {
+      font-size: 8.5pt;
+      color: #333;
+      margin-bottom: 2pt;
+    }
+    .role-bullets li {
+      font-size: 8.75pt;
+      padding-left: 12pt;
+      margin-bottom: 1pt;
+      line-height: 1.35;
+      color: #111;
+    }
+    .role-bullets li::before {
+      content: "→";
+      color: #B33A2A;
+      width: 9pt;
+      left: 0;
+    }
+
+    .school {
+      margin-bottom: 3pt;
+    }
+    .school-institution {
+      font-size: 9.5pt;
+      color: #111;
+    }
+    .school-location {
+      color: #555;
+      opacity: 1;
+    }
+    .school-dates {
+      color: #555;
+      opacity: 1;
+      font-size: 8pt;
+    }
+    .school-degree {
+      font-size: 8.5pt;
+      color: #333;
+    }
+    .school-honors {
+      font-size: 8pt;
+      color: #555;
+      opacity: 1;
+    }
+
+    .tools-grid {
+      column-gap: 10pt;
+      row-gap: 1pt;
+    }
+    .tools-grid dt {
+      color: #B33A2A;
+      font-size: 7.5pt;
+      letter-spacing: 0.1em;
+    }
+    .tools-grid dd {
+      color: #222;
+      font-size: 8.5pt;
+    }
+
+    @page {
+      size: letter;
+      margin: 0.5in 0.55in;
+    }
+  }
+</style>

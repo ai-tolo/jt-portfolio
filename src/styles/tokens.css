@@ -1,0 +1,210 @@
+/* Brand tokens + reset. Imported once via Layout.astro.
+   Color tokens are scoped to [data-theme] so they swap at runtime
+   via the ThemeSelector. The :root rule below is the default (Carbon)
+   and is also matched by [data-theme="dark"].
+
+   Each theme = field + anchor + tint + ONE pop. Modeled on the album-cover
+   logic (Pinegrove / minimalist sleeves): one bold field, dark anchor,
+   light tinted text inside the anchor, and a single accent that pops.
+
+   Token model:
+   - --bg / --text: page background + body text color
+   - --ink: chunk + anchor block color (high-contrast anchor)
+   - --ink-fg: text color inside chunks (strategic tinted highlight)
+   - --accent: the POP. Used sparingly: cursor dot, hover decorations.
+   - --muted: dimmed body text (hardcoded for AA contrast, not alpha)
+   - --line: subtle dividers + outlines
+   - --surface-1: slightly elevated bg for cover placeholders
+*/
+
+:root,
+:root[data-theme="dark"] {
+  --bg: #0A0A0A;
+  --text: #F5F1E8;
+  --ink: #F8F6EF;
+  --ink-fg: #0A0A0A;
+  --accent: #FF5A3C;
+  --muted: #7A746C;
+  --line: #2A2824;
+  --surface-1: #15130F;
+  /* Speckle dimmer — Carbon's deep bg makes the cream specks pop hard;
+     a soft dark overlay rolls them back to about 65% visible. */
+  --speckle-overlay: rgba(10, 10, 10, 0.38);
+}
+
+:root[data-theme="powder"] {
+  --bg: #A8C9D9;
+  --text: #11283F;
+  --ink: #11283F;
+  --ink-fg: #F4EFE2;
+  --accent: #D43F2E;
+  --muted: #3F5870;
+  --line: #6E8AA0;
+  --surface-1: #93B5C8;
+  --speckle-overlay: transparent;
+}
+
+:root[data-theme="field"] {
+  --bg: #5C9248;
+  --text: #0E2814;
+  --ink: #0E2814;
+  --ink-fg: #DCF0A8;
+  --accent: #E04A2E;
+  --muted: #1A4020;
+  --line: #2E5A30;
+  --surface-1: #4A7D38;
+  --speckle-overlay: transparent;
+}
+
+:root[data-theme="honey"] {
+  --bg: #E8C246;
+  --text: #2A1A05;
+  --ink: #2A1A05;
+  --ink-fg: #FBF2D8;
+  --accent: #C82A1F;
+  --muted: #5A3F12;
+  --line: #B8973A;
+  --surface-1: #D4AE3A;
+  --speckle-overlay: transparent;
+}
+
+:root {
+
+  /* Type ramp (mobile-first, fluid where it matters) */
+  --fs-display: clamp(3.5rem, 11vw, 6rem);   /* 56 -> 96 */
+  --fs-lede: clamp(1.125rem, 2vw, 1.375rem); /* 18 -> 22 */
+  --fs-title: clamp(1.5rem, 3.2vw, 2rem);    /* 24 -> 32 */
+  --fs-body: 1rem;        /* 16 */
+  --fs-small: 0.875rem;   /* 14 */
+  --fs-eyebrow: 0.6875rem;/* 11 */
+
+  --ls-display: -0.04em;
+  --ls-title: -0.02em;
+  --ls-eyebrow: 0.22em;
+
+  --lh-display: 1;
+  --lh-title: 1.15;
+  --lh-body: 1.5;
+  --lh-lede: 1.45;
+
+  --fw-regular: 400;
+  --fw-medium: 500;
+  --fw-semibold: 600;
+  --fw-bold: 700;
+
+  /* Spacing scale */
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-5: 1.25rem;
+  --space-6: 1.5rem;
+  --space-8: 2rem;
+  --space-12: 3rem;
+  --space-16: 4rem;
+  --space-24: 6rem;
+  --space-32: 8rem;
+
+  /* Layout */
+  --content-max: 72rem;                       /* 1152 */
+  --content-pad: clamp(1.5rem, 5vw, 4rem);    /* 24 -> 64 */
+}
+
+/* Reset */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+body {
+  margin: 0;
+  background-color: var(--bg);
+  /* Speckled cardstock texture. Colors drawn from all 4 theme palettes.
+     The leading linear-gradient layer is a per-theme dimming overlay;
+     transparent on light themes, soft-dark on Carbon to take the edge off. */
+  background-image:
+    linear-gradient(var(--speckle-overlay), var(--speckle-overlay)),
+    url("/speckles.svg");
+  background-repeat: repeat;
+  background-size: 800px 800px;
+  color: var(--text);
+  font-family: "Geist Variable", "Geist", "Inter", system-ui, -apple-system, sans-serif;
+  font-feature-settings: "ss01", "cv11";
+  font-size: var(--fs-body);
+  font-weight: var(--fw-regular);
+  line-height: var(--lh-body);
+  transition: background-color 280ms cubic-bezier(0.2, 0, 0, 1),
+              color 280ms cubic-bezier(0.2, 0, 0, 1);
+}
+
+@media print {
+  body {
+    background-image: none !important;
+  }
+}
+
+h1, h2, h3, h4, h5, h6, p, ul, ol {
+  margin: 0;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+img {
+  max-width: 100%;
+  display: block;
+}
+
+::selection {
+  background: var(--text);
+  color: var(--bg);
+}
+
+:focus-visible {
+  outline: 2px solid var(--text);
+  outline-offset: 4px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* Custom cursor — hides system cursor on fine-pointer devices only.
+   The cursor elements themselves live in Cursor.astro. */
+@media (pointer: fine) and (prefers-reduced-motion: no-preference) {
+  body,
+  a,
+  button {
+    cursor: none;
+  }
+}
+
+/* Shared utilities */
+.inner {
+  max-width: var(--content-max);
+  margin: 0 auto;
+  padding: 0 var(--content-pad);
+}
+
+.eyebrow {
+  font-size: var(--fs-eyebrow);
+  font-weight: var(--fw-semibold);
+  letter-spacing: var(--ls-eyebrow);
+  text-transform: uppercase;
+  color: var(--muted);
+  display: inline-block;
+}

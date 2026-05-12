@@ -1,0 +1,67 @@
+---
+// Renders a Notion rich_text array (paragraphs, list items, headings).
+// Handles bold/italic/underline/strikethrough/code annotations and links.
+// External links open in a new tab; internal Notion mentions are ignored.
+
+import type { RichTextItemResponse } from "@notionhq/client/build/src/api-endpoints";
+
+interface Props {
+  rich: RichTextItemResponse[];
+}
+
+const { rich } = Astro.props;
+---
+
+{rich.map((t) => {
+  const text = t.plain_text;
+  const a = t.annotations;
+  const href = t.href;
+  return (
+    <>
+      {href ? (
+        <a href={href} target="_blank" rel="noopener">
+          <span class:list={[
+            a.bold && "b",
+            a.italic && "i",
+            a.underline && "u",
+            a.strikethrough && "s",
+            a.code && "c",
+          ]}>{text}</span>
+        </a>
+      ) : (
+        <span class:list={[
+          a.bold && "b",
+          a.italic && "i",
+          a.underline && "u",
+          a.strikethrough && "s",
+          a.code && "c",
+        ]}>{text}</span>
+      )}
+    </>
+  );
+})}
+
+<style>
+  .b { font-weight: var(--fw-bold); }
+  .i { font-style: italic; }
+  .u { text-decoration: underline; text-underline-offset: 3px; }
+  .s { text-decoration: line-through; }
+  .c {
+    font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    font-size: 0.9em;
+    background: var(--surface-1);
+    padding: 1px 5px;
+    border: 1px solid var(--line);
+  }
+  a {
+    color: inherit;
+    text-decoration: underline;
+    text-decoration-color: var(--accent);
+    text-decoration-thickness: 1px;
+    text-underline-offset: 4px;
+    transition: text-decoration-thickness 160ms ease;
+  }
+  a:hover {
+    text-decoration-thickness: 2px;
+  }
+</style>

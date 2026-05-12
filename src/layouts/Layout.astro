@@ -1,0 +1,51 @@
+---
+import "@fontsource-variable/geist";
+import "../styles/tokens.css";
+import ThemeSelector from "../components/ThemeSelector.astro";
+import Cursor from "../components/Cursor.astro";
+
+interface Props {
+  title: string;
+  description?: string;
+}
+
+const {
+  title,
+  description = "Jon Tollefson, senior product designer. Portfolio of design systems, enterprise AI tooling, and bilingual fintech work.",
+} = Astro.props;
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <meta name="generator" content={Astro.generator} />
+    <meta name="description" content={description} />
+    <meta property="og:title" content={title} />
+    <meta property="og:description" content={description} />
+    <meta property="og:type" content="website" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <title>{title}</title>
+
+    {/* Inline theme bootstrap. Runs before paint to prevent FOUC.
+        Validates against the current theme set; old ids fall back to dark. */}
+    <script is:inline>
+      (() => {
+        const valid = new Set(["dark", "powder", "field", "honey"]);
+        try {
+          const stored = localStorage.getItem("theme");
+          document.documentElement.dataset.theme =
+            stored && valid.has(stored) ? stored : "dark";
+        } catch {
+          document.documentElement.dataset.theme = "dark";
+        }
+      })();
+    </script>
+  </head>
+  <body>
+    <ThemeSelector />
+    <Cursor />
+    <slot />
+  </body>
+</html>

@@ -1,0 +1,69 @@
+---
+import Layout from "../../layouts/Layout.astro";
+import ResumeRenderer from "../../components/ResumeRenderer.astro";
+import Footer from "../../components/Footer.astro";
+import { getDefaultResume } from "../../lib/resumes";
+
+const resume = await getDefaultResume();
+if (!resume) throw new Error("No default resume marked Active in the Resumes database.");
+---
+
+<Layout
+  title={`${resume.header.name} — Resume`}
+  description={`${resume.header.name} resume. ${resume.header.title}.`}
+>
+  <main class="resume-page">
+    <div class="actions print-hide">
+      <a class="back" href="/">← Index</a>
+      <button class="print-btn" type="button" id="print-btn">Print or save as PDF</button>
+    </div>
+
+    <ResumeRenderer resume={resume} />
+  </main>
+
+  <Footer />
+</Layout>
+
+<style>
+  .resume-page {
+    padding: var(--space-8) 0 0;
+  }
+  .actions {
+    max-width: 56rem;
+    margin: 0 auto;
+    padding: 0 var(--content-pad);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: var(--space-8);
+  }
+  .back {
+    font-size: var(--fs-eyebrow);
+    font-weight: var(--fw-semibold);
+    letter-spacing: var(--ls-eyebrow);
+    text-transform: uppercase;
+    color: var(--accent);
+  }
+  .print-btn {
+    font-family: inherit;
+    font-size: var(--fs-eyebrow);
+    font-weight: var(--fw-semibold);
+    letter-spacing: var(--ls-eyebrow);
+    text-transform: uppercase;
+    color: var(--text);
+    background: transparent;
+    border: 1px solid var(--line);
+    padding: var(--space-2) var(--space-4);
+    cursor: pointer;
+    transition: border-color 200ms ease;
+  }
+  .print-btn:hover {
+    border-color: var(--accent);
+  }
+</style>
+
+<script>
+  document.getElementById("print-btn")?.addEventListener("click", () => {
+    window.print();
+  });
+</script>
