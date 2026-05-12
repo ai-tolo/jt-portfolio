@@ -1,9 +1,13 @@
 ---
+// Footer link order is intentional: most actionable first (Resume, Email),
+// then external presence (LinkedIn, Substack), then meta (Colophon).
+// External links open in a new tab with a small ↗ glyph marker.
+
 const links = [
-  { label: "Substack", href: "https://substack.com/@diaryofasoundbender" },
-  { label: "LinkedIn", href: "https://www.linkedin.com/in/jtollefson123/" },
-  { label: "Email", href: "mailto:jtollefson123@gmail.com" },
   { label: "Resume", href: "/resume" },
+  { label: "Email", href: "mailto:jtollefson123@gmail.com" },
+  { label: "LinkedIn", href: "https://www.linkedin.com/in/jtollefson123/", external: true },
+  { label: "Substack", href: "https://substack.com/@diaryofasoundbender", external: true },
   { label: "Colophon", href: "/colophon" },
 ];
 
@@ -16,7 +20,13 @@ const year = new Date().getFullYear();
     <ul class="links">
       {links.map((l) => (
         <li>
-          <a href={l.href} rel={l.href.startsWith("http") ? "noopener" : undefined}>{l.label}</a>
+          <a
+            href={l.href}
+            target={l.external ? "_blank" : undefined}
+            rel={l.external ? "noopener noreferrer" : undefined}
+          >
+            {l.label}{l.external && <span class="ext" aria-hidden="true"> ↗</span>}
+          </a>
         </li>
       ))}
     </ul>
@@ -54,12 +64,20 @@ const year = new Date().getFullYear();
     text-decoration-color: var(--line);
     text-underline-offset: 6px;
     text-decoration-thickness: 1px;
-    transition: text-decoration-color 160ms ease;
+    transition: text-decoration-color 160ms ease,
+                text-decoration-thickness 160ms ease;
   }
   .links a:hover,
   .links a:focus-visible {
     text-decoration-color: var(--accent);
     text-decoration-thickness: 2px;
+  }
+  .ext {
+    display: inline-block;
+    font-size: 0.85em;
+    margin-left: 1px;
+    color: var(--accent);
+    text-decoration: none;
   }
 
   @media (min-width: 56rem) {
