@@ -103,10 +103,47 @@ async function getAllBlocks(pageId: string): Promise<BlockObjectResponse[]> {
   return all;
 }
 
+// ── Inline image rewriting ────────────────────────────────────────────────
+// Notion-hosted image URLs are signed and expire (~1 hr). Before rendering,
+// rewrite every file-type image block to point at a local copy under
+// /public/case-studies/[slug]/. The prebuild script (sync-notion-images.mjs)
+// is responsible for actually downloading the files; this function only
+// rewrites the URL the renderer sees. The two must agree on the filename
+// convention below.
+
+function extFromUrl(url: string): string {
+  try {
+    const p = new URL(url).pathname;
+    const m = p.match(/\.([a-z0-9]{2,5})$/i);
+    if (m) return m[1].toLowerCase();
+  } catch {}
+  return "png";
+}
+
+function localImagePath(slug: string, blockId: string, originalUrl: string): string {
+  const id = blockId.replace(/-/g, "");
+  const ext = extFromUrl(originalUrl);
+  return `/case-studies/${slug}/notion-${id}.${ext}`;
+}
+
+function rewriteBlockImages(blocks: BlockObjectResponse[], slug: string): BlockObjectResponse[] {
+  return blocks.map((b) => {
+    if (b.type !== "image") return b;
+    if (b.image.type !== "file") return b; // external URLs stay as-is
+    const localUrl = localImagePath(slug, b.id, b.image.file.url);
+    // Deep-clone the block and swap the URL. We don't bother updating
+    // expiry_time; rendering only reads `url`.
+    const cloned = JSON.parse(JSON.stringify(b)) as typeof b;
+    cloned.image.file.url = localUrl;
+    return cloned;
+  });
+}
+
 export async function getCaseStudyBySlug(slug: string): Promise<CaseStudy | null> {
   const all = await getCaseStudies();
   const meta = all.find((c) => c.slug === slug);
   if (!meta) return null;
   const blocks = await getAllBlocks(meta.id);
-  return { ...meta, blocks };
+  const rewritten = rewriteBlockImages(blocks, slug);
+  return { ...meta, blocks: rewritten };
 }

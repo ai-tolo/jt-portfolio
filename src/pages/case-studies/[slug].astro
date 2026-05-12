@@ -18,14 +18,18 @@ if (!study) throw new Error(`Case study not found: ${slug}`);
 const num = String(study.order).padStart(2, "0");
 const description = study.subtitle || study.outcome;
 
-// Image/video gallery: any media file dropped into
+// Bottom-of-page gallery: any media file dropped into
 // public/case-studies/[slug]/ shows up automatically, sorted by filename.
+// Excludes notion-prefixed files — those are inline images downloaded from
+// Notion blocks by the prebuild script, and they render inline within the
+// body, not in this gallery.
 const galleryDir = path.join(process.cwd(), "public", "case-studies", slug!);
 let galleryFiles: string[] = [];
 try {
   const entries = await fs.readdir(galleryDir);
   galleryFiles = entries
     .filter((f) => /\.(png|jpg|jpeg|gif|webp|mp4|webm)$/i.test(f))
+    .filter((f) => !f.startsWith("notion-"))
     .sort();
 } catch {
   // No gallery folder for this slug. That's fine.
