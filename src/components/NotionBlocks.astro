@@ -7,6 +7,7 @@
 
 import type { BlockObjectResponse } from "@notionhq/client/build/src/api-endpoints";
 import RichText from "./RichText.astro";
+import { parseCaption } from "../lib/caption";
 
 interface Props {
   blocks: BlockObjectResponse[];
@@ -49,11 +50,10 @@ function richTextFor(b: BlockObjectResponse) {
   return x[b.type]?.rich_text ?? [];
 }
 function imageFor(b: BlockObjectResponse) {
-  if (b.type !== "image") return { src: "", caption: "" };
+  if (b.type !== "image") return { src: "", captionRich: [], blockId: "" };
   const img = b.image;
   const src = img.type === "external" ? img.external.url : img.file.url;
-  const caption = img.caption.map((c) => c.plain_text).join("");
-  return { src, caption };
+  return { src, captionRich: img.caption, blockId: b.id };
 }
 ---
 
@@ -97,11 +97,16 @@ function imageFor(b: BlockObjectResponse) {
       return <hr class="divider" />;
     }
     if (b.type === "image") {
-      const { src, caption } = imageFor(b);
+      const { src, captionRich, blockId } = imageFor(b);
+      const { bg, rich, plain } = parseCaption(captionRich, blockId);
       return (
         <figure class="figure">
-          <img src={src} alt={caption} loading="lazy" />
-          {caption && <figcaption>{caption}</figcaption>}
+          <div class:list={["frame", bg && "frame-bg"]} style={bg ? `background:${bg.color}` : undefined}>
+            <img src={src} alt={plain} loading="lazy" />
+          </div>
+          {rich.length > 0 && (
+            <figcaption><RichText rich={rich} /></figcaption>
+          )}
         </figure>
       );
     }
@@ -161,24 +166,27 @@ function imageFor(b: BlockObjectResponse) {
     border-top: 1px solid var(--line);
     margin: var(--space-12) 0;
   }
-  /* Inline images sit on a cream paper backdrop regardless of the active
-     theme. Ensures images with dark internal text (UI screenshots, mocks,
-     diagrams) stay readable on any background. Looks like a clipping. */
+  /* Inline images float directly on the theme field by default. Opt into
+     a backdrop per-image by adding {bg} or {bg:value} to the caption in
+     Notion — see src/lib/caption.ts. The backdrop wraps only the image;
+     captions always sit on the field so a single caption color works
+     across themes and backdrops. */
   .figure {
     margin: var(--space-12) 0;
-    background: #F5F1E8;
+  }
+  .frame-bg {
     padding: var(--space-4);
     border: 1px solid var(--line);
     transition: border-color 280ms ease;
   }
-  .figure img {
+  .frame img {
     width: 100%;
     height: auto;
     display: block;
   }
   .figure figcaption {
     font-size: var(--fs-small);
-    color: #5A5450;
+    color: var(--muted);
     margin-top: var(--space-3);
     line-height: 1.5;
     font-style: italic;
