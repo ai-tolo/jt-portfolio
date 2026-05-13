@@ -56,9 +56,25 @@ function normalizePage(page: PageObjectResponse): CaseStudyMeta {
   // Notion's TS types for properties are a discriminated union; the `any`
   // here keeps the access concise. Each property is read defensively.
   const p = page.properties as Record<string, any>;
+  const slug = readRichText(p.Slug);
+
+  // Cover image: Notion-hosted files have signed URLs that expire ~1 hr.
+  // Rewrite file-type covers to point at the local copy that the prebuild
+  // script downloads to /public/case-studies/[slug]/cover.[ext]. External
+  // URLs (set via Notion's "embed by URL" cover option) are stable, used
+  // as-is.
+  const coverFile = p.Cover?.files?.[0];
+  let cover: string | null = null;
+  if (coverFile?.file?.url) {
+    const ext = extFromUrl(coverFile.file.url);
+    cover = `/case-studies/${slug}/cover.${ext}`;
+  } else if (coverFile?.external?.url) {
+    cover = coverFile.external.url;
+  }
+
   return {
     id: page.id,
-    slug: readRichText(p.Slug),
+    slug,
     name: readRichText(p.Name),
     subtitle: readRichText(p.Subtitle),
     outcome: readRichText(p.Outcome),
@@ -71,10 +87,7 @@ function normalizePage(page: PageObjectResponse): CaseStudyMeta {
     tools: Array.isArray(p.Tools?.multi_select)
       ? p.Tools.multi_select.map((t: { name: string }) => t.name)
       : [],
-    cover:
-      p.Cover?.files?.[0]?.file?.url ??
-      p.Cover?.files?.[0]?.external?.url ??
-      null,
+    cover,
   };
 }
 

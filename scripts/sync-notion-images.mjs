@@ -97,6 +97,30 @@ async function main() {
     const slug = readText(page.properties.Slug);
     if (!slug) continue;
 
+    const dir = path.join("public", "case-studies", slug);
+
+    // ── Cover image (page property "Cover") ────────────────────────────────
+    // Notion lets you set a Cover via the file-upload control or via
+    // external URL. File-type covers have signed URLs that expire (~1 hr),
+    // so we download them to /public/case-studies/[slug]/cover.[ext].
+    const coverFile = page.properties.Cover?.files?.[0];
+    if (coverFile?.file?.url) {
+      await fs.mkdir(dir, { recursive: true });
+      const url = coverFile.file.url;
+      const ext = extFromUrl(url);
+      const filename = `cover.${ext}`;
+      const destPath = path.join(dir, filename);
+      try {
+        const bytes = await downloadTo(url, destPath);
+        console.log(`  ${slug}/${filename}  ${(bytes / 1024).toFixed(1)} KB  [cover]`);
+        downloaded++;
+      } catch (err) {
+        console.error(`  ${slug}/${filename}  FAILED [cover]: ${err.message}`);
+        failed++;
+      }
+    }
+
+    // ── Inline images (image blocks in the page body) ──────────────────────
     const blocks = await fetchAllBlocks(page.id);
     const images = blocks.filter(
       (b) => b.type === "image" && b.image.type === "file"
@@ -104,7 +128,6 @@ async function main() {
 
     if (images.length === 0) continue;
 
-    const dir = path.join("public", "case-studies", slug);
     await fs.mkdir(dir, { recursive: true });
 
     for (const block of images) {
