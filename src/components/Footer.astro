@@ -1,14 +1,10 @@
 ---
-// Footer link order is intentional: most actionable first (Resume, Email),
-// then external presence (LinkedIn, Substack), then meta (Colophon).
-// External links open in a new tab with a small ↗ glyph marker.
+const path = Astro.url.pathname;
+const isColophon = path === "/colophon" || path === "/colophon/";
 
-const links = [
-  { label: "Resume", href: "/resume" },
-  { label: "Email", href: "mailto:jtollefson123@gmail.com" },
-  { label: "LinkedIn", href: "https://www.linkedin.com/in/jtollefson123/", external: true },
-  { label: "Substack", href: "https://substack.com/@diaryofasoundbender", external: true },
-  { label: "Colophon", href: "/colophon" },
+const externals = [
+  { label: "LinkedIn", href: "https://www.linkedin.com/in/jtollefson123/" },
+  { label: "Substack", href: "https://substack.com/@diaryofasoundbender" },
 ];
 
 const year = new Date().getFullYear();
@@ -18,14 +14,17 @@ const year = new Date().getFullYear();
   <div class="inner footer-inner">
     <p class="name">Jonathan Tollefson · {year}</p>
     <ul class="links">
-      {links.map((l) => (
+      <li>
+        <a
+          href="/colophon"
+          class="colophon"
+          aria-current={isColophon ? "page" : undefined}
+        >Colophon</a>
+      </li>
+      {externals.map((l) => (
         <li>
-          <a
-            href={l.href}
-            target={l.external ? "_blank" : undefined}
-            rel={l.external ? "noopener noreferrer" : undefined}
-          >
-            {l.label}{l.external && <span class="ext" aria-hidden="true"> ↗</span>}
+          <a href={l.href} target="_blank" rel="noopener noreferrer">
+            {l.label}<span class="ext" aria-hidden="true"> ↗</span>
           </a>
         </li>
       ))}
@@ -59,16 +58,27 @@ const year = new Date().getFullYear();
     gap: var(--space-6);
   }
   .links a {
-    color: var(--text);
+    font-size: var(--fs-eyebrow);
+    font-weight: var(--fw-semibold);
+    letter-spacing: var(--ls-eyebrow);
+    text-transform: uppercase;
+    color: var(--muted);
     text-decoration: underline;
     text-decoration-color: var(--line);
     text-underline-offset: 6px;
     text-decoration-thickness: 1px;
-    transition: text-decoration-color 160ms ease,
+    transition: color 160ms ease,
+                text-decoration-color 160ms ease,
                 text-decoration-thickness 160ms ease;
   }
   .links a:hover,
   .links a:focus-visible {
+    color: var(--text);
+    text-decoration-color: var(--accent);
+    text-decoration-thickness: 2px;
+  }
+  .links a.colophon[aria-current="page"] {
+    color: var(--text);
     text-decoration-color: var(--accent);
     text-decoration-thickness: 2px;
   }
