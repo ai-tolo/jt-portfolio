@@ -125,13 +125,13 @@ html {
 
 body {
   margin: 0;
+  /* Establish a stacking context so the dimmer pseudo-element sits
+     between the speckles and page content. */
+  position: relative;
+  min-height: 100vh;
   background-color: var(--bg);
-  /* Speckled cardstock texture. Colors drawn from all 4 theme palettes.
-     The leading linear-gradient layer is a per-theme dimming overlay;
-     transparent on light themes, soft-dark on Carbon to take the edge off. */
-  background-image:
-    linear-gradient(var(--speckle-overlay), var(--speckle-overlay)),
-    url("/speckles.svg");
+  /* Speckled cardstock texture. Colors drawn from all 4 theme palettes. */
+  background-image: url("/speckles.svg");
   background-repeat: repeat;
   background-size: 800px 800px;
   color: var(--text);
@@ -144,9 +144,31 @@ body {
               color 280ms cubic-bezier(0.2, 0, 0, 1);
 }
 
+/* Per-theme speckle dimmer. Transparent on light themes, soft-dark on
+   Carbon to knock back the cream speckles. Lives on a fixed pseudo-
+   element rather than baked into body's background-image because:
+   (a) Chrome/Safari sometimes fail to repaint `background-image:
+   linear-gradient(var(--x), ...)` when the variable changes via an
+   attribute selector — most visible after bfcache restore, manifesting
+   as a "stuck darker" overlay on a light theme.
+   (b) On its own layer the dimmer transitions smoothly with the theme
+   swap instead of snapping in. */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  background-color: var(--speckle-overlay);
+  pointer-events: none;
+  z-index: -1;
+  transition: background-color 280ms cubic-bezier(0.2, 0, 0, 1);
+}
+
 @media print {
   body {
     background-image: none !important;
+  }
+  body::before {
+    display: none !important;
   }
 }
 
