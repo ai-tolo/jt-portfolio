@@ -11,6 +11,8 @@ interface Props {
 
 const { index, name, subtitle, outcome, tags, slug, cover } = Astro.props;
 const num = String(index).padStart(2, "0");
+// Deterministic 0-3 variant for per-card padding/offset on the chunk label.
+const variant = ((index - 1) % 4 + 4) % 4;
 ---
 
 <a class="card" href={`/case-studies/${slug}`} aria-label={`Read case study: ${name}`}>
@@ -25,7 +27,7 @@ const num = String(index).padStart(2, "0");
   </div>
 
   <div class="meta">
-    <span class="num">{num} / {name}</span>
+    <span class={`num v${variant}`}>{num} / {name}</span>
     <h3 class="title">{subtitle}</h3>
     <p class="outcome">{outcome}</p>
     <ul class="tags">
@@ -51,14 +53,13 @@ const num = String(index).padStart(2, "0");
 
   .cover {
     aspect-ratio: 16 / 10;
-    background: var(--surface-1);
     overflow: hidden;
-    transition: background-color 280ms cubic-bezier(0.2, 0, 0, 1);
   }
   .cover img {
     width: 100%;
     height: 100%;
     object-fit: cover;
+    display: block;
   }
   .cover-empty {
     height: 100%;
@@ -76,14 +77,51 @@ const num = String(index).padStart(2, "0");
   .meta {
     display: grid;
     gap: var(--space-4);
+    align-content: start;
   }
+
+  /* Project marker — borrows the hero name chunks' vocabulary at a small
+     scale: solid anchor color, inverted text, fit-content width, varied
+     padding + tiny horizontal offset per card. Reads like a strip of
+     electrical tape labeled in marker, sitting above the project title. */
   .num {
-    font-size: var(--fs-eyebrow);
-    font-weight: var(--fw-semibold);
-    letter-spacing: var(--ls-eyebrow);
-    color: var(--accent);
+    display: inline-flex;
+    align-items: baseline;
+    width: fit-content;
+    background: var(--ink);
+    color: var(--ink-fg);
+    font-size: clamp(0.8125rem, 1.05vw, 1rem);
+    font-weight: var(--fw-bold);
+    letter-spacing: 0.14em;
+    line-height: 1;
     text-transform: uppercase;
+    transition: background-color 280ms cubic-bezier(0.2, 0, 0, 1),
+                color 280ms cubic-bezier(0.2, 0, 0, 1),
+                transform 220ms cubic-bezier(0.2, 0, 0, 1);
   }
+  .card:hover .num,
+  .card:focus-visible .num {
+    transform: translateX(2px);
+  }
+  /* Four uneven silhouettes, recycled per card index (mod 4). Asymmetric
+     padding + small horizontal offset gives each marker its own hand-cut
+     character without breaking the eyebrow hierarchy. */
+  .v0 {
+    padding: 0.46em 0.72em 0.26em 0.50em;
+  }
+  .v1 {
+    padding: 0.24em 0.60em 0.42em 0.78em;
+    margin-left: 3px;
+  }
+  .v2 {
+    padding: 0.34em 0.50em 0.22em 0.84em;
+    margin-left: -2px;
+  }
+  .v3 {
+    padding: 0.18em 0.78em 0.48em 0.38em;
+    margin-left: 2px;
+  }
+
   .title {
     font-size: var(--fs-title);
     font-weight: var(--fw-bold);
@@ -94,6 +132,9 @@ const num = String(index).padStart(2, "0");
   .outcome {
     color: var(--muted);
     max-width: 56ch;
+    font-size: 1.125rem;
+    font-weight: var(--fw-medium);
+    line-height: 1.55;
   }
   .tags {
     list-style: none;
@@ -102,7 +143,8 @@ const num = String(index).padStart(2, "0");
     flex-wrap: wrap;
     gap: var(--space-2) var(--space-3);
     color: var(--muted);
-    font-size: var(--fs-small);
+    font-size: 0.9375rem;
+    font-weight: var(--fw-medium);
   }
   .tags li::after {
     content: "·";
