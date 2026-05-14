@@ -1,43 +1,48 @@
-# Astro Starter Kit: Minimal
+# uxjon.com
+
+Source for [uxjon.com](https://uxjon.com). A site built to demonstrate the
+system that built it.
+
+## Stack
+
+- **Astro v6**, TypeScript strict
+- **Notion** as the content layer (Case Studies + Resumes databases)
+- **Vercel** for deploy and SSL
+- **Geist Variable**, self-hosted via Fontsource
+- **CSS custom properties** for four chromatic themes (Carbon, Powder,
+  Field, Honey). Press `T` to cycle.
+
+## How it works
+
+Case studies and resumes live as Notion database rows. The build queries
+them at compile time, downloads any Notion-hosted images locally so URLs
+don't expire, and renders Notion's block tree as editorial prose. A new
+tailored resume variant is one new database row; the route auto-generates
+on next deploy.
+
+More architecture detail on the [colophon](https://uxjon.com/colophon).
+
+## Local dev
 
 ```sh
-npm create astro@latest -- --template minimal
+npm install
+cp .env.example .env   # fill in NOTION_TOKEN
+npm run dev            # → http://localhost:4321
 ```
 
-> 🧑‍🚀 **Seasoned astronaut?** Delete this file. Have fun!
+The dev server auto-runs `scripts/sync-notion-images.mjs`, which mirrors
+Notion-hosted images into `/public/case-studies/[slug]/` so URLs don't
+expire between builds.
 
-## 🚀 Project Structure
-
-Inside of your Astro project, you'll see the following folders and files:
-
-```text
-/
-├── public/
-├── src/
-│   └── pages/
-│       └── index.astro
-└── package.json
+```sh
+npm run build          # → /dist
+npm run preview        # serve /dist locally
 ```
 
-Astro looks for `.astro` or `.md` files in the `src/pages/` directory. Each page is exposed as a route based on its file name.
+## Environment
 
-There's nothing special about `src/components/`, but that's where we like to put any Astro/React/Vue/Svelte/Preact components.
+`NOTION_TOKEN` — internal integration token from Notion. Required.
 
-Any static assets, like images, can be placed in the `public/` directory.
-
-## 🧞 Commands
-
-All commands are run from the root of the project, from a terminal:
-
-| Command                   | Action                                           |
-| :------------------------ | :----------------------------------------------- |
-| `npm install`             | Installs dependencies                            |
-| `npm run dev`             | Starts local dev server at `localhost:4321`      |
-| `npm run build`           | Build your production site to `./dist/`          |
-| `npm run preview`         | Preview your build locally, before deploying     |
-| `npm run astro ...`       | Run CLI commands like `astro add`, `astro check` |
-| `npm run astro -- --help` | Get help using the Astro CLI                     |
-
-## 👀 Want to learn more?
-
-Feel free to check [our documentation](https://docs.astro.build) or jump into our [Discord server](https://astro.build/chat).
+Source-database IDs are constants in `src/lib/notion.ts` and
+`src/lib/resumes.ts`; swap them when forking against your own Notion
+workspace.
