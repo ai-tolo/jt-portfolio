@@ -8,12 +8,23 @@ import Header from "../components/Header.astro";
 interface Props {
   title: string;
   description?: string;
+  /** Override the default OG image. Path relative to site root, e.g. "/og-case-study.png". */
+  ogImage?: string;
 }
+
+const DEFAULT_DESCRIPTION =
+  "Jon Tollefson, senior product designer. Portfolio of design systems, enterprise AI tooling, and bilingual fintech work.";
 
 const {
   title,
-  description = "Jon Tollefson, senior product designer. Portfolio of design systems, enterprise AI tooling, and bilingual fintech work.",
+  description = DEFAULT_DESCRIPTION,
+  ogImage = "/og-image.png",
 } = Astro.props;
+
+// Astro.site is set in astro.config.mjs. Falls back to uxjon.com if missing.
+const siteOrigin = Astro.site?.origin ?? "https://uxjon.com";
+const canonical = new URL(Astro.url.pathname, siteOrigin).toString();
+const ogImageUrl = new URL(ogImage, siteOrigin).toString();
 ---
 
 <!doctype html>
@@ -22,12 +33,38 @@ const {
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width,initial-scale=1" />
     <meta name="generator" content={Astro.generator} />
+
+    <title>{title}</title>
     <meta name="description" content={description} />
+    <link rel="canonical" href={canonical} />
+    <meta name="theme-color" content="#0A0A0A" />
+
+    {/* Icons. SVG for modern browsers (with built-in dark-mode swap); PNG
+        fallbacks for older browsers and search results; Apple touch icon
+        for iOS home-screen pinning. */}
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png" />
+    <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16.png" />
+    <link rel="shortcut icon" href="/favicon.ico" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
+    <link rel="manifest" href="/site.webmanifest" />
+
+    {/* Open Graph — used by iMessage, Slack, Facebook, LinkedIn, etc. */}
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="Jonathan Tollefson" />
     <meta property="og:title" content={title} />
     <meta property="og:description" content={description} />
-    <meta property="og:type" content="website" />
-    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <title>{title}</title>
+    <meta property="og:url" content={canonical} />
+    <meta property="og:image" content={ogImageUrl} />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="Jonathan Tollefson — Senior product designer" />
+
+    {/* Twitter / X */}
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content={title} />
+    <meta name="twitter:description" content={description} />
+    <meta name="twitter:image" content={ogImageUrl} />
 
     {/* Inline theme bootstrap. Runs before paint to prevent FOUC.
         Validates against the current theme set; old ids fall back to dark. */}
