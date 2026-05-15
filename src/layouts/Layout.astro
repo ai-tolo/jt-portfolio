@@ -67,17 +67,24 @@ const ogImageUrl = new URL(ogImage, siteOrigin).toString();
     <meta name="twitter:image" content={ogImageUrl} />
 
     {/* Inline theme bootstrap. Runs before paint to prevent FOUC.
-        Validates against the current theme set; old ids fall back to dark. */}
+        Validates against the current theme set; old ids fall back to dark.
+        The pageshow handler reapplies the theme on bfcache restore — without
+        it, navigating back to a page that was opened in a different theme
+        leaves the wrong theme cached. */}
     <script is:inline>
       (() => {
         const valid = new Set(["dark", "powder", "field", "honey"]);
-        try {
-          const stored = localStorage.getItem("theme");
-          document.documentElement.dataset.theme =
-            stored && valid.has(stored) ? stored : "dark";
-        } catch {
-          document.documentElement.dataset.theme = "dark";
-        }
+        const apply = () => {
+          try {
+            const stored = localStorage.getItem("theme");
+            document.documentElement.dataset.theme =
+              stored && valid.has(stored) ? stored : "dark";
+          } catch {
+            document.documentElement.dataset.theme = "dark";
+          }
+        };
+        apply();
+        window.addEventListener("pageshow", apply);
       })();
     </script>
   </head>

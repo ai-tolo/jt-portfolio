@@ -27,9 +27,6 @@
   --muted: #7A746C;
   --line: #2A2824;
   --surface-1: #15130F;
-  /* Speckle dimmer — Carbon's deep bg makes the cream specks pop hard;
-     a soft dark overlay rolls them back to about 65% visible. */
-  --speckle-overlay: rgba(10, 10, 10, 0.38);
 }
 
 :root[data-theme="powder"] {
@@ -41,7 +38,6 @@
   --muted: #3F5870;
   --line: #6E8AA0;
   --surface-1: #93B5C8;
-  --speckle-overlay: transparent;
 }
 
 :root[data-theme="field"] {
@@ -53,7 +49,6 @@
   --muted: #1A4020;
   --line: #2E5A30;
   --surface-1: #4A7D38;
-  --speckle-overlay: transparent;
 }
 
 :root[data-theme="honey"] {
@@ -65,7 +60,6 @@
   --muted: #5A3F12;
   --line: #B8973A;
   --surface-1: #D4AE3A;
-  --speckle-overlay: transparent;
 }
 
 :root {
@@ -144,23 +138,26 @@ body {
               color 280ms cubic-bezier(0.2, 0, 0, 1);
 }
 
-/* Per-theme speckle dimmer. Transparent on light themes, soft-dark on
-   Carbon to knock back the cream speckles. Lives on a fixed pseudo-
-   element rather than baked into body's background-image because:
-   (a) Chrome/Safari sometimes fail to repaint `background-image:
-   linear-gradient(var(--x), ...)` when the variable changes via an
-   attribute selector — most visible after bfcache restore, manifesting
-   as a "stuck darker" overlay on a light theme.
-   (b) On its own layer the dimmer transitions smoothly with the theme
-   swap instead of snapping in. */
+/* Per-theme speckle dimmer. Carbon (dark) softens the cream speckles
+   with a translucent overlay; light themes show speckles undimmed.
+
+   The dimmer is scoped directly via :root[data-theme="..."] body::before
+   rather than reading a CSS custom property, because Chromium has a
+   known invalidation bug: pseudo-elements consuming a custom property
+   that changes via attribute-selector cascade don't always repaint,
+   leaving the old value stuck (e.g., dark dimmer over honey = muddy
+   olive). Attribute-selector rules trigger a reliable style invalidation. */
 body::before {
   content: "";
   position: fixed;
   inset: 0;
-  background-color: var(--speckle-overlay);
+  background-color: transparent;
   pointer-events: none;
   z-index: -1;
   transition: background-color 280ms cubic-bezier(0.2, 0, 0, 1);
+}
+:root[data-theme="dark"] body::before {
+  background-color: rgba(10, 10, 10, 0.38);
 }
 
 @media print {
