@@ -1,14 +1,23 @@
 ---
 import PortalLayout from "../../layouts/PortalLayout.astro";
 import Card from "../../components/portal/Card.astro";
-import EmptyState from "../../components/portal/EmptyState.astro";
-import { search, stats } from "../../lib/console-api";
-import type { Asset } from "../../lib/console-types";
+import { search, browse } from "../../lib/console-api";
+import type { Asset, BrowseSort } from "../../lib/console-api";
 
 const PAGE_SIZE = 25;
+const SORT_LABELS: Record<BrowseSort, string> = {
+  recent: "Most recent",
+  oldest: "Oldest first",
+  longest: "Longest first",
+  shortest: "Shortest first",
+  "most-used": "Used in most projects",
+};
+const VALID_SORTS = Object.keys(SORT_LABELS) as BrowseSort[];
 
 const url = Astro.url;
 const q = (url.searchParams.get("q") ?? "").trim();
+const sortParam = (url.searchParams.get("sort") ?? "recent") as BrowseSort;
+const sort: BrowseSort = VALID_SORTS.includes(sortParam) ? sortParam : "recent";
 const limit = (() => {
   const n = parseInt(url.searchParams.get("limit") ?? "", 10);
   return Number.isFinite(n) && n > 0 ? Math.min(n, 500) : PAGE_SIZE;
@@ -17,36 +26,51 @@ const category = url.searchParams.get("category") ?? "all";
 const contentType = url.searchParams.get("content_type") ?? "all";
 
 let results: Asset[] = [];
-let searchError: string | null = null;
+let fetchError: string | null = null;
+let total = 0;
 let truncated = false;
+let mode: "search" | "browse" = q.length > 0 ? "search" : "browse";
 
-if (q.length > 0) {
+if (mode === "search") {
   const res = await search(q, { limit });
   if (res.ok) {
     results = res.data.results;
-    // M1 returns up to `limit` items; if we got exactly `limit`, more may exist
+    total = results.length;
     truncated = results.length === limit;
   } else {
-    searchError = res.error.kind === "http" ? `HTTP ${res.error.status}` : res.error.kind;
+    fetchError = res.error.kind === "http" ? `HTTP ${res.error.status}` : res.error.kind;
+  }
+} else {
+  const res = await browse({
+    sort,
+    limit,
+    category: category !== "all" ? category : undefined,
+    content_type: contentType !== "all" ? contentType : undefined,
+  });
+  if (res.ok) {
+    results = res.data.results;
+    total = res.data.total;
+    truncated = limit < total;
+  } else {
+    fetchError = res.error.kind === "http" ? `HTTP ${res.error.status}` : res.error.kind;
   }
 }
 
-// Client-side filters layer: category first, then content_type. Each chip row
-// counts based on the FULL search-result set so the chips show stable totals
-// regardless of what's currently selected on the other filter.
-const filtered = results.filter(
-  (r) =>
-    (category === "all" || r.category === category) &&
-    (contentType === "all" || r.content_type === contentType),
-);
+// For search mode we still apply client-side category/content_type filters
+// because /search doesn't accept those params. For browse mode the engine
+// has already filtered, so the filter is a no-op.
+const filtered = mode === "search"
+  ? results.filter(
+      (r) =>
+        (category === "all" || r.category === category) &&
+        (contentType === "all" || r.content_type === contentType),
+    )
+  : results;
 
 const categoriesPresent = Array.from(new Set(results.map((r) => r.category))).sort();
 const contentTypesPresent = Array.from(
   new Set(results.map((r) => r.content_type).filter((c): c is string => !!c)),
 ).sort();
-
-const statsResult = q.length === 0 ? await stats() : null;
-const statsData = statsResult?.ok ? statsResult.data : null;
 
 const nextLimit = limit + PAGE_SIZE;
 const buildHref = (overrides: Record<string, string | null>): string => {
@@ -65,7 +89,7 @@ const buildHref = (overrides: Record<string, string | null>): string => {
     <header class="surface-head">
       <div>
         <p class="eyebrow">Library</p>
-        <h1 class="title">Search the catalog</h1>
+        <h1 class="title">{mode === "search" ? `Results for "${q}"` : "Browse the catalog"}</h1>
       </div>
     </header>
 
@@ -74,33 +98,38 @@ const buildHref = (overrides: Record<string, string | null>): string => {
         type="search"
         name="q"
         value={q}
-        placeholder="Search transcripts, summaries, tags…"
+        placeholder="Search transcripts, summaries, tags, names…"
         autocomplete="off"
         spellcheck="false"
         aria-label="Search the catalog"
       />
-      <button type="submit">Search</button>
-      {q && (
+      {mode === "browse" && (
+        <label class="sort-pick">
+          Sort by
+          <select name="sort" onchange="this.form.submit()">
+            {VALID_SORTS.map((s) => (
+              <option value={s} selected={s === sort}>{SORT_LABELS[s]}</option>
+            ))}
+          </select>
+        </label>
+      )}
+      <button type="submit">{mode === "search" ? "Search" : "Apply"}</button>
+      {(q || sort !== "recent" || category !== "all" || contentType !== "all") && (
         <a class="reset" href="/portal/library">Clear</a>
       )}
     </form>
 
-    {q.length === 0 ? (
-      <EmptyState
-        title="Type to search"
-        body={"Search runs across transcripts, summaries, tags, and filenames. The M1 returns the most relevant matches."}
-        stats={statsData}
-      />
-    ) : searchError ? (
-      <p class="error" role="alert">Search failed: {searchError}</p>
+    {fetchError ? (
+      <p class="error" role="alert">Couldn't load: {fetchError}</p>
     ) : (
       <>
         <div class="result-meta">
           <p class="count">
-            <strong>{filtered.length}</strong> {filtered.length === 1 ? "result" : "results"}
+            <strong>{filtered.length}</strong> of {total.toLocaleString()} {filtered.length === 1 ? "result" : "results"}
             {category !== "all" && <> in <code>{category}</code></>}
             {contentType !== "all" && <> · <code>{contentType}</code></>}
-            <span class="muted"> for "{q}"</span>
+            {mode === "browse" && <span class="muted"> · {SORT_LABELS[sort].toLowerCase()}</span>}
+            <a class="trash-link" href="/portal/trash">view trash →</a>
           </p>
 
           {categoriesPresent.length > 1 && (
@@ -109,14 +138,14 @@ const buildHref = (overrides: Record<string, string | null>): string => {
                 <a
                   href={buildHref({ category: null })}
                   class:list={["chip", { active: category === "all" }]}
-                >all ({results.length})</a>
+                >all</a>
               </li>
               {categoriesPresent.map((c) => (
                 <li>
                   <a
                     href={buildHref({ category: c })}
                     class:list={["chip", { active: category === c }]}
-                  >{c.replace(/_/g, " ")} ({results.filter((r) => r.category === c).length})</a>
+                  >{c.replace(/_/g, " ")}</a>
                 </li>
               ))}
             </ul>
@@ -128,14 +157,14 @@ const buildHref = (overrides: Record<string, string | null>): string => {
                 <a
                   href={buildHref({ content_type: null })}
                   class:list={["chip", { active: contentType === "all" }]}
-                >any type ({results.length})</a>
+                >any type</a>
               </li>
               {contentTypesPresent.map((ct) => (
                 <li>
                   <a
                     href={buildHref({ content_type: ct })}
                     class:list={["chip", { active: contentType === ct }]}
-                  >{ct} ({results.filter((r) => r.content_type === ct).length})</a>
+                  >{ct}</a>
                 </li>
               ))}
             </ul>
@@ -143,7 +172,7 @@ const buildHref = (overrides: Record<string, string | null>): string => {
         </div>
 
         {filtered.length === 0 ? (
-          <p class="no-results">No matches{(category !== "all" || contentType !== "all") && <> with these filters</>}.</p>
+          <p class="no-results">Nothing matches{(category !== "all" || contentType !== "all") && <> with these filters</>}.</p>
         ) : (
           <ul class="cards">
             {filtered.map((item) => (
@@ -155,7 +184,7 @@ const buildHref = (overrides: Record<string, string | null>): string => {
         {truncated && filtered.length > 0 && (
           <p class="load-more-wrap">
             <a class="load-more" href={buildHref({ limit: String(nextLimit) })}>
-              Load more ({nextLimit} total)
+              Load more ({Math.min(nextLimit, total).toLocaleString()} of {total.toLocaleString()})
             </a>
           </p>
         )}
@@ -195,8 +224,28 @@ const buildHref = (overrides: Record<string, string | null>): string => {
   .search-form {
     display: flex;
     gap: var(--space-3);
-    align-items: stretch;
+    align-items: center;
     flex-wrap: wrap;
+  }
+  .sort-pick {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-2);
+    font-size: var(--fs-eyebrow);
+    font-weight: var(--fw-semibold);
+    letter-spacing: var(--ls-eyebrow);
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  .sort-pick select {
+    font: inherit;
+    color: var(--text);
+    background: transparent;
+    border: 1px solid var(--line);
+    padding: var(--space-2) var(--space-3);
+    text-transform: none;
+    letter-spacing: 0;
+    cursor: pointer;
   }
   input[type="search"] {
     flex: 1;
@@ -262,6 +311,15 @@ const buildHref = (overrides: Record<string, string | null>): string => {
     text-transform: uppercase;
   }
   .count .muted { color: var(--muted); }
+  .trash-link {
+    margin-left: var(--space-3);
+    font-size: var(--fs-eyebrow);
+    font-weight: var(--fw-semibold);
+    letter-spacing: var(--ls-eyebrow);
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  .trash-link:hover { color: var(--accent); }
 
   .chips {
     list-style: none;

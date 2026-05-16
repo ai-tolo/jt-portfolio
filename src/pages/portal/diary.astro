@@ -2,8 +2,8 @@
 import PortalLayout from "../../layouts/PortalLayout.astro";
 import EmptyState from "../../components/portal/EmptyState.astro";
 import { getRecentEntries, type DiaryEntry } from "../../lib/diary-notion";
-import { diaryCandidates } from "../../lib/console-api";
-import type { LyricCandidate } from "../../lib/console-types";
+import { diaryCandidates, surprise } from "../../lib/console-api";
+import type { LyricCandidate, SurpriseItem } from "../../lib/console-types";
 
 const url = Astro.url;
 const ok = url.searchParams.get("ok") === "1";
@@ -23,6 +23,43 @@ try {
   if (res.ok) candidates = res.data.candidates;
 } catch {
   // engine unreachable; skip candidates section
+}
+
+// ── Song Pitch (Spark) ─────────────────────────────────────────────────────
+// Pair a random thought from the Notion diary with a random audio seed from
+// the Surprise picker. The juxtaposition is the pitch; the user's brain does
+// the connecting. Nothing is synthesized.
+let pitchThought: DiaryEntry | null = null;
+let pitchSeed: SurpriseItem | null = null;
+if (entries.length > 0) {
+  pitchThought = entries[Math.floor(Math.random() * entries.length)];
+}
+try {
+  // mark=false so browsing the Diary doesn't pollute the surfaced-recency
+  // signal on the picker; the Surprise tab is still the canonical surface.
+  const sres = await surprise({ n: 8, mark: false });
+  if (sres.ok && sres.data.items.length > 0) {
+    pitchSeed = sres.data.items[Math.floor(Math.random() * sres.data.items.length)];
+  }
+} catch {
+  // engine unreachable; skip the seed half
+}
+
+function audioCtx(seed: SurpriseItem): string {
+  const bits: string[] = [];
+  if (seed.duration_seconds) {
+    const m = Math.floor(seed.duration_seconds / 60);
+    const s = Math.floor(seed.duration_seconds % 60);
+    bits.push(`${m}:${String(s).padStart(2, "0")}`);
+  }
+  if (seed.bpm) bits.push(`${Math.round(seed.bpm)} BPM`);
+  if (seed.key) bits.push(seed.key);
+  if (seed.mood) bits.push(seed.mood.split(",")[0].trim());
+  return bits.join(" · ");
+}
+
+function seedTitle(seed: SurpriseItem): string {
+  return seed.display_name || seed.filename;
 }
 
 function relativeTime(iso: string): string {
@@ -57,6 +94,42 @@ const errorMessage =
         <h1 class="title">Thoughts &amp; Lyrics</h1>
       </div>
     </header>
+
+    {(pitchThought || pitchSeed) && (
+      <section class="pitch" aria-labelledby="pitch-heading">
+        <header class="pitch-head">
+          <p class="pitch-eyebrow" id="pitch-heading">Song pitch</p>
+          <a class="shuffle" href={url.pathname} aria-label="Shuffle pitch">↻ Shuffle</a>
+        </header>
+        <div class="pitch-cols">
+          <div class="pitch-col pitch-thought">
+            <p class="pitch-side-eyebrow">Thought</p>
+            {pitchThought ? (
+              <blockquote class="pitch-text">{pitchThought.text}</blockquote>
+            ) : (
+              <p class="pitch-empty">No diary entries yet.</p>
+            )}
+          </div>
+          <div class="pitch-col pitch-seed">
+            <p class="pitch-side-eyebrow">Seed</p>
+            {pitchSeed ? (
+              <>
+                <p class="pitch-title">{seedTitle(pitchSeed)}</p>
+                {pitchSeed.summary && <p class="pitch-summary">{pitchSeed.summary}</p>}
+                <p class="pitch-ctx">{audioCtx(pitchSeed)}</p>
+                <audio
+                  controls
+                  preload="none"
+                  src={`/api/console/asset?path=${encodeURIComponent(pitchSeed.path)}`}
+                ></audio>
+              </>
+            ) : (
+              <p class="pitch-empty">Engine unreachable — no seed available.</p>
+            )}
+          </div>
+        </div>
+      </section>
+    )}
 
     <form method="POST" action="/api/console/diary" class="capture">
       <label class="visually-hidden" for="capture-text">Capture a thought or lyric</label>
@@ -147,6 +220,103 @@ const errorMessage =
     letter-spacing: var(--ls-title);
     line-height: var(--lh-title);
     margin-top: var(--space-1);
+  }
+
+  .pitch {
+    display: grid;
+    gap: var(--space-4);
+    padding: var(--space-5);
+    border: 1px solid var(--accent);
+    background: color-mix(in srgb, var(--accent) 4%, transparent);
+  }
+  .pitch-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: var(--space-4);
+  }
+  .pitch-eyebrow {
+    font-size: var(--fs-eyebrow);
+    font-weight: var(--fw-semibold);
+    letter-spacing: var(--ls-eyebrow);
+    text-transform: uppercase;
+    color: var(--accent);
+    margin: 0;
+  }
+  .shuffle {
+    font-size: var(--fs-eyebrow);
+    font-weight: var(--fw-semibold);
+    letter-spacing: var(--ls-eyebrow);
+    text-transform: uppercase;
+    color: var(--muted);
+    text-decoration: none;
+    padding: 4px 10px;
+    border: 1px solid var(--line);
+    transition: border-color 160ms ease, color 160ms ease;
+  }
+  .shuffle:hover, .shuffle:focus-visible {
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+  .pitch-cols {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--space-5);
+  }
+  @media (max-width: 640px) {
+    .pitch-cols { grid-template-columns: 1fr; }
+  }
+  .pitch-col {
+    display: grid;
+    gap: var(--space-3);
+  }
+  .pitch-side-eyebrow {
+    font-size: var(--fs-eyebrow);
+    font-weight: var(--fw-semibold);
+    letter-spacing: var(--ls-eyebrow);
+    text-transform: uppercase;
+    color: var(--muted);
+    margin: 0;
+  }
+  .pitch-text {
+    margin: 0;
+    font-size: 1.0625rem;
+    line-height: 1.5;
+    border-left: 2px solid var(--accent);
+    padding-left: var(--space-3);
+    color: var(--text);
+    font-style: italic;
+  }
+  .pitch-title {
+    margin: 0;
+    font-size: 1rem;
+    font-weight: var(--fw-semibold);
+    color: var(--text);
+    word-break: break-word;
+  }
+  .pitch-summary {
+    margin: 0;
+    font-size: var(--fs-small);
+    color: var(--muted);
+    line-height: 1.5;
+    max-width: 50ch;
+  }
+  .pitch-ctx {
+    margin: 0;
+    font-size: var(--fs-eyebrow);
+    font-weight: var(--fw-semibold);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--accent);
+  }
+  .pitch audio {
+    width: 100%;
+    max-width: 28rem;
+  }
+  .pitch-empty {
+    color: var(--muted);
+    font-style: italic;
+    margin: 0;
   }
 
   .capture {

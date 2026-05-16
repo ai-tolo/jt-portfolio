@@ -125,6 +125,176 @@ const { title, current, bare = false } = Astro.props;
       reflectQueueState();
       window.addEventListener("pageshow", reflectQueueState);
 
+      // Friendly Names: click the title button on any Card to inline-edit.
+      // Save persists to /api/console/items-display-name; Suggest fetches a
+      // proposal from /api/console/suggest-name; Cancel/Esc restores.
+      function buildRenameForm(currentLabel: string, fallback: string) {
+        const form = document.createElement("span");
+        form.className = "rename-form";
+        const input = document.createElement("input");
+        input.type = "text";
+        input.value = currentLabel;
+        input.maxLength = 200;
+        const save = document.createElement("button");
+        save.type = "button";
+        save.className = "primary";
+        save.dataset.role = "rename-save";
+        save.textContent = "Save";
+        const suggest = document.createElement("button");
+        suggest.type = "button";
+        suggest.dataset.role = "rename-suggest";
+        suggest.textContent = "Suggest";
+        const cancel = document.createElement("button");
+        cancel.type = "button";
+        cancel.dataset.role = "rename-cancel";
+        cancel.textContent = "Cancel";
+        form.append(input, save, suggest, cancel);
+        form.dataset.fallback = fallback;
+        return { form, input };
+      }
+
+      function exitRenameMode(form: HTMLElement, label: string, isRenamed: boolean) {
+        const container = form.parentElement!;
+        const path = form.dataset.path!;
+        const filename = form.dataset.filename!;
+        const btn = document.createElement("button");
+        btn.type = "button";
+        btn.className = "title-edit";
+        btn.dataset.action = "rename";
+        btn.dataset.path = path;
+        if (isRenamed) btn.dataset.renamed = "true";
+        btn.title = `Click to rename. Real filename: ${filename}`;
+        btn.textContent = label;
+        container.replaceChildren(btn);
+        // Notify other surfaces (Workbench metaCache, etc.).
+        window.dispatchEvent(new CustomEvent("portal:display-name-changed", {
+          detail: { path, display_name: isRenamed ? label : null },
+        }));
+      }
+
+      document.addEventListener("click", async (e) => {
+        const target = e.target as HTMLElement | null;
+
+        // Enter edit mode.
+        const trigger = target?.closest<HTMLButtonElement>('[data-action="rename"][data-path]');
+        if (trigger) {
+          const path = trigger.dataset.path!;
+          const card = trigger.closest<HTMLElement>("[data-path]");
+          const filename = card?.dataset.filename ?? trigger.textContent ?? "";
+          const current = trigger.textContent ?? "";
+          const { form, input } = buildRenameForm(current.trim(), filename);
+          form.dataset.path = path;
+          form.dataset.filename = filename;
+          trigger.replaceWith(form);
+          input.focus();
+          input.select();
+          return;
+        }
+
+        // Save / Suggest / Cancel within an active rename-form.
+        const formBtn = target?.closest<HTMLButtonElement>('.rename-form button');
+        if (!formBtn) return;
+        const form = formBtn.closest<HTMLElement>(".rename-form");
+        if (!form) return;
+        const input = form.querySelector<HTMLInputElement>("input")!;
+        const path = form.dataset.path!;
+        const role = formBtn.dataset.role;
+
+        if (role === "rename-cancel") {
+          const filename = form.dataset.filename ?? "";
+          exitRenameMode(form, filename, false);
+          return;
+        }
+        if (role === "rename-suggest") {
+          formBtn.disabled = true;
+          try {
+            const params = new URLSearchParams({ path });
+            const res = await fetch(`/api/console/suggest-name?${params}`);
+            if (res.ok) {
+              const data = await res.json();
+              if (typeof data.suggested === "string") input.value = data.suggested;
+            }
+          } finally {
+            formBtn.disabled = false;
+            input.focus();
+          }
+          return;
+        }
+        if (role === "rename-save") {
+          formBtn.disabled = true;
+          const value = input.value.trim();
+          const filename = form.dataset.filename ?? "";
+          try {
+            const res = await fetch("/api/console/items-display-name", {
+              method: "POST",
+              headers: { "content-type": "application/json" },
+              body: JSON.stringify({ path, display_name: value || null }),
+            });
+            if (!res.ok) {
+              formBtn.title = `Save failed (HTTP ${res.status})`;
+              return;
+            }
+            const data = await res.json();
+            const newLabel = data.display_name ?? filename;
+            exitRenameMode(form, newLabel, !!data.display_name);
+          } catch {
+            formBtn.title = "Save failed (network)";
+          } finally {
+            formBtn.disabled = false;
+          }
+        }
+      });
+
+      // Trash: click the small ✕ in any Card header to hide it from all
+      // surfaces. The file on disk stays; row keeps existing. Restore from
+      // /portal/trash.
+      document.addEventListener("click", async (e) => {
+        const target = e.target as HTMLElement | null;
+        const btn = target?.closest<HTMLButtonElement>('[data-action="trash"][data-path]');
+        if (!btn) return;
+        const path = btn.dataset.path!;
+        const card = btn.closest<HTMLElement>(".card, .wb-card");
+        if (card) card.dataset.trashing = "true";
+        try {
+          const res = await fetch("/api/console/items-trashed", {
+            method: "POST",
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify({ path, trashed: true }),
+          });
+          if (!res.ok) {
+            if (card) card.removeAttribute("data-trashing");
+            btn.title = `Trash failed (HTTP ${res.status})`;
+            return;
+          }
+          // Remove the card from the DOM.
+          if (card) {
+            const li = card.closest<HTMLElement>("li");
+            (li ?? card).remove();
+          }
+          window.dispatchEvent(new CustomEvent("portal:trashed-changed", {
+            detail: { path, trashed: true },
+          }));
+          // Also drop it from the localStorage queue if present.
+          const q = readQueue().filter((e) => e.path !== path);
+          writeQueue(q);
+          reflectQueueState();
+        } catch {
+          if (card) card.removeAttribute("data-trashing");
+          btn.title = "Trash failed (network)";
+        }
+      });
+
+      // Esc cancels active rename, blur outside the form cancels too.
+      document.addEventListener("keydown", (e) => {
+        if (e.key !== "Escape") return;
+        const active = document.activeElement;
+        const form = active?.closest<HTMLElement>(".rename-form");
+        if (form) {
+          const filename = form.dataset.filename ?? "";
+          exitRenameMode(form, filename, false);
+        }
+      });
+
       // Public toggle: click any [data-action="toggle-public"][data-path] to
       // flip the asset's `public` flag via the auth-gated proxy. Optimistic
       // UI, rolled back on failure.

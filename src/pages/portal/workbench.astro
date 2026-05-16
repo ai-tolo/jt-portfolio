@@ -59,12 +59,14 @@ const BUILD_3_ACTIONS = [
 
     {/* Stub action button row, repeated per card via JS template */}
     <template id="card-tpl">
-      <li class="wb-card" data-path="">
+      <li class="wb-card" data-path="" data-filename="">
         <header class="meta">
           <span class="eyebrow-row">Queued</span>
           <button type="button" class="remove" data-action="unqueue" data-path="" aria-label="Remove from queue">✕</button>
         </header>
-        <h3 class="name"></h3>
+        <h3 class="name">
+          <button type="button" class="title-edit" data-action="rename" data-path=""></button>
+        </h3>
         <p class="summary"></p>
         <ul class="tags"></ul>
         <p class="added"></p>
@@ -177,7 +179,14 @@ const BUILD_3_ACTIONS = [
         const meta = await fetchMeta(entry.path);
         const node = (tpl.content.firstElementChild!.cloneNode(true) as HTMLLIElement);
         node.dataset.path = entry.path;
-        node.querySelector(".name")!.textContent = fileLabel(meta, entry.path);
+        const realFilename = meta?.filename ?? fileLabel(meta, entry.path);
+        node.dataset.filename = realFilename;
+        const titleBtn = node.querySelector(".name .title-edit") as HTMLButtonElement;
+        titleBtn.dataset.path = entry.path;
+        const display = meta?.display_name || realFilename;
+        titleBtn.textContent = display;
+        if (meta?.display_name) titleBtn.dataset.renamed = "true";
+        titleBtn.title = `Click to rename. Real filename: ${realFilename}`;
         node.querySelector(".summary")!.textContent = meta?.summary ?? "";
         if (!meta?.summary) (node.querySelector(".summary") as HTMLElement).hidden = true;
         (node.querySelector(".added") as HTMLElement).textContent = `Added ${shortDate(entry.addedAt)}`;
@@ -209,10 +218,14 @@ const BUILD_3_ACTIONS = [
     btn.classList.toggle("on", isPublic);
   }
 
-  // Click handling for toggle-public lives in PortalLayout (global). When it
-  // fires, we drop the affected path from metaCache so the next render reads
-  // fresh state instead of the pre-toggle value.
+  // Click handling for toggle-public + rename lives in PortalLayout (global).
+  // When either fires, drop the affected path from metaCache so the next
+  // render reads fresh state.
   window.addEventListener("portal:public-changed", (e) => {
+    const path = (e as CustomEvent<{ path: string }>).detail?.path;
+    if (path) metaCache.delete(path);
+  });
+  window.addEventListener("portal:display-name-changed", (e) => {
     const path = (e as CustomEvent<{ path: string }>).detail?.path;
     if (path) metaCache.delete(path);
   });

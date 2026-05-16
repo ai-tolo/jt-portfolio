@@ -57,6 +57,9 @@ export interface Asset {
   /** How many .als projects reference this asset's filename. Computed by
    * the engine per request from `als_projects.sample_refs`. */
   project_count?: number | null;
+  /** Curator-set friendly name. Lives alongside the real filename; the file
+   * on disk is never renamed. UI falls back to filename when this is null. */
+  display_name?: string | null;
 }
 
 export interface SearchResponse {

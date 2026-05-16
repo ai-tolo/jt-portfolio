@@ -104,8 +104,40 @@ export function search(q: string, opts?: FetchOpts & { limit?: number; offset?: 
   return call<SearchResponse>(`/search?${params}`, opts);
 }
 
-export function surprise(opts?: FetchOpts) {
-  return call<SurpriseResponse>("/surprise", opts);
+export type BrowseSort = "recent" | "oldest" | "longest" | "shortest" | "most-used";
+
+export interface BrowseResponse {
+  sort: BrowseSort;
+  total: number;
+  offset: number;
+  results: Asset[];
+}
+
+export function browse(opts?: FetchOpts & {
+  sort?: BrowseSort;
+  limit?: number;
+  offset?: number;
+  category?: string;
+  content_type?: string;
+  public_only?: boolean;
+}) {
+  const params = new URLSearchParams();
+  if (opts?.sort) params.set("sort", opts.sort);
+  if (opts?.limit !== undefined) params.set("limit", String(opts.limit));
+  if (opts?.offset !== undefined) params.set("offset", String(opts.offset));
+  if (opts?.category && opts.category !== "all") params.set("category", opts.category);
+  if (opts?.content_type && opts.content_type !== "all") params.set("content_type", opts.content_type);
+  if (opts?.public_only) params.set("public_only", "true");
+  const qs = params.toString();
+  return call<BrowseResponse>(qs ? `/browse?${qs}` : "/browse", opts);
+}
+
+export function surprise(opts?: FetchOpts & { mark?: boolean; n?: number }) {
+  const params = new URLSearchParams();
+  if (opts?.n !== undefined) params.set("n", String(opts.n));
+  if (opts?.mark === false) params.set("mark", "false");
+  const qs = params.toString();
+  return call<SurpriseResponse>(qs ? `/surprise?${qs}` : "/surprise", opts);
 }
 
 export function rotationThisWeek(opts?: FetchOpts) {
@@ -168,6 +200,100 @@ export function publicItems(opts?: FetchOpts & { limit?: number }) {
   if (opts?.limit) params.set("limit", String(opts.limit));
   const qs = params.toString();
   return call<PublicItemsResponse>(qs ? `/public?${qs}` : "/public", opts);
+}
+
+export async function setDisplayName(
+  path: string,
+  displayName: string | null,
+  opts: FetchOpts = {},
+): Promise<ApiResult<{ path: string; display_name: string | null }>> {
+  return _post(`/items/display-name`, { path, display_name: displayName }, opts);
+}
+
+export async function setItemTrashed(
+  path: string,
+  trashed: boolean,
+  opts: FetchOpts = {},
+): Promise<ApiResult<{ path: string; trashed: boolean }>> {
+  return _post(`/items/trashed`, { path, trashed }, opts);
+}
+
+export interface TrashResponse {
+  total: number;
+  offset: number;
+  items: (Asset & { trashed_at: string })[];
+}
+
+export function trashList(opts?: FetchOpts & { limit?: number; offset?: number }) {
+  const params = new URLSearchParams();
+  if (opts?.limit !== undefined) params.set("limit", String(opts.limit));
+  if (opts?.offset !== undefined) params.set("offset", String(opts.offset));
+  const qs = params.toString();
+  return call<TrashResponse>(qs ? `/trash?${qs}` : "/trash", opts);
+}
+
+export function suggestName(path: string, opts?: FetchOpts) {
+  const params = new URLSearchParams({ path });
+  return call<{ path: string; suggested: string }>(
+    `/items/suggest-name?${params}`,
+    opts,
+  );
+}
+
+async function _post<T>(
+  pathAndQuery: string,
+  body: unknown,
+  opts: FetchOpts = {},
+): Promise<ApiResult<T>> {
+  const url = `${BASE}${pathAndQuery}`;
+  const controller = new AbortController();
+  const timeout = setTimeout(
+    () => controller.abort(),
+    opts.timeoutMs ?? DEFAULT_TIMEOUT_MS,
+  );
+  opts.signal?.addEventListener("abort", () => controller.abort(), { once: true });
+
+  let res: Response;
+  try {
+    res = await fetch(url, {
+      method: "POST",
+      signal: controller.signal,
+      headers: {
+        accept: "application/json",
+        "content-type": "application/json",
+        ...authHeaders(),
+      },
+      body: JSON.stringify(body),
+    });
+  } catch (e) {
+    return {
+      ok: false,
+      error: {
+        kind: "unreachable",
+        message: e instanceof Error ? e.message : "fetch failed",
+      },
+    };
+  } finally {
+    clearTimeout(timeout);
+  }
+
+  if (!res.ok) {
+    return {
+      ok: false,
+      error: { kind: "http", status: res.status, message: res.statusText },
+    };
+  }
+  try {
+    return { ok: true, data: (await res.json()) as T };
+  } catch (e) {
+    return {
+      ok: false,
+      error: {
+        kind: "parse",
+        message: e instanceof Error ? e.message : "invalid JSON",
+      },
+    };
+  }
 }
 
 export async function setItemPublic(
