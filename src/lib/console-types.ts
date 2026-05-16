@@ -36,6 +36,16 @@ export interface Asset {
   bpm: number | null;
   key: string | null;
   content_type: string | null;
+  // Added 2026-05-16 — post-analyze_audio columns the engine may return.
+  // All optional so existing surfaces don't break if the engine omits them.
+  duration_seconds?: number | null;
+  mood?: string | null;
+  silence_ratio?: number | null;
+  loop_density?: number | null;
+  spectral_novelty?: number | null;
+  source_type?: string | null;
+  /** Set in the engine when an item has been transcribed. */
+  transcribed?: 0 | 1 | null;
 }
 
 export interface SearchResponse {
@@ -82,3 +92,59 @@ export type ApiError =
 export type ApiResult<T> =
   | { ok: true; data: T }
   | { ok: false; error: ApiError };
+
+// ── Spec types for upcoming Rotation + Diary endpoints ─────────────────────
+// These shapes match the engine spec in console-build/engine-api/new-endpoints.md.
+// The M1 engine does not yet implement these endpoints. Types live here so the
+// portfolio client is ready to drop in once the engine ships them.
+
+export interface RotationPick {
+  asset: Asset;
+  /** Objective signals describing why the picker chose this item. */
+  reasons: string[];
+  /** Ranking score 0..1, exposed for transparency. */
+  score: number;
+  /** ISO date of the Monday that starts this rotation week. */
+  weekOf: string;
+  /** When the pick was computed. */
+  pickedAt: string;
+}
+
+export interface RotationThisWeekResponse {
+  pick: RotationPick | null;
+  pinned: boolean;
+  /** Present iff pick is null; explains why. */
+  emptyReason?: string;
+}
+
+export interface RotationHistoryEntry {
+  weekOf: string;
+  pickedAt: string;
+  asset: Asset;
+  pinned: boolean;
+}
+
+export interface RotationHistoryResponse {
+  entries: RotationHistoryEntry[];
+}
+
+export interface LyricCandidate {
+  asset: Asset;
+  fragment: string;
+  startSeconds: number;
+  endSeconds: number;
+  /** Heuristic score 0..1, higher = more lyric-like. */
+  score: number;
+  /** Why the heuristic flagged the fragment. */
+  reasons: string[];
+  /** Stable ID for dismiss/accept tracking. */
+  id: string;
+}
+
+export interface DiaryCandidatesResponse {
+  candidates: LyricCandidate[];
+}
+
+export interface DiaryActionResponse {
+  ok: boolean;
+}

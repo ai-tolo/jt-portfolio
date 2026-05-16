@@ -28,6 +28,14 @@ const dateLabel = (() => {
     return item.modified;
   }
 })();
+
+function formatDuration(s: number | null | undefined): string | null {
+  if (s == null || !Number.isFinite(s) || s <= 0) return null;
+  const m = Math.floor(s / 60);
+  const r = Math.round(s % 60);
+  return `${m}:${String(r).padStart(2, "0")}`;
+}
+const durationLabel = formatDuration(item.duration_seconds);
 ---
 
 <article class="card" data-path={item.path}>
@@ -40,13 +48,16 @@ const dateLabel = (() => {
 
   {item.summary && <p class="summary">{item.summary}</p>}
 
-  {(item.bpm || item.key) && (
+  {(item.bpm || item.key || durationLabel || item.content_type) && (
     <p class="audio-meta">
+      {durationLabel && <span>{durationLabel}</span>}
       {item.bpm && <span>{item.bpm} BPM</span>}
       {item.key && <span>{item.key}</span>}
       {item.content_type && <span>{item.content_type}</span>}
     </p>
   )}
+
+  {item.mood && <p class="mood">{item.mood}</p>}
 
   {tagList.length > 0 && (
     <ul class="tags">
@@ -120,6 +131,7 @@ const dateLabel = (() => {
 
   .audio-meta {
     display: flex;
+    flex-wrap: wrap;
     gap: var(--space-3);
     font-size: var(--fs-eyebrow);
     font-weight: var(--fw-semibold);
@@ -131,6 +143,14 @@ const dateLabel = (() => {
     content: " ·";
     color: var(--muted);
     margin-left: var(--space-2);
+  }
+
+  .mood {
+    margin: 0;
+    font-size: var(--fs-small);
+    font-style: italic;
+    color: var(--muted);
+    line-height: 1.4;
   }
 
   .tags {

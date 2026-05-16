@@ -14,6 +14,7 @@ const limit = (() => {
   return Number.isFinite(n) && n > 0 ? Math.min(n, 500) : PAGE_SIZE;
 })();
 const category = url.searchParams.get("category") ?? "all";
+const contentType = url.searchParams.get("content_type") ?? "all";
 
 let results: Asset[] = [];
 let searchError: string | null = null;
@@ -30,15 +31,19 @@ if (q.length > 0) {
   }
 }
 
-// Client-side filter chip applies if category != "all". Pre-filter on the
-// server so the "X results" count matches what's rendered. The chip itself
-// is a regular link that updates the URL.
-const filtered =
-  category === "all"
-    ? results
-    : results.filter((r) => r.category === category);
+// Client-side filters layer: category first, then content_type. Each chip row
+// counts based on the FULL search-result set so the chips show stable totals
+// regardless of what's currently selected on the other filter.
+const filtered = results.filter(
+  (r) =>
+    (category === "all" || r.category === category) &&
+    (contentType === "all" || r.content_type === contentType),
+);
 
 const categoriesPresent = Array.from(new Set(results.map((r) => r.category))).sort();
+const contentTypesPresent = Array.from(
+  new Set(results.map((r) => r.content_type).filter((c): c is string => !!c)),
+).sort();
 
 const statsResult = q.length === 0 ? await stats() : null;
 const statsData = statsResult?.ok ? statsResult.data : null;
@@ -94,6 +99,7 @@ const buildHref = (overrides: Record<string, string | null>): string => {
           <p class="count">
             <strong>{filtered.length}</strong> {filtered.length === 1 ? "result" : "results"}
             {category !== "all" && <> in <code>{category}</code></>}
+            {contentType !== "all" && <> · <code>{contentType}</code></>}
             <span class="muted"> for "{q}"</span>
           </p>
 
@@ -115,10 +121,29 @@ const buildHref = (overrides: Record<string, string | null>): string => {
               ))}
             </ul>
           )}
+
+          {contentTypesPresent.length > 1 && (
+            <ul class="chips chips-content" role="list" aria-label="Filter by content type">
+              <li>
+                <a
+                  href={buildHref({ content_type: null })}
+                  class:list={["chip", { active: contentType === "all" }]}
+                >any type ({results.length})</a>
+              </li>
+              {contentTypesPresent.map((ct) => (
+                <li>
+                  <a
+                    href={buildHref({ content_type: ct })}
+                    class:list={["chip", { active: contentType === ct }]}
+                  >{ct} ({results.filter((r) => r.content_type === ct).length})</a>
+                </li>
+              ))}
+            </ul>
+          )}
         </div>
 
         {filtered.length === 0 ? (
-          <p class="no-results">No matches{category !== "all" && <> in this category</>}.</p>
+          <p class="no-results">No matches{(category !== "all" || contentType !== "all") && <> with these filters</>}.</p>
         ) : (
           <ul class="cards">
             {filtered.map((item) => (

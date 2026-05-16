@@ -12,6 +12,9 @@ import type {
   SearchResponse,
   StatsResponse,
   SurpriseResponse,
+  RotationThisWeekResponse,
+  RotationHistoryResponse,
+  DiaryCandidatesResponse,
 } from "./console-types";
 
 // process.env is checked first so Vercel's runtime env vars always win in
@@ -101,6 +104,31 @@ export function search(q: string, opts?: FetchOpts & { limit?: number; offset?: 
 
 export function surprise(opts?: FetchOpts) {
   return call<SurpriseResponse>("/surprise", opts);
+}
+
+export function rotationThisWeek(opts?: FetchOpts) {
+  return call<RotationThisWeekResponse>("/rotation/this-week", opts);
+}
+
+export function rotationHistory(opts?: FetchOpts & { limit?: number }) {
+  const params = new URLSearchParams();
+  if (opts?.limit) params.set("limit", String(opts.limit));
+  const qs = params.toString();
+  return call<RotationHistoryResponse>(
+    qs ? `/rotation/history?${qs}` : "/rotation/history",
+    opts,
+  );
+}
+
+export function diaryCandidates(opts?: FetchOpts & { limit?: number; minScore?: number }) {
+  const params = new URLSearchParams();
+  if (opts?.limit) params.set("limit", String(opts.limit));
+  if (opts?.minScore !== undefined) params.set("min_score", String(opts.minScore));
+  const qs = params.toString();
+  return call<DiaryCandidatesResponse>(
+    qs ? `/diary/candidates?${qs}` : "/diary/candidates",
+    opts,
+  );
 }
 
 export function projects(opts?: FetchOpts) {
