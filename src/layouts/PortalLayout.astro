@@ -124,6 +124,49 @@ const { title, current, bare = false } = Astro.props;
 
       reflectQueueState();
       window.addEventListener("pageshow", reflectQueueState);
+
+      // Public toggle: click any [data-action="toggle-public"][data-path] to
+      // flip the asset's `public` flag via the auth-gated proxy. Optimistic
+      // UI, rolled back on failure.
+      function applyPublicState(btn: HTMLButtonElement, isPublic: boolean) {
+        btn.setAttribute("aria-pressed", isPublic ? "true" : "false");
+        btn.textContent = isPublic ? "● Public" : "○ Public";
+        btn.classList.toggle("on", isPublic);
+      }
+
+      document.addEventListener("click", async (e) => {
+        const target = e.target as HTMLElement | null;
+        const btn = target?.closest<HTMLButtonElement>('[data-action="toggle-public"][data-path]');
+        if (!btn) return;
+        const path = btn.dataset.path!;
+        const wasPublic = btn.getAttribute("aria-pressed") === "true";
+        const desired = !wasPublic;
+        btn.disabled = true;
+        applyPublicState(btn, desired); // optimistic
+        try {
+          const res = await fetch("/api/console/items-public", {
+            method: "POST",
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify({ path, public: desired }),
+          });
+          if (!res.ok) {
+            applyPublicState(btn, wasPublic); // rollback
+            btn.title = `Save failed (HTTP ${res.status})`;
+            return;
+          }
+          const data = await res.json();
+          applyPublicState(btn, Boolean(data.public));
+          btn.title = data.public ? "Public on /sounds" : "Mark this item public on /sounds";
+          window.dispatchEvent(new CustomEvent("portal:public-changed", {
+            detail: { path, public: Boolean(data.public) },
+          }));
+        } catch {
+          applyPublicState(btn, wasPublic);
+          btn.title = "Save failed (network)";
+        } finally {
+          btn.disabled = false;
+        }
+      });
     </script>
 
     {/* T cycles themes — reuse the public site's keyboard wiring. Inline so

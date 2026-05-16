@@ -2,11 +2,31 @@
 import PortalLayout from "../../layouts/PortalLayout.astro";
 
 const BUILD_3_ACTIONS = [
-  { id: "new-project", label: "Drop into new project" },
-  { id: "add-existing", label: "Add to existing project" },
-  { id: "stem-split", label: "Separate stems" },
-  { id: "open-brief", label: "Open with brief" },
-  { id: "send-preview", label: "Send private preview" },
+  {
+    id: "new-project",
+    label: "Drop into new project",
+    detail: "Opens Ableton's recording template, splits stems at loop points, drops them in.",
+  },
+  {
+    id: "add-existing",
+    label: "Add to existing project",
+    detail: "Tempo-conforms the file and fires it into the next empty clip slot of the selected track.",
+  },
+  {
+    id: "stem-split",
+    label: "Separate stems",
+    detail: "Splits this file into stems and saves them next to the original.",
+  },
+  {
+    id: "open-brief",
+    label: "Open with brief",
+    detail: "Opens the project with a one-page resume summary of where you left off.",
+  },
+  {
+    id: "send-preview",
+    label: "Send private preview",
+    detail: "Uploads as a private SoundCloud link with optional expiry and open-tracking.",
+  },
 ];
 ---
 
@@ -27,7 +47,7 @@ const BUILD_3_ACTIONS = [
     </header>
 
     <p class="hint">
-      Queue state lives in your browser (localStorage). Action buttons below are stubbed for Build 2; the wiring lands in Build 3 with the Max for Live device.
+      Queue state lives in your browser (localStorage). <strong>Public</strong> ships items to <a href="/sounds">/sounds</a> right now. The other actions run inside Ableton via the Max for Live device, whose webview is scaffolded; the <code>.amxd</code> patcher is the remaining step before they go live.
     </p>
 
     <div id="empty" class="empty" hidden>
@@ -51,10 +71,13 @@ const BUILD_3_ACTIONS = [
 
         <footer class="actions">
           {BUILD_3_ACTIONS.map((a) => (
-            <button type="button" class="action" data-action-id={a.id} disabled title="Coming in Build 3">
+            <button type="button" class="action" data-action-id={a.id} disabled title={`${a.detail} — pending Build 3 .amxd.`}>
               {a.label}
             </button>
           ))}
+          <button type="button" class="action public-toggle" data-action="toggle-public" aria-pressed="false" title="Mark this item public on /sounds">
+            ○ Public
+          </button>
           <a class="action listen" data-listen-href="">Listen →</a>
         </footer>
       </li>
@@ -170,12 +193,29 @@ const BUILD_3_ACTIONS = [
         if (tagsUl.children.length === 0) tagsUl.hidden = true;
         const listenA = node.querySelector(".listen") as HTMLAnchorElement;
         listenA.href = `/portal/listen?from=single&path=${encodeURIComponent(entry.path)}`;
+        const pubBtn = node.querySelector(".public-toggle") as HTMLButtonElement;
+        pubBtn.dataset.path = entry.path;
+        applyPublicState(pubBtn, meta?.public === 1);
         return node;
       }),
     );
 
     list.replaceChildren(...nodes);
   }
+
+  function applyPublicState(btn: HTMLButtonElement, isPublic: boolean) {
+    btn.setAttribute("aria-pressed", isPublic ? "true" : "false");
+    btn.textContent = isPublic ? "● Public" : "○ Public";
+    btn.classList.toggle("on", isPublic);
+  }
+
+  // Click handling for toggle-public lives in PortalLayout (global). When it
+  // fires, we drop the affected path from metaCache so the next render reads
+  // fresh state instead of the pre-toggle value.
+  window.addEventListener("portal:public-changed", (e) => {
+    const path = (e as CustomEvent<{ path: string }>).detail?.path;
+    if (path) metaCache.delete(path);
+  });
 
   render();
   window.addEventListener("portal:queue-changed", render);
@@ -289,5 +329,18 @@ const BUILD_3_ACTIONS = [
   .action.listen:hover, .action.listen:focus-visible { border-color: var(--accent); color: var(--accent); }
   .action:disabled {
     opacity: 0.55;
+  }
+  .action.public-toggle {
+    cursor: pointer;
+    color: var(--text);
+  }
+  .action.public-toggle:hover,
+  .action.public-toggle:focus-visible {
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+  .action.public-toggle.on {
+    border-color: var(--accent);
+    color: var(--accent);
   }
 </style>

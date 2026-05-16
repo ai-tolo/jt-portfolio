@@ -43,6 +43,12 @@ npm run preview        # serve /dist locally
 
 `NOTION_TOKEN` — internal integration token from Notion. Required.
 
+`CONSOLE_API_KEY` and `CONSOLE_API_BASE` — auth for the M1 brain that
+powers the Portal. Without them the Portal pages render but engine calls
+401 or 502. If you rotate either, **restart `npm run dev`**: Astro reads
+`.env` at process start and a long-running dev server keeps sending the
+stale value silently.
+
 Source-database IDs are constants in `src/lib/notion.ts` and
 `src/lib/resumes.ts`; swap them when forking against your own Notion
 workspace.

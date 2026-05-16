@@ -51,9 +51,15 @@ const durationLabel = formatDuration(item.duration_seconds);
   {(item.bpm || item.key || durationLabel || item.content_type) && (
     <p class="audio-meta">
       {durationLabel && <span>{durationLabel}</span>}
-      {item.bpm && <span>{item.bpm} BPM</span>}
+      {item.bpm && <span>{Math.round(item.bpm)} BPM</span>}
       {item.key && <span>{item.key}</span>}
       {item.content_type && <span>{item.content_type}</span>}
+    </p>
+  )}
+
+  {typeof item.project_count === "number" && item.project_count > 0 && (
+    <p class="project-count" title="Number of .als projects that reference this filename">
+      in {item.project_count} {item.project_count === 1 ? "project" : "projects"}
     </p>
   )}
 
@@ -78,6 +84,16 @@ const durationLabel = formatDuration(item.duration_seconds);
         + Queue
       </button>
     )}
+    <button
+      type="button"
+      class:list={["action public-toggle", { on: item.public === 1 }]}
+      data-action="toggle-public"
+      data-path={item.path}
+      aria-pressed={item.public === 1 ? "true" : "false"}
+      title="Mark this item public on /sounds"
+    >
+      {item.public === 1 ? "● Public" : "○ Public"}
+    </button>
     <a class="action listen" href={`/portal/listen?from=single&path=${encodeURIComponent(item.path)}`}>
       Listen →
     </a>
@@ -153,6 +169,15 @@ const durationLabel = formatDuration(item.duration_seconds);
     line-height: 1.4;
   }
 
+  .project-count {
+    margin: 0;
+    font-size: var(--fs-eyebrow);
+    font-weight: var(--fw-semibold);
+    letter-spacing: var(--ls-eyebrow);
+    text-transform: uppercase;
+    color: var(--accent);
+  }
+
   .tags {
     list-style: none;
     padding: 0;
@@ -212,5 +237,10 @@ const durationLabel = formatDuration(item.duration_seconds);
     background: var(--accent);
     color: var(--bg);
     border-color: var(--accent);
+  }
+  .action.public-toggle.on,
+  .action.public-toggle[aria-pressed="true"] {
+    border-color: var(--accent);
+    color: var(--accent);
   }
 </style>

@@ -1,0 +1,181 @@
+---
+import Layout from "../layouts/Layout.astro";
+import { publicItems } from "../lib/console-api";
+import type { PublicItem } from "../lib/console-types";
+
+const res = await publicItems({ limit: 50 });
+
+let items: PublicItem[] = [];
+let loadError: string | null = null;
+
+if (res.ok) {
+  items = res.data.items;
+} else {
+  loadError = res.error.kind === "http" ? `engine returned ${res.error.status}` : res.error.kind;
+}
+
+function trackTitle(item: PublicItem): string {
+  const stem = item.filename.replace(/\.[^.]+$/, "");
+  return stem;
+}
+
+function fmtDuration(seconds: number | null | undefined): string {
+  if (!seconds || !Number.isFinite(seconds)) return "";
+  const m = Math.floor(seconds / 60);
+  const s = Math.floor(seconds % 60);
+  return `${m}:${String(s).padStart(2, "0")}`;
+}
+---
+
+<Layout
+  title="Sounds — Jon Tollefson"
+  description="A small public window into Jon's soundbending output. Tracks tagged for public listening."
+>
+  <main class="sounds">
+    <header class="head">
+      <div class="inner">
+        <p class="eyebrow">Sounds</p>
+        <h1 class="title">Tracks tagged for public listening.</h1>
+        <p class="lede">
+          A small window into the soundbending side of the practice. Selected
+          finished work, pulled from the same catalog the rest of the system
+          reads from.
+        </p>
+      </div>
+    </header>
+
+    <section class="list-wrap">
+      <div class="inner">
+        {loadError && (
+          <p class="empty">Couldn't reach the catalog right now ({loadError}). Try again in a minute.</p>
+        )}
+
+        {!loadError && items.length === 0 && (
+          <p class="empty">Nothing here yet. Coming soon.</p>
+        )}
+
+        {items.length > 0 && (
+          <ol class="tracks" role="list">
+            {items.map((item) => (
+              <li class="track">
+                <div class="track-meta">
+                  <p class="num">{String(items.indexOf(item) + 1).padStart(2, "0")}</p>
+                  <h2 class="name">{trackTitle(item)}</h2>
+                  {item.summary && <p class="summary">{item.summary}</p>}
+                  <p class="row">
+                    {fmtDuration(item.duration_seconds) && (
+                      <span class="dur">{fmtDuration(item.duration_seconds)}</span>
+                    )}
+                    {item.mood && <span class="mood">{item.mood}</span>}
+                    {item.tags && <span class="tags">{item.tags}</span>}
+                  </p>
+                </div>
+                <audio
+                  controls
+                  preload="none"
+                  src={`/api/public/asset?path=${encodeURIComponent(item.path)}`}
+                ></audio>
+              </li>
+            ))}
+          </ol>
+        )}
+      </div>
+    </section>
+  </main>
+</Layout>
+
+<style>
+  .sounds {
+    min-height: 100vh;
+    padding-bottom: var(--space-12, 4rem);
+  }
+  .inner {
+    max-width: var(--content-max, 64rem);
+    margin: 0 auto;
+    padding: 0 var(--content-pad, 1.5rem);
+  }
+  .head {
+    padding: var(--space-10, 3.5rem) 0 var(--space-8, 2.5rem);
+  }
+  .eyebrow {
+    font-size: var(--fs-eyebrow);
+    font-weight: var(--fw-semibold);
+    letter-spacing: var(--ls-eyebrow);
+    text-transform: uppercase;
+    color: var(--muted);
+    margin: 0 0 var(--space-3, 0.75rem);
+  }
+  .title {
+    font-size: var(--fs-display, 2.25rem);
+    font-weight: var(--fw-bold, 700);
+    letter-spacing: var(--ls-title, -0.01em);
+    line-height: 1.1;
+    margin: 0 0 var(--space-4, 1rem);
+    color: var(--text);
+  }
+  .lede {
+    max-width: 50ch;
+    color: var(--muted);
+    line-height: 1.55;
+    margin: 0;
+  }
+
+  .empty {
+    color: var(--muted);
+    padding: var(--space-8, 2.5rem) 0;
+    text-align: center;
+    border-top: 1px solid var(--line);
+  }
+
+  .tracks {
+    display: grid;
+    gap: var(--space-6, 2rem);
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    border-top: 1px solid var(--line);
+  }
+  .track {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: var(--space-3, 0.75rem);
+    padding: var(--space-6, 2rem) 0;
+    border-bottom: 1px solid var(--line);
+  }
+  .track-meta { display: grid; gap: var(--space-2, 0.5rem); }
+  .num {
+    font-size: var(--fs-eyebrow);
+    font-weight: var(--fw-semibold);
+    letter-spacing: var(--ls-eyebrow);
+    color: var(--muted);
+    margin: 0;
+  }
+  .name {
+    font-size: var(--fs-title, 1.4rem);
+    font-weight: var(--fw-semibold, 600);
+    color: var(--text);
+    margin: 0;
+  }
+  .summary {
+    color: var(--text);
+    line-height: 1.5;
+    margin: 0;
+    max-width: 60ch;
+  }
+  .row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-4, 1rem);
+    font-size: var(--fs-small, 0.9rem);
+    color: var(--muted);
+    margin: 0;
+  }
+  .row span { white-space: nowrap; }
+  .dur::before { content: "·  "; opacity: 0.5; }
+  .dur:first-child::before { content: ""; }
+
+  audio {
+    width: min(100%, 32rem);
+    margin-top: var(--space-2, 0.5rem);
+  }
+</style>

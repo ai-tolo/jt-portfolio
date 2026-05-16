@@ -15,6 +15,8 @@ import type {
   RotationThisWeekResponse,
   RotationHistoryResponse,
   DiaryCandidatesResponse,
+  PublicItemsResponse,
+  SetPublicResponse,
 } from "./console-types";
 
 // process.env is checked first so Vercel's runtime env vars always win in
@@ -159,4 +161,68 @@ export async function streamAsset(
   const headers: Record<string, string> = { ...authHeaders() };
   if (init.range) headers.Range = init.range;
   return fetch(`${BASE}/file?${params}`, { headers, signal: init.signal });
+}
+
+export function publicItems(opts?: FetchOpts & { limit?: number }) {
+  const params = new URLSearchParams();
+  if (opts?.limit) params.set("limit", String(opts.limit));
+  const qs = params.toString();
+  return call<PublicItemsResponse>(qs ? `/public?${qs}` : "/public", opts);
+}
+
+export async function setItemPublic(
+  path: string,
+  isPublic: boolean,
+  opts: FetchOpts = {},
+): Promise<ApiResult<SetPublicResponse>> {
+  const url = `${BASE}/items/public`;
+  const controller = new AbortController();
+  const timeout = setTimeout(
+    () => controller.abort(),
+    opts.timeoutMs ?? DEFAULT_TIMEOUT_MS,
+  );
+  opts.signal?.addEventListener("abort", () => controller.abort(), { once: true });
+
+  let res: Response;
+  try {
+    res = await fetch(url, {
+      method: "POST",
+      signal: controller.signal,
+      headers: {
+        accept: "application/json",
+        "content-type": "application/json",
+        ...authHeaders(),
+      },
+      body: JSON.stringify({ path, public: isPublic }),
+    });
+  } catch (e) {
+    return {
+      ok: false,
+      error: {
+        kind: "unreachable",
+        message: e instanceof Error ? e.message : "fetch failed",
+      },
+    };
+  } finally {
+    clearTimeout(timeout);
+  }
+
+  if (!res.ok) {
+    return {
+      ok: false,
+      error: { kind: "http", status: res.status, message: res.statusText },
+    };
+  }
+
+  try {
+    return { ok: true, data: (await res.json()) as SetPublicResponse };
+  } catch (e) {
+    return {
+      ok: false,
+      error: {
+        kind: "parse",
+        message: e instanceof Error ? e.message : "invalid JSON",
+      },
+    };
+  }
 }

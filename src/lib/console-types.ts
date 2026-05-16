@@ -23,6 +23,12 @@ export interface StatsResponse {
     audio: number;
     visual: number;
   };
+  public: number;
+  content_dedup: {
+    hashed: number;
+    total: number;
+    duplicate_rows: number;
+  };
   als_projects: number;
 }
 
@@ -46,6 +52,11 @@ export interface Asset {
   source_type?: string | null;
   /** Set in the engine when an item has been transcribed. */
   transcribed?: 0 | 1 | null;
+  /** Curator-set flag; items with `public=1` show on the public /sounds route. */
+  public?: 0 | 1 | null;
+  /** How many .als projects reference this asset's filename. Computed by
+   * the engine per request from `als_projects.sample_refs`. */
+  project_count?: number | null;
 }
 
 export interface SearchResponse {
@@ -147,4 +158,24 @@ export interface DiaryCandidatesResponse {
 
 export interface DiaryActionResponse {
   ok: boolean;
+}
+
+// ── Public-state items surface ─────────────────────────────────────────────
+// Items the curator has flagged public expose on a public route on uxjon.com.
+// Same infrastructure as the portal; gating happens at the proxy layer.
+
+export interface PublicItem extends Asset {
+  palette?: Array<{ r: number; g: number; b: number }> | null;
+  contrast?: number | null;
+  warmth?: number | null;
+}
+
+export interface PublicItemsResponse {
+  items: PublicItem[];
+  count: number;
+}
+
+export interface SetPublicResponse {
+  path: string;
+  public: boolean;
 }
