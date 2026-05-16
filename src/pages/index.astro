@@ -4,6 +4,8 @@ import WorkCard from "../components/WorkCard.astro";
 import Footer from "../components/Footer.astro";
 import { getCaseStudies } from "../lib/notion";
 
+export const prerender = true;
+
 const works = await getCaseStudies();
 ---
 
@@ -75,7 +77,75 @@ const works = await getCaseStudies();
   </main>
 
   <Footer />
+
+  {/* Hidden Portal entry. Type "console" anywhere on the home page to reveal
+      a corner badge linking to /portal/login. The badge stays visible for
+      10 s then fades; typing it again brings it back. The buffer ignores
+      keystrokes inside inputs/textareas and modifier-key combos. */}
+  <a id="portal-hint" class="portal-hint" href="/portal/login" hidden>
+    → Portal
+  </a>
+  <script>
+    (() => {
+      const TRIGGER = "console";
+      const BUFFER_LEN = TRIGGER.length;
+      let buffer = "";
+      let hideTimer: number | null = null;
+
+      const hint = document.getElementById("portal-hint") as HTMLAnchorElement | null;
+      if (!hint) return;
+
+      const show = () => {
+        hint.hidden = false;
+        // Ensure transition runs each time.
+        hint.style.opacity = "0";
+        requestAnimationFrame(() => { hint.style.opacity = "1"; });
+        if (hideTimer) window.clearTimeout(hideTimer);
+        hideTimer = window.setTimeout(() => {
+          hint.style.opacity = "0";
+          window.setTimeout(() => { hint.hidden = true; }, 600);
+        }, 10000);
+      };
+
+      document.addEventListener("keydown", (e) => {
+        if (e.metaKey || e.ctrlKey || e.altKey) return;
+        const target = e.target as HTMLElement | null;
+        const tag = target?.tagName?.toLowerCase();
+        if (tag === "input" || tag === "textarea" || target?.isContentEditable) return;
+        if (e.key.length !== 1) return;
+        const ch = e.key.toLowerCase();
+        if (!/^[a-z]$/.test(ch)) return;
+        buffer = (buffer + ch).slice(-BUFFER_LEN);
+        if (buffer === TRIGGER) show();
+      });
+    })();
+  </script>
 </Layout>
+
+<style>
+  .portal-hint {
+    position: fixed;
+    bottom: var(--space-6);
+    left: var(--space-6);
+    z-index: 100;
+    font-size: var(--fs-eyebrow);
+    font-weight: var(--fw-semibold);
+    letter-spacing: var(--ls-eyebrow);
+    text-transform: uppercase;
+    color: var(--accent);
+    background: var(--bg);
+    border: 1px solid var(--accent);
+    padding: 8px 14px;
+    text-decoration: none;
+    transition: opacity 500ms ease, transform 200ms ease;
+  }
+  .portal-hint:hover,
+  .portal-hint:focus-visible {
+    background: var(--accent);
+    color: var(--bg);
+    transform: translateY(-1px);
+  }
+</style>
 
 <style>
   main {

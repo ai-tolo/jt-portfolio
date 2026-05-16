@@ -1,0 +1,221 @@
+---
+import "@fontsource-variable/geist";
+import "../styles/tokens.css";
+import TabStrip from "../components/portal/TabStrip.astro";
+
+interface Props {
+  title: string;
+  /** Which tab to highlight. Listening room passes "surprise" since it's a
+   * downstream surface from the Surprise/Workbench tabs. */
+  current: "surprise" | "library" | "projects" | "workbench";
+  /** Hide the tab strip entirely (e.g. Listening room takes over the viewport). */
+  bare?: boolean;
+}
+
+const { title, current, bare = false } = Astro.props;
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <meta name="robots" content="noindex,nofollow" />
+    <title>{title} · Portal</title>
+    {/* Theme bootstrap — same logic as the public Layout. Inherits whatever
+        theme Jon last set on the public site. */}
+    <script is:inline>
+      (() => {
+        const valid = new Set(["dark", "powder", "field", "honey"]);
+        const apply = () => {
+          try {
+            const stored = localStorage.getItem("theme");
+            document.documentElement.dataset.theme =
+              stored && valid.has(stored) ? stored : "dark";
+          } catch {
+            document.documentElement.dataset.theme = "dark";
+          }
+        };
+        apply();
+        window.addEventListener("pageshow", apply);
+      })();
+    </script>
+  </head>
+  <body>
+    {!bare && (
+      <header class="portal-header">
+        <div class="inner">
+          <a class="brand" href="/portal" aria-label="The Console — Portal home">
+            <span class="dot" aria-hidden="true"></span>
+            <span>The Console</span>
+          </a>
+
+          <TabStrip current={current} />
+
+          <form method="POST" action="/api/console/logout" class="logout">
+            <button type="submit" aria-label="Log out">Log out</button>
+          </form>
+        </div>
+      </header>
+    )}
+
+    <main class="portal-main">
+      <slot />
+    </main>
+
+    {/* Queue storage: data-action="queue" buttons add the data-path attribute
+        to localStorage. Reflects already-queued items by toggling [data-queued].
+        Listened to globally so any Card on any tab works without per-page wiring. */}
+    <script>
+      const QUEUE_KEY = "portal:queue";
+
+      type QueueEntry = { path: string; addedAt: number };
+      const readQueue = (): QueueEntry[] => {
+        try {
+          const raw = localStorage.getItem(QUEUE_KEY);
+          if (!raw) return [];
+          const parsed = JSON.parse(raw);
+          return Array.isArray(parsed) ? parsed : [];
+        } catch {
+          return [];
+        }
+      };
+      const writeQueue = (q: QueueEntry[]) => {
+        try { localStorage.setItem(QUEUE_KEY, JSON.stringify(q)); } catch {}
+        window.dispatchEvent(new CustomEvent("portal:queue-changed", { detail: q }));
+      };
+
+      const reflectQueueState = () => {
+        const queued = new Set(readQueue().map((e) => e.path));
+        document
+          .querySelectorAll<HTMLElement>('[data-action="queue"][data-path]')
+          .forEach((b) => {
+            const path = b.dataset.path!;
+            const isIn = queued.has(path);
+            b.dataset.queued = isIn ? "true" : "false";
+            b.textContent = isIn ? "✓ Queued" : "+ Queue";
+          });
+      };
+
+      document.addEventListener("click", (e) => {
+        const target = e.target as HTMLElement | null;
+        const btn = target?.closest<HTMLElement>('[data-action="queue"][data-path]');
+        if (!btn) return;
+        const path = btn.dataset.path!;
+        const q = readQueue();
+        const idx = q.findIndex((e) => e.path === path);
+        if (idx === -1) q.push({ path, addedAt: Date.now() });
+        else q.splice(idx, 1);
+        writeQueue(q);
+        reflectQueueState();
+      });
+
+      // Also let other surfaces (Workbench) trigger removal via custom event.
+      document.addEventListener("click", (e) => {
+        const target = e.target as HTMLElement | null;
+        const btn = target?.closest<HTMLElement>('[data-action="unqueue"][data-path]');
+        if (!btn) return;
+        const path = btn.dataset.path!;
+        writeQueue(readQueue().filter((e) => e.path !== path));
+        reflectQueueState();
+        // Workbench removes its own card on click. Dispatch so it can react.
+        window.dispatchEvent(new CustomEvent("portal:queue-removed", { detail: { path } }));
+      });
+
+      reflectQueueState();
+      window.addEventListener("pageshow", reflectQueueState);
+    </script>
+
+    {/* T cycles themes — reuse the public site's keyboard wiring. Inline so
+        it doesn't depend on importing the ThemeSelector component (which has
+        its own UI we don't want on Portal). */}
+    <script>
+      const root = document.documentElement;
+      const order = ["dark", "powder", "field", "honey"];
+      const valid = new Set(order);
+      document.addEventListener("keydown", (e) => {
+        if (e.key.toLowerCase() !== "t") return;
+        if (e.metaKey || e.ctrlKey || e.altKey) return;
+        const target = e.target as HTMLElement | null;
+        const tag = target?.tagName?.toLowerCase();
+        if (tag === "input" || tag === "textarea" || target?.isContentEditable) return;
+        const current = root.dataset.theme || "dark";
+        const idx = order.indexOf(current);
+        const next = order[(idx + 1) % order.length];
+        if (valid.has(next)) {
+          root.dataset.theme = next;
+          try { localStorage.setItem("theme", next); } catch {}
+        }
+      });
+    </script>
+
+    <style>
+      .portal-header {
+        position: sticky;
+        top: 0;
+        z-index: 50;
+        background: color-mix(in srgb, var(--bg) 88%, transparent);
+        backdrop-filter: saturate(140%) blur(10px);
+        -webkit-backdrop-filter: saturate(140%) blur(10px);
+        border-bottom: 1px solid var(--line);
+      }
+      .inner {
+        max-width: var(--content-max);
+        margin: 0 auto;
+        padding: var(--space-3) var(--content-pad);
+        display: flex;
+        align-items: center;
+        gap: var(--space-6);
+        flex-wrap: wrap;
+      }
+
+      .brand {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        font-size: var(--fs-eyebrow);
+        font-weight: var(--fw-semibold);
+        letter-spacing: var(--ls-eyebrow);
+        text-transform: uppercase;
+        color: var(--text);
+        opacity: 0.88;
+        transition: opacity 200ms ease;
+      }
+      .brand:hover { opacity: 1; }
+      .dot {
+        width: 8px;
+        height: 8px;
+        background: var(--accent);
+        display: inline-block;
+        border-radius: 999px;
+      }
+
+      .logout {
+        margin-left: auto;
+      }
+      .logout button {
+        font: inherit;
+        font-size: var(--fs-eyebrow);
+        font-weight: var(--fw-semibold);
+        letter-spacing: var(--ls-eyebrow);
+        text-transform: uppercase;
+        color: var(--muted);
+        background: transparent;
+        border: 0;
+        padding: 8px 0;
+        cursor: pointer;
+        transition: color 160ms ease;
+      }
+      .logout button:hover,
+      .logout button:focus-visible {
+        color: var(--accent);
+      }
+
+      .portal-main {
+        max-width: var(--content-max);
+        margin: 0 auto;
+        padding: var(--space-8) var(--content-pad) var(--space-16);
+      }
+    </style>
+  </body>
+</html>

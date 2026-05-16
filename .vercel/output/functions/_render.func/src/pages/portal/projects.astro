@@ -1,0 +1,140 @@
+---
+import PortalLayout from "../../layouts/PortalLayout.astro";
+import EmptyState from "../../components/portal/EmptyState.astro";
+import { projects, stats } from "../../lib/console-api";
+import type { AlsProject } from "../../lib/console-types";
+
+const [projResult, statsResult] = await Promise.all([projects(), stats()]);
+const projList: AlsProject[] = projResult.ok ? projResult.data.projects : [];
+const statsData = statsResult.ok ? statsResult.data : null;
+const projError = !projResult.ok ? projResult.error : null;
+
+const formatDate = (s: string) => {
+  try {
+    return new Date(s).toLocaleDateString(undefined, {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+    });
+  } catch {
+    return s;
+  }
+};
+---
+
+<PortalLayout title="Projects" current="projects">
+  <section class="surface">
+    <header class="surface-head">
+      <div>
+        <p class="eyebrow">Projects</p>
+        <h1 class="title">Ableton projects</h1>
+      </div>
+    </header>
+
+    {projError && (
+      <p class="error" role="alert">
+        Couldn't reach the M1 brain ({projError.kind}).
+      </p>
+    )}
+
+    {projList.length === 0 ? (
+      <EmptyState
+        title="No .als projects indexed yet"
+        body={
+          "The Engine catalogs Ableton projects in Build 5 (backfill) or whenever Jon hits Save in a session. Tempo, scene count, track count, and sample lists land here once that runs."
+        }
+        stats={statsData}
+      />
+    ) : (
+      <ul class="project-list">
+        {projList.map((p) => (
+          <li class="project">
+            <header class="meta">
+              <span class="eyebrow-row">als project</span>
+              <span class="date">{formatDate(p.modified)}</span>
+            </header>
+            <h3 class="name">{p.name}</h3>
+
+            <dl class="metrics">
+              {p.tempo != null && (
+                <div><dt>Tempo</dt><dd>{p.tempo}</dd></div>
+              )}
+              {p.scenes != null && (
+                <div><dt>Scenes</dt><dd>{p.scenes}</dd></div>
+              )}
+              {p.tracks != null && (
+                <div><dt>Tracks</dt><dd>{p.tracks}</dd></div>
+              )}
+              {p.samples != null && (
+                <div><dt>Samples</dt><dd>{p.samples.length}</dd></div>
+              )}
+            </dl>
+
+            <footer class="actions">
+              <button type="button" class="action" data-action="queue" data-path={p.path}>+ Queue</button>
+            </footer>
+          </li>
+        ))}
+      </ul>
+    )}
+  </section>
+</PortalLayout>
+
+<style>
+  .surface { display: grid; gap: var(--space-6); }
+  .surface-head { display: flex; justify-content: space-between; align-items: flex-end; gap: var(--space-6); flex-wrap: wrap; }
+  .eyebrow { font-size: var(--fs-eyebrow); font-weight: var(--fw-semibold); letter-spacing: var(--ls-eyebrow); text-transform: uppercase; color: var(--muted); }
+  .title { font-size: var(--fs-title); font-weight: var(--fw-bold); letter-spacing: var(--ls-title); line-height: var(--lh-title); margin-top: var(--space-1); }
+
+  .error {
+    padding: var(--space-3) var(--space-4);
+    border-left: 2px solid var(--accent);
+    background: color-mix(in srgb, var(--accent) 8%, transparent);
+    font-size: var(--fs-small);
+  }
+
+  .project-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: grid;
+    gap: var(--space-4);
+  }
+  .project {
+    display: grid;
+    gap: var(--space-3);
+    padding: var(--space-5);
+    background: color-mix(in srgb, var(--ink) 6%, transparent);
+    border: 1px solid var(--line);
+  }
+  .meta { display: flex; justify-content: space-between; gap: var(--space-4); }
+  .eyebrow-row { font-size: var(--fs-eyebrow); font-weight: var(--fw-semibold); letter-spacing: var(--ls-eyebrow); text-transform: uppercase; color: var(--muted); }
+  .date { font-size: var(--fs-eyebrow); color: var(--muted); }
+  .name { font-size: 1.125rem; font-weight: var(--fw-semibold); word-break: break-word; }
+
+  .metrics {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(80px, 1fr));
+    gap: var(--space-3) var(--space-5);
+    margin: 0;
+  }
+  .metrics div { display: grid; gap: 2px; }
+  .metrics dt { font-size: var(--fs-eyebrow); font-weight: var(--fw-semibold); letter-spacing: var(--ls-eyebrow); text-transform: uppercase; color: var(--muted); }
+  .metrics dd { font-size: 1.125rem; font-weight: var(--fw-semibold); margin: 0; color: var(--accent); }
+
+  .actions { display: flex; gap: var(--space-3); }
+  .action {
+    font-size: var(--fs-eyebrow);
+    font-weight: var(--fw-semibold);
+    letter-spacing: var(--ls-eyebrow);
+    text-transform: uppercase;
+    padding: 6px 10px;
+    border: 1px solid var(--line);
+    background: transparent;
+    color: var(--text);
+    cursor: pointer;
+    transition: border-color 160ms ease, color 160ms ease;
+  }
+  .action:hover, .action:focus-visible { border-color: var(--accent); color: var(--accent); }
+  .action[data-queued="true"] { background: var(--accent); color: var(--bg); border-color: var(--accent); }
+</style>

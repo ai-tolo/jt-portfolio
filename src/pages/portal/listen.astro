@@ -1,0 +1,398 @@
+---
+import PortalLayout from "../../layouts/PortalLayout.astro";
+import { surprise } from "../../lib/console-api";
+import type { Asset } from "../../lib/console-types";
+
+const url = Astro.url;
+const fromParam = url.searchParams.get("from") ?? "surprise";
+const singlePath = url.searchParams.get("path");
+
+// `from=surprise` pre-loads the current /surprise queue server-side so the
+// listening room has something to play even before localStorage is touched.
+// `from=workbench` defers queue load to the client (reads localStorage).
+// `from=single` plays just the one item passed in `path`.
+let initialQueue: { path: string }[] = [];
+let initialError: string | null = null;
+
+if (fromParam === "surprise") {
+  const res = await surprise();
+  if (res.ok) {
+    initialQueue = res.data.items.map((i: Asset) => ({ path: i.path }));
+  } else {
+    initialError = res.error.kind === "http" ? `HTTP ${res.error.status}` : res.error.kind;
+  }
+} else if (fromParam === "single" && singlePath) {
+  initialQueue = [{ path: singlePath }];
+}
+// from=workbench: client-side hydration; nothing here.
+
+const initialQueueJson = JSON.stringify(initialQueue);
+---
+
+<PortalLayout title="Listening room" current="surprise" bare={true}>
+  <section class="room" id="room" data-source={fromParam}>
+    <header class="room-head">
+      <a class="back" href="/portal">← Back</a>
+      <p class="eyebrow">Listening room</p>
+      <p class="position" id="position" aria-live="polite">—</p>
+    </header>
+
+    <div class="viewer" id="viewer">
+      <p class="state" id="state-msg">Loading…</p>
+    </div>
+
+    <footer class="controls">
+      <button type="button" id="prev" class="ctrl" aria-label="Previous (Left arrow)">←</button>
+      <button type="button" id="play" class="ctrl primary" aria-label="Play / Pause (Space)">▶</button>
+      <button type="button" id="next" class="ctrl" aria-label="Next (Right arrow)">→</button>
+
+      <p class="meta" id="now-playing" aria-live="polite"></p>
+      <p class="hint" aria-hidden="true">space · ← → · esc</p>
+    </footer>
+
+    {initialError && (
+      <p class="error" role="alert">Couldn't load /surprise queue: {initialError}</p>
+    )}
+  </section>
+</PortalLayout>
+
+<script define:vars={{ initialQueueJson }}>
+  const room = document.getElementById("room");
+  const source = room?.dataset.source ?? "surprise";
+
+  /** @type {{path: string}[]} */
+  let queue = [];
+  try {
+    queue = JSON.parse(initialQueueJson);
+  } catch {
+    queue = [];
+  }
+
+  if (source === "workbench") {
+    try {
+      const raw = localStorage.getItem("portal:queue");
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed)) {
+          parsed.sort((a, b) => (b.addedAt || 0) - (a.addedAt || 0));
+          queue = parsed.map((e) => ({ path: e.path }));
+        }
+      }
+    } catch {}
+  }
+
+  const AUDIO_EXT = new Set(["m4a", "mp3", "wav", "aif", "aiff", "flac", "ogg"]);
+  const IMAGE_EXT = new Set(["jpg", "jpeg", "png", "webp", "heic", "gif"]);
+  const ALS_EXT = new Set(["als"]);
+
+  /** @param {string} path */
+  function kindOf(path) {
+    const ext = path.toLowerCase().split(".").pop() ?? "";
+    if (AUDIO_EXT.has(ext)) return "audio";
+    if (IMAGE_EXT.has(ext)) return "image";
+    if (ALS_EXT.has(ext)) return "als";
+    return "unknown";
+  }
+
+  /** @param {string} path */
+  function filename(path) {
+    const parts = path.split("/");
+    return parts[parts.length - 1] || path;
+  }
+
+  /** Asset metadata cache. Pre-fetched on item change for snappy ←/→ nav. */
+  const metaCache = new Map();
+
+  /** @param {string} path */
+  async function fetchMeta(path) {
+    if (metaCache.has(path)) return metaCache.get(path);
+    try {
+      const url = `/api/console/asset-meta?path=${encodeURIComponent(path)}`;
+      const r = await fetch(url, { headers: { accept: "application/json" } });
+      if (!r.ok) return null;
+      const data = await r.json();
+      metaCache.set(path, data);
+      return data;
+    } catch {
+      return null;
+    }
+  }
+
+  let index = 0;
+  const viewer = document.getElementById("viewer");
+  const state = document.getElementById("state-msg");
+  const position = document.getElementById("position");
+  const nowPlaying = document.getElementById("now-playing");
+  const prevBtn = document.getElementById("prev");
+  const nextBtn = document.getElementById("next");
+  const playBtn = document.getElementById("play");
+
+  /** @type {HTMLAudioElement | null} */
+  let currentAudio = null;
+
+  function updatePosition() {
+    if (queue.length === 0) {
+      position.textContent = "—";
+    } else {
+      position.textContent = `${index + 1} / ${queue.length}`;
+    }
+  }
+
+  function setEmpty() {
+    viewer.replaceChildren();
+    const p = document.createElement("p");
+    p.className = "state";
+    p.textContent =
+      source === "workbench"
+        ? "Workbench queue is empty. Add items with the + Queue button on Surprise or Library."
+        : "Nothing to play yet. The Surprise picker activates once audio + visual analysis runs.";
+    viewer.appendChild(p);
+    nowPlaying.textContent = "";
+    prevBtn.disabled = true;
+    nextBtn.disabled = true;
+    playBtn.disabled = true;
+  }
+
+  async function render() {
+    updatePosition();
+    if (queue.length === 0) {
+      setEmpty();
+      return;
+    }
+    prevBtn.disabled = index === 0;
+    nextBtn.disabled = index >= queue.length - 1;
+    playBtn.disabled = false;
+
+    const entry = queue[index];
+    const kind = kindOf(entry.path);
+    const assetSrc = `/api/console/asset?path=${encodeURIComponent(entry.path)}`;
+
+    viewer.replaceChildren();
+
+    if (kind === "audio") {
+      const audio = document.createElement("audio");
+      audio.controls = true;
+      audio.preload = "metadata";
+      audio.autoplay = true;
+      audio.src = assetSrc;
+      audio.addEventListener("error", () => {
+        const p = document.createElement("p");
+        p.className = "state error";
+        p.textContent =
+          "Couldn't play this file. Make sure the M1 /file endpoint is wired up (tasks/m1-file-endpoint.py).";
+        viewer.appendChild(p);
+      });
+      audio.addEventListener("ended", () => {
+        if (index < queue.length - 1) goto(index + 1);
+      });
+      viewer.appendChild(audio);
+      currentAudio = audio;
+    } else if (kind === "image") {
+      const img = document.createElement("img");
+      img.src = assetSrc;
+      img.alt = filename(entry.path);
+      img.className = "photo";
+      viewer.appendChild(img);
+      currentAudio = null;
+    } else if (kind === "als") {
+      const meta = await fetchMeta(entry.path);
+      const wrap = document.createElement("div");
+      wrap.className = "als-meta";
+      wrap.innerHTML = `<p class="eyebrow">.als project</p><h2 class="als-name">${filename(entry.path)}</h2><p class="state">Playback isn't supported for .als in Build 2 — metadata only.</p>`;
+      viewer.appendChild(wrap);
+      currentAudio = null;
+    } else {
+      const p = document.createElement("p");
+      p.className = "state";
+      p.textContent = `Unsupported file type: ${filename(entry.path)}`;
+      viewer.appendChild(p);
+      currentAudio = null;
+    }
+
+    const meta = await fetchMeta(entry.path);
+    const label = meta?.summary ? `${filename(entry.path)} — ${meta.summary.slice(0, 140)}` : filename(entry.path);
+    nowPlaying.textContent = label;
+
+    // Pre-warm the next item's metadata so ArrowRight is snappy.
+    if (index + 1 < queue.length) fetchMeta(queue[index + 1].path);
+  }
+
+  /** @param {number} i */
+  function goto(i) {
+    if (i < 0 || i >= queue.length) return;
+    if (currentAudio) {
+      currentAudio.pause();
+      currentAudio = null;
+    }
+    index = i;
+    render();
+  }
+
+  function togglePlay() {
+    if (!currentAudio) return;
+    if (currentAudio.paused) {
+      currentAudio.play().catch(() => {});
+      playBtn.textContent = "⏸";
+    } else {
+      currentAudio.pause();
+      playBtn.textContent = "▶";
+    }
+  }
+
+  prevBtn.addEventListener("click", () => goto(index - 1));
+  nextBtn.addEventListener("click", () => goto(index + 1));
+  playBtn.addEventListener("click", togglePlay);
+
+  document.addEventListener("keydown", (e) => {
+    const target = /** @type {HTMLElement|null} */ (e.target);
+    const tag = target?.tagName?.toLowerCase();
+    if (tag === "input" || tag === "textarea" || target?.isContentEditable) return;
+    if (e.metaKey || e.ctrlKey || e.altKey) return;
+
+    if (e.key === " ") {
+      e.preventDefault();
+      togglePlay();
+    } else if (e.key === "ArrowLeft") {
+      e.preventDefault();
+      goto(index - 1);
+    } else if (e.key === "ArrowRight") {
+      e.preventDefault();
+      goto(index + 1);
+    } else if (e.key === "Escape") {
+      window.location.href = source === "workbench" ? "/portal/workbench" : "/portal";
+    }
+  });
+
+  // Sync play button label with audio state changes from native controls.
+  document.addEventListener("play", (e) => {
+    if (e.target instanceof HTMLAudioElement) playBtn.textContent = "⏸";
+  }, true);
+  document.addEventListener("pause", (e) => {
+    if (e.target instanceof HTMLAudioElement) playBtn.textContent = "▶";
+  }, true);
+
+  render();
+</script>
+
+<style>
+  .room {
+    min-height: 100vh;
+    display: grid;
+    grid-template-rows: auto 1fr auto;
+    padding: var(--space-6) var(--content-pad);
+    gap: var(--space-6);
+    max-width: var(--content-max);
+    margin: 0 auto;
+  }
+
+  .room-head {
+    display: flex;
+    align-items: baseline;
+    gap: var(--space-6);
+    flex-wrap: wrap;
+  }
+  .back {
+    font-size: var(--fs-eyebrow);
+    font-weight: var(--fw-semibold);
+    letter-spacing: var(--ls-eyebrow);
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  .back:hover { color: var(--accent); }
+  .eyebrow {
+    font-size: var(--fs-eyebrow);
+    font-weight: var(--fw-semibold);
+    letter-spacing: var(--ls-eyebrow);
+    text-transform: uppercase;
+    color: var(--text);
+  }
+  .position {
+    margin-left: auto;
+    font-size: var(--fs-eyebrow);
+    font-weight: var(--fw-semibold);
+    letter-spacing: var(--ls-eyebrow);
+    color: var(--muted);
+  }
+
+  .viewer {
+    display: grid;
+    place-items: center;
+    min-height: 50vh;
+    border: 1px solid var(--line);
+    background: color-mix(in srgb, var(--ink) 4%, transparent);
+    padding: var(--space-8);
+  }
+  .viewer audio {
+    width: min(100%, 32rem);
+  }
+  .viewer .photo {
+    max-width: 100%;
+    max-height: 70vh;
+    object-fit: contain;
+  }
+
+  .als-meta { display: grid; gap: var(--space-3); text-align: center; }
+  .als-name { font-size: var(--fs-title); font-weight: var(--fw-bold); letter-spacing: var(--ls-title); }
+
+  .state { color: var(--muted); text-align: center; max-width: 40ch; line-height: 1.5; }
+  .state.error { color: var(--accent); }
+
+  .controls {
+    display: grid;
+    grid-template-columns: auto auto auto 1fr auto;
+    align-items: center;
+    gap: var(--space-3) var(--space-4);
+    border-top: 1px solid var(--line);
+    padding-top: var(--space-4);
+  }
+  .ctrl {
+    font: inherit;
+    font-size: 18px;
+    color: var(--text);
+    background: transparent;
+    border: 1px solid var(--line);
+    width: 44px;
+    height: 44px;
+    line-height: 1;
+    cursor: pointer;
+    transition: border-color 160ms ease, color 160ms ease;
+  }
+  .ctrl:not(:disabled):hover,
+  .ctrl:not(:disabled):focus-visible {
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+  .ctrl.primary {
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+  .ctrl.primary:not(:disabled):hover {
+    background: var(--accent);
+    color: var(--bg);
+  }
+  .ctrl:disabled { opacity: 0.4; cursor: not-allowed; }
+
+  .meta {
+    font-size: var(--fs-small);
+    color: var(--text);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    min-width: 0;
+  }
+  .hint {
+    font-size: var(--fs-eyebrow);
+    font-weight: var(--fw-semibold);
+    letter-spacing: var(--ls-eyebrow);
+    text-transform: uppercase;
+    color: var(--muted);
+    white-space: nowrap;
+  }
+
+  .error {
+    padding: var(--space-3) var(--space-4);
+    border-left: 2px solid var(--accent);
+    background: color-mix(in srgb, var(--accent) 8%, transparent);
+    font-size: var(--fs-small);
+  }
+</style>

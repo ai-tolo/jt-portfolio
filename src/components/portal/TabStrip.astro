@@ -1,0 +1,68 @@
+---
+interface Props {
+  current: "surprise" | "library" | "projects" | "workbench";
+}
+
+const { current } = Astro.props;
+
+const tabs: { id: Props["current"]; label: string; href: string }[] = [
+  { id: "surprise", label: "Surprise", href: "/portal" },
+  { id: "library", label: "Library", href: "/portal/library" },
+  { id: "projects", label: "Projects", href: "/portal/projects" },
+  { id: "workbench", label: "Workbench", href: "/portal/workbench" },
+];
+---
+
+<nav class="tabs" aria-label="Portal sections">
+  <ul role="list">
+    {tabs.map((t) => (
+      <li>
+        <a
+          href={t.href}
+          class:list={["tab", { active: t.id === current }]}
+          aria-current={t.id === current ? "page" : undefined}
+        >{t.label}</a>
+      </li>
+    ))}
+  </ul>
+</nav>
+
+<style>
+  .tabs ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+
+  /* Each tab borrows the public WorkCard "num" chunk vocabulary:
+     anchor-color background, inverted text, fit-content width, slight
+     padding asymmetry. Inactive tabs sit at low opacity until hover. */
+  .tab {
+    display: inline-block;
+    background: var(--ink);
+    color: var(--ink-fg);
+    font-size: var(--fs-eyebrow);
+    font-weight: var(--fw-semibold);
+    letter-spacing: var(--ls-eyebrow);
+    text-transform: uppercase;
+    line-height: 1;
+    padding: 9px 12px 8px;
+    opacity: 0.45;
+    transition: opacity 200ms ease, transform 200ms ease;
+  }
+
+  .tab:hover,
+  .tab:focus-visible {
+    opacity: 0.85;
+    transform: translateY(-1px);
+  }
+
+  .tab.active {
+    opacity: 1;
+    outline: 1px solid var(--accent);
+    outline-offset: 3px;
+  }
+</style>

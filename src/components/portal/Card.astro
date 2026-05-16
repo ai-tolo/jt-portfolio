@@ -1,0 +1,196 @@
+---
+import type { Asset, SurpriseItem } from "../../lib/console-types";
+
+interface Props {
+  item: Asset | SurpriseItem;
+  /** Optional list of objective-signal reasons (shown on Surprise cards). */
+  reasons?: string[];
+  /** Show the [+ Queue] button (Library, Surprise). Workbench passes false. */
+  queueable?: boolean;
+}
+
+const { item, reasons, queueable = true } = Astro.props;
+
+const tagList = (item.tags ?? "")
+  .split(",")
+  .map((t) => t.trim())
+  .filter(Boolean)
+  .slice(0, 6);
+
+const dateLabel = (() => {
+  try {
+    return new Date(item.modified).toLocaleString(undefined, {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+    });
+  } catch {
+    return item.modified;
+  }
+})();
+---
+
+<article class="card" data-path={item.path}>
+  <header class="meta">
+    <span class="eyebrow">{item.category.replace(/_/g, " ")}</span>
+    <span class="date">{dateLabel}</span>
+  </header>
+
+  <h3 class="title">{item.filename}</h3>
+
+  {item.summary && <p class="summary">{item.summary}</p>}
+
+  {(item.bpm || item.key) && (
+    <p class="audio-meta">
+      {item.bpm && <span>{item.bpm} BPM</span>}
+      {item.key && <span>{item.key}</span>}
+      {item.content_type && <span>{item.content_type}</span>}
+    </p>
+  )}
+
+  {tagList.length > 0 && (
+    <ul class="tags">
+      {tagList.map((t) => <li>{t}</li>)}
+    </ul>
+  )}
+
+  {reasons && reasons.length > 0 && (
+    <p class="reasons" aria-label="Why this surfaced">
+      <span class="reasons-label">Why:</span>
+      {reasons.join(" · ")}
+    </p>
+  )}
+
+  <footer class="actions">
+    {queueable && (
+      <button type="button" class="action queue" data-action="queue" data-path={item.path}>
+        + Queue
+      </button>
+    )}
+    <a class="action listen" href={`/portal/listen?from=single&path=${encodeURIComponent(item.path)}`}>
+      Listen →
+    </a>
+  </footer>
+</article>
+
+<style>
+  .card {
+    display: grid;
+    gap: var(--space-3);
+    padding: var(--space-5);
+    background: color-mix(in srgb, var(--ink) 6%, transparent);
+    border: 1px solid var(--line);
+    transition: border-color 200ms ease, background-color 200ms ease;
+  }
+  .card:hover {
+    border-color: var(--accent);
+  }
+
+  .meta {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: var(--space-4);
+  }
+  .eyebrow {
+    font-size: var(--fs-eyebrow);
+    font-weight: var(--fw-semibold);
+    letter-spacing: var(--ls-eyebrow);
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  .date {
+    font-size: var(--fs-eyebrow);
+    color: var(--muted);
+  }
+
+  .title {
+    font-size: 1.0625rem;
+    font-weight: var(--fw-semibold);
+    line-height: 1.3;
+    word-break: break-all;
+  }
+
+  .summary {
+    font-size: var(--fs-small);
+    line-height: 1.55;
+    color: var(--text);
+    max-width: 60ch;
+  }
+
+  .audio-meta {
+    display: flex;
+    gap: var(--space-3);
+    font-size: var(--fs-eyebrow);
+    font-weight: var(--fw-semibold);
+    color: var(--accent);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+  .audio-meta span:not(:last-child)::after {
+    content: " ·";
+    color: var(--muted);
+    margin-left: var(--space-2);
+  }
+
+  .tags {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px 6px;
+  }
+  .tags li {
+    font-size: 11px;
+    font-weight: var(--fw-medium);
+    color: var(--muted);
+    border: 1px solid var(--line);
+    padding: 2px 6px;
+  }
+
+  .reasons {
+    font-size: var(--fs-small);
+    color: var(--muted);
+    font-style: italic;
+    line-height: 1.5;
+  }
+  .reasons-label {
+    color: var(--accent);
+    font-style: normal;
+    font-weight: var(--fw-semibold);
+    text-transform: uppercase;
+    font-size: var(--fs-eyebrow);
+    letter-spacing: var(--ls-eyebrow);
+    margin-right: 6px;
+  }
+
+  .actions {
+    display: flex;
+    gap: var(--space-3);
+    margin-top: var(--space-2);
+  }
+  .action {
+    font-size: var(--fs-eyebrow);
+    font-weight: var(--fw-semibold);
+    letter-spacing: var(--ls-eyebrow);
+    text-transform: uppercase;
+    padding: 6px 10px;
+    border: 1px solid var(--line);
+    background: transparent;
+    color: var(--text);
+    cursor: pointer;
+    text-decoration: none;
+    transition: border-color 160ms ease, color 160ms ease, background-color 160ms ease;
+  }
+  .action:hover,
+  .action:focus-visible {
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+  .action.queue[data-queued="true"] {
+    background: var(--accent);
+    color: var(--bg);
+    border-color: var(--accent);
+  }
+</style>
