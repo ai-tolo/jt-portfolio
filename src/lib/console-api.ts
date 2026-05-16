@@ -14,17 +14,15 @@ import type {
   SurpriseResponse,
 } from "./console-types";
 
-const BASE = (() => {
-  const fromAstro = (import.meta.env as Record<string, string | undefined>)
-    .CONSOLE_API_BASE;
-  return fromAstro ?? process.env.CONSOLE_API_BASE ?? "http://macbook-pro-tolo:8765";
-})();
-
-const API_KEY = (() => {
-  const fromAstro = (import.meta.env as Record<string, string | undefined>)
-    .CONSOLE_API_KEY;
-  return fromAstro ?? process.env.CONSOLE_API_KEY ?? "";
-})();
+// process.env is checked first so Vercel's runtime env vars always win in
+// prod. import.meta.env is the dev fallback (Astro/Vite loads .env into it,
+// but does not populate process.env). The build-time-inlined import.meta.env
+// values are a dead branch in prod since process.env is already populated.
+const importMeta = import.meta.env as Record<string, string | undefined>;
+const BASE =
+  process.env.CONSOLE_API_BASE ?? importMeta.CONSOLE_API_BASE ?? "http://macbook-pro-tolo:8765";
+const API_KEY =
+  process.env.CONSOLE_API_KEY ?? importMeta.CONSOLE_API_KEY ?? "";
 
 const DEFAULT_TIMEOUT_MS = 5_000;
 

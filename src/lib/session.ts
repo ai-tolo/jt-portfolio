@@ -16,10 +16,14 @@ interface SessionPayload {
   exp: number;
 }
 
+// process.env is checked first so Vercel's runtime values win in prod.
+// import.meta.env is the dev fallback (Astro/Vite loads .env into it but
+// does not populate process.env). The build-time-inlined import.meta.env
+// values are a dead branch in prod since process.env is already populated.
+const importMeta = import.meta.env as Record<string, string | undefined>;
+
 function getSecret(): string {
-  const fromAstro = (import.meta.env as Record<string, string | undefined>)
-    .CONSOLE_SESSION_SECRET;
-  const secret = fromAstro ?? process.env.CONSOLE_SESSION_SECRET;
+  const secret = process.env.CONSOLE_SESSION_SECRET ?? importMeta.CONSOLE_SESSION_SECRET;
   if (!secret) {
     throw new Error(
       "CONSOLE_SESSION_SECRET is not set. Generate with `openssl rand -hex 32` and add to .env (local) and Vercel.",
@@ -29,9 +33,7 @@ function getSecret(): string {
 }
 
 function getPassword(): string {
-  const fromAstro = (import.meta.env as Record<string, string | undefined>)
-    .CONSOLE_PASSWORD;
-  const pw = fromAstro ?? process.env.CONSOLE_PASSWORD;
+  const pw = process.env.CONSOLE_PASSWORD ?? importMeta.CONSOLE_PASSWORD;
   if (!pw) {
     throw new Error(
       "CONSOLE_PASSWORD is not set. Add it to .env (local) and Vercel project env vars.",
