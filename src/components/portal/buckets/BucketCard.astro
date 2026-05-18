@@ -11,7 +11,9 @@ interface Props {
 const { item, index } = Astro.props;
 
 const basename = (p: string): string => p.split("/").pop() ?? p;
-const title = item.display_name || basename(item.path);
+const filename = item.filename || basename(item.path);
+const title = item.display_name || filename;
+const isPublic = item.public === 1;
 
 const fmtDuration = (s: number | null): string | null => {
   if (s == null || !Number.isFinite(s) || s <= 0) return null;
@@ -72,10 +74,16 @@ const waveformSrc = (() => {
   data-quality={String(item.quality_star)}
   data-parent-id={item.parent_id ? String(item.parent_id) : ""}
   data-path={item.path}
+  data-filename={filename}
   data-live-loop-path={item.live_loop_path ?? ""}
+  data-public={isPublic ? "1" : "0"}
   aria-label={`${title} — ${BUCKET_LABEL[currentBucket]}`}
 >
-  <div class="waveform">
+  <div
+    class="waveform"
+    data-seekable={waveformSrc ? "true" : "false"}
+    title={waveformSrc ? "Click to seek" : undefined}
+  >
     {waveformSrc ? (
       <img
         src={waveformSrc}
@@ -88,10 +96,20 @@ const waveformSrc = (() => {
     ) : (
       <div class="waveform-placeholder">no waveform yet</div>
     )}
+    <div class="waveform-playhead" data-playhead hidden></div>
+    <div class="waveform-time" data-waveform-time hidden></div>
   </div>
 
   <header class="head">
-    <h3 class="title" title={item.path}>{title}</h3>
+    <h3 class="title">
+      <button
+        type="button"
+        class="title-edit"
+        data-action="rename"
+        data-path={item.path}
+        title={`Click to rename. Real filename: ${filename}`}
+      >{title}</button>
+    </h3>
     <button
       type="button"
       class="audition"
@@ -101,6 +119,8 @@ const waveformSrc = (() => {
       title="Audition (Space)"
     >▶ <span class="kbd">Space</span></button>
   </header>
+
+  {item.summary && <p class="summary">{item.summary}</p>}
 
   <div class="bucket-row">
     <span class:list={["bucket-badge", `bucket-${currentBucket}`]}>
@@ -146,12 +166,19 @@ const waveformSrc = (() => {
     </span>
   </div>
 
-  {(durationLabel || item.bpm || item.key) && (
+  {(durationLabel || item.bpm || item.key || item.content_type) && (
     <p class="audio-meta">
       {durationLabel && <span>{durationLabel}</span>}
       {item.bpm && <span>{Math.round(item.bpm)} BPM</span>}
       {item.key && <span>{item.key}</span>}
+      {item.content_type && <span class="ct">{item.content_type}</span>}
       {item.source_type && <span class="src">{item.source_type.replace("_", " ")}</span>}
+    </p>
+  )}
+
+  {typeof item.project_count === "number" && item.project_count > 0 && (
+    <p class="project-count" title="Number of .als projects that reference this filename">
+      in {item.project_count} {item.project_count === 1 ? "project" : "projects"}
     </p>
   )}
 
@@ -176,6 +203,20 @@ const waveformSrc = (() => {
   )}
 
   <p class="status" data-status-line aria-live="polite"></p>
+
+  <footer class="card-actions">
+    <button type="button" class="action queue" data-action="queue" data-path={item.path}>
+      + Queue
+    </button>
+    <button
+      type="button"
+      class:list={["action public-toggle", { on: isPublic }]}
+      data-action="toggle-public"
+      data-path={item.path}
+      aria-pressed={isPublic ? "true" : "false"}
+      title="Mark this item public on /sounds"
+    >{isPublic ? "● Public" : "○ Public"}</button>
+  </footer>
 </article>
 
 <style>
@@ -198,13 +239,18 @@ const waveformSrc = (() => {
   .bucket-card[data-pending="true"] { opacity: 0.5; pointer-events: none; }
 
   .waveform {
-    height: 56px;
+    position: relative;
+    height: 80px;
     background: var(--surface-1);
     border: 1px solid var(--line);
     overflow: hidden;
     display: flex;
     align-items: center;
     justify-content: center;
+  }
+  .waveform[data-seekable="true"] { cursor: pointer; }
+  .waveform[data-seekable="true"]:hover {
+    border-color: color-mix(in srgb, var(--accent) 50%, var(--line));
   }
   .waveform img {
     width: 100%;
@@ -219,6 +265,32 @@ const waveformSrc = (() => {
     text-transform: uppercase;
     color: var(--muted);
   }
+  .waveform-playhead {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: 2px;
+    left: 0;
+    background: var(--accent);
+    pointer-events: none;
+    box-shadow: 0 0 0 1px color-mix(in srgb, var(--accent) 30%, transparent);
+    z-index: 2;
+  }
+  .waveform-time {
+    position: absolute;
+    bottom: 4px;
+    right: 6px;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 10px;
+    font-feature-settings: "tnum";
+    line-height: 1;
+    color: var(--bg);
+    background: color-mix(in srgb, var(--ink) 70%, transparent);
+    padding: 3px 6px;
+    pointer-events: none;
+    z-index: 2;
+    letter-spacing: 0;
+  }
 
   .head {
     display: flex;
@@ -232,6 +304,70 @@ const waveformSrc = (() => {
     font-weight: var(--fw-semibold);
     line-height: 1.3;
     word-break: break-word;
+  }
+  .title-edit {
+    font: inherit;
+    text-align: left;
+    color: inherit;
+    background: transparent;
+    border: 1px dashed transparent;
+    padding: 1px 4px;
+    margin-left: -4px;
+    cursor: text;
+    width: 100%;
+    transition: border-color 160ms ease, color 160ms ease;
+  }
+  .title-edit:hover,
+  .title-edit:focus-visible {
+    border-color: var(--line);
+    outline: none;
+  }
+  .summary {
+    margin: 0;
+    font-size: var(--fs-small, 13px);
+    color: var(--muted);
+    line-height: 1.45;
+  }
+  .project-count {
+    margin: 0;
+    font-size: 11px;
+    color: var(--muted);
+    font-style: italic;
+  }
+  .card-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    padding-top: var(--space-2);
+    border-top: 1px solid color-mix(in srgb, var(--line) 50%, transparent);
+  }
+  .card-actions .action {
+    font: inherit;
+    font-size: var(--fs-eyebrow);
+    font-weight: var(--fw-semibold);
+    letter-spacing: var(--ls-eyebrow);
+    text-transform: uppercase;
+    color: var(--muted);
+    background: transparent;
+    border: 1px solid var(--line);
+    padding: 4px 8px;
+    cursor: pointer;
+    transition: color 160ms ease, border-color 160ms ease, background-color 160ms ease;
+  }
+  .card-actions .action:hover,
+  .card-actions .action:focus-visible {
+    color: var(--text);
+    border-color: var(--text);
+    outline: none;
+  }
+  .card-actions .public-toggle.on {
+    color: var(--bg);
+    background: var(--accent);
+    border-color: var(--accent);
+  }
+  .card-actions .queue[data-queued="true"] {
+    color: var(--accent);
+    border-color: var(--accent);
   }
   .audition {
     font: inherit;

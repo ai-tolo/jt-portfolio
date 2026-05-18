@@ -11,9 +11,11 @@ interface Props {
   source: BucketSource | "all";
   star: BucketStarFilter;
   sort: BucketSort;
+  q: string;
+  contentType: string;
 }
 
-const { bucket, source, star, sort } = Astro.props;
+const { bucket, source, star, sort, q, contentType } = Astro.props;
 
 const SOURCES: { id: BucketSource | "all"; label: string }[] = [
   { id: "all", label: "All" },
@@ -29,11 +31,20 @@ const STARS: { id: BucketStarFilter; label: string }[] = [
   { id: "three", label: "3-star only" },
 ];
 
+const CONTENT_TYPES: { id: string; label: string }[] = [
+  { id: "all", label: "All" },
+  { id: "voice-note", label: "Voice Note" },
+  { id: "music-only", label: "Music" },
+  { id: "field-recording", label: "Field" },
+  { id: "conversation", label: "Conversation" },
+];
+
 const SORTS: { id: BucketSort; label: string }[] = [
   { id: "recent", label: "Recent" },
   { id: "oldest", label: "Oldest" },
   { id: "longest", label: "Longest" },
   { id: "shortest", label: "Shortest" },
+  { id: "most-used", label: "Most-used" },
 ];
 
 // Build a URL preserving the bucket path; only the query string changes.
@@ -43,6 +54,8 @@ const buildHref = (overrides: Record<string, string | null>): string => {
   if (source !== "all") p.set("source", source);
   if (star !== "any") p.set("star", star);
   if (sort !== "recent") p.set("sort", sort);
+  if (contentType && contentType !== "all") p.set("content_type", contentType);
+  if (q) p.set("q", q);
   for (const [k, v] of Object.entries(overrides)) {
     if (v === null) p.delete(k);
     else p.set(k, v);
@@ -51,12 +64,31 @@ const buildHref = (overrides: Record<string, string | null>): string => {
   if (p.get("source") === "all") p.delete("source");
   if (p.get("star") === "any") p.delete("star");
   if (p.get("sort") === "recent") p.delete("sort");
+  if (p.get("content_type") === "all") p.delete("content_type");
   const qs = p.toString();
   return qs ? `${base}?${qs}` : base;
 };
 ---
 
 <div class="filters" aria-label="Bucket filters">
+  <div class="group group-search">
+    <input
+      type="search"
+      class="search-input"
+      placeholder="Search title, tags, path…"
+      value={q}
+      data-search-input
+      aria-label="Search this bucket"
+      autocomplete="off"
+    />
+    <button
+      type="button"
+      class="random-btn"
+      data-action="random"
+      title="Pick a random card in the current view"
+    >↻ Random</button>
+  </div>
+
   <div class="group">
     <span class="label">Source</span>
     <ul class="chips" role="list">
@@ -66,6 +98,20 @@ const buildHref = (overrides: Record<string, string | null>): string => {
             href={buildHref({ source: s.id })}
             class:list={["chip", { active: source === s.id }]}
           >{s.label}</a>
+        </li>
+      ))}
+    </ul>
+  </div>
+
+  <div class="group">
+    <span class="label">Type</span>
+    <ul class="chips" role="list">
+      {CONTENT_TYPES.map((c) => (
+        <li>
+          <a
+            href={buildHref({ content_type: c.id })}
+            class:list={["chip", { active: contentType === c.id || (!contentType && c.id === "all") }]}
+          >{c.label}</a>
         </li>
       ))}
     </ul>
@@ -111,6 +157,9 @@ const buildHref = (overrides: Record<string, string | null>): string => {
     gap: var(--space-3);
     flex-wrap: wrap;
   }
+  .group-search {
+    gap: var(--space-2);
+  }
   .label {
     font-size: var(--fs-eyebrow);
     font-weight: var(--fw-semibold);
@@ -118,6 +167,45 @@ const buildHref = (overrides: Record<string, string | null>): string => {
     text-transform: uppercase;
     color: var(--muted);
     min-width: 4rem;
+  }
+  .search-input {
+    flex: 1;
+    min-width: 16rem;
+    max-width: 40rem;
+    font: inherit;
+    font-size: 14px;
+    color: var(--text);
+    background: var(--surface-1);
+    border: 1px solid var(--line);
+    padding: 8px 12px;
+    transition: border-color 160ms ease;
+  }
+  .search-input:focus {
+    outline: none;
+    border-color: var(--accent);
+  }
+  .search-input::-webkit-search-cancel-button {
+    cursor: pointer;
+  }
+  .random-btn {
+    font: inherit;
+    font-size: var(--fs-eyebrow);
+    font-weight: var(--fw-semibold);
+    letter-spacing: var(--ls-eyebrow);
+    text-transform: uppercase;
+    color: var(--bg);
+    background: var(--accent);
+    border: 1px solid var(--accent);
+    padding: 8px 14px;
+    cursor: pointer;
+    transition: background-color 160ms ease, color 160ms ease;
+  }
+  .random-btn:hover,
+  .random-btn:focus-visible {
+    background: var(--ink);
+    color: var(--ink-fg);
+    border-color: var(--ink);
+    outline: none;
   }
   .chips {
     list-style: none;

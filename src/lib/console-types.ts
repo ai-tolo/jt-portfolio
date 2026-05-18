@@ -197,7 +197,7 @@ export type BucketSource = "voice_memo" | "jam" | "video_extract" | "other";
 
 export type QualityStar = 0 | 1 | 2 | 3;
 
-export type BucketSort = "recent" | "oldest" | "longest" | "shortest";
+export type BucketSort = "recent" | "oldest" | "longest" | "shortest" | "most-used";
 
 export type BucketStarFilter = "any" | "starred" | "three";
 
@@ -225,6 +225,17 @@ export interface BucketAsset {
   /** Absolute path on M1 to the normalized WAV in
    *  `_Soundbending/loops/`. Set after a successful promote-to-live. */
   live_loop_path?: string | null;
+  /** Basename of `path` — included in the response so the rename
+   *  handler can fall back to it when display_name is null. */
+  filename?: string | null;
+  /** Curator-set flag; mirrors `Asset.public`. Drives the public toggle. */
+  public?: 0 | 1 | null;
+  /** librosa-classified or curator-set; used for the content_type filter. */
+  content_type?: string | null;
+  /** Whisper/LLM-derived one-liner if present. */
+  summary?: string | null;
+  /** Count of `als_projects.sample_refs` matching this filename. */
+  project_count?: number | null;
 }
 
 export interface PromoteToLiveResponse {
@@ -243,6 +254,10 @@ export interface BucketsListFilters {
   source?: BucketSource | "all";
   star?: BucketStarFilter;
   sort?: BucketSort;
+  /** Free-text search across path, filename, display_name, tags. */
+  q?: string;
+  /** Filter by content_type (e.g. voice-note, music-only). */
+  content_type?: string;
 }
 
 export interface BucketsListResponse {

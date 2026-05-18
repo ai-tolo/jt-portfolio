@@ -15,7 +15,7 @@ import type {
 const VALID_BUCKETS: BucketName[] = ["inbox", "voice_memo", "loop", "song", "trash"];
 const VALID_SOURCES: (BucketSource | "all")[] = ["all", "voice_memo", "jam", "video_extract", "other"];
 const VALID_STARS: BucketStarFilter[] = ["any", "starred", "three"];
-const VALID_SORTS: BucketSort[] = ["recent", "oldest", "longest", "shortest"];
+const VALID_SORTS: BucketSort[] = ["recent", "oldest", "longest", "shortest", "most-used"];
 
 const bucketParam = Astro.params.bucket ?? "inbox";
 if (!VALID_BUCKETS.includes(bucketParam as BucketName)) {
@@ -27,6 +27,8 @@ const url = Astro.url;
 const sourceRaw = url.searchParams.get("source") ?? "all";
 const starRaw = url.searchParams.get("star") ?? "any";
 const sortRaw = url.searchParams.get("sort") ?? "recent";
+const q = (url.searchParams.get("q") ?? "").trim();
+const contentType = (url.searchParams.get("content_type") ?? "all").trim();
 
 const source: BucketSource | "all" = VALID_SOURCES.includes(sourceRaw as BucketSource | "all")
   ? (sourceRaw as BucketSource | "all")
@@ -38,11 +40,13 @@ const sort: BucketSort = VALID_SORTS.includes(sortRaw as BucketSort)
   ? (sortRaw as BucketSort)
   : "recent";
 
-// Fetch the current bucket (mocked) plus the four others in parallel so the
-// sub-tab counts stay honest as the user assigns rows around.
+// Fetch the current bucket plus the four others in parallel so the
+// sub-tab counts stay honest as the user assigns rows around. Search +
+// content_type apply only to the current bucket; the other buckets need
+// just the bucket-level count.
 const otherBuckets = VALID_BUCKETS.filter((b) => b !== bucket);
 const [primary, ...others] = await Promise.all([
-  getBucketsList(bucket, { source, star, sort }),
+  getBucketsList(bucket, { source, star, sort, q, content_type: contentType }),
   ...otherBuckets.map((b) => getBucketsList(b, {})),
 ]);
 
@@ -85,7 +89,7 @@ const BUCKET_TITLE: Record<BucketName, string> = {
 
     <BucketsKeymap />
 
-    <BucketsFilters bucket={bucket} source={source} star={star} sort={sort} />
+    <BucketsFilters bucket={bucket} source={source} star={star} sort={sort} q={q} contentType={contentType} />
 
     {fetchError ? (
       <p class="error" role="alert">Couldn't load: {fetchError}</p>
@@ -375,31 +379,177 @@ const BUCKET_TITLE: Record<BucketName, string> = {
       }
     };
 
-    // ── Audition (visual only — real audio wires up when /file or a new
-    //    /audition endpoint is reachable; see Task E) ────────────────────
-    const toggleAudition = (card: HTMLElement) => {
+    // ── Audition (real audio via /api/console/asset) ─────────────────────
+    // Singleton audio element; one card plays at a time. The waveform PNG
+    // doubles as a seek bar — click anywhere on the image to jump there,
+    // and a playhead line tracks currentTime / duration during playback.
+    let audio: HTMLAudioElement | null = null;
+    let activeCard: HTMLElement | null = null;
+
+    const fmtTime = (s: number): string => {
+      if (!Number.isFinite(s) || s < 0) return "0:00";
+      const m = Math.floor(s / 60);
+      const r = Math.floor(s % 60);
+      return `${m}:${String(r).padStart(2, "0")}`;
+    };
+
+    const setAuditionBtnState = (card: HTMLElement, playing: boolean) => {
       const btn = card.querySelector<HTMLButtonElement>('[data-action="audition"]');
       if (!btn) return;
-      const isOn = btn.getAttribute("aria-pressed") === "true";
-      // First, blank any other card currently auditioning.
-      cards().forEach((c) => {
-        if (c === card) return;
-        const b = c.querySelector<HTMLButtonElement>('[data-action="audition"]');
-        if (b && b.getAttribute("aria-pressed") === "true") {
-          b.setAttribute("aria-pressed", "false");
-          b.firstChild && (b.firstChild.textContent = "▶ ");
-        }
-      });
-      btn.setAttribute("aria-pressed", isOn ? "false" : "true");
-      // Replace the play glyph; preserve the trailing <span class="kbd">.
+      btn.setAttribute("aria-pressed", playing ? "true" : "false");
       const first = btn.firstChild;
-      if (first) first.textContent = isOn ? "▶ " : "⏸ ";
+      if (first) first.textContent = playing ? "⏸ " : "▶ ";
+    };
+
+    const updatePlayhead = () => {
+      if (!activeCard || !audio) return;
+      const playhead = activeCard.querySelector<HTMLElement>("[data-playhead]");
+      const time = activeCard.querySelector<HTMLElement>("[data-waveform-time]");
+      const dur = audio.duration;
+      if (playhead && Number.isFinite(dur) && dur > 0) {
+        const pct = (audio.currentTime / dur) * 100;
+        playhead.style.left = `${pct}%`;
+        playhead.hidden = false;
+      }
+      if (time) {
+        const durStr = Number.isFinite(dur) && dur > 0 ? fmtTime(dur) : "—";
+        time.textContent = `${fmtTime(audio.currentTime)} / ${durStr}`;
+        time.hidden = false;
+      }
+    };
+
+    const clearPlayheadUI = (card: HTMLElement | null) => {
+      if (!card) return;
+      const playhead = card.querySelector<HTMLElement>("[data-playhead]");
+      const time = card.querySelector<HTMLElement>("[data-waveform-time]");
+      if (playhead) {
+        playhead.hidden = true;
+        playhead.style.left = "0";
+      }
+      if (time) {
+        time.hidden = true;
+        time.textContent = "";
+      }
+    };
+
+    const clearAllPlayheadsExcept = (keep: HTMLElement | null) => {
+      cards().forEach((c) => {
+        if (c === keep) return;
+        clearPlayheadUI(c);
+      });
+    };
+
+    const stopActive = () => {
+      if (audio) audio.pause();
+      if (activeCard) {
+        setAuditionBtnState(activeCard, false);
+        clearPlayheadUI(activeCard);
+      }
+      activeCard = null;
+    };
+
+    const ensureAudio = (): HTMLAudioElement => {
+      if (audio) return audio;
+      audio = new Audio();
+      audio.preload = "metadata";
+      audio.addEventListener("timeupdate", updatePlayhead);
+      audio.addEventListener("loadedmetadata", updatePlayhead);
+      audio.addEventListener("durationchange", updatePlayhead);
+      audio.addEventListener("ended", () => {
+        if (activeCard) {
+          setAuditionBtnState(activeCard, false);
+          // Park playhead at end so the user sees where playback finished.
+          const ph = activeCard.querySelector<HTMLElement>("[data-playhead]");
+          if (ph) ph.style.left = "100%";
+        }
+        activeCard = null;
+      });
+      audio.addEventListener("error", () => {
+        if (activeCard) setStatus(activeCard, "Audio failed to load", "err");
+        stopActive();
+      });
+      return audio;
+    };
+
+    const playCard = async (card: HTMLElement, seekFraction?: number) => {
+      const path = card.dataset.path;
+      if (!path) return;
+      const a = ensureAudio();
+
+      // Same card already loaded → toggle or seek.
+      if (activeCard === card) {
+        if (seekFraction !== undefined && Number.isFinite(a.duration) && a.duration > 0) {
+          a.currentTime = seekFraction * a.duration;
+          if (a.paused) {
+            try { await a.play(); } catch {}
+          }
+          updatePlayhead();
+          return;
+        }
+        if (a.paused) {
+          try { await a.play(); setAuditionBtnState(card, true); } catch {}
+        } else {
+          a.pause();
+          setAuditionBtnState(card, false);
+        }
+        return;
+      }
+
+      // Switch cards. Wipe any lingering playheads (e.g. an ended-state
+      // card that nulled activeCard before this switch).
+      stopActive();
+      clearAllPlayheadsExcept(card);
+      activeCard = card;
+      setAuditionBtnState(card, true);
+      a.src = `/api/console/asset?path=${encodeURIComponent(path)}`;
+
+      const startAtFraction = () => {
+        if (seekFraction === undefined) return;
+        if (Number.isFinite(a.duration) && a.duration > 0) {
+          a.currentTime = seekFraction * a.duration;
+        } else {
+          a.addEventListener(
+            "loadedmetadata",
+            () => { a.currentTime = seekFraction * a.duration; },
+            { once: true },
+          );
+        }
+      };
+
+      try {
+        await a.play();
+        startAtFraction();
+      } catch {
+        setStatus(card, "Audio play failed", "err");
+        stopActive();
+      }
+    };
+
+    const toggleAudition = (card: HTMLElement) => {
+      playCard(card);
+    };
+
+    const seekFromWaveform = (e: MouseEvent, card: HTMLElement) => {
+      const wf = card.querySelector<HTMLElement>(".waveform");
+      if (!wf || wf.getAttribute("data-seekable") !== "true") return;
+      const rect = wf.getBoundingClientRect();
+      const fraction = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+      playCard(card, fraction);
     };
 
     // ── Click handlers (delegated) ───────────────────────────────────────
     root.addEventListener("click", (e) => {
       const t = e.target as HTMLElement | null;
       if (!t) return;
+      // Waveform click → seek (or start playback at that position).
+      const wfHit = t.closest<HTMLElement>(".waveform");
+      if (wfHit && wfHit.getAttribute("data-seekable") === "true") {
+        const card = wfHit.closest<HTMLElement>("[data-bucket-card]");
+        if (card) {
+          seekFromWaveform(e, card);
+          return;
+        }
+      }
       const btn = t.closest<HTMLElement>("[data-action]");
       if (!btn) return;
       const card = btn.closest<HTMLElement>("[data-bucket-card]");
@@ -503,6 +653,100 @@ const BUCKET_TITLE: Record<BucketName, string> = {
     const first = cards()[0];
     if (first) {
       first.setAttribute("data-focused", "true");
+    }
+
+    // ── Random button: pick a card in the current view ──────────────────
+    const pickRandomCard = () => {
+      const all = cards();
+      if (all.length === 0) return;
+      const idx = Math.floor(Math.random() * all.length);
+      const target = all[idx];
+      target.scrollIntoView({ block: "center", behavior: "auto" });
+      focusCard(idx);
+    };
+    root.addEventListener("click", (e) => {
+      const t = e.target as HTMLElement | null;
+      if (t?.closest('[data-action="random"]')) {
+        e.preventDefault();
+        pickRandomCard();
+      }
+    });
+
+    // ── Debounced search input → SPA-style page swap ─────────────────────
+    // Updating the URL with ?q= would trigger a full reload; instead we
+    // fetch the new server-rendered HTML, parse it, and swap the cards
+    // section + count in place. Audio is stopped first since cards may be
+    // replaced. The audition singleton + activeCard pointer get reset.
+    const searchInput = root.querySelector<HTMLInputElement>("[data-search-input]");
+    if (searchInput) {
+      let debounce: number | null = null;
+      let lastFetched = searchInput.value;
+
+      const fetchAndSwap = async () => {
+        const newQ = searchInput.value.trim();
+        if (newQ === lastFetched.trim()) return;
+        lastFetched = newQ;
+        // Build URL preserving existing params, updating only q.
+        const u = new URL(window.location.href);
+        if (newQ) u.searchParams.set("q", newQ);
+        else u.searchParams.delete("q");
+        history.replaceState({}, "", u.toString());
+        stopActive();
+        root.setAttribute("data-searching", "true");
+        try {
+          const res = await fetch(u.toString(), { headers: { accept: "text/html" } });
+          if (!res.ok) {
+            root.setAttribute("data-search-error", "true");
+            return;
+          }
+          const html = await res.text();
+          const doc = new DOMParser().parseFromString(html, "text/html");
+          const newCards = doc.querySelector(".cards");
+          const newCount = doc.querySelector(".count");
+          const newEmpty = doc.querySelector(".empty");
+          const newError = doc.querySelector(".error");
+          // Replace the count line, the cards UL, and any empty/error
+          // states. Swap whichever pair exists on both sides.
+          const oldCount = root.querySelector(".count");
+          const oldCards = root.querySelector(".cards");
+          const oldEmpty = root.querySelector(".empty");
+          const oldError = root.querySelector(".error");
+          oldCount?.replaceWith(newCount?.cloneNode(true) ?? document.createTextNode(""));
+          if (oldCards && newCards) {
+            oldCards.replaceWith(newCards.cloneNode(true));
+          } else if (oldCards && !newCards) {
+            oldCards.remove();
+          } else if (!oldCards && newCards) {
+            root.appendChild(newCards.cloneNode(true));
+          }
+          if (oldEmpty) oldEmpty.remove();
+          if (oldError) oldError.remove();
+          if (newEmpty) root.appendChild(newEmpty.cloneNode(true));
+          if (newError) root.appendChild(newError.cloneNode(true));
+          // Refocus the first card so keyboard nav works post-swap.
+          const f = cards()[0];
+          if (f) f.setAttribute("data-focused", "true");
+          root.removeAttribute("data-search-error");
+        } catch {
+          root.setAttribute("data-search-error", "true");
+        } finally {
+          root.removeAttribute("data-searching");
+        }
+      };
+
+      searchInput.addEventListener("input", () => {
+        if (debounce !== null) window.clearTimeout(debounce);
+        debounce = window.setTimeout(fetchAndSwap, 300);
+      });
+      // Enter immediately commits + blurs to dismiss mobile keyboard.
+      searchInput.addEventListener("keydown", (e) => {
+        if (e.key === "Enter") {
+          e.preventDefault();
+          if (debounce !== null) window.clearTimeout(debounce);
+          fetchAndSwap();
+          searchInput.blur();
+        }
+      });
     }
   }
 </script>
