@@ -6,7 +6,7 @@ import type { APIRoute } from "astro";
 import { setBucket } from "../../../lib/console-api";
 import type { BucketName } from "../../../lib/console-types";
 
-const VALID_BUCKETS: BucketName[] = ["inbox", "voice_memo", "loop", "song", "trash"];
+const VALID_BUCKETS: BucketName[] = ["inbox", "jam", "loops", "field", "tracks", "trash"];
 
 export const POST: APIRoute = async ({ request }) => {
   let payload: { asset_id?: unknown; bucket?: unknown };

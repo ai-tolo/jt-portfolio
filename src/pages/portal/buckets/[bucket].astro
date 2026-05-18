@@ -1,25 +1,28 @@
 ---
 import PortalLayout from "../../../layouts/PortalLayout.astro";
 import BucketCard from "../../../components/portal/buckets/BucketCard.astro";
-import BucketSubTabs from "../../../components/portal/buckets/BucketSubTabs.astro";
 import BucketsFilters from "../../../components/portal/buckets/BucketsFilters.astro";
-import BucketsKeymap from "../../../components/portal/buckets/BucketsKeymap.astro";
 import { getBucketsList } from "../../../lib/console-api";
 import type {
-  BucketName,
   BucketCategory,
   BucketSort,
+  BucketView,
 } from "../../../lib/console-types";
 
-const VALID_BUCKETS: BucketName[] = ["inbox", "voice_memo", "loop", "song", "trash"];
-const VALID_CATEGORIES: BucketCategory[] = ["all", "jam", "loops", "field", "tracks", "other"];
+// `BucketView` includes "all" (the unified surface) plus the five
+// assignable buckets. The sub-tab strip was removed 2026-05-18; the
+// default landing is /portal/buckets/all and Category/Sort handle
+// browsing. Named-bucket URLs (e.g. /portal/buckets/loop) still resolve
+// for anyone bookmarking them.
+const VALID_BUCKETS: BucketView[] = ["all", "inbox", "jam", "loops", "field", "tracks", "trash"];
+const VALID_CATEGORIES: BucketCategory[] = ["all", "jam", "loops", "field", "tracks", "other", "cleanup"];
 const VALID_SORTS: BucketSort[] = ["recent", "oldest", "longest", "shortest", "most-used", "stars"];
 
-const bucketParam = Astro.params.bucket ?? "inbox";
-if (!VALID_BUCKETS.includes(bucketParam as BucketName)) {
-  return Astro.redirect("/portal/buckets/inbox", 307);
+const bucketParam = Astro.params.bucket ?? "all";
+if (!VALID_BUCKETS.includes(bucketParam as BucketView)) {
+  return Astro.redirect("/portal/buckets/all", 307);
 }
-const bucket = bucketParam as BucketName;
+const bucket = bucketParam as BucketView;
 
 const url = Astro.url;
 const categoryRaw = (url.searchParams.get("category") ?? "all").trim();
@@ -33,55 +36,30 @@ const sort: BucketSort = VALID_SORTS.includes(sortRaw as BucketSort)
   ? (sortRaw as BucketSort)
   : "recent";
 
-// Fetch the current bucket plus the four others in parallel so the
-// sub-tab counts stay honest as the user assigns rows around. Search +
-// category apply only to the current bucket; the other buckets need
-// just the bucket-level count.
-const otherBuckets = VALID_BUCKETS.filter((b) => b !== bucket);
-const [primary, ...others] = await Promise.all([
-  getBucketsList(bucket, { sort, q, category }),
-  ...otherBuckets.map((b) => getBucketsList(b, {})),
-]);
-
-const counts: Partial<Record<BucketName, number>> = {};
-if (primary.ok) counts[bucket] = primary.data.total;
-otherBuckets.forEach((b, i) => {
-  const r = others[i];
-  if (r.ok) counts[b] = r.data.total;
-});
+// Single fetch — no more parallel sub-tab count requests.
+const primary = await getBucketsList(bucket, { sort, q, category });
 
 const items = primary.ok ? primary.data.items : [];
+const total = primary.ok ? primary.data.total : 0;
 const fetchError = primary.ok
   ? null
   : primary.error.kind === "http"
     ? `HTTP ${primary.error.status}`
     : primary.error.kind;
 
-const BUCKET_TITLE: Record<BucketName, string> = {
+const BUCKET_TITLE: Record<BucketView, string> = {
+  all: "All",
   inbox: "Inbox",
-  voice_memo: "Voice Memos",
-  loop: "Loops",
-  song: "Songs",
+  jam: "Jam",
+  loops: "Loops",
+  field: "Field",
+  tracks: "Tracks",
   trash: "Trash",
 };
 ---
 
 <PortalLayout title={`Buckets · ${BUCKET_TITLE[bucket]}`} current="buckets">
   <section class="buckets-page" data-bucket={bucket}>
-    <header class="head">
-      <div>
-        <p class="eyebrow">Buckets</p>
-        <h1 class="title">{BUCKET_TITLE[bucket]}</h1>
-      </div>
-      <p class="note">
-        Triage surface (Build 3 successor). Live on the M1 engine.
-      </p>
-    </header>
-
-    <BucketSubTabs current={bucket} counts={counts} />
-
-    <BucketsKeymap />
-
     <BucketsFilters bucket={bucket} category={category} sort={sort} q={q} />
 
     {fetchError ? (
@@ -90,7 +68,11 @@ const BUCKET_TITLE: Record<BucketName, string> = {
       <p class="empty">Nothing here yet. Try a different filter.</p>
     ) : (
       <>
-        <p class="count"><strong>{items.length}</strong> in {BUCKET_TITLE[bucket]}</p>
+        <p class="count">
+          <strong>{total.toLocaleString()}</strong>
+          {bucket === "all" ? " items" : ` in ${BUCKET_TITLE[bucket]}`}
+          {items.length < total && ` (${items.length} loaded)`}
+        </p>
         <ul class="cards" role="list">
           {items.map((item, idx) => (
             <li><BucketCard item={item} index={idx} /></li>
@@ -106,41 +88,6 @@ const BUCKET_TITLE: Record<BucketName, string> = {
     display: grid;
     gap: var(--space-5);
   }
-  .head {
-    display: flex;
-    justify-content: space-between;
-    align-items: flex-end;
-    gap: var(--space-6);
-    flex-wrap: wrap;
-  }
-  .eyebrow {
-    font-size: var(--fs-eyebrow);
-    font-weight: var(--fw-semibold);
-    letter-spacing: var(--ls-eyebrow);
-    text-transform: uppercase;
-    color: var(--muted);
-  }
-  .title {
-    font-size: var(--fs-title);
-    font-weight: var(--fw-bold);
-    letter-spacing: var(--ls-title);
-    line-height: var(--lh-title);
-    margin: var(--space-1) 0 0;
-  }
-  .note {
-    font-size: var(--fs-small);
-    color: var(--muted);
-    max-width: 40ch;
-  }
-  .note code {
-    font-family: inherit;
-    background: var(--ink);
-    color: var(--ink-fg);
-    padding: 1px 6px;
-    font-size: 11px;
-    letter-spacing: 0.05em;
-  }
-
   .count {
     font-size: var(--fs-small);
     color: var(--muted);
@@ -171,7 +118,7 @@ const BUCKET_TITLE: Record<BucketName, string> = {
     queue / trash / rename / public-toggle wiring. Scoped via .buckets-page
     so it does not run on other tabs. */}
 <script>
-  type BucketName = "inbox" | "voice_memo" | "loop" | "song" | "trash";
+  type BucketName = "inbox" | "jam" | "loops" | "field" | "tracks" | "trash";
 
   const root = document.querySelector<HTMLElement>(".buckets-page");
   if (root) {
@@ -227,17 +174,11 @@ const BUCKET_TITLE: Record<BucketName, string> = {
           return;
         }
         card.dataset.bucket = bucket;
-        // Update the visible badge.
-        const badge = card.querySelector<HTMLElement>(".bucket-badge");
-        if (badge) {
-          badge.className = `bucket-badge bucket-${bucket}`;
-          badge.textContent =
-            bucket === "inbox" ? "Inbox"
-            : bucket === "voice_memo" ? "Voice Memo"
-            : bucket === "loop" ? "Loop"
-            : bucket === "song" ? "Song"
-            : "Trash";
-        }
+        // Reflect new state on the bucket-action buttons (active highlight
+        // tracks the assigned bucket; only one is active at a time).
+        card.querySelectorAll<HTMLElement>('[data-action="bucket"]').forEach((b) => {
+          b.classList.toggle("active", b.dataset.bucket === bucket);
+        });
         setStatus(card, `→ ${bucket.replace("_", " ")}`, "ok");
       } catch {
         setStatus(card, "Assign failed (network)", "err");
@@ -525,10 +466,58 @@ const BUCKET_TITLE: Record<BucketName, string> = {
     const seekFromWaveform = (e: MouseEvent, card: HTMLElement) => {
       const wf = card.querySelector<HTMLElement>(".waveform");
       if (!wf || wf.getAttribute("data-seekable") !== "true") return;
+      // First click on a card not currently playing → play from start.
+      // Subsequent clicks while this card is active → seek to click x.
+      if (activeCard !== card) {
+        playCard(card);
+        return;
+      }
       const rect = wf.getBoundingClientRect();
       const fraction = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
       playCard(card, fraction);
     };
+
+    // ── Hold-to-trash (3s press) ─────────────────────────────────────────
+    // Replaces the X keyboard shortcut. The button has a CSS-only fill
+    // animation triggered by the data-holding attribute; we just toggle
+    // the attribute and run assignBucket(card, "trash") after the timeout.
+    let trashTimer: number | null = null;
+    let activeTrashBtn: HTMLElement | null = null;
+
+    const cancelTrashHold = () => {
+      if (trashTimer !== null) {
+        window.clearTimeout(trashTimer);
+        trashTimer = null;
+      }
+      if (activeTrashBtn) {
+        activeTrashBtn.removeAttribute("data-holding");
+        activeTrashBtn = null;
+      }
+    };
+
+    const startTrashHold = (btn: HTMLElement) => {
+      if (trashTimer !== null) return;
+      activeTrashBtn = btn;
+      btn.setAttribute("data-holding", "true");
+      trashTimer = window.setTimeout(() => {
+        const card = btn.closest<HTMLElement>("[data-bucket-card]");
+        if (card) assignBucket(card, "trash");
+        cancelTrashHold();
+      }, 2000);
+    };
+
+    root.addEventListener("pointerdown", (e) => {
+      const btn = (e.target as HTMLElement)?.closest<HTMLElement>(
+        '[data-action="trash-hold"]',
+      );
+      if (btn) {
+        e.preventDefault();
+        startTrashHold(btn);
+      }
+    });
+    document.addEventListener("pointerup", cancelTrashHold);
+    document.addEventListener("pointercancel", cancelTrashHold);
+    root.addEventListener("pointerleave", cancelTrashHold);
 
     // ── Click handlers (delegated) ───────────────────────────────────────
     root.addEventListener("click", (e) => {
@@ -564,6 +553,11 @@ const BUCKET_TITLE: Record<BucketName, string> = {
         case "promote-to-live":
           promoteToLive(card);
           break;
+        case "bucket": {
+          const target = btn.dataset.bucket as BucketName | undefined;
+          if (target) assignBucket(card, target);
+          break;
+        }
       }
     });
 
@@ -631,10 +625,12 @@ const BUCKET_TITLE: Record<BucketName, string> = {
       }
 
       const key = e.key.toLowerCase();
-      if (key === "v") { e.preventDefault(); assignBucket(currentEl, "voice_memo"); return; }
-      if (key === "l") { e.preventDefault(); assignBucket(currentEl, "loop"); return; }
-      if (key === "s") { e.preventDefault(); assignBucket(currentEl, "song"); return; }
-      if (key === "x") { e.preventDefault(); assignBucket(currentEl, "trash"); return; }
+      if (key === "j") { e.preventDefault(); assignBucket(currentEl, "jam"); return; }
+      if (key === "l") { e.preventDefault(); assignBucket(currentEl, "loops"); return; }
+      if (key === "f") { e.preventDefault(); assignBucket(currentEl, "field"); return; }
+      if (key === "t") { e.preventDefault(); assignBucket(currentEl, "tracks"); return; }
+      // Trash is intentionally not on the keyboard — the hold-button on
+      // the card's bottom-right corner is the only way to delete.
 
       if (["0", "1", "2", "3"].includes(e.key)) {
         e.preventDefault();

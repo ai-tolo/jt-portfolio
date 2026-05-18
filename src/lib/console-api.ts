@@ -22,6 +22,7 @@ import type {
   BucketName,
   BucketsListFilters,
   BucketsListResponse,
+  BucketView,
   LineageResponse,
   PromoteToLiveResponse,
   QualityStar,
@@ -351,7 +352,7 @@ async function _post<T>(
 // rendering (see waveformSrc() in BucketCard.astro).
 
 export async function getBucketsList(
-  bucket: BucketName,
+  bucket: BucketView,
   filters: BucketsListFilters = {},
 ): Promise<ApiResult<BucketsListResponse>> {
   const params = new URLSearchParams({ bucket });

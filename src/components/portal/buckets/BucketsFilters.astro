@@ -1,12 +1,12 @@
 ---
 import type {
-  BucketName,
+  BucketView,
   BucketCategory,
   BucketSort,
 } from "../../../lib/console-types";
 
 interface Props {
-  bucket: BucketName;
+  bucket: BucketView;
   category: BucketCategory;
   sort: BucketSort;
   q: string;
@@ -21,6 +21,7 @@ const CATEGORIES: { id: BucketCategory; label: string; hint: string }[] = [
   { id: "field", label: "Field", hint: "Voice memos + audio extracted from videos" },
   { id: "tracks", label: "Tracks", hint: "Medium-length musical ideas + .als projects" },
   { id: "other", label: "Other", hint: "Doesn't fit the other categories" },
+  { id: "cleanup", label: "Cleanup", hint: "Duplicates + orphans flagged for review" },
 ];
 
 const SORTS: { id: BucketSort; label: string }[] = [
@@ -47,17 +48,49 @@ const buildHref = (overrides: Record<string, string | null>): string => {
   const qs = p.toString();
   return qs ? `${base}?${qs}` : base;
 };
+
+const activeCategory = CATEGORIES.find((c) => c.id === category) ?? CATEGORIES[0];
 ---
 
-<div class="filters" aria-label="Bucket filters">
-  <div class="group group-search">
+<section class="filters" aria-label="Bucket filters">
+  {/*
+    Primary navigation: Category. Each chip is a top-level slice of the
+    catalog. The strip lives at the top of every Buckets page; Search +
+    Sort below act on the selected category.
+  */}
+  <nav class="cats" aria-label="Category">
+    <span class="cats-label">Browse</span>
+    <ul class="cats-list" role="list">
+      {CATEGORIES.map((c) => (
+        <li>
+          <a
+            href={buildHref({ category: c.id })}
+            class:list={["cat", { active: category === c.id || (!category && c.id === "all") }]}
+            title={c.hint}
+          >{c.label}</a>
+        </li>
+      ))}
+    </ul>
+  </nav>
+
+  {/*
+    Search + Random sit visually nested inside the Category context:
+    a thin shared border + inset padding makes it clear you're searching
+    *within* the active category.
+  */}
+  <div class="searchbar" data-active-cat={category}>
+    <span class="searchbar-context">
+      <span class="ctx-arrow" aria-hidden="true">↳</span>
+      <span class="ctx-label">in</span>
+      <span class="ctx-name">{activeCategory.label}</span>
+    </span>
     <input
       type="search"
       class="search-input"
-      placeholder="Search title, tags, path…"
+      placeholder={`Search ${activeCategory.label.toLowerCase()}…`}
       value={q}
       data-search-input
-      aria-label="Search this bucket"
+      aria-label={`Search ${activeCategory.label}`}
       autocomplete="off"
     />
     <button
@@ -68,87 +101,145 @@ const buildHref = (overrides: Record<string, string | null>): string => {
     >↻ Random</button>
   </div>
 
-  <div class="group">
-    <span class="label">Category</span>
-    <ul class="chips" role="list">
-      {CATEGORIES.map((c) => (
-        <li>
-          <a
-            href={buildHref({ category: c.id })}
-            class:list={["chip", { active: category === c.id || (!category && c.id === "all") }]}
-            title={c.hint}
-          >{c.label}</a>
-        </li>
-      ))}
-    </ul>
-  </div>
-
-  <div class="group">
-    <span class="label">Sort</span>
-    <ul class="chips" role="list">
+  <div class="sort-row">
+    <span class="sort-label">Sort</span>
+    <ul class="sort-list" role="list">
       {SORTS.map((s) => (
         <li>
           <a
             href={buildHref({ sort: s.id })}
-            class:list={["chip", { active: sort === s.id }]}
+            class:list={["sort-chip", { active: sort === s.id }]}
           >{s.label}</a>
         </li>
       ))}
     </ul>
   </div>
-</div>
+</section>
 
 <style>
   .filters {
     display: grid;
-    gap: var(--space-3);
+    gap: 0;
   }
-  .group {
+
+  /* ── Category strip (primary nav) ─────────────────────────────────── */
+  .cats {
     display: flex;
-    align-items: center;
-    gap: var(--space-3);
+    align-items: stretch;
+    gap: 0;
     flex-wrap: wrap;
+    background: color-mix(in srgb, var(--ink) 4%, transparent);
+    border: 1px solid var(--line);
+    border-bottom: none;
+    padding: 4px;
   }
-  .group-search {
-    gap: var(--space-2);
-  }
-  .label {
-    font-size: var(--fs-eyebrow);
+  .cats-label {
+    padding: 12px 14px;
+    font-size: 10px;
     font-weight: var(--fw-semibold);
-    letter-spacing: var(--ls-eyebrow);
+    letter-spacing: 0.14em;
     text-transform: uppercase;
     color: var(--muted);
-    min-width: 4rem;
+    align-self: center;
+    border-right: 1px solid var(--line);
+    margin-right: 4px;
+  }
+  .cats-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex: 1;
+    flex-wrap: wrap;
+    gap: 4px;
+  }
+  .cats-list li { flex: 1; min-width: 0; }
+  .cat {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    height: 100%;
+    min-height: 42px;
+    padding: 12px 18px;
+    font-size: 14px;
+    font-weight: var(--fw-semibold);
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: var(--text);
+    background: transparent;
+    border: 1.5px solid var(--line);
+    text-decoration: none;
+    transition: color 160ms ease, border-color 160ms ease,
+                background-color 160ms ease, transform 80ms ease;
+  }
+  .cat:hover,
+  .cat:focus-visible {
+    color: var(--accent);
+    border-color: var(--accent);
+  }
+  .cat:active { transform: translateY(1px); }
+  .cat.active {
+    color: var(--bg);
+    background: var(--accent);
+    border-color: var(--accent);
+  }
+
+  /* ── Search bar (scoped to selected category) ─────────────────────── */
+  .searchbar {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    padding: 10px 14px;
+    background: color-mix(in srgb, var(--ink) 4%, transparent);
+    border: 1px solid var(--line);
+    border-top: 1px dashed var(--line);
+    flex-wrap: wrap;
+  }
+  .searchbar-context {
+    display: inline-flex;
+    align-items: baseline;
+    gap: 6px;
+    color: var(--muted);
+    font-size: 12px;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    letter-spacing: 0;
+    flex: 0 0 auto;
+  }
+  .ctx-arrow { color: var(--accent); font-weight: var(--fw-semibold); }
+  .ctx-name {
+    color: var(--text);
+    font-weight: var(--fw-semibold);
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
   }
   .search-input {
     flex: 1;
-    min-width: 16rem;
-    max-width: 40rem;
+    min-width: 14rem;
     font: inherit;
-    font-size: 14px;
+    font-size: 15px;
     color: var(--text);
     background: var(--surface-1);
     border: 1px solid var(--line);
-    padding: 8px 12px;
+    padding: 9px 12px;
     transition: border-color 160ms ease;
   }
   .search-input:focus {
     outline: none;
     border-color: var(--accent);
   }
-  .search-input::-webkit-search-cancel-button {
-    cursor: pointer;
-  }
+  .search-input::-webkit-search-cancel-button { cursor: pointer; }
   .random-btn {
+    flex: 0 0 auto;
     font: inherit;
-    font-size: var(--fs-eyebrow);
+    font-size: 12px;
     font-weight: var(--fw-semibold);
-    letter-spacing: var(--ls-eyebrow);
+    letter-spacing: 0.06em;
     text-transform: uppercase;
     color: var(--bg);
     background: var(--accent);
     border: 1px solid var(--accent);
-    padding: 8px 14px;
+    padding: 9px 14px;
     cursor: pointer;
     transition: background-color 160ms ease, color 160ms ease;
   }
@@ -159,7 +250,26 @@ const buildHref = (overrides: Record<string, string | null>): string => {
     border-color: var(--ink);
     outline: none;
   }
-  .chips {
+
+  /* ── Sort row (secondary, light visual weight) ────────────────────── */
+  .sort-row {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    padding: 8px 14px;
+    border: 1px solid var(--line);
+    border-top: none;
+    flex-wrap: wrap;
+  }
+  .sort-label {
+    font-size: 10px;
+    font-weight: var(--fw-semibold);
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--muted);
+    flex: 0 0 auto;
+  }
+  .sort-list {
     list-style: none;
     padding: 0;
     margin: 0;
@@ -167,11 +277,11 @@ const buildHref = (overrides: Record<string, string | null>): string => {
     flex-wrap: wrap;
     gap: 6px;
   }
-  .chip {
+  .sort-chip {
     display: inline-block;
-    font-size: var(--fs-eyebrow);
+    font-size: 11px;
     font-weight: var(--fw-semibold);
-    letter-spacing: var(--ls-eyebrow);
+    letter-spacing: 0.06em;
     text-transform: uppercase;
     color: var(--muted);
     border: 1px solid var(--line);
@@ -179,8 +289,8 @@ const buildHref = (overrides: Record<string, string | null>): string => {
     text-decoration: none;
     transition: color 160ms ease, border-color 160ms ease;
   }
-  .chip:hover { color: var(--text); border-color: var(--text); }
-  .chip.active {
+  .sort-chip:hover { color: var(--text); border-color: var(--text); }
+  .sort-chip.active {
     color: var(--bg);
     background: var(--accent);
     border-color: var(--accent);

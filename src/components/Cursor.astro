@@ -1,88 +1,43 @@
 ---
-// Custom cursor.
-// Default: 5px accent dot (precise) + 28px ring (lagged via rAF lerp).
-// Link hover: ring grows + becomes a spinning record-arc (top + bottom
-// borders only, rotating continuously). Dot inverts to a hollow accent
-// ring, like the spindle of the record. Audiophile / Tron metaphor.
-// Hidden on touch + reduced-motion.
+// Custom cursor — simple version (rewritten 2026-05-17 evening).
+// One white dot that follows the mouse, mix-blend-mode: difference so it
+// always inverts whatever it's hovering. On hover of links/buttons it
+// scales up. No lagged ring, no rAF loop — just a single transform per
+// mousemove. Hidden on touch + reduced-motion.
 ---
 
 <div class="cursor-dot" aria-hidden="true"></div>
-<div class="cursor-ring" aria-hidden="true">
-  <div class="cursor-ring-inner"></div>
-</div>
 
 <style>
-  .cursor-dot,
-  .cursor-ring {
+  .cursor-dot {
     position: fixed;
     top: 0;
     left: 0;
+    width: 16px;
+    height: 16px;
+    margin: -8px 0 0 -8px;
+    border-radius: 50%;
+    background: #fff;
+    /* The whole trick: `difference` blends each pixel against the layer
+       below as (255 - bottom). White-on-anything = "invert that color." */
+    mix-blend-mode: difference;
     pointer-events: none;
     z-index: 9999;
     will-change: transform;
     transform: translate3d(-100px, -100px, 0);
     opacity: 0;
-    transition: opacity 200ms ease;
+    transition: opacity 160ms ease,
+                width 180ms ease,
+                height 180ms ease,
+                margin 180ms ease;
   }
-  .cursor-dot {
-    width: 5px;
-    height: 5px;
-    background: var(--accent);
-    border: 0;
-    margin: -2.5px 0 0 -2.5px;
-    border-radius: 50%;
-    box-shadow: 0 0 12px color-mix(in srgb, var(--accent) 45%, transparent);
-    transition: opacity 200ms ease, background-color 280ms ease,
-                width 220ms ease, height 220ms ease, margin 220ms ease,
-                border 220ms ease, box-shadow 220ms ease;
-  }
-  .cursor-ring {
+  .cursor-dot[data-hover="true"] {
     width: 28px;
     height: 28px;
     margin: -14px 0 0 -14px;
-    transition: opacity 200ms ease, width 220ms ease, height 220ms ease,
-                margin 220ms ease;
   }
-  .cursor-ring-inner {
-    width: 100%;
-    height: 100%;
-    border: 1px solid var(--text);
-    border-radius: 50%;
-    box-sizing: border-box;
-    transition: border-color 280ms ease;
-  }
-
-  /* Link hover state */
-  .cursor-ring[data-hover="true"] {
-    width: 56px;
-    height: 56px;
-    margin: -28px 0 0 -28px;
-  }
-  .cursor-ring[data-hover="true"] .cursor-ring-inner {
-    border-color: transparent;
-    border-top-color: var(--accent);
-    border-bottom-color: var(--accent);
-    border-width: 1.5px;
-    animation: cursor-spin 1.6s linear infinite;
-  }
-  .cursor-dot[data-hover="true"] {
-    width: 10px;
-    height: 10px;
-    margin: -5px 0 0 -5px;
-    background: transparent;
-    border: 1.5px solid var(--accent);
-    box-shadow: none;
-  }
-
-  @keyframes cursor-spin {
-    from { transform: rotate(0deg); }
-    to { transform: rotate(360deg); }
-  }
-
   @media (pointer: coarse), (prefers-reduced-motion: reduce) {
-    .cursor-dot,
-    .cursor-ring {
+    .cursor-dot {
       display: none;
     }
   }
@@ -94,53 +49,23 @@
 
   if (fine && !reduced) {
     const dot = document.querySelector<HTMLElement>(".cursor-dot");
-    const ring = document.querySelector<HTMLElement>(".cursor-ring");
-
-    if (dot && ring) {
-      let mouseX = -100;
-      let mouseY = -100;
-      let ringX = -100;
-      let ringY = -100;
+    if (dot) {
       let visible = false;
 
-      const show = () => {
-        if (visible) return;
-        dot.style.opacity = "1";
-        ring.style.opacity = "1";
-        visible = true;
-      };
-      const hide = () => {
-        dot.style.opacity = "0";
-        ring.style.opacity = "0";
-        visible = false;
-      };
-
       document.addEventListener("mousemove", (e) => {
-        mouseX = e.clientX;
-        mouseY = e.clientY;
-        dot.style.transform = `translate3d(${mouseX}px, ${mouseY}px, 0)`;
-        show();
+        dot.style.transform = `translate3d(${e.clientX}px, ${e.clientY}px, 0)`;
+        if (!visible) {
+          dot.style.opacity = "1";
+          visible = true;
+        }
       });
-      document.addEventListener("mouseleave", hide);
+      document.addEventListener("mouseleave", () => {
+        dot.style.opacity = "0";
+        visible = false;
+      });
 
-      const lerp = (a: number, b: number, t: number) => a + (b - a) * t;
-      const tick = () => {
-        ringX = lerp(ringX, mouseX, 0.18);
-        ringY = lerp(ringY, mouseY, 0.18);
-        ring.style.transform = `translate3d(${ringX}px, ${ringY}px, 0)`;
-        requestAnimationFrame(tick);
-      };
-      requestAnimationFrame(tick);
-
-      const enter = () => {
-        ring.dataset.hover = "true";
-        dot.dataset.hover = "true";
-      };
-      const leave = () => {
-        delete ring.dataset.hover;
-        delete dot.dataset.hover;
-      };
-
+      const enter = () => { dot.dataset.hover = "true"; };
+      const leave = () => { delete dot.dataset.hover; };
       document.querySelectorAll<HTMLElement>("a, button").forEach((el) => {
         el.addEventListener("mouseenter", enter);
         el.addEventListener("mouseleave", leave);

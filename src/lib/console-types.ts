@@ -191,11 +191,20 @@ export interface SetPublicResponse {
 // scaffolded against mocks first so it can iterate while the engine work
 // proceeds in parallel.
 
-export type BucketName = "inbox" | "voice_memo" | "loop" | "song" | "trash";
+/** Curator-assigned bucket — the per-row state set via the BucketCard
+ *  action bar. Vocabulary matches the Category heuristic chips so the
+ *  triage actions speak the same language as the browse filters. The
+ *  prior `voice_memo / loop / song` values were renamed to `field /
+ *  loops / tracks` on 2026-05-18; existing rows were migrated server-side. */
+export type BucketName = "inbox" | "jam" | "loops" | "field" | "tracks" | "trash";
+
+/** URL view of the Buckets page: all assignable buckets plus the
+ *  unified `"all"` view. */
+export type BucketView = BucketName | "all";
 
 /** User-facing filter taxonomy (replaced the prior Source + content_type
  *  + Stars chips on 2026-05-17 evening; see Notion: Console (Build)). */
-export type BucketCategory = "all" | "jam" | "loops" | "field" | "tracks" | "other";
+export type BucketCategory = "all" | "jam" | "loops" | "field" | "tracks" | "other" | "cleanup";
 
 /** Legacy SOURCE enum kept for type compat on BucketAsset.source_type;
  *  no longer a user-facing filter. */
@@ -246,6 +255,13 @@ export interface BucketAsset {
   summary?: string | null;
   /** Count of `als_projects.sample_refs` matching this filename. */
   project_count?: number | null;
+  /** Rowid of the canonical row when this is a duplicate; NULL if
+   *  unique or canonical. Set by `scripts/find_duplicates.py`. */
+  dup_of?: number | null;
+  /** 1 if `scripts/find_orphans.py` flagged this as a safe-to-trash
+   *  candidate (not referenced in any project, never auditioned, no
+   *  curator classification). */
+  orphan_candidate?: 0 | 1 | null;
 }
 
 export interface PromoteToLiveResponse {
