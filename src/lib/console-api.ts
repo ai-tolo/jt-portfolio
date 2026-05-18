@@ -355,13 +355,9 @@ export async function getBucketsList(
   filters: BucketsListFilters = {},
 ): Promise<ApiResult<BucketsListResponse>> {
   const params = new URLSearchParams({ bucket });
-  if (filters.source && filters.source !== "all") params.set("source", filters.source);
-  if (filters.star && filters.star !== "any") params.set("star", filters.star);
   if (filters.sort && filters.sort !== "recent") params.set("sort", filters.sort);
   if (filters.q) params.set("q", filters.q);
-  if (filters.content_type && filters.content_type !== "all") {
-    params.set("content_type", filters.content_type);
-  }
+  if (filters.category && filters.category !== "all") params.set("category", filters.category);
   return call<BucketsListResponse>(`/buckets?${params}`);
 }
 

@@ -193,13 +193,23 @@ export interface SetPublicResponse {
 
 export type BucketName = "inbox" | "voice_memo" | "loop" | "song" | "trash";
 
+/** User-facing filter taxonomy (replaced the prior Source + content_type
+ *  + Stars chips on 2026-05-17 evening; see Notion: Console (Build)). */
+export type BucketCategory = "all" | "jam" | "loops" | "field" | "tracks" | "other";
+
+/** Legacy SOURCE enum kept for type compat on BucketAsset.source_type;
+ *  no longer a user-facing filter. */
 export type BucketSource = "voice_memo" | "jam" | "video_extract" | "other";
 
 export type QualityStar = 0 | 1 | 2 | 3;
 
-export type BucketSort = "recent" | "oldest" | "longest" | "shortest" | "most-used";
-
-export type BucketStarFilter = "any" | "starred" | "three";
+export type BucketSort =
+  | "recent"
+  | "oldest"
+  | "longest"
+  | "shortest"
+  | "most-used"
+  | "stars";
 
 export interface BucketAsset {
   /** Stable engine row id. Required for assignment/lineage POSTs. */
@@ -251,13 +261,11 @@ export interface PromoteToLiveResponse {
 }
 
 export interface BucketsListFilters {
-  source?: BucketSource | "all";
-  star?: BucketStarFilter;
   sort?: BucketSort;
   /** Free-text search across path, filename, display_name, tags. */
   q?: string;
-  /** Filter by content_type (e.g. voice-note, music-only). */
-  content_type?: string;
+  /** Single Category filter (replaces Source + Type chips). */
+  category?: BucketCategory;
 }
 
 export interface BucketsListResponse {

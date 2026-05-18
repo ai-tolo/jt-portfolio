@@ -7,15 +7,13 @@ import BucketsKeymap from "../../../components/portal/buckets/BucketsKeymap.astr
 import { getBucketsList } from "../../../lib/console-api";
 import type {
   BucketName,
+  BucketCategory,
   BucketSort,
-  BucketSource,
-  BucketStarFilter,
 } from "../../../lib/console-types";
 
 const VALID_BUCKETS: BucketName[] = ["inbox", "voice_memo", "loop", "song", "trash"];
-const VALID_SOURCES: (BucketSource | "all")[] = ["all", "voice_memo", "jam", "video_extract", "other"];
-const VALID_STARS: BucketStarFilter[] = ["any", "starred", "three"];
-const VALID_SORTS: BucketSort[] = ["recent", "oldest", "longest", "shortest", "most-used"];
+const VALID_CATEGORIES: BucketCategory[] = ["all", "jam", "loops", "field", "tracks", "other"];
+const VALID_SORTS: BucketSort[] = ["recent", "oldest", "longest", "shortest", "most-used", "stars"];
 
 const bucketParam = Astro.params.bucket ?? "inbox";
 if (!VALID_BUCKETS.includes(bucketParam as BucketName)) {
@@ -24,29 +22,24 @@ if (!VALID_BUCKETS.includes(bucketParam as BucketName)) {
 const bucket = bucketParam as BucketName;
 
 const url = Astro.url;
-const sourceRaw = url.searchParams.get("source") ?? "all";
-const starRaw = url.searchParams.get("star") ?? "any";
+const categoryRaw = (url.searchParams.get("category") ?? "all").trim();
 const sortRaw = url.searchParams.get("sort") ?? "recent";
 const q = (url.searchParams.get("q") ?? "").trim();
-const contentType = (url.searchParams.get("content_type") ?? "all").trim();
 
-const source: BucketSource | "all" = VALID_SOURCES.includes(sourceRaw as BucketSource | "all")
-  ? (sourceRaw as BucketSource | "all")
+const category: BucketCategory = VALID_CATEGORIES.includes(categoryRaw as BucketCategory)
+  ? (categoryRaw as BucketCategory)
   : "all";
-const star: BucketStarFilter = VALID_STARS.includes(starRaw as BucketStarFilter)
-  ? (starRaw as BucketStarFilter)
-  : "any";
 const sort: BucketSort = VALID_SORTS.includes(sortRaw as BucketSort)
   ? (sortRaw as BucketSort)
   : "recent";
 
 // Fetch the current bucket plus the four others in parallel so the
 // sub-tab counts stay honest as the user assigns rows around. Search +
-// content_type apply only to the current bucket; the other buckets need
+// category apply only to the current bucket; the other buckets need
 // just the bucket-level count.
 const otherBuckets = VALID_BUCKETS.filter((b) => b !== bucket);
 const [primary, ...others] = await Promise.all([
-  getBucketsList(bucket, { source, star, sort, q, content_type: contentType }),
+  getBucketsList(bucket, { sort, q, category }),
   ...otherBuckets.map((b) => getBucketsList(b, {})),
 ]);
 
@@ -89,7 +82,7 @@ const BUCKET_TITLE: Record<BucketName, string> = {
 
     <BucketsKeymap />
 
-    <BucketsFilters bucket={bucket} source={source} star={star} sort={sort} q={q} contentType={contentType} />
+    <BucketsFilters bucket={bucket} category={category} sort={sort} q={q} />
 
     {fetchError ? (
       <p class="error" role="alert">Couldn't load: {fetchError}</p>
