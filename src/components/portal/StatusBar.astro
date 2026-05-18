@@ -1,79 +1,138 @@
 ---
-// Lightweight live status widget for M1 jobs + catalog state.
-// - Polls /api/console/status every 15s, only while the tab is visible.
-// - Renders a compact text strip; no animation, single DOM repaint per cycle.
-// - On error or 401, hides itself rather than spamming retries.
+// Live M1 status widget. Compact code-editor aesthetic: tokenized spans
+// (job names cyan, numbers green, keywords magenta, separators dim) with
+// soft text-shadow halos for a glowing-terminal feel. Polls /status every
+// 15s while the tab is visible; auto-hides on sustained failure.
 ---
 
 <aside class="status-bar" data-status-bar aria-live="polite" aria-label="M1 status">
   <span class="dot" data-dot="loading" aria-hidden="true"></span>
-  <span class="text" data-status-text>checking m1…</span>
+  <span class="text" data-status-text>
+    <span class="tok-dim">checking</span> <span class="tok-job">m1</span><span class="tok-sep">…</span>
+  </span>
 </aside>
 
 <style>
+  /* One Dark Pro-inspired palette. Designed for the Portal's near-black
+     background; high contrast, glow via text-shadow not animation. */
   .status-bar {
     display: inline-flex;
     align-items: center;
-    gap: 8px;
-    padding: 4px 10px;
-    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-    font-size: 11px;
+    gap: 10px;
+    padding: 6px 14px;
+    font-family: ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 13px;
     line-height: 1;
-    color: var(--muted);
-    background: color-mix(in srgb, var(--ink) 4%, transparent);
-    border: 1px solid var(--line);
+    color: #abb2bf; /* code editor default text */
+    background: color-mix(in srgb, #1e2127 92%, transparent); /* code editor bg */
+    border: 1px solid color-mix(in srgb, #61afef 22%, transparent);
+    border-radius: 2px;
     letter-spacing: 0;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
     max-width: 100%;
+    transition: border-color 280ms ease, box-shadow 280ms ease;
   }
-  .dot {
-    display: inline-block;
-    width: 8px;
-    height: 8px;
-    border-radius: 50%;
-    flex: 0 0 auto;
-    background: var(--muted);
+  /* Subtle outer glow that intensifies with state */
+  .status-bar:has(.dot[data-dot="busy"]) {
+    border-color: color-mix(in srgb, #98c379 45%, transparent);
+    box-shadow: 0 0 14px color-mix(in srgb, #98c379 18%, transparent);
   }
-  .dot[data-dot="ok"] {
-    background: var(--accent);
+  .status-bar:has(.dot[data-dot="warn"]) {
+    border-color: color-mix(in srgb, #e5c07b 55%, transparent);
+    box-shadow: 0 0 14px color-mix(in srgb, #e5c07b 22%, transparent);
   }
-  .dot[data-dot="busy"] {
-    background: var(--accent);
-    animation: status-pulse 1.4s ease-in-out infinite;
-  }
-  .dot[data-dot="warn"] {
-    background: #d4a017; /* amber, not theme-tinted on purpose */
-  }
-  .dot[data-dot="err"] {
-    background: var(--accent);
-    box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 30%, transparent);
-  }
-  .dot[data-dot="loading"] {
-    background: transparent;
-    border: 1px solid var(--line);
-  }
-  @keyframes status-pulse {
-    0%, 100% { opacity: 0.55; }
-    50% { opacity: 1; }
-  }
-  .text { overflow: hidden; text-overflow: ellipsis; }
-  .text b {
-    color: var(--text);
-    font-weight: var(--fw-semibold);
+  .status-bar:has(.dot[data-dot="err"]) {
+    border-color: color-mix(in srgb, #e06c75 60%, transparent);
+    box-shadow: 0 0 14px color-mix(in srgb, #e06c75 25%, transparent);
   }
   .status-bar[hidden] { display: none; }
 
+  /* Status dot — emits a soft halo via box-shadow. Subtle pulse on busy. */
+  .dot {
+    display: inline-block;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    flex: 0 0 auto;
+    background: #5c6370;
+    box-shadow: 0 0 4px rgba(92, 99, 112, 0.4);
+    transition: background 280ms ease, box-shadow 280ms ease;
+  }
+  .dot[data-dot="loading"] {
+    background: transparent;
+    border: 1px solid #5c6370;
+    box-shadow: none;
+  }
+  .dot[data-dot="ok"] {
+    background: #61afef;
+    box-shadow: 0 0 6px #61afef, 0 0 12px rgba(97, 175, 239, 0.45);
+  }
+  .dot[data-dot="busy"] {
+    background: #98c379;
+    box-shadow: 0 0 8px #98c379, 0 0 18px rgba(152, 195, 121, 0.55);
+    animation: dot-pulse 1.8s ease-in-out infinite;
+  }
+  .dot[data-dot="warn"] {
+    background: #e5c07b;
+    box-shadow: 0 0 8px #e5c07b, 0 0 18px rgba(229, 192, 123, 0.55);
+  }
+  .dot[data-dot="err"] {
+    background: #e06c75;
+    box-shadow: 0 0 10px #e06c75, 0 0 20px rgba(224, 108, 117, 0.6);
+  }
+  @keyframes dot-pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.6; }
+  }
   @media (prefers-reduced-motion: reduce) {
-    .dot[data-dot="busy"] { animation: none; opacity: 0.85; }
+    .dot[data-dot="busy"] { animation: none; }
+  }
+
+  /* Token spans — code-editor palette with soft halos. */
+  .text { overflow: hidden; text-overflow: ellipsis; }
+  .tok-job {
+    color: #61afef;
+    text-shadow: 0 0 6px rgba(97, 175, 239, 0.45);
+    font-weight: 600;
+  }
+  .tok-num {
+    color: #98c379;
+    text-shadow: 0 0 6px rgba(152, 195, 121, 0.4);
+    font-feature-settings: "tnum";
+    font-weight: 600;
+  }
+  .tok-key {
+    color: #e5c07b;
+    text-shadow: 0 0 4px rgba(229, 192, 123, 0.3);
+  }
+  .tok-keyword {
+    color: #c678dd;
+    text-shadow: 0 0 4px rgba(198, 120, 221, 0.3);
+    font-style: italic;
+  }
+  .tok-warn {
+    color: #e06c75;
+    text-shadow: 0 0 6px rgba(224, 108, 117, 0.55);
+    font-weight: 600;
+  }
+  .tok-dim {
+    color: #5c6370;
+  }
+  .tok-sep {
+    color: #4b5263;
+    margin: 0 2px;
+  }
+
+  /* Container scales it slightly down on narrow screens so it doesn't blow
+     out a phone layout. Stays readable down to 12px. */
+  @media (max-width: 700px) {
+    .status-bar { font-size: 12px; padding: 5px 10px; }
   }
 </style>
 
 <script>
-  // Plain JS (no TS types) — Astro inline TS scripts can silently drop on
-  // some edge cases. Lightweight: polls /api/console/status every 15s when
-  // the tab is visible, hides itself after sustained failure.
   const POLL_MS = 15000;
   const bar = document.querySelector("[data-status-bar]");
   const dot = bar && bar.querySelector(".dot");
@@ -83,6 +142,12 @@
     let timer = null;
     let consecutiveErrors = 0;
 
+    const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+    const n = (v) => Number(v).toLocaleString();
+    const tok = (cls, val) => `<span class="${cls}">${esc(val)}</span>`;
+    const sep = `<span class="tok-sep">·</span>`;
+    const slash = `<span class="tok-sep">/</span>`;
+
     const setState = (kind, html) => {
       dot.setAttribute("data-dot", kind);
       text.innerHTML = html;
@@ -91,26 +156,49 @@
     const renderStatus = (data) => {
       const busy = (data.jobs || []).filter((j) => j.running);
       const withProgress = busy.find((j) => j.progress);
-      const diskWarn = (data.disk && data.disk.internal_pct_used >= 90);
+      const diskPct = data.disk && data.disk.internal_pct_used;
+      const diskWarn = diskPct !== null && diskPct >= 90;
       const headline = withProgress
         || busy.find((j) => ["console-api", "task-inbox", "inbox-watcher"].indexOf(j.name) === -1)
         || null;
-      let line = "";
+
+      const parts = [];
       let kind = "ok";
+
       if (headline) {
         kind = "busy";
-        line = headline.progress
-          ? `<b>${headline.name}</b> ${headline.progress[0]}/${headline.progress[1]}`
-          : `<b>${headline.name}</b> running`;
+        if (headline.progress) {
+          parts.push(
+            tok("tok-job", headline.name) + " " +
+            tok("tok-num", headline.progress[0]) + slash + tok("tok-num", headline.progress[1])
+          );
+        } else {
+          parts.push(tok("tok-job", headline.name) + " " + tok("tok-keyword", "running"));
+        }
       } else {
-        line = `<b>${busy.length}</b> jobs idle-stable`;
+        parts.push(
+          tok("tok-num", busy.length) + " " + tok("tok-keyword", "jobs idle")
+        );
       }
-      line += ` · cat <b>${data.catalog.transcribed.toLocaleString()}</b>/${data.catalog.total_user.toLocaleString()} transcribed`;
-      if (data.disk && data.disk.internal_pct_used !== null) {
-        line += ` · disk <b>${data.disk.internal_pct_used}%</b>`;
+
+      parts.push(
+        tok("tok-key", "cat") + " " +
+        tok("tok-num", n(data.catalog.transcribed)) + slash + tok("tok-dim", n(data.catalog.total_user)) + " " +
+        tok("tok-keyword", "transcribed")
+      );
+
+      if (diskPct !== null && diskPct !== undefined) {
+        parts.push(
+          tok("tok-key", "disk") + " " +
+          tok(diskWarn ? "tok-warn" : "tok-num", diskPct + "%")
+        );
       }
+
+      if (diskWarn && kind !== "busy") kind = "warn";
+      // If a job is busy AND disk is in warning, prefer the warn dot.
       if (diskWarn) kind = "warn";
-      setState(kind, line);
+
+      setState(kind, parts.join(" " + sep + " "));
     };
 
     const tick = async () => {
@@ -119,7 +207,7 @@
         if (!res.ok) {
           consecutiveErrors++;
           if (consecutiveErrors > 2) bar.hidden = true;
-          else setState("err", "m1 unreachable (" + res.status + ")");
+          else setState("err", tok("tok-warn", "m1 unreachable") + " " + tok("tok-dim", "(" + res.status + ")"));
           return;
         }
         consecutiveErrors = 0;
@@ -128,7 +216,7 @@
       } catch (e) {
         consecutiveErrors++;
         if (consecutiveErrors > 2) bar.hidden = true;
-        else setState("err", "m1 offline");
+        else setState("err", tok("tok-warn", "m1 offline"));
       }
     };
 
