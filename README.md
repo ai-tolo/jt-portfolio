@@ -52,3 +52,29 @@ stale value silently.
 Source-database IDs are constants in `src/lib/notion.ts` and
 `src/lib/resumes.ts`; swap them when forking against your own Notion
 workspace.
+
+## Portal · Buckets tab (M3 scaffold)
+
+New triage surface at `/portal/buckets/[bucket]` (Inbox / Voice Memos /
+Loops / Songs / Trash). `/portal/buckets` redirects to
+`/portal/buckets/inbox`. Keyboard-first: arrow keys move focus between
+cards; **V / L / S / X** assign the focused card to a bucket; **0–3**
+sets quality stars; **Space** auditions; **Enter** confirms; **Esc**
+blurs. The full keymap is documented in the page's collapsible legend.
+
+The surface ships against mocked data while the M1 engine builds out the
+matching `bucket`, `quality_star`, `waveform_path`, and `parent_id`
+columns (Task A) plus the HTTP endpoints (Task E). When the engine is
+ready, swap two places:
+
+- **`src/lib/buckets-mock-data.ts`** — the fixture; delete the file
+  after wiring.
+- **`src/lib/console-api.ts`** — the five `// MOCK:` blocks
+  (`getBucketsList`, `setBucket`, `setQualityStar`, `getLineage`,
+  `revealInFinder`). Each comment names the engine endpoint it will
+  call. The API route stubs in `src/pages/api/console/buckets-*.ts`
+  already forward through these functions, so they need no change.
+
+Existing Portal tabs (Library, Workbench, Diary, Surprise) are
+untouched; the only shared edits are additive entries in `TabStrip` and
+the `current` union in `PortalLayout`.

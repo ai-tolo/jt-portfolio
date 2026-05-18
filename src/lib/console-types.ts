@@ -182,3 +182,95 @@ export interface SetPublicResponse {
   path: string;
   public: boolean;
 }
+
+// ── Build 3 successor: Buckets ─────────────────────────────────────────────
+// Spec: triage surface that lets the curator assign every catalog row to one
+// of four buckets (Voice Memos / Loops / Songs / Trash) plus a default Inbox
+// bin. The engine columns referenced here (bucket, quality_star,
+// waveform_path, parent_id, discarded_at) ship with M1 Task A; the UI is
+// scaffolded against mocks first so it can iterate while the engine work
+// proceeds in parallel.
+
+export type BucketName = "inbox" | "voice_memo" | "loop" | "song" | "trash";
+
+export type BucketSource = "voice_memo" | "jam" | "video_extract" | "other";
+
+export type QualityStar = 0 | 1 | 2 | 3;
+
+export type BucketSort = "recent" | "oldest" | "longest" | "shortest";
+
+export type BucketStarFilter = "any" | "starred" | "three";
+
+export interface BucketAsset {
+  /** Stable engine row id. Required for assignment/lineage POSTs. */
+  asset_id: number;
+  /** Absolute path on the M1 catalog volume. */
+  path: string;
+  display_name: string | null;
+  /** Null is treated as Inbox by the UI. */
+  bucket: BucketName | null;
+  quality_star: QualityStar;
+  /** Public-relative path to the pre-generated waveform PNG, or null. */
+  waveform_path: string | null;
+  /** Engine row id of the parent asset (a voice memo or video this row was
+   *  extracted from). Null for top-level rows. */
+  parent_id: number | null;
+  source_type: BucketSource | null;
+  duration_seconds: number | null;
+  bpm: number | null;
+  key: string | null;
+  tags: string | null;
+  /** ISO timestamp when the curator moved this row to the trash bucket. */
+  discarded_at: string | null;
+  /** Absolute path on M1 to the normalized WAV in
+   *  `_Soundbending/loops/`. Set after a successful promote-to-live. */
+  live_loop_path?: string | null;
+}
+
+export interface PromoteToLiveResponse {
+  asset_id: number;
+  live_loop_path: string;
+  wav_path: string;
+  /** Always null in Phase 1 (.wav-only). Phase 2 will populate once we have
+   *  an authoritative .alc template from Live's Save-as-Audio-Clip. */
+  alc_path: string | null;
+  normalized: boolean;
+  sourcestem: string;
+  filename: string;
+}
+
+export interface BucketsListFilters {
+  source?: BucketSource | "all";
+  star?: BucketStarFilter;
+  sort?: BucketSort;
+}
+
+export interface BucketsListResponse {
+  bucket: BucketName;
+  total: number;
+  items: BucketAsset[];
+}
+
+export interface BucketAssignResponse {
+  asset_id: number;
+  bucket: BucketName;
+}
+
+export interface QualityStarResponse {
+  asset_id: number;
+  quality_star: QualityStar;
+}
+
+export interface LineageResponse {
+  asset_id: number;
+  parent: BucketAsset | null;
+  children: BucketAsset[];
+}
+
+export interface RevealInFinderResponse {
+  asset_id: number;
+  ok: boolean;
+  /** Engine returns the absolute path it asked Finder to reveal, for
+   *  display in the UI. */
+  revealed_path: string | null;
+}

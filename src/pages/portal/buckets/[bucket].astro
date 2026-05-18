@@ -1,0 +1,508 @@
+---
+import PortalLayout from "../../../layouts/PortalLayout.astro";
+import BucketCard from "../../../components/portal/buckets/BucketCard.astro";
+import BucketSubTabs from "../../../components/portal/buckets/BucketSubTabs.astro";
+import BucketsFilters from "../../../components/portal/buckets/BucketsFilters.astro";
+import BucketsKeymap from "../../../components/portal/buckets/BucketsKeymap.astro";
+import { getBucketsList } from "../../../lib/console-api";
+import type {
+  BucketName,
+  BucketSort,
+  BucketSource,
+  BucketStarFilter,
+} from "../../../lib/console-types";
+
+const VALID_BUCKETS: BucketName[] = ["inbox", "voice_memo", "loop", "song", "trash"];
+const VALID_SOURCES: (BucketSource | "all")[] = ["all", "voice_memo", "jam", "video_extract", "other"];
+const VALID_STARS: BucketStarFilter[] = ["any", "starred", "three"];
+const VALID_SORTS: BucketSort[] = ["recent", "oldest", "longest", "shortest"];
+
+const bucketParam = Astro.params.bucket ?? "inbox";
+if (!VALID_BUCKETS.includes(bucketParam as BucketName)) {
+  return Astro.redirect("/portal/buckets/inbox", 307);
+}
+const bucket = bucketParam as BucketName;
+
+const url = Astro.url;
+const sourceRaw = url.searchParams.get("source") ?? "all";
+const starRaw = url.searchParams.get("star") ?? "any";
+const sortRaw = url.searchParams.get("sort") ?? "recent";
+
+const source: BucketSource | "all" = VALID_SOURCES.includes(sourceRaw as BucketSource | "all")
+  ? (sourceRaw as BucketSource | "all")
+  : "all";
+const star: BucketStarFilter = VALID_STARS.includes(starRaw as BucketStarFilter)
+  ? (starRaw as BucketStarFilter)
+  : "any";
+const sort: BucketSort = VALID_SORTS.includes(sortRaw as BucketSort)
+  ? (sortRaw as BucketSort)
+  : "recent";
+
+// Fetch the current bucket (mocked) plus the four others in parallel so the
+// sub-tab counts stay honest as the user assigns rows around.
+const otherBuckets = VALID_BUCKETS.filter((b) => b !== bucket);
+const [primary, ...others] = await Promise.all([
+  getBucketsList(bucket, { source, star, sort }),
+  ...otherBuckets.map((b) => getBucketsList(b, {})),
+]);
+
+const counts: Partial<Record<BucketName, number>> = {};
+if (primary.ok) counts[bucket] = primary.data.total;
+otherBuckets.forEach((b, i) => {
+  const r = others[i];
+  if (r.ok) counts[b] = r.data.total;
+});
+
+const items = primary.ok ? primary.data.items : [];
+const fetchError = primary.ok
+  ? null
+  : primary.error.kind === "http"
+    ? `HTTP ${primary.error.status}`
+    : primary.error.kind;
+
+const BUCKET_TITLE: Record<BucketName, string> = {
+  inbox: "Inbox",
+  voice_memo: "Voice Memos",
+  loop: "Loops",
+  song: "Songs",
+  trash: "Trash",
+};
+---
+
+<PortalLayout title={`Buckets · ${BUCKET_TITLE[bucket]}`} current="buckets">
+  <section class="buckets-page" data-bucket={bucket}>
+    <header class="head">
+      <div>
+        <p class="eyebrow">Buckets</p>
+        <h1 class="title">{BUCKET_TITLE[bucket]}</h1>
+      </div>
+      <p class="note">
+        Triage surface (Build 3 successor). Live on the M1 engine.
+      </p>
+    </header>
+
+    <BucketSubTabs current={bucket} counts={counts} />
+
+    <BucketsKeymap />
+
+    <BucketsFilters bucket={bucket} source={source} star={star} sort={sort} />
+
+    {fetchError ? (
+      <p class="error" role="alert">Couldn't load: {fetchError}</p>
+    ) : items.length === 0 ? (
+      <p class="empty">Nothing here yet. Try a different filter.</p>
+    ) : (
+      <>
+        <p class="count"><strong>{items.length}</strong> in {BUCKET_TITLE[bucket]}</p>
+        <ul class="cards" role="list">
+          {items.map((item, idx) => (
+            <li><BucketCard item={item} index={idx} /></li>
+          ))}
+        </ul>
+      </>
+    )}
+  </section>
+</PortalLayout>
+
+<style>
+  .buckets-page {
+    display: grid;
+    gap: var(--space-5);
+  }
+  .head {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    gap: var(--space-6);
+    flex-wrap: wrap;
+  }
+  .eyebrow {
+    font-size: var(--fs-eyebrow);
+    font-weight: var(--fw-semibold);
+    letter-spacing: var(--ls-eyebrow);
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  .title {
+    font-size: var(--fs-title);
+    font-weight: var(--fw-bold);
+    letter-spacing: var(--ls-title);
+    line-height: var(--lh-title);
+    margin: var(--space-1) 0 0;
+  }
+  .note {
+    font-size: var(--fs-small);
+    color: var(--muted);
+    max-width: 40ch;
+  }
+  .note code {
+    font-family: inherit;
+    background: var(--ink);
+    color: var(--ink-fg);
+    padding: 1px 6px;
+    font-size: 11px;
+    letter-spacing: 0.05em;
+  }
+
+  .count {
+    font-size: var(--fs-small);
+    color: var(--muted);
+    margin: 0;
+  }
+  .count strong { color: var(--accent); }
+
+  .empty { color: var(--muted); font-style: italic; }
+  .error {
+    padding: var(--space-3) var(--space-4);
+    border-left: 2px solid var(--accent);
+    background: color-mix(in srgb, var(--accent) 8%, transparent);
+    font-size: var(--fs-small);
+  }
+
+  .cards {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: grid;
+    gap: var(--space-4);
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 22rem), 1fr));
+  }
+</style>
+
+{/* Page-level controller for keyboard triage + per-card actions. Vanilla JS
+    in a script tag mirrors the pattern PortalLayout uses for its global
+    queue / trash / rename / public-toggle wiring. Scoped via .buckets-page
+    so it does not run on other tabs. */}
+<script>
+  type BucketName = "inbox" | "voice_memo" | "loop" | "song" | "trash";
+
+  const root = document.querySelector<HTMLElement>(".buckets-page");
+  if (root) {
+    const cards = () =>
+      Array.from(root.querySelectorAll<HTMLElement>("[data-bucket-card]"));
+
+    const focusCard = (idx: number) => {
+      const all = cards();
+      if (all.length === 0) return;
+      const clamped = Math.max(0, Math.min(all.length - 1, idx));
+      const target = all[clamped];
+      all.forEach((c) => c.removeAttribute("data-focused"));
+      target.setAttribute("data-focused", "true");
+      target.focus();
+    };
+
+    const focusedCard = (): HTMLElement | null => {
+      const active = document.activeElement as HTMLElement | null;
+      if (active && active.matches?.("[data-bucket-card]")) return active;
+      const marked = root.querySelector<HTMLElement>('[data-bucket-card][data-focused="true"]');
+      return marked ?? null;
+    };
+
+    const setStatus = (card: HTMLElement, text: string, tone: "" | "ok" | "err" = "") => {
+      const line = card.querySelector<HTMLElement>("[data-status-line]");
+      if (!line) return;
+      line.textContent = text;
+      if (tone) line.setAttribute("data-tone", tone);
+      else line.removeAttribute("data-tone");
+      if (text) {
+        window.setTimeout(() => {
+          if (line.textContent === text) {
+            line.textContent = "";
+            line.removeAttribute("data-tone");
+          }
+        }, 2200);
+      }
+    };
+
+    // ── Bucket assignment ────────────────────────────────────────────────
+    const assignBucket = async (card: HTMLElement, bucket: BucketName) => {
+      const assetId = card.dataset.assetId;
+      if (!assetId) return;
+      card.setAttribute("data-pending", "true");
+      try {
+        const res = await fetch("/api/console/buckets-assign", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ asset_id: Number(assetId), bucket }),
+        });
+        if (!res.ok) {
+          setStatus(card, `Assign failed (HTTP ${res.status})`, "err");
+          return;
+        }
+        card.dataset.bucket = bucket;
+        // Update the visible badge.
+        const badge = card.querySelector<HTMLElement>(".bucket-badge");
+        if (badge) {
+          badge.className = `bucket-badge bucket-${bucket}`;
+          badge.textContent =
+            bucket === "inbox" ? "Inbox"
+            : bucket === "voice_memo" ? "Voice Memo"
+            : bucket === "loop" ? "Loop"
+            : bucket === "song" ? "Song"
+            : "Trash";
+        }
+        setStatus(card, `→ ${bucket.replace("_", " ")}`, "ok");
+      } catch {
+        setStatus(card, "Assign failed (network)", "err");
+      } finally {
+        card.removeAttribute("data-pending");
+      }
+    };
+
+    // ── Quality stars ────────────────────────────────────────────────────
+    const setStars = async (card: HTMLElement, n: number) => {
+      const assetId = card.dataset.assetId;
+      if (!assetId) return;
+      card.setAttribute("data-pending", "true");
+      try {
+        const res = await fetch("/api/console/buckets-quality-star", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ asset_id: Number(assetId), quality_star: n }),
+        });
+        if (!res.ok) {
+          setStatus(card, `Stars failed (HTTP ${res.status})`, "err");
+          return;
+        }
+        card.dataset.quality = String(n);
+        card.querySelectorAll<HTMLElement>(".star").forEach((el, i) => {
+          el.classList.toggle("on", i < n);
+        });
+        const counter = card.querySelector<HTMLElement>(".quality-zero");
+        if (counter) counter.textContent = `(${n}/3)`;
+        setStatus(card, `★ ${n}`, "ok");
+      } catch {
+        setStatus(card, "Stars failed (network)", "err");
+      } finally {
+        card.removeAttribute("data-pending");
+      }
+    };
+
+    // ── Lineage reveal ───────────────────────────────────────────────────
+    const revealLineage = async (card: HTMLElement, chip: HTMLElement) => {
+      const assetId = card.dataset.assetId;
+      const target = card.querySelector<HTMLElement>("[data-lineage-target]");
+      if (!assetId || !target) return;
+      if (chip.dataset.loaded === "true") {
+        target.hidden = !target.hidden;
+        return;
+      }
+      try {
+        const res = await fetch(`/api/console/buckets-lineage?asset_id=${assetId}`);
+        if (!res.ok) {
+          target.hidden = false;
+          target.textContent = `Lineage failed (HTTP ${res.status})`;
+          return;
+        }
+        const data = await res.json();
+        const lines: string[] = [];
+        if (data.parent) {
+          const name = data.parent.display_name || data.parent.path.split("/").pop();
+          lines.push(`<b>parent:</b> ${name} (${data.parent.bucket ?? "inbox"})`);
+        }
+        if (Array.isArray(data.children) && data.children.length > 0) {
+          const kids = data.children
+            .map((c: { display_name: string | null; path: string; bucket: string | null }) =>
+              c.display_name || c.path.split("/").pop())
+            .join(", ");
+          lines.push(`<b>children:</b> ${kids}`);
+        }
+        target.innerHTML = lines.length > 0 ? lines.join("<br>") : "<i>No related rows.</i>";
+        target.hidden = false;
+        chip.dataset.loaded = "true";
+      } catch {
+        target.hidden = false;
+        target.textContent = "Lineage failed (network)";
+      }
+    };
+
+    // ── Promote to Live (Task F, .wav-only Phase 1) ─────────────────────
+    const promoteToLive = async (card: HTMLElement) => {
+      const assetId = card.dataset.assetId;
+      if (!assetId) return;
+      // Refuse double-click if already in flight.
+      if (card.getAttribute("data-pending") === "true") return;
+      const row = card.querySelector<HTMLElement>("[data-promote-row]");
+      const btn = row?.querySelector<HTMLButtonElement>('[data-action="promote-to-live"]');
+      card.setAttribute("data-pending", "true");
+      if (btn) {
+        btn.disabled = true;
+        btn.textContent = "Normalizing…";
+      }
+      setStatus(card, "Promoting…");
+      try {
+        const res = await fetch("/api/console/buckets-promote", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ asset_id: Number(assetId) }),
+        });
+        if (!res.ok) {
+          let detail = `HTTP ${res.status}`;
+          try {
+            const body = await res.json();
+            if (body?.error?.message) detail = body.error.message;
+            else if (typeof body?.detail === "string") detail = body.detail;
+          } catch {}
+          setStatus(card, `Promote failed: ${detail}`, "err");
+          if (btn) {
+            btn.disabled = false;
+            btn.textContent = "→ Promote to Live";
+          }
+          return;
+        }
+        const data = (await res.json()) as {
+          live_loop_path: string;
+          filename: string;
+        };
+        card.dataset.liveLoopPath = data.live_loop_path;
+        if (row) {
+          row.innerHTML = "";
+          const badge = document.createElement("span");
+          badge.className = "promoted-badge";
+          badge.title = `In Live's browser: ${data.live_loop_path}`;
+          badge.textContent = "✓ In Live";
+          row.appendChild(badge);
+        }
+        setStatus(card, `Promoted: ${data.filename}`, "ok");
+      } catch {
+        setStatus(card, "Promote failed (network)", "err");
+        if (btn) {
+          btn.disabled = false;
+          btn.textContent = "→ Promote to Live";
+        }
+      } finally {
+        card.removeAttribute("data-pending");
+      }
+    };
+
+    // ── Audition (visual only — real audio wires up when /file or a new
+    //    /audition endpoint is reachable; see Task E) ────────────────────
+    const toggleAudition = (card: HTMLElement) => {
+      const btn = card.querySelector<HTMLButtonElement>('[data-action="audition"]');
+      if (!btn) return;
+      const isOn = btn.getAttribute("aria-pressed") === "true";
+      // First, blank any other card currently auditioning.
+      cards().forEach((c) => {
+        if (c === card) return;
+        const b = c.querySelector<HTMLButtonElement>('[data-action="audition"]');
+        if (b && b.getAttribute("aria-pressed") === "true") {
+          b.setAttribute("aria-pressed", "false");
+          b.firstChild && (b.firstChild.textContent = "▶ ");
+        }
+      });
+      btn.setAttribute("aria-pressed", isOn ? "false" : "true");
+      // Replace the play glyph; preserve the trailing <span class="kbd">.
+      const first = btn.firstChild;
+      if (first) first.textContent = isOn ? "▶ " : "⏸ ";
+    };
+
+    // ── Click handlers (delegated) ───────────────────────────────────────
+    root.addEventListener("click", (e) => {
+      const t = e.target as HTMLElement | null;
+      if (!t) return;
+      const btn = t.closest<HTMLElement>("[data-action]");
+      if (!btn) return;
+      const card = btn.closest<HTMLElement>("[data-bucket-card]");
+      if (!card) return;
+
+      const action = btn.dataset.action;
+      switch (action) {
+        case "audition":
+          toggleAudition(card);
+          break;
+        case "quality-star": {
+          const n = Number(btn.dataset.starValue);
+          if (Number.isFinite(n)) setStars(card, n);
+          break;
+        }
+        case "lineage":
+          revealLineage(card, btn);
+          break;
+        case "promote-to-live":
+          promoteToLive(card);
+          break;
+      }
+    });
+
+    // Track focused state for the keyboard handler when the user clicks a
+    // card body (browsers handle focus already; we just mirror it into
+    // data-focused so styles match).
+    root.addEventListener("focusin", (e) => {
+      const t = e.target as HTMLElement | null;
+      const card = t?.closest<HTMLElement>("[data-bucket-card]");
+      if (!card) return;
+      cards().forEach((c) => c.removeAttribute("data-focused"));
+      card.setAttribute("data-focused", "true");
+    });
+
+    // ── Keyboard handler ─────────────────────────────────────────────────
+    document.addEventListener("keydown", (e) => {
+      // Don't hijack typing in form fields.
+      const tag = (e.target as HTMLElement | null)?.tagName?.toLowerCase();
+      if (tag === "input" || tag === "textarea" || (e.target as HTMLElement)?.isContentEditable) {
+        return;
+      }
+      // Only act when we're on the buckets page.
+      if (!document.body.contains(root)) return;
+      // Don't fight other site shortcuts.
+      if (e.metaKey || e.ctrlKey || e.altKey) return;
+
+      const all = cards();
+      if (all.length === 0) return;
+
+      const currentEl = focusedCard();
+      const currentIdx = currentEl ? all.indexOf(currentEl) : -1;
+
+      // Arrow navigation. ←/↑ go back; →/↓ go forward. Wraps.
+      if (["ArrowRight", "ArrowDown"].includes(e.key)) {
+        e.preventDefault();
+        const next = currentIdx < 0 ? 0 : (currentIdx + 1) % all.length;
+        focusCard(next);
+        return;
+      }
+      if (["ArrowLeft", "ArrowUp"].includes(e.key)) {
+        e.preventDefault();
+        const prev = currentIdx < 0 ? 0 : (currentIdx - 1 + all.length) % all.length;
+        focusCard(prev);
+        return;
+      }
+
+      if (!currentEl) return;
+
+      if (e.key === " ") {
+        e.preventDefault();
+        toggleAudition(currentEl);
+        return;
+      }
+      if (e.key === "Escape") {
+        currentEl.blur();
+        currentEl.removeAttribute("data-focused");
+        return;
+      }
+      if (e.key === "Enter") {
+        e.preventDefault();
+        // Detail drawer is a future deliverable. For now, surface the path
+        // in the status line so the curator can confirm what's focused.
+        setStatus(currentEl, currentEl.dataset.path ?? "(no path)", "ok");
+        return;
+      }
+
+      const key = e.key.toLowerCase();
+      if (key === "v") { e.preventDefault(); assignBucket(currentEl, "voice_memo"); return; }
+      if (key === "l") { e.preventDefault(); assignBucket(currentEl, "loop"); return; }
+      if (key === "s") { e.preventDefault(); assignBucket(currentEl, "song"); return; }
+      if (key === "x") { e.preventDefault(); assignBucket(currentEl, "trash"); return; }
+
+      if (["0", "1", "2", "3"].includes(e.key)) {
+        e.preventDefault();
+        setStars(currentEl, Number(e.key));
+      }
+    });
+
+    // Auto-focus the first card so arrows work without a click first.
+    const first = cards()[0];
+    if (first) {
+      first.setAttribute("data-focused", "true");
+    }
+  }
+</script>

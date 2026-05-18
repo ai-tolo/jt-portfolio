@@ -17,6 +17,16 @@ import type {
   DiaryCandidatesResponse,
   PublicItemsResponse,
   SetPublicResponse,
+  BucketAsset,
+  BucketAssignResponse,
+  BucketName,
+  BucketsListFilters,
+  BucketsListResponse,
+  LineageResponse,
+  PromoteToLiveResponse,
+  QualityStar,
+  QualityStarResponse,
+  RevealInFinderResponse,
 } from "./console-types";
 
 // process.env is checked first so Vercel's runtime env vars always win in
@@ -195,6 +205,22 @@ export async function streamAsset(
   return fetch(`${BASE}/file?${params}`, { headers, signal: init.signal });
 }
 
+/** Stream a pre-generated waveform PNG. The engine's `/waveform/<sha1>.png`
+ * endpoint serves files from `~/automation/data/waveforms/` on M1 (generated
+ * by `~/automation/sweeper/`). Returns 404 when the PNG doesn't exist
+ * (sweeper hasn't reached that file yet, or it's TCC-blocked, or the file
+ * type isn't renderable); the caller forwards that to the browser and
+ * BucketCard's `<img onerror>` falls back to a placeholder. */
+export async function streamWaveform(
+  sha1: string,
+  init: { signal?: AbortSignal } = {},
+): Promise<Response> {
+  return fetch(`${BASE}/waveform/${sha1}.png`, {
+    headers: { ...authHeaders() },
+    signal: init.signal,
+  });
+}
+
 export function publicItems(opts?: FetchOpts & { limit?: number }) {
   const params = new URLSearchParams();
   if (opts?.limit) params.set("limit", String(opts.limit));
@@ -316,6 +342,66 @@ async function _post<T>(
       },
     };
   }
+}
+
+// ── Build 3 successor: Buckets (LIVE) ─────────────────────────────────────
+// Wired to the M1 engine's /buckets/* routes (deployed 2026-05-17 evening).
+// `waveform_path` values are engine-side filenames like `<sha1>.png`; the
+// BucketCard formats them through `/api/console/waveform?sha1=<sha>` when
+// rendering (see waveformSrc() in BucketCard.astro).
+
+export async function getBucketsList(
+  bucket: BucketName,
+  filters: BucketsListFilters = {},
+): Promise<ApiResult<BucketsListResponse>> {
+  const params = new URLSearchParams({ bucket });
+  if (filters.source && filters.source !== "all") params.set("source", filters.source);
+  if (filters.star && filters.star !== "any") params.set("star", filters.star);
+  if (filters.sort && filters.sort !== "recent") params.set("sort", filters.sort);
+  return call<BucketsListResponse>(`/buckets?${params}`);
+}
+
+export async function setBucket(
+  asset_id: number,
+  bucket: BucketName,
+): Promise<ApiResult<BucketAssignResponse>> {
+  return _post<BucketAssignResponse>("/buckets/assign", { asset_id, bucket });
+}
+
+export async function setQualityStar(
+  asset_id: number,
+  stars: QualityStar,
+): Promise<ApiResult<QualityStarResponse>> {
+  return _post<QualityStarResponse>("/buckets/quality-star", {
+    asset_id,
+    quality_star: stars,
+  });
+}
+
+export async function getLineage(
+  asset_id: number,
+): Promise<ApiResult<LineageResponse>> {
+  const params = new URLSearchParams({ asset_id: String(asset_id) });
+  return call<LineageResponse>(`/buckets/lineage?${params}`);
+}
+
+export async function revealInFinder(
+  asset_id: number,
+): Promise<ApiResult<RevealInFinderResponse>> {
+  return _post<RevealInFinderResponse>("/buckets/reveal-in-finder", { asset_id });
+}
+
+/** Promote a bucket=loop row into Live's browser. Loudnorm pass plus a
+ *  small file write can take a few seconds; default _post timeout (5s) is
+ *  too short for longer source files, so we bump to 90s here. */
+export async function promoteToLive(
+  asset_id: number,
+): Promise<ApiResult<PromoteToLiveResponse>> {
+  return _post<PromoteToLiveResponse>(
+    "/buckets/promote-to-live",
+    { asset_id },
+    { timeoutMs: 90_000 },
+  );
 }
 
 export async function setItemPublic(

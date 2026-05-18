@@ -1,0 +1,451 @@
+---
+import type { BucketAsset, BucketName } from "../../../lib/console-types";
+
+interface Props {
+  item: BucketAsset;
+  /** Index within the rendered grid — used as a stable tab order so arrow
+   *  keys traverse predictably. */
+  index: number;
+}
+
+const { item, index } = Astro.props;
+
+const basename = (p: string): string => p.split("/").pop() ?? p;
+const title = item.display_name || basename(item.path);
+
+const fmtDuration = (s: number | null): string | null => {
+  if (s == null || !Number.isFinite(s) || s <= 0) return null;
+  const m = Math.floor(s / 60);
+  const r = Math.round(s % 60);
+  return `${m}:${String(r).padStart(2, "0")}`;
+};
+const durationLabel = fmtDuration(item.duration_seconds);
+
+const tagList = (item.tags ?? "")
+  .split(",")
+  .map((t) => t.trim())
+  .filter(Boolean)
+  .slice(0, 6);
+
+// Bucket badge — display label + the four-key hint chip when assigned.
+const BUCKET_LABEL: Record<BucketName, string> = {
+  inbox: "Inbox",
+  voice_memo: "Voice Memo",
+  loop: "Loop",
+  song: "Song",
+  trash: "Trash",
+};
+const currentBucket: BucketName = item.bucket ?? "inbox";
+
+// Lineage chip wording — the engine returns parent rows of either
+// source_type voice_memo or video_extract; default to "asset" if unknown.
+const lineageWord = (() => {
+  if (!item.parent_id) return null;
+  switch (item.source_type) {
+    case "voice_memo": return "voice-memo";
+    case "video_extract": return "video";
+    case "jam": return "jam";
+    default: return "asset";
+  }
+})();
+
+// Waveform `src` — engine returns `waveform_path` as `<sha1>.png` (or a
+// full path; we handle both). The Portal serves through the auth-gated
+// /api/console/waveform proxy.
+const waveformSrc = (() => {
+  const wp = item.waveform_path;
+  if (!wp) return null;
+  const basename = wp.split("/").pop() ?? wp;
+  const sha1 = basename.replace(/\.png$/i, "");
+  if (!/^[a-f0-9]{40}$/i.test(sha1)) return null;
+  return `/api/console/waveform?sha1=${sha1}`;
+})();
+---
+
+<article
+  class="bucket-card"
+  tabindex="0"
+  data-bucket-card
+  data-card-index={String(index)}
+  data-asset-id={String(item.asset_id)}
+  data-bucket={currentBucket}
+  data-quality={String(item.quality_star)}
+  data-parent-id={item.parent_id ? String(item.parent_id) : ""}
+  data-path={item.path}
+  data-live-loop-path={item.live_loop_path ?? ""}
+  aria-label={`${title} — ${BUCKET_LABEL[currentBucket]}`}
+>
+  <div class="waveform">
+    {waveformSrc ? (
+      <img
+        src={waveformSrc}
+        alt=""
+        loading="lazy"
+        width="640"
+        height="80"
+        onerror="this.replaceWith(Object.assign(document.createElement('div'),{className:'waveform-placeholder',textContent:'no waveform yet'}))"
+      />
+    ) : (
+      <div class="waveform-placeholder">no waveform yet</div>
+    )}
+  </div>
+
+  <header class="head">
+    <h3 class="title" title={item.path}>{title}</h3>
+    <button
+      type="button"
+      class="audition"
+      data-action="audition"
+      data-asset-id={String(item.asset_id)}
+      aria-pressed="false"
+      title="Audition (Space)"
+    >▶ <span class="kbd">Space</span></button>
+  </header>
+
+  <div class="bucket-row">
+    <span class:list={["bucket-badge", `bucket-${currentBucket}`]}>
+      {BUCKET_LABEL[currentBucket]}
+    </span>
+    <span class="keymap-inline" aria-hidden="true">
+      <kbd>V</kbd><kbd>L</kbd><kbd>S</kbd><kbd>X</kbd>
+    </span>
+  </div>
+
+  {currentBucket === "loop" && (
+    <div class="promote-row" data-promote-row>
+      {item.live_loop_path ? (
+        <span class="promoted-badge" title={`In Live's browser: ${item.live_loop_path}`}>
+          ✓ In Live
+        </span>
+      ) : (
+        <button
+          type="button"
+          class="promote-btn"
+          data-action="promote-to-live"
+          data-asset-id={String(item.asset_id)}
+          title="Copy + loudness-normalize to _Soundbending/loops/ for Live's browser"
+        >→ Promote to Live</button>
+      )}
+    </div>
+  )}
+
+  <div class="quality" role="group" aria-label="Quality stars">
+    {[1, 2, 3].map((n) => (
+      <button
+        type="button"
+        class:list={["star", { on: item.quality_star >= n }]}
+        data-action="quality-star"
+        data-asset-id={String(item.asset_id)}
+        data-star-value={String(n)}
+        aria-label={`Set quality to ${n} star${n === 1 ? "" : "s"}`}
+        title={`Set quality to ${n} (press ${n} when focused)`}
+      >★</button>
+    ))}
+    <span class="quality-zero" title="Press 0 when focused to clear stars">
+      ({item.quality_star}/3)
+    </span>
+  </div>
+
+  {(durationLabel || item.bpm || item.key) && (
+    <p class="audio-meta">
+      {durationLabel && <span>{durationLabel}</span>}
+      {item.bpm && <span>{Math.round(item.bpm)} BPM</span>}
+      {item.key && <span>{item.key}</span>}
+      {item.source_type && <span class="src">{item.source_type.replace("_", " ")}</span>}
+    </p>
+  )}
+
+  {lineageWord && (
+    <button
+      type="button"
+      class="lineage-chip"
+      data-action="lineage"
+      data-asset-id={String(item.asset_id)}
+      title="Click to fetch lineage"
+    >
+      from {lineageWord}:{item.parent_id}
+    </button>
+  )}
+  {/* Lineage detail panel — populated by the page-level click handler. */}
+  <div class="lineage-detail" data-lineage-target hidden></div>
+
+  {tagList.length > 0 && (
+    <ul class="tags" role="list">
+      {tagList.map((t) => <li>{t}</li>)}
+    </ul>
+  )}
+
+  <p class="status" data-status-line aria-live="polite"></p>
+</article>
+
+<style>
+  .bucket-card {
+    display: grid;
+    gap: var(--space-3);
+    padding: var(--space-4);
+    background: color-mix(in srgb, var(--ink) 6%, transparent);
+    border: 1px solid var(--line);
+    outline: none;
+    transition: border-color 200ms ease, background-color 200ms ease,
+                box-shadow 200ms ease;
+  }
+  .bucket-card:hover { border-color: var(--accent); }
+  .bucket-card:focus-visible,
+  .bucket-card[data-focused="true"] {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 35%, transparent);
+  }
+  .bucket-card[data-pending="true"] { opacity: 0.5; pointer-events: none; }
+
+  .waveform {
+    height: 56px;
+    background: var(--surface-1);
+    border: 1px solid var(--line);
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .waveform img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+  }
+  .waveform-placeholder {
+    font-size: var(--fs-eyebrow);
+    font-weight: var(--fw-semibold);
+    letter-spacing: var(--ls-eyebrow);
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+
+  .head {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--space-3);
+  }
+  .title {
+    flex: 1;
+    margin: 0;
+    font-size: 1rem;
+    font-weight: var(--fw-semibold);
+    line-height: 1.3;
+    word-break: break-word;
+  }
+  .audition {
+    font: inherit;
+    font-size: var(--fs-eyebrow);
+    font-weight: var(--fw-semibold);
+    letter-spacing: var(--ls-eyebrow);
+    text-transform: uppercase;
+    color: var(--text);
+    background: transparent;
+    border: 1px solid var(--line);
+    padding: 4px 8px;
+    cursor: pointer;
+    display: inline-flex;
+    gap: 6px;
+    align-items: center;
+    transition: color 160ms ease, border-color 160ms ease;
+  }
+  .audition:hover,
+  .audition:focus-visible {
+    color: var(--accent);
+    border-color: var(--accent);
+  }
+  .audition[aria-pressed="true"] {
+    color: var(--accent);
+    border-color: var(--accent);
+  }
+  .kbd {
+    font-size: 9px;
+    letter-spacing: 0.1em;
+    opacity: 0.7;
+  }
+
+  .bucket-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: var(--space-3);
+  }
+  .bucket-badge {
+    display: inline-block;
+    font-size: var(--fs-eyebrow);
+    font-weight: var(--fw-semibold);
+    letter-spacing: var(--ls-eyebrow);
+    text-transform: uppercase;
+    padding: 4px 8px;
+    border: 1px solid var(--line);
+    color: var(--text);
+  }
+  .bucket-inbox { color: var(--muted); }
+  .bucket-voice_memo { color: var(--accent); border-color: var(--accent); }
+  .bucket-loop { color: var(--ink-fg); background: var(--ink); border-color: var(--ink); }
+  .bucket-song {
+    color: var(--bg);
+    background: var(--accent);
+    border-color: var(--accent);
+  }
+  .bucket-trash {
+    color: var(--muted);
+    border-style: dashed;
+  }
+
+  .keymap-inline {
+    display: inline-flex;
+    gap: 4px;
+  }
+  .keymap-inline kbd {
+    font: inherit;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 10px;
+    color: var(--muted);
+    border: 1px solid var(--line);
+    padding: 2px 5px;
+    line-height: 1;
+  }
+
+  .promote-row {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+  }
+  .promote-btn {
+    font: inherit;
+    font-size: var(--fs-eyebrow);
+    font-weight: var(--fw-semibold);
+    letter-spacing: var(--ls-eyebrow);
+    text-transform: uppercase;
+    color: var(--bg);
+    background: var(--accent);
+    border: 1px solid var(--accent);
+    padding: 6px 10px;
+    cursor: pointer;
+    transition: background-color 160ms ease, color 160ms ease;
+  }
+  .promote-btn:hover,
+  .promote-btn:focus-visible {
+    background: var(--ink);
+    color: var(--ink-fg);
+    border-color: var(--ink);
+    outline: none;
+  }
+  .promote-btn[disabled] {
+    cursor: progress;
+    opacity: 0.65;
+  }
+  .promoted-badge {
+    display: inline-block;
+    font-size: var(--fs-eyebrow);
+    font-weight: var(--fw-semibold);
+    letter-spacing: var(--ls-eyebrow);
+    text-transform: uppercase;
+    color: var(--accent);
+    background: transparent;
+    border: 1px solid var(--accent);
+    padding: 5px 9px;
+  }
+
+  .quality {
+    display: flex;
+    gap: 4px;
+    align-items: center;
+  }
+  .star {
+    font: inherit;
+    font-size: 14px;
+    color: var(--line);
+    background: transparent;
+    border: 0;
+    padding: 2px 4px;
+    cursor: pointer;
+    line-height: 1;
+    transition: color 160ms ease;
+  }
+  .star:hover,
+  .star:focus-visible { color: var(--accent); outline: none; }
+  .star.on { color: var(--accent); }
+  .quality-zero {
+    font-size: 10px;
+    color: var(--muted);
+    margin-left: 4px;
+    font-feature-settings: "tnum";
+  }
+
+  .audio-meta {
+    margin: 0;
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-3);
+    font-size: var(--fs-eyebrow);
+    font-weight: var(--fw-semibold);
+    color: var(--accent);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+  .audio-meta span:not(:last-child)::after {
+    content: " ·";
+    color: var(--muted);
+    margin-left: var(--space-2);
+  }
+  .audio-meta .src { color: var(--muted); }
+
+  .lineage-chip {
+    font: inherit;
+    justify-self: flex-start;
+    align-self: flex-start;
+    font-size: 11px;
+    font-weight: var(--fw-medium);
+    color: var(--muted);
+    background: transparent;
+    border: 1px dashed var(--line);
+    padding: 3px 8px;
+    cursor: pointer;
+    text-transform: none;
+    letter-spacing: 0;
+    transition: color 160ms ease, border-color 160ms ease;
+  }
+  .lineage-chip:hover,
+  .lineage-chip:focus-visible {
+    color: var(--accent);
+    border-color: var(--accent);
+  }
+  .lineage-chip[data-loaded="true"] { border-style: solid; }
+
+  .lineage-detail {
+    font-size: var(--fs-eyebrow);
+    color: var(--muted);
+    border-left: 2px solid var(--line);
+    padding: 4px 0 4px 8px;
+    line-height: 1.45;
+  }
+  .lineage-detail b { color: var(--text); font-weight: var(--fw-semibold); }
+
+  .tags {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px 6px;
+  }
+  .tags li {
+    font-size: 11px;
+    font-weight: var(--fw-medium);
+    color: var(--muted);
+    border: 1px solid var(--line);
+    padding: 2px 6px;
+  }
+
+  .status {
+    margin: 0;
+    min-height: 1em;
+    font-size: 11px;
+    color: var(--muted);
+    font-style: italic;
+  }
+  .status[data-tone="ok"] { color: var(--accent); font-style: normal; }
+  .status[data-tone="err"] { color: var(--accent); font-style: normal; }
+</style>

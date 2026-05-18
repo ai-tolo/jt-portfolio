@@ -1,0 +1,148 @@
+---
+import type {
+  BucketName,
+  BucketSort,
+  BucketSource,
+  BucketStarFilter,
+} from "../../../lib/console-types";
+
+interface Props {
+  bucket: BucketName;
+  source: BucketSource | "all";
+  star: BucketStarFilter;
+  sort: BucketSort;
+}
+
+const { bucket, source, star, sort } = Astro.props;
+
+const SOURCES: { id: BucketSource | "all"; label: string }[] = [
+  { id: "all", label: "All" },
+  { id: "voice_memo", label: "Voice Memo" },
+  { id: "jam", label: "Jam" },
+  { id: "video_extract", label: "Video-Extracted" },
+  { id: "other", label: "Other" },
+];
+
+const STARS: { id: BucketStarFilter; label: string }[] = [
+  { id: "any", label: "Any" },
+  { id: "starred", label: "Starred (≥1)" },
+  { id: "three", label: "3-star only" },
+];
+
+const SORTS: { id: BucketSort; label: string }[] = [
+  { id: "recent", label: "Recent" },
+  { id: "oldest", label: "Oldest" },
+  { id: "longest", label: "Longest" },
+  { id: "shortest", label: "Shortest" },
+];
+
+// Build a URL preserving the bucket path; only the query string changes.
+const base = `/portal/buckets/${bucket}`;
+const buildHref = (overrides: Record<string, string | null>): string => {
+  const p = new URLSearchParams();
+  if (source !== "all") p.set("source", source);
+  if (star !== "any") p.set("star", star);
+  if (sort !== "recent") p.set("sort", sort);
+  for (const [k, v] of Object.entries(overrides)) {
+    if (v === null) p.delete(k);
+    else p.set(k, v);
+  }
+  // Normalize defaults out of the URL.
+  if (p.get("source") === "all") p.delete("source");
+  if (p.get("star") === "any") p.delete("star");
+  if (p.get("sort") === "recent") p.delete("sort");
+  const qs = p.toString();
+  return qs ? `${base}?${qs}` : base;
+};
+---
+
+<div class="filters" aria-label="Bucket filters">
+  <div class="group">
+    <span class="label">Source</span>
+    <ul class="chips" role="list">
+      {SOURCES.map((s) => (
+        <li>
+          <a
+            href={buildHref({ source: s.id })}
+            class:list={["chip", { active: source === s.id }]}
+          >{s.label}</a>
+        </li>
+      ))}
+    </ul>
+  </div>
+
+  <div class="group">
+    <span class="label">Stars</span>
+    <ul class="chips" role="list">
+      {STARS.map((s) => (
+        <li>
+          <a
+            href={buildHref({ star: s.id })}
+            class:list={["chip", { active: star === s.id }]}
+          >{s.label}</a>
+        </li>
+      ))}
+    </ul>
+  </div>
+
+  <div class="group">
+    <span class="label">Sort</span>
+    <ul class="chips" role="list">
+      {SORTS.map((s) => (
+        <li>
+          <a
+            href={buildHref({ sort: s.id })}
+            class:list={["chip", { active: sort === s.id }]}
+          >{s.label}</a>
+        </li>
+      ))}
+    </ul>
+  </div>
+</div>
+
+<style>
+  .filters {
+    display: grid;
+    gap: var(--space-3);
+  }
+  .group {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    flex-wrap: wrap;
+  }
+  .label {
+    font-size: var(--fs-eyebrow);
+    font-weight: var(--fw-semibold);
+    letter-spacing: var(--ls-eyebrow);
+    text-transform: uppercase;
+    color: var(--muted);
+    min-width: 4rem;
+  }
+  .chips {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+  .chip {
+    display: inline-block;
+    font-size: var(--fs-eyebrow);
+    font-weight: var(--fw-semibold);
+    letter-spacing: var(--ls-eyebrow);
+    text-transform: uppercase;
+    color: var(--muted);
+    border: 1px solid var(--line);
+    padding: 5px 9px;
+    text-decoration: none;
+    transition: color 160ms ease, border-color 160ms ease;
+  }
+  .chip:hover { color: var(--text); border-color: var(--text); }
+  .chip.active {
+    color: var(--bg);
+    background: var(--accent);
+    border-color: var(--accent);
+  }
+</style>
