@@ -104,6 +104,34 @@ export function health(opts?: FetchOpts) {
   return call<HealthResponse>("/health", opts);
 }
 
+export interface StatusJob {
+  name: string;
+  pid: number | null;
+  running: boolean;
+  progress: [number, number] | null;
+  log_mtime: number | null;
+}
+
+export interface StatusResponse {
+  ts: number;
+  jobs: StatusJob[];
+  catalog: {
+    total_user: number;
+    transcribed: number;
+    dup_flagged: number;
+    orphan_flagged: number;
+    display_named: number;
+  };
+  disk: {
+    internal_pct_used: number | null;
+    t7_pct_used: number | null;
+  };
+}
+
+export function status(opts?: FetchOpts) {
+  return call<StatusResponse>("/status", opts);
+}
+
 export function stats(opts?: FetchOpts) {
   return call<StatsResponse>("/stats", opts);
 }

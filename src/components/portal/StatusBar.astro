@@ -1,0 +1,145 @@
+---
+// Lightweight live status widget for M1 jobs + catalog state.
+// - Polls /api/console/status every 15s, only while the tab is visible.
+// - Renders a compact text strip; no animation, single DOM repaint per cycle.
+// - On error or 401, hides itself rather than spamming retries.
+---
+
+<aside class="status-bar" data-status-bar aria-live="polite" aria-label="M1 status">
+  <span class="dot" data-dot="loading" aria-hidden="true"></span>
+  <span class="text" data-status-text>checking m1…</span>
+</aside>
+
+<style>
+  .status-bar {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 4px 10px;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 11px;
+    line-height: 1;
+    color: var(--muted);
+    background: color-mix(in srgb, var(--ink) 4%, transparent);
+    border: 1px solid var(--line);
+    letter-spacing: 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 100%;
+  }
+  .dot {
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    flex: 0 0 auto;
+    background: var(--muted);
+  }
+  .dot[data-dot="ok"] {
+    background: var(--accent);
+  }
+  .dot[data-dot="busy"] {
+    background: var(--accent);
+    animation: status-pulse 1.4s ease-in-out infinite;
+  }
+  .dot[data-dot="warn"] {
+    background: #d4a017; /* amber, not theme-tinted on purpose */
+  }
+  .dot[data-dot="err"] {
+    background: var(--accent);
+    box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 30%, transparent);
+  }
+  .dot[data-dot="loading"] {
+    background: transparent;
+    border: 1px solid var(--line);
+  }
+  @keyframes status-pulse {
+    0%, 100% { opacity: 0.55; }
+    50% { opacity: 1; }
+  }
+  .text { overflow: hidden; text-overflow: ellipsis; }
+  .text b {
+    color: var(--text);
+    font-weight: var(--fw-semibold);
+  }
+  .status-bar[hidden] { display: none; }
+
+  @media (prefers-reduced-motion: reduce) {
+    .dot[data-dot="busy"] { animation: none; opacity: 0.85; }
+  }
+</style>
+
+<script>
+  // Plain JS (no TS types) — Astro inline TS scripts can silently drop on
+  // some edge cases. Lightweight: polls /api/console/status every 15s when
+  // the tab is visible, hides itself after sustained failure.
+  const POLL_MS = 15000;
+  const bar = document.querySelector("[data-status-bar]");
+  const dot = bar && bar.querySelector(".dot");
+  const text = document.querySelector("[data-status-text]");
+
+  if (bar && dot && text) {
+    let timer = null;
+    let consecutiveErrors = 0;
+
+    const setState = (kind, html) => {
+      dot.setAttribute("data-dot", kind);
+      text.innerHTML = html;
+    };
+
+    const renderStatus = (data) => {
+      const busy = (data.jobs || []).filter((j) => j.running);
+      const withProgress = busy.find((j) => j.progress);
+      const diskWarn = (data.disk && data.disk.internal_pct_used >= 90);
+      const headline = withProgress
+        || busy.find((j) => ["console-api", "task-inbox", "inbox-watcher"].indexOf(j.name) === -1)
+        || null;
+      let line = "";
+      let kind = "ok";
+      if (headline) {
+        kind = "busy";
+        line = headline.progress
+          ? `<b>${headline.name}</b> ${headline.progress[0]}/${headline.progress[1]}`
+          : `<b>${headline.name}</b> running`;
+      } else {
+        line = `<b>${busy.length}</b> jobs idle-stable`;
+      }
+      line += ` · cat <b>${data.catalog.transcribed.toLocaleString()}</b>/${data.catalog.total_user.toLocaleString()} transcribed`;
+      if (data.disk && data.disk.internal_pct_used !== null) {
+        line += ` · disk <b>${data.disk.internal_pct_used}%</b>`;
+      }
+      if (diskWarn) kind = "warn";
+      setState(kind, line);
+    };
+
+    const tick = async () => {
+      try {
+        const res = await fetch("/api/console/status", { cache: "no-store" });
+        if (!res.ok) {
+          consecutiveErrors++;
+          if (consecutiveErrors > 2) bar.hidden = true;
+          else setState("err", "m1 unreachable (" + res.status + ")");
+          return;
+        }
+        consecutiveErrors = 0;
+        bar.hidden = false;
+        renderStatus(await res.json());
+      } catch (e) {
+        consecutiveErrors++;
+        if (consecutiveErrors > 2) bar.hidden = true;
+        else setState("err", "m1 offline");
+      }
+    };
+
+    const schedule = () => {
+      if (timer !== null) { clearTimeout(timer); timer = null; }
+      if (document.hidden) return;
+      tick();
+      timer = setTimeout(schedule, POLL_MS);
+    };
+
+    document.addEventListener("visibilitychange", schedule);
+    schedule();
+  }
+</script>
