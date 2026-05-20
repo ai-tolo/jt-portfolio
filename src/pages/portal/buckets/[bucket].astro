@@ -485,10 +485,14 @@ const BUCKET_TITLE: Record<BucketView, string> = {
       playCard(card, fraction);
     };
 
-    // ── Hold-to-trash (3s press) ─────────────────────────────────────────
-    // Replaces the X keyboard shortcut. The button has a CSS-only fill
-    // animation triggered by the data-holding attribute; we just toggle
-    // the attribute and run assignBucket(card, "trash") after the timeout.
+    // ── Hold-to-archive (0.9s press) + Undo window ───────────────────────
+    // The button's fill bar climbs over 0.9s via CSS while the curator
+    // holds; after the timeout the card flips to "data-archiving" and
+    // assignBucket(card, "trash") commits server-side. An inline status
+    // line offers a 6-second Undo window that reverses to the previous
+    // bucket if the curator changes their mind.
+    const HOLD_MS = 900;
+    const UNDO_MS = 6000;
     let trashTimer: number | null = null;
     let activeTrashBtn: HTMLElement | null = null;
 
@@ -503,15 +507,35 @@ const BUCKET_TITLE: Record<BucketView, string> = {
       }
     };
 
+    const offerUndo = (card: HTMLElement, prevBucket: BucketName) => {
+      const status = card.querySelector<HTMLElement>("[data-status-line]");
+      if (!status) return;
+      const safe = prevBucket === "trash" ? "inbox" : prevBucket;
+      status.innerHTML = `<span class="undo-text">Archived.</span> <button type="button" class="undo-btn" data-action="undo-archive" data-prev="${safe}">Undo</button>`;
+      status.setAttribute("data-tone", "ok");
+      // Auto-fade the offer after UNDO_MS; the card stays archived.
+      window.setTimeout(() => {
+        if (status.textContent && status.textContent.startsWith("Archived")) {
+          status.textContent = "";
+          status.removeAttribute("data-tone");
+        }
+      }, UNDO_MS);
+    };
+
     const startTrashHold = (btn: HTMLElement) => {
       if (trashTimer !== null) return;
       activeTrashBtn = btn;
       btn.setAttribute("data-holding", "true");
       trashTimer = window.setTimeout(() => {
         const card = btn.closest<HTMLElement>("[data-bucket-card]");
-        if (card) assignBucket(card, "trash");
+        if (card) {
+          const prev = (card.dataset.bucket as BucketName | undefined) ?? "inbox";
+          card.setAttribute("data-archiving", "true");
+          assignBucket(card, "trash");
+          offerUndo(card, prev);
+        }
         cancelTrashHold();
-      }, 2000);
+      }, HOLD_MS);
     };
 
     root.addEventListener("pointerdown", (e) => {
@@ -553,6 +577,23 @@ const BUCKET_TITLE: Record<BucketView, string> = {
         case "kudos":
           bumpKudos(card);
           break;
+        case "undo-archive": {
+          const prev = (btn.dataset.prev as BucketName | undefined) ?? "inbox";
+          card.removeAttribute("data-archiving");
+          assignBucket(card, prev);
+          const status = card.querySelector<HTMLElement>("[data-status-line]");
+          if (status) {
+            status.textContent = "Restored.";
+            status.setAttribute("data-tone", "ok");
+            window.setTimeout(() => {
+              if (status.textContent === "Restored.") {
+                status.textContent = "";
+                status.removeAttribute("data-tone");
+              }
+            }, 2200);
+          }
+          break;
+        }
         case "lineage":
           revealLineage(card, btn);
           break;

@@ -161,95 +161,96 @@ const hasExpanded = true;
       </div>
     </div>
 
-    <!-- ── Head row: duration tag + title tag + flag + BPM module ──── -->
-    <div class="head-row">
-      <span class="duration" aria-label="Duration">{durationLabel ?? "—:—"}</span>
-      <h3 class="title">
-        <button
-          type="button"
-          class="title-edit"
-          data-action="rename"
-          data-path={item.path}
-          title={`Click to rename. Real filename: ${filename}`}
-        ><span class="title-base">{titleParts.base}</span>{titleParts.ext && <span class="title-ext">{titleParts.ext}</span>}</button>
-      </h3>
-      {item.dup_of && (
-        <span class="flag-chip flag-dup" title={`Duplicate of asset_id ${item.dup_of}`}>DUP</span>
-      )}
-      {item.orphan_candidate === 1 && (
-        <span class="flag-chip flag-orphan" title="Flagged orphan">ORPHAN</span>
-      )}
-      <span class:list={["tech-meta", { ghost: !item.bpm && !item.key }]}>
-        <span class="bpm-num">{item.bpm ? Math.round(item.bpm) : "—"}</span>
-        <span class="bpm-unit">BPM</span>
-        <span class="tech-sep">·</span>
-        <span class="key">{item.key || "—"}</span>
-        {item.key && <span class="key-mode">maj</span>}
-      </span>
-    </div>
-
-    <!-- ── Waveform (row 2, col 2) ───────────────────────────────────── -->
-    <div class="main-col">
-      <div
-        class="waveform"
-        data-seekable={waveformSrc ? "true" : "false"}
-        title={waveformSrc ? "Click to play (click again to seek)" : undefined}
-      >
-        {waveformSrc ? (
-          <img
-            src={waveformSrc}
-            alt=""
-            loading="lazy"
-            width="640"
-            height="60"
-            onerror="this.replaceWith(Object.assign(document.createElement('div'),{className:'waveform-placeholder',textContent:'no waveform yet'}))"
-          />
-        ) : (
-          <div class="waveform-placeholder">no waveform yet</div>
-        )}
-        <div class="waveform-playhead" data-playhead hidden></div>
-        <div class="waveform-time" data-waveform-time hidden></div>
-      </div>
-    </div>
-
-    <!-- ── Actions col: J/L/F/T tiles (letter + label) + kudos jar ─── -->
-    <div class="actions-col">
-      <div class="category-bar" role="group" aria-label="Assign to category">
-        {CATEGORIES.map((c) => (
+    <!-- ── Middle column: head row + wave row ───────────────────────── -->
+    <div class="middle-col">
+      <div class="head-row">
+        <span class="duration" aria-label="Duration">{durationLabel ?? "—:—"}</span>
+        <h3 class="title">
           <button
             type="button"
-            class:list={["category-btn", { active: currentBucket === c.id }]}
-            data-action="bucket"
-            data-bucket={c.id}
-            aria-label={`Assign to ${c.label}`}
-            title={`Assign to ${c.label} (${c.kbd})`}
-          >
-            <kbd>{c.kbd}</kbd>
-            <span class="category-label">{c.label}</span>
-          </button>
-        ))}
+            class="title-edit"
+            data-action="rename"
+            data-path={item.path}
+            title={`Click to rename. Real filename: ${filename}`}
+          ><span class="title-base">{titleParts.base}</span>{titleParts.ext && <span class="title-ext">{titleParts.ext}</span>}</button>
+        </h3>
+        {item.dup_of && (
+          <span class="flag-chip flag-dup" title={`Duplicate of asset_id ${item.dup_of}`}>DUP</span>
+        )}
+        {item.orphan_candidate === 1 && (
+          <span class="flag-chip flag-orphan" title="Flagged orphan">ORPHAN</span>
+        )}
+        <span class:list={["tech-meta", { ghost: !item.bpm && !item.key }]}>
+          <span class="bpm-num">{item.bpm ? Math.round(item.bpm) : "—"}</span>
+          <span class="bpm-unit">BPM</span>
+          <span class="tech-sep">·</span>
+          <span class="key">{item.key || "—"}</span>
+          {item.key && <span class="key-mode">maj</span>}
+        </span>
+        <button
+          type="button"
+          class:list={["kudos", { has: (item.quality_star ?? 0) > 0 }]}
+          data-action="kudos"
+          data-asset-id={String(item.asset_id)}
+          aria-label="Give kudos"
+          title="Click to add kudos"
+        >
+          <span class="kudos-glyph" aria-hidden="true">★</span>
+          <span class="kudos-count" data-kudos-count>{item.quality_star ?? 0}</span>
+        </button>
       </div>
-      <button
-        type="button"
-        class:list={["kudos", { has: (item.quality_star ?? 0) > 0 }]}
-        data-action="kudos"
-        data-asset-id={String(item.asset_id)}
-        aria-label="Give kudos"
-        title="Click to add kudos"
-      >
-        <span class="kudos-glyph" aria-hidden="true">★</span>
-        <span class="kudos-count" data-kudos-count>{item.quality_star ?? 0}</span>
-      </button>
+      <div class="wave-row">
+        <div
+          class="waveform"
+          data-seekable={waveformSrc ? "true" : "false"}
+          title={waveformSrc ? "Click to play (click again to seek)" : undefined}
+        >
+          {waveformSrc ? (
+            <img
+              src={waveformSrc}
+              alt=""
+              loading="lazy"
+              width="640"
+              height="60"
+              onerror="this.replaceWith(Object.assign(document.createElement('div'),{className:'waveform-placeholder',textContent:'no waveform yet'}))"
+            />
+          ) : (
+            <div class="waveform-placeholder">no waveform yet</div>
+          )}
+          <div class="waveform-playhead" data-playhead hidden></div>
+          <div class="waveform-time" data-waveform-time hidden></div>
+        </div>
+        <div class="category-bar" role="group" aria-label="Assign to category">
+          {CATEGORIES.map((c) => (
+            <button
+              type="button"
+              class:list={["category-btn", { active: currentBucket === c.id }]}
+              data-action="bucket"
+              data-bucket={c.id}
+              aria-label={`Assign to ${c.label}`}
+              title={`Assign to ${c.label} (${c.kbd})`}
+            >
+              <kbd>{c.kbd}</kbd>
+              <span class="category-label">{c.label}</span>
+            </button>
+          ))}
+        </div>
+      </div>
+      <p class="status" data-status-line aria-live="polite"></p>
     </div>
 
-    <!-- ── Trash detached (col 4, both rows, far right edge) ─────────── -->
+    <!-- ── Trash column (full card height, slight red hue) ──────────── -->
     <button
       type="button"
       class="trash-hold detached"
       data-action="trash-hold"
-      title="Hold 2s to trash"
-      aria-label="Hold to trash"
-    ><span class="hold-fill" aria-hidden="true"></span><span class="hold-glyph">✕</span></button>
+      title="Hold 0.9s to archive"
+      aria-label="Hold to archive"
+    >
+      <span class="hold-fill" aria-hidden="true"></span>
+      <span class="hold-glyph">✕</span>
+      <span class="hold-label" aria-hidden="true">HOLD</span>
+    </button>
   </div>
 
   <!-- ── Expanded section (collapsed by default) ─────────────────────── -->
@@ -351,32 +352,41 @@ const hasExpanded = true;
             title, both anchored top-left. Always the same horizontal
             position so the eye finds runtime + name first.
      Row 2: date column | waveform | actions trail. */
-  /* Four-column grid:
-       col 1: date spine (full height, holds PUBLIC + date stack)
-       col 2: head row (row 1) + waveform (row 2)
-       col 3: J/L/F/T tiles, centered vertically across both rows
-       col 4: detached trash ✕ on the far right edge */
+  /* Three-column grid:
+       col 1: date spine (full height)
+       col 2: middle stack — head row + wave row (with J/L/F/T inline)
+       col 3: full-height trash column (slight red tint) */
   .card-grid {
     display: grid;
-    grid-template-columns: 92px minmax(0, 1fr) auto auto;
-    grid-template-rows: auto auto;
-    column-gap: 14px;
-    row-gap: 8px;
-    align-items: center;
-    padding: 0 14px 12px 0;
+    grid-template-columns: 112px minmax(0, 1fr) 42px;
+    column-gap: 0;
+    align-items: stretch;
+  }
+  .middle-col {
+    grid-column: 2;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 12px 0 12px 14px;
+    min-width: 0;
   }
   .head-row {
-    grid-column: 2;
-    grid-row: 1;
     display: flex;
     align-items: center;
     gap: 10px;
     min-width: 0;
-    padding-top: 12px;
+  }
+  /* Wave row puts the waveform next to the J/L/F/T tiles on the same line. */
+  .wave-row {
+    display: flex;
+    align-items: stretch;
+    gap: 10px;
+    min-width: 0;
   }
 
-  /* Duration pill — neon-green tape label. Italic mono. Always rendered
-     (falls back to "—:—") so the head row's left edge is fixed. */
+  /* Duration pill — neon-green text in a darker-blue-bordered tape tag.
+     Always rendered (falls back to "—:—") so the head row's left edge
+     is fixed. The blue border ties it to the title-tag + card perimeter. */
   .duration {
     flex: 0 0 auto;
     font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
@@ -385,7 +395,7 @@ const hasExpanded = true;
     font-weight: 700;
     color: #00ff4d;
     background: rgba(0, 255, 77, 0.04);
-    border: 1px solid rgba(0, 255, 77, 0.55);
+    border: 1px solid rgba(14, 196, 252, 0.55);
     border-radius: 3px;
     padding: 3px 8px;
     font-feature-settings: "tnum";
@@ -402,18 +412,19 @@ const hasExpanded = true;
   /* ── Date spine ──────────────────────────────────────────────────────
      Full-height burgundy stripe on the left edge of the card. PUBLIC
      toggle sits at the top, date stack centered below. */
-  /* Date spine — neutral dark stripe with a cyan rim. Expand chevron
+  /* Date spine — neutral dark stripe with a cyan rim. Slightly wider
+     than before so MAY + 18 sit comfortably on one line. Expand chevron
      anchors the left edge; date stack sits centered to its right. */
   .date-col {
     grid-column: 1;
-    grid-row: 1 / 3;
     align-self: stretch;
     display: flex;
     align-items: center;
     gap: 6px;
-    padding: 8px 12px 8px 8px;
+    padding: 10px 12px 10px 8px;
     background: #1a1a1a;
     border: 1px solid rgba(14, 196, 252, 0.38);
+    border-right: 0;
     border-radius: 6px 0 0 6px;
   }
   .date-stack {
@@ -421,28 +432,29 @@ const hasExpanded = true;
     display: flex;
     flex-direction: column;
     justify-content: center;
-    gap: 2px;
+    gap: 3px;
     min-width: 0;
   }
-  /* Month line: name upright + day italic — typewriter feel. */
+  /* Month + day on one line. Month name white regular (no bold, no italic);
+     day in italic orange. The contrast across one line reads as a stamp. */
   .date-month {
     font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
     font-size: 13px;
-    font-weight: 700;
-    letter-spacing: 0.08em;
     line-height: 1;
+    letter-spacing: 0.04em;
   }
   .date-month-name {
-    color: #ff6e21;
+    color: #f5f1e8;
+    font-weight: 400;
+    font-style: normal;
     text-transform: uppercase;
   }
   .date-day {
-    color: #ffaa7d;
+    color: #ff6e21;
+    font-weight: 700;
     font-style: italic;
-    text-transform: none;
   }
-  /* Year is the visual anchor. "20" upright cream, "26" italic orange —
-     two distinct typographic notes that read as a typewritten serial. */
+  /* Year is the visual anchor — "20" upright cream + "26" italic orange. */
   .date-year {
     font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
     font-size: 22px;
@@ -504,9 +516,10 @@ const hasExpanded = true;
     display: grid;
     gap: 6px;
   }
-  /* Title sits in its own cyan-bordered tag next to the green duration
-     pill. The filename base renders in italic green; the extension
-     drops to a quieter shade so the eye reads the name first. */
+  /* Title sits in its own darker-blue-bordered tag. Text renders in pale
+     orange italic mono — keeps the typewriter-label feel but pulls the
+     color back from the loud neon-green so the head row reads as
+     hierarchy: green=number, pale-orange=name. */
   .title-edit {
     display: inline-block;
     max-width: 100%;
@@ -515,10 +528,10 @@ const hasExpanded = true;
     font-style: italic;
     font-size: 13px;
     font-weight: 600;
-    color: #00ff4d;
+    color: #ffb4a3;
     text-align: left;
     background: transparent;
-    border: 1px solid rgba(14, 196, 252, 0.38);
+    border: 1px solid rgba(14, 196, 252, 0.55);
     border-radius: 3px;
     padding: 4px 10px;
     cursor: text;
@@ -529,7 +542,7 @@ const hasExpanded = true;
   }
   .title-edit:hover,
   .title-edit:focus-visible {
-    border-color: rgba(14, 196, 252, 0.78);
+    border-color: rgba(14, 196, 252, 0.85);
     background: rgba(14, 196, 252, 0.05);
     outline: none;
   }
@@ -679,29 +692,29 @@ const hasExpanded = true;
     padding: 0 14px;
     border-left: 1px solid rgba(245, 241, 232, 0.06);
   }
+  /* J/L/F/T tiles now sit inline with the waveform — smaller, denser. */
   .category-bar {
+    flex: 0 0 auto;
     display: grid;
-    grid-template-columns: repeat(4, 44px);
-    gap: 5px;
+    grid-template-columns: repeat(4, 36px);
+    gap: 4px;
+    align-self: center;
   }
-  /* Each tile stacks letter on top + label underneath. Active state is
-     hot pink-red — outline + matching letter/label. Keeps the row-level
-     decoration quiet (no fills, no box-shadow halo). */
   .category-btn {
-    width: 44px;
-    height: 44px;
+    width: 36px;
+    height: 36px;
     font: inherit;
     color: rgba(245, 241, 232, 0.55);
     background: transparent;
     border: 1px solid rgba(245, 241, 232, 0.18);
-    border-radius: 4px;
-    padding: 4px 0;
+    border-radius: 3px;
+    padding: 2px 0;
     cursor: pointer;
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: 2px;
+    gap: 1px;
     line-height: 1;
     transition: color 160ms ease, border-color 160ms ease,
                 background-color 160ms ease, transform 80ms ease;
@@ -716,7 +729,7 @@ const hasExpanded = true;
   .category-btn kbd {
     font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
     font-style: italic;
-    font-size: 15px;
+    font-size: 13px;
     font-weight: 700;
     line-height: 1;
     padding: 0;
@@ -727,42 +740,41 @@ const hasExpanded = true;
   }
   .category-btn .category-label {
     font-family: "Geist Variable", ui-sans-serif, system-ui, sans-serif;
-    font-size: 8px;
+    font-size: 7px;
     font-weight: 700;
     letter-spacing: 0.10em;
     line-height: 1;
     color: inherit;
-    opacity: 0.78;
+    opacity: 0.66;
   }
-  /* Active = hot pink-red. Letter + label both shift; just the border
-     and ink change, no fill. */
+  /* Active = hot pink-red. */
   .bucket-card .category-btn.active {
     color: #ff2761;
     border-color: rgba(255, 39, 97, 0.78);
   }
   .bucket-card .category-btn.active .category-label { opacity: 1; }
 
-  /* Kudos jar — yellow tile with a black star + orange count. Reads as
-     a sticky-note "vote" tag. Click increments; brief pulse on success. */
+  /* Kudos jar — compact yellow chip in the head row. Black star + orange
+     count. Reads as a sticky-note "vote" tag pinned to the row. */
   .kudos {
-    align-self: center;
+    flex: 0 0 auto;
     display: inline-flex;
     align-items: center;
-    gap: 6px;
+    gap: 4px;
     font: inherit;
     font-family: "Geist Variable", ui-sans-serif, system-ui, sans-serif;
-    font-size: 13px;
+    font-size: 11px;
     font-weight: 700;
     color: #ff6e21;
     background: #eeff00;
     border: 1px solid rgba(0, 0, 0, 0.30);
-    border-radius: 4px;
-    padding: 4px 10px;
+    border-radius: 3px;
+    padding: 3px 7px;
     cursor: pointer;
     line-height: 1;
     transition: background 160ms ease, transform 160ms ease,
                 box-shadow 160ms ease;
-    box-shadow: 0 0 12px rgba(238, 255, 0, 0.18);
+    box-shadow: 0 0 10px rgba(238, 255, 0, 0.18);
   }
   .kudos:hover,
   .kudos:focus-visible {
@@ -790,56 +802,79 @@ const hasExpanded = true;
     grid-row: 1 / 3;
     align-self: center;
   }
-  /* Trash ✕ — borderless icon on the far right edge. Hover fills the
-     button with the pink→orange gradient (still committed-but-reversible
-     until you complete the 2s hold). */
+  /* Archive column — full card height on the right edge with a slight
+     red hue so it reads as the destructive zone. Hover pulls the red
+     forward; the hold-fill bar climbs from bottom over 0.9s. */
+  .trash-hold.detached {
+    grid-column: 3;
+    grid-row: 1;
+    align-self: stretch;
+    justify-self: stretch;
+    width: auto;
+    height: auto;
+  }
   .trash-hold {
     position: relative;
     overflow: hidden;
-    width: 28px;
-    height: 28px;
     font: inherit;
-    font-size: 16px;
+    font-size: 17px;
+    font-weight: 700;
     line-height: 1;
-    color: rgba(245, 241, 232, 0.50);
-    background: transparent;
+    color: rgba(245, 241, 232, 0.55);
+    background: linear-gradient(180deg,
+      rgba(47, 7, 18, 0.55) 0%,
+      rgba(47, 7, 18, 0.75) 100%);
     border: 0;
-    border-radius: 3px;
+    border-left: 1px solid rgba(255, 39, 97, 0.22);
+    border-radius: 0 6px 6px 0;
     cursor: pointer;
-    transition: color 160ms ease, background 160ms ease, box-shadow 160ms ease;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    transition: color 160ms ease, background 160ms ease;
   }
-  /* Hover wears the pink → orange gradient — the same key surface used
-     on active buttons elsewhere. Makes the destructive action visually
-     committed but reversible until you complete the 2s hold. */
+  .trash-hold .hold-label {
+    font-family: "Geist Variable", ui-sans-serif, system-ui, sans-serif;
+    font-size: 8px;
+    font-weight: 700;
+    letter-spacing: 0.18em;
+    color: rgba(255, 39, 97, 0.65);
+    writing-mode: vertical-rl;
+    transform: rotate(180deg);
+    line-height: 1;
+  }
+  /* Hover deepens the red. Hold fills the column bottom→top in 0.9s. */
   .trash-hold:hover,
   .trash-hold:focus-visible {
     color: #fff;
-    background-image: linear-gradient(135deg, #ff3b6e 0%, #ff6e21 100%);
-    border-color: transparent;
+    background: linear-gradient(180deg,
+      rgba(78, 12, 30, 0.72) 0%,
+      rgba(255, 39, 97, 0.32) 100%);
+    border-left-color: rgba(255, 39, 97, 0.55);
     outline: none;
-    box-shadow:
-      inset 0 1px 0 rgba(255, 255, 255, 0.28),
-      0 2px 10px rgba(255, 59, 110, 0.32),
-      0 0 0 1px rgba(14, 196, 252, 0.50);
   }
-  .trash-hold:hover .hold-glyph,
-  .trash-hold:focus-visible .hold-glyph {
-    text-shadow: 0 1px 1px rgba(120, 8, 52, 0.40);
+  .trash-hold:hover .hold-label,
+  .trash-hold:focus-visible .hold-label {
+    color: rgba(255, 200, 200, 0.85);
   }
+  /* Hold-fill rises from the bottom — vertical fill, not horizontal — so
+     it reads as the archive column "filling up" toward commit. */
   .trash-hold .hold-fill {
     position: absolute;
-    top: 0; left: 0; bottom: 0;
-    width: 100%;
-    background: #ff3b6e;
-    transform-origin: left center;
-    transform: scaleX(0);
+    left: 0; right: 0; bottom: 0;
+    height: 100%;
+    background: linear-gradient(180deg, #ff2761 0%, #ff6e21 100%);
+    transform-origin: center bottom;
+    transform: scaleY(0);
     transition: none;
     pointer-events: none;
     z-index: 0;
   }
   .trash-hold[data-holding="true"] .hold-fill {
-    transform: scaleX(1);
-    transition: transform 2s linear;
+    transform: scaleY(1);
+    transition: transform 0.9s linear;
   }
   .trash-hold .hold-glyph {
     position: relative;
@@ -847,6 +882,7 @@ const hasExpanded = true;
     font-weight: 700;
   }
   .trash-hold[data-holding="true"] .hold-glyph { color: #0e0c14; }
+  .trash-hold[data-holding="true"] .hold-label { color: #0e0c14; }
 
   /* Expand chevron sits on the left edge of the date spine, vertically
      centered. Subtle white arrow that rotates 90° when expanded. */
@@ -1019,14 +1055,47 @@ const hasExpanded = true;
   }
 
   .status {
-    margin: 6px 0 0;
+    margin: 0;
     min-height: 1em;
     font-size: 11px;
     color: rgba(245, 241, 232, 0.52);
     font-style: italic;
+    line-height: 1.4;
   }
-  .status[data-tone="ok"] { color: #0ec4fc; font-style: normal; }
+  .status[data-tone="ok"] { color: #f5f1e8; font-style: normal; }
   .status[data-tone="err"] { color: #ff6e21; font-style: normal; }
+  .status :global(.undo-text) { color: #ff2761; font-weight: 600; }
+  .status :global(.undo-btn) {
+    font: inherit;
+    font-family: "Geist Variable", ui-sans-serif, system-ui, sans-serif;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: #eeff00;
+    background: transparent;
+    border: 1px solid rgba(238, 255, 0, 0.65);
+    border-radius: 3px;
+    padding: 2px 8px;
+    margin-left: 6px;
+    cursor: pointer;
+    transition: background 160ms ease, color 160ms ease;
+  }
+  .status :global(.undo-btn:hover),
+  .status :global(.undo-btn:focus-visible) {
+    background: #eeff00;
+    color: #050306;
+    outline: none;
+  }
+
+  /* Archiving state — card fades while the Undo offer is live. */
+  .bucket-card[data-archiving="true"] {
+    opacity: 0.55;
+  }
+  .bucket-card[data-archiving="true"] .trash-hold {
+    opacity: 0;
+    pointer-events: none;
+  }
 
   /* Expanded panel indents to the right of the date spine so the
      details visually start where the head row does. */
