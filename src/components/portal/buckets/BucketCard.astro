@@ -196,21 +196,6 @@ const hasExpanded = true;
           <div class="waveform-playhead" data-playhead hidden></div>
           <div class="waveform-time" data-waveform-time hidden></div>
         </div>
-        <div class="category-bar" role="group" aria-label="Assign to category">
-          {CATEGORIES.map((c) => (
-            <button
-              type="button"
-              class:list={["category-btn", { active: currentBucket === c.id }]}
-              data-action="bucket"
-              data-bucket={c.id}
-              aria-label={`Assign to ${c.label}`}
-              title={`Assign to ${c.label} (${c.kbd})`}
-            >
-              <kbd>{c.kbd}</kbd>
-              <span class="category-label">{c.label}</span>
-            </button>
-          ))}
-        </div>
       </div>
 
       {/* Date at the bottom-left of the card. Format "8y [12-12-2018]"
@@ -234,6 +219,23 @@ const hasExpanded = true;
       </button>
 
       <p class="status" data-status-line aria-live="polite"></p>
+    </div>
+
+    {/* J/L/F/T as a vertical 4x1 column adjacent to the archive X. */}
+    <div class="category-bar" role="group" aria-label="Assign to category">
+      {CATEGORIES.map((c) => (
+        <button
+          type="button"
+          class:list={["category-btn", { active: currentBucket === c.id }]}
+          data-action="bucket"
+          data-bucket={c.id}
+          aria-label={`Assign to ${c.label}`}
+          title={`Assign to ${c.label} (${c.kbd})`}
+        >
+          <kbd>{c.kbd}</kbd>
+          <span class="category-label">{c.label}</span>
+        </button>
+      ))}
     </div>
 
     <!-- ── Archive column. Orphan-candidate rows wear a red rim glow
@@ -351,12 +353,13 @@ const hasExpanded = true;
             title, both anchored top-left. Always the same horizontal
             position so the eye finds runtime + name first.
      Row 2: date column | waveform | actions trail. */
-  /* Two-column grid:
-       col 1: main stack — title, date subtitle, wave row, meta row
-       col 2: archive trash on the right edge */
+  /* Three-column grid:
+       col 1: main stack — title, BPM subtitle, waveform, date
+       col 2: vertical J/L/F/T tile column adjacent to the archive X
+       col 3: archive X on the far right edge */
   .card-grid {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) 42px;
+    grid-template-columns: minmax(0, 1fr) auto 42px;
     column-gap: 0;
     align-items: stretch;
     padding: 16px 0 16px 20px;
@@ -370,43 +373,28 @@ const hasExpanded = true;
     min-width: 0;
     justify-content: center;
   }
-  /* Bottom meta row — runtime (pink) + BPM (cyan) side by side, with
-     the kudos boost pushed to the right edge of the row. */
-  .meta-row {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    min-width: 0;
-    margin-top: 2px;
-  }
-  .meta-spacer { flex: 1 1 auto; }
-  .head-row {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    min-width: 0;
-  }
-  /* Wave row layout:  [duration] [waveform grows] [J/L/F/T 2x2] [kudos] */
+  /* Wave row — thin wrapper around the waveform. The LCD duration is
+     absolutely-positioned inside the waveform itself, not in this flex
+     container. */
   .wave-row {
     display: flex;
     align-items: center;
-    gap: 12px;
     min-width: 0;
-    margin-top: 4px;
   }
 
-  /* Duration — borderless LCD-style overlay anchored to the top-left
-     of the waveform. Mono digits with a soft pink glow so it reads as
-     a built-in alarm-clock readout rather than a labelled tag. */
+  /* Duration — borderless LCD overlay, vertically centered inside the
+     waveform on the left edge. Mono digits with a soft pink glow so
+     it reads as a built-in alarm-clock readout. */
   .duration {
     position: absolute;
-    top: 4px;
-    left: 8px;
+    top: 50%;
+    left: 10px;
+    transform: translateY(-50%);
     z-index: 3;
     pointer-events: none;
     font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
     font-style: italic;
-    font-size: 13px;
+    font-size: 14px;
     font-weight: 700;
     color: #ff3b6e;
     background: transparent;
@@ -699,32 +687,18 @@ const hasExpanded = true;
     z-index: 2;
   }
 
-  /* ── Actions column (J/L/F/T + kudos) ──────────────────────────────
-     Spans both grid rows. Tiles stack vertically: bucket bar on top,
-     kudos ticker below. */
-  .actions-col {
-    grid-column: 3;
-    grid-row: 1 / 3;
-    align-self: stretch;
-    display: flex;
-    flex-direction: column;
-    align-items: stretch;
-    justify-content: center;
-    gap: 6px;
-    padding: 0 14px;
-    border-left: 1px solid rgba(245, 241, 232, 0.06);
-  }
-  /* J/L/F/T tiles — 1x4 horizontal row alongside the waveform. */
+  /* J/L/F/T tiles — vertical 4x1 column adjacent to the archive X. */
   .category-bar {
-    flex: 0 0 auto;
-    display: grid;
-    grid-template-columns: repeat(4, 34px);
-    gap: 5px;
+    grid-column: 2;
     align-self: center;
+    display: grid;
+    grid-template-rows: repeat(4, 28px);
+    gap: 4px;
+    padding: 0 10px;
   }
   .category-btn {
-    width: 34px;
-    height: 34px;
+    width: 32px;
+    height: 28px;
     font: inherit;
     color: rgba(245, 241, 232, 0.55);
     background: transparent;
@@ -773,19 +747,13 @@ const hasExpanded = true;
      (engine endpoint, keyboard shortcut, expand-panel star count) so
      the affordance can be re-added later in a more deliberate spot. */
 
-  /* ── Detached trash ✕ (col 4, both rows, far right edge) ──────────── */
+  /* ── Detached trash ✕ ─────────────────────────────────────────────
+     Full card-height stripe at the right edge (col 3 of card-grid).
+     Inner edges square against the card body; outer right edge inherits
+     the card's rounded corner. Quiet red wash so it reads as the
+     destructive zone without pulling focus. */
   .trash-hold.detached {
-    grid-column: 4;
-    grid-row: 1 / 3;
-    align-self: center;
-  }
-  /* Archive column — full card height on the right edge, shell-fitted
-     to the card's rounded corners. Inner edges square (touches the
-     card body); outer right edge inherits the card radius. Quiet red
-     wash so it reads as the destructive zone without pulling focus. */
-  .trash-hold.detached {
-    grid-column: 2;
-    grid-row: 1;
+    grid-column: 3;
     align-self: stretch;
     justify-self: stretch;
     width: auto;
@@ -1053,33 +1021,22 @@ const hasExpanded = true;
     to { opacity: 1; transform: translateY(0); }
   }
 
-  /* ── Responsive ───────────────────────────────────────────────────── */
+  /* ── Responsive ─────────────────────────────────────────────────────
+     On narrow screens, keep the 3-column layout but shrink the J/L/F/T
+     tiles and tighten the inner padding so the row stays single-line. */
   @media (max-width: 640px) {
     .card-grid {
-      grid-template-columns: 70px minmax(0, 1fr);
-      grid-template-rows: auto auto auto;
-      column-gap: 12px;
+      grid-template-columns: minmax(0, 1fr) auto 36px;
+      padding: 12px 0 12px 14px;
     }
-    .date-col { grid-column: 1; grid-row: 1 / 4; padding: 8px 10px; }
-    .head-row { grid-column: 2; grid-row: 1; }
-    .main-col { grid-column: 2; grid-row: 2; }
-    .actions-col {
-      grid-column: 2;
-      grid-row: 3;
-      flex-direction: row;
-      padding: 0 10px;
-      border-left: 0;
-      border-top: 1px solid rgba(245, 241, 232, 0.06);
-      padding-top: 8px;
+    .middle-col { padding-right: 10px; }
+    .category-bar {
+      grid-template-rows: repeat(4, 24px);
+      padding: 0 6px;
     }
-    .trash-hold.detached {
-      grid-column: 2;
-      grid-row: 3;
-      justify-self: end;
-    }
-    .category-bar { grid-template-columns: repeat(4, 36px); }
-    .date-year { font-size: 18px; }
-    .expanded { margin-left: 70px; }
+    .category-btn { width: 28px; height: 24px; }
+    .trash-hold.detached { margin: -12px 0; }
+    .expanded { margin-left: 14px; }
   }
 </style>
 
