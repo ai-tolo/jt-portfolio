@@ -38,6 +38,9 @@ const dateInfo = (() => {
   if (Number.isNaN(d.getTime())) return null;
   const primary = `${MONTHS[d.getMonth()]} ${d.getDate()}`;
   const year = String(d.getFullYear());
+  const mm = String(d.getMonth() + 1).padStart(2, "0");
+  const dd = String(d.getDate()).padStart(2, "0");
+  const stamped = `${mm}-${dd}-${year}`;
   const ageMs = Date.now() - d.getTime();
   const ageDays = ageMs / 86400000;
   let relative: string;
@@ -46,7 +49,7 @@ const dateInfo = (() => {
   else if (ageDays < 30) relative = `${Math.floor(ageDays / 7)}w`;
   else if (ageDays < 365) relative = `${Math.floor(ageDays / 30)}mo`;
   else relative = `${Math.floor(ageDays / 365)}y`;
-  return { primary, year, relative };
+  return { primary, year, relative, stamped };
 })();
 
 const tagList = (item.tags ?? "")
@@ -161,29 +164,17 @@ const hasExpanded = true;
         )}
       </h3>
 
-      {/* Date subtitle — tasteful single line. Clickable to expand. */}
-      <button
-        type="button"
-        class="date-subtitle"
-        data-action="expand"
-        aria-expanded="false"
-        title={dateInfo ? "Click to expand" : undefined}
-      >
-        {dateInfo ? (
-          <>
-            <span class="date-month-name">{dateInfo.primary.split(" ")[0]}</span>{" "}
-            <span class="date-day">{dateInfo.primary.split(" ")[1]}</span>,{" "}
-            <span class="date-year">
-              <span class="year-prefix">{dateInfo.year.slice(0, 2)}</span><span class="year-suffix">{dateInfo.year.slice(2)}</span>
-            </span>
-            <span class="date-sep"> · </span>
-            <span class="date-rel">{dateInfo.relative} ago</span>
-          </>
-        ) : (
-          <span class="date-rel">date unknown</span>
-        )}
-      </button>
+      {/* BPM / key — now sits as a secondary line under the title. */}
+      <span class:list={["tech-meta", { ghost: !item.bpm && !item.key }]}>
+        <span class="bpm-num">{item.bpm ? Math.round(item.bpm) : "—"}</span>
+        <span class="bpm-unit">BPM</span>
+        <span class="tech-sep">·</span>
+        <span class="key">{keyInfo.letter || "—"}</span>
+        {keyInfo.mode && <span class="key-mode">{keyInfo.mode}</span>}
+      </span>
       <div class="wave-row">
+        {/* Runtime tag sits LEFT of the waveform, inline. */}
+        <span class="duration" aria-label="Duration">{durationLabel ?? "—:—"}</span>
         <div
           class="waveform"
           data-seekable={waveformSrc ? "true" : "false"}
@@ -219,18 +210,10 @@ const hasExpanded = true;
             </button>
           ))}
         </div>
-      </div>
-      {/* Meta row under the waveform — runtime + BPM + kudos. */}
-      <div class="meta-row">
-        <span class="duration" aria-label="Duration">{durationLabel ?? "—:—"}</span>
-        <span class:list={["tech-meta", { ghost: !item.bpm && !item.key }]}>
-          <span class="bpm-num">{item.bpm ? Math.round(item.bpm) : "—"}</span>
-          <span class="bpm-unit">BPM</span>
-          <span class="tech-sep">·</span>
-          <span class="key">{keyInfo.letter || "—"}</span>
-          {keyInfo.mode && <span class="key-mode">{keyInfo.mode}</span>}
-        </span>
-        <span class="meta-spacer"></span>
+        {/* Buckeye-style kudos button — small filled disc with a cream "eye"
+            highlight. Sits at the right edge of the wave row next to the
+            J/L/F/T tile stack. Reads as an "earned" sticker rather than a
+            generic like button. */}
         <button
           type="button"
           class:list={["kudos", { has: (item.quality_star ?? 0) > 0 }]}
@@ -239,15 +222,50 @@ const hasExpanded = true;
           aria-label="Boost — add kudos"
           title="Boost this — click to add kudos"
         >
-          <span class="kudos-glyph" aria-hidden="true">⚡</span>
+          <svg class="kudos-buckeye" viewBox="0 0 24 24" aria-hidden="true">
+            <defs>
+              <radialGradient id={`buckeye-grad-${item.asset_id}`} cx="40%" cy="36%" r="65%">
+                <stop offset="0%" stop-color="#e8b465"/>
+                <stop offset="55%" stop-color="#8b4d18"/>
+                <stop offset="100%" stop-color="#2a1408"/>
+              </radialGradient>
+              <radialGradient id={`buckeye-eye-${item.asset_id}`} cx="50%" cy="40%" r="60%">
+                <stop offset="0%" stop-color="#fff7e0"/>
+                <stop offset="100%" stop-color="#e0c388"/>
+              </radialGradient>
+            </defs>
+            <circle cx="12" cy="12" r="10" fill={`url(#buckeye-grad-${item.asset_id})`} />
+            <ellipse cx="11.5" cy="9.8" rx="4.6" ry="2.4" fill={`url(#buckeye-eye-${item.asset_id})`} />
+          </svg>
           <span class="kudos-count" data-kudos-count>{item.quality_star ?? 0}</span>
         </button>
       </div>
 
+      {/* Date at the bottom-left of the card. Format "8y [12-12-2018]"
+          with an expand carrot at the trailing edge. */}
+      <button
+        type="button"
+        class="date-subtitle"
+        data-action="expand"
+        aria-expanded="false"
+        title={dateInfo ? "Click to expand" : undefined}
+      >
+        {dateInfo ? (
+          <>
+            <span class="date-rel">{dateInfo.relative}</span>
+            <span class="date-bracket"> [</span><span class="date-stamped">{dateInfo.stamped}</span><span class="date-bracket">]</span>
+          </>
+        ) : (
+          <span class="date-rel">date unknown</span>
+        )}
+        <span class="date-chev" aria-hidden="true">▾</span>
+      </button>
+
       <p class="status" data-status-line aria-live="polite"></p>
     </div>
 
-    <!-- ── Archive column with orphan dot indicator ─────────────────── -->
+    <!-- ── Archive column. Orphan-candidate rows wear a red rim glow
+         (no animation, lighter perceived weight). ────────────────────── -->
     <button
       type="button"
       class:list={["trash-hold detached", { "is-orphan": item.orphan_candidate === 1 }]}
@@ -257,9 +275,6 @@ const hasExpanded = true;
         : "Hold 0.9s to archive"}
       aria-label="Hold to archive"
     >
-      {item.orphan_candidate === 1 && (
-        <span class="orphan-dot" aria-hidden="true"></span>
-      )}
       <span class="hold-fill" aria-hidden="true"></span>
       <span class="hold-glyph">✕</span>
     </button>
@@ -399,12 +414,13 @@ const hasExpanded = true;
     gap: 10px;
     min-width: 0;
   }
-  /* Wave row puts the waveform next to the J/L/F/T tiles on the same line. */
+  /* Wave row layout:  [duration] [waveform grows] [J/L/F/T 2x2] [kudos] */
   .wave-row {
     display: flex;
-    align-items: stretch;
-    gap: 10px;
+    align-items: center;
+    gap: 12px;
     min-width: 0;
+    margin-top: 4px;
   }
 
   /* Duration pill — pink text in a cyan-rimmed tape tag. Lives in the
@@ -434,27 +450,27 @@ const hasExpanded = true;
   /* ── Date spine ──────────────────────────────────────────────────────
      Full-height burgundy stripe on the left edge of the card. PUBLIC
      toggle sits at the top, date stack centered below. */
-  /* Date subtitle — tasteful single line under the title. Mixed
-     typography keeps it from reading as decoration: month + day in
-     mono with the day in blue, year split (cream/orange) for the
-     typewriter-serial feel, then a quiet relative-age tail. The whole
-     line is the click target for expand. */
+  /* Date subtitle — bottom-left of the card. Format: "8y [12-12-2018] ▾"
+     Click anywhere on it to expand. Quiet by default, brightens on
+     hover. The carrot at the trailing edge is the explicit expand
+     affordance. */
   .date-subtitle {
     display: inline-flex;
     align-items: baseline;
-    gap: 4px;
+    gap: 2px;
     align-self: flex-start;
     font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-    font-size: 12px;
+    font-size: 11px;
     font-weight: 500;
     letter-spacing: 0.02em;
-    color: rgba(245, 241, 232, 0.55);
+    color: rgba(245, 241, 232, 0.42);
     background: transparent;
     border: 0;
-    padding: 2px 6px 2px 0;
+    padding: 4px 8px 4px 6px;
     margin-left: -6px;
+    margin-top: 4px;
     cursor: pointer;
-    line-height: 1.2;
+    line-height: 1;
     text-align: left;
     transition: color 160ms ease, background 160ms ease;
     border-radius: 3px;
@@ -465,38 +481,34 @@ const hasExpanded = true;
     background: rgba(14, 196, 252, 0.04);
     outline: none;
   }
-  .date-month-name {
+  .date-subtitle .date-rel {
     color: rgba(245, 241, 232, 0.62);
-    font-weight: 400;
-    text-transform: uppercase;
-    letter-spacing: 0.06em;
-    font-size: 11px;
+    font-weight: 600;
   }
-  .date-day {
-    color: #0ec4fc;
-    font-weight: 700;
-    font-style: italic;
-    font-size: 13px;
-  }
-  .date-year {
-    color: rgba(245, 241, 232, 0.62);
-    font-weight: 500;
-    font-size: 12px;
-  }
-  .date-year .year-prefix {
-    color: rgba(245, 241, 232, 0.62);
-  }
-  .date-year .year-suffix {
-    color: #ff6e21;
-    font-style: italic;
-  }
-  .date-sep {
+  .date-subtitle .date-bracket {
     color: rgba(245, 241, 232, 0.22);
+    font-weight: 400;
   }
-  .date-rel {
-    color: rgba(245, 241, 232, 0.42);
-    font-size: 11px;
+  .date-subtitle .date-stamped {
+    color: rgba(245, 241, 232, 0.45);
     font-weight: 500;
+    letter-spacing: 0;
+  }
+  .date-subtitle .date-chev {
+    margin-left: 6px;
+    color: rgba(245, 241, 232, 0.42);
+    font-size: 12px;
+    transition: transform 220ms ease, color 160ms ease;
+    display: inline-block;
+    line-height: 1;
+  }
+  .date-subtitle[aria-expanded="true"] .date-chev {
+    color: #0ec4fc;
+    transform: rotate(180deg);
+  }
+  .date-subtitle[aria-expanded="true"] {
+    color: rgba(245, 241, 232, 0.85);
+    background: rgba(14, 196, 252, 0.06);
   }
 
   /* Smaller, lower-profile PUBLIC at the top of the spine. */
@@ -538,9 +550,9 @@ const hasExpanded = true;
     display: grid;
     gap: 6px;
   }
-  /* Title — green, italic mono, near-borderless lead element. Rename
-     trigger still works on click; the dashed-ish ghost border only
-     surfaces on hover/focus. */
+  /* Title — green, italic mono, emphasized by default. The lead element
+     of the row, wearing a subtle green glow and a soft green outline so
+     it reads as the row's identity at a glance. */
   .title {
     margin: 0;
     line-height: 1.1;
@@ -552,37 +564,37 @@ const hasExpanded = true;
     font: inherit;
     font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
     font-style: italic;
-    font-size: 17px;
+    font-size: 19px;
     font-weight: 700;
     color: #00ff4d;
     text-align: left;
-    background: transparent;
-    border: 1px solid transparent;
-    border-radius: 3px;
-    padding: 2px 6px;
-    margin-left: -6px;
+    background: rgba(0, 255, 77, 0.05);
+    border: 1px solid rgba(0, 255, 77, 0.32);
+    border-radius: 4px;
+    padding: 4px 10px;
+    margin-left: -10px;
     cursor: text;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
-    text-shadow: 0 0 10px rgba(0, 255, 77, 0.25);
+    text-shadow: 0 0 12px rgba(0, 255, 77, 0.32);
     transition: border-color 160ms ease, background 160ms ease;
   }
   .title-edit:hover,
   .title-edit:focus-visible {
-    border-color: rgba(0, 255, 77, 0.30);
-    background: rgba(0, 255, 77, 0.04);
+    border-color: rgba(0, 255, 77, 0.55);
+    background: rgba(0, 255, 77, 0.08);
     outline: none;
   }
   .title-base { color: inherit; }
-  .title-ext { color: #f5f1e8; opacity: 0.40; font-style: italic; }
+  .title-ext { color: #f5f1e8; opacity: 0.42; font-style: italic; font-weight: 500; }
 
-  /* BPM/Key module — matching box style to duration, but with a CYAN
-     color story instead of green. Only the number + key letter wear
-     the accent; the "BPM" unit + "major" mode are muted cream to read
-     as labels. Ghost when no data. */
+  /* BPM/Key module — borderless secondary line under the title. Only
+     the number + key letter wear the cyan accent; "BPM" + "major" are
+     muted cream label-weight. Ghost when no data. */
   .tech-meta {
     flex: 0 0 auto;
+    align-self: flex-start;
     display: inline-flex;
     align-items: baseline;
     gap: 4px;
@@ -590,10 +602,10 @@ const hasExpanded = true;
     font-style: italic;
     font-feature-settings: "tnum";
     line-height: 1;
-    padding: 4px 10px;
-    background: rgba(14, 196, 252, 0.05);
-    border: 1px solid rgba(14, 196, 252, 0.45);
-    border-radius: 3px;
+    padding: 2px 0 2px 2px;
+    background: transparent;
+    border: 0;
+    border-radius: 0;
   }
   .tech-meta .bpm-num {
     font-size: 14px;
@@ -723,29 +735,28 @@ const hasExpanded = true;
     padding: 0 14px;
     border-left: 1px solid rgba(245, 241, 232, 0.06);
   }
-  /* J/L/F/T tiles now sit inline with the waveform — smaller, denser. */
+  /* J/L/F/T tiles stack 2x2 to save horizontal space for the waveform. */
   .category-bar {
     flex: 0 0 auto;
     display: grid;
-    grid-template-columns: repeat(4, 36px);
+    grid-template-columns: repeat(2, 36px);
+    grid-template-rows: repeat(2, 28px);
     gap: 4px;
     align-self: center;
   }
   .category-btn {
     width: 36px;
-    height: 36px;
+    height: 28px;
     font: inherit;
     color: rgba(245, 241, 232, 0.55);
     background: transparent;
     border: 1px solid rgba(245, 241, 232, 0.18);
     border-radius: 3px;
-    padding: 2px 0;
+    padding: 0;
     cursor: pointer;
     display: flex;
-    flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: 1px;
     line-height: 1;
     transition: color 160ms ease, border-color 160ms ease,
                 background-color 160ms ease, transform 80ms ease;
@@ -769,15 +780,10 @@ const hasExpanded = true;
     letter-spacing: 0;
     color: inherit;
   }
-  .category-btn .category-label {
-    font-family: "Geist Variable", ui-sans-serif, system-ui, sans-serif;
-    font-size: 7px;
-    font-weight: 700;
-    letter-spacing: 0.10em;
-    line-height: 1;
-    color: inherit;
-    opacity: 0.66;
-  }
+  /* Hide the label inside the tile since 2x2 tiles are too small to
+     fit kbd + label vertically; the kbd letter carries the action.
+     The aria-label still announces the full label for screen readers. */
+  .category-btn .category-label { display: none; }
   /* Active = hot pink-red. */
   .bucket-card .category-btn.active {
     color: #ff2761;
@@ -785,55 +791,58 @@ const hasExpanded = true;
   }
   .bucket-card .category-btn.active .category-label { opacity: 1; }
 
-  /* Kudos = "Boost" — recessed pill at the right edge of the meta row.
-     Lightning bolt ⚡ glyph reads as energy/spark/like-it without being
-     a literal heart or musical note. Dim by default, warms up as the
-     count grows. Click pulses briefly to confirm. */
+  /* Kudos = buckeye sticker. A small filled disc with a cream eye — looks
+     like an earned merit decal. Sits at the right edge of the wave row
+     next to the J/L/F/T tile stack. Dim warmth by default; brightens
+     and glows softly when the count grows. */
   .kudos {
     flex: 0 0 auto;
     display: inline-flex;
+    flex-direction: column;
     align-items: center;
-    gap: 5px;
+    gap: 3px;
     font: inherit;
     font-family: "Geist Variable", ui-sans-serif, system-ui, sans-serif;
-    font-size: 12px;
+    font-size: 10px;
     font-weight: 700;
-    color: rgba(245, 241, 232, 0.42);
-    background: rgba(0, 0, 0, 0.30);
+    letter-spacing: 0.02em;
+    color: rgba(245, 241, 232, 0.55);
+    background: transparent;
     border: 0;
-    border-radius: 999px;
-    padding: 4px 12px;
+    padding: 4px 6px;
     cursor: pointer;
     line-height: 1;
-    box-shadow:
-      inset 0 1px 2px rgba(0, 0, 0, 0.45),
-      inset 0 0 0 1px rgba(255, 255, 255, 0.03);
-    transition: color 160ms ease, transform 160ms ease,
-                background 160ms ease, box-shadow 160ms ease;
+    transition: color 160ms ease, transform 160ms ease, filter 160ms ease;
+  }
+  .kudos .kudos-buckeye {
+    width: 36px;
+    height: 36px;
+    display: block;
+    filter:
+      drop-shadow(0 1px 2px rgba(0, 0, 0, 0.55))
+      drop-shadow(0 0 0 rgba(232, 180, 101, 0));
+    transition: filter 240ms ease, transform 240ms ease;
   }
   .kudos:hover,
   .kudos:focus-visible {
-    color: #ffd76a;
     outline: none;
-    box-shadow:
-      inset 0 1px 2px rgba(0, 0, 0, 0.55),
-      inset 0 0 0 1px rgba(255, 215, 106, 0.22),
-      0 0 10px rgba(255, 215, 106, 0.12);
-  }
-  .kudos.has {
     color: #ffd76a;
-    box-shadow:
-      inset 0 1px 2px rgba(0, 0, 0, 0.55),
-      inset 0 0 0 1px rgba(255, 215, 106, 0.34),
-      0 0 14px rgba(255, 215, 106, 0.18);
   }
-  .kudos-glyph {
-    font-size: 13px;
-    line-height: 1;
-    transform: translateY(-0.5px);
+  .kudos:hover .kudos-buckeye,
+  .kudos:focus-visible .kudos-buckeye {
+    filter:
+      drop-shadow(0 1px 2px rgba(0, 0, 0, 0.55))
+      drop-shadow(0 0 8px rgba(255, 215, 106, 0.35));
+    transform: translateY(-1px);
+  }
+  .kudos.has { color: #ffd76a; }
+  .kudos.has .kudos-buckeye {
+    filter:
+      drop-shadow(0 1px 2px rgba(0, 0, 0, 0.55))
+      drop-shadow(0 0 10px rgba(255, 215, 106, 0.45));
   }
   .kudos-count { font-variant-numeric: tabular-nums; }
-  .kudos[data-pulsing="true"] { transform: scale(1.12); }
+  .kudos[data-pulsing="true"] { transform: scale(1.14); }
 
   /* ── Detached trash ✕ (col 4, both rows, far right edge) ──────────── */
   .trash-hold.detached {
@@ -841,17 +850,18 @@ const hasExpanded = true;
     grid-row: 1 / 3;
     align-self: center;
   }
-  /* Archive column — full card height on the right edge. Slight red
-     wash so it reads as the destructive zone, but quiet enough that it
-     doesn't pull attention from the row content. The orphan dot at the
-     top is the only visual signal for cleanup-candidate items. */
+  /* Archive column — full card height on the right edge, shell-fitted
+     to the card's rounded corners. Inner edges square (touches the
+     card body); outer right edge inherits the card radius. Quiet red
+     wash so it reads as the destructive zone without pulling focus. */
   .trash-hold.detached {
-    grid-column: 3;
+    grid-column: 2;
     grid-row: 1;
     align-self: stretch;
     justify-self: stretch;
     width: auto;
     height: auto;
+    margin: -16px 0 -16px 0;  /* cancel .card-grid vertical padding */
   }
   .trash-hold {
     position: relative;
@@ -866,34 +876,21 @@ const hasExpanded = true;
       rgba(47, 7, 18, 0.62) 100%);
     border: 0;
     border-left: 1px solid rgba(255, 39, 97, 0.18);
-    border-radius: 0 8px 8px 0;
+    border-radius: 0 7px 7px 0;
     cursor: pointer;
     display: flex;
     align-items: center;
     justify-content: center;
-    transition: color 160ms ease, background 160ms ease;
+    transition: color 160ms ease, background 160ms ease,
+                border-left-color 160ms ease, box-shadow 160ms ease;
   }
-  /* Orphan dot — small red circle anchored top center of the archive
-     column. Soft pulse to draw the eye without being loud. */
-  .trash-hold .orphan-dot {
-    position: absolute;
-    top: 8px;
-    left: 50%;
-    transform: translateX(-50%);
-    width: 6px;
-    height: 6px;
-    border-radius: 50%;
-    background: #ff2761;
-    box-shadow: 0 0 8px rgba(255, 39, 97, 0.6);
-    z-index: 2;
-    animation: orphan-pulse 2.2s ease-in-out infinite;
-  }
-  @keyframes orphan-pulse {
-    0%, 100% { opacity: 0.85; }
-    50% { opacity: 0.45; }
-  }
-  @media (prefers-reduced-motion: reduce) {
-    .trash-hold .orphan-dot { animation: none; }
+  /* Orphan-candidate rows: red rim glow on the X column. Static — no
+     animation, no extra DOM node. Just a meaningful boundary cue. */
+  .trash-hold.is-orphan {
+    border-left-color: rgba(255, 39, 97, 0.65);
+    box-shadow:
+      inset 6px 0 14px -4px rgba(255, 39, 97, 0.30),
+      inset 2px 0 0 0 rgba(255, 39, 97, 0.20);
   }
   /* Hover deepens the red. Hold fills the column bottom→top in 0.9s. */
   .trash-hold:hover,
