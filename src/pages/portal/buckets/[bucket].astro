@@ -189,32 +189,38 @@ const BUCKET_TITLE: Record<BucketView, string> = {
       }
     };
 
-    // ── Quality stars ────────────────────────────────────────────────────
-    const setStars = async (card: HTMLElement, n: number) => {
+    // ── Kudos ticker — increment by 1 per click, unbounded count ────────
+    const bumpKudos = async (card: HTMLElement) => {
       const assetId = card.dataset.assetId;
       if (!assetId) return;
-      card.setAttribute("data-pending", "true");
+      const btn = card.querySelector<HTMLElement>('[data-action="kudos"]');
+      const counter = card.querySelector<HTMLElement>("[data-kudos-count]");
+      // Optimistic: bump the local count immediately so the click feels
+      // instant. Roll back on failure.
+      const before = Number(counter?.textContent ?? "0") || 0;
+      if (counter) counter.textContent = String(before + 1);
+      if (btn) btn.classList.add("has");
+      btn?.setAttribute("data-pulsing", "true");
+      window.setTimeout(() => btn?.removeAttribute("data-pulsing"), 320);
       try {
-        const res = await fetch("/api/console/buckets-quality-star", {
+        const res = await fetch("/api/console/buckets-kudos", {
           method: "POST",
           headers: { "content-type": "application/json" },
-          body: JSON.stringify({ asset_id: Number(assetId), quality_star: n }),
+          body: JSON.stringify({ asset_id: Number(assetId) }),
         });
         if (!res.ok) {
-          setStatus(card, `Stars failed (HTTP ${res.status})`, "err");
+          if (counter) counter.textContent = String(before);
+          if (before === 0) btn?.classList.remove("has");
+          setStatus(card, `Kudos failed (HTTP ${res.status})`, "err");
           return;
         }
-        card.dataset.quality = String(n);
-        card.querySelectorAll<HTMLElement>(".star").forEach((el, i) => {
-          el.classList.toggle("on", i < n);
-        });
-        const counter = card.querySelector<HTMLElement>(".quality-zero");
-        if (counter) counter.textContent = `(${n}/3)`;
-        setStatus(card, `★ ${n}`, "ok");
+        const data = await res.json();
+        if (counter && typeof data.kudos === "number") counter.textContent = String(data.kudos);
+        card.dataset.quality = String(data.kudos ?? before + 1);
       } catch {
-        setStatus(card, "Stars failed (network)", "err");
-      } finally {
-        card.removeAttribute("data-pending");
+        if (counter) counter.textContent = String(before);
+        if (before === 0) btn?.classList.remove("has");
+        setStatus(card, "Kudos failed (network)", "err");
       }
     };
 
@@ -544,11 +550,9 @@ const BUCKET_TITLE: Record<BucketView, string> = {
         case "audition":
           toggleAudition(card);
           break;
-        case "quality-star": {
-          const n = Number(btn.dataset.starValue);
-          if (Number.isFinite(n)) setStars(card, n);
+        case "kudos":
+          bumpKudos(card);
           break;
-        }
         case "lineage":
           revealLineage(card, btn);
           break;
@@ -640,9 +644,10 @@ const BUCKET_TITLE: Record<BucketView, string> = {
       // Trash is intentionally not on the keyboard — the hold-button on
       // the card's bottom-right corner is the only way to delete.
 
-      if (["0", "1", "2", "3"].includes(e.key)) {
+      // K (or +) adds kudos to the focused card.
+      if (e.key === "k" || e.key === "+") {
         e.preventDefault();
-        setStars(currentEl, Number(e.key));
+        bumpKudos(currentEl);
       }
     });
 

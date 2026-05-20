@@ -172,18 +172,12 @@ const hasExpanded = true;
       {item.orphan_candidate === 1 && (
         <span class="flag-chip flag-orphan" title="Flagged orphan">ORPHAN</span>
       )}
-      {tech.length > 0 && (
-        <span class="tech-meta">
-          {item.bpm && (
-            <>
-              <span class="bpm-num">{Math.round(item.bpm)}</span>
-              <span class="bpm-unit">BPM</span>
-            </>
-          )}
-          {item.bpm && item.key && <span class="tech-sep">·</span>}
-          {item.key && <span class="key">{item.key}</span>}
-        </span>
-      )}
+      <span class:list={["tech-meta", { ghost: !item.bpm && !item.key }]}>
+        <span class="bpm-num">{item.bpm ? Math.round(item.bpm) : "—"}</span>
+        <span class="bpm-unit">BPM</span>
+        <span class="tech-sep">·</span>
+        <span class="key">{item.key || "—"}</span>
+      </span>
     </div>
 
     <!-- ── Waveform (row 2, col 2) ───────────────────────────────────── -->
@@ -210,7 +204,7 @@ const hasExpanded = true;
       </div>
     </div>
 
-    <!-- ── Actions col (col 3, both rows): J/L/F/T as letter tiles ───── -->
+    <!-- ── Actions col (col 3, both rows): J/L/F/T + kudos ticker ────── -->
     <div class="actions-col">
       <div class="category-bar" role="group" aria-label="Assign to category">
         {CATEGORIES.map((c) => (
@@ -226,6 +220,17 @@ const hasExpanded = true;
           </button>
         ))}
       </div>
+      <button
+        type="button"
+        class:list={["kudos", { has: (item.quality_star ?? 0) > 0 }]}
+        data-action="kudos"
+        data-asset-id={String(item.asset_id)}
+        aria-label="Give kudos"
+        title="Click to add kudos"
+      >
+        <span class="kudos-glyph" aria-hidden="true">♥</span>
+        <span class="kudos-count" data-kudos-count>{item.quality_star ?? 0}</span>
+      </button>
     </div>
 
     <!-- ── Trash detached (col 4, both rows, far right edge) ─────────── -->
@@ -242,22 +247,6 @@ const hasExpanded = true;
   {hasExpanded && (
     <div class="expanded" data-expanded hidden>
       <dl class="exp">
-        <dt>Rating</dt>
-        <dd>
-          <div class="quality" role="group" aria-label="Quality stars">
-            {[1, 2, 3].map((n) => (
-              <button
-                type="button"
-                class:list={["star", { on: item.quality_star >= n }]}
-                data-action="quality-star"
-                data-asset-id={String(item.asset_id)}
-                data-star-value={String(n)}
-                aria-label={`Set quality to ${n} star${n === 1 ? "" : "s"}`}
-                title={`Set quality to ${n} (${n} when focused)`}
-              >★</button>
-            ))}
-          </div>
-        </dd>
         {item.summary && (
           <>
             <dt>Summary</dt>
@@ -357,7 +346,7 @@ const hasExpanded = true;
     padding: 0 14px 12px 0;
   }
   .head-row {
-    grid-column: 2 / 4;
+    grid-column: 2;
     grid-row: 1;
     display: flex;
     align-items: center;
@@ -447,23 +436,21 @@ const hasExpanded = true;
     line-height: 1;
   }
 
-  /* Public toggle sits at the top of the spine. Off state = dashed
-     border. On state inherits the wave-textured pink fill from
-     PortalLayout's global active-button override. */
+  /* Smaller, lower-profile PUBLIC at the top of the spine. */
   .pub-toggle {
     flex: 0 0 auto;
     align-self: flex-start;
     font: inherit;
     font-family: "Geist Variable", ui-sans-serif, system-ui, sans-serif;
-    font-size: 9px;
+    font-size: 8px;
     font-weight: 700;
-    letter-spacing: 0.10em;
+    letter-spacing: 0.14em;
     text-transform: uppercase;
-    color: rgba(245, 241, 232, 0.55);
+    color: rgba(245, 241, 232, 0.48);
     background: transparent;
-    border: 1px dashed rgba(245, 241, 232, 0.22);
-    border-radius: 3px;
-    padding: 3px 7px;
+    border: 1px dashed rgba(245, 241, 232, 0.18);
+    border-radius: 2px;
+    padding: 2px 5px;
     cursor: pointer;
     transition: color 160ms ease, border-color 160ms ease,
                 background 160ms ease;
@@ -471,8 +458,13 @@ const hasExpanded = true;
   .pub-toggle:hover,
   .pub-toggle:focus-visible {
     color: #f5f1e8;
-    border-color: rgba(245, 241, 232, 0.55);
+    border-color: rgba(245, 241, 232, 0.45);
     outline: none;
+  }
+  .pub-toggle.on {
+    color: #ff3b6e;
+    border-color: rgba(255, 59, 110, 0.55);
+    border-style: solid;
   }
 
   /* ── Main column (col 2, row 2): just the waveform ─────────────────── */
@@ -510,8 +502,9 @@ const hasExpanded = true;
     outline: none;
   }
 
-  /* Structured BPM/Key display — the number reads as the headline glyph,
-     unit + key follow at a tighter weight. */
+  /* BPM/Key module — own container with a dark backdrop. Always rendered
+     (ghost mode when no data) so the right edge of the head row stays
+     anchored across cards. */
   .tech-meta {
     flex: 0 0 auto;
     display: inline-flex;
@@ -521,38 +514,56 @@ const hasExpanded = true;
     font-feature-settings: "tnum";
     color: #f5f1e8;
     line-height: 1;
+    padding: 5px 10px;
+    background: rgba(14, 10, 22, 0.6);
+    border: 1px solid rgba(245, 241, 232, 0.06);
+    border-radius: 4px;
   }
   .tech-meta .bpm-num {
-    font-size: 18px;
+    font-size: 17px;
     font-weight: 700;
+    color: #f5f1e8;
   }
   .tech-meta .bpm-unit {
-    font-size: 12px;
-    font-weight: 700;
-    color: rgba(245, 241, 232, 0.66);
+    font-size: 11px;
+    font-weight: 600;
+    color: rgba(245, 241, 232, 0.46);
+    margin-left: 1px;
   }
   .tech-meta .tech-sep {
     font-size: 14px;
-    color: rgba(245, 241, 232, 0.32);
-    margin: 0 2px;
+    color: rgba(245, 241, 232, 0.22);
+    margin: 0 4px;
   }
   .tech-meta .key {
     font-size: 16px;
     font-weight: 700;
+    color: #f5f1e8;
   }
+  /* Ghost: rendered but dimmed when the asset has no BPM/key. */
+  .tech-meta.ghost {
+    border-style: dashed;
+    background: transparent;
+  }
+  .tech-meta.ghost .bpm-num,
+  .tech-meta.ghost .key { color: rgba(245, 241, 232, 0.22); }
+  .tech-meta.ghost .bpm-unit { color: rgba(245, 241, 232, 0.18); }
+  .tech-meta.ghost .tech-sep { color: rgba(245, 241, 232, 0.12); }
+
+  /* Smaller, pink-toned ORPHAN. Less aggressive than the prior orange. */
   .flag-chip {
     flex: 0 0 auto;
-    font-size: 9px;
+    font-size: 8.5px;
     font-weight: 700;
-    letter-spacing: 0.12em;
+    letter-spacing: 0.14em;
     text-transform: uppercase;
-    padding: 2px 6px;
+    padding: 2px 5px;
     border: 1px solid currentColor;
     border-radius: 2px;
     line-height: 1.4;
   }
   .flag-dup { color: rgba(245, 241, 232, 0.42); }
-  .flag-orphan { color: #ff6e21; }
+  .flag-orphan { color: #ff5a82; }
 
   /* ── Waveform (the row's visual fingerprint) ──────────────────────── */
   .waveform {
@@ -607,30 +618,34 @@ const hasExpanded = true;
     z-index: 2;
   }
 
-  /* ── Actions column ─────────────────────────────────────────────────
-     Spans both grid rows so the J/L/F/T tiles sit vertically centered
-     against the head row + waveform stack to their left. */
+  /* ── Actions column (J/L/F/T + kudos) ──────────────────────────────
+     Spans both grid rows. Tiles stack vertically: bucket bar on top,
+     kudos ticker below. */
   .actions-col {
     grid-column: 3;
     grid-row: 1 / 3;
     align-self: stretch;
     display: flex;
-    align-items: center;
-    padding-left: 12px;
+    flex-direction: column;
+    align-items: stretch;
+    justify-content: center;
+    gap: 6px;
+    padding: 0 14px;
     border-left: 1px solid rgba(245, 241, 232, 0.06);
   }
-  /* Letter-only tiles — no inline label, just the kbd glyph. The aria-label
-     on the button carries the accessible name. */
   .category-bar {
     display: grid;
-    grid-template-columns: repeat(4, 38px);
+    grid-template-columns: repeat(4, 36px);
     gap: 5px;
   }
+  /* Letter-only tile. Active state is LOW-PROFILE: pink letter + pink
+     border + faint pink fill, NOT the loud pink→orange gradient that
+     the browse chips wear. Keeps row-level decoration quiet. */
   .category-btn {
-    width: 38px;
-    height: 38px;
+    width: 36px;
+    height: 32px;
     font: inherit;
-    color: rgba(245, 241, 232, 0.66);
+    color: rgba(245, 241, 232, 0.55);
     background: transparent;
     border: 1px solid rgba(245, 241, 232, 0.10);
     border-radius: 4px;
@@ -645,17 +660,15 @@ const hasExpanded = true;
   }
   .category-btn:hover,
   .category-btn:focus-visible {
-    border-color: rgba(14, 196, 252, 0.55);
+    border-color: rgba(245, 241, 232, 0.30);
     color: #f5f1e8;
     outline: none;
   }
   .category-btn:active { transform: translateY(1px); }
-  /* Italic mono glyph — gives the tile a typewriter-key feel that fits
-     the cassette-tape vibe. */
   .category-btn kbd {
     font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
     font-style: italic;
-    font-size: 18px;
+    font-size: 17px;
     font-weight: 700;
     line-height: 1;
     padding: 0;
@@ -665,7 +678,50 @@ const hasExpanded = true;
     color: inherit;
     opacity: 0.85;
   }
-  .category-btn.active kbd { opacity: 1; font-style: italic; }
+  /* Active = pink ink on subtle pink wash. No box-shadow halo. */
+  .bucket-card .category-btn.active {
+    color: #ff3b6e;
+    background: rgba(255, 59, 110, 0.08);
+    border-color: rgba(255, 59, 110, 0.55);
+  }
+  .bucket-card .category-btn.active kbd { opacity: 1; }
+
+  /* Kudos ticker — small heart + count. Click increments. The pulse
+     keyframe runs briefly after each click to confirm the action. */
+  .kudos {
+    align-self: center;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font: inherit;
+    font-family: "Geist Variable", ui-sans-serif, system-ui, sans-serif;
+    font-size: 11px;
+    font-weight: 700;
+    color: rgba(245, 241, 232, 0.42);
+    background: transparent;
+    border: 1px solid rgba(245, 241, 232, 0.12);
+    border-radius: 999px;
+    padding: 3px 9px;
+    cursor: pointer;
+    line-height: 1;
+    transition: color 160ms ease, border-color 160ms ease,
+                background 160ms ease, transform 160ms ease;
+  }
+  .kudos:hover,
+  .kudos:focus-visible {
+    color: #ff3b6e;
+    border-color: rgba(255, 59, 110, 0.55);
+    outline: none;
+    transform: translateY(-1px);
+  }
+  .kudos.has {
+    color: #ff3b6e;
+    border-color: rgba(255, 59, 110, 0.45);
+    background: rgba(255, 59, 110, 0.06);
+  }
+  .kudos-glyph { font-size: 12px; line-height: 1; }
+  .kudos-count { font-variant-numeric: tabular-nums; }
+  .kudos[data-pulsing="true"] { transform: scale(1.08); }
 
   /* ── Detached trash ✕ (col 4, both rows, far right edge) ──────────── */
   .trash-hold.detached {
@@ -918,22 +974,32 @@ const hasExpanded = true;
   }
 
   /* ── Responsive ───────────────────────────────────────────────────── */
-  @media (max-width: 880px) {
+  @media (max-width: 640px) {
     .card-grid {
-      grid-template-columns: 78px minmax(0, 1fr) auto;
-      grid-template-rows: auto auto;
+      grid-template-columns: 70px minmax(0, 1fr);
+      grid-template-rows: auto auto auto;
       column-gap: 12px;
     }
-    .date-col { grid-column: 1; grid-row: 1 / 3; padding: 8px 10px; }
-    .head-row { grid-column: 2 / 4; grid-row: 1; }
+    .date-col { grid-column: 1; grid-row: 1 / 4; padding: 8px 10px; }
+    .head-row { grid-column: 2; grid-row: 1; }
     .main-col { grid-column: 2; grid-row: 2; }
-    .actions-col { grid-column: 3; grid-row: 1 / 3; padding-left: 10px; }
-    .trash-hold.detached { display: none; }   /* compact: trash hides at mobile, accessible via expand */
-    .category-bar { grid-template-columns: repeat(2, 38px); gap: 5px; }
-    .category-bar .category-btn:nth-child(3),
-    .category-bar .category-btn:nth-child(4) { grid-column: span 1; }
+    .actions-col {
+      grid-column: 2;
+      grid-row: 3;
+      flex-direction: row;
+      padding: 0 10px;
+      border-left: 0;
+      border-top: 1px solid rgba(245, 241, 232, 0.06);
+      padding-top: 8px;
+    }
+    .trash-hold.detached {
+      grid-column: 2;
+      grid-row: 3;
+      justify-self: end;
+    }
+    .category-bar { grid-template-columns: repeat(4, 36px); }
     .date-year { font-size: 18px; }
-    .expanded { margin-left: 78px; }
+    .expanded { margin-left: 70px; }
   }
 </style>
 

@@ -427,6 +427,15 @@ export async function setQualityStar(
   });
 }
 
+/** Increment kudos on an asset by 1. Returns the new total. */
+export async function bumpKudos(
+  asset_id: number,
+): Promise<ApiResult<{ asset_id: number; kudos: number }>> {
+  return _post<{ asset_id: number; kudos: number }>("/buckets/kudos", {
+    asset_id,
+  });
+}
+
 export async function getLineage(
   asset_id: number,
 ): Promise<ApiResult<LineageResponse>> {

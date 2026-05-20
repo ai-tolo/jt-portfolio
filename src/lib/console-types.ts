@@ -218,7 +218,7 @@ export type BucketSort =
   | "longest"
   | "shortest"
   | "most-used"
-  | "stars";
+  | "kudos";
 
 export interface BucketAsset {
   /** Stable engine row id. Required for assignment/lineage POSTs. */
