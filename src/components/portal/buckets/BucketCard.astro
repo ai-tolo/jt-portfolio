@@ -80,6 +80,24 @@ const titleParts = (() => {
   return m ? { base: m[1], ext: m[2] } : { base: title, ext: "" };
 })();
 
+// Parse the engine's free-form key string into a clean letter + mode.
+// The column may hold "C", "D#", "Dm", "F#m", "D major", "D maj",
+// "D minor" — normalise so we don't render "D major major".
+const keyInfo = (() => {
+  if (!item.key) return { letter: null as string | null, mode: null as string | null };
+  const str = String(item.key).trim();
+  let m = str.match(/^([A-Ga-g][#b]?)\s*(major|minor|maj|min)\b/i);
+  if (m) {
+    const mode = m[2].toLowerCase().startsWith("min") ? "minor" : "major";
+    return { letter: m[1].toUpperCase().replace("B", "b"), mode };
+  }
+  m = str.match(/^([A-Ga-g][#b]?)m$/);
+  if (m) return { letter: m[1].toUpperCase().replace("B", "b"), mode: "minor" };
+  m = str.match(/^([A-Ga-g][#b]?)$/);
+  if (m) return { letter: m[1].toUpperCase().replace("B", "b"), mode: "major" };
+  return { letter: str, mode: null };
+})();
+
 const lineageWord = (() => {
   if (!item.parent_id) return null;
   switch (item.source_type) {
@@ -127,41 +145,20 @@ const hasExpanded = true;
   aria-label={`${title} — ${BUCKET_LABEL[currentBucket]}`}
 >
   <div class="card-grid">
-    <!-- ── Date column: whole area is the expand target. No backdrop —
-         a single cyan rule on the right is the only divider. ─────────── -->
-    <button
-      type="button"
-      class="date-col"
-      data-action="expand"
-      aria-expanded="false"
-      aria-label={dateInfo ? `Modified ${dateInfo.primary} ${dateInfo.year}. Click to expand.` : "Click to expand"}
-      title="Click to expand"
-    >
-      {dateInfo ? (
-        <>
-          <div class="date-month">
-            <span class="date-month-name">{dateInfo.primary.split(" ")[0]}</span>
-            {" "}
-            <span class="date-day">{dateInfo.primary.split(" ")[1]}</span>
-          </div>
-          <div class="date-year">
-            <span class="year-prefix">{dateInfo.year.slice(0, 2)}</span><span class="year-suffix">{dateInfo.year.slice(2)}</span>
-          </div>
-          <div class="date-rel">{dateInfo.relative}</div>
-        </>
-      ) : (
-        <div class="date-month">—</div>
-      )}
-    </button>
-
-    <!-- ── Middle column: head row + wave row ────────────────────────
-         Head row: duration | title | BPM
-         Wave row: waveform | J L F T tiles | kudos
-         Equal type sizes across the head row so hierarchy reads via
-         color + weight, not size. ──────────────────────────────────── -->
+    <!-- ── Main column: title row, sub-title (duration + BPM), wave row ── -->
     <div class="middle-col">
-      <div class="head-row">
-        <span class="duration" aria-label="Duration">{durationLabel ?? "—:—"}</span>
+      <div class="title-row">
+        <button
+          type="button"
+          class:list={["kudos", { has: (item.quality_star ?? 0) > 0 }]}
+          data-action="kudos"
+          data-asset-id={String(item.asset_id)}
+          aria-label="Give kudos"
+          title="Click to add kudos"
+        >
+          <span class="kudos-glyph" aria-hidden="true">♪</span>
+          <span class="kudos-count" data-kudos-count>{item.quality_star ?? 0}</span>
+        </button>
         <h3 class="title">
           <button
             type="button"
@@ -174,12 +171,15 @@ const hasExpanded = true;
         {item.dup_of && (
           <span class="flag-chip flag-dup" title={`Duplicate of asset_id ${item.dup_of}`}>DUP</span>
         )}
+      </div>
+      <div class="subtitle-row">
+        <span class="duration" aria-label="Duration">{durationLabel ?? "—:—"}</span>
         <span class:list={["tech-meta", { ghost: !item.bpm && !item.key }]}>
           <span class="bpm-num">{item.bpm ? Math.round(item.bpm) : "—"}</span>
           <span class="bpm-unit">BPM</span>
           <span class="tech-sep">·</span>
-          <span class="key">{item.key || "—"}</span>
-          {item.key && <span class="key-mode">maj</span>}
+          <span class="key">{keyInfo.letter || "—"}</span>
+          {keyInfo.mode && <span class="key-mode">{keyInfo.mode}</span>}
         </span>
       </div>
       <div class="wave-row">
@@ -218,23 +218,38 @@ const hasExpanded = true;
             </button>
           ))}
         </div>
-        <button
-          type="button"
-          class:list={["kudos", { has: (item.quality_star ?? 0) > 0 }]}
-          data-action="kudos"
-          data-asset-id={String(item.asset_id)}
-          aria-label="Give kudos"
-          title="Click to add kudos"
-        >
-          <span class="kudos-glyph" aria-hidden="true">★</span>
-          <span class="kudos-count" data-kudos-count>{item.quality_star ?? 0}</span>
-        </button>
       </div>
       <p class="status" data-status-line aria-live="polite"></p>
     </div>
 
-    <!-- ── Archive column. The ORPHAN signal moved here as a subtle red
-         dot at the top of the column when the row is a cleanup candidate. ── -->
+    <!-- ── Date column: moved to the right of the main content. Whole
+         column is the click target for expand. ───────────────────────── -->
+    <button
+      type="button"
+      class="date-col"
+      data-action="expand"
+      aria-expanded="false"
+      aria-label={dateInfo ? `Modified ${dateInfo.primary} ${dateInfo.year}. Click to expand.` : "Click to expand"}
+      title="Click to expand"
+    >
+      {dateInfo ? (
+        <>
+          <div class="date-month">
+            <span class="date-month-name">{dateInfo.primary.split(" ")[0]}</span>
+            {" "}
+            <span class="date-day">{dateInfo.primary.split(" ")[1]}</span>
+          </div>
+          <div class="date-year">
+            <span class="year-prefix">{dateInfo.year.slice(0, 2)}</span><span class="year-suffix">{dateInfo.year.slice(2)}</span>
+          </div>
+          <div class="date-rel">{dateInfo.relative}</div>
+        </>
+      ) : (
+        <div class="date-month">—</div>
+      )}
+    </button>
+
+    <!-- ── Archive column with orphan dot indicator ─────────────────── -->
     <button
       type="button"
       class:list={["trash-hold detached", { "is-orphan": item.orphan_candidate === 1 }]}
@@ -351,25 +366,41 @@ const hasExpanded = true;
             title, both anchored top-left. Always the same horizontal
             position so the eye finds runtime + name first.
      Row 2: date column | waveform | actions trail. */
-  /* Three-column grid:
-       col 1: date column (transparent — single cyan rule on right)
-       col 2: middle stack — head row + wave row (J/L/F/T + kudos inline)
-       col 3: archive column (subtle red wash) */
+  /* Three-column grid, restructured:
+       col 1: main content — title row, sub-title row, wave row
+       col 2: date column (right side now, vertical stack)
+       col 3: archive column */
   .card-grid {
     display: grid;
-    grid-template-columns: 102px minmax(0, 1fr) 42px;
+    grid-template-columns: minmax(0, 1fr) 102px 42px;
     column-gap: 0;
     align-items: stretch;
-    padding: 14px 0 14px 12px;
+    padding: 16px 0 16px 18px;
   }
   .middle-col {
-    grid-column: 2;
+    grid-column: 1;
     display: flex;
     flex-direction: column;
-    gap: 10px;
-    padding: 0 18px;
+    gap: 8px;
+    padding: 0 18px 0 0;
     min-width: 0;
     justify-content: center;
+  }
+  /* Title row — kudos imprint to the left of the title text. */
+  .title-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-width: 0;
+  }
+  /* Sub-title row — the duration tag + BPM/key tag sit side by side as
+     matching boxes. Same border style; different inner color so each
+     reads as its own data point. */
+  .subtitle-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
   }
   .head-row {
     display: flex;
@@ -413,21 +444,20 @@ const hasExpanded = true;
   /* ── Date spine ──────────────────────────────────────────────────────
      Full-height burgundy stripe on the left edge of the card. PUBLIC
      toggle sits at the top, date stack centered below. */
-  /* Date column — borderless, transparent. A single 1px blue rule on
-     its right edge is the only divider from the rest of the card. The
-     whole column is a button so the curator can click anywhere in this
-     zone to expand. No tiny chevron to aim at. */
+  /* Date column — moved to the right of the main content. Borderless,
+     transparent; a single 1px cyan rule on the LEFT edge is the only
+     divider from the main stack. The whole column is the expand target. */
   .date-col {
-    grid-column: 1;
+    grid-column: 2;
     align-self: stretch;
     display: flex;
     flex-direction: column;
     justify-content: center;
     gap: 4px;
-    padding: 0 16px 0 4px;
+    padding: 0 14px 0 16px;
     background: transparent;
     border: 0;
-    border-right: 1px solid rgba(14, 196, 252, 0.32);
+    border-left: 1px solid rgba(14, 196, 252, 0.28);
     border-radius: 0;
     text-align: left;
     cursor: pointer;
@@ -556,8 +586,10 @@ const hasExpanded = true;
   .title-base { color: inherit; }
   .title-ext { color: #f5f1e8; opacity: 0.42; font-style: italic; }
 
-  /* BPM/Key module — cyan-rimmed tape tag matching duration + title.
-     Equal 14px type. Ghost mode when no data. */
+  /* BPM/Key module — matching box style to duration, but with a CYAN
+     color story instead of green. Only the number + key letter wear
+     the accent; the "BPM" unit + "major" mode are muted cream to read
+     as labels. Ghost when no data. */
   .tech-meta {
     flex: 0 0 auto;
     display: inline-flex;
@@ -566,24 +598,24 @@ const hasExpanded = true;
     font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
     font-style: italic;
     font-feature-settings: "tnum";
-    color: #00ff4d;
     line-height: 1;
     padding: 4px 10px;
-    background: rgba(0, 255, 77, 0.04);
+    background: rgba(14, 196, 252, 0.05);
     border: 1px solid rgba(14, 196, 252, 0.45);
     border-radius: 3px;
   }
   .tech-meta .bpm-num {
     font-size: 14px;
     font-weight: 700;
-    color: #00ff4d;
-    text-shadow: 0 0 6px rgba(0, 255, 77, 0.22);
+    color: #0ec4fc;
+    text-shadow: 0 0 6px rgba(14, 196, 252, 0.22);
   }
   .tech-meta .bpm-unit {
-    font-size: 11px;
-    font-weight: 600;
+    font-size: 14px;
+    font-weight: 500;
+    font-style: italic;
     color: rgba(245, 241, 232, 0.55);
-    margin-left: 1px;
+    margin-left: 2px;
   }
   .tech-meta .tech-sep {
     font-size: 14px;
@@ -593,14 +625,16 @@ const hasExpanded = true;
   .tech-meta .key {
     font-size: 14px;
     font-weight: 700;
-    color: #00ff4d;
+    color: #0ec4fc;
   }
+  /* "major" matches the BPM unit — muted, label-weight. Lets the number
+     and key letter carry the cyan accent. */
   .tech-meta .key-mode {
-    font-size: 10px;
-    font-weight: 600;
-    color: #ff6e21;
-    margin-left: 2px;
-    letter-spacing: 0.04em;
+    font-size: 14px;
+    font-weight: 500;
+    font-style: italic;
+    color: rgba(245, 241, 232, 0.55);
+    margin-left: 4px;
   }
   .tech-meta.ghost {
     border-style: dashed;
@@ -760,8 +794,11 @@ const hasExpanded = true;
   }
   .bucket-card .category-btn.active .category-label { opacity: 1; }
 
-  /* Kudos jar — compact yellow chip in the head row. Black star + orange
-     count. Reads as a sticky-note "vote" tag pinned to the row. */
+  /* Kudos imprint — a recessed pill sitting to the left of the title.
+     Subtle by default (dim text in a dark inset well); when count > 0,
+     the glyph + count brighten into the warm accent. Click pulses
+     briefly to confirm. Music-note glyph (♪) instead of a star — fits
+     the audio context without competing with the J/L/F/T tile letters. */
   .kudos {
     flex: 0 0 auto;
     display: inline-flex;
@@ -770,36 +807,41 @@ const hasExpanded = true;
     font: inherit;
     font-family: "Geist Variable", ui-sans-serif, system-ui, sans-serif;
     font-size: 11px;
-    font-weight: 700;
-    color: #ff6e21;
-    background: #eeff00;
-    border: 1px solid rgba(0, 0, 0, 0.30);
-    border-radius: 3px;
-    padding: 3px 7px;
+    font-weight: 600;
+    color: rgba(245, 241, 232, 0.38);
+    background: rgba(0, 0, 0, 0.32);
+    border: 0;
+    border-radius: 999px;
+    padding: 3px 9px;
     cursor: pointer;
     line-height: 1;
-    transition: background 160ms ease, transform 160ms ease,
-                box-shadow 160ms ease;
-    box-shadow: 0 0 10px rgba(238, 255, 0, 0.18);
+    box-shadow:
+      inset 0 1px 2px rgba(0, 0, 0, 0.48),
+      inset 0 0 0 1px rgba(255, 255, 255, 0.03);
+    transition: color 160ms ease, transform 160ms ease,
+                background 160ms ease, box-shadow 160ms ease;
   }
   .kudos:hover,
   .kudos:focus-visible {
+    color: #ffb4a3;
     outline: none;
-    transform: translateY(-1px);
-    box-shadow: 0 0 18px rgba(238, 255, 0, 0.36);
+    box-shadow:
+      inset 0 1px 2px rgba(0, 0, 0, 0.55),
+      inset 0 0 0 1px rgba(255, 180, 163, 0.18);
   }
   .kudos.has {
-    background: #eeff00;
+    color: #ff6e21;
+    box-shadow:
+      inset 0 1px 2px rgba(0, 0, 0, 0.55),
+      inset 0 0 0 1px rgba(255, 110, 33, 0.32),
+      0 0 8px rgba(255, 110, 33, 0.10);
   }
   .kudos-glyph {
-    color: #050306;
     font-size: 13px;
     line-height: 1;
+    transform: translateY(-0.5px);
   }
-  .kudos-count {
-    font-variant-numeric: tabular-nums;
-    color: #ff6e21;
-  }
+  .kudos-count { font-variant-numeric: tabular-nums; }
   .kudos[data-pulsing="true"] { transform: scale(1.10); }
 
   /* ── Detached trash ✕ (col 4, both rows, far right edge) ──────────── */
