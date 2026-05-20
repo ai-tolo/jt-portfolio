@@ -173,14 +173,14 @@ const hasExpanded = true;
         {keyInfo.mode && <span class="key-mode">{keyInfo.mode}</span>}
       </span>
       <div class="wave-row">
+        {/* Runtime sits to the LEFT of the waveform — borderless LCD
+            digits with a soft pink glow. */}
+        <span class="duration" aria-label="Duration">{durationLabel ?? "—:—"}</span>
         <div
           class="waveform"
           data-seekable={waveformSrc ? "true" : "false"}
           title={waveformSrc ? "Click to play (click again to seek)" : undefined}
         >
-          {/* Runtime sits INSIDE the waveform as a glowing alarm-clock-
-              style readout — no border, no fill, just LCD-feel digits. */}
-          <span class="duration" aria-label="Duration">{durationLabel ?? "—:—"}</span>
           {waveformSrc ? (
             <img
               src={waveformSrc}
@@ -373,28 +373,21 @@ const hasExpanded = true;
     min-width: 0;
     justify-content: center;
   }
-  /* Wave row — thin wrapper around the waveform. The LCD duration is
-     absolutely-positioned inside the waveform itself, not in this flex
-     container. */
+  /* Wave row — duration LCD on the left, waveform fills the rest. */
   .wave-row {
     display: flex;
     align-items: center;
+    gap: 12px;
     min-width: 0;
   }
 
-  /* Duration — borderless LCD overlay, vertically centered inside the
-     waveform on the left edge. Mono digits with a soft pink glow so
-     it reads as a built-in alarm-clock readout. */
+  /* Duration — borderless LCD readout to the LEFT of the waveform.
+     Mono italic digits with a soft pink glow. */
   .duration {
-    position: absolute;
-    top: 50%;
-    left: 10px;
-    transform: translateY(-50%);
-    z-index: 3;
-    pointer-events: none;
+    flex: 0 0 auto;
     font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
     font-style: italic;
-    font-size: 14px;
+    font-size: 16px;
     font-weight: 700;
     color: #ff3b6e;
     background: transparent;
@@ -403,6 +396,8 @@ const hasExpanded = true;
     font-feature-settings: "tnum";
     line-height: 1;
     letter-spacing: 0.04em;
+    min-width: 3.6em;
+    text-align: right;
     text-shadow:
       0 0 4px rgba(255, 59, 110, 0.65),
       0 0 10px rgba(255, 59, 110, 0.35);
@@ -531,7 +526,7 @@ const hasExpanded = true;
     font: inherit;
     font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
     font-style: italic;
-    font-size: 19px;
+    font-size: 17px;
     font-weight: 700;
     color: #00ff4d;
     text-align: left;
@@ -687,36 +682,46 @@ const hasExpanded = true;
     z-index: 2;
   }
 
-  /* J/L/F/T tiles — vertical 4x1 column adjacent to the archive X. */
+  /* J/L/F/T — a single tall pill that fills the full card height. Tiles
+     stack inside with shared horizontal dividers, like a weekly medicine
+     container. Active tile uses a hot pink-red foreground. */
   .category-bar {
     grid-column: 2;
-    align-self: center;
-    display: grid;
-    grid-template-rows: repeat(4, 28px);
-    gap: 4px;
-    padding: 0 10px;
+    align-self: stretch;
+    justify-self: stretch;
+    margin: -16px 10px;       /* full card height + breathing room from X */
+    display: flex;
+    flex-direction: column;
+    width: 36px;
+    border: 1px solid rgba(245, 241, 232, 0.22);
+    border-radius: 4px;
+    overflow: hidden;
+    background: rgba(245, 241, 232, 0.02);
   }
   .category-btn {
-    width: 32px;
-    height: 28px;
+    flex: 1 1 0;
+    width: 100%;
+    min-height: 28px;
     font: inherit;
     color: rgba(245, 241, 232, 0.55);
     background: transparent;
-    border: 1px solid rgba(245, 241, 232, 0.18);
-    border-radius: 4px;
+    border: 0;
+    border-top: 1px solid rgba(245, 241, 232, 0.18);
+    border-radius: 0;
     padding: 0;
     cursor: pointer;
     display: flex;
     align-items: center;
     justify-content: center;
     line-height: 1;
-    transition: color 160ms ease, border-color 160ms ease,
-                background-color 160ms ease, transform 80ms ease;
+    transition: color 160ms ease, background-color 160ms ease,
+                transform 80ms ease;
   }
+  .category-btn:first-child { border-top: 0; }
   .category-btn:hover,
   .category-btn:focus-visible {
-    border-color: rgba(245, 241, 232, 0.40);
     color: #f5f1e8;
+    background: rgba(245, 241, 232, 0.04);
     outline: none;
   }
   .category-btn:active { transform: translateY(1px); }
@@ -736,11 +741,16 @@ const hasExpanded = true;
      fit kbd + label vertically; the kbd letter carries the action.
      The aria-label still announces the full label for screen readers. */
   .category-btn .category-label { display: none; }
-  /* Active = hot pink-red. */
+  /* Active = hot pink-red. Inside the shared-border pill, we tint the
+     active tile's background so it reads as a "selected pocket" instead
+     of relying on a per-tile border. */
   .bucket-card .category-btn.active {
     color: #ff2761;
-    border-color: rgba(255, 39, 97, 0.78);
+    background: rgba(255, 39, 97, 0.12);
   }
+  .bucket-card .category-btn.active + .category-btn { border-top-color: rgba(255, 39, 97, 0.45); }
+  .bucket-card .category-btn.active { border-top-color: rgba(255, 39, 97, 0.45); }
+  .bucket-card .category-btn.active:first-child { border-top: 0; }
   .bucket-card .category-btn.active .category-label { opacity: 1; }
 
   /* Kudos removed in this revision — leaving the data layer intact
@@ -1022,8 +1032,8 @@ const hasExpanded = true;
   }
 
   /* ── Responsive ─────────────────────────────────────────────────────
-     On narrow screens, keep the 3-column layout but shrink the J/L/F/T
-     tiles and tighten the inner padding so the row stays single-line. */
+     On narrow screens, keep the 3-column layout but tighten paddings
+     and shrink the medicine-container pill so the row stays single-line. */
   @media (max-width: 640px) {
     .card-grid {
       grid-template-columns: minmax(0, 1fr) auto 36px;
@@ -1031,10 +1041,10 @@ const hasExpanded = true;
     }
     .middle-col { padding-right: 10px; }
     .category-bar {
-      grid-template-rows: repeat(4, 24px);
-      padding: 0 6px;
+      width: 30px;
+      margin: -12px 6px;
     }
-    .category-btn { width: 28px; height: 24px; }
+    .category-btn { min-height: 24px; }
     .trash-hold.detached { margin: -12px 0; }
     .expanded { margin-left: 14px; }
   }
