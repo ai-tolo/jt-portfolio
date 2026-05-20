@@ -152,6 +152,15 @@ const ogImageUrl = new URL(ogImage, siteOrigin).toString();
         const TARGET = "cloud";
         const overlay = document.querySelector<HTMLElement>("[data-cloud-overlay]");
         if (!overlay) return;
+
+        // Shared entrance: activate the gradient overlay then navigate. Pure
+        // CSS so the perceived transition stays under 500ms.
+        const enterCloud = () => {
+          overlay.setAttribute("data-active", "true");
+          setTimeout(() => { window.location.href = "/portal/login"; }, 360);
+        };
+
+        // ── Desktop keyboard trigger: type "cloud" outside an input. ──────
         let buf = "";
         let lastKeyTs = 0;
         const RESET_MS = 1500;
@@ -170,11 +179,76 @@ const ogImageUrl = new URL(ogImage, siteOrigin).toString();
           buf = (buf + e.key.toLowerCase()).slice(-TARGET.length);
           if (buf === TARGET) {
             buf = "";
-            overlay.setAttribute("data-active", "true");
-            // Short fade, then navigate. Trigger is gradient-only so the
-            // perceived transition stays under 500ms.
-            setTimeout(() => { window.location.href = "/portal/login"; }, 360);
+            enterCloud();
           }
+        });
+
+        // ── Mobile / touch trigger: long-press any [data-cloud-trigger]. ──
+        // Currently wraps the `·` separator in the footer. Same hold time as
+        // the buckets archive button (800ms) so the gesture vocabulary stays
+        // consistent across the site. Mouse handlers included so desktop
+        // testing of the touch path works without device emulation.
+        const HOLD_MS = 800;
+        let holdTimer: number | null = null;
+        let holdingEl: HTMLElement | null = null;
+
+        const cancelHold = () => {
+          if (holdTimer !== null) {
+            window.clearTimeout(holdTimer);
+            holdTimer = null;
+          }
+          if (holdingEl) {
+            holdingEl.removeAttribute("data-holding");
+            holdingEl = null;
+          }
+        };
+
+        const startHold = (el: HTMLElement) => {
+          if (holdTimer !== null) return;
+          holdingEl = el;
+          el.setAttribute("data-holding", "true");
+          holdTimer = window.setTimeout(() => {
+            holdTimer = null;
+            holdingEl?.removeAttribute("data-holding");
+            holdingEl = null;
+            try {
+              (navigator as Navigator & { vibrate?: (p: number) => void }).vibrate?.(8);
+            } catch {
+              /* vibrate is best-effort */
+            }
+            enterCloud();
+          }, HOLD_MS);
+        };
+
+        const findTrigger = (target: EventTarget | null): HTMLElement | null =>
+          (target as HTMLElement | null)?.closest<HTMLElement>("[data-cloud-trigger]") ?? null;
+
+        document.addEventListener("touchstart", (e) => {
+          const el = findTrigger(e.target);
+          if (el) startHold(el);
+        }, { passive: true });
+        document.addEventListener("touchend", cancelHold, { passive: true });
+        document.addEventListener("touchcancel", cancelHold, { passive: true });
+        document.addEventListener("touchmove", (e) => {
+          // If the finger drifts off the trigger, abort.
+          if (!holdingEl) return;
+          const touch = e.touches[0];
+          if (!touch) return;
+          const under = document.elementFromPoint(touch.clientX, touch.clientY);
+          if (!under || !under.closest("[data-cloud-trigger]")) cancelHold();
+        }, { passive: true });
+
+        document.addEventListener("mousedown", (e) => {
+          if (e.button !== 0) return;
+          const el = findTrigger(e.target);
+          if (el) startHold(el);
+        });
+        document.addEventListener("mouseup", cancelHold);
+        document.addEventListener("mouseleave", cancelHold);
+
+        document.addEventListener("contextmenu", (e) => {
+          // Suppress the right-click / iOS callout menu while we're holding.
+          if (holdingEl) e.preventDefault();
         });
       })();
     </script>
