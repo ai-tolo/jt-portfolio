@@ -17,10 +17,11 @@
 </aside>
 
 <style>
-  /* Tolo.Cloud-tinted glass widget. No code-editor palette, no glow halos,
-     no pulsing dot — those read as "terminal" and the rest of the surface
-     is no longer trying to be a console. Container takes its state cue
-     from [data-state] which the script sets per tick. */
+  /* Cali-palette glass widget sitting on the interstellar smoke backdrop.
+     Container border + active glow track the dashboard's hot magenta;
+     M1 reads as cyan (Cali's chromatic-aberration edge), M3 as the same
+     magenta as the brand. Progress line is a flat slice of --tolo-flow
+     so the wave runs through it. */
   .status-bar {
     display: inline-flex;
     flex-direction: column;
@@ -31,9 +32,9 @@
     font-size: 12px;
     font-weight: 500;
     line-height: 1.2;
-    color: rgba(245, 241, 232, 0.86);
-    background: color-mix(in srgb, #1a1422 70%, transparent);
-    border: 1px solid color-mix(in srgb, #c7a8ff 14%, transparent);
+    color: rgba(245, 241, 232, 0.88);
+    background: color-mix(in srgb, #0d060f 78%, transparent);
+    border: 1px solid color-mix(in srgb, #ff1e8a 18%, transparent);
     border-radius: 12px;
     backdrop-filter: saturate(140%) blur(10px);
     -webkit-backdrop-filter: saturate(140%) blur(10px);
@@ -42,16 +43,16 @@
     transition: border-color 280ms ease, box-shadow 280ms ease, background 280ms ease;
   }
   .status-bar[data-state="busy"] {
-    border-color: color-mix(in srgb, #ff6fcf 26%, transparent);
-    box-shadow: 0 0 24px color-mix(in srgb, #ff6fcf 10%, transparent);
+    border-color: color-mix(in srgb, #ff1e8a 32%, transparent);
+    box-shadow: 0 0 24px color-mix(in srgb, #ff1e8a 14%, transparent);
   }
   .status-bar[data-state="warn"] {
-    border-color: color-mix(in srgb, #ffd76a 38%, transparent);
-    box-shadow: 0 0 24px color-mix(in srgb, #ffd76a 12%, transparent);
+    border-color: color-mix(in srgb, #ff6e21 44%, transparent);
+    box-shadow: 0 0 24px color-mix(in srgb, #ff6e21 16%, transparent);
   }
   .status-bar[data-state="err"] {
-    border-color: color-mix(in srgb, #ff8a8a 44%, transparent);
-    box-shadow: 0 0 24px color-mix(in srgb, #ff8a8a 14%, transparent);
+    border-color: color-mix(in srgb, #ff5a6a 48%, transparent);
+    box-shadow: 0 0 24px color-mix(in srgb, #ff5a6a 16%, transparent);
   }
   .status-bar[hidden] { display: none; }
 
@@ -61,15 +62,15 @@
     text-overflow: ellipsis;
     white-space: nowrap;
   }
-  /* M1 job — lavender. Echoes the brand wordmark's lavender stop. */
+  /* M1 job — cyan. Mirrors Cali's chromatic-aberration edge color. */
   .status-bar :global(.tok-job) {
-    color: #c7a8ff;
+    color: #1ecbe0;
     font-weight: 600;
   }
-  /* Remote worker (e.g. m3-whisper) — pink. Echoes the wordmark's pink
-     stop so the eye reads "different machine" at a glance. */
+  /* Remote worker (e.g. m3-whisper) — hot magenta. Same as --accent and
+     the dominant Cali wave color. */
   .status-bar :global(.tok-worker) {
-    color: #ff6fcf;
+    color: #ff2999;
     font-weight: 600;
   }
   .status-bar :global(.tok-num) {
@@ -90,7 +91,7 @@
     font-weight: 500;
   }
   .status-bar :global(.tok-warn) {
-    color: #ff8a8a;
+    color: #ff6e21;
     font-weight: 600;
   }
   .status-bar :global(.tok-dim) {
@@ -101,26 +102,29 @@
     margin: 0 4px;
   }
 
-  /* Progress line — overall catalog transcription %. Pink → cyan gradient
-     reading left-to-right, matching the Tolo.Cloud palette. */
+  /* Progress line is a flat slice of the same Cali flow surface used on
+     active buttons across the portal — same SVG, painted into a 2px-tall
+     strip. The whole UI key is one inline SVG, no extra requests. */
   .bar {
-    height: 2px;
+    height: 3px;
     width: 100%;
-    background: color-mix(in srgb, #c7a8ff 8%, transparent);
+    background: color-mix(in srgb, #ff1e8a 9%, transparent);
     border-radius: 999px;
     overflow: hidden;
     position: relative;
   }
   .bar-fill {
     height: 100%;
-    background: linear-gradient(90deg, #ff6fcf 0%, #c7a8ff 60%, #74c4ff 100%);
-    box-shadow: 0 0 8px rgba(255, 109, 196, 0.35);
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 40' preserveAspectRatio='none'><defs><linearGradient id='g' x1='0%25' y1='50%25' x2='100%25' y2='50%25'><stop offset='0' stop-color='rgb(255,30,138)'/><stop offset='.16' stop-color='rgb(255,90,158)'/><stop offset='.22' stop-color='rgb(30,203,224)'/><stop offset='.32' stop-color='rgb(248,232,242)'/><stop offset='.55' stop-color='rgb(248,232,242)'/><stop offset='.68' stop-color='rgb(30,203,224)'/><stop offset='.78' stop-color='rgb(255,90,158)'/><stop offset='.92' stop-color='rgb(255,30,138)'/><stop offset='1' stop-color='rgb(255,110,33)'/></linearGradient></defs><rect width='200' height='40' fill='url(%23g)'/></svg>");
+    background-size: 100% 100%;
+    background-repeat: no-repeat;
+    box-shadow: 0 0 10px rgba(255, 30, 138, 0.45);
     transition: width 480ms cubic-bezier(.22,.61,.36,1);
     border-radius: 999px;
   }
   .status-bar[data-state="warn"] .bar-fill {
-    background: linear-gradient(90deg, #ffd76a 0%, #ff8a8a 100%);
-    box-shadow: 0 0 8px rgba(255, 215, 106, 0.4);
+    background-image: linear-gradient(90deg, #ff6e21 0%, #ff5a6a 100%);
+    box-shadow: 0 0 10px rgba(255, 110, 33, 0.5);
   }
   .status-bar[data-state="err"] .bar { display: none; }
 
