@@ -352,17 +352,66 @@ const { title, current, bare = false } = Astro.props;
          the public-site --accent (utility orange) with the Tolo.Cloud pink,
          so existing button/chip styles inherit the new look without rewrites.
          Adds an ambient lavender/cyan/pink gradient behind everything; the
-         body is otherwise unchanged. */
+         body is otherwise unchanged.
+
+         --tolo-flow is an inline SVG data URI (pink→lavender→cyan→amber
+         gradient with three wavy ribbon overlays inspired by Cali +
+         Blizzard). Used in place of flat --accent fills on active buttons
+         so the key surface has the same character as the illustrations
+         without any image HTTP request. */
       :root[data-theme="dark"] body:has(.portal-main) {
         --accent: #ff6fcf;
         --accent-2: #74c4ff;
         --accent-3: #c7a8ff;
+        --tolo-flow: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 40' preserveAspectRatio='none'><defs><linearGradient id='g' x1='0%25' y1='50%25' x2='100%25' y2='50%25'><stop offset='0' stop-color='rgb(255,109,196)'/><stop offset='.45' stop-color='rgb(199,168,255)'/><stop offset='.85' stop-color='rgb(116,196,255)'/><stop offset='1' stop-color='rgb(255,215,106)'/></linearGradient></defs><rect width='200' height='40' fill='url(%23g)'/><path d='M0 11Q50 -2 100 11T200 11V40H0Z' fill='rgba(255,255,255,.20)'/><path d='M0 24Q55 38 110 24T220 24V40H0Z' fill='rgba(12,4,24,.18)'/><path d='M0 32Q60 22 120 32T240 32V40H0Z' fill='rgba(255,255,255,.08)'/></svg>");
         background:
           radial-gradient(60% 40% at 12% 8%, rgba(255, 109, 196, 0.08), transparent 60%),
           radial-gradient(50% 38% at 92% 18%, rgba(116, 196, 255, 0.07), transparent 60%),
           radial-gradient(55% 48% at 50% 110%, rgba(166, 120, 255, 0.10), transparent 60%),
           var(--bg);
         background-attachment: fixed;
+      }
+
+      /* Active-state buttons / chips / toggles across portal pages.
+         Every selector below uses `background: var(--accent)` in its own
+         CSS today; this single rule layers the wavy flow surface on top
+         so the buttons read as artwork instead of flat fills. Listed
+         explicitly (rather than catch-all) so nothing unintended picks
+         up the texture. */
+      body:has(.portal-main) .cat.active,
+      body:has(.portal-main) .sort-chip.active,
+      body:has(.portal-main) .category-btn.active,
+      body:has(.portal-main) .pub-toggle.on,
+      body:has(.portal-main) .random-btn,
+      body:has(.portal-main) .action.queue[data-queued="true"],
+      body:has(.portal-main) .ctrl.primary:not(:disabled):hover,
+      body:has(.portal-main) .candidate-capture:hover,
+      body:has(.portal-main) .candidate-capture:focus-visible,
+      body:has(.portal-main) .capture-row button:hover,
+      body:has(.portal-main) .capture-row button:focus-visible,
+      body:has(.portal-main) .listen-cta:hover,
+      body:has(.portal-main) .listen-cta:focus-visible,
+      body:has(.portal-main) button.primary {
+        background-color: transparent !important;
+        background-image: var(--tolo-flow) !important;
+        background-size: 100% 100% !important;
+        background-repeat: no-repeat !important;
+        color: #0c0418 !important;
+        border-color: transparent !important;
+        text-shadow: 0 1px 0 rgba(255, 255, 255, 0.22);
+        box-shadow:
+          inset 0 1px 0 rgba(255, 255, 255, 0.22),
+          0 6px 22px rgba(255, 109, 196, 0.24),
+          0 0 0 1px rgba(199, 168, 255, 0.35);
+      }
+      /* TabStrip active state uses an outline today, not a fill. Replace the
+         flat-pink outline with a soft pink glow ring so the active tab reads
+         as Tolo.Cloud-y rather than utility-orange. */
+      body:has(.portal-main) .tab.active {
+        outline: 1px solid rgba(255, 109, 196, 0.55) !important;
+        box-shadow:
+          0 0 0 4px rgba(199, 168, 255, 0.10),
+          0 0 18px rgba(255, 109, 196, 0.20);
       }
     </style>
 
