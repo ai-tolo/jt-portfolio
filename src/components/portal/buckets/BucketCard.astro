@@ -98,13 +98,9 @@ if (typeof item.project_count === "number" && item.project_count > 0) {
   tech.push(`${item.project_count} ${item.project_count === 1 ? "project" : "projects"}`);
 }
 
-const hasExpanded =
-  Boolean(item.summary) ||
-  tagList.length > 0 ||
-  Boolean(item.content_type) ||
-  Boolean(item.source_type) ||
-  Boolean(lineageWord) ||
-  currentBucket === "loops";
+// Always true now — rating + (optionally) summary/tags/lineage/promote
+// all live in the expanded panel.
+const hasExpanded = true;
 ---
 
 <article
@@ -123,7 +119,42 @@ const hasExpanded =
   aria-label={`${title} — ${BUCKET_LABEL[currentBucket]}`}
 >
   <div class="card-grid">
-    <!-- ── Head row: duration + title (spans full width, top-left) ───── -->
+    <!-- ── Date spine: public toggle on top, date stack below ────────── -->
+    <div class="date-col" aria-hidden={dateInfo ? undefined : "true"}>
+      <button
+        type="button"
+        class:list={["pub-toggle", { on: isPublic }]}
+        data-action="toggle-public"
+        data-path={item.path}
+        aria-pressed={isPublic ? "true" : "false"}
+        title="Mark public on /sounds"
+      >{isPublic ? "● PUBLIC" : "○ PUBLIC"}</button>
+      <div class="date-stack">
+        {dateInfo ? (
+          <>
+            <div class="date-month">{dateInfo.primary}</div>
+            <div class="date-year">{dateInfo.year}</div>
+            <div class="date-tail">
+              <span class="date-rel">{dateInfo.relative}</span>
+              {hasExpanded && (
+                <button
+                  type="button"
+                  class="expand-toggle"
+                  data-action="expand"
+                  aria-expanded="false"
+                  aria-label="Show details"
+                  title="Show details"
+                ><span class="chev" aria-hidden="true">▾</span></button>
+              )}
+            </div>
+          </>
+        ) : (
+          <div class="date-month">—</div>
+        )}
+      </div>
+    </div>
+
+    <!-- ── Head row (row 1, cols 2–3): duration tag + title tag + meta ── -->
     <div class="head-row">
       <span class="duration" aria-label="Duration">{durationLabel ?? "—:—"}</span>
       <h3 class="title">
@@ -135,31 +166,27 @@ const hasExpanded =
           title={`Click to rename. Real filename: ${filename}`}
         >{title}</button>
       </h3>
-      {tech.length > 0 && (
-        <span class="tech-meta">{tech.join(" · ")}</span>
-      )}
       {item.dup_of && (
         <span class="flag-chip flag-dup" title={`Duplicate of asset_id ${item.dup_of}`}>DUP</span>
       )}
       {item.orphan_candidate === 1 && (
         <span class="flag-chip flag-orphan" title="Flagged orphan">ORPHAN</span>
       )}
-    </div>
-
-    <!-- ── Date column (under head row, left edge) ───────────────────── -->
-    <div class="date-col" aria-hidden={dateInfo ? undefined : "true"}>
-      {dateInfo ? (
-        <>
-          <div class="date-month">{dateInfo.primary}</div>
-          <div class="date-year">{dateInfo.year}</div>
-          <div class="date-rel">{dateInfo.relative}</div>
-        </>
-      ) : (
-        <div class="date-month">—</div>
+      {tech.length > 0 && (
+        <span class="tech-meta">
+          {item.bpm && (
+            <>
+              <span class="bpm-num">{Math.round(item.bpm)}</span>
+              <span class="bpm-unit">BPM</span>
+            </>
+          )}
+          {item.bpm && item.key && <span class="tech-sep">·</span>}
+          {item.key && <span class="key">{item.key}</span>}
+        </span>
       )}
     </div>
 
-    <!-- ── Main column: just the waveform ────────────────────────────── -->
+    <!-- ── Waveform (row 2, col 2) ───────────────────────────────────── -->
     <div class="main-col">
       <div
         class="waveform"
@@ -183,7 +210,7 @@ const hasExpanded =
       </div>
     </div>
 
-    <!-- ── Actions column ────────────────────────────────────────────── -->
+    <!-- ── Actions col (col 3, both rows): J/L/F/T as letter tiles ───── -->
     <div class="actions-col">
       <div class="category-bar" role="group" aria-label="Assign to category">
         {CATEGORIES.map((c) => (
@@ -192,60 +219,45 @@ const hasExpanded =
             class:list={["category-btn", { active: currentBucket === c.id }]}
             data-action="bucket"
             data-bucket={c.id}
+            aria-label={`Assign to ${c.label}`}
             title={`Assign to ${c.label} (${c.kbd})`}
           >
             <kbd>{c.kbd}</kbd>
-            <span>{c.label}</span>
           </button>
         ))}
       </div>
-      <div class="trail">
-        <div class="quality" role="group" aria-label="Quality stars">
-          {[1, 2, 3].map((n) => (
-            <button
-              type="button"
-              class:list={["star", { on: item.quality_star >= n }]}
-              data-action="quality-star"
-              data-asset-id={String(item.asset_id)}
-              data-star-value={String(n)}
-              aria-label={`Set quality to ${n} star${n === 1 ? "" : "s"}`}
-              title={`Set quality to ${n} (${n} when focused)`}
-            >★</button>
-          ))}
-        </div>
-        <button
-          type="button"
-          class:list={["pub-toggle", { on: isPublic }]}
-          data-action="toggle-public"
-          data-path={item.path}
-          aria-pressed={isPublic ? "true" : "false"}
-          title="Mark public on /sounds"
-        >{isPublic ? "● Public" : "○ Public"}</button>
-        <button
-          type="button"
-          class="trash-hold"
-          data-action="trash-hold"
-          title="Hold 2s to trash"
-          aria-label="Hold to trash"
-        ><span class="hold-fill" aria-hidden="true"></span><span class="hold-glyph">✕</span></button>
-        {hasExpanded && (
-          <button
-            type="button"
-            class="expand-toggle"
-            data-action="expand"
-            aria-expanded="false"
-            aria-label="Show details"
-            title="Show details"
-          ><span class="chev" aria-hidden="true">▾</span></button>
-        )}
-      </div>
     </div>
+
+    <!-- ── Trash detached (col 4, both rows, far right edge) ─────────── -->
+    <button
+      type="button"
+      class="trash-hold detached"
+      data-action="trash-hold"
+      title="Hold 2s to trash"
+      aria-label="Hold to trash"
+    ><span class="hold-fill" aria-hidden="true"></span><span class="hold-glyph">✕</span></button>
   </div>
 
   <!-- ── Expanded section (collapsed by default) ─────────────────────── -->
   {hasExpanded && (
     <div class="expanded" data-expanded hidden>
       <dl class="exp">
+        <dt>Rating</dt>
+        <dd>
+          <div class="quality" role="group" aria-label="Quality stars">
+            {[1, 2, 3].map((n) => (
+              <button
+                type="button"
+                class:list={["star", { on: item.quality_star >= n }]}
+                data-action="quality-star"
+                data-asset-id={String(item.asset_id)}
+                data-star-value={String(n)}
+                aria-label={`Set quality to ${n} star${n === 1 ? "" : "s"}`}
+                title={`Set quality to ${n} (${n} when focused)`}
+              >★</button>
+            ))}
+          </div>
+        </dd>
         {item.summary && (
           <>
             <dt>Summary</dt>
@@ -313,14 +325,15 @@ const hasExpanded =
 
 <style>
   /* ── Card shell ─────────────────────────────────────────────────────
-     The cassette treatment (lighter bg + bright-blue border + inset
-     highlight + bottom shadow) lives in PortalLayout's global style.
-     This sheet defines the row's *internal* layout and typography. */
+     The cassette treatment (border + glow) lives in PortalLayout's
+     global style. This sheet defines the row's internal layout. Cards
+     clip content so the date spine reaches the rounded corner. */
   .bucket-card {
     position: relative;
-    padding: 12px 14px;
+    padding: 0;
     outline: none;
     transition: border-color 200ms ease, box-shadow 200ms ease;
+    overflow: hidden;
   }
   .bucket-card[data-pending="true"] { opacity: 0.5; pointer-events: none; }
 
@@ -329,62 +342,76 @@ const hasExpanded =
             title, both anchored top-left. Always the same horizontal
             position so the eye finds runtime + name first.
      Row 2: date column | waveform | actions trail. */
+  /* Four-column grid:
+       col 1: date spine (full height, holds PUBLIC + date stack)
+       col 2: head row (row 1) + waveform (row 2)
+       col 3: J/L/F/T tiles, centered vertically across both rows
+       col 4: detached trash ✕ on the far right edge */
   .card-grid {
     display: grid;
-    grid-template-columns: 78px minmax(0, 1fr) auto;
+    grid-template-columns: 92px minmax(0, 1fr) auto auto;
     grid-template-rows: auto auto;
-    column-gap: 16px;
+    column-gap: 14px;
     row-gap: 8px;
     align-items: center;
+    padding: 0 14px 12px 0;
   }
   .head-row {
-    grid-column: 1 / -1;
+    grid-column: 2 / 4;
+    grid-row: 1;
     display: flex;
     align-items: center;
     gap: 10px;
     min-width: 0;
+    padding-top: 12px;
   }
 
-  /* Duration: pill-tagged so it always reads as its own partition,
-     regardless of title length. When duration is unknown the pill still
-     renders ("—:—") so the layout doesn't shift between cards. */
+  /* Duration pill — pink-bordered tape label. Always rendered (falls
+     back to "—:—") so the head-row's left edge is fixed. */
   .duration {
     flex: 0 0 auto;
     font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
     font-size: 13px;
     font-weight: 700;
-    color: #f5f1e8;
-    background: rgba(14, 196, 252, 0.06);
-    border: 1px solid rgba(14, 196, 252, 0.22);
+    color: #ff3b6e;
+    background: rgba(255, 59, 110, 0.04);
+    border: 1px solid rgba(255, 59, 110, 0.45);
     border-radius: 3px;
     padding: 3px 8px;
     font-feature-settings: "tnum";
     line-height: 1;
+    text-shadow: 0 0 8px rgba(255, 59, 110, 0.18);
   }
   .title {
     flex: 1 1 auto;
     margin: 0;
     min-width: 0;
-    font-size: 14px;
-    font-weight: 600;
-    line-height: 1.2;
-    color: #f5f1e8;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
+    line-height: 1;
   }
 
-  /* ── Date column ──────────────────────────────────────────────────── */
+  /* ── Date spine ──────────────────────────────────────────────────────
+     Full-height burgundy stripe on the left edge of the card. PUBLIC
+     toggle sits at the top, date stack centered below. */
   .date-col {
     grid-column: 1;
-    grid-row: 2;
+    grid-row: 1 / 3;
     align-self: stretch;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 10px 12px 10px 14px;
+    background: linear-gradient(180deg,
+      rgba(60, 8, 26, 0.62) 0%,
+      rgba(30, 4, 14, 0.46) 100%);
+    border-right: 1px solid rgba(255, 59, 110, 0.18);
+  }
+  .date-stack {
+    flex: 1 1 auto;
     display: flex;
     flex-direction: column;
     justify-content: center;
     gap: 2px;
-    padding-right: 12px;
-    border-right: 1px solid rgba(245, 241, 232, 0.06);
+    min-width: 0;
   }
   .date-month {
     font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
@@ -395,16 +422,22 @@ const hasExpanded =
     color: #ff6e21;
     line-height: 1;
   }
-  /* Year reads as the visual anchor — larger, in the brand cyan so it
-     stands distinctly apart from the orange month and the dim relative. */
+  /* Year reads as the visual anchor — large, italic, cyan. Italic mono
+     reads as a typewritten serial. */
   .date-year {
     font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-style: italic;
     font-size: 22px;
     font-weight: 700;
     letter-spacing: -0.01em;
     color: #0ec4fc;
     line-height: 1;
-    text-shadow: 0 0 14px rgba(14, 196, 252, 0.18);
+    text-shadow: 0 0 14px rgba(14, 196, 252, 0.22);
+  }
+  .date-tail {
+    display: flex;
+    align-items: center;
+    gap: 6px;
   }
   .date-rel {
     font-size: 10px;
@@ -414,7 +447,35 @@ const hasExpanded =
     line-height: 1;
   }
 
-  /* ── Main column ──────────────────────────────────────────────────── */
+  /* Public toggle sits at the top of the spine. Off state = dashed
+     border. On state inherits the wave-textured pink fill from
+     PortalLayout's global active-button override. */
+  .pub-toggle {
+    flex: 0 0 auto;
+    align-self: flex-start;
+    font: inherit;
+    font-family: "Geist Variable", ui-sans-serif, system-ui, sans-serif;
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 0.10em;
+    text-transform: uppercase;
+    color: rgba(245, 241, 232, 0.55);
+    background: transparent;
+    border: 1px dashed rgba(245, 241, 232, 0.22);
+    border-radius: 3px;
+    padding: 3px 7px;
+    cursor: pointer;
+    transition: color 160ms ease, border-color 160ms ease,
+                background 160ms ease;
+  }
+  .pub-toggle:hover,
+  .pub-toggle:focus-visible {
+    color: #f5f1e8;
+    border-color: rgba(245, 241, 232, 0.55);
+    outline: none;
+  }
+
+  /* ── Main column (col 2, row 2): just the waveform ─────────────────── */
   .main-col {
     grid-column: 2;
     grid-row: 2;
@@ -422,33 +483,62 @@ const hasExpanded =
     display: grid;
     gap: 6px;
   }
+  /* Title sits in its own pink-bordered tag next to the duration pill —
+     the two read as paired tape labels. Click-to-rename preserved. */
   .title-edit {
+    display: inline-block;
+    max-width: 100%;
     font: inherit;
-    color: inherit;
+    font-size: 13px;
+    font-weight: 600;
+    color: #f5f1e8;
     text-align: left;
     background: transparent;
-    border: 1px dashed transparent;
-    padding: 1px 4px;
-    margin-left: -4px;
+    border: 1px solid rgba(255, 59, 110, 0.32);
+    border-radius: 3px;
+    padding: 4px 10px;
     cursor: text;
-    max-width: 100%;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
-    transition: border-color 160ms ease, color 160ms ease;
+    transition: border-color 160ms ease, background 160ms ease;
   }
   .title-edit:hover,
   .title-edit:focus-visible {
-    border-color: rgba(14, 196, 252, 0.5);
+    border-color: rgba(255, 59, 110, 0.7);
+    background: rgba(255, 59, 110, 0.06);
     outline: none;
   }
+
+  /* Structured BPM/Key display — the number reads as the headline glyph,
+     unit + key follow at a tighter weight. */
   .tech-meta {
     flex: 0 0 auto;
-    font-size: 11px;
-    font-weight: 600;
-    color: rgba(245, 241, 232, 0.62);
-    letter-spacing: 0.02em;
+    display: inline-flex;
+    align-items: baseline;
+    gap: 4px;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
     font-feature-settings: "tnum";
+    color: #f5f1e8;
+    line-height: 1;
+  }
+  .tech-meta .bpm-num {
+    font-size: 18px;
+    font-weight: 700;
+  }
+  .tech-meta .bpm-unit {
+    font-size: 12px;
+    font-weight: 700;
+    color: rgba(245, 241, 232, 0.66);
+  }
+  .tech-meta .tech-sep {
+    font-size: 14px;
+    color: rgba(245, 241, 232, 0.32);
+    margin: 0 2px;
+  }
+  .tech-meta .key {
+    font-size: 16px;
+    font-weight: 700;
   }
   .flag-chip {
     flex: 0 0 auto;
@@ -458,6 +548,7 @@ const hasExpanded =
     text-transform: uppercase;
     padding: 2px 6px;
     border: 1px solid currentColor;
+    border-radius: 2px;
     line-height: 1.4;
   }
   .flag-dup { color: rgba(245, 241, 232, 0.42); }
@@ -516,42 +607,38 @@ const hasExpanded =
     z-index: 2;
   }
 
-  /* ── Actions column ───────────────────────────────────────────────── */
+  /* ── Actions column ─────────────────────────────────────────────────
+     Spans both grid rows so the J/L/F/T tiles sit vertically centered
+     against the head row + waveform stack to their left. */
   .actions-col {
     grid-column: 3;
-    grid-row: 2;
+    grid-row: 1 / 3;
     align-self: stretch;
     display: flex;
-    flex-direction: column;
-    justify-content: space-between;
-    align-items: flex-end;
-    gap: 8px;
+    align-items: center;
     padding-left: 12px;
     border-left: 1px solid rgba(245, 241, 232, 0.06);
   }
+  /* Letter-only tiles — no inline label, just the kbd glyph. The aria-label
+     on the button carries the accessible name. */
   .category-bar {
     display: grid;
-    grid-template-columns: repeat(4, 56px);
-    gap: 6px;
+    grid-template-columns: repeat(4, 38px);
+    gap: 5px;
   }
   .category-btn {
-    min-height: 34px;
+    width: 38px;
+    height: 38px;
     font: inherit;
-    font-size: 10px;
-    font-weight: 600;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
     color: rgba(245, 241, 232, 0.66);
     background: transparent;
-    border: 1px solid rgba(245, 241, 232, 0.08);
+    border: 1px solid rgba(245, 241, 232, 0.10);
     border-radius: 4px;
-    padding: 6px 4px;
+    padding: 0;
     cursor: pointer;
     display: flex;
-    flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: 2px;
     line-height: 1;
     transition: color 160ms ease, border-color 160ms ease,
                 background-color 160ms ease, transform 80ms ease;
@@ -563,10 +650,12 @@ const hasExpanded =
     outline: none;
   }
   .category-btn:active { transform: translateY(1px); }
-  /* The keyboard-shortcut letter, no longer boxed. */
+  /* Italic mono glyph — gives the tile a typewriter-key feel that fits
+     the cassette-tape vibe. */
   .category-btn kbd {
     font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-    font-size: 14px;
+    font-style: italic;
+    font-size: 18px;
     font-weight: 700;
     line-height: 1;
     padding: 0;
@@ -576,70 +665,21 @@ const hasExpanded =
     color: inherit;
     opacity: 0.85;
   }
-  .category-btn.active kbd { opacity: 1; }
+  .category-btn.active kbd { opacity: 1; font-style: italic; }
 
-  /* ── Trail (stars, public, trash, expand) ─────────────────────────── */
-  .trail {
-    display: flex;
-    align-items: center;
-    gap: 6px;
+  /* ── Detached trash ✕ (col 4, both rows, far right edge) ──────────── */
+  .trash-hold.detached {
+    grid-column: 4;
+    grid-row: 1 / 3;
+    align-self: center;
   }
-  .quality {
-    display: flex;
-    gap: 0;
-    align-items: center;
-  }
-  .star {
-    font: inherit;
-    font-size: 14px;
-    color: rgba(245, 241, 232, 0.22);
-    background: transparent;
-    border: 0;
-    padding: 2px 3px;
-    cursor: pointer;
-    line-height: 1;
-    transition: color 160ms ease, transform 80ms ease;
-  }
-  .star:hover,
-  .star:focus-visible {
-    color: #ff3b6e;
-    outline: none;
-    transform: translateY(-1px);
-  }
-  .star.on { color: #ff3b6e; }
-
-  .pub-toggle {
-    font: inherit;
-    font-size: 9px;
-    font-weight: 700;
-    letter-spacing: 0.06em;
-    text-transform: uppercase;
-    color: rgba(245, 241, 232, 0.42);
-    background: transparent;
-    border: 1px dashed rgba(245, 241, 232, 0.18);
-    border-radius: 3px;
-    padding: 3px 7px;
-    cursor: pointer;
-    transition: color 160ms ease, border-color 160ms ease,
-                border-style 160ms ease;
-  }
-  .pub-toggle:hover,
-  .pub-toggle:focus-visible {
-    color: #f5f1e8;
-    border-color: rgba(245, 241, 232, 0.45);
-    border-style: solid;
-    outline: none;
-  }
-  /* .pub-toggle.on inherits the wave-textured surface from PortalLayout's
-     global override. */
-
   .trash-hold {
     position: relative;
     overflow: hidden;
-    width: 26px;
-    height: 22px;
+    width: 30px;
+    height: 30px;
     font: inherit;
-    font-size: 12px;
+    font-size: 13px;
     line-height: 1;
     color: rgba(245, 241, 232, 0.45);
     background: transparent;
@@ -689,24 +729,24 @@ const hasExpanded =
   }
   .trash-hold[data-holding="true"] .hold-glyph { color: #0e0c14; }
 
+  /* Expand chevron lives at the bottom of the date spine, inline with
+     the relative-time text. Small + unobtrusive. */
   .expand-toggle {
     font: inherit;
-    font-size: 12px;
-    width: 26px;
-    height: 22px;
+    font-size: 11px;
+    width: 18px;
+    height: 16px;
+    padding: 0;
     line-height: 1;
-    color: rgba(245, 241, 232, 0.55);
+    color: rgba(245, 241, 232, 0.42);
     background: transparent;
-    border: 1px solid rgba(245, 241, 232, 0.18);
-    border-radius: 3px;
+    border: 0;
     cursor: pointer;
-    transition: color 160ms ease, border-color 160ms ease,
-                background-color 160ms ease;
+    transition: color 160ms ease, transform 220ms ease;
   }
   .expand-toggle:hover,
   .expand-toggle:focus-visible {
     color: #0ec4fc;
-    border-color: rgba(14, 196, 252, 0.55);
     outline: none;
   }
   .expand-toggle .chev {
@@ -714,19 +754,35 @@ const hasExpanded =
     transition: transform 220ms ease;
   }
   .expand-toggle[aria-expanded="true"] .chev { transform: rotate(180deg); }
-  .expand-toggle[aria-expanded="true"] {
-    color: #0ec4fc;
-    border-color: rgba(14, 196, 252, 0.55);
-    background: rgba(14, 196, 252, 0.06);
-  }
+  .expand-toggle[aria-expanded="true"] { color: #0ec4fc; }
 
-  /* ── Expanded section ─────────────────────────────────────────────── */
-  .expanded {
-    margin-top: 10px;
-    padding-top: 10px;
-    border-top: 1px solid rgba(14, 196, 252, 0.14);
-    animation: exp-in 220ms ease;
+  /* Quality stars now live inside the expanded panel. Larger and more
+     tappable than they were in the trail. */
+  .quality {
+    display: flex;
+    gap: 0;
+    align-items: center;
   }
+  .star {
+    font: inherit;
+    font-size: 18px;
+    color: rgba(245, 241, 232, 0.22);
+    background: transparent;
+    border: 0;
+    padding: 2px 4px;
+    cursor: pointer;
+    line-height: 1;
+    transition: color 160ms ease, transform 80ms ease;
+  }
+  .star:hover,
+  .star:focus-visible {
+    color: #ff3b6e;
+    outline: none;
+    transform: translateY(-1px);
+  }
+  .star.on { color: #ff3b6e; }
+
+  /* ── Expanded section (full block at the cleanup of this stylesheet) ── */
   @keyframes exp-in {
     from { opacity: 0; transform: translateY(-4px); }
     to { opacity: 1; transform: translateY(0); }
@@ -846,28 +902,38 @@ const hasExpanded =
   .status[data-tone="ok"] { color: #0ec4fc; font-style: normal; }
   .status[data-tone="err"] { color: #ff6e21; font-style: normal; }
 
+  /* Expanded panel indents to the right of the date spine so the
+     details visually start where the head row does. */
+  .expanded {
+    margin-left: 92px;
+    margin-right: 14px;
+    padding-top: 10px;
+    padding-bottom: 12px;
+    border-top: 1px solid rgba(14, 196, 252, 0.14);
+    animation: exp-in 220ms ease;
+  }
+  @keyframes exp-in {
+    from { opacity: 0; transform: translateY(-4px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
   /* ── Responsive ───────────────────────────────────────────────────── */
   @media (max-width: 880px) {
     .card-grid {
-      grid-template-columns: 60px minmax(0, 1fr);
-      grid-template-rows: auto auto auto;
+      grid-template-columns: 78px minmax(0, 1fr) auto;
+      grid-template-rows: auto auto;
       column-gap: 12px;
     }
-    .head-row { grid-column: 1 / -1; grid-row: 1; }
-    .date-col { grid-column: 1; grid-row: 2; }
+    .date-col { grid-column: 1; grid-row: 1 / 3; padding: 8px 10px; }
+    .head-row { grid-column: 2 / 4; grid-row: 1; }
     .main-col { grid-column: 2; grid-row: 2; }
-    .actions-col {
-      grid-column: 1 / -1;
-      grid-row: 3;
-      align-items: stretch;
-      border-left: 0;
-      padding-left: 0;
-      padding-top: 6px;
-      border-top: 1px solid rgba(245, 241, 232, 0.06);
-    }
-    .category-bar { grid-template-columns: repeat(4, 1fr); }
-    .trail { justify-content: space-between; }
+    .actions-col { grid-column: 3; grid-row: 1 / 3; padding-left: 10px; }
+    .trash-hold.detached { display: none; }   /* compact: trash hides at mobile, accessible via expand */
+    .category-bar { grid-template-columns: repeat(2, 38px); gap: 5px; }
+    .category-bar .category-btn:nth-child(3),
+    .category-bar .category-btn:nth-child(4) { grid-column: span 1; }
     .date-year { font-size: 18px; }
+    .expanded { margin-left: 78px; }
   }
 </style>
 
