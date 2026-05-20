@@ -66,11 +66,19 @@ const BUCKET_LABEL: Record<BucketName, string> = {
 const currentBucket: BucketName = item.bucket ?? "inbox";
 
 const CATEGORIES: { id: BucketName; label: string; kbd: string }[] = [
-  { id: "jam", label: "Jam", kbd: "J" },
-  { id: "loops", label: "Loops", kbd: "L" },
-  { id: "field", label: "Field", kbd: "F" },
-  { id: "tracks", label: "Tracks", kbd: "T" },
+  { id: "jam", label: "JAM", kbd: "J" },
+  { id: "loops", label: "LOOP", kbd: "L" },
+  { id: "field", label: "FIELD", kbd: "F" },
+  { id: "tracks", label: "TRACK", kbd: "T" },
 ];
+
+// Split the title at the file extension so the .wav suffix can render
+// at a quieter opacity than the main name. Tries common audio extensions
+// first; falls back to whatever the last dot suffix is up to 5 chars.
+const titleParts = (() => {
+  const m = title.match(/^(.*?)(\.[A-Za-z0-9]{1,5})$/);
+  return m ? { base: m[1], ext: m[2] } : { base: title, ext: "" };
+})();
 
 const lineageWord = (() => {
   if (!item.parent_id) return null;
@@ -119,34 +127,33 @@ const hasExpanded = true;
   aria-label={`${title} — ${BUCKET_LABEL[currentBucket]}`}
 >
   <div class="card-grid">
-    <!-- ── Date spine: public toggle on top, date stack below ────────── -->
+    <!-- ── Date spine: expand chevron at left, date stack centered ───── -->
     <div class="date-col" aria-hidden={dateInfo ? undefined : "true"}>
-      <button
-        type="button"
-        class:list={["pub-toggle", { on: isPublic }]}
-        data-action="toggle-public"
-        data-path={item.path}
-        aria-pressed={isPublic ? "true" : "false"}
-        title="Mark public on /sounds"
-      >{isPublic ? "● PUBLIC" : "○ PUBLIC"}</button>
+      {hasExpanded && (
+        <button
+          type="button"
+          class="expand-toggle"
+          data-action="expand"
+          aria-expanded="false"
+          aria-label="Show details"
+          title="Show details"
+        ><span class="chev" aria-hidden="true">›</span></button>
+      )}
       <div class="date-stack">
         {dateInfo ? (
           <>
-            <div class="date-month">{dateInfo.primary}</div>
-            <div class="date-year">{dateInfo.year}</div>
-            <div class="date-tail">
-              <span class="date-rel">{dateInfo.relative}</span>
-              {hasExpanded && (
-                <button
-                  type="button"
-                  class="expand-toggle"
-                  data-action="expand"
-                  aria-expanded="false"
-                  aria-label="Show details"
-                  title="Show details"
-                ><span class="chev" aria-hidden="true">▾</span></button>
-              )}
+            {/* Month + day: "MAY" upright orange, day italic. */}
+            <div class="date-month">
+              <span class="date-month-name">{dateInfo.primary.split(" ")[0]}</span>
+              {" "}
+              <span class="date-day">{dateInfo.primary.split(" ")[1]}</span>
             </div>
+            {/* Year: "20" upright cream, "26" italic orange — mixed weights
+                make the year read like a typewritten serial. */}
+            <div class="date-year">
+              <span class="year-prefix">{dateInfo.year.slice(0, 2)}</span><span class="year-suffix">{dateInfo.year.slice(2)}</span>
+            </div>
+            <div class="date-rel">{dateInfo.relative}</div>
           </>
         ) : (
           <div class="date-month">—</div>
@@ -154,7 +161,7 @@ const hasExpanded = true;
       </div>
     </div>
 
-    <!-- ── Head row (row 1, cols 2–3): duration tag + title tag + meta ── -->
+    <!-- ── Head row: duration tag + title tag + flag + BPM module ──── -->
     <div class="head-row">
       <span class="duration" aria-label="Duration">{durationLabel ?? "—:—"}</span>
       <h3 class="title">
@@ -164,7 +171,7 @@ const hasExpanded = true;
           data-action="rename"
           data-path={item.path}
           title={`Click to rename. Real filename: ${filename}`}
-        >{title}</button>
+        ><span class="title-base">{titleParts.base}</span>{titleParts.ext && <span class="title-ext">{titleParts.ext}</span>}</button>
       </h3>
       {item.dup_of && (
         <span class="flag-chip flag-dup" title={`Duplicate of asset_id ${item.dup_of}`}>DUP</span>
@@ -177,6 +184,7 @@ const hasExpanded = true;
         <span class="bpm-unit">BPM</span>
         <span class="tech-sep">·</span>
         <span class="key">{item.key || "—"}</span>
+        {item.key && <span class="key-mode">maj</span>}
       </span>
     </div>
 
@@ -204,7 +212,7 @@ const hasExpanded = true;
       </div>
     </div>
 
-    <!-- ── Actions col (col 3, both rows): J/L/F/T + kudos ticker ────── -->
+    <!-- ── Actions col: J/L/F/T tiles (letter + label) + kudos jar ─── -->
     <div class="actions-col">
       <div class="category-bar" role="group" aria-label="Assign to category">
         {CATEGORIES.map((c) => (
@@ -217,6 +225,7 @@ const hasExpanded = true;
             title={`Assign to ${c.label} (${c.kbd})`}
           >
             <kbd>{c.kbd}</kbd>
+            <span class="category-label">{c.label}</span>
           </button>
         ))}
       </div>
@@ -228,7 +237,7 @@ const hasExpanded = true;
         aria-label="Give kudos"
         title="Click to add kudos"
       >
-        <span class="kudos-glyph" aria-hidden="true">♥</span>
+        <span class="kudos-glyph" aria-hidden="true">★</span>
         <span class="kudos-count" data-kudos-count>{item.quality_star ?? 0}</span>
       </button>
     </div>
@@ -247,6 +256,17 @@ const hasExpanded = true;
   {hasExpanded && (
     <div class="expanded" data-expanded hidden>
       <dl class="exp">
+        <dt>Visibility</dt>
+        <dd>
+          <button
+            type="button"
+            class:list={["pub-toggle", { on: isPublic }]}
+            data-action="toggle-public"
+            data-path={item.path}
+            aria-pressed={isPublic ? "true" : "false"}
+            title="Mark public on /sounds"
+          >{isPublic ? "● PUBLIC" : "○ PUBLIC"}</button>
+        </dd>
         {item.summary && (
           <>
             <dt>Summary</dt>
@@ -355,21 +375,22 @@ const hasExpanded = true;
     padding-top: 12px;
   }
 
-  /* Duration pill — pink-bordered tape label. Always rendered (falls
-     back to "—:—") so the head-row's left edge is fixed. */
+  /* Duration pill — neon-green tape label. Italic mono. Always rendered
+     (falls back to "—:—") so the head row's left edge is fixed. */
   .duration {
     flex: 0 0 auto;
     font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-style: italic;
     font-size: 13px;
     font-weight: 700;
-    color: #ff3b6e;
-    background: rgba(255, 59, 110, 0.04);
-    border: 1px solid rgba(255, 59, 110, 0.45);
+    color: #00ff4d;
+    background: rgba(0, 255, 77, 0.04);
+    border: 1px solid rgba(0, 255, 77, 0.55);
     border-radius: 3px;
     padding: 3px 8px;
     font-feature-settings: "tnum";
     line-height: 1;
-    text-shadow: 0 0 8px rgba(255, 59, 110, 0.18);
+    text-shadow: 0 0 8px rgba(0, 255, 77, 0.22);
   }
   .title {
     flex: 1 1 auto;
@@ -381,18 +402,19 @@ const hasExpanded = true;
   /* ── Date spine ──────────────────────────────────────────────────────
      Full-height burgundy stripe on the left edge of the card. PUBLIC
      toggle sits at the top, date stack centered below. */
+  /* Date spine — neutral dark stripe with a cyan rim. Expand chevron
+     anchors the left edge; date stack sits centered to its right. */
   .date-col {
     grid-column: 1;
     grid-row: 1 / 3;
     align-self: stretch;
     display: flex;
-    flex-direction: column;
-    gap: 8px;
-    padding: 10px 12px 10px 14px;
-    background: linear-gradient(180deg,
-      rgba(60, 8, 26, 0.62) 0%,
-      rgba(30, 4, 14, 0.46) 100%);
-    border-right: 1px solid rgba(255, 59, 110, 0.18);
+    align-items: center;
+    gap: 6px;
+    padding: 8px 12px 8px 8px;
+    background: #1a1a1a;
+    border: 1px solid rgba(14, 196, 252, 0.38);
+    border-radius: 6px 0 0 6px;
   }
   .date-stack {
     flex: 1 1 auto;
@@ -402,31 +424,38 @@ const hasExpanded = true;
     gap: 2px;
     min-width: 0;
   }
+  /* Month line: name upright + day italic — typewriter feel. */
   .date-month {
     font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-    font-size: 11px;
+    font-size: 13px;
     font-weight: 700;
-    letter-spacing: 0.10em;
-    text-transform: uppercase;
-    color: #ff6e21;
+    letter-spacing: 0.08em;
     line-height: 1;
   }
-  /* Year reads as the visual anchor — large, italic, cyan. Italic mono
-     reads as a typewritten serial. */
+  .date-month-name {
+    color: #ff6e21;
+    text-transform: uppercase;
+  }
+  .date-day {
+    color: #ffaa7d;
+    font-style: italic;
+    text-transform: none;
+  }
+  /* Year is the visual anchor. "20" upright cream, "26" italic orange —
+     two distinct typographic notes that read as a typewritten serial. */
   .date-year {
     font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-    font-style: italic;
     font-size: 22px;
     font-weight: 700;
     letter-spacing: -0.01em;
-    color: #0ec4fc;
     line-height: 1;
-    text-shadow: 0 0 14px rgba(14, 196, 252, 0.22);
   }
-  .date-tail {
-    display: flex;
-    align-items: center;
-    gap: 6px;
+  .date-year .year-prefix {
+    color: #f5f1e8;
+  }
+  .date-year .year-suffix {
+    color: #ff6e21;
+    font-style: italic;
   }
   .date-rel {
     font-size: 10px;
@@ -475,18 +504,21 @@ const hasExpanded = true;
     display: grid;
     gap: 6px;
   }
-  /* Title sits in its own pink-bordered tag next to the duration pill —
-     the two read as paired tape labels. Click-to-rename preserved. */
+  /* Title sits in its own cyan-bordered tag next to the green duration
+     pill. The filename base renders in italic green; the extension
+     drops to a quieter shade so the eye reads the name first. */
   .title-edit {
     display: inline-block;
     max-width: 100%;
     font: inherit;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-style: italic;
     font-size: 13px;
     font-weight: 600;
-    color: #f5f1e8;
+    color: #00ff4d;
     text-align: left;
     background: transparent;
-    border: 1px solid rgba(255, 59, 110, 0.32);
+    border: 1px solid rgba(14, 196, 252, 0.38);
     border-radius: 3px;
     padding: 4px 10px;
     cursor: text;
@@ -497,56 +529,70 @@ const hasExpanded = true;
   }
   .title-edit:hover,
   .title-edit:focus-visible {
-    border-color: rgba(255, 59, 110, 0.7);
-    background: rgba(255, 59, 110, 0.06);
+    border-color: rgba(14, 196, 252, 0.78);
+    background: rgba(14, 196, 252, 0.05);
     outline: none;
   }
+  .title-base { color: inherit; }
+  .title-ext { color: #f5f1e8; opacity: 0.42; font-style: italic; }
 
-  /* BPM/Key module — own container with a dark backdrop. Always rendered
-     (ghost mode when no data) so the right edge of the head row stays
-     anchored across cards. */
+  /* BPM/Key module — green-bordered tape-label, italic mono. Numbers in
+     vivid green, unit "BPM" dim cream, key + "maj" suffix in green/orange. */
   .tech-meta {
     flex: 0 0 auto;
     display: inline-flex;
     align-items: baseline;
     gap: 4px;
     font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-style: italic;
     font-feature-settings: "tnum";
-    color: #f5f1e8;
+    color: #00ff4d;
     line-height: 1;
-    padding: 5px 10px;
-    background: rgba(14, 10, 22, 0.6);
-    border: 1px solid rgba(245, 241, 232, 0.06);
-    border-radius: 4px;
+    padding: 4px 10px;
+    background: rgba(0, 255, 77, 0.03);
+    border: 1px solid rgba(0, 255, 77, 0.42);
+    border-radius: 3px;
   }
   .tech-meta .bpm-num {
-    font-size: 17px;
+    font-size: 16px;
     font-weight: 700;
-    color: #f5f1e8;
+    color: #00ff4d;
+    text-shadow: 0 0 6px rgba(0, 255, 77, 0.22);
   }
   .tech-meta .bpm-unit {
     font-size: 11px;
     font-weight: 600;
-    color: rgba(245, 241, 232, 0.46);
+    color: rgba(245, 241, 232, 0.55);
     margin-left: 1px;
   }
   .tech-meta .tech-sep {
     font-size: 14px;
-    color: rgba(245, 241, 232, 0.22);
+    color: rgba(245, 241, 232, 0.32);
     margin: 0 4px;
   }
   .tech-meta .key {
-    font-size: 16px;
+    font-size: 15px;
     font-weight: 700;
-    color: #f5f1e8;
+    color: #00ff4d;
   }
-  /* Ghost: rendered but dimmed when the asset has no BPM/key. */
+  /* "maj" / "min" suffix in orange italic so the key reads as music. */
+  .tech-meta .key-mode {
+    font-size: 10px;
+    font-weight: 600;
+    color: #ff6e21;
+    margin-left: 2px;
+    letter-spacing: 0.04em;
+  }
   .tech-meta.ghost {
     border-style: dashed;
     background: transparent;
+    border-color: rgba(245, 241, 232, 0.14);
   }
   .tech-meta.ghost .bpm-num,
-  .tech-meta.ghost .key { color: rgba(245, 241, 232, 0.22); }
+  .tech-meta.ghost .key {
+    color: rgba(245, 241, 232, 0.22);
+    text-shadow: none;
+  }
   .tech-meta.ghost .bpm-unit { color: rgba(245, 241, 232, 0.18); }
   .tech-meta.ghost .tech-sep { color: rgba(245, 241, 232, 0.12); }
 
@@ -635,32 +681,34 @@ const hasExpanded = true;
   }
   .category-bar {
     display: grid;
-    grid-template-columns: repeat(4, 36px);
+    grid-template-columns: repeat(4, 44px);
     gap: 5px;
   }
-  /* Letter-only tile. Active state is LOW-PROFILE: pink letter + pink
-     border + faint pink fill, NOT the loud pink→orange gradient that
-     the browse chips wear. Keeps row-level decoration quiet. */
+  /* Each tile stacks letter on top + label underneath. Active state is
+     hot pink-red — outline + matching letter/label. Keeps the row-level
+     decoration quiet (no fills, no box-shadow halo). */
   .category-btn {
-    width: 36px;
-    height: 32px;
+    width: 44px;
+    height: 44px;
     font: inherit;
     color: rgba(245, 241, 232, 0.55);
     background: transparent;
-    border: 1px solid rgba(245, 241, 232, 0.10);
+    border: 1px solid rgba(245, 241, 232, 0.18);
     border-radius: 4px;
-    padding: 0;
+    padding: 4px 0;
     cursor: pointer;
     display: flex;
+    flex-direction: column;
     align-items: center;
     justify-content: center;
+    gap: 2px;
     line-height: 1;
     transition: color 160ms ease, border-color 160ms ease,
                 background-color 160ms ease, transform 80ms ease;
   }
   .category-btn:hover,
   .category-btn:focus-visible {
-    border-color: rgba(245, 241, 232, 0.30);
+    border-color: rgba(245, 241, 232, 0.40);
     color: #f5f1e8;
     outline: none;
   }
@@ -668,7 +716,7 @@ const hasExpanded = true;
   .category-btn kbd {
     font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
     font-style: italic;
-    font-size: 17px;
+    font-size: 15px;
     font-weight: 700;
     line-height: 1;
     padding: 0;
@@ -676,52 +724,65 @@ const hasExpanded = true;
     background: transparent;
     letter-spacing: 0;
     color: inherit;
-    opacity: 0.85;
   }
-  /* Active = pink ink on subtle pink wash. No box-shadow halo. */
+  .category-btn .category-label {
+    font-family: "Geist Variable", ui-sans-serif, system-ui, sans-serif;
+    font-size: 8px;
+    font-weight: 700;
+    letter-spacing: 0.10em;
+    line-height: 1;
+    color: inherit;
+    opacity: 0.78;
+  }
+  /* Active = hot pink-red. Letter + label both shift; just the border
+     and ink change, no fill. */
   .bucket-card .category-btn.active {
-    color: #ff3b6e;
-    background: rgba(255, 59, 110, 0.08);
-    border-color: rgba(255, 59, 110, 0.55);
+    color: #ff2761;
+    border-color: rgba(255, 39, 97, 0.78);
   }
-  .bucket-card .category-btn.active kbd { opacity: 1; }
+  .bucket-card .category-btn.active .category-label { opacity: 1; }
 
-  /* Kudos ticker — small heart + count. Click increments. The pulse
-     keyframe runs briefly after each click to confirm the action. */
+  /* Kudos jar — yellow tile with a black star + orange count. Reads as
+     a sticky-note "vote" tag. Click increments; brief pulse on success. */
   .kudos {
     align-self: center;
     display: inline-flex;
     align-items: center;
-    gap: 5px;
+    gap: 6px;
     font: inherit;
     font-family: "Geist Variable", ui-sans-serif, system-ui, sans-serif;
-    font-size: 11px;
+    font-size: 13px;
     font-weight: 700;
-    color: rgba(245, 241, 232, 0.42);
-    background: transparent;
-    border: 1px solid rgba(245, 241, 232, 0.12);
-    border-radius: 999px;
-    padding: 3px 9px;
+    color: #ff6e21;
+    background: #eeff00;
+    border: 1px solid rgba(0, 0, 0, 0.30);
+    border-radius: 4px;
+    padding: 4px 10px;
     cursor: pointer;
     line-height: 1;
-    transition: color 160ms ease, border-color 160ms ease,
-                background 160ms ease, transform 160ms ease;
+    transition: background 160ms ease, transform 160ms ease,
+                box-shadow 160ms ease;
+    box-shadow: 0 0 12px rgba(238, 255, 0, 0.18);
   }
   .kudos:hover,
   .kudos:focus-visible {
-    color: #ff3b6e;
-    border-color: rgba(255, 59, 110, 0.55);
     outline: none;
     transform: translateY(-1px);
+    box-shadow: 0 0 18px rgba(238, 255, 0, 0.36);
   }
   .kudos.has {
-    color: #ff3b6e;
-    border-color: rgba(255, 59, 110, 0.45);
-    background: rgba(255, 59, 110, 0.06);
+    background: #eeff00;
   }
-  .kudos-glyph { font-size: 12px; line-height: 1; }
-  .kudos-count { font-variant-numeric: tabular-nums; }
-  .kudos[data-pulsing="true"] { transform: scale(1.08); }
+  .kudos-glyph {
+    color: #050306;
+    font-size: 13px;
+    line-height: 1;
+  }
+  .kudos-count {
+    font-variant-numeric: tabular-nums;
+    color: #ff6e21;
+  }
+  .kudos[data-pulsing="true"] { transform: scale(1.10); }
 
   /* ── Detached trash ✕ (col 4, both rows, far right edge) ──────────── */
   .trash-hold.detached {
@@ -729,21 +790,23 @@ const hasExpanded = true;
     grid-row: 1 / 3;
     align-self: center;
   }
+  /* Trash ✕ — borderless icon on the far right edge. Hover fills the
+     button with the pink→orange gradient (still committed-but-reversible
+     until you complete the 2s hold). */
   .trash-hold {
     position: relative;
     overflow: hidden;
-    width: 30px;
-    height: 30px;
+    width: 28px;
+    height: 28px;
     font: inherit;
-    font-size: 13px;
+    font-size: 16px;
     line-height: 1;
-    color: rgba(245, 241, 232, 0.45);
+    color: rgba(245, 241, 232, 0.50);
     background: transparent;
-    border: 1px solid rgba(245, 241, 232, 0.18);
+    border: 0;
     border-radius: 3px;
     cursor: pointer;
-    transition: color 160ms ease, border-color 160ms ease,
-                background 160ms ease, box-shadow 160ms ease;
+    transition: color 160ms ease, background 160ms ease, box-shadow 160ms ease;
   }
   /* Hover wears the pink → orange gradient — the same key surface used
      on active buttons elsewhere. Makes the destructive action visually
@@ -785,31 +848,38 @@ const hasExpanded = true;
   }
   .trash-hold[data-holding="true"] .hold-glyph { color: #0e0c14; }
 
-  /* Expand chevron lives at the bottom of the date spine, inline with
-     the relative-time text. Small + unobtrusive. */
+  /* Expand chevron sits on the left edge of the date spine, vertically
+     centered. Subtle white arrow that rotates 90° when expanded. */
   .expand-toggle {
+    flex: 0 0 auto;
+    align-self: center;
     font: inherit;
-    font-size: 11px;
-    width: 18px;
-    height: 16px;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 14px;
+    font-weight: 600;
+    width: 12px;
+    height: 24px;
     padding: 0;
     line-height: 1;
-    color: rgba(245, 241, 232, 0.42);
+    color: rgba(245, 241, 232, 0.50);
     background: transparent;
     border: 0;
     cursor: pointer;
     transition: color 160ms ease, transform 220ms ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
   }
   .expand-toggle:hover,
   .expand-toggle:focus-visible {
-    color: #0ec4fc;
+    color: #f5f1e8;
     outline: none;
   }
   .expand-toggle .chev {
     display: inline-block;
     transition: transform 220ms ease;
   }
-  .expand-toggle[aria-expanded="true"] .chev { transform: rotate(180deg); }
+  .expand-toggle[aria-expanded="true"] .chev { transform: rotate(90deg); }
   .expand-toggle[aria-expanded="true"] { color: #0ec4fc; }
 
   /* Quality stars now live inside the expanded panel. Larger and more
