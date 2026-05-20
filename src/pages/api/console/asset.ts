@@ -56,7 +56,14 @@ export const GET: APIRoute = async ({ request, url }) => {
   for (const [k, v] of upstream.headers) {
     if (FORWARD_HEADERS.has(k.toLowerCase())) headers.set(k, v);
   }
-  headers.set("cache-control", "private, max-age=0, must-revalidate");
+  // Cache Range segments aggressively in the browser for an hour. The
+  // earlier `max-age=0, must-revalidate` forced the browser to re-fetch
+  // every Range over Tailscale Funnel on every seek, which made long
+  // files (33min WAV @ 356 MB) unplayable — they'd buffer-stall on each
+  // scrub. The catalog file mtime is stable (we never mutate files in
+  // place), so a 1 hour browser cache is safe. Auth is still required —
+  // the cache-control is `private` so no CDN buffers it.
+  headers.set("cache-control", "private, max-age=3600");
 
   return new Response(upstream.body, {
     status: upstream.status,

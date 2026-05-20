@@ -443,6 +443,19 @@ export async function getLineage(
   return call<LineageResponse>(`/buckets/lineage?${params}`);
 }
 
+export interface DupGroupResponse {
+  asset_id: number;
+  content_sha1: string | null;
+  siblings: (BucketAsset & { is_canonical?: boolean })[];
+}
+
+export async function getDupGroup(
+  asset_id: number,
+): Promise<ApiResult<DupGroupResponse>> {
+  const params = new URLSearchParams({ asset_id: String(asset_id) });
+  return call<DupGroupResponse>(`/buckets/dup-group?${params}`);
+}
+
 export async function revealInFinder(
   asset_id: number,
 ): Promise<ApiResult<RevealInFinderResponse>> {

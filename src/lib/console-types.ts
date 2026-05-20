@@ -258,6 +258,13 @@ export interface BucketAsset {
   /** Rowid of the canonical row when this is a duplicate; NULL if
    *  unique or canonical. Set by `scripts/find_duplicates.py`. */
   dup_of?: number | null;
+  /** Total rows sharing this row's `content_sha1`, including this row.
+   *  Surfaced on the DUP badge so curators see group size before trashing
+   *  ("DUP (4)" instead of an unannotated "DUP"). */
+  dup_count?: number | null;
+  /** SHA1 of file contents. Engine computes during ingest; same value
+   *  across copies on different drives. */
+  content_sha1?: string | null;
   /** 1 if `scripts/find_orphans.py` flagged this as a safe-to-trash
    *  candidate (not referenced in any project, never auditioned, no
    *  curator classification). */
@@ -266,6 +273,25 @@ export interface BucketAsset {
    *  engine so the bucket card can show its temporal anchor without a
    *  filename-parse fallback. */
   modified?: string | null;
+  /** Librosa-derived. Available on listing responses where the row has
+   *  been analyzed; null otherwise. Used in the expanded panel's Tech row
+   *  to give long-form rows something to show when summary is empty. */
+  loop_density?: number | null;
+  silence_ratio?: number | null;
+  /** Parent-row fields populated when this row has parent_id !== null and
+   *  came through the bucket listing endpoint (engine LEFT JOINs to the
+   *  parent's row). Drives:
+   *    - date inheritance: extracted-from-video children show the parent's
+   *      modified instead of the extraction timestamp
+   *    - rich lineage chip: parent name + bucket + duration shown inline
+   *      without needing to fetch /buckets/lineage first
+   *    - clickable navigation back to the parent's bucket page. */
+  parent_modified?: string | null;
+  parent_filename?: string | null;
+  parent_display_name?: string | null;
+  parent_bucket?: BucketName | null;
+  parent_duration_seconds?: number | null;
+  parent_category?: string | null;
 }
 
 export interface PromoteToLiveResponse {

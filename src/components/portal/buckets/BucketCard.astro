@@ -22,13 +22,17 @@ const fmtDuration = (s: number | null): string | null => {
 };
 const durationLabel = fmtDuration(item.duration_seconds);
 
-// Date column: primary = "MMM DD", secondary = "YYYY · Xmo". Falls back to
-// filesystem-mtime if engine sent it, else parses a [YYYY-MM-DD] from the
-// filename, else hides the column gracefully. Done server-side so the row
-// has stable text without a JS Date roundtrip per card.
+// Date column: primary = "MMM DD", secondary = "YYYY · Xmo".
+//
+// For extracted-from-video children, the row's own `modified` is the
+// extraction timestamp (often weeks or months after the source was
+// captured). Prefer the parent's modified when present so the card
+// reflects when the *content* was captured, not when we extracted audio
+// from it. Falls back to filename-embedded [YYYY-MM-DD] when neither
+// engine-side timestamp is available.
 const MONTHS = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
 const dateInfo = (() => {
-  let iso: string | null = item.modified ?? null;
+  let iso: string | null = item.parent_modified ?? item.modified ?? null;
   if (!iso) {
     const m = filename.match(/\[(\d{4})-(\d{2})-(\d{2})/);
     if (m) iso = `${m[1]}-${m[2]}-${m[3]}T00:00:00`;
@@ -103,6 +107,9 @@ const keyInfo = (() => {
 
 const lineageWord = (() => {
   if (!item.parent_id) return null;
+  // Prefer parent_category (engine-supplied) over source_type — it's the
+  // ground truth from the parent row, not a derivation.
+  if (item.parent_category === "video") return "video";
   switch (item.source_type) {
     case "voice_memo": return "voice-memo";
     case "video_extract": return "video";
@@ -110,6 +117,52 @@ const lineageWord = (() => {
     default: return "asset";
   }
 })();
+
+// Pretty-printed parent display name for the lineage chip — strip extension
+// and lean on display_name when set.
+const parentLabel = (() => {
+  if (!item.parent_id) return null;
+  const name = item.parent_display_name || item.parent_filename || `asset:${item.parent_id}`;
+  return name.replace(/\.[A-Za-z0-9]{1,5}$/, "");
+})();
+
+// Where clicking the lineage chip should navigate. Parent's bucket page,
+// anchored at the parent's card via `?focus=<parent_id>`.
+const parentHref = (() => {
+  if (!item.parent_id) return null;
+  const bucket = item.parent_bucket || "all";
+  return `/portal/buckets/${bucket}?focus=${item.parent_id}`;
+})();
+
+const fmtMmSs = (s: number | null | undefined): string | null => {
+  if (s == null || !Number.isFinite(s) || s <= 0) return null;
+  const m = Math.floor(s / 60);
+  const r = Math.round(s % 60);
+  return `${m}:${String(r).padStart(2, "0")}`;
+};
+
+// Tech facts shown in the expanded panel when summary is null (and even
+// when populated, as supplementary detail). Always-on so curators can see
+// what was actually analyzed.
+const techFacts: string[] = [];
+if (item.bpm) techFacts.push(`${Math.round(item.bpm)} BPM`);
+if (item.key) techFacts.push(String(item.key));
+const techDur = fmtMmSs(item.duration_seconds);
+if (techDur) techFacts.push(techDur);
+if (typeof item.loop_density === "number") {
+  techFacts.push(`loop-density ${item.loop_density.toFixed(2)}`);
+}
+if (typeof item.silence_ratio === "number" && item.silence_ratio > 0) {
+  techFacts.push(`${Math.round(item.silence_ratio * 100)}% silent`);
+}
+
+// Long-form jam rows get an explanatory note in place of the missing
+// summary — Jon's auto-bucket policy says >30min content is NOT
+// auto-transcribed because Whisper hallucinates on long music sections.
+const isLongJam =
+  (item.duration_seconds ?? 0) > 1800 &&
+  (item.bucket === "jam" || item.parent_bucket === "jam");
+const hasNoSummary = !item.summary || /^(insufficient|music or non-speech)/i.test(item.summary);
 
 const waveformSrc = (() => {
   const wp = item.waveform_path;
@@ -160,8 +213,21 @@ const hasExpanded = true;
           title={`Click to rename. Real filename: ${filename}`}
         ><span class="title-base">{titleParts.base}</span>{titleParts.ext && <span class="title-ext">{titleParts.ext}</span>}</button>
         {item.dup_of && (
-          <span class="flag-chip flag-dup" title={`Duplicate of asset_id ${item.dup_of}`}>DUP</span>
+          <button
+            type="button"
+            class="flag-chip flag-dup"
+            data-action="dup-group"
+            data-asset-id={String(item.asset_id)}
+            title={item.dup_count && item.dup_count > 1
+              ? `${item.dup_count} copies share this content. Click to see siblings (canonical highlighted) before trashing.`
+              : `Duplicate of asset_id ${item.dup_of}`}
+          >
+            DUP{item.dup_count && item.dup_count > 1 ? ` (${item.dup_count})` : ""}
+          </button>
         )}
+        {/* Inline sibling list — populated lazily on DUP click. Scoped to
+            this card so multiple DUP chips don't fight for the same panel. */}
+        <div class="dup-detail" data-dup-target hidden></div>
       </h3>
 
       {/* BPM / key — now sits as a secondary line under the title. */}
@@ -245,8 +311,8 @@ const hasExpanded = true;
       class:list={["trash-hold detached", { "is-orphan": item.orphan_candidate === 1 }]}
       data-action="trash-hold"
       title={item.orphan_candidate === 1
-        ? "Likely safe to archive (unused, never auditioned). Hold 0.8s."
-        : "Hold 0.8s to archive"}
+        ? "Likely safe to archive (unused, never auditioned). Hold 0.45s."
+        : "Hold 0.45s to archive"}
       aria-label="Hold to archive"
     >
       <span class="hold-fill" aria-hidden="true"></span>
@@ -269,10 +335,19 @@ const hasExpanded = true;
             title="Mark public on /sounds"
           >{isPublic ? "● PUBLIC" : "○ PUBLIC"}</button>
         </dd>
-        {item.summary && (
+        {item.summary && !/^(insufficient|music or non-speech)/i.test(item.summary) && (
           <>
             <dt>Summary</dt>
             <dd>{item.summary}</dd>
+          </>
+        )}
+        {/* Long-form jam content gets an explanatory note where the summary
+            would be. Auto-bucket policy: rows >30min go to jam and are NOT
+            auto-transcribed because Whisper hallucinates on long music. */}
+        {hasNoSummary && isLongJam && (
+          <>
+            <dt>Note</dt>
+            <dd class="exp-note">Not auto-transcribed — Whisper hallucinates on long music sections. Browse the waveform / audition to find what's in here.</dd>
           </>
         )}
         {tagList.length > 0 && (
@@ -295,17 +370,46 @@ const hasExpanded = true;
             </dd>
           </>
         )}
-        {lineageWord && (
+        {/* Tech facts: always shown so the card has something to say even
+            when summary is null. Reads as a metadata line, not a header. */}
+        {techFacts.length > 0 && (
+          <>
+            <dt>Tech</dt>
+            <dd class="exp-tech">{techFacts.join(" · ")}</dd>
+          </>
+        )}
+        {lineageWord && parentLabel && (
           <>
             <dt>Lineage</dt>
             <dd>
+              {/* Rich inline lineage: parent name as a link to its bucket
+                  page (with ?focus= anchor), bucket + duration + date as
+                  inline metadata. No click-to-fetch needed — the data is
+                  already on the row from the engine LEFT JOIN. */}
+              <span class="lineage-line">
+                <span class="lineage-from">from {lineageWord}:</span>
+                {parentHref ? (
+                  <a class="lineage-link" href={parentHref}>{parentLabel}</a>
+                ) : (
+                  <span class="lineage-link">{parentLabel}</span>
+                )}
+                {item.parent_bucket && (
+                  <span class="lineage-meta"> · {item.parent_bucket}</span>
+                )}
+                {fmtMmSs(item.parent_duration_seconds) && (
+                  <span class="lineage-meta"> · {fmtMmSs(item.parent_duration_seconds)}</span>
+                )}
+              </span>
+              {/* Optional deeper fetch for siblings/children — kept for the
+                  curator who wants to see "other audio extracted from the
+                  same source video". Click-to-load. */}
               <button
                 type="button"
-                class="lineage-chip"
+                class="lineage-more"
                 data-action="lineage"
                 data-asset-id={String(item.asset_id)}
-                title="Click to fetch parent + children"
-              >from {lineageWord}:{item.parent_id}</button>
+                title="Load siblings + children of this row"
+              >show siblings</button>
               <div class="lineage-detail" data-lineage-target hidden></div>
             </dd>
           </>
@@ -644,9 +748,45 @@ const hasExpanded = true;
     border: 1px solid currentColor;
     border-radius: 2px;
     line-height: 1.4;
+    background: transparent;
+    cursor: pointer;
+    transition: color 160ms ease, border-color 160ms ease;
   }
-  .flag-dup { color: rgba(245, 241, 232, 0.42); }
+  .flag-chip:hover,
+  .flag-chip:focus-visible {
+    color: #f5f1e8;
+    outline: none;
+  }
+  .flag-dup { color: rgba(245, 241, 232, 0.55); }
   .flag-orphan { color: #ff5a82; }
+
+  /* Inline dup-group panel rendered next to / below the title row. Renders
+     siblings as a tight list with the canonical marked. Never auto-shown —
+     opens only when the curator clicks the DUP badge. */
+  .dup-detail {
+    grid-column: 1;
+    margin-top: 6px;
+    margin-bottom: -4px;
+    font-size: 11px;
+    color: rgba(245, 241, 232, 0.78);
+    border-left: 2px solid rgba(255, 39, 97, 0.32);
+    padding: 4px 0 4px 8px;
+    line-height: 1.5;
+  }
+  .dup-detail ul.dup-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+  .dup-detail ul.dup-list li { margin: 0; padding: 0; }
+  .dup-detail a {
+    color: #0ec4fc;
+    text-decoration: underline;
+    text-decoration-color: rgba(14, 196, 252, 0.4);
+    text-underline-offset: 3px;
+  }
+  .dup-detail a:hover { color: #6ed8ff; }
+  .dup-detail b { color: #ff2761; font-weight: 700; }
 
   /* ── Waveform (the row's visual fingerprint) ──────────────────────── */
   .waveform {
@@ -819,7 +959,7 @@ const hasExpanded = true;
       inset 6px 0 14px -4px rgba(255, 39, 97, 0.30),
       inset 2px 0 0 0 rgba(255, 39, 97, 0.20);
   }
-  /* Hover deepens the red. Hold fills the column bottom→top in 0.8s. */
+  /* Hover deepens the red. Hold fills the column bottom→top in 0.45s. */
   .trash-hold:hover,
   .trash-hold:focus-visible {
     color: #fff;
@@ -844,7 +984,7 @@ const hasExpanded = true;
   }
   .trash-hold[data-holding="true"] .hold-fill {
     transform: scaleY(1);
-    transition: transform 0.8s linear;
+    transition: transform 0.45s linear;
   }
   .trash-hold .hold-glyph {
     position: relative;
@@ -945,6 +1085,57 @@ const hasExpanded = true;
     outline: none;
   }
   .lineage-chip[data-loaded="true"] { border-style: solid; }
+
+  /* Rich inline lineage line — the data is on the row already (engine LEFT
+     JOIN), so no fetch needed to render parent name + bucket + duration. */
+  .lineage-line {
+    display: inline;
+    font-size: 12px;
+    line-height: 1.5;
+  }
+  .lineage-from {
+    color: rgba(245, 241, 232, 0.5);
+    margin-right: 4px;
+  }
+  .lineage-link {
+    color: #0ec4fc;
+    text-decoration: underline;
+    text-decoration-color: rgba(14, 196, 252, 0.45);
+    text-underline-offset: 3px;
+    text-decoration-thickness: 1px;
+    transition: color 160ms ease, text-decoration-color 160ms ease;
+  }
+  a.lineage-link:hover,
+  a.lineage-link:focus-visible {
+    color: #6ed8ff;
+    text-decoration-color: #6ed8ff;
+    outline: none;
+  }
+  .lineage-meta {
+    color: rgba(245, 241, 232, 0.5);
+  }
+  .lineage-more {
+    font: inherit;
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: rgba(245, 241, 232, 0.45);
+    background: transparent;
+    border: 0;
+    border-bottom: 1px dotted rgba(245, 241, 232, 0.28);
+    padding: 0 1px;
+    margin-left: 10px;
+    cursor: pointer;
+    transition: color 160ms ease, border-color 160ms ease;
+  }
+  .lineage-more:hover,
+  .lineage-more:focus-visible {
+    color: #f5f1e8;
+    border-color: #0ec4fc;
+    outline: none;
+  }
+
   .lineage-detail {
     margin-top: 6px;
     font-size: 11px;
@@ -954,6 +1145,22 @@ const hasExpanded = true;
     line-height: 1.45;
   }
   .lineage-detail b { color: #f5f1e8; font-weight: 600; }
+
+  /* Expanded-panel fallback content: tech facts when summary is null, plus
+     the long-form-jam explanatory note. Both render as a single line so the
+     panel stays scannable. */
+  .exp-tech {
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 11px;
+    color: rgba(245, 241, 232, 0.72);
+    letter-spacing: 0.02em;
+  }
+  .exp-note {
+    font-size: 11.5px;
+    color: rgba(245, 241, 232, 0.62);
+    font-style: italic;
+    line-height: 1.45;
+  }
 
   .promote-btn {
     font: inherit;
@@ -1025,6 +1232,20 @@ const hasExpanded = true;
     background: #eeff00;
     color: #050306;
     outline: none;
+  }
+
+  /* When the card is navigated to via a lineage-chip click, it gets a
+     2.4-second cyan pulse around its outer border so the curator's eye
+     locks onto the arrival target. Attribute is removed after the pulse
+     so subsequent renders / re-arrivals can re-trigger it. */
+  @keyframes lineage-arrive-pulse {
+    0%   { box-shadow: 0 0 0 0 rgba(14, 196, 252, 0.55); }
+    40%  { box-shadow: 0 0 0 6px rgba(14, 196, 252, 0.20); }
+    100% { box-shadow: 0 0 0 0 rgba(14, 196, 252, 0); }
+  }
+  .bucket-card[data-lineage-arrived="true"] {
+    animation: lineage-arrive-pulse 2200ms ease-out;
+    border-radius: 8px;
   }
 
   /* Archiving state — card fades while the Undo offer is live. */

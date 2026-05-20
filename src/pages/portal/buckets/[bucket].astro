@@ -226,6 +226,64 @@ const BUCKET_TITLE: Record<BucketView, string> = {
       }
     };
 
+    // ── Dup-group reveal ─────────────────────────────────────────────────
+    // Click the DUP badge to fetch all rows sharing this row's
+    // content_sha1. Renders an inline list with canonical highlighted plus
+    // a "go to" link per sibling. Lets the curator see the full group
+    // before trashing — never accidentally trash the canonical or last copy.
+    const revealDupGroup = async (card: HTMLElement, chip: HTMLElement) => {
+      const assetId = card.dataset.assetId;
+      const target = card.querySelector<HTMLElement>("[data-dup-target]");
+      if (!assetId || !target) return;
+      if (chip.dataset.loaded === "true") {
+        target.hidden = !target.hidden;
+        return;
+      }
+      target.hidden = false;
+      target.textContent = "Loading group…";
+      try {
+        const res = await fetch(`/api/console/buckets-dup-group?asset_id=${assetId}`);
+        if (!res.ok) {
+          target.textContent = `Dup-group failed (HTTP ${res.status})`;
+          return;
+        }
+        const data = await res.json();
+        const sibs = Array.isArray(data.siblings) ? data.siblings : [];
+        if (sibs.length === 0) {
+          target.textContent = "No siblings — this is the only copy.";
+          chip.dataset.loaded = "true";
+          return;
+        }
+        const html = sibs
+          .map((s: {
+            asset_id: number;
+            display_name: string | null;
+            filename: string | null;
+            path: string;
+            bucket: string | null;
+            duration_seconds: number | null;
+            is_canonical?: boolean;
+            discarded_at?: string | null;
+          }) => {
+            const name = s.display_name || s.filename || s.path.split("/").pop();
+            const tag = s.is_canonical ? "<b>CANONICAL</b>" : "dup";
+            const bucket = s.bucket || "inbox";
+            const trashed = s.discarded_at ? " <i>(trashed)</i>" : "";
+            const here = String(s.asset_id) === assetId ? " ← <i>this row</i>" : "";
+            const href = `/portal/buckets/${bucket}?focus=${s.asset_id}`;
+            const safeName = String(name).replace(/[<>&]/g, (c) =>
+              c === "<" ? "&lt;" : c === ">" ? "&gt;" : "&amp;",
+            );
+            return `<li>[${tag}] <a href="${href}">${safeName}</a> · ${bucket}${trashed}${here}</li>`;
+          })
+          .join("");
+        target.innerHTML = `<ul class="dup-list">${html}</ul>`;
+        chip.dataset.loaded = "true";
+      } catch {
+        target.textContent = "Dup-group failed (network)";
+      }
+    };
+
     // ── Lineage reveal ───────────────────────────────────────────────────
     const revealLineage = async (card: HTMLElement, chip: HTMLElement) => {
       const assetId = card.dataset.assetId;
@@ -395,7 +453,11 @@ const BUCKET_TITLE: Record<BucketView, string> = {
     const ensureAudio = (): HTMLAudioElement => {
       if (audio) return audio;
       audio = new Audio();
-      audio.preload = "metadata";
+      // "auto" lets the browser pre-buffer ahead of the playhead as soon
+      // as src is set. The proxy now sets cache-control: private, max-age=
+      // 3600 so the buffered ranges stick in the browser cache across
+      // seeks — without it, every seek burned an RTT over Tailscale Funnel.
+      audio.preload = "auto";
       audio.addEventListener("timeupdate", updatePlayhead);
       audio.addEventListener("loadedmetadata", updatePlayhead);
       audio.addEventListener("durationchange", updatePlayhead);
@@ -487,13 +549,13 @@ const BUCKET_TITLE: Record<BucketView, string> = {
       playCard(card, fraction);
     };
 
-    // ── Hold-to-archive (0.8s press) + Undo window ───────────────────────
-    // The button's fill bar climbs over 0.8s via CSS while the curator
+    // ── Hold-to-archive (0.45s press) + Undo window ──────────────────────
+    // The button's fill bar climbs over 0.45s via CSS while the curator
     // holds; after the timeout the card flips to "data-archiving" and
     // assignBucket(card, "trash") commits server-side. An inline status
     // line offers a 6-second Undo window that reverses to the previous
     // bucket if the curator changes their mind.
-    const HOLD_MS = 800;
+    const HOLD_MS = 450;
     const UNDO_MS = 6000;
     let trashTimer: number | null = null;
     let activeTrashBtn: HTMLElement | null = null;
@@ -599,6 +661,9 @@ const BUCKET_TITLE: Record<BucketView, string> = {
         case "lineage":
           revealLineage(card, btn);
           break;
+        case "dup-group":
+          revealDupGroup(card, btn);
+          break;
         case "promote-to-live":
           promoteToLive(card);
           break;
@@ -695,9 +760,28 @@ const BUCKET_TITLE: Record<BucketView, string> = {
     });
 
     // Auto-focus the first card so arrows work without a click first.
-    const first = cards()[0];
-    if (first) {
-      first.setAttribute("data-focused", "true");
+    // If the URL carries `?focus=N` (came from a lineage chip click on
+    // another bucket page), prefer that card — scroll it into view and
+    // pulse its border so the curator sees the navigation target instead
+    // of landing somewhere arbitrary in a possibly-long list.
+    const focusParam = new URLSearchParams(window.location.search).get("focus");
+    const all = cards();
+    const focusIdx = focusParam
+      ? all.findIndex((c) => c.dataset.assetId === focusParam)
+      : -1;
+    if (focusIdx >= 0) {
+      const target = all[focusIdx];
+      target.setAttribute("data-focused", "true");
+      target.setAttribute("data-lineage-arrived", "true");
+      target.scrollIntoView({ block: "center", behavior: "auto" });
+      // Clear the highlight class after the pulse finishes so re-entries
+      // re-trigger it.
+      window.setTimeout(
+        () => target.removeAttribute("data-lineage-arrived"),
+        2400,
+      );
+    } else if (all[0]) {
+      all[0].setAttribute("data-focused", "true");
     }
 
     // ── Random button: pick a card in the current view ──────────────────
