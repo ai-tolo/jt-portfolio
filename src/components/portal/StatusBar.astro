@@ -1,78 +1,135 @@
 ---
-// Live M1+M3 status widget. Tolo.Cloud aesthetic: soft glass pill with
-// gradient-tinted text. M1 jobs render in lavender, remote workers in
-// pink — the same hierarchy the wordmark gradient uses. Thin progress
-// line under the text tracks overall catalog transcription progress.
-// Polls /status every 15s while the tab is visible; auto-hides on
-// sustained failure.
+// Live M1+M3 status widget. Three compartments side-by-side:
+//   M1 ─── M3 ─── SYSTEM
+// Each cell carries its own label, body, and progress sliver. M1 reads
+// in bright blue, M3 in pink, system in plain white. Vertical dividers
+// between cells make the hierarchy obvious. Polls /status every 15s
+// while the tab is visible; auto-hides on sustained failure.
 ---
 
 <aside class="status-bar" data-status-bar data-state="loading" aria-live="polite" aria-label="Engine status">
-  <span class="text" data-status-text>
-    <span class="tok-dim">checking</span> <span class="tok-job">m1</span><span class="tok-sep">…</span>
-  </span>
-  <div class="bar" data-bar aria-hidden="true">
-    <div class="bar-fill" data-bar-fill style="width: 0%"></div>
+  <div class="cells">
+    <section class="cell cell-m1">
+      <div class="cell-label">M1</div>
+      <div class="cell-body" data-cell="m1">
+        <span class="tok-dim">checking…</span>
+      </div>
+      <div class="cell-bar"><div class="cell-bar-fill" data-cell-bar="m1" style="width: 0%"></div></div>
+    </section>
+    <section class="cell cell-m3">
+      <div class="cell-label">M3</div>
+      <div class="cell-body" data-cell="m3">
+        <span class="tok-dim">idle</span>
+      </div>
+      <div class="cell-bar"><div class="cell-bar-fill" data-cell-bar="m3" style="width: 0%"></div></div>
+    </section>
+    <section class="cell cell-sys">
+      <div class="cell-label">SYS</div>
+      <div class="cell-body" data-cell="sys">
+        <span class="tok-dim">—</span>
+      </div>
+      <div class="cell-bar"><div class="cell-bar-fill" data-cell-bar="sys" style="width: 0%"></div></div>
+    </section>
   </div>
 </aside>
 
 <style>
-  /* Cali-palette glass widget sitting on the interstellar smoke backdrop.
-     Container border + active glow track the dashboard's hot magenta;
-     M1 reads as cyan (Cali's chromatic-aberration edge), M3 as the same
-     magenta as the brand. Progress line is a flat slice of --tolo-flow
-     so the wave runs through it. */
+  /* Three-compartment widget. Cells flex horizontally with a thin vertical
+     rule between them; each cell has its own micro-label and progress
+     sliver. The container is a soft glass shell on the interstellar
+     backdrop. */
   .status-bar {
-    display: inline-flex;
-    flex-direction: column;
-    align-items: stretch;
-    gap: 6px;
-    padding: 8px 14px 7px;
+    display: inline-block;
+    padding: 7px 14px 6px;
     font-family: "Geist Variable", ui-sans-serif, system-ui, -apple-system, sans-serif;
     font-size: 12px;
     font-weight: 500;
     line-height: 1.2;
     color: rgba(245, 241, 232, 0.88);
     background: color-mix(in srgb, #0d060f 78%, transparent);
-    border: 1px solid color-mix(in srgb, #ff1e8a 18%, transparent);
-    border-radius: 12px;
+    border: 1px solid color-mix(in srgb, #0ec4fc 22%, transparent);
+    border-radius: 10px;
     backdrop-filter: saturate(140%) blur(10px);
     -webkit-backdrop-filter: saturate(140%) blur(10px);
-    letter-spacing: 0;
     max-width: 100%;
     transition: border-color 280ms ease, box-shadow 280ms ease, background 280ms ease;
   }
   .status-bar[data-state="busy"] {
-    border-color: color-mix(in srgb, #ff1e8a 32%, transparent);
-    box-shadow: 0 0 24px color-mix(in srgb, #ff1e8a 14%, transparent);
+    border-color: color-mix(in srgb, #0ec4fc 40%, transparent);
+    box-shadow: 0 0 22px color-mix(in srgb, #0ec4fc 12%, transparent);
   }
   .status-bar[data-state="warn"] {
-    border-color: color-mix(in srgb, #ff6e21 44%, transparent);
-    box-shadow: 0 0 24px color-mix(in srgb, #ff6e21 16%, transparent);
+    border-color: color-mix(in srgb, #ff6e21 46%, transparent);
+    box-shadow: 0 0 22px color-mix(in srgb, #ff6e21 14%, transparent);
   }
   .status-bar[data-state="err"] {
     border-color: color-mix(in srgb, #ff5a6a 48%, transparent);
-    box-shadow: 0 0 24px color-mix(in srgb, #ff5a6a 16%, transparent);
+    box-shadow: 0 0 22px color-mix(in srgb, #ff5a6a 14%, transparent);
   }
   .status-bar[hidden] { display: none; }
 
-  /* Text row — sans-serif, no glow halos per span. */
-  .text {
+  .cells {
+    display: flex;
+    align-items: stretch;
+    gap: 12px;
+  }
+  .cell {
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    gap: 4px;
+    padding-right: 12px;
+    border-right: 1px solid rgba(245, 241, 232, 0.08);
+    min-width: 0;
+  }
+  .cell:last-child { border-right: 0; padding-right: 0; }
+
+  .cell-label {
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: rgba(245, 241, 232, 0.45);
+  }
+  .cell-m1 .cell-label { color: rgba(14, 196, 252, 0.85); }
+  .cell-m3 .cell-label { color: rgba(255, 59, 110, 0.90); }
+  .cell-sys .cell-label { color: rgba(245, 241, 232, 0.55); }
+
+  .cell-body {
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
   }
-  /* M1 job — cyan. Mirrors Cali's chromatic-aberration edge color. */
-  .status-bar :global(.tok-job) {
-    color: #1ecbe0;
-    font-weight: 600;
+
+  /* Per-cell sliver. M1 + M3 reflect their own job progress; SYS shows
+     overall catalog transcribed%. Thin, single-color per cell. */
+  .cell-bar {
+    height: 2px;
+    width: 100%;
+    background: rgba(245, 241, 232, 0.06);
+    border-radius: 999px;
+    overflow: hidden;
   }
-  /* Remote worker (e.g. m3-whisper) — hot magenta. Same as --accent and
-     the dominant Cali wave color. */
-  .status-bar :global(.tok-worker) {
-    color: #ff2999;
-    font-weight: 600;
+  .cell-bar-fill {
+    height: 100%;
+    border-radius: 999px;
+    transition: width 480ms cubic-bezier(.22,.61,.36,1), background 280ms ease;
   }
+  .cell-m1 .cell-bar-fill {
+    background: #0ec4fc;
+    box-shadow: 0 0 6px rgba(14, 196, 252, 0.45);
+  }
+  .cell-m3 .cell-bar-fill {
+    background: #ff3b6e;
+    box-shadow: 0 0 6px rgba(255, 59, 110, 0.45);
+  }
+  .cell-sys .cell-bar-fill {
+    background: linear-gradient(90deg, #ff3b6e 0%, #ff6e21 100%);
+    box-shadow: 0 0 6px rgba(255, 59, 110, 0.42);
+  }
+
+  /* Token spans — JS-injected, so wrapped in :global() to escape Astro
+     CSS scoping. */
   .status-bar :global(.tok-num) {
     color: #f5f1e8;
     font-variant-numeric: tabular-nums;
@@ -83,7 +140,7 @@
     font-weight: 500;
   }
   .status-bar :global(.tok-keyword) {
-    color: rgba(245, 241, 232, 0.55);
+    color: rgba(245, 241, 232, 0.5);
     font-weight: 500;
   }
   .status-bar :global(.tok-eta) {
@@ -95,48 +152,32 @@
     font-weight: 600;
   }
   .status-bar :global(.tok-dim) {
-    color: rgba(245, 241, 232, 0.32);
+    color: rgba(245, 241, 232, 0.30);
   }
   .status-bar :global(.tok-sep) {
     color: rgba(245, 241, 232, 0.22);
     margin: 0 4px;
   }
 
-  /* Two-stop magenta → cyan progress line — the same pair of colors the
-     M3 + M1 tokens use, in order. Clean, no overlay pattern. */
-  .bar {
-    height: 2px;
-    width: 100%;
-    background: rgba(255, 30, 138, 0.10);
-    border-radius: 999px;
-    overflow: hidden;
-    position: relative;
-  }
-  .bar-fill {
-    height: 100%;
-    background: linear-gradient(90deg, #ff1e8a 0%, #1ecbe0 100%);
-    box-shadow: 0 0 8px rgba(255, 30, 138, 0.40);
-    transition: width 480ms cubic-bezier(.22,.61,.36,1);
-    border-radius: 999px;
-  }
-  .status-bar[data-state="warn"] .bar-fill {
-    background: #ff6e21;
-    box-shadow: 0 0 8px rgba(255, 110, 33, 0.5);
-  }
-  .status-bar[data-state="err"] .bar { display: none; }
-
   @media (max-width: 700px) {
-    .status-bar { font-size: 11.5px; padding: 7px 12px 6px; border-radius: 10px; }
+    .status-bar { font-size: 11.5px; padding: 6px 12px 5px; border-radius: 9px; }
+    .cells { gap: 8px; }
+    .cell { padding-right: 8px; }
+    .cell-label { font-size: 8.5px; }
   }
 </style>
 
 <script>
   const POLL_MS = 15000;
   const bar = document.querySelector("[data-status-bar]");
-  const text = document.querySelector("[data-status-text]");
-  const barFill = document.querySelector("[data-bar-fill]");
+  const cellM1 = document.querySelector('[data-cell="m1"]');
+  const cellM3 = document.querySelector('[data-cell="m3"]');
+  const cellSys = document.querySelector('[data-cell="sys"]');
+  const barM1 = document.querySelector('[data-cell-bar="m1"]');
+  const barM3 = document.querySelector('[data-cell-bar="m3"]');
+  const barSys = document.querySelector('[data-cell-bar="sys"]');
 
-  if (bar && text && barFill) {
+  if (bar && cellM1 && cellM3 && cellSys && barM1 && barM3 && barSys) {
     let timer = null;
     let consecutiveErrors = 0;
 
@@ -146,8 +187,6 @@
     const sep = `<span class="tok-sep">·</span>`;
     const slash = `<span class="tok-sep">/</span>`;
 
-    // Format seconds → "—" / "47m" / "2.3h" / "1.4d". Returns null markup
-    // when eta is null/undefined so the caller can omit the segment.
     const fmtEta = (secs) => {
       if (secs === null || secs === undefined) return null;
       if (secs < 60) return "—";
@@ -156,74 +195,90 @@
       return (secs / 86400).toFixed(1) + "d";
     };
 
-    const setState = (kind, html) => {
-      bar.setAttribute("data-state", kind);
-      text.innerHTML = html;
-    };
+    const pct = (done, total) => total > 0
+      ? Math.max(0, Math.min(100, (done / total) * 100))
+      : 0;
 
-    // Engine-internal helpers don't belong in the curator-facing headline.
     const HIDDEN_JOBS = new Set(["console-api", "task-inbox", "inbox-watcher"]);
 
-    const renderStatus = (data) => {
-      const busyJobs = (data.jobs || []).filter((j) => j.running && !HIDDEN_JOBS.has(j.name));
-      const workers = data.workers || [];
-      const diskPct = data.disk && data.disk.internal_pct_used;
-      const diskWarn = diskPct !== null && diskPct !== undefined && diskPct >= 90;
-
+    const renderM1 = (jobs) => {
+      const busy = jobs.filter((j) => j.running && !HIDDEN_JOBS.has(j.name));
+      const j = busy.find((x) => x.progress) || busy[0] || null;
+      if (!j) {
+        cellM1.innerHTML = tok("tok-dim", "idle");
+        barM1.style.width = "0%";
+        return false;
+      }
       const parts = [];
-      let kind = "ok";
-
-      const m1Headline = busyJobs.find((j) => j.progress) || busyJobs[0] || null;
-      const headlineFragments = [];
-
-      if (m1Headline) {
-        kind = "busy";
-        let frag = tok("tok-job", "m1-" + m1Headline.name.replace(/-backfill$/, ""));
-        if (m1Headline.progress) {
-          frag += " " + tok("tok-num", m1Headline.progress[0]) + slash + tok("tok-num", m1Headline.progress[1]);
-        } else {
-          frag += " " + tok("tok-keyword", "running");
-        }
-        const eta = fmtEta(m1Headline.eta_seconds);
-        if (eta) frag += " " + tok("tok-eta", "ETA") + " " + tok("tok-num", eta);
-        headlineFragments.push(frag);
+      const label = j.name.replace(/-backfill$/, "");
+      parts.push(tok("tok-key", label));
+      if (j.progress) {
+        parts.push(tok("tok-num", j.progress[0]) + slash + tok("tok-num", j.progress[1]));
+        barM1.style.width = pct(j.progress[0], j.progress[1]).toFixed(2) + "%";
+      } else {
+        parts.push(tok("tok-keyword", "running"));
+        barM1.style.width = "0%";
       }
+      const eta = fmtEta(j.eta_seconds);
+      if (eta) parts.push(tok("tok-eta", "ETA") + " " + tok("tok-num", eta));
+      cellM1.innerHTML = parts.join(" ");
+      return true;
+    };
 
-      for (const w of workers) {
-        kind = "busy";
-        let frag = tok("tok-worker", w.worker_id) + " " +
-          tok("tok-num", w.rows_done) + slash + tok("tok-num", w.rows_total);
-        const eta = fmtEta(w.eta_seconds);
-        if (eta) frag += " " + tok("tok-eta", "ETA") + " " + tok("tok-num", eta);
-        headlineFragments.push(frag);
+    const renderM3 = (workers) => {
+      const w = workers.find((x) => x.worker_id.startsWith("m3")) || workers[0] || null;
+      if (!w) {
+        cellM3.innerHTML = tok("tok-dim", "idle");
+        barM3.style.width = "0%";
+        return false;
       }
+      const parts = [];
+      parts.push(tok("tok-key", w.worker_id.replace(/^m3-/, "")));
+      parts.push(tok("tok-num", w.rows_done) + slash + tok("tok-num", w.rows_total));
+      const eta = fmtEta(w.eta_seconds);
+      if (eta) parts.push(tok("tok-eta", "ETA") + " " + tok("tok-num", eta));
+      cellM3.innerHTML = parts.join(" ");
+      barM3.style.width = pct(w.rows_done, w.rows_total).toFixed(2) + "%";
+      return true;
+    };
 
-      if (headlineFragments.length === 0) {
-        headlineFragments.push(tok("tok-keyword", "idle"));
-      }
-      parts.push(headlineFragments.join(" " + sep + " "));
-
-      const cat = data.catalog || { transcribed: 0, total_user: 0 };
+    const renderSys = (cat, disk) => {
+      const parts = [];
       parts.push(
         tok("tok-key", "cat") + " " +
         tok("tok-num", n(cat.transcribed)) + slash + tok("tok-dim", n(cat.total_user))
       );
-
+      const diskPct = disk && disk.internal_pct_used;
+      const diskWarn = diskPct !== null && diskPct !== undefined && diskPct >= 90;
       if (diskPct !== null && diskPct !== undefined) {
         parts.push(
           tok("tok-key", "disk") + " " +
           tok(diskWarn ? "tok-warn" : "tok-num", diskPct + "%")
         );
       }
+      cellSys.innerHTML = parts.join(" " + sep + " ");
+      barSys.style.width = pct(cat.transcribed, cat.total_user).toFixed(2) + "%";
+      return diskWarn;
+    };
 
+    const renderStatus = (data) => {
+      const m1Busy = renderM1(data.jobs || []);
+      const m3Busy = renderM3(data.workers || []);
+      const diskWarn = renderSys(
+        data.catalog || { transcribed: 0, total_user: 0 },
+        data.disk || {},
+      );
+      let kind = "ok";
+      if (m1Busy || m3Busy) kind = "busy";
       if (diskWarn) kind = "warn";
+      bar.setAttribute("data-state", kind);
+    };
 
-      setState(kind, parts.join(" " + sep + " "));
-
-      const pct = cat.total_user > 0
-        ? Math.max(0, Math.min(100, (cat.transcribed / cat.total_user) * 100))
-        : 0;
-      barFill.style.width = pct.toFixed(2) + "%";
+    const renderError = (label) => {
+      cellM1.innerHTML = tok("tok-warn", label);
+      cellM3.innerHTML = tok("tok-dim", "—");
+      cellSys.innerHTML = tok("tok-dim", "—");
+      bar.setAttribute("data-state", "err");
     };
 
     const tick = async () => {
@@ -232,7 +287,7 @@
         if (!res.ok) {
           consecutiveErrors++;
           if (consecutiveErrors > 2) bar.hidden = true;
-          else setState("err", tok("tok-warn", "engine unreachable") + " " + tok("tok-dim", "(" + res.status + ")"));
+          else renderError("engine " + res.status);
           return;
         }
         consecutiveErrors = 0;
@@ -241,7 +296,7 @@
       } catch (e) {
         consecutiveErrors++;
         if (consecutiveErrors > 2) bar.hidden = true;
-        else setState("err", tok("tok-warn", "engine offline"));
+        else renderError("engine offline");
       }
     };
 
