@@ -22,11 +22,38 @@ const fmtDuration = (s: number | null): string | null => {
 };
 const durationLabel = fmtDuration(item.duration_seconds);
 
+// Date column: primary = "MMM DD", secondary = "YYYY · Xmo". Falls back to
+// filesystem-mtime if engine sent it, else parses a [YYYY-MM-DD] from the
+// filename, else hides the column gracefully. Done server-side so the row
+// has stable text without a JS Date roundtrip per card.
+const MONTHS = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+const dateInfo = (() => {
+  let iso: string | null = item.modified ?? null;
+  if (!iso) {
+    const m = filename.match(/\[(\d{4})-(\d{2})-(\d{2})/);
+    if (m) iso = `${m[1]}-${m[2]}-${m[3]}T00:00:00`;
+  }
+  if (!iso) return null;
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return null;
+  const primary = `${MONTHS[d.getMonth()]} ${d.getDate()}`;
+  const yr = d.getFullYear();
+  const ageMs = Date.now() - d.getTime();
+  const ageDays = ageMs / 86400000;
+  let rel: string;
+  if (ageDays < 1) rel = "today";
+  else if (ageDays < 7) rel = `${Math.floor(ageDays)}d`;
+  else if (ageDays < 30) rel = `${Math.floor(ageDays / 7)}w`;
+  else if (ageDays < 365) rel = `${Math.floor(ageDays / 30)}mo`;
+  else rel = `${Math.floor(ageDays / 365)}y`;
+  return { primary, secondary: `${yr} · ${rel}` };
+})();
+
 const tagList = (item.tags ?? "")
   .split(",")
   .map((t) => t.trim())
   .filter(Boolean)
-  .slice(0, 6);
+  .slice(0, 8);
 
 const BUCKET_LABEL: Record<BucketName, string> = {
   inbox: "Inbox",
@@ -38,9 +65,6 @@ const BUCKET_LABEL: Record<BucketName, string> = {
 };
 const currentBucket: BucketName = item.bucket ?? "inbox";
 
-// The four curator-assignable categories (Inbox is the unset default,
-// Trash is the hold-button on the bottom-right corner — neither lives in
-// the main category bar).
 const CATEGORIES: { id: BucketName; label: string; kbd: string }[] = [
   { id: "jam", label: "Jam", kbd: "J" },
   { id: "loops", label: "Loops", kbd: "L" },
@@ -66,6 +90,21 @@ const waveformSrc = (() => {
   if (!/^[a-f0-9]{40}$/i.test(sha1)) return null;
   return `/api/console/waveform?sha1=${sha1}`;
 })();
+
+const tech: string[] = [];
+if (item.bpm) tech.push(`${Math.round(item.bpm)} BPM`);
+if (item.key) tech.push(String(item.key));
+if (typeof item.project_count === "number" && item.project_count > 0) {
+  tech.push(`${item.project_count} ${item.project_count === 1 ? "project" : "projects"}`);
+}
+
+const hasExpanded =
+  Boolean(item.summary) ||
+  tagList.length > 0 ||
+  Boolean(item.content_type) ||
+  Boolean(item.source_type) ||
+  Boolean(lineageWord) ||
+  currentBucket === "loops";
 ---
 
 <article
@@ -83,469 +122,442 @@ const waveformSrc = (() => {
   data-public={isPublic ? "1" : "0"}
   aria-label={`${title} — ${BUCKET_LABEL[currentBucket]}`}
 >
-  <header class="head">
-    <h3 class="title">
-      <button
-        type="button"
-        class="title-edit"
-        data-action="rename"
-        data-path={item.path}
-        title={`Click to rename. Real filename: ${filename}`}
-      >{title}</button>
-    </h3>
-    {item.dup_of && (
-      <span class="flag-chip flag-dup" title={`Duplicate of asset_id ${item.dup_of}`}>DUP</span>
-    )}
-    {item.orphan_candidate === 1 && (
-      <span class="flag-chip flag-orphan" title="Flagged as orphan — never used in projects, never auditioned, very short/long">ORPHAN</span>
-    )}
-    {durationLabel && <span class="duration" aria-label="Duration">{durationLabel}</span>}
-  </header>
-
-  <div
-    class="waveform"
-    data-seekable={waveformSrc ? "true" : "false"}
-    title={waveformSrc ? "Click to play (click again to seek)" : undefined}
-  >
-    {waveformSrc ? (
-      <img
-        src={waveformSrc}
-        alt=""
-        loading="lazy"
-        width="640"
-        height="80"
-        onerror="this.replaceWith(Object.assign(document.createElement('div'),{className:'waveform-placeholder',textContent:'no waveform yet'}))"
-      />
-    ) : (
-      <div class="waveform-placeholder">no waveform yet</div>
-    )}
-    <div class="waveform-playhead" data-playhead hidden></div>
-    <div class="waveform-time" data-waveform-time hidden></div>
-  </div>
-
-  {item.summary && <p class="summary">{item.summary}</p>}
-
-  {(item.bpm || item.key) && (
-    <p class="audio-meta">
-      {item.bpm && <span>{Math.round(item.bpm)} BPM</span>}
-      {item.key && <span>{item.key}</span>}
-      {typeof item.project_count === "number" && item.project_count > 0 && (
-        <span class="proj">in {item.project_count} {item.project_count === 1 ? "project" : "projects"}</span>
-      )}
-    </p>
-  )}
-
-  {currentBucket === "loops" && (
-    <div class="promote-row" data-promote-row>
-      {item.live_loop_path ? (
-        <span class="promoted-badge" title={`In Live's browser: ${item.live_loop_path}`}>
-          ✓ In Live
-        </span>
+  <div class="card-grid">
+    <!-- ── Date column ───────────────────────────────────────────────── -->
+    <div class="date-col" aria-hidden={dateInfo ? undefined : "true"}>
+      {dateInfo ? (
+        <>
+          <div class="date-primary">{dateInfo.primary}</div>
+          <div class="date-secondary">{dateInfo.secondary}</div>
+        </>
       ) : (
-        <button
-          type="button"
-          class="promote-btn"
-          data-action="promote-to-live"
-          data-asset-id={String(item.asset_id)}
-          title="Copy + loudness-normalize to _Soundbending/loops/ for Live's browser"
-        >→ Promote to Live</button>
+        <div class="date-primary">—</div>
       )}
     </div>
-  )}
 
-  <div class="category-bar" role="group" aria-label="Assign to category">
-    {CATEGORIES.map((c) => (
-      <button
-        type="button"
-        class:list={["category-btn", { active: currentBucket === c.id }]}
-        data-action="bucket"
-        data-bucket={c.id}
-        title={`Assign to ${c.label} (${c.kbd} key)`}
+    <!-- ── Main column: title row + waveform row ─────────────────────── -->
+    <div class="main-col">
+      <div class="main-head">
+        {durationLabel && <span class="duration" aria-label="Duration">{durationLabel}</span>}
+        <h3 class="title">
+          <button
+            type="button"
+            class="title-edit"
+            data-action="rename"
+            data-path={item.path}
+            title={`Click to rename. Real filename: ${filename}`}
+          >{title}</button>
+        </h3>
+        {tech.length > 0 && (
+          <span class="tech-meta">{tech.join(" · ")}</span>
+        )}
+        {item.dup_of && (
+          <span class="flag-chip flag-dup" title={`Duplicate of asset_id ${item.dup_of}`}>DUP</span>
+        )}
+        {item.orphan_candidate === 1 && (
+          <span class="flag-chip flag-orphan" title="Flagged orphan">ORPHAN</span>
+        )}
+      </div>
+      <div
+        class="waveform"
+        data-seekable={waveformSrc ? "true" : "false"}
+        title={waveformSrc ? "Click to play (click again to seek)" : undefined}
       >
-        <kbd>{c.kbd}</kbd>
-        <span>{c.label}</span>
-      </button>
-    ))}
-  </div>
+        {waveformSrc ? (
+          <img
+            src={waveformSrc}
+            alt=""
+            loading="lazy"
+            width="640"
+            height="60"
+            onerror="this.replaceWith(Object.assign(document.createElement('div'),{className:'waveform-placeholder',textContent:'no waveform yet'}))"
+          />
+        ) : (
+          <div class="waveform-placeholder">no waveform yet</div>
+        )}
+        <div class="waveform-playhead" data-playhead hidden></div>
+        <div class="waveform-time" data-waveform-time hidden></div>
+      </div>
+    </div>
 
-  {lineageWord && (
-    <button
-      type="button"
-      class="lineage-chip"
-      data-action="lineage"
-      data-asset-id={String(item.asset_id)}
-      title="Click to fetch lineage"
-    >
-      from {lineageWord}:{item.parent_id}
-    </button>
-  )}
-  <div class="lineage-detail" data-lineage-target hidden></div>
-
-  {tagList.length > 0 && (
-    <ul class="tags" role="list">
-      {tagList.map((t) => <li>{t}</li>)}
-    </ul>
-  )}
-
-  <p class="status" data-status-line aria-live="polite"></p>
-
-  <footer class="bottom-row">
-    <div class="quality" role="group" aria-label="Quality stars">
-      {[1, 2, 3].map((n) => (
+    <!-- ── Actions column ────────────────────────────────────────────── -->
+    <div class="actions-col">
+      <div class="category-bar" role="group" aria-label="Assign to category">
+        {CATEGORIES.map((c) => (
+          <button
+            type="button"
+            class:list={["category-btn", { active: currentBucket === c.id }]}
+            data-action="bucket"
+            data-bucket={c.id}
+            title={`Assign to ${c.label} (${c.kbd})`}
+          >
+            <kbd>{c.kbd}</kbd>
+            <span>{c.label}</span>
+          </button>
+        ))}
+      </div>
+      <div class="trail">
+        <div class="quality" role="group" aria-label="Quality stars">
+          {[1, 2, 3].map((n) => (
+            <button
+              type="button"
+              class:list={["star", { on: item.quality_star >= n }]}
+              data-action="quality-star"
+              data-asset-id={String(item.asset_id)}
+              data-star-value={String(n)}
+              aria-label={`Set quality to ${n} star${n === 1 ? "" : "s"}`}
+              title={`Set quality to ${n} (${n} when focused)`}
+            >★</button>
+          ))}
+        </div>
         <button
           type="button"
-          class:list={["star", { on: item.quality_star >= n }]}
-          data-action="quality-star"
-          data-asset-id={String(item.asset_id)}
-          data-star-value={String(n)}
-          aria-label={`Set quality to ${n} star${n === 1 ? "" : "s"}`}
-          title={`Set quality to ${n} (press ${n} when focused)`}
-        >★</button>
-      ))}
+          class:list={["pub-toggle", { on: isPublic }]}
+          data-action="toggle-public"
+          data-path={item.path}
+          aria-pressed={isPublic ? "true" : "false"}
+          title="Mark public on /sounds"
+        >{isPublic ? "● Public" : "○ Public"}</button>
+        <button
+          type="button"
+          class="trash-hold"
+          data-action="trash-hold"
+          title="Hold 2s to trash"
+          aria-label="Hold to trash"
+        ><span class="hold-fill" aria-hidden="true"></span><span class="hold-glyph">✕</span></button>
+        {hasExpanded && (
+          <button
+            type="button"
+            class="expand-toggle"
+            data-action="expand"
+            aria-expanded="false"
+            aria-label="Show details"
+            title="Show details"
+          ><span class="chev" aria-hidden="true">▾</span></button>
+        )}
+      </div>
     </div>
-    <button
-      type="button"
-      class:list={["pub-toggle", { on: isPublic }]}
-      data-action="toggle-public"
-      data-path={item.path}
-      aria-pressed={isPublic ? "true" : "false"}
-      title="Mark this item public on /sounds"
-    >{isPublic ? "● Public" : "○ Public"}</button>
-    <button
-      type="button"
-      class="trash-hold"
-      data-action="trash-hold"
-      title="Hold 2 seconds to trash"
-      aria-label="Hold to trash"
-    ><span class="hold-fill" aria-hidden="true"></span><span class="hold-glyph">✕</span></button>
-  </footer>
+  </div>
+
+  <!-- ── Expanded section (collapsed by default) ─────────────────────── -->
+  {hasExpanded && (
+    <div class="expanded" data-expanded hidden>
+      <dl class="exp">
+        {item.summary && (
+          <>
+            <dt>Summary</dt>
+            <dd>{item.summary}</dd>
+          </>
+        )}
+        {tagList.length > 0 && (
+          <>
+            <dt>Tags</dt>
+            <dd>
+              <ul class="tag-list">
+                {tagList.map((t) => <li>{t}</li>)}
+              </ul>
+            </dd>
+          </>
+        )}
+        {(item.source_type || item.content_type) && (
+          <>
+            <dt>Type</dt>
+            <dd>
+              {item.content_type && <span>{item.content_type}</span>}
+              {item.content_type && item.source_type && <span class="exp-sep"> · </span>}
+              {item.source_type && <span>{item.source_type}</span>}
+            </dd>
+          </>
+        )}
+        {lineageWord && (
+          <>
+            <dt>Lineage</dt>
+            <dd>
+              <button
+                type="button"
+                class="lineage-chip"
+                data-action="lineage"
+                data-asset-id={String(item.asset_id)}
+                title="Click to fetch parent + children"
+              >from {lineageWord}:{item.parent_id}</button>
+              <div class="lineage-detail" data-lineage-target hidden></div>
+            </dd>
+          </>
+        )}
+        {currentBucket === "loops" && (
+          <>
+            <dt>Live</dt>
+            <dd>
+              {item.live_loop_path ? (
+                <span class="promoted-badge" title={`In Live's browser: ${item.live_loop_path}`}>✓ In Live</span>
+              ) : (
+                <button
+                  type="button"
+                  class="promote-btn"
+                  data-action="promote-to-live"
+                  data-asset-id={String(item.asset_id)}
+                  title="Copy + normalize to _Soundbending/loops/"
+                >→ Promote to Live</button>
+              )}
+            </dd>
+          </>
+        )}
+      </dl>
+      <p class="status" data-status-line aria-live="polite"></p>
+    </div>
+  )}
 </article>
 
 <style>
+  /* ── Card shell ─────────────────────────────────────────────────────
+     The cassette treatment (lighter bg + bright-blue border + inset
+     highlight + bottom shadow) lives in PortalLayout's global style.
+     This sheet defines the row's *internal* layout and typography. */
   .bucket-card {
     position: relative;
-    display: grid;
-    gap: var(--space-3);
-    padding: var(--space-4);
-    padding-bottom: calc(var(--space-4) + 18px); /* breathing room for the abs-positioned ✕ */
-    background: color-mix(in srgb, var(--ink) 6%, transparent);
-    border: 1px solid var(--line);
+    padding: 12px 14px;
     outline: none;
-    transition: border-color 200ms ease, background-color 200ms ease,
-                box-shadow 200ms ease;
-  }
-  .bucket-card:hover { border-color: var(--accent); }
-  .bucket-card:focus-visible,
-  .bucket-card[data-focused="true"] {
-    border-color: var(--accent);
-    box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 35%, transparent);
+    transition: border-color 200ms ease, box-shadow 200ms ease;
   }
   .bucket-card[data-pending="true"] { opacity: 0.5; pointer-events: none; }
 
-  /* Title row: editable title (left) + duration (right). The duration
-     now occupies the slot the play button used to. */
-  .head {
+  /* ── Row grid: date | main | actions ──────────────────────────────── */
+  .card-grid {
+    display: grid;
+    grid-template-columns: 78px minmax(0, 1fr) auto;
+    column-gap: 16px;
+    row-gap: 6px;
+    align-items: center;
+  }
+
+  /* ── Date column ──────────────────────────────────────────────────── */
+  .date-col {
+    align-self: stretch;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 2px;
+    padding-right: 12px;
+    border-right: 1px solid rgba(245, 241, 232, 0.06);
+  }
+  .date-primary {
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: #ff6e21;
+    line-height: 1.1;
+  }
+  .date-secondary {
+    font-size: 10px;
+    font-weight: 500;
+    letter-spacing: 0.04em;
+    color: rgba(245, 241, 232, 0.42);
+  }
+
+  /* ── Main column ──────────────────────────────────────────────────── */
+  .main-col {
+    min-width: 0;
+    display: grid;
+    gap: 6px;
+  }
+  .main-head {
     display: flex;
     align-items: baseline;
-    gap: var(--space-3);
+    gap: 10px;
+    min-width: 0;
+  }
+  .duration {
+    flex: 0 0 auto;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 16px;
+    font-weight: 700;
+    color: #f5f1e8;
+    font-feature-settings: "tnum";
+    line-height: 1;
   }
   .title {
-    flex: 1;
+    flex: 1 1 auto;
     margin: 0;
-    font-size: 1rem;
-    font-weight: var(--fw-semibold);
-    line-height: 1.3;
-    word-break: break-word;
+    min-width: 0;
+    font-size: 14px;
+    font-weight: 600;
+    line-height: 1.2;
+    color: #f5f1e8;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
   .title-edit {
     font: inherit;
-    text-align: left;
     color: inherit;
+    text-align: left;
     background: transparent;
     border: 1px dashed transparent;
     padding: 1px 4px;
     margin-left: -4px;
     cursor: text;
-    width: 100%;
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
     transition: border-color 160ms ease, color 160ms ease;
   }
   .title-edit:hover,
   .title-edit:focus-visible {
-    border-color: var(--line);
+    border-color: rgba(14, 196, 252, 0.5);
     outline: none;
   }
-  .duration {
+  .tech-meta {
     flex: 0 0 auto;
-    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-    font-size: 14px;
-    font-weight: var(--fw-semibold);
-    color: var(--text);
-    letter-spacing: 0;
+    font-size: 11px;
+    font-weight: 600;
+    color: rgba(245, 241, 232, 0.62);
+    letter-spacing: 0.02em;
     font-feature-settings: "tnum";
   }
   .flag-chip {
     flex: 0 0 auto;
     font-size: 9px;
-    font-weight: var(--fw-semibold);
+    font-weight: 700;
     letter-spacing: 0.12em;
     text-transform: uppercase;
     padding: 2px 6px;
     border: 1px solid currentColor;
     line-height: 1.4;
   }
-  .flag-dup { color: var(--muted); }
-  .flag-orphan { color: var(--accent); }
+  .flag-dup { color: rgba(245, 241, 232, 0.42); }
+  .flag-orphan { color: #ff6e21; }
 
-  .summary {
-    margin: 0;
-    font-size: var(--fs-small, 13px);
-    color: var(--muted);
-    line-height: 1.45;
-  }
-
-  /* Waveform — first click on a paused/inactive card = play from start;
-     subsequent clicks while active = seek to the click x-fraction. The
-     dedicated play button is gone; the image *is* the play surface. */
+  /* ── Waveform (the row's visual fingerprint) ──────────────────────── */
   .waveform {
     position: relative;
-    height: 80px;
-    background: var(--surface-1);
-    border: 1px solid var(--line);
+    height: 48px;
+    background: var(--surface-1, #07060c);
+    border-radius: 3px;
     overflow: hidden;
     display: flex;
     align-items: center;
     justify-content: center;
   }
   .waveform[data-seekable="true"] { cursor: pointer; }
-  .waveform[data-seekable="true"]:hover {
-    border-color: color-mix(in srgb, var(--accent) 50%, var(--line));
-  }
+  .waveform[data-seekable="true"]:hover { box-shadow: inset 0 0 0 1px rgba(14, 196, 252, 0.45); }
   .waveform img {
     width: 100%;
     height: 100%;
     object-fit: cover;
     display: block;
+    opacity: 0.92;
   }
   .waveform-placeholder {
-    font-size: var(--fs-eyebrow);
-    font-weight: var(--fw-semibold);
-    letter-spacing: var(--ls-eyebrow);
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.12em;
     text-transform: uppercase;
-    color: var(--muted);
+    color: rgba(245, 241, 232, 0.32);
   }
   .waveform-playhead {
     position: absolute;
     top: 0; bottom: 0;
     width: 2px;
     left: 0;
-    background: var(--accent);
+    background: #ff3b6e;
     pointer-events: none;
-    box-shadow: 0 0 0 1px color-mix(in srgb, var(--accent) 30%, transparent);
+    box-shadow: 0 0 6px rgba(255, 59, 110, 0.6);
     z-index: 2;
   }
   .waveform-time {
     position: absolute;
-    bottom: 4px;
-    right: 6px;
+    bottom: 3px;
+    right: 5px;
     font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
     font-size: 10px;
     font-feature-settings: "tnum";
     line-height: 1;
-    color: var(--bg);
-    background: color-mix(in srgb, var(--ink) 70%, transparent);
-    padding: 3px 6px;
+    color: #0e0c14;
+    background: rgba(245, 241, 232, 0.78);
+    padding: 2px 5px;
+    border-radius: 2px;
     pointer-events: none;
     z-index: 2;
-    letter-spacing: 0;
   }
 
-  .audio-meta {
-    margin: 0;
+  /* ── Actions column ───────────────────────────────────────────────── */
+  .actions-col {
+    align-self: stretch;
     display: flex;
-    flex-wrap: wrap;
-    gap: var(--space-3);
-    font-size: 15px;
-    font-weight: var(--fw-semibold);
-    color: var(--text);
-    letter-spacing: 0;
-    font-feature-settings: "tnum";
+    flex-direction: column;
+    justify-content: space-between;
+    align-items: flex-end;
+    gap: 8px;
+    padding-left: 12px;
+    border-left: 1px solid rgba(245, 241, 232, 0.06);
   }
-  .audio-meta span:not(:last-child)::after {
-    content: " ·";
-    color: var(--muted);
-    margin-left: var(--space-2);
-    font-weight: 400;
-  }
-  .audio-meta .proj {
-    color: var(--muted);
-    font-size: 13px;
-    font-weight: var(--fw-medium);
-  }
-
-  /* Category bar: 4 equal-width buttons that fill the card width.
-     The primary curator action surface — visually heavier than other
-     card chrome to communicate that. */
   .category-bar {
     display: grid;
-    grid-template-columns: repeat(4, minmax(0, 1fr));
+    grid-template-columns: repeat(4, 56px);
     gap: 6px;
-    width: 100%;
   }
   .category-btn {
-    width: 100%;
-    min-height: 38px;
+    min-height: 34px;
     font: inherit;
-    font-size: 12px;
-    font-weight: var(--fw-semibold);
-    letter-spacing: 0.06em;
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
     text-transform: uppercase;
-    color: var(--text);
+    color: rgba(245, 241, 232, 0.66);
     background: transparent;
-    border: 1.5px solid var(--line);
-    padding: 8px 6px;
+    border: 1px solid rgba(245, 241, 232, 0.08);
+    border-radius: 4px;
+    padding: 6px 4px;
     cursor: pointer;
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: 4px;
+    gap: 2px;
     line-height: 1;
     transition: color 160ms ease, border-color 160ms ease,
                 background-color 160ms ease, transform 80ms ease;
   }
   .category-btn:hover,
   .category-btn:focus-visible {
-    border-color: var(--accent);
-    color: var(--accent);
+    border-color: rgba(14, 196, 252, 0.55);
+    color: #f5f1e8;
     outline: none;
   }
-  .category-btn:active {
-    transform: translateY(1px);
-  }
-  .category-btn.active {
-    color: var(--bg);
-    background: var(--accent);
-    border-color: var(--accent);
-  }
-  /* The keyboard-shortcut letter, no longer boxed. Reads as a typographic
-     accent above the label, scaled up enough to register as the primary
-     glyph in the chip. */
+  .category-btn:active { transform: translateY(1px); }
+  /* The keyboard-shortcut letter, no longer boxed. */
   .category-btn kbd {
     font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-    font-size: 15px;
+    font-size: 14px;
     font-weight: 700;
     line-height: 1;
     padding: 0;
     border: 0;
     background: transparent;
     letter-spacing: 0;
-    opacity: 0.7;
+    color: inherit;
+    opacity: 0.85;
   }
-  .category-btn.active kbd { opacity: 0.95; }
+  .category-btn.active kbd { opacity: 1; }
 
-  .promote-row { display: flex; align-items: center; gap: var(--space-2); }
-  .promote-btn {
-    font: inherit;
-    font-size: var(--fs-eyebrow);
-    font-weight: var(--fw-semibold);
-    letter-spacing: var(--ls-eyebrow);
-    text-transform: uppercase;
-    color: var(--bg);
-    background: var(--accent);
-    border: 1px solid var(--accent);
-    padding: 6px 10px;
-    cursor: pointer;
-    transition: background-color 160ms ease, color 160ms ease;
-  }
-  .promote-btn:hover,
-  .promote-btn:focus-visible {
-    background: var(--ink);
-    color: var(--ink-fg);
-    border-color: var(--ink);
-    outline: none;
-  }
-  .promote-btn[disabled] { cursor: progress; opacity: 0.65; }
-  .promoted-badge {
-    display: inline-block;
-    font-size: var(--fs-eyebrow);
-    font-weight: var(--fw-semibold);
-    letter-spacing: var(--ls-eyebrow);
-    text-transform: uppercase;
-    color: var(--accent);
-    border: 1px solid var(--accent);
-    padding: 5px 9px;
-  }
-
-  .lineage-chip {
-    font: inherit;
-    justify-self: flex-start;
-    align-self: flex-start;
-    font-size: 11px;
-    color: var(--muted);
-    background: transparent;
-    border: 1px dashed var(--line);
-    padding: 3px 8px;
-    cursor: pointer;
-    transition: color 160ms ease, border-color 160ms ease;
-  }
-  .lineage-chip:hover,
-  .lineage-chip:focus-visible { color: var(--accent); border-color: var(--accent); }
-  .lineage-chip[data-loaded="true"] { border-style: solid; }
-  .lineage-detail {
-    font-size: var(--fs-eyebrow);
-    color: var(--muted);
-    border-left: 2px solid var(--line);
-    padding: 4px 0 4px 8px;
-    line-height: 1.45;
-  }
-  .lineage-detail b { color: var(--text); font-weight: var(--fw-semibold); }
-
-  .tags {
-    list-style: none;
-    padding: 0;
-    margin: 0;
-    display: flex;
-    flex-wrap: wrap;
-    gap: 4px 6px;
-  }
-  .tags li {
-    font-size: 11px;
-    font-weight: var(--fw-medium);
-    color: var(--muted);
-    border: 1px solid var(--line);
-    padding: 2px 6px;
-  }
-
-  .status {
-    margin: 0;
-    min-height: 1em;
-    font-size: 11px;
-    color: var(--muted);
-    font-style: italic;
-  }
-  .status[data-tone="ok"] { color: var(--accent); font-style: normal; }
-  .status[data-tone="err"] { color: var(--accent); font-style: normal; }
-
-  /* Bottom row: stars (left) + small public chip (right). The ✕ is
-     corner-anchored separately via absolute positioning on the card. */
-  .bottom-row {
+  /* ── Trail (stars, public, trash, expand) ─────────────────────────── */
+  .trail {
     display: flex;
     align-items: center;
-    gap: var(--space-2);
-    padding-top: var(--space-2);
-    /* Leave room for the abs-positioned ✕ so it doesn't overlap the toggle. */
-    padding-right: 36px;
-    border-top: 1px solid color-mix(in srgb, var(--line) 50%, transparent);
+    gap: 6px;
   }
   .quality {
     display: flex;
-    gap: 2px;
+    gap: 0;
     align-items: center;
   }
   .star {
     font: inherit;
-    font-size: 18px;
-    color: color-mix(in srgb, var(--text) 25%, transparent);
+    font-size: 14px;
+    color: rgba(245, 241, 232, 0.22);
     background: transparent;
     border: 0;
     padding: 2px 3px;
@@ -555,22 +567,22 @@ const waveformSrc = (() => {
   }
   .star:hover,
   .star:focus-visible {
-    color: var(--accent);
+    color: #ff3b6e;
     outline: none;
     transform: translateY(-1px);
   }
-  .star.on { color: var(--accent); }
+  .star.on { color: #ff3b6e; }
 
   .pub-toggle {
-    margin-left: auto;
     font: inherit;
-    font-size: 10px;
-    font-weight: var(--fw-semibold);
+    font-size: 9px;
+    font-weight: 700;
     letter-spacing: 0.06em;
     text-transform: uppercase;
-    color: var(--muted);
+    color: rgba(245, 241, 232, 0.42);
     background: transparent;
-    border: 1px dashed var(--line);
+    border: 1px dashed rgba(245, 241, 232, 0.18);
+    border-radius: 3px;
     padding: 3px 7px;
     cursor: pointer;
     transition: color 160ms ease, border-color 160ms ease,
@@ -578,49 +590,40 @@ const waveformSrc = (() => {
   }
   .pub-toggle:hover,
   .pub-toggle:focus-visible {
-    color: var(--text);
-    border-color: var(--text);
+    color: #f5f1e8;
+    border-color: rgba(245, 241, 232, 0.45);
     border-style: solid;
     outline: none;
   }
-  .pub-toggle.on {
-    color: var(--bg);
-    background: var(--accent);
-    border-color: var(--accent);
-    border-style: solid;
-  }
+  /* .pub-toggle.on inherits the wave-textured surface from PortalLayout's
+     global override. */
 
-  /* Hold-to-trash: absolutely positioned in the card's bottom-right
-     corner. Distinct from the category buttons and from the public
-     toggle so it doesn't visually blend with everyday actions. */
   .trash-hold {
-    position: absolute;
-    bottom: 10px;
-    right: 10px;
+    position: relative;
     overflow: hidden;
-    width: 28px;
-    height: 24px;
+    width: 26px;
+    height: 22px;
     font: inherit;
-    font-size: 14px;
+    font-size: 12px;
     line-height: 1;
-    color: var(--muted);
+    color: rgba(245, 241, 232, 0.45);
     background: transparent;
-    border: 1px solid color-mix(in srgb, var(--accent) 35%, var(--line));
+    border: 1px solid rgba(245, 241, 232, 0.18);
+    border-radius: 3px;
     cursor: pointer;
     transition: color 160ms ease, border-color 160ms ease;
-    z-index: 3;
   }
   .trash-hold:hover,
   .trash-hold:focus-visible {
-    color: var(--accent);
-    border-color: var(--accent);
+    color: #ff3b6e;
+    border-color: rgba(255, 59, 110, 0.55);
     outline: none;
   }
   .trash-hold .hold-fill {
     position: absolute;
     top: 0; left: 0; bottom: 0;
     width: 100%;
-    background: var(--accent);
+    background: #ff3b6e;
     transform-origin: left center;
     transform: scaleX(0);
     transition: none;
@@ -634,7 +637,205 @@ const waveformSrc = (() => {
   .trash-hold .hold-glyph {
     position: relative;
     z-index: 1;
-    font-weight: var(--fw-semibold);
+    font-weight: 700;
   }
-  .trash-hold[data-holding="true"] .hold-glyph { color: var(--bg); }
+  .trash-hold[data-holding="true"] .hold-glyph { color: #0e0c14; }
+
+  .expand-toggle {
+    font: inherit;
+    font-size: 12px;
+    width: 26px;
+    height: 22px;
+    line-height: 1;
+    color: rgba(245, 241, 232, 0.55);
+    background: transparent;
+    border: 1px solid rgba(245, 241, 232, 0.18);
+    border-radius: 3px;
+    cursor: pointer;
+    transition: color 160ms ease, border-color 160ms ease,
+                background-color 160ms ease;
+  }
+  .expand-toggle:hover,
+  .expand-toggle:focus-visible {
+    color: #0ec4fc;
+    border-color: rgba(14, 196, 252, 0.55);
+    outline: none;
+  }
+  .expand-toggle .chev {
+    display: inline-block;
+    transition: transform 220ms ease;
+  }
+  .expand-toggle[aria-expanded="true"] .chev { transform: rotate(180deg); }
+  .expand-toggle[aria-expanded="true"] {
+    color: #0ec4fc;
+    border-color: rgba(14, 196, 252, 0.55);
+    background: rgba(14, 196, 252, 0.06);
+  }
+
+  /* ── Expanded section ─────────────────────────────────────────────── */
+  .expanded {
+    margin-top: 10px;
+    padding-top: 10px;
+    border-top: 1px solid rgba(14, 196, 252, 0.14);
+    animation: exp-in 220ms ease;
+  }
+  @keyframes exp-in {
+    from { opacity: 0; transform: translateY(-4px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  .exp {
+    display: grid;
+    grid-template-columns: 92px 1fr;
+    gap: 4px 14px;
+    margin: 0;
+    font-size: 12px;
+    line-height: 1.45;
+  }
+  .exp dt {
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: rgba(14, 196, 252, 0.78);
+    align-self: center;
+  }
+  .exp dd {
+    margin: 0;
+    color: rgba(245, 241, 232, 0.82);
+  }
+  .exp-sep { color: rgba(245, 241, 232, 0.35); }
+
+  .tag-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px 6px;
+  }
+  .tag-list li {
+    font-size: 10px;
+    font-weight: 500;
+    color: rgba(245, 241, 232, 0.66);
+    border: 1px solid rgba(245, 241, 232, 0.12);
+    border-radius: 2px;
+    padding: 2px 6px;
+  }
+
+  .lineage-chip {
+    font: inherit;
+    font-size: 11px;
+    color: rgba(245, 241, 232, 0.62);
+    background: transparent;
+    border: 1px dashed rgba(245, 241, 232, 0.22);
+    border-radius: 3px;
+    padding: 3px 8px;
+    cursor: pointer;
+    transition: color 160ms ease, border-color 160ms ease;
+  }
+  .lineage-chip:hover,
+  .lineage-chip:focus-visible {
+    color: #0ec4fc;
+    border-color: rgba(14, 196, 252, 0.55);
+    outline: none;
+  }
+  .lineage-chip[data-loaded="true"] { border-style: solid; }
+  .lineage-detail {
+    margin-top: 6px;
+    font-size: 11px;
+    color: rgba(245, 241, 232, 0.72);
+    border-left: 2px solid rgba(14, 196, 252, 0.24);
+    padding: 4px 0 4px 8px;
+    line-height: 1.45;
+  }
+  .lineage-detail b { color: #f5f1e8; font-weight: 600; }
+
+  .promote-btn {
+    font: inherit;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: #fff;
+    padding: 5px 10px;
+    border-radius: 4px;
+    border: 0;
+    cursor: pointer;
+    /* Inherits the wave-textured surface via PortalLayout (.promote-btn isn't
+       in that selector list — apply a manual gradient here). */
+    background-image: linear-gradient(135deg, #ff3b6e 0%, #ff6e21 100%);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.22),
+      0 2px 8px rgba(255, 59, 110, 0.25),
+      0 0 0 1px rgba(14, 196, 252, 0.55);
+    transition: box-shadow 160ms ease, transform 80ms ease;
+  }
+  .promote-btn:hover,
+  .promote-btn:focus-visible {
+    outline: none;
+    transform: translateY(-1px);
+  }
+  .promote-btn[disabled] { cursor: progress; opacity: 0.65; }
+  .promoted-badge {
+    display: inline-block;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: #0ec4fc;
+    border: 1px solid rgba(14, 196, 252, 0.45);
+    border-radius: 3px;
+    padding: 4px 8px;
+  }
+
+  .status {
+    margin: 6px 0 0;
+    min-height: 1em;
+    font-size: 11px;
+    color: rgba(245, 241, 232, 0.52);
+    font-style: italic;
+  }
+  .status[data-tone="ok"] { color: #0ec4fc; font-style: normal; }
+  .status[data-tone="err"] { color: #ff6e21; font-style: normal; }
+
+  /* ── Responsive ───────────────────────────────────────────────────── */
+  @media (max-width: 880px) {
+    .card-grid {
+      grid-template-columns: 64px minmax(0, 1fr);
+      grid-template-rows: auto auto;
+      column-gap: 12px;
+    }
+    .actions-col {
+      grid-column: 1 / -1;
+      align-items: stretch;
+      border-left: 0;
+      padding-left: 0;
+      padding-top: 6px;
+      border-top: 1px solid rgba(245, 241, 232, 0.06);
+    }
+    .category-bar { grid-template-columns: repeat(4, 1fr); }
+    .trail { justify-content: space-between; }
+  }
 </style>
+
+<script>
+  // Expand / collapse the details section. The chevron rotates and the
+  // expanded block reveals — handled per-card so it has no global state.
+  document.addEventListener("click", (e) => {
+    const target = e.target as HTMLElement | null;
+    const btn = target?.closest<HTMLButtonElement>('[data-action="expand"]');
+    if (!btn) return;
+    const card = btn.closest<HTMLElement>(".bucket-card");
+    if (!card) return;
+    const panel = card.querySelector<HTMLElement>("[data-expanded]");
+    if (!panel) return;
+    const open = btn.getAttribute("aria-expanded") === "true";
+    if (open) {
+      btn.setAttribute("aria-expanded", "false");
+      panel.hidden = true;
+    } else {
+      btn.setAttribute("aria-expanded", "true");
+      panel.hidden = false;
+    }
+  });
+</script>

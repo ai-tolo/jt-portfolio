@@ -262,6 +262,10 @@ export interface BucketAsset {
    *  candidate (not referenced in any project, never auditioned, no
    *  curator classification). */
   orphan_candidate?: 0 | 1 | null;
+  /** ISO timestamp the asset file was last modified. Surfaced by the
+   *  engine so the bucket card can show its temporal anchor without a
+   *  filename-parse fallback. */
+  modified?: string | null;
 }
 
 export interface PromoteToLiveResponse {
