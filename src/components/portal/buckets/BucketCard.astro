@@ -147,41 +147,42 @@ const hasExpanded = true;
   <div class="card-grid">
     <!-- ── Main column: title row, sub-title (duration + BPM), wave row ── -->
     <div class="middle-col">
-      <div class="title-row">
+      {/* Title — far left, green, near-borderless. Lead element. */}
+      <h3 class="title">
         <button
           type="button"
-          class:list={["kudos", { has: (item.quality_star ?? 0) > 0 }]}
-          data-action="kudos"
-          data-asset-id={String(item.asset_id)}
-          aria-label="Give kudos"
-          title="Click to add kudos"
-        >
-          <span class="kudos-glyph" aria-hidden="true">♪</span>
-          <span class="kudos-count" data-kudos-count>{item.quality_star ?? 0}</span>
-        </button>
-        <h3 class="title">
-          <button
-            type="button"
-            class="title-edit"
-            data-action="rename"
-            data-path={item.path}
-            title={`Click to rename. Real filename: ${filename}`}
-          ><span class="title-base">{titleParts.base}</span>{titleParts.ext && <span class="title-ext">{titleParts.ext}</span>}</button>
-        </h3>
+          class="title-edit"
+          data-action="rename"
+          data-path={item.path}
+          title={`Click to rename. Real filename: ${filename}`}
+        ><span class="title-base">{titleParts.base}</span>{titleParts.ext && <span class="title-ext">{titleParts.ext}</span>}</button>
         {item.dup_of && (
           <span class="flag-chip flag-dup" title={`Duplicate of asset_id ${item.dup_of}`}>DUP</span>
         )}
-      </div>
-      <div class="subtitle-row">
-        <span class="duration" aria-label="Duration">{durationLabel ?? "—:—"}</span>
-        <span class:list={["tech-meta", { ghost: !item.bpm && !item.key }]}>
-          <span class="bpm-num">{item.bpm ? Math.round(item.bpm) : "—"}</span>
-          <span class="bpm-unit">BPM</span>
-          <span class="tech-sep">·</span>
-          <span class="key">{keyInfo.letter || "—"}</span>
-          {keyInfo.mode && <span class="key-mode">{keyInfo.mode}</span>}
-        </span>
-      </div>
+      </h3>
+
+      {/* Date subtitle — tasteful single line. Clickable to expand. */}
+      <button
+        type="button"
+        class="date-subtitle"
+        data-action="expand"
+        aria-expanded="false"
+        title={dateInfo ? "Click to expand" : undefined}
+      >
+        {dateInfo ? (
+          <>
+            <span class="date-month-name">{dateInfo.primary.split(" ")[0]}</span>{" "}
+            <span class="date-day">{dateInfo.primary.split(" ")[1]}</span>,{" "}
+            <span class="date-year">
+              <span class="year-prefix">{dateInfo.year.slice(0, 2)}</span><span class="year-suffix">{dateInfo.year.slice(2)}</span>
+            </span>
+            <span class="date-sep"> · </span>
+            <span class="date-rel">{dateInfo.relative} ago</span>
+          </>
+        ) : (
+          <span class="date-rel">date unknown</span>
+        )}
+      </button>
       <div class="wave-row">
         <div
           class="waveform"
@@ -219,35 +220,32 @@ const hasExpanded = true;
           ))}
         </div>
       </div>
+      {/* Meta row under the waveform — runtime + BPM + kudos. */}
+      <div class="meta-row">
+        <span class="duration" aria-label="Duration">{durationLabel ?? "—:—"}</span>
+        <span class:list={["tech-meta", { ghost: !item.bpm && !item.key }]}>
+          <span class="bpm-num">{item.bpm ? Math.round(item.bpm) : "—"}</span>
+          <span class="bpm-unit">BPM</span>
+          <span class="tech-sep">·</span>
+          <span class="key">{keyInfo.letter || "—"}</span>
+          {keyInfo.mode && <span class="key-mode">{keyInfo.mode}</span>}
+        </span>
+        <span class="meta-spacer"></span>
+        <button
+          type="button"
+          class:list={["kudos", { has: (item.quality_star ?? 0) > 0 }]}
+          data-action="kudos"
+          data-asset-id={String(item.asset_id)}
+          aria-label="Boost — add kudos"
+          title="Boost this — click to add kudos"
+        >
+          <span class="kudos-glyph" aria-hidden="true">⚡</span>
+          <span class="kudos-count" data-kudos-count>{item.quality_star ?? 0}</span>
+        </button>
+      </div>
+
       <p class="status" data-status-line aria-live="polite"></p>
     </div>
-
-    <!-- ── Date column: moved to the right of the main content. Whole
-         column is the click target for expand. ───────────────────────── -->
-    <button
-      type="button"
-      class="date-col"
-      data-action="expand"
-      aria-expanded="false"
-      aria-label={dateInfo ? `Modified ${dateInfo.primary} ${dateInfo.year}. Click to expand.` : "Click to expand"}
-      title="Click to expand"
-    >
-      {dateInfo ? (
-        <>
-          <div class="date-month">
-            <span class="date-month-name">{dateInfo.primary.split(" ")[0]}</span>
-            {" "}
-            <span class="date-day">{dateInfo.primary.split(" ")[1]}</span>
-          </div>
-          <div class="date-year">
-            <span class="year-prefix">{dateInfo.year.slice(0, 2)}</span><span class="year-suffix">{dateInfo.year.slice(2)}</span>
-          </div>
-          <div class="date-rel">{dateInfo.relative}</div>
-        </>
-      ) : (
-        <div class="date-month">—</div>
-      )}
-    </button>
 
     <!-- ── Archive column with orphan dot indicator ─────────────────── -->
     <button
@@ -366,16 +364,15 @@ const hasExpanded = true;
             title, both anchored top-left. Always the same horizontal
             position so the eye finds runtime + name first.
      Row 2: date column | waveform | actions trail. */
-  /* Three-column grid, restructured:
-       col 1: main content — title row, sub-title row, wave row
-       col 2: date column (right side now, vertical stack)
-       col 3: archive column */
+  /* Two-column grid:
+       col 1: main stack — title, date subtitle, wave row, meta row
+       col 2: archive trash on the right edge */
   .card-grid {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) 102px 42px;
+    grid-template-columns: minmax(0, 1fr) 42px;
     column-gap: 0;
     align-items: stretch;
-    padding: 16px 0 16px 18px;
+    padding: 16px 0 16px 20px;
   }
   .middle-col {
     grid-column: 1;
@@ -386,22 +383,16 @@ const hasExpanded = true;
     min-width: 0;
     justify-content: center;
   }
-  /* Title row — kudos imprint to the left of the title text. */
-  .title-row {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    min-width: 0;
-  }
-  /* Sub-title row — the duration tag + BPM/key tag sit side by side as
-     matching boxes. Same border style; different inner color so each
-     reads as its own data point. */
-  .subtitle-row {
+  /* Bottom meta row — runtime (pink) + BPM (cyan) side by side, with
+     the kudos boost pushed to the right edge of the row. */
+  .meta-row {
     display: flex;
     align-items: center;
     gap: 8px;
     min-width: 0;
+    margin-top: 2px;
   }
+  .meta-spacer { flex: 1 1 auto; }
   .head-row {
     display: flex;
     align-items: center;
@@ -416,23 +407,22 @@ const hasExpanded = true;
     min-width: 0;
   }
 
-  /* Duration pill — neon-green text in a cyan-rimmed tape tag. Unified
-     14px type matches the title + BPM number; hierarchy is via color
-     and weight, not size. */
+  /* Duration pill — pink text in a cyan-rimmed tape tag. Lives in the
+     meta row under the waveform alongside the BPM/key module. */
   .duration {
     flex: 0 0 auto;
     font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
     font-style: italic;
     font-size: 14px;
     font-weight: 700;
-    color: #00ff4d;
-    background: rgba(0, 255, 77, 0.04);
+    color: #ff3b6e;
+    background: rgba(255, 59, 110, 0.04);
     border: 1px solid rgba(14, 196, 252, 0.45);
     border-radius: 3px;
     padding: 4px 10px;
     font-feature-settings: "tnum";
     line-height: 1;
-    text-shadow: 0 0 8px rgba(0, 255, 77, 0.22);
+    text-shadow: 0 0 8px rgba(255, 59, 110, 0.22);
   }
   .title {
     flex: 1 1 auto;
@@ -444,74 +434,69 @@ const hasExpanded = true;
   /* ── Date spine ──────────────────────────────────────────────────────
      Full-height burgundy stripe on the left edge of the card. PUBLIC
      toggle sits at the top, date stack centered below. */
-  /* Date column — moved to the right of the main content. Borderless,
-     transparent; a single 1px cyan rule on the LEFT edge is the only
-     divider from the main stack. The whole column is the expand target. */
-  .date-col {
-    grid-column: 2;
-    align-self: stretch;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
+  /* Date subtitle — tasteful single line under the title. Mixed
+     typography keeps it from reading as decoration: month + day in
+     mono with the day in blue, year split (cream/orange) for the
+     typewriter-serial feel, then a quiet relative-age tail. The whole
+     line is the click target for expand. */
+  .date-subtitle {
+    display: inline-flex;
+    align-items: baseline;
     gap: 4px;
-    padding: 0 14px 0 16px;
+    align-self: flex-start;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 12px;
+    font-weight: 500;
+    letter-spacing: 0.02em;
+    color: rgba(245, 241, 232, 0.55);
     background: transparent;
     border: 0;
-    border-left: 1px solid rgba(14, 196, 252, 0.28);
-    border-radius: 0;
-    text-align: left;
+    padding: 2px 6px 2px 0;
+    margin-left: -6px;
     cursor: pointer;
-    color: inherit;
-    transition: background 160ms ease;
+    line-height: 1.2;
+    text-align: left;
+    transition: color 160ms ease, background 160ms ease;
+    border-radius: 3px;
   }
-  .date-col:hover,
-  .date-col:focus-visible {
+  .date-subtitle:hover,
+  .date-subtitle:focus-visible {
+    color: rgba(245, 241, 232, 0.85);
     background: rgba(14, 196, 252, 0.04);
     outline: none;
   }
-  .date-col[aria-expanded="true"] {
-    background: rgba(14, 196, 252, 0.06);
-  }
-  /* Month + day on one line. Month white regular, day blue italic — the
-     contrast on a single line reads as a typewritten stamp. */
-  .date-month {
-    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-    font-size: 14px;
-    line-height: 1;
-    letter-spacing: 0.04em;
-  }
   .date-month-name {
-    color: #f5f1e8;
+    color: rgba(245, 241, 232, 0.62);
     font-weight: 400;
-    font-style: normal;
     text-transform: uppercase;
+    letter-spacing: 0.06em;
+    font-size: 11px;
   }
   .date-day {
     color: #0ec4fc;
     font-weight: 700;
     font-style: italic;
+    font-size: 13px;
   }
-  /* Year is the visual anchor — "20" upright cream + "26" italic orange. */
   .date-year {
-    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-    font-size: 22px;
-    font-weight: 700;
-    letter-spacing: -0.01em;
-    line-height: 1;
+    color: rgba(245, 241, 232, 0.62);
+    font-weight: 500;
+    font-size: 12px;
   }
   .date-year .year-prefix {
-    color: #f5f1e8;
+    color: rgba(245, 241, 232, 0.62);
   }
   .date-year .year-suffix {
     color: #ff6e21;
     font-style: italic;
   }
+  .date-sep {
+    color: rgba(245, 241, 232, 0.22);
+  }
   .date-rel {
-    font-size: 10px;
-    font-weight: 500;
-    letter-spacing: 0.06em;
     color: rgba(245, 241, 232, 0.42);
-    line-height: 1;
+    font-size: 11px;
+    font-weight: 500;
   }
 
   /* Smaller, lower-profile PUBLIC at the top of the spine. */
@@ -553,38 +538,44 @@ const hasExpanded = true;
     display: grid;
     gap: 6px;
   }
-  /* Title sits in its own darker-blue-bordered tag. Text renders in pale
-     orange italic mono — keeps the typewriter-label feel but pulls the
-     color back from the loud neon-green so the head row reads as
-     hierarchy: green=number, pale-orange=name. */
+  /* Title — green, italic mono, near-borderless lead element. Rename
+     trigger still works on click; the dashed-ish ghost border only
+     surfaces on hover/focus. */
+  .title {
+    margin: 0;
+    line-height: 1.1;
+    min-width: 0;
+  }
   .title-edit {
     display: inline-block;
     max-width: 100%;
     font: inherit;
     font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
     font-style: italic;
-    font-size: 14px;
-    font-weight: 600;
-    color: #ffb4a3;
+    font-size: 17px;
+    font-weight: 700;
+    color: #00ff4d;
     text-align: left;
     background: transparent;
-    border: 1px solid rgba(14, 196, 252, 0.45);
+    border: 1px solid transparent;
     border-radius: 3px;
-    padding: 4px 10px;
+    padding: 2px 6px;
+    margin-left: -6px;
     cursor: text;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+    text-shadow: 0 0 10px rgba(0, 255, 77, 0.25);
     transition: border-color 160ms ease, background 160ms ease;
   }
   .title-edit:hover,
   .title-edit:focus-visible {
-    border-color: rgba(14, 196, 252, 0.85);
-    background: rgba(14, 196, 252, 0.05);
+    border-color: rgba(0, 255, 77, 0.30);
+    background: rgba(0, 255, 77, 0.04);
     outline: none;
   }
   .title-base { color: inherit; }
-  .title-ext { color: #f5f1e8; opacity: 0.42; font-style: italic; }
+  .title-ext { color: #f5f1e8; opacity: 0.40; font-style: italic; }
 
   /* BPM/Key module — matching box style to duration, but with a CYAN
      color story instead of green. Only the number + key letter wear
@@ -794,47 +785,47 @@ const hasExpanded = true;
   }
   .bucket-card .category-btn.active .category-label { opacity: 1; }
 
-  /* Kudos imprint — a recessed pill sitting to the left of the title.
-     Subtle by default (dim text in a dark inset well); when count > 0,
-     the glyph + count brighten into the warm accent. Click pulses
-     briefly to confirm. Music-note glyph (♪) instead of a star — fits
-     the audio context without competing with the J/L/F/T tile letters. */
+  /* Kudos = "Boost" — recessed pill at the right edge of the meta row.
+     Lightning bolt ⚡ glyph reads as energy/spark/like-it without being
+     a literal heart or musical note. Dim by default, warms up as the
+     count grows. Click pulses briefly to confirm. */
   .kudos {
     flex: 0 0 auto;
     display: inline-flex;
     align-items: center;
-    gap: 4px;
+    gap: 5px;
     font: inherit;
     font-family: "Geist Variable", ui-sans-serif, system-ui, sans-serif;
-    font-size: 11px;
-    font-weight: 600;
-    color: rgba(245, 241, 232, 0.38);
-    background: rgba(0, 0, 0, 0.32);
+    font-size: 12px;
+    font-weight: 700;
+    color: rgba(245, 241, 232, 0.42);
+    background: rgba(0, 0, 0, 0.30);
     border: 0;
     border-radius: 999px;
-    padding: 3px 9px;
+    padding: 4px 12px;
     cursor: pointer;
     line-height: 1;
     box-shadow:
-      inset 0 1px 2px rgba(0, 0, 0, 0.48),
+      inset 0 1px 2px rgba(0, 0, 0, 0.45),
       inset 0 0 0 1px rgba(255, 255, 255, 0.03);
     transition: color 160ms ease, transform 160ms ease,
                 background 160ms ease, box-shadow 160ms ease;
   }
   .kudos:hover,
   .kudos:focus-visible {
-    color: #ffb4a3;
+    color: #ffd76a;
     outline: none;
     box-shadow:
       inset 0 1px 2px rgba(0, 0, 0, 0.55),
-      inset 0 0 0 1px rgba(255, 180, 163, 0.18);
+      inset 0 0 0 1px rgba(255, 215, 106, 0.22),
+      0 0 10px rgba(255, 215, 106, 0.12);
   }
   .kudos.has {
-    color: #ff6e21;
+    color: #ffd76a;
     box-shadow:
       inset 0 1px 2px rgba(0, 0, 0, 0.55),
-      inset 0 0 0 1px rgba(255, 110, 33, 0.32),
-      0 0 8px rgba(255, 110, 33, 0.10);
+      inset 0 0 0 1px rgba(255, 215, 106, 0.34),
+      0 0 14px rgba(255, 215, 106, 0.18);
   }
   .kudos-glyph {
     font-size: 13px;
@@ -842,7 +833,7 @@ const hasExpanded = true;
     transform: translateY(-0.5px);
   }
   .kudos-count { font-variant-numeric: tabular-nums; }
-  .kudos[data-pulsing="true"] { transform: scale(1.10); }
+  .kudos[data-pulsing="true"] { transform: scale(1.12); }
 
   /* ── Detached trash ✕ (col 4, both rows, far right edge) ──────────── */
   .trash-hold.detached {
