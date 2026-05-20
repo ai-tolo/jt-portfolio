@@ -1,210 +1,141 @@
 ---
-// Live M1+M3 status widget. Compact code-editor aesthetic: tokenized spans
-// (job names cyan/magenta per worker, numbers green, keywords yellow,
-// separators dim) with soft text-shadow halos for a glowing-terminal feel.
-// Thin progress bar across the bottom tracks overall catalog transcription
-// (the mission). Polls /status every 15s while the tab is visible;
-// auto-hides on sustained failure.
+// Live M1+M3 status widget. Tolo.Cloud aesthetic: soft glass pill with
+// gradient-tinted text. M1 jobs render in lavender, remote workers in
+// pink — the same hierarchy the wordmark gradient uses. Thin progress
+// line under the text tracks overall catalog transcription progress.
+// Polls /status every 15s while the tab is visible; auto-hides on
+// sustained failure.
 ---
 
-<aside class="status-bar" data-status-bar aria-live="polite" aria-label="Engine status">
-  <div class="row">
-    <span class="dot" data-dot="loading" aria-hidden="true"></span>
-    <span class="text" data-status-text>
-      <span class="tok-dim">checking</span> <span class="tok-job">m1</span><span class="tok-sep">…</span>
-    </span>
-  </div>
+<aside class="status-bar" data-status-bar data-state="loading" aria-live="polite" aria-label="Engine status">
+  <span class="text" data-status-text>
+    <span class="tok-dim">checking</span> <span class="tok-job">m1</span><span class="tok-sep">…</span>
+  </span>
   <div class="bar" data-bar aria-hidden="true">
     <div class="bar-fill" data-bar-fill style="width: 0%"></div>
   </div>
 </aside>
 
 <style>
-  /* One Dark Pro-inspired palette. Designed for the Portal's near-black
-     background; high contrast, glow via text-shadow not animation. */
+  /* Tolo.Cloud-tinted glass widget. No code-editor palette, no glow halos,
+     no pulsing dot — those read as "terminal" and the rest of the surface
+     is no longer trying to be a console. Container takes its state cue
+     from [data-state] which the script sets per tick. */
   .status-bar {
     display: inline-flex;
     flex-direction: column;
     align-items: stretch;
     gap: 6px;
-    padding: 6px 14px 5px;
-    font-family: ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas, monospace;
-    font-size: 13px;
-    line-height: 1;
-    color: #abb2bf; /* code editor default text */
-    background: color-mix(in srgb, #1e2127 92%, transparent); /* code editor bg */
-    border: 1px solid color-mix(in srgb, #61afef 22%, transparent);
-    border-radius: 2px;
+    padding: 8px 14px 7px;
+    font-family: "Geist Variable", ui-sans-serif, system-ui, -apple-system, sans-serif;
+    font-size: 12px;
+    font-weight: 500;
+    line-height: 1.2;
+    color: rgba(245, 241, 232, 0.86);
+    background: color-mix(in srgb, #1a1422 70%, transparent);
+    border: 1px solid color-mix(in srgb, #c7a8ff 14%, transparent);
+    border-radius: 12px;
+    backdrop-filter: saturate(140%) blur(10px);
+    -webkit-backdrop-filter: saturate(140%) blur(10px);
     letter-spacing: 0;
     max-width: 100%;
-    transition: border-color 280ms ease, box-shadow 280ms ease;
+    transition: border-color 280ms ease, box-shadow 280ms ease, background 280ms ease;
   }
-  .status-bar .row {
-    display: inline-flex;
-    align-items: center;
-    gap: 10px;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    max-width: 100%;
+  .status-bar[data-state="busy"] {
+    border-color: color-mix(in srgb, #ff6fcf 26%, transparent);
+    box-shadow: 0 0 24px color-mix(in srgb, #ff6fcf 10%, transparent);
   }
-  /* Subtle outer glow that intensifies with state */
-  .status-bar:has(.dot[data-dot="busy"]) {
-    border-color: color-mix(in srgb, #98c379 45%, transparent);
-    box-shadow: 0 0 14px color-mix(in srgb, #98c379 18%, transparent);
+  .status-bar[data-state="warn"] {
+    border-color: color-mix(in srgb, #ffd76a 38%, transparent);
+    box-shadow: 0 0 24px color-mix(in srgb, #ffd76a 12%, transparent);
   }
-  .status-bar:has(.dot[data-dot="warn"]) {
-    border-color: color-mix(in srgb, #e5c07b 55%, transparent);
-    box-shadow: 0 0 14px color-mix(in srgb, #e5c07b 22%, transparent);
-  }
-  .status-bar:has(.dot[data-dot="err"]) {
-    border-color: color-mix(in srgb, #e06c75 60%, transparent);
-    box-shadow: 0 0 14px color-mix(in srgb, #e06c75 25%, transparent);
+  .status-bar[data-state="err"] {
+    border-color: color-mix(in srgb, #ff8a8a 44%, transparent);
+    box-shadow: 0 0 24px color-mix(in srgb, #ff8a8a 14%, transparent);
   }
   .status-bar[hidden] { display: none; }
 
-  /* Status dot — emits a soft halo via box-shadow. Subtle pulse on busy. */
-  .dot {
-    display: inline-block;
-    width: 10px;
-    height: 10px;
-    border-radius: 50%;
-    flex: 0 0 auto;
-    background: #5c6370;
-    box-shadow: 0 0 4px rgba(92, 99, 112, 0.4);
-    transition: background 280ms ease, box-shadow 280ms ease;
+  /* Text row — sans-serif, no glow halos per span. */
+  .text {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
-  .dot[data-dot="loading"] {
-    background: transparent;
-    border: 1px solid #5c6370;
-    box-shadow: none;
-  }
-  .dot[data-dot="ok"] {
-    background: #61afef;
-    box-shadow: 0 0 6px #61afef, 0 0 12px rgba(97, 175, 239, 0.45);
-  }
-  .dot[data-dot="busy"] {
-    background: #98c379;
-    box-shadow: 0 0 8px #98c379, 0 0 18px rgba(152, 195, 121, 0.55);
-    animation: dot-pulse 1.8s ease-in-out infinite;
-  }
-  .dot[data-dot="warn"] {
-    background: #e5c07b;
-    box-shadow: 0 0 8px #e5c07b, 0 0 18px rgba(229, 192, 123, 0.55);
-  }
-  .dot[data-dot="err"] {
-    background: #e06c75;
-    box-shadow: 0 0 10px #e06c75, 0 0 20px rgba(224, 108, 117, 0.6);
-  }
-  @keyframes dot-pulse {
-    0%, 100% { opacity: 1; }
-    50% { opacity: 0.6; }
-  }
-  @media (prefers-reduced-motion: reduce) {
-    .dot[data-dot="busy"] { animation: none; }
-  }
-
-  /* Token spans — code-editor palette with soft halos. The token classes
-     are wrapped in :global() because the StatusBar render script emits
-     these <span> tags via innerHTML, so they don't pick up Astro's
-     scoped-CSS hash attribute. Scoping only the container (.status-bar)
-     is enough to keep these styles from leaking site-wide. */
-  .text { overflow: hidden; text-overflow: ellipsis; }
-  /* M1 job — cyan (blue). */
+  /* M1 job — lavender. Echoes the brand wordmark's lavender stop. */
   .status-bar :global(.tok-job) {
-    color: #61afef;
-    text-shadow: 0 0 6px rgba(97, 175, 239, 0.45);
+    color: #c7a8ff;
     font-weight: 600;
   }
-  /* Remote worker (e.g. m3-whisper) — magenta, to read at a glance as
-     "different machine" from the cyan M1 jobs. */
+  /* Remote worker (e.g. m3-whisper) — pink. Echoes the wordmark's pink
+     stop so the eye reads "different machine" at a glance. */
   .status-bar :global(.tok-worker) {
-    color: #c678dd;
-    text-shadow: 0 0 6px rgba(198, 120, 221, 0.45);
+    color: #ff6fcf;
     font-weight: 600;
   }
   .status-bar :global(.tok-num) {
-    color: #98c379;
-    text-shadow: 0 0 6px rgba(152, 195, 121, 0.4);
-    font-feature-settings: "tnum";
+    color: #f5f1e8;
+    font-variant-numeric: tabular-nums;
     font-weight: 600;
   }
   .status-bar :global(.tok-key) {
-    color: #e5c07b;
-    text-shadow: 0 0 4px rgba(229, 192, 123, 0.3);
+    color: rgba(245, 241, 232, 0.55);
+    font-weight: 500;
   }
   .status-bar :global(.tok-keyword) {
-    color: #c678dd;
-    text-shadow: 0 0 4px rgba(198, 120, 221, 0.3);
-    font-style: italic;
+    color: rgba(245, 241, 232, 0.55);
+    font-weight: 500;
   }
-  /* "ETA" label — quieter than a primary token; the duration that follows
-     wears the number color. */
   .status-bar :global(.tok-eta) {
-    color: #828a98;
+    color: rgba(245, 241, 232, 0.42);
     font-weight: 500;
   }
   .status-bar :global(.tok-warn) {
-    color: #e06c75;
-    text-shadow: 0 0 6px rgba(224, 108, 117, 0.55);
+    color: #ff8a8a;
     font-weight: 600;
   }
   .status-bar :global(.tok-dim) {
-    color: #5c6370;
+    color: rgba(245, 241, 232, 0.32);
   }
   .status-bar :global(.tok-sep) {
-    color: #4b5263;
-    margin: 0 2px;
+    color: rgba(245, 241, 232, 0.22);
+    margin: 0 4px;
   }
 
-  /* Catalog-progress line — overall mission % transcribed. Subtle, glows
-     softly with the M1 cyan accent. Never above 2px tall; sits flush to
-     the widget's bottom inset. */
+  /* Progress line — overall catalog transcription %. Pink → cyan gradient
+     reading left-to-right, matching the Tolo.Cloud palette. */
   .bar {
     height: 2px;
     width: 100%;
-    background: color-mix(in srgb, #61afef 8%, transparent);
-    border-radius: 1px;
+    background: color-mix(in srgb, #c7a8ff 8%, transparent);
+    border-radius: 999px;
     overflow: hidden;
     position: relative;
   }
   .bar-fill {
     height: 100%;
-    background: linear-gradient(90deg,
-      color-mix(in srgb, #61afef 80%, transparent),
-      color-mix(in srgb, #98c379 80%, transparent));
-    box-shadow: 0 0 6px rgba(97, 175, 239, 0.55);
-    transition: width 400ms cubic-bezier(.22,.61,.36,1);
-    border-radius: 1px;
+    background: linear-gradient(90deg, #ff6fcf 0%, #c7a8ff 60%, #74c4ff 100%);
+    box-shadow: 0 0 8px rgba(255, 109, 196, 0.35);
+    transition: width 480ms cubic-bezier(.22,.61,.36,1);
+    border-radius: 999px;
   }
-  /* When any worker is busy, the bar glows brighter green to read
-     "in motion" without animating (respects prefers-reduced-motion). */
-  .status-bar:has(.dot[data-dot="busy"]) .bar-fill {
-    box-shadow: 0 0 8px rgba(152, 195, 121, 0.6);
+  .status-bar[data-state="warn"] .bar-fill {
+    background: linear-gradient(90deg, #ffd76a 0%, #ff8a8a 100%);
+    box-shadow: 0 0 8px rgba(255, 215, 106, 0.4);
   }
-  .status-bar:has(.dot[data-dot="warn"]) .bar-fill {
-    background: linear-gradient(90deg,
-      color-mix(in srgb, #e5c07b 80%, transparent),
-      color-mix(in srgb, #e06c75 60%, transparent));
-    box-shadow: 0 0 6px rgba(229, 192, 123, 0.5);
-  }
-  .status-bar:has(.dot[data-dot="err"]) .bar { display: none; }
+  .status-bar[data-state="err"] .bar { display: none; }
 
-  /* Container scales it slightly down on narrow screens so it doesn't blow
-     out a phone layout. Stays readable down to 12px. */
   @media (max-width: 700px) {
-    .status-bar { font-size: 12px; padding: 5px 10px; }
+    .status-bar { font-size: 11.5px; padding: 7px 12px 6px; border-radius: 10px; }
   }
 </style>
 
 <script>
   const POLL_MS = 15000;
   const bar = document.querySelector("[data-status-bar]");
-  const dot = bar && bar.querySelector(".dot");
   const text = document.querySelector("[data-status-text]");
   const barFill = document.querySelector("[data-bar-fill]");
 
-  if (bar && dot && text && barFill) {
+  if (bar && text && barFill) {
     let timer = null;
     let consecutiveErrors = 0;
 
@@ -225,12 +156,11 @@
     };
 
     const setState = (kind, html) => {
-      dot.setAttribute("data-dot", kind);
+      bar.setAttribute("data-state", kind);
       text.innerHTML = html;
     };
 
-    // The M1 whisper-backfill job is the curator-relevant one. Hide
-    // engine-internal helpers from the headline so they don't crowd the bar.
+    // Engine-internal helpers don't belong in the curator-facing headline.
     const HIDDEN_JOBS = new Set(["console-api", "task-inbox", "inbox-watcher"]);
 
     const renderStatus = (data) => {
@@ -242,8 +172,6 @@
       const parts = [];
       let kind = "ok";
 
-      // Headline: an M1 whisper-style job + every remote worker. Cyan for
-      // M1 (.tok-job), magenta for remote workers (.tok-worker).
       const m1Headline = busyJobs.find((j) => j.progress) || busyJobs[0] || null;
       const headlineFragments = [];
 
@@ -274,13 +202,10 @@
       }
       parts.push(headlineFragments.join(" " + sep + " "));
 
-      // Catalog snapshot — quieter once workers are active (numbers still
-      // visible, "transcribed" label dropped to save horizontal space).
       const cat = data.catalog || { transcribed: 0, total_user: 0 };
       parts.push(
         tok("tok-key", "cat") + " " +
-        tok("tok-num", n(cat.transcribed)) + slash + tok("tok-dim", n(cat.total_user)) + " " +
-        tok("tok-keyword", "transcribed")
+        tok("tok-num", n(cat.transcribed)) + slash + tok("tok-dim", n(cat.total_user))
       );
 
       if (diskPct !== null && diskPct !== undefined) {
@@ -294,8 +219,6 @@
 
       setState(kind, parts.join(" " + sep + " "));
 
-      // Progress bar = overall mission progress (catalog transcribed %).
-      // Clamp 0..100 to be safe against any future API drift.
       const pct = cat.total_user > 0
         ? Math.max(0, Math.min(100, (cat.transcribed / cat.total_user) * 100))
         : 0;
@@ -308,7 +231,7 @@
         if (!res.ok) {
           consecutiveErrors++;
           if (consecutiveErrors > 2) bar.hidden = true;
-          else setState("err", tok("tok-warn", "m1 unreachable") + " " + tok("tok-dim", "(" + res.status + ")"));
+          else setState("err", tok("tok-warn", "engine unreachable") + " " + tok("tok-dim", "(" + res.status + ")"));
           return;
         }
         consecutiveErrors = 0;
@@ -317,7 +240,7 @@
       } catch (e) {
         consecutiveErrors++;
         if (consecutiveErrors > 2) bar.hidden = true;
-        else setState("err", tok("tok-warn", "m1 offline"));
+        else setState("err", tok("tok-warn", "engine offline"));
       }
     };
 

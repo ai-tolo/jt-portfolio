@@ -103,30 +103,23 @@ const ogImageUrl = new URL(ogImage, siteOrigin).toString();
       <span class="cloud-mark">Tolo.Cloud</span>
     </div>
     <style is:global>
+      /* Trigger transition is pure CSS — zero network cost so the keystroke
+         feels instant. The destination /portal/login then carries the
+         heavier artwork load (lazy in the next navigation). */
       .cloud-overlay {
         position: fixed;
         inset: 0;
         z-index: 9999;
-        /* Artwork URL is set by JS only on first trigger so the 600KB image
-           doesn't load on every public-site visit. Falls back to the radial
-           gradient if the image hasn't fetched yet. */
-        background:
-          linear-gradient(180deg, rgba(8,4,14,0.55), rgba(8,4,14,0.85)),
-          radial-gradient(circle at 50% 50%, rgba(80,40,120,0.85), #000 70%);
-        background-size: cover;
-        background-position: center;
+        background-color: #050308;
+        background-image:
+          radial-gradient(60% 50% at 22% 30%, rgba(255, 109, 196, 0.55), transparent 70%),
+          radial-gradient(50% 45% at 78% 38%, rgba(116, 196, 255, 0.45), transparent 70%),
+          radial-gradient(70% 60% at 50% 88%, rgba(166, 120, 255, 0.55), transparent 70%);
         display: grid;
         place-items: center;
         opacity: 0;
         pointer-events: none;
-        transition: opacity 480ms cubic-bezier(.4,0,.2,1);
-        backdrop-filter: blur(2px);
-      }
-      .cloud-overlay[data-art="on"] {
-        background:
-          linear-gradient(180deg, rgba(8,4,14,0.55), rgba(8,4,14,0.85)),
-          url("/portal/cloud/cloud-2.jpg") center/cover no-repeat,
-          radial-gradient(circle at 50% 50%, rgba(80,40,120,0.85), #000 70%);
+        transition: opacity 320ms cubic-bezier(.4,0,.2,1);
       }
       .cloud-overlay[data-active="true"] {
         opacity: 1;
@@ -175,19 +168,12 @@ const ogImageUrl = new URL(ogImage, siteOrigin).toString();
           lastKeyTs = now;
 
           buf = (buf + e.key.toLowerCase()).slice(-TARGET.length);
-          // Prefetch the artwork as soon as the user is mid-word — the
-          // image will be in cache by the time the overlay needs it.
-          if (TARGET.startsWith(buf) && buf.length >= 2) {
-            const img = new Image();
-            img.src = "/portal/cloud/cloud-2.jpg";
-          }
           if (buf === TARGET) {
             buf = "";
-            overlay.setAttribute("data-art", "on");
             overlay.setAttribute("data-active", "true");
-            // Let the fade play, then navigate. Login page handles its
-            // own entrance — keeps total perceived transition under 1s.
-            setTimeout(() => { window.location.href = "/portal/login"; }, 620);
+            // Short fade, then navigate. Trigger is gradient-only so the
+            // perceived transition stays under 500ms.
+            setTimeout(() => { window.location.href = "/portal/login"; }, 360);
           }
         });
       })();
