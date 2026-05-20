@@ -22,33 +22,21 @@ const { title, current, bare = false } = Astro.props;
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width,initial-scale=1" />
     <meta name="robots" content="noindex,nofollow" />
-    <title>{title} · Portal</title>
-    {/* Theme bootstrap — same logic as the public Layout. Inherits whatever
-        theme Jon last set on the public site. */}
+    <title>{title} · Tolo.Cloud</title>
+    {/* Tolo.Cloud uses a single fixed palette — the public-site theme system
+        no longer reaches in here. data-theme="dark" pins the variables in
+        tokens.css to the dark scheme without any localStorage round-trip. */}
     <script is:inline>
-      (() => {
-        const valid = new Set(["dark", "powder", "field", "honey"]);
-        const apply = () => {
-          try {
-            const stored = localStorage.getItem("theme");
-            document.documentElement.dataset.theme =
-              stored && valid.has(stored) ? stored : "dark";
-          } catch {
-            document.documentElement.dataset.theme = "dark";
-          }
-        };
-        apply();
-        window.addEventListener("pageshow", apply);
-      })();
+      document.documentElement.dataset.theme = "dark";
     </script>
   </head>
   <body>
     {!bare && (
       <header class="portal-header">
         <div class="inner">
-          <a class="brand" href="/portal" aria-label="The Console — Portal home">
+          <a class="brand" href="/portal" aria-label="Tolo.Cloud — Portal home">
             <span class="dot" aria-hidden="true"></span>
-            <span>The Console</span>
+            <span>Tolo.Cloud</span>
           </a>
 
           <TabStrip current={current} />
@@ -338,29 +326,6 @@ const { title, current, bare = false } = Astro.props;
           btn.title = "Save failed (network)";
         } finally {
           btn.disabled = false;
-        }
-      });
-    </script>
-
-    {/* T cycles themes — reuse the public site's keyboard wiring. Inline so
-        it doesn't depend on importing the ThemeSelector component (which has
-        its own UI we don't want on Portal). */}
-    <script>
-      const root = document.documentElement;
-      const order = ["dark", "powder", "field", "honey"];
-      const valid = new Set(order);
-      document.addEventListener("keydown", (e) => {
-        if (e.key.toLowerCase() !== "t") return;
-        if (e.metaKey || e.ctrlKey || e.altKey) return;
-        const target = e.target as HTMLElement | null;
-        const tag = target?.tagName?.toLowerCase();
-        if (tag === "input" || tag === "textarea" || target?.isContentEditable) return;
-        const current = root.dataset.theme || "dark";
-        const idx = order.indexOf(current);
-        const next = order[(idx + 1) % order.length];
-        if (valid.has(next)) {
-          root.dataset.theme = next;
-          try { localStorage.setItem("theme", next); } catch {}
         }
       });
     </script>

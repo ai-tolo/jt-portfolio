@@ -110,6 +110,22 @@ export interface StatusJob {
   running: boolean;
   progress: [number, number] | null;
   log_mtime: number | null;
+  /** Estimated seconds remaining for this job's current run. Null when the
+   * engine hasn't seen ≥3 rows of forward progress yet (avoids nonsense
+   * estimates right after a job starts or after an engine restart). */
+  eta_seconds?: number | null;
+}
+
+/** Remote worker (e.g. M3 transcribe loop) reporting in via POST
+ * /worker-status. Stale entries (>5 min since last heartbeat) are filtered
+ * out engine-side. */
+export interface StatusWorker {
+  worker_id: string;
+  rows_done: number;
+  rows_total: number;
+  current_row: string;
+  eta_seconds: number | null;
+  last_heartbeat_age_sec: number;
 }
 
 export interface StatusResponse {
@@ -126,6 +142,10 @@ export interface StatusResponse {
     internal_pct_used: number | null;
     t7_pct_used: number | null;
   };
+  /** Remote workers with a heartbeat in the last 5 min. Empty when none
+   * are running. Always present on responses from engines that ship the
+   * worker-status feature; older engines may omit it. */
+  workers?: StatusWorker[];
 }
 
 export function status(opts?: FetchOpts) {

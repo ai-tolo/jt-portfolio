@@ -93,5 +93,104 @@ const ogImageUrl = new URL(ogImage, siteOrigin).toString();
     <Cursor />
     <Header />
     <slot />
+
+    {/* Hidden trigger: typing "cloud" anywhere on the public site (outside
+        text inputs) opens the Tolo.Cloud portal. Sliding-window matcher so
+        a stale 'c' from minutes ago doesn't poison the sequence. Single
+        fullscreen overlay fades to black, then we navigate — the login
+        page then handles its own dramatic entrance. */}
+    <div data-cloud-overlay class="cloud-overlay" aria-hidden="true">
+      <span class="cloud-mark">Tolo.Cloud</span>
+    </div>
+    <style is:global>
+      .cloud-overlay {
+        position: fixed;
+        inset: 0;
+        z-index: 9999;
+        /* Artwork URL is set by JS only on first trigger so the 600KB image
+           doesn't load on every public-site visit. Falls back to the radial
+           gradient if the image hasn't fetched yet. */
+        background:
+          linear-gradient(180deg, rgba(8,4,14,0.55), rgba(8,4,14,0.85)),
+          radial-gradient(circle at 50% 50%, rgba(80,40,120,0.85), #000 70%);
+        background-size: cover;
+        background-position: center;
+        display: grid;
+        place-items: center;
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 480ms cubic-bezier(.4,0,.2,1);
+        backdrop-filter: blur(2px);
+      }
+      .cloud-overlay[data-art="on"] {
+        background:
+          linear-gradient(180deg, rgba(8,4,14,0.55), rgba(8,4,14,0.85)),
+          url("/portal/cloud/cloud-2.jpg") center/cover no-repeat,
+          radial-gradient(circle at 50% 50%, rgba(80,40,120,0.85), #000 70%);
+      }
+      .cloud-overlay[data-active="true"] {
+        opacity: 1;
+        pointer-events: auto;
+      }
+      .cloud-mark {
+        font-family: ui-monospace, "SF Mono", SFMono-Regular, Menlo, monospace;
+        font-weight: 700;
+        font-size: clamp(2.4rem, 8vw, 5rem);
+        letter-spacing: 0.04em;
+        color: transparent;
+        background: linear-gradient(95deg, #d6e7ff, #c7a8ff 35%, #ff6fcf 65%, #ffd76a 95%);
+        -webkit-background-clip: text;
+        background-clip: text;
+        text-shadow: 0 0 60px rgba(199, 168, 255, 0.35);
+        transform: translateY(8px) scale(0.96);
+        opacity: 0;
+        transition: opacity 520ms 80ms ease, transform 600ms 80ms cubic-bezier(.2,.7,.3,1.2);
+      }
+      .cloud-overlay[data-active="true"] .cloud-mark {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+      }
+      @media (prefers-reduced-motion: reduce) {
+        .cloud-overlay, .cloud-mark { transition-duration: 0ms; }
+      }
+    </style>
+    <script>
+      (() => {
+        const TARGET = "cloud";
+        const overlay = document.querySelector<HTMLElement>("[data-cloud-overlay]");
+        if (!overlay) return;
+        let buf = "";
+        let lastKeyTs = 0;
+        const RESET_MS = 1500;
+
+        document.addEventListener("keydown", (e) => {
+          if (e.metaKey || e.ctrlKey || e.altKey) return;
+          if (e.key.length !== 1) return;
+          const t = e.target as HTMLElement | null;
+          const tag = t?.tagName?.toLowerCase();
+          if (tag === "input" || tag === "textarea" || t?.isContentEditable) return;
+
+          const now = performance.now();
+          if (now - lastKeyTs > RESET_MS) buf = "";
+          lastKeyTs = now;
+
+          buf = (buf + e.key.toLowerCase()).slice(-TARGET.length);
+          // Prefetch the artwork as soon as the user is mid-word — the
+          // image will be in cache by the time the overlay needs it.
+          if (TARGET.startsWith(buf) && buf.length >= 2) {
+            const img = new Image();
+            img.src = "/portal/cloud/cloud-2.jpg";
+          }
+          if (buf === TARGET) {
+            buf = "";
+            overlay.setAttribute("data-art", "on");
+            overlay.setAttribute("data-active", "true");
+            // Let the fade play, then navigate. Login page handles its
+            // own entrance — keeps total perceived transition under 1s.
+            setTimeout(() => { window.location.href = "/portal/login"; }, 620);
+          }
+        });
+      })();
+    </script>
   </body>
 </html>

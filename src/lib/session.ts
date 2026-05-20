@@ -1,4 +1,4 @@
-// Session cookie helpers for The Console (private /portal route).
+// Session cookie helpers for Tolo.Cloud (private /portal route).
 //
 // Format: base64url(JSON{exp:number}) + "." + base64url(HMAC-SHA256)
 // HMAC keyed with CONSOLE_SESSION_SECRET (env var).

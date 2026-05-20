@@ -1,15 +1,22 @@
 ---
-// Live M1 status widget. Compact code-editor aesthetic: tokenized spans
-// (job names cyan, numbers green, keywords magenta, separators dim) with
-// soft text-shadow halos for a glowing-terminal feel. Polls /status every
-// 15s while the tab is visible; auto-hides on sustained failure.
+// Live M1+M3 status widget. Compact code-editor aesthetic: tokenized spans
+// (job names cyan/magenta per worker, numbers green, keywords yellow,
+// separators dim) with soft text-shadow halos for a glowing-terminal feel.
+// Thin progress bar across the bottom tracks overall catalog transcription
+// (the mission). Polls /status every 15s while the tab is visible;
+// auto-hides on sustained failure.
 ---
 
-<aside class="status-bar" data-status-bar aria-live="polite" aria-label="M1 status">
-  <span class="dot" data-dot="loading" aria-hidden="true"></span>
-  <span class="text" data-status-text>
-    <span class="tok-dim">checking</span> <span class="tok-job">m1</span><span class="tok-sep">…</span>
-  </span>
+<aside class="status-bar" data-status-bar aria-live="polite" aria-label="Engine status">
+  <div class="row">
+    <span class="dot" data-dot="loading" aria-hidden="true"></span>
+    <span class="text" data-status-text>
+      <span class="tok-dim">checking</span> <span class="tok-job">m1</span><span class="tok-sep">…</span>
+    </span>
+  </div>
+  <div class="bar" data-bar aria-hidden="true">
+    <div class="bar-fill" data-bar-fill style="width: 0%"></div>
+  </div>
 </aside>
 
 <style>
@@ -17,9 +24,10 @@
      background; high contrast, glow via text-shadow not animation. */
   .status-bar {
     display: inline-flex;
-    align-items: center;
-    gap: 10px;
-    padding: 6px 14px;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 6px;
+    padding: 6px 14px 5px;
     font-family: ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas, monospace;
     font-size: 13px;
     line-height: 1;
@@ -28,11 +36,17 @@
     border: 1px solid color-mix(in srgb, #61afef 22%, transparent);
     border-radius: 2px;
     letter-spacing: 0;
+    max-width: 100%;
+    transition: border-color 280ms ease, box-shadow 280ms ease;
+  }
+  .status-bar .row {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
     max-width: 100%;
-    transition: border-color 280ms ease, box-shadow 280ms ease;
   }
   /* Subtle outer glow that intensifies with state */
   .status-bar:has(.dot[data-dot="busy"]) {
@@ -90,40 +104,91 @@
     .dot[data-dot="busy"] { animation: none; }
   }
 
-  /* Token spans — code-editor palette with soft halos. */
+  /* Token spans — code-editor palette with soft halos. The token classes
+     are wrapped in :global() because the StatusBar render script emits
+     these <span> tags via innerHTML, so they don't pick up Astro's
+     scoped-CSS hash attribute. Scoping only the container (.status-bar)
+     is enough to keep these styles from leaking site-wide. */
   .text { overflow: hidden; text-overflow: ellipsis; }
-  .tok-job {
+  /* M1 job — cyan (blue). */
+  .status-bar :global(.tok-job) {
     color: #61afef;
     text-shadow: 0 0 6px rgba(97, 175, 239, 0.45);
     font-weight: 600;
   }
-  .tok-num {
+  /* Remote worker (e.g. m3-whisper) — magenta, to read at a glance as
+     "different machine" from the cyan M1 jobs. */
+  .status-bar :global(.tok-worker) {
+    color: #c678dd;
+    text-shadow: 0 0 6px rgba(198, 120, 221, 0.45);
+    font-weight: 600;
+  }
+  .status-bar :global(.tok-num) {
     color: #98c379;
     text-shadow: 0 0 6px rgba(152, 195, 121, 0.4);
     font-feature-settings: "tnum";
     font-weight: 600;
   }
-  .tok-key {
+  .status-bar :global(.tok-key) {
     color: #e5c07b;
     text-shadow: 0 0 4px rgba(229, 192, 123, 0.3);
   }
-  .tok-keyword {
+  .status-bar :global(.tok-keyword) {
     color: #c678dd;
     text-shadow: 0 0 4px rgba(198, 120, 221, 0.3);
     font-style: italic;
   }
-  .tok-warn {
+  /* "ETA" label — quieter than a primary token; the duration that follows
+     wears the number color. */
+  .status-bar :global(.tok-eta) {
+    color: #828a98;
+    font-weight: 500;
+  }
+  .status-bar :global(.tok-warn) {
     color: #e06c75;
     text-shadow: 0 0 6px rgba(224, 108, 117, 0.55);
     font-weight: 600;
   }
-  .tok-dim {
+  .status-bar :global(.tok-dim) {
     color: #5c6370;
   }
-  .tok-sep {
+  .status-bar :global(.tok-sep) {
     color: #4b5263;
     margin: 0 2px;
   }
+
+  /* Catalog-progress line — overall mission % transcribed. Subtle, glows
+     softly with the M1 cyan accent. Never above 2px tall; sits flush to
+     the widget's bottom inset. */
+  .bar {
+    height: 2px;
+    width: 100%;
+    background: color-mix(in srgb, #61afef 8%, transparent);
+    border-radius: 1px;
+    overflow: hidden;
+    position: relative;
+  }
+  .bar-fill {
+    height: 100%;
+    background: linear-gradient(90deg,
+      color-mix(in srgb, #61afef 80%, transparent),
+      color-mix(in srgb, #98c379 80%, transparent));
+    box-shadow: 0 0 6px rgba(97, 175, 239, 0.55);
+    transition: width 400ms cubic-bezier(.22,.61,.36,1);
+    border-radius: 1px;
+  }
+  /* When any worker is busy, the bar glows brighter green to read
+     "in motion" without animating (respects prefers-reduced-motion). */
+  .status-bar:has(.dot[data-dot="busy"]) .bar-fill {
+    box-shadow: 0 0 8px rgba(152, 195, 121, 0.6);
+  }
+  .status-bar:has(.dot[data-dot="warn"]) .bar-fill {
+    background: linear-gradient(90deg,
+      color-mix(in srgb, #e5c07b 80%, transparent),
+      color-mix(in srgb, #e06c75 60%, transparent));
+    box-shadow: 0 0 6px rgba(229, 192, 123, 0.5);
+  }
+  .status-bar:has(.dot[data-dot="err"]) .bar { display: none; }
 
   /* Container scales it slightly down on narrow screens so it doesn't blow
      out a phone layout. Stays readable down to 12px. */
@@ -137,8 +202,9 @@
   const bar = document.querySelector("[data-status-bar]");
   const dot = bar && bar.querySelector(".dot");
   const text = document.querySelector("[data-status-text]");
+  const barFill = document.querySelector("[data-bar-fill]");
 
-  if (bar && dot && text) {
+  if (bar && dot && text && barFill) {
     let timer = null;
     let consecutiveErrors = 0;
 
@@ -148,42 +214,72 @@
     const sep = `<span class="tok-sep">·</span>`;
     const slash = `<span class="tok-sep">/</span>`;
 
+    // Format seconds → "—" / "47m" / "2.3h" / "1.4d". Returns null markup
+    // when eta is null/undefined so the caller can omit the segment.
+    const fmtEta = (secs) => {
+      if (secs === null || secs === undefined) return null;
+      if (secs < 60) return "—";
+      if (secs < 3600) return Math.round(secs / 60) + "m";
+      if (secs < 86400) return (secs / 3600).toFixed(1) + "h";
+      return (secs / 86400).toFixed(1) + "d";
+    };
+
     const setState = (kind, html) => {
       dot.setAttribute("data-dot", kind);
       text.innerHTML = html;
     };
 
+    // The M1 whisper-backfill job is the curator-relevant one. Hide
+    // engine-internal helpers from the headline so they don't crowd the bar.
+    const HIDDEN_JOBS = new Set(["console-api", "task-inbox", "inbox-watcher"]);
+
     const renderStatus = (data) => {
-      const busy = (data.jobs || []).filter((j) => j.running);
-      const withProgress = busy.find((j) => j.progress);
+      const busyJobs = (data.jobs || []).filter((j) => j.running && !HIDDEN_JOBS.has(j.name));
+      const workers = data.workers || [];
       const diskPct = data.disk && data.disk.internal_pct_used;
-      const diskWarn = diskPct !== null && diskPct >= 90;
-      const headline = withProgress
-        || busy.find((j) => ["console-api", "task-inbox", "inbox-watcher"].indexOf(j.name) === -1)
-        || null;
+      const diskWarn = diskPct !== null && diskPct !== undefined && diskPct >= 90;
 
       const parts = [];
       let kind = "ok";
 
-      if (headline) {
+      // Headline: an M1 whisper-style job + every remote worker. Cyan for
+      // M1 (.tok-job), magenta for remote workers (.tok-worker).
+      const m1Headline = busyJobs.find((j) => j.progress) || busyJobs[0] || null;
+      const headlineFragments = [];
+
+      if (m1Headline) {
         kind = "busy";
-        if (headline.progress) {
-          parts.push(
-            tok("tok-job", headline.name) + " " +
-            tok("tok-num", headline.progress[0]) + slash + tok("tok-num", headline.progress[1])
-          );
+        let frag = tok("tok-job", "m1-" + m1Headline.name.replace(/-backfill$/, ""));
+        if (m1Headline.progress) {
+          frag += " " + tok("tok-num", m1Headline.progress[0]) + slash + tok("tok-num", m1Headline.progress[1]);
         } else {
-          parts.push(tok("tok-job", headline.name) + " " + tok("tok-keyword", "running"));
+          frag += " " + tok("tok-keyword", "running");
         }
-      } else {
-        parts.push(
-          tok("tok-num", busy.length) + " " + tok("tok-keyword", "jobs idle")
-        );
+        const eta = fmtEta(m1Headline.eta_seconds);
+        if (eta) frag += " " + tok("tok-eta", "ETA") + " " + tok("tok-num", eta);
+        headlineFragments.push(frag);
       }
 
+      for (const w of workers) {
+        kind = "busy";
+        let frag = tok("tok-worker", w.worker_id) + " " +
+          tok("tok-num", w.rows_done) + slash + tok("tok-num", w.rows_total);
+        const eta = fmtEta(w.eta_seconds);
+        if (eta) frag += " " + tok("tok-eta", "ETA") + " " + tok("tok-num", eta);
+        headlineFragments.push(frag);
+      }
+
+      if (headlineFragments.length === 0) {
+        headlineFragments.push(tok("tok-keyword", "idle"));
+      }
+      parts.push(headlineFragments.join(" " + sep + " "));
+
+      // Catalog snapshot — quieter once workers are active (numbers still
+      // visible, "transcribed" label dropped to save horizontal space).
+      const cat = data.catalog || { transcribed: 0, total_user: 0 };
       parts.push(
         tok("tok-key", "cat") + " " +
-        tok("tok-num", n(data.catalog.transcribed)) + slash + tok("tok-dim", n(data.catalog.total_user)) + " " +
+        tok("tok-num", n(cat.transcribed)) + slash + tok("tok-dim", n(cat.total_user)) + " " +
         tok("tok-keyword", "transcribed")
       );
 
@@ -194,11 +290,16 @@
         );
       }
 
-      if (diskWarn && kind !== "busy") kind = "warn";
-      // If a job is busy AND disk is in warning, prefer the warn dot.
       if (diskWarn) kind = "warn";
 
       setState(kind, parts.join(" " + sep + " "));
+
+      // Progress bar = overall mission progress (catalog transcribed %).
+      // Clamp 0..100 to be safe against any future API drift.
+      const pct = cat.total_user > 0
+        ? Math.max(0, Math.min(100, (cat.transcribed / cat.total_user) * 100))
+        : 0;
+      barFill.style.width = pct.toFixed(2) + "%";
     };
 
     const tick = async () => {
