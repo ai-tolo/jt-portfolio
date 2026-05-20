@@ -557,7 +557,13 @@ const BUCKET_TITLE: Record<BucketView, string> = {
           break;
         case "bucket": {
           const target = btn.dataset.bucket as BucketName | undefined;
-          if (target) assignBucket(card, target);
+          if (!target) break;
+          // Toggle: re-clicking the bucket the card is *already* in flips
+          // it back to Inbox (unassigned). Lets the curator un-do a wrong
+          // category assignment without leaving the card.
+          const current = card.dataset.bucket as BucketName | undefined;
+          const next: BucketName = current === target ? "inbox" : target;
+          assignBucket(card, next);
           break;
         }
       }

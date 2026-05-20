@@ -37,16 +37,16 @@ const dateInfo = (() => {
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return null;
   const primary = `${MONTHS[d.getMonth()]} ${d.getDate()}`;
-  const yr = d.getFullYear();
+  const year = String(d.getFullYear());
   const ageMs = Date.now() - d.getTime();
   const ageDays = ageMs / 86400000;
-  let rel: string;
-  if (ageDays < 1) rel = "today";
-  else if (ageDays < 7) rel = `${Math.floor(ageDays)}d`;
-  else if (ageDays < 30) rel = `${Math.floor(ageDays / 7)}w`;
-  else if (ageDays < 365) rel = `${Math.floor(ageDays / 30)}mo`;
-  else rel = `${Math.floor(ageDays / 365)}y`;
-  return { primary, secondary: `${yr} · ${rel}` };
+  let relative: string;
+  if (ageDays < 1) relative = "today";
+  else if (ageDays < 7) relative = `${Math.floor(ageDays)}d`;
+  else if (ageDays < 30) relative = `${Math.floor(ageDays / 7)}w`;
+  else if (ageDays < 365) relative = `${Math.floor(ageDays / 30)}mo`;
+  else relative = `${Math.floor(ageDays / 365)}y`;
+  return { primary, year, relative };
 })();
 
 const tagList = (item.tags ?? "")
@@ -123,41 +123,44 @@ const hasExpanded =
   aria-label={`${title} — ${BUCKET_LABEL[currentBucket]}`}
 >
   <div class="card-grid">
-    <!-- ── Date column ───────────────────────────────────────────────── -->
-    <div class="date-col" aria-hidden={dateInfo ? undefined : "true"}>
-      {dateInfo ? (
-        <>
-          <div class="date-primary">{dateInfo.primary}</div>
-          <div class="date-secondary">{dateInfo.secondary}</div>
-        </>
-      ) : (
-        <div class="date-primary">—</div>
+    <!-- ── Head row: duration + title (spans full width, top-left) ───── -->
+    <div class="head-row">
+      <span class="duration" aria-label="Duration">{durationLabel ?? "—:—"}</span>
+      <h3 class="title">
+        <button
+          type="button"
+          class="title-edit"
+          data-action="rename"
+          data-path={item.path}
+          title={`Click to rename. Real filename: ${filename}`}
+        >{title}</button>
+      </h3>
+      {tech.length > 0 && (
+        <span class="tech-meta">{tech.join(" · ")}</span>
+      )}
+      {item.dup_of && (
+        <span class="flag-chip flag-dup" title={`Duplicate of asset_id ${item.dup_of}`}>DUP</span>
+      )}
+      {item.orphan_candidate === 1 && (
+        <span class="flag-chip flag-orphan" title="Flagged orphan">ORPHAN</span>
       )}
     </div>
 
-    <!-- ── Main column: title row + waveform row ─────────────────────── -->
+    <!-- ── Date column (under head row, left edge) ───────────────────── -->
+    <div class="date-col" aria-hidden={dateInfo ? undefined : "true"}>
+      {dateInfo ? (
+        <>
+          <div class="date-month">{dateInfo.primary}</div>
+          <div class="date-year">{dateInfo.year}</div>
+          <div class="date-rel">{dateInfo.relative}</div>
+        </>
+      ) : (
+        <div class="date-month">—</div>
+      )}
+    </div>
+
+    <!-- ── Main column: just the waveform ────────────────────────────── -->
     <div class="main-col">
-      <div class="main-head">
-        {durationLabel && <span class="duration" aria-label="Duration">{durationLabel}</span>}
-        <h3 class="title">
-          <button
-            type="button"
-            class="title-edit"
-            data-action="rename"
-            data-path={item.path}
-            title={`Click to rename. Real filename: ${filename}`}
-          >{title}</button>
-        </h3>
-        {tech.length > 0 && (
-          <span class="tech-meta">{tech.join(" · ")}</span>
-        )}
-        {item.dup_of && (
-          <span class="flag-chip flag-dup" title={`Duplicate of asset_id ${item.dup_of}`}>DUP</span>
-        )}
-        {item.orphan_candidate === 1 && (
-          <span class="flag-chip flag-orphan" title="Flagged orphan">ORPHAN</span>
-        )}
-      </div>
       <div
         class="waveform"
         data-seekable={waveformSrc ? "true" : "false"}
@@ -321,59 +324,40 @@ const hasExpanded =
   }
   .bucket-card[data-pending="true"] { opacity: 0.5; pointer-events: none; }
 
-  /* ── Row grid: date | main | actions ──────────────────────────────── */
+  /* ── Two-row grid ──────────────────────────────────────────────────
+     Row 1: head-row spans all three columns — duration partitioned from
+            title, both anchored top-left. Always the same horizontal
+            position so the eye finds runtime + name first.
+     Row 2: date column | waveform | actions trail. */
   .card-grid {
     display: grid;
     grid-template-columns: 78px minmax(0, 1fr) auto;
+    grid-template-rows: auto auto;
     column-gap: 16px;
-    row-gap: 6px;
+    row-gap: 8px;
     align-items: center;
   }
-
-  /* ── Date column ──────────────────────────────────────────────────── */
-  .date-col {
-    align-self: stretch;
+  .head-row {
+    grid-column: 1 / -1;
     display: flex;
-    flex-direction: column;
-    justify-content: center;
-    gap: 2px;
-    padding-right: 12px;
-    border-right: 1px solid rgba(245, 241, 232, 0.06);
-  }
-  .date-primary {
-    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-    font-size: 13px;
-    font-weight: 700;
-    letter-spacing: 0.04em;
-    text-transform: uppercase;
-    color: #ff6e21;
-    line-height: 1.1;
-  }
-  .date-secondary {
-    font-size: 10px;
-    font-weight: 500;
-    letter-spacing: 0.04em;
-    color: rgba(245, 241, 232, 0.42);
-  }
-
-  /* ── Main column ──────────────────────────────────────────────────── */
-  .main-col {
-    min-width: 0;
-    display: grid;
-    gap: 6px;
-  }
-  .main-head {
-    display: flex;
-    align-items: baseline;
+    align-items: center;
     gap: 10px;
     min-width: 0;
   }
+
+  /* Duration: pill-tagged so it always reads as its own partition,
+     regardless of title length. When duration is unknown the pill still
+     renders ("—:—") so the layout doesn't shift between cards. */
   .duration {
     flex: 0 0 auto;
     font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-    font-size: 16px;
+    font-size: 13px;
     font-weight: 700;
     color: #f5f1e8;
+    background: rgba(14, 196, 252, 0.06);
+    border: 1px solid rgba(14, 196, 252, 0.22);
+    border-radius: 3px;
+    padding: 3px 8px;
     font-feature-settings: "tnum";
     line-height: 1;
   }
@@ -388,6 +372,55 @@ const hasExpanded =
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+  }
+
+  /* ── Date column ──────────────────────────────────────────────────── */
+  .date-col {
+    grid-column: 1;
+    grid-row: 2;
+    align-self: stretch;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 2px;
+    padding-right: 12px;
+    border-right: 1px solid rgba(245, 241, 232, 0.06);
+  }
+  .date-month {
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.10em;
+    text-transform: uppercase;
+    color: #ff6e21;
+    line-height: 1;
+  }
+  /* Year reads as the visual anchor — larger, in the brand cyan so it
+     stands distinctly apart from the orange month and the dim relative. */
+  .date-year {
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 22px;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+    color: #0ec4fc;
+    line-height: 1;
+    text-shadow: 0 0 14px rgba(14, 196, 252, 0.18);
+  }
+  .date-rel {
+    font-size: 10px;
+    font-weight: 500;
+    letter-spacing: 0.04em;
+    color: rgba(245, 241, 232, 0.42);
+    line-height: 1;
+  }
+
+  /* ── Main column ──────────────────────────────────────────────────── */
+  .main-col {
+    grid-column: 2;
+    grid-row: 2;
+    min-width: 0;
+    display: grid;
+    gap: 6px;
   }
   .title-edit {
     font: inherit;
@@ -485,6 +518,8 @@ const hasExpanded =
 
   /* ── Actions column ───────────────────────────────────────────────── */
   .actions-col {
+    grid-column: 3;
+    grid-row: 2;
     align-self: stretch;
     display: flex;
     flex-direction: column;
@@ -611,13 +646,26 @@ const hasExpanded =
     border: 1px solid rgba(245, 241, 232, 0.18);
     border-radius: 3px;
     cursor: pointer;
-    transition: color 160ms ease, border-color 160ms ease;
+    transition: color 160ms ease, border-color 160ms ease,
+                background 160ms ease, box-shadow 160ms ease;
   }
+  /* Hover wears the pink → orange gradient — the same key surface used
+     on active buttons elsewhere. Makes the destructive action visually
+     committed but reversible until you complete the 2s hold. */
   .trash-hold:hover,
   .trash-hold:focus-visible {
-    color: #ff3b6e;
-    border-color: rgba(255, 59, 110, 0.55);
+    color: #fff;
+    background-image: linear-gradient(135deg, #ff3b6e 0%, #ff6e21 100%);
+    border-color: transparent;
     outline: none;
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.28),
+      0 2px 10px rgba(255, 59, 110, 0.32),
+      0 0 0 1px rgba(14, 196, 252, 0.50);
+  }
+  .trash-hold:hover .hold-glyph,
+  .trash-hold:focus-visible .hold-glyph {
+    text-shadow: 0 1px 1px rgba(120, 8, 52, 0.40);
   }
   .trash-hold .hold-fill {
     position: absolute;
@@ -801,12 +849,16 @@ const hasExpanded =
   /* ── Responsive ───────────────────────────────────────────────────── */
   @media (max-width: 880px) {
     .card-grid {
-      grid-template-columns: 64px minmax(0, 1fr);
-      grid-template-rows: auto auto;
+      grid-template-columns: 60px minmax(0, 1fr);
+      grid-template-rows: auto auto auto;
       column-gap: 12px;
     }
+    .head-row { grid-column: 1 / -1; grid-row: 1; }
+    .date-col { grid-column: 1; grid-row: 2; }
+    .main-col { grid-column: 2; grid-row: 2; }
     .actions-col {
       grid-column: 1 / -1;
+      grid-row: 3;
       align-items: stretch;
       border-left: 0;
       padding-left: 0;
@@ -815,6 +867,7 @@ const hasExpanded =
     }
     .category-bar { grid-template-columns: repeat(4, 1fr); }
     .trail { justify-content: space-between; }
+    .date-year { font-size: 18px; }
   }
 </style>
 
