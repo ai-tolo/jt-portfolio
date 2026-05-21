@@ -312,6 +312,20 @@ export interface BucketsListFilters {
   q?: string;
   /** Single Category filter (replaces Source + Type chips). */
   category?: BucketCategory;
+  /** Comma-separated tag tokens; AND semantics (each must match). */
+  tags?: string;
+}
+
+export interface TopTag {
+  tag: string;
+  count: number;
+}
+
+export interface TopTagsResponse {
+  bucket: BucketName | "all";
+  category: BucketCategory | "";
+  total_rows_with_tags: number;
+  tags: TopTag[];
 }
 
 export interface BucketsListResponse {

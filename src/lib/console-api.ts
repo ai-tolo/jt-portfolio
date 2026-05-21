@@ -28,6 +28,7 @@ import type {
   QualityStar,
   QualityStarResponse,
   RevealInFinderResponse,
+  TopTagsResponse,
 } from "./console-types";
 
 // process.env is checked first so Vercel's runtime env vars always win in
@@ -293,6 +294,14 @@ export async function setItemTrashed(
   return _post(`/items/trashed`, { path, trashed }, opts);
 }
 
+export async function setItemTags(
+  path: string,
+  tags: string[],
+  opts: FetchOpts = {},
+): Promise<ApiResult<{ path: string; tags: string | null }>> {
+  return _post(`/items/tags`, { path, tags }, opts);
+}
+
 export interface TrashResponse {
   total: number;
   offset: number;
@@ -407,7 +416,21 @@ export async function getBucketsList(
   if (filters.sort && filters.sort !== "recent") params.set("sort", filters.sort);
   if (filters.q) params.set("q", filters.q);
   if (filters.category && filters.category !== "all") params.set("category", filters.category);
+  if (filters.tags) params.set("tags", filters.tags);
   return call<BucketsListResponse>(`/buckets?${params}`);
+}
+
+/** Top N tags by frequency for the current bucket+category view. The set
+ *  is computed BEFORE the active tag filter is applied so the chip strip
+ *  remains stable as the curator AND-narrows. */
+export async function getTopTags(
+  bucket: BucketView,
+  category?: string,
+  limit = 10,
+): Promise<ApiResult<TopTagsResponse>> {
+  const params = new URLSearchParams({ bucket, limit: String(limit) });
+  if (category && category !== "all") params.set("category", category);
+  return call<TopTagsResponse>(`/buckets/top-tags?${params}`);
 }
 
 export async function setBucket(

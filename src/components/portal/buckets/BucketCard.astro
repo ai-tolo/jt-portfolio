@@ -53,7 +53,11 @@ const dateInfo = (() => {
   else if (ageDays < 30) relative = `${Math.floor(ageDays / 7)}w`;
   else if (ageDays < 365) relative = `${Math.floor(ageDays / 30)}mo`;
   else relative = `${Math.floor(ageDays / 365)}y`;
-  return { primary, year, relative, stamped };
+  // Absolute day count. Comma-grouped past 1000 for legibility. Cheap math,
+  // no perf concern — one subtract + format per card.
+  const daysInt = Math.max(0, Math.floor(ageDays));
+  const daysAbs = daysInt.toLocaleString("en-US") + "d";
+  return { primary, year, relative, stamped, daysAbs };
 })();
 
 const tagList = (item.tags ?? "")
@@ -230,13 +234,21 @@ const hasExpanded = true;
         <div class="dup-detail" data-dup-target hidden></div>
       </h3>
 
-      {/* BPM / key — now sits as a secondary line under the title. */}
+      {/* BPM / key — secondary line under the title. Silence% folds in here
+          when noteworthy (>20%) so the curator sees it before they click
+          play and hear half a minute of nothing. */}
       <span class:list={["tech-meta", { ghost: !item.bpm && !item.key }]}>
         <span class="bpm-num">{item.bpm ? Math.round(item.bpm) : "—"}</span>
         <span class="bpm-unit">BPM</span>
         <span class="tech-sep">·</span>
         <span class="key">{keyInfo.letter || "—"}</span>
         {keyInfo.mode && <span class="key-mode">{keyInfo.mode}</span>}
+        {typeof item.silence_ratio === "number" && item.silence_ratio > 0.2 && (
+          <>
+            <span class="tech-sep">·</span>
+            <span class="silence-meta" title="Fraction of audio below the silence floor.">{Math.round(item.silence_ratio * 100)}% silent</span>
+          </>
+        )}
       </span>
       <div class="wave-row">
         {/* Runtime sits to the LEFT of the waveform — borderless LCD
@@ -277,6 +289,8 @@ const hasExpanded = true;
           <>
             <span class="date-rel">{dateInfo.relative}</span>
             <span class="date-bracket"> [</span><span class="date-stamped">{dateInfo.stamped}</span><span class="date-bracket">]</span>
+            <span class="date-sep"> · </span>
+            <span class="date-days" title="Total days since this date">{dateInfo.daysAbs}</span>
           </>
         ) : (
           <span class="date-rel">date unknown</span>
@@ -324,16 +338,48 @@ const hasExpanded = true;
   {hasExpanded && (
     <div class="expanded" data-expanded hidden>
       <dl class="exp">
-        <dt>Visibility</dt>
-        <dd>
+        {/* Single Tags row — combines what used to be Visibility + Type +
+            Tags into one chip strip. Order: PUBLIC (curator-toggleable,
+            always first), source_type + content_type (engine-derived,
+            read-only), then comma-split tag values (curator-editable, each
+            with × to remove), then "+" to add a new tag. */}
+        <dt>Tags</dt>
+        <dd class="exp-tags">
           <button
             type="button"
-            class:list={["pub-toggle", { on: isPublic }]}
+            class:list={["chip chip-public", { on: isPublic }]}
             data-action="toggle-public"
             data-path={item.path}
             aria-pressed={isPublic ? "true" : "false"}
             title="Mark public on /sounds"
           >{isPublic ? "● PUBLIC" : "○ PUBLIC"}</button>
+          {item.content_type && (
+            <span class="chip chip-derived" title="Engine-classified content type">{item.content_type}</span>
+          )}
+          {item.source_type && (
+            <span class="chip chip-derived" title="Engine-classified source type">{item.source_type}</span>
+          )}
+          {tagList.map((t) => (
+            <span class="chip chip-tag" data-tag-value={t}>
+              {t}
+              <button
+                type="button"
+                class="chip-x"
+                data-action="tag-remove"
+                data-path={item.path}
+                data-tag={t}
+                aria-label={`Remove tag ${t}`}
+                title={`Remove tag "${t}"`}
+              >×</button>
+            </span>
+          ))}
+          <button
+            type="button"
+            class="chip chip-add"
+            data-action="tag-add"
+            data-path={item.path}
+            title="Add a new tag"
+          >+ add</button>
         </dd>
         {item.summary && !/^(insufficient|music or non-speech)/i.test(item.summary) && (
           <>
@@ -348,34 +394,6 @@ const hasExpanded = true;
           <>
             <dt>Note</dt>
             <dd class="exp-note">Not auto-transcribed — Whisper hallucinates on long music sections. Browse the waveform / audition to find what's in here.</dd>
-          </>
-        )}
-        {tagList.length > 0 && (
-          <>
-            <dt>Tags</dt>
-            <dd>
-              <ul class="tag-list">
-                {tagList.map((t) => <li>{t}</li>)}
-              </ul>
-            </dd>
-          </>
-        )}
-        {(item.source_type || item.content_type) && (
-          <>
-            <dt>Type</dt>
-            <dd>
-              {item.content_type && <span>{item.content_type}</span>}
-              {item.content_type && item.source_type && <span class="exp-sep"> · </span>}
-              {item.source_type && <span>{item.source_type}</span>}
-            </dd>
-          </>
-        )}
-        {/* Tech facts: always shown so the card has something to say even
-            when summary is null. Reads as a metadata line, not a header. */}
-        {techFacts.length > 0 && (
-          <>
-            <dt>Tech</dt>
-            <dd class="exp-tech">{techFacts.join(" · ")}</dd>
           </>
         )}
         {lineageWord && parentLabel && (
@@ -559,6 +577,16 @@ const hasExpanded = true;
     color: rgba(245, 241, 232, 0.65);
     font-weight: 500;
     letter-spacing: 0.02em;
+  }
+  .date-subtitle .date-sep {
+    color: rgba(245, 241, 232, 0.32);
+    font-weight: 500;
+  }
+  .date-subtitle .date-days {
+    color: rgba(245, 241, 232, 0.5);
+    font-weight: 500;
+    letter-spacing: 0.02em;
+    font-feature-settings: "tnum";
   }
   .date-subtitle .date-chev {
     margin-left: 8px;
@@ -1146,20 +1174,119 @@ const hasExpanded = true;
   }
   .lineage-detail b { color: #f5f1e8; font-weight: 600; }
 
-  /* Expanded-panel fallback content: tech facts when summary is null, plus
-     the long-form-jam explanatory note. Both render as a single line so the
-     panel stays scannable. */
-  .exp-tech {
-    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-    font-size: 11px;
-    color: rgba(245, 241, 232, 0.72);
-    letter-spacing: 0.02em;
-  }
+  /* Expanded-panel note for un-transcribed long-form jams. Italic, low-key
+     so it reads as supplementary context rather than a header. */
   .exp-note {
     font-size: 11.5px;
     color: rgba(245, 241, 232, 0.62);
     font-style: italic;
     line-height: 1.45;
+  }
+
+  /* Combined Tags row — flat strip of chips. PUBLIC stays on the left;
+     engine-derived classifications (content_type, source_type) sit in the
+     middle as quiet read-only pills; curator tag values follow, each with
+     an × to remove; the trailing "+ add" chip opens an inline input. */
+  .exp-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px 6px;
+    align-items: center;
+    line-height: 1.2;
+  }
+  .exp-tags .chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font: inherit;
+    font-family: "Geist Variable", ui-sans-serif, system-ui, sans-serif;
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    line-height: 1;
+    padding: 4px 8px;
+    border-radius: 3px;
+    border: 1px solid rgba(245, 241, 232, 0.18);
+    background: rgba(245, 241, 232, 0.03);
+    color: rgba(245, 241, 232, 0.72);
+    cursor: default;
+    transition: color 160ms ease, border-color 160ms ease,
+                background 160ms ease;
+  }
+  /* PUBLIC pill — curator-toggleable, leads the row. */
+  .exp-tags .chip-public {
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    border-style: dashed;
+    cursor: pointer;
+  }
+  .exp-tags .chip-public:hover,
+  .exp-tags .chip-public:focus-visible {
+    color: #f5f1e8;
+    border-color: rgba(245, 241, 232, 0.45);
+    outline: none;
+  }
+  .exp-tags .chip-public.on {
+    color: #ff3b6e;
+    border-color: rgba(255, 59, 110, 0.55);
+    border-style: solid;
+    background: rgba(255, 59, 110, 0.08);
+  }
+  /* Read-only derived chips (content_type, source_type) — quieter than
+     tags so the eye knows these aren't editable. */
+  .exp-tags .chip-derived {
+    color: rgba(14, 196, 252, 0.78);
+    border-color: rgba(14, 196, 252, 0.28);
+    background: rgba(14, 196, 252, 0.04);
+  }
+  /* Editable tag values — each with an × button. */
+  .exp-tags .chip-tag {
+    color: rgba(245, 241, 232, 0.88);
+    border-color: rgba(245, 241, 232, 0.28);
+    padding-right: 2px;
+  }
+  .exp-tags .chip-tag:hover { border-color: rgba(245, 241, 232, 0.55); }
+  .exp-tags .chip-x {
+    font: inherit;
+    font-size: 12px;
+    line-height: 1;
+    color: rgba(245, 241, 232, 0.48);
+    background: transparent;
+    border: 0;
+    padding: 0 4px 0 2px;
+    margin-left: 1px;
+    cursor: pointer;
+    transition: color 120ms ease;
+  }
+  .exp-tags .chip-x:hover,
+  .exp-tags .chip-x:focus-visible {
+    color: #ff3b6e;
+    outline: none;
+  }
+  /* "+ add" chip + the inline input it morphs into. */
+  .exp-tags .chip-add {
+    color: rgba(245, 241, 232, 0.48);
+    border-style: dashed;
+    cursor: pointer;
+  }
+  .exp-tags .chip-add:hover,
+  .exp-tags .chip-add:focus-visible {
+    color: #eeff00;
+    border-color: rgba(238, 255, 0, 0.55);
+    outline: none;
+  }
+  .exp-tags .chip-add-input {
+    font: inherit;
+    font-family: "Geist Variable", ui-sans-serif, system-ui, sans-serif;
+    font-size: 10px;
+    font-weight: 600;
+    color: #f5f1e8;
+    background: rgba(238, 255, 0, 0.05);
+    border: 1px solid rgba(238, 255, 0, 0.55);
+    border-radius: 3px;
+    padding: 3px 6px;
+    width: 110px;
+    outline: none;
   }
 
   .promote-btn {
@@ -1293,23 +1420,56 @@ const hasExpanded = true;
 </style>
 
 <script>
-  // Expand / collapse the details section. The chevron rotates and the
-  // expanded block reveals — handled per-card so it has no global state.
-  document.addEventListener("click", (e) => {
-    const target = e.target as HTMLElement | null;
-    const btn = target?.closest<HTMLButtonElement>('[data-action="expand"]');
-    if (!btn) return;
-    const card = btn.closest<HTMLElement>(".bucket-card");
-    if (!card) return;
+  // Expand / collapse the details section. Anywhere on the card body
+  // toggles, EXCEPT clicks on interactive descendants. The date subtitle
+  // remains an explicit toggle target so keyboard + aria flow still works
+  // (chevron rotates to indicate state).
+  const togglePanel = (card: HTMLElement) => {
     const panel = card.querySelector<HTMLElement>("[data-expanded]");
+    const dateBtn = card.querySelector<HTMLButtonElement>('[data-action="expand"]');
     if (!panel) return;
-    const open = btn.getAttribute("aria-expanded") === "true";
+    const open = dateBtn?.getAttribute("aria-expanded") === "true";
     if (open) {
-      btn.setAttribute("aria-expanded", "false");
+      dateBtn?.setAttribute("aria-expanded", "false");
       panel.hidden = true;
     } else {
-      btn.setAttribute("aria-expanded", "true");
+      dateBtn?.setAttribute("aria-expanded", "true");
       panel.hidden = false;
     }
+  };
+
+  // Selector for any interactive child that should NOT trigger expand.
+  // Includes the expanded panel itself so clicks inside it (chip removal,
+  // tag input, lineage links, etc.) don't accidentally collapse the card.
+  const INTERACTIVE_SKIP = [
+    "[data-action]",
+    "button",
+    "input",
+    "select",
+    "textarea",
+    "a",
+    ".waveform",
+    ".title-edit",
+    ".expanded",
+  ].join(",");
+
+  document.addEventListener("click", (e) => {
+    const target = e.target as HTMLElement | null;
+    if (!target) return;
+
+    // Path 1: explicit click on date subtitle (kept for a11y).
+    const dateBtn = target.closest<HTMLButtonElement>('[data-action="expand"]');
+    if (dateBtn) {
+      const card = dateBtn.closest<HTMLElement>(".bucket-card");
+      if (card) togglePanel(card);
+      return;
+    }
+
+    // Path 2: click anywhere else in the card body. Only fire if the
+    // click landed on a card AND didn't cross any interactive element.
+    const card = target.closest<HTMLElement>(".bucket-card");
+    if (!card) return;
+    if (target.closest(INTERACTIVE_SKIP)) return;
+    togglePanel(card);
   });
 </script>

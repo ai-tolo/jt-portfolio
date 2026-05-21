@@ -3,6 +3,7 @@ import type {
   BucketView,
   BucketCategory,
   BucketSort,
+  TopTag,
 } from "../../../lib/console-types";
 
 interface Props {
@@ -10,9 +11,12 @@ interface Props {
   category: BucketCategory;
   sort: BucketSort;
   q: string;
+  activeTags: string[];
+  topTags: TopTag[];
 }
 
-const { bucket, category, sort, q } = Astro.props;
+const { bucket, category, sort, q, activeTags, topTags } = Astro.props;
+const activeSet = new Set(activeTags);
 
 const CATEGORIES: { id: BucketCategory; label: string; hint: string }[] = [
   { id: "all", label: "All", hint: "Everything in this bucket" },
@@ -34,13 +38,15 @@ const SORTS: { id: BucketSort; label: string }[] = [
 ];
 
 const base = `/portal/buckets/${bucket}`;
+const tagsCsv = activeTags.join(",");
 const buildHref = (overrides: Record<string, string | null>): string => {
   const p = new URLSearchParams();
   if (sort !== "recent") p.set("sort", sort);
   if (category && category !== "all") p.set("category", category);
   if (q) p.set("q", q);
+  if (tagsCsv) p.set("tags", tagsCsv);
   for (const [k, v] of Object.entries(overrides)) {
-    if (v === null) p.delete(k);
+    if (v === null || v === "") p.delete(k);
     else p.set(k, v);
   }
   if (p.get("sort") === "recent") p.delete("sort");
@@ -49,10 +55,70 @@ const buildHref = (overrides: Record<string, string | null>): string => {
   return qs ? `${base}?${qs}` : base;
 };
 
+// Each chip's href toggles its tag in/out of the active set. Active tags
+// AND together server-side, so clicking adds an extra constraint; clicking
+// an already-active chip removes it.
+const buildTagsHref = (tag: string): string => {
+  const next = activeSet.has(tag)
+    ? activeTags.filter((t) => t !== tag)
+    : [...activeTags, tag];
+  return buildHref({ tags: next.join(",") });
+};
+
+const clearTagsHref = buildHref({ tags: "" });
+
 const activeCategory = CATEGORIES.find((c) => c.id === category) ?? CATEGORIES[0];
 ---
 
 <section class="filters" aria-label="Bucket filters">
+  {/*
+    Tags chip strip — top 10 tags by frequency in the current
+    bucket+category view. Clicking a chip toggles its tag in the active
+    set (AND semantics across multiple chips). The strip itself is
+    computed BEFORE the active filter is applied so it stays stable as
+    the curator narrows. Hidden when there's nothing taggable to show.
+  */}
+  {(topTags.length > 0 || activeTags.length > 0) && (
+    <nav class="tags-strip" aria-label="Filter by tag">
+      <span class="tags-label">Tags</span>
+      <ul class="tags-list" role="list">
+        {topTags.map((t) => (
+          <li>
+            <a
+              href={buildTagsHref(t.tag)}
+              class:list={["tag-chip", { active: activeSet.has(t.tag) }]}
+              aria-pressed={activeSet.has(t.tag) ? "true" : "false"}
+              title={activeSet.has(t.tag) ? `Remove ${t.tag} filter` : `Filter by ${t.tag}`}
+            >
+              <span class="tag-name">{t.tag}</span>
+              <span class="tag-count">{t.count.toLocaleString()}</span>
+            </a>
+          </li>
+        ))}
+        {/* If the user has tags active that aren't in the top 10 (e.g.
+            they navigated in via URL or the counts shifted), still render
+            them as active chips so they can be toggled off. */}
+        {activeTags
+          .filter((t) => !topTags.some((tt) => tt.tag === t))
+          .map((t) => (
+            <li>
+              <a
+                href={buildTagsHref(t)}
+                class:list={["tag-chip", "active"]}
+                aria-pressed="true"
+                title={`Remove ${t} filter`}
+              >
+                <span class="tag-name">{t}</span>
+              </a>
+            </li>
+          ))}
+      </ul>
+      {activeTags.length > 0 && (
+        <a href={clearTagsHref} class="tags-clear" title="Clear all tag filters">Clear</a>
+      )}
+    </nav>
+  )}
+
   {/*
     Primary navigation: Category. Each chip is a top-level slice of the
     catalog. The strip lives at the top of every Buckets page; Search +
@@ -158,6 +224,91 @@ const activeCategory = CATEGORIES.find((c) => c.id === category) ?? CATEGORIES[0
     border-color: rgba(255, 39, 97, 0.55);
     border-style: solid;
     background: rgba(255, 39, 97, 0.06);
+  }
+
+  /* ── Tags chip strip (sits above Category) ────────────────────────── */
+  .tags-strip {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    padding: 8px 14px;
+    background: color-mix(in srgb, var(--ink) 4%, transparent);
+    border: 1px solid var(--line);
+    border-bottom: none;
+    flex-wrap: wrap;
+  }
+  .tags-label {
+    font-size: 10px;
+    font-weight: var(--fw-semibold);
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--muted);
+    flex: 0 0 auto;
+  }
+  .tags-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    flex: 1;
+  }
+  .tag-chip {
+    display: inline-flex;
+    align-items: baseline;
+    gap: 6px;
+    font-size: 12px;
+    font-weight: var(--fw-semibold);
+    letter-spacing: 0.04em;
+    color: var(--text);
+    border: 1px solid var(--line);
+    padding: 5px 10px;
+    text-decoration: none;
+    transition: color 160ms ease, border-color 160ms ease,
+                background-color 160ms ease;
+  }
+  .tag-chip:hover,
+  .tag-chip:focus-visible {
+    color: var(--accent);
+    border-color: var(--accent);
+    outline: none;
+  }
+  .tag-chip.active {
+    color: var(--bg);
+    background: var(--accent);
+    border-color: var(--accent);
+  }
+  .tag-chip .tag-name {
+    text-transform: lowercase;
+  }
+  .tag-chip .tag-count {
+    font-size: 10px;
+    font-weight: var(--fw-regular);
+    color: var(--muted);
+    letter-spacing: 0;
+  }
+  .tag-chip.active .tag-count {
+    color: color-mix(in srgb, var(--bg) 70%, transparent);
+  }
+  .tags-clear {
+    margin-left: auto;
+    font-family: "Geist Variable", ui-sans-serif, system-ui, sans-serif;
+    font-size: 11px;
+    font-weight: var(--fw-semibold);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    text-decoration: none;
+    color: rgba(245, 241, 232, 0.55);
+    border: 1px dashed rgba(245, 241, 232, 0.20);
+    padding: 5px 10px;
+    transition: color 160ms ease, border-color 160ms ease;
+  }
+  .tags-clear:hover,
+  .tags-clear:focus-visible {
+    color: #ff2761;
+    border-color: rgba(255, 39, 97, 0.55);
+    outline: none;
   }
 
   /* ── Category strip (primary nav) ─────────────────────────────────── */

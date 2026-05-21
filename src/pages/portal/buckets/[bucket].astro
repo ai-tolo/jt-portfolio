@@ -2,11 +2,12 @@
 import PortalLayout from "../../../layouts/PortalLayout.astro";
 import BucketCard from "../../../components/portal/buckets/BucketCard.astro";
 import BucketsFilters from "../../../components/portal/buckets/BucketsFilters.astro";
-import { getBucketsList } from "../../../lib/console-api";
+import { getBucketsList, getTopTags } from "../../../lib/console-api";
 import type {
   BucketCategory,
   BucketSort,
   BucketView,
+  TopTag,
 } from "../../../lib/console-types";
 
 // `BucketView` includes "all" (the unified surface) plus the five
@@ -28,6 +29,7 @@ const url = Astro.url;
 const categoryRaw = (url.searchParams.get("category") ?? "all").trim();
 const sortRaw = url.searchParams.get("sort") ?? "recent";
 const q = (url.searchParams.get("q") ?? "").trim();
+const tagsRaw = (url.searchParams.get("tags") ?? "").trim();
 
 const category: BucketCategory = VALID_CATEGORIES.includes(categoryRaw as BucketCategory)
   ? (categoryRaw as BucketCategory)
@@ -36,8 +38,26 @@ const sort: BucketSort = VALID_SORTS.includes(sortRaw as BucketSort)
   ? (sortRaw as BucketSort)
   : "recent";
 
-// Single fetch — no more parallel sub-tab count requests.
-const primary = await getBucketsList(bucket, { sort, q, category });
+// Active tag tokens parsed from ?tags=. Each is lowercase + de-duped so
+// the query sent to the engine matches what's rendered as "active" in the
+// chip strip. Empty list means no tag filter.
+const activeTags: string[] = Array.from(
+  new Set(
+    tagsRaw
+      .split(",")
+      .map((t) => t.trim().toLowerCase())
+      .filter(Boolean),
+  ),
+);
+const tagsParam = activeTags.join(",");
+
+// Grid + top-tags fire in parallel — both are server-side and independent.
+// Top-tags reflects what's available in the bucket+category view BEFORE
+// the active filter, so the strip stays stable as the curator AND-narrows.
+const [primary, topTagsRes] = await Promise.all([
+  getBucketsList(bucket, { sort, q, category, tags: tagsParam }),
+  getTopTags(bucket, category, 10),
+]);
 
 const items = primary.ok ? primary.data.items : [];
 const total = primary.ok ? primary.data.total : 0;
@@ -46,6 +66,8 @@ const fetchError = primary.ok
   : primary.error.kind === "http"
     ? `HTTP ${primary.error.status}`
     : primary.error.kind;
+
+const topTags: TopTag[] = topTagsRes.ok ? topTagsRes.data.tags : [];
 
 const BUCKET_TITLE: Record<BucketView, string> = {
   all: "All",
@@ -60,7 +82,14 @@ const BUCKET_TITLE: Record<BucketView, string> = {
 
 <PortalLayout title={`Buckets · ${BUCKET_TITLE[bucket]}`} current="buckets">
   <section class="buckets-page" data-bucket={bucket}>
-    <BucketsFilters bucket={bucket} category={category} sort={sort} q={q} />
+    <BucketsFilters
+      bucket={bucket}
+      category={category}
+      sort={sort}
+      q={q}
+      activeTags={activeTags}
+      topTags={topTags}
+    />
 
     {fetchError ? (
       <p class="error" role="alert">Couldn't load: {fetchError}</p>
@@ -224,6 +253,107 @@ const BUCKET_TITLE: Record<BucketView, string> = {
         if (before === 0) btn?.classList.remove("has");
         setStatus(card, "Kudos failed (network)", "err");
       }
+    };
+
+    // ── Tag edits (× and + on chips in the expanded panel) ───────────────
+    // Single source of truth for the current tag list is the rendered DOM.
+    // Each save sends the full updated list to /items/tags; the engine
+    // normalizes (lowercase, dedupe, trim) and writes back. UI is
+    // optimistic — we update the DOM first, then POST. On error we restore.
+    const collectCardTags = (card: HTMLElement): string[] => {
+      const chips = card.querySelectorAll<HTMLElement>(".chip-tag[data-tag-value]");
+      const out: string[] = [];
+      chips.forEach((c) => {
+        const v = c.dataset.tagValue;
+        if (v && !out.includes(v)) out.push(v);
+      });
+      return out;
+    };
+
+    const persistTags = async (card: HTMLElement, tags: string[]) => {
+      const path = card.dataset.path;
+      if (!path) return false;
+      try {
+        const res = await fetch("/api/console/items-tags", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ path, tags }),
+        });
+        if (!res.ok) {
+          setStatus(card, `Tag save failed (HTTP ${res.status})`, "err");
+          return false;
+        }
+        return true;
+      } catch {
+        setStatus(card, "Tag save failed (network)", "err");
+        return false;
+      }
+    };
+
+    const removeTag = async (card: HTMLElement, xBtn: HTMLElement) => {
+      const tag = xBtn.dataset.tag;
+      if (!tag) return;
+      const chip = xBtn.closest<HTMLElement>(".chip-tag");
+      const current = collectCardTags(card);
+      const next = current.filter((t) => t !== tag);
+      // Optimistic remove. Hide the chip; restore on error.
+      if (chip) chip.style.display = "none";
+      const ok = await persistTags(card, next);
+      if (!ok && chip) chip.style.display = "";
+      else if (chip) chip.remove();
+    };
+
+    const startAddTag = (card: HTMLElement, addBtn: HTMLElement) => {
+      // Replace "+ add" chip with an inline input. Enter commits; Escape
+      // or blur-without-value cancels. Result re-renders as a new tag chip
+      // inserted before the (re-shown) "+ add" chip.
+      if (addBtn.classList.contains("editing")) return;
+      addBtn.classList.add("editing");
+      const input = document.createElement("input");
+      input.type = "text";
+      input.className = "chip-add-input";
+      input.maxLength = 40;
+      input.placeholder = "new tag…";
+      const finish = (commitValue: string | null) => {
+        addBtn.classList.remove("editing");
+        input.replaceWith(addBtn);
+        if (commitValue) {
+          const clean = commitValue.trim().toLowerCase();
+          if (!clean) return;
+          const current = collectCardTags(card);
+          if (current.includes(clean)) return;  // dedupe client-side
+          // Optimistic add: render the chip immediately, then persist.
+          const chip = document.createElement("span");
+          chip.className = "chip chip-tag";
+          chip.dataset.tagValue = clean;
+          chip.textContent = clean;
+          const xb = document.createElement("button");
+          xb.type = "button";
+          xb.className = "chip-x";
+          xb.dataset.action = "tag-remove";
+          xb.dataset.path = card.dataset.path ?? "";
+          xb.dataset.tag = clean;
+          xb.setAttribute("aria-label", `Remove tag ${clean}`);
+          xb.textContent = "×";
+          chip.appendChild(xb);
+          addBtn.parentElement?.insertBefore(chip, addBtn);
+          persistTags(card, [...current, clean]).then((ok) => {
+            if (!ok) chip.remove();
+          });
+        }
+      };
+      addBtn.replaceWith(input);
+      input.focus();
+      input.addEventListener("keydown", (ev) => {
+        if (ev.key === "Enter") {
+          ev.preventDefault();
+          finish(input.value);
+        } else if (ev.key === "Escape") {
+          ev.preventDefault();
+          finish(null);
+        }
+      });
+      input.addEventListener("blur", () => finish(input.value || null), { once: true });
     };
 
     // ── Dup-group reveal ─────────────────────────────────────────────────
@@ -664,18 +794,25 @@ const BUCKET_TITLE: Record<BucketView, string> = {
         case "dup-group":
           revealDupGroup(card, btn);
           break;
+        case "tag-remove":
+          removeTag(card, btn);
+          break;
+        case "tag-add":
+          startAddTag(card, btn);
+          break;
         case "promote-to-live":
           promoteToLive(card);
           break;
         case "bucket": {
           const target = btn.dataset.bucket as BucketName | undefined;
           if (!target) break;
-          // Toggle: re-clicking the bucket the card is *already* in flips
-          // it back to Inbox (unassigned). Lets the curator un-do a wrong
-          // category assignment without leaving the card.
+          // Exclusive: clicking a different tab switches the card; clicking
+          // the already-active tab is a no-op. The previous toggle-to-inbox
+          // behavior was confusing — a `loop` row that you re-clicked LOOP
+          // on would silently revert to Inbox. Pure radio semantics now.
           const current = card.dataset.bucket as BucketName | undefined;
-          const next: BucketName = current === target ? "inbox" : target;
-          assignBucket(card, next);
+          if (current === target) break;
+          assignBucket(card, target);
           break;
         }
       }
