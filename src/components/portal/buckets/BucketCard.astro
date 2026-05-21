@@ -234,22 +234,6 @@ const hasExpanded = true;
         <div class="dup-detail" data-dup-target hidden></div>
       </h3>
 
-      {/* BPM / key — secondary line under the title. Silence% folds in here
-          when noteworthy (>20%) so the curator sees it before they click
-          play and hear half a minute of nothing. */}
-      <span class:list={["tech-meta", { ghost: !item.bpm && !item.key }]}>
-        <span class="bpm-num">{item.bpm ? Math.round(item.bpm) : "—"}</span>
-        <span class="bpm-unit">BPM</span>
-        <span class="tech-sep">·</span>
-        <span class="key">{keyInfo.letter || "—"}</span>
-        {keyInfo.mode && <span class="key-mode">{keyInfo.mode}</span>}
-        {typeof item.silence_ratio === "number" && item.silence_ratio > 0.2 && (
-          <>
-            <span class="tech-sep">·</span>
-            <span class="silence-meta" title="Fraction of audio below the silence floor.">{Math.round(item.silence_ratio * 100)}% silent</span>
-          </>
-        )}
-      </span>
       <div class="wave-row">
         {/* Runtime sits to the LEFT of the waveform — borderless LCD
             digits with a soft pink glow. */}
@@ -291,6 +275,12 @@ const hasExpanded = true;
             <span class="date-bracket"> [</span><span class="date-stamped">{dateInfo.stamped}</span><span class="date-bracket">]</span>
             <span class="date-sep"> · </span>
             <span class="date-days" title="Total days since this date">{dateInfo.daysAbs}</span>
+            {typeof item.silence_ratio === "number" && item.silence_ratio > 0.2 && (
+              <>
+                <span class="date-sep"> · </span>
+                <span class="silence-meta" title="Fraction of audio below the silence floor.">{Math.round(item.silence_ratio * 100)}% silent</span>
+              </>
+            )}
           </>
         ) : (
           <span class="date-rel">date unknown</span>
@@ -381,19 +371,24 @@ const hasExpanded = true;
             title="Add a new tag"
           >+ add</button>
         </dd>
-        {item.summary && !/^(insufficient|music or non-speech)/i.test(item.summary) && (
+        {(item.bpm || item.key) && (
           <>
-            <dt>Summary</dt>
-            <dd>{item.summary}</dd>
-          </>
-        )}
-        {/* Long-form jam content gets an explanatory note where the summary
-            would be. Auto-bucket policy: rows >30min go to jam and are NOT
-            auto-transcribed because Whisper hallucinates on long music. */}
-        {hasNoSummary && isLongJam && (
-          <>
-            <dt>Note</dt>
-            <dd class="exp-note">Not auto-transcribed — Whisper hallucinates on long music sections. Browse the waveform / audition to find what's in here.</dd>
+            <dt>Tech</dt>
+            <dd class="exp-tech">
+              {item.bpm && (
+                <>
+                  <span class="bpm-num">{Math.round(item.bpm)}</span>
+                  <span class="bpm-unit">BPM</span>
+                </>
+              )}
+              {item.bpm && item.key && <span class="tech-sep">·</span>}
+              {item.key && (
+                <>
+                  <span class="key">{keyInfo.letter || "—"}</span>
+                  {keyInfo.mode && <span class="key-mode">{keyInfo.mode}</span>}
+                </>
+              )}
+            </dd>
           </>
         )}
         {lineageWord && parentLabel && (
@@ -430,6 +425,28 @@ const hasExpanded = true;
               >show siblings</button>
               <div class="lineage-detail" data-lineage-target hidden></div>
             </dd>
+          </>
+        )}
+        {/* Visual separator between curator metadata (tags/tech/lineage)
+            and engine-generated content (summary/note). Spans both grid
+            columns so the eye knows the section below is a different
+            kind of information. */}
+        {(item.summary && !/^(insufficient|music or non-speech)/i.test(item.summary)) || (hasNoSummary && isLongJam) ? (
+          <div class="exp-divider" role="presentation"></div>
+        ) : null}
+        {item.summary && !/^(insufficient|music or non-speech)/i.test(item.summary) && (
+          <>
+            <dt>Summary</dt>
+            <dd>{item.summary}</dd>
+          </>
+        )}
+        {/* Long-form jam content gets an explanatory note where the summary
+            would be. Auto-bucket policy: rows >30min go to jam and are NOT
+            auto-transcribed because Whisper hallucinates on long music. */}
+        {hasNoSummary && isLongJam && (
+          <>
+            <dt>Note</dt>
+            <dd class="exp-note">Not auto-transcribed — Whisper hallucinates on long music sections. Browse the waveform / audition to find what's in here.</dd>
           </>
         )}
         {currentBucket === "loops" && (
@@ -490,7 +507,7 @@ const hasExpanded = true;
     grid-column: 1;
     display: flex;
     flex-direction: column;
-    gap: 8px;
+    gap: 14px;
     padding: 0 18px 0 0;
     min-width: 0;
     justify-content: center;
@@ -662,34 +679,109 @@ const hasExpanded = true;
     font-weight: 700;
     color: #00ff4d;
     text-align: left;
-    background: rgba(0, 255, 77, 0.05);
-    border: 1px solid rgba(0, 255, 77, 0.32);
+    background: transparent;
+    border: 1px solid rgba(245, 241, 232, 0.10);
     border-radius: 4px;
-    padding: 4px 10px;
+    padding: 5px 10px;
     margin-left: -10px;
     cursor: text;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
-    text-shadow: 0 0 12px rgba(0, 255, 77, 0.32);
-    transition: border-color 160ms ease, background 160ms ease;
+    transition: color 160ms ease, background 160ms ease, border-color 160ms ease;
   }
   .title-edit:hover,
   .title-edit:focus-visible {
-    border-color: rgba(0, 255, 77, 0.55);
-    background: rgba(0, 255, 77, 0.08);
+    background: rgba(245, 241, 232, 0.04);
+    border-color: rgba(245, 241, 232, 0.22);
     outline: none;
   }
-  /* On a selected card, the title chip's background reveals ~10% of
-     the card's rainbow gradient — same palette as the card border,
-     dialled way down so the green chip identity still reads first. */
+  /* Selected card — title shifts to a brighter green, border picks up a
+     faint green tint so it reads as the active row without competing with
+     the card's rainbow gradient frame. */
   .bucket-card[data-focused="true"] .title-edit,
   .bucket-card:focus-visible .title-edit {
-    background:
-      linear-gradient(135deg,
-        rgba(255, 59, 110, 0.14) 0%,
-        rgba(255, 110, 33, 0.12) 50%,
-        rgba(238, 255, 0, 0.10) 100%);
+    color: #a1ff98;
+    background: transparent;
+    border-color: rgba(161, 255, 152, 0.22);
+  }
+
+  /* Rename form replaces the title button while editing. The form is
+     created at runtime by PortalLayout's JS via document.createElement,
+     so it doesn't carry Astro's scoped data-attribute — we have to use
+     :global() for these rules to apply. Scoped to .bucket-card .title
+     so other surfaces (Card.astro) keep their own treatment. */
+  :global(.bucket-card .title .rename-form) {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: wrap;
+    margin-left: -10px;
+    max-width: 100%;
+  }
+  :global(.bucket-card .title .rename-form input) {
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-style: italic;
+    font-size: 17px;
+    font-weight: 700;
+    color: #a1ff98;
+    background: rgba(161, 255, 152, 0.06);
+    border: 1px solid rgba(161, 255, 152, 0.45);
+    border-radius: 4px;
+    padding: 4px 10px;
+    min-width: 14rem;
+    flex: 1 1 auto;
+    outline: none;
+    caret-color: #a1ff98;
+  }
+  :global(.bucket-card .title .rename-form input:focus) {
+    border-color: rgba(161, 255, 152, 0.75);
+    background: rgba(161, 255, 152, 0.08);
+  }
+  :global(.bucket-card .title .rename-form button) {
+    font-family: "Geist Variable", ui-sans-serif, system-ui, sans-serif;
+    font-style: normal;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: rgba(245, 241, 232, 0.78);
+    background: transparent;
+    border: 1px solid rgba(245, 241, 232, 0.22);
+    border-radius: 3px;
+    padding: 4px 9px;
+    cursor: pointer;
+    transition: color 160ms ease, border-color 160ms ease,
+                background 160ms ease;
+  }
+  :global(.bucket-card .title .rename-form button:hover),
+  :global(.bucket-card .title .rename-form button:focus-visible) {
+    color: #f5f1e8;
+    border-color: rgba(245, 241, 232, 0.45);
+    outline: none;
+  }
+  /* Override PortalLayout's global button.primary gradient — we want the
+     Save button to read as the green-on-dark sibling of the title, not
+     the system-wide pink/orange CTA. */
+  :global(.bucket-card .title .rename-form button.primary) {
+    color: #0e0c14 !important;
+    background: #a1ff98 !important;
+    background-image: none !important;
+    border-color: #a1ff98 !important;
+    text-shadow: none !important;
+    box-shadow: none !important;
+  }
+  :global(.bucket-card .title .rename-form button.primary:hover),
+  :global(.bucket-card .title .rename-form button.primary:focus-visible) {
+    background: #b9ffb1 !important;
+    background-image: none !important;
+    border-color: #b9ffb1 !important;
+    color: #0e0c14 !important;
+    box-shadow: none !important;
+  }
+  .title .rename-form button:disabled {
+    opacity: 0.45;
+    cursor: wait;
   }
   .title-base { color: inherit; }
   /* File extension renders at 60% of the title size so ".wav" / ".als"
@@ -702,12 +794,9 @@ const hasExpanded = true;
     font-size: 0.6em;
   }
 
-  /* BPM/Key module — borderless secondary line under the title. Only
-     the number + key letter wear the cyan accent; "BPM" + "major" are
-     muted cream label-weight. Ghost when no data. */
-  .tech-meta {
-    flex: 0 0 auto;
-    align-self: flex-start;
+  /* BPM / key — lives in the expanded dl now. Number + key letter wear the
+     cyan accent; "BPM" + "major" are muted cream label-weight. */
+  .exp-tech {
     display: inline-flex;
     align-items: baseline;
     gap: 4px;
@@ -715,55 +804,43 @@ const hasExpanded = true;
     font-style: italic;
     font-feature-settings: "tnum";
     line-height: 1;
-    padding: 2px 0 2px 2px;
-    background: transparent;
-    border: 0;
-    border-radius: 0;
   }
-  .tech-meta .bpm-num {
-    font-size: 14px;
+  .exp-tech .bpm-num {
+    font-size: 13px;
     font-weight: 700;
     color: #0ec4fc;
-    text-shadow: 0 0 6px rgba(14, 196, 252, 0.22);
   }
-  .tech-meta .bpm-unit {
-    font-size: 14px;
+  .exp-tech .bpm-unit {
+    font-size: 13px;
     font-weight: 500;
-    font-style: italic;
     color: rgba(245, 241, 232, 0.55);
     margin-left: 2px;
   }
-  .tech-meta .tech-sep {
-    font-size: 14px;
+  .exp-tech .tech-sep {
+    font-size: 13px;
     color: rgba(245, 241, 232, 0.32);
     margin: 0 4px;
   }
-  .tech-meta .key {
-    font-size: 14px;
+  .exp-tech .key {
+    font-size: 13px;
     font-weight: 700;
     color: #0ec4fc;
   }
-  /* "major" matches the BPM unit — muted, label-weight. Lets the number
-     and key letter carry the cyan accent. */
-  .tech-meta .key-mode {
-    font-size: 14px;
+  .exp-tech .key-mode {
+    font-size: 13px;
     font-weight: 500;
-    font-style: italic;
     color: rgba(245, 241, 232, 0.55);
     margin-left: 4px;
   }
-  .tech-meta.ghost {
-    border-style: dashed;
-    background: transparent;
-    border-color: rgba(245, 241, 232, 0.14);
+
+  /* Silence% inline in the date subtitle — muted amber so it reads as a
+     gentle "heads up" before the curator hits play. */
+  .date-subtitle .silence-meta {
+    color: rgba(255, 178, 80, 0.78);
+    font-weight: 500;
+    font-style: italic;
+    letter-spacing: 0.01em;
   }
-  .tech-meta.ghost .bpm-num,
-  .tech-meta.ghost .key {
-    color: rgba(245, 241, 232, 0.22);
-    text-shadow: none;
-  }
-  .tech-meta.ghost .bpm-unit { color: rgba(245, 241, 232, 0.18); }
-  .tech-meta.ghost .tech-sep { color: rgba(245, 241, 232, 0.12); }
 
   /* Smaller, pink-toned ORPHAN. Less aggressive than the prior orange. */
   .flag-chip {
@@ -869,36 +946,37 @@ const hasExpanded = true;
     z-index: 2;
   }
 
-  /* J/L/F/T — a single tall pill that fills the full card height and
-     abuts the archive X column. Tiles stack inside with shared
-     horizontal dividers, like a weekly medicine container. The right
-     edge is flush + flat (no border, no radius) so it visually merges
-     into the X strip; only the left edge wears the rounded border. */
+  /* J/L/F/T — vertical pillbox that spans the full card-grid height and
+     abuts the archive X column on its right. Tiles share horizontal
+     dividers (no per-tile borders or gaps) so the column reads as a
+     four-compartment medicine container. The right edge is flush + flat
+     (no border, no radius) so it visually merges into the X strip;
+     only the left edge wears the rounded outer border. */
   .category-bar {
     grid-column: 2;
     align-self: stretch;
     justify-self: stretch;
-    margin: -16px 0 -16px 10px;  /* right edge touches X column */
+    margin: -16px 0 -16px 12px;
     display: flex;
     flex-direction: column;
-    width: 60px;
+    width: 68px;
     border: 1px solid rgba(245, 241, 232, 0.22);
     border-right: 0;
-    border-radius: 4px 0 0 4px;
+    border-radius: 5px 0 0 5px;
     overflow: hidden;
-    background: rgba(245, 241, 232, 0.02);
+    background: rgba(245, 241, 232, 0.025);
   }
   .category-btn {
     flex: 1 1 0;
     width: 100%;
-    min-height: 28px;
+    min-height: 34px;
     font: inherit;
-    color: rgba(245, 241, 232, 0.55);
+    color: rgba(245, 241, 232, 0.7);
     background: transparent;
     border: 0;
-    border-top: 1px solid rgba(245, 241, 232, 0.18);
+    border-top: 1px solid rgba(245, 241, 232, 0.22);
     border-radius: 0;
-    padding: 0;
+    padding: 0 6px;
     cursor: pointer;
     display: flex;
     align-items: center;
@@ -911,7 +989,7 @@ const hasExpanded = true;
   .category-btn:hover,
   .category-btn:focus-visible {
     color: #f5f1e8;
-    background: rgba(245, 241, 232, 0.04);
+    background: rgba(245, 241, 232, 0.06);
     outline: none;
   }
   .category-btn:active { transform: translateY(1px); }
@@ -923,21 +1001,23 @@ const hasExpanded = true;
     display: inline-block;
     font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
     font-style: italic;
-    font-size: 11px;
+    font-size: 12px;
     font-weight: 700;
-    letter-spacing: 0.06em;
+    letter-spacing: 0.08em;
     line-height: 1;
     color: inherit;
   }
-  /* Active = hot pink-red. Inside the shared-border pill, we tint the
-     active tile's background so it reads as a "selected pocket" instead
-     of relying on a per-tile border. */
+  /* Active = hot pink-red. Inside the shared-border pillbox, we tint the
+     active tile's background + brighten the divider above/below so it
+     reads as a "selected pocket" without per-tile chrome. */
   .bucket-card .category-btn.active {
     color: #ff2761;
-    background: rgba(255, 39, 97, 0.12);
+    background: rgba(255, 39, 97, 0.14);
   }
-  .bucket-card .category-btn.active + .category-btn { border-top-color: rgba(255, 39, 97, 0.45); }
-  .bucket-card .category-btn.active { border-top-color: rgba(255, 39, 97, 0.45); }
+  .bucket-card .category-btn.active,
+  .bucket-card .category-btn.active + .category-btn {
+    border-top-color: rgba(255, 39, 97, 0.45);
+  }
   .bucket-card .category-btn.active:first-child { border-top: 0; }
   .bucket-card .category-btn.active .category-label { opacity: 1; }
 
@@ -1077,6 +1157,17 @@ const hasExpanded = true;
     color: rgba(245, 241, 232, 0.82);
   }
   .exp-sep { color: rgba(245, 241, 232, 0.35); }
+  /* Divider between curator metadata and engine-generated content.
+     Spans both grid columns so it acts as a section break inside the dl. */
+  .exp-divider {
+    grid-column: 1 / -1;
+    height: 1px;
+    background: linear-gradient(90deg,
+      rgba(14, 196, 252, 0) 0%,
+      rgba(14, 196, 252, 0.24) 50%,
+      rgba(14, 196, 252, 0) 100%);
+    margin: 6px 0 2px 0;
+  }
 
   .tag-list {
     list-style: none;
@@ -1409,11 +1500,11 @@ const hasExpanded = true;
     }
     .middle-col { padding-right: 8px; }
     .category-bar {
-      width: 52px;
-      margin: -12px 0 -12px 6px;
+      width: 56px;
+      margin: -12px 0 -12px 8px;
     }
-    .category-btn { min-height: 24px; }
-    .category-btn .category-label { font-size: 10px; }
+    .category-btn { min-height: 28px; padding: 0 4px; }
+    .category-btn .category-label { font-size: 11px; }
     .trash-hold.detached { margin: -12px 0; }
     .expanded { margin-left: 14px; }
   }
