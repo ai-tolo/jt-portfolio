@@ -80,17 +80,99 @@ export interface SurpriseResponse {
 }
 
 export interface AlsProject {
+  asset_id: number;
   path: string;
-  name: string;
+  filename: string;
+  display_name?: string | null;
+  bucket?: string | null;
   modified: string;
+  last_modified: string;
+  discarded_at?: string | null;
   tempo?: number | null;
-  scenes?: number | null;
-  tracks?: number | null;
-  samples?: string[] | null;
+  key_signature?: string | null;
+  time_signature?: string | null;
+  scene_names?: string[];
+  track_names?: string[];
+  sample_count?: number;
+  sample_refs?: string[];
+  samples?: string[];
+  samples_truncated?: boolean;
+  /** Absolute path to an auto-detected bounced render of this project,
+   * or null if none was found. Engine walks the .als parent dir for any
+   * audio file and picks the largest. Today only ~5/212 projects have
+   * one — the rest will need an explicit bounce or manual path entry. */
+  bounced_track_path?: string | null;
+  /** How many catalog assets are linked to this project via Print Capture
+   * (assets.print_of_project_id = this project's asset_id, non-discarded). */
+  print_count?: number;
+  /** Full metadata for prints attached to this project, sorted newest
+   * first. Surfaces in the inline print player on the project card. */
+  linked_prints?: LinkedPrint[];
+  /** Prints from OTHER projects that this project samples — detected by
+   * matching this project's sample_refs against known print filenames.
+   * Creates the "Built from: [print of X]" chain that powers
+   * mastering-pass and remix lineage. */
+  built_from_prints?: BuiltFromPrint[];
+}
+
+export interface LinkedPrint {
+  asset_id: number;
+  path: string;
+  filename: string;
+  display_name?: string | null;
+  modified?: string | null;
+  duration_seconds?: number | null;
+  waveform_path?: string | null;
+}
+
+export interface BuiltFromPrint {
+  print_asset_id: number;
+  print_filename: string;
+  print_display_name?: string | null;
+  source_project_asset_id: number;
+  source_project_filename?: string | null;
 }
 
 export interface ProjectsResponse {
   projects: AlsProject[];
+}
+
+/** A .als project surfaced as a candidate parent for an unmatched print.
+ *  Returned by /prints/pending for each pending row. */
+export interface PrintProjectSuggestion {
+  asset_id: number;
+  filename: string;
+  display_name?: string | null;
+  modified?: string | null;
+  tempo?: number | null;
+}
+
+/** A print awaiting curator confirmation. The M3 watcher noticed it in
+ *  the iCloud inbox; the curator picks which .als it came from. */
+export interface PendingPrint {
+  path: string;
+  filename: string;
+  size_bytes: number;
+  mtime: number;
+  noticed_at: string;
+  suggestions: PrintProjectSuggestion[];
+  /** Engine clusters prints whose mtimes fall within 5min of each other
+   *  into the same group_id. The UI shows a single "link all" gesture
+   *  for groups of 2+ to handle iterate-and-bounce sessions cleanly. */
+  group_id: number;
+  group_size: number;
+}
+
+export interface PendingPrintsResponse {
+  total: number;
+  items: PendingPrint[];
+}
+
+export interface PrintLinkResponse {
+  ok: boolean;
+  print_asset_id: number;
+  project_asset_id: number;
+  print_path: string;
 }
 
 export interface InboxResponse {
@@ -292,6 +374,15 @@ export interface BucketAsset {
   parent_bucket?: BucketName | null;
   parent_duration_seconds?: number | null;
   parent_category?: string | null;
+  /** Print Capture: rowid of the .als project this asset was printed
+   *  from, null if this isn't a print. Drives the "Print of [project]"
+   *  lineage chip on BucketCard. */
+  print_of_project_id?: number | null;
+  /** Resolved alongside print_of_project_id on listing endpoints — the
+   *  project's filename + display_name, surfaced so the chip can render
+   *  the parent name without a follow-up fetch. */
+  print_of_filename?: string | null;
+  print_of_display_name?: string | null;
 }
 
 export interface PromoteToLiveResponse {
@@ -334,6 +425,12 @@ export interface BucketsListResponse {
   items: BucketAsset[];
 }
 
+export interface PromoteCandidatesResponse {
+  total_candidates: number;
+  returned: number;
+  items: BucketAsset[];
+}
+
 export interface BucketAssignResponse {
   asset_id: number;
   bucket: BucketName;
@@ -348,6 +445,46 @@ export interface LineageResponse {
   asset_id: number;
   parent: BucketAsset | null;
   children: BucketAsset[];
+}
+
+// ── Jam slicer (extract-loop) ─────────────────────────────────────────────
+// Engine carves a [start_sec, end_sec] region of a source asset into a new
+// row via ffmpeg loudnorm, inserted with parent_id=<source> and
+// category='extracted-from-jam' so the BucketCard lineage chip chains back
+// to the jam. Engine endpoint: POST /buckets/extract-loop.
+
+export interface ExtractLoopResponse {
+  ok: true;
+  new_asset_id: number;
+  output_path: string;
+  duration_sec: number;
+}
+
+// ── Stem splitter (Demucs) ────────────────────────────────────────────────
+// POST kicks off a background Demucs job and returns a job_id immediately;
+// the UI then polls /buckets/split-stems/{job_id} every 5s. On done, the
+// engine has already inserted the new stem rows with parent_id=<source>
+// and content_type in {'drums','bass','vocals','other'} — siblings show via
+// the existing lineage chip + dup-group surfaces.
+
+export type StemSplitMode = "2" | "4";
+
+export interface SplitStemsResponse {
+  ok: true;
+  job_id: number;
+}
+
+export type SplitStemsJobStatus = "running" | "done" | "failed";
+
+export interface SplitStemsStatus {
+  job_id: number;
+  status: SplitStemsJobStatus;
+  /** 0..1, set by the worker as it progresses through Demucs stages. */
+  progress?: number;
+  /** Set when status='failed'. */
+  error?: string;
+  /** Set when status='done' — rowids of the new sibling asset rows. */
+  stem_asset_ids?: number[];
 }
 
 export interface RevealInFinderResponse {

@@ -1,0 +1,1053 @@
+---
+import PortalLayout from "../../layouts/PortalLayout.astro";
+import { projects as fetchProjects, getPendingPrints } from "../../lib/console-api";
+import type { AlsProject, PendingPrint } from "../../lib/console-types";
+
+const [res, pendingRes] = await Promise.all([
+  fetchProjects(),
+  getPendingPrints(),
+]);
+const items: AlsProject[] = res.ok ? res.data.projects : [];
+const pending: PendingPrint[] = pendingRes.ok ? pendingRes.data.items : [];
+
+// Cluster pending prints by group_id assigned server-side (5-min window).
+// Preserves the original noticed_at order — first occurrence of a group_id
+// determines where the group appears in the banner.
+const groupedPending: PendingPrint[][] = [];
+{
+  const seen = new Set<number>();
+  for (const p of pending) {
+    if (seen.has(p.group_id)) continue;
+    seen.add(p.group_id);
+    groupedPending.push(pending.filter((x) => x.group_id === p.group_id));
+  }
+}
+const fetchError = res.ok
+  ? null
+  : res.error.kind === "http"
+    ? `HTTP ${res.error.status}`
+    : res.error.kind;
+
+function fmtSize(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} KB`;
+  if (bytes < 1024 * 1024 * 1024) return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+  return `${(bytes / (1024 * 1024 * 1024)).toFixed(2)} GB`;
+}
+
+function fmtPendingAge(noticedAt: string): string {
+  const t = new Date(noticedAt.replace(" ", "T") + "Z").getTime();
+  if (Number.isNaN(t)) return "";
+  const mins = Math.floor((Date.now() - t) / 60000);
+  if (mins < 1) return "just now";
+  if (mins < 60) return `${mins}m ago`;
+  const hrs = Math.floor(mins / 60);
+  if (hrs < 24) return `${hrs}h ago`;
+  return `${Math.floor(hrs / 24)}d ago`;
+}
+
+const withBounce = items.filter((p) => p.bounced_track_path);
+
+// Show the project title in the same shape as BucketCard's title: stem
+// (no extension), with a small grey ".als" tail.
+function splitAls(filename: string): { base: string; ext: string } {
+  if (filename.toLowerCase().endsWith(".als")) {
+    return { base: filename.slice(0, -4), ext: ".als" };
+  }
+  return { base: filename, ext: "" };
+}
+
+function fmtDate(s?: string | null): string {
+  if (!s) return "—";
+  // ISO-ish; engine returns "2026-04-12 23:40:59" or with sub-seconds.
+  const [date] = s.split(" ");
+  return date; // YYYY-MM-DD
+}
+
+function daysAgo(s?: string | null): string {
+  if (!s) return "";
+  const [date] = s.split(" ");
+  const t = new Date(date).getTime();
+  if (Number.isNaN(t)) return "";
+  const days = Math.floor((Date.now() - t) / 86400000);
+  if (days < 30) return `${days}d`;
+  if (days < 365) return `${Math.floor(days / 30)}mo`;
+  return `${Math.floor(days / 365)}y`;
+}
+---
+
+<PortalLayout title="Projects" current="projects">
+  <section class="projects-page">
+    <header class="proj-head">
+      <h1>Projects</h1>
+      <p class="proj-sub">
+        Every <code>.als</code> in the catalog. {items.length} total · <strong>{withBounce.length}</strong> with a bounced render auto-detected in the project folder.
+      </p>
+    </header>
+
+    {pending.length > 0 && (
+      <section class="pending-banner" aria-labelledby="pending-h2">
+        <header class="pending-head">
+          <h2 id="pending-h2"><strong>{pending.length}</strong> {pending.length === 1 ? "print" : "prints"} awaiting registration</h2>
+          <p class="pending-sub">
+            Dropped into <code>_Soundbending/prints/inbox/</code>. Pick the project each came from to link it into the catalog.
+          </p>
+        </header>
+        <ul class="pending-list" role="list">
+          {groupedPending.map((group) => {
+            const isBatch = group.length > 1;
+            const head = group[0]; // suggestions are mtime-ranked per row; pick first as the shared set
+            const groupPaths = group.map((g) => g.path);
+            return (
+              <li class="pending-group" data-group-paths={JSON.stringify(groupPaths)}>
+                {isBatch && (
+                  <p class="pending-batch-label">
+                    <strong>{group.length} prints</strong> from the same session
+                  </p>
+                )}
+                {group.map((p) => (
+                  <div class="pending-row" data-pending-path={p.path}>
+                    <div class="pending-meta">
+                      <span class="pending-filename">{p.filename}</span>
+                      <span class="pending-tech">{fmtSize(p.size_bytes)} · noticed {fmtPendingAge(p.noticed_at)}</span>
+                    </div>
+                    {!isBatch && (
+                      <div class="pending-pick" data-pick-target>
+                        <span class="pending-label">Link to:</span>
+                        {p.suggestions.map((s) => (
+                          <button
+                            type="button"
+                            class="pending-suggestion"
+                            data-action="link-print"
+                            data-project-id={String(s.asset_id)}
+                            title={s.modified ?? ""}
+                          >
+                            {(s.display_name ?? s.filename).replace(/\.als$/i, "")}
+                            {s.tempo && <span class="pending-tempo"> · {Math.round(s.tempo)} BPM</span>}
+                          </button>
+                        ))}
+                        <details class="pending-more">
+                          <summary>or pick another…</summary>
+                          <select class="pending-select" data-action="link-print-select">
+                            <option value="">— choose a project —</option>
+                            {items.map((proj) => (
+                              <option value={String(proj.asset_id)}>
+                                {(proj.display_name ?? proj.filename).replace(/\.als$/i, "")} ({fmtDate(proj.modified)})
+                              </option>
+                            ))}
+                          </select>
+                        </details>
+                      </div>
+                    )}
+                    <p class="pending-status" data-status-line aria-live="polite"></p>
+                  </div>
+                ))}
+                {isBatch && (
+                  <div class="pending-pick pending-batch-pick" data-pick-target>
+                    <span class="pending-label">Link all {group.length} to:</span>
+                    {head.suggestions.map((s) => (
+                      <button
+                        type="button"
+                        class="pending-suggestion"
+                        data-action="link-print-batch"
+                        data-project-id={String(s.asset_id)}
+                        title={s.modified ?? ""}
+                      >
+                        {(s.display_name ?? s.filename).replace(/\.als$/i, "")}
+                        {s.tempo && <span class="pending-tempo"> · {Math.round(s.tempo)} BPM</span>}
+                      </button>
+                    ))}
+                    <details class="pending-more">
+                      <summary>or pick another…</summary>
+                      <select class="pending-select" data-action="link-print-batch-select">
+                        <option value="">— choose a project —</option>
+                        {items.map((proj) => (
+                          <option value={String(proj.asset_id)}>
+                            {(proj.display_name ?? proj.filename).replace(/\.als$/i, "")} ({fmtDate(proj.modified)})
+                          </option>
+                        ))}
+                      </select>
+                    </details>
+                    <p class="pending-status" data-status-line data-batch-status aria-live="polite"></p>
+                  </div>
+                )}
+              </li>
+            );
+          })}
+        </ul>
+      </section>
+    )}
+
+    {fetchError ? (
+      <p class="error" role="alert">Couldn't load: {fetchError}</p>
+    ) : items.length === 0 ? (
+      <p class="empty">No projects in the catalog yet.</p>
+    ) : (
+      <ul class="proj-list" role="list">
+        {items.map((p) => {
+          const title = p.display_name ?? splitAls(p.filename).base;
+          const ext = p.display_name ? "" : splitAls(p.filename).ext;
+          const samplesShown = p.samples ?? [];
+          const moreCount = (p.sample_count ?? samplesShown.length) - samplesShown.length;
+          const tech: string[] = [];
+          if (p.tempo) tech.push(`${Math.round(p.tempo)} BPM`);
+          if (p.key_signature && p.key_signature !== "0 Major") tech.push(p.key_signature);
+          if (p.time_signature) tech.push(p.time_signature);
+          if (p.track_names && p.track_names.length > 0) tech.push(`${p.track_names.length} tracks`);
+          tech.push(`${p.sample_count ?? samplesShown.length} samples`);
+          return (
+            <li
+              class="proj-card"
+              data-asset-id={String(p.asset_id)}
+              data-bounced-path={p.bounced_track_path ?? ""}
+            >
+              <div class="proj-head-row">
+                <h3 class="proj-title">
+                  <span class="proj-title-base">{title}</span>
+                  {ext && <span class="proj-title-ext">{ext}</span>}
+                  {(p.print_count ?? 0) > 0 && (
+                    <span class="proj-prints-chip" title={`${p.print_count} print${p.print_count === 1 ? "" : "s"} linked to this project`}>
+                      → {p.print_count} {p.print_count === 1 ? "print" : "prints"}
+                    </span>
+                  )}
+                </h3>
+                <span class="proj-modified" title={p.modified ?? ""}>
+                  {daysAgo(p.modified)} <span class="proj-date">[{fmtDate(p.modified)}]</span>
+                </span>
+              </div>
+              {tech.length > 0 && <p class="proj-tech">{tech.join(" · ")}</p>}
+              {(p.built_from_prints?.length ?? 0) > 0 && (
+                <p class="proj-built-from">
+                  <span class="proj-built-label">↑ Built from:</span>
+                  {p.built_from_prints!.map((b, i) => (
+                    <>
+                      {i > 0 && <span class="proj-built-sep">·</span>}
+                      <span class="proj-built-chip" title={`Print from: ${(b.source_project_filename ?? "unknown").replace(/\.als$/i, "")}`}>
+                        {(b.print_display_name ?? b.print_filename).replace(/\.(wav|aif|aiff|mp3|m4a|flac)$/i, "")}
+                        {b.source_project_filename && (
+                          <span class="proj-built-parent">
+                            ← {b.source_project_filename.replace(/\.als$/i, "")}
+                          </span>
+                        )}
+                      </span>
+                    </>
+                  ))}
+                </p>
+              )}
+              {samplesShown.length > 0 && (
+                <details class="proj-samples">
+                  <summary>
+                    Samples
+                    {moreCount > 0 ? ` · ${samplesShown.length} shown, +${moreCount} more` : ""}
+                  </summary>
+                  <ul role="list">
+                    {samplesShown.map((s) => <li>{s}</li>)}
+                  </ul>
+                </details>
+              )}
+              {(p.linked_prints?.length ?? 0) > 0 && (
+                <details class="proj-prints" open>
+                  <summary>
+                    <strong>Prints ({p.linked_prints!.length})</strong>
+                  </summary>
+                  <ul role="list" class="proj-prints-list">
+                    {p.linked_prints!.map((pr) => (
+                      <li class="proj-print-row" data-print-path={pr.path}>
+                        <button
+                          type="button"
+                          class="print-play-btn"
+                          data-action="audition-print"
+                          aria-label={`Audition ${pr.filename}`}
+                        >▶</button>
+                        <span class="print-filename">{pr.display_name ?? pr.filename}</span>
+                        {pr.duration_seconds && (
+                          <span class="print-duration">
+                            {Math.floor(pr.duration_seconds / 60)}:{String(Math.floor(pr.duration_seconds % 60)).padStart(2, "0")}
+                          </span>
+                        )}
+                        <button
+                          type="button"
+                          class="print-unlink-btn"
+                          data-action="unlink-print"
+                          data-print-asset-id={String(pr.asset_id)}
+                          title="Remove this print's link to this project"
+                        >✕</button>
+                        <span class="status-line" data-status-line aria-live="polite"></span>
+                      </li>
+                    ))}
+                  </ul>
+                </details>
+              )}
+              {p.bounced_track_path && (
+                <div class="proj-actions">
+                  <button
+                    type="button"
+                    class="audition-btn"
+                    data-action="audition-bounce"
+                  >▶ Audition bounced render</button>
+                  <span class="status-line" data-status-line aria-live="polite"></span>
+                </div>
+              )}
+            </li>
+          );
+        })}
+      </ul>
+    )}
+  </section>
+</PortalLayout>
+
+<style>
+  .projects-page {
+    padding: 0 16px 80px;
+    max-width: 980px;
+    margin: 0 auto;
+  }
+  .proj-head {
+    margin: 24px 0 18px;
+  }
+  .proj-head h1 {
+    font-size: 22px;
+    font-weight: 700;
+    margin: 0 0 6px;
+    color: var(--ink);
+  }
+  .proj-sub {
+    font-size: 13px;
+    line-height: 1.5;
+    color: var(--ink-muted, #888);
+    margin: 0;
+  }
+  .proj-sub strong {
+    color: var(--accent, #ff4f8b);
+  }
+  .proj-sub code {
+    font-size: 12px;
+    background: rgba(0,0,0,0.05);
+    padding: 1px 5px;
+    border-radius: 3px;
+  }
+  .proj-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .proj-card {
+    background: var(--card-bg, rgba(255,255,255,0.02));
+    border: 1px solid var(--card-border, rgba(255,255,255,0.08));
+    border-radius: 6px;
+    padding: 12px 16px;
+  }
+  .proj-head-row {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+  .proj-title {
+    font-family: "Geist Mono Variable", ui-monospace, monospace;
+    font-size: 14px;
+    font-weight: 600;
+    margin: 0;
+    color: var(--accent-soft, #7fd9b0);
+  }
+  .proj-title-ext {
+    color: var(--ink-muted, #888);
+    font-weight: 400;
+  }
+  .proj-prints-chip {
+    margin-left: 10px;
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--accent, #ff4f8b);
+    background: rgba(255, 79, 139, 0.1);
+    border: 1px solid rgba(255, 79, 139, 0.4);
+    padding: 2px 8px;
+    border-radius: 10px;
+    letter-spacing: 0.04em;
+    vertical-align: 2px;
+  }
+  .proj-modified {
+    font-family: "Geist Mono Variable", ui-monospace, monospace;
+    font-size: 12px;
+    color: var(--ink-muted, #888);
+    white-space: nowrap;
+  }
+  .proj-date {
+    opacity: 0.6;
+  }
+  .proj-tech {
+    font-family: "Geist Mono Variable", ui-monospace, monospace;
+    font-size: 12px;
+    color: var(--ink-muted, #888);
+    margin: 6px 0 0;
+  }
+  .proj-samples {
+    margin-top: 8px;
+    font-size: 12px;
+  }
+  .proj-samples summary {
+    cursor: pointer;
+    color: var(--ink-muted, #888);
+    font-family: "Geist Mono Variable", ui-monospace, monospace;
+    padding: 4px 0;
+  }
+  .proj-samples summary:hover { color: var(--ink); }
+  .proj-samples ul {
+    list-style: none;
+    padding: 6px 0 4px 12px;
+    margin: 0;
+    font-family: "Geist Mono Variable", ui-monospace, monospace;
+    color: var(--ink-muted, #888);
+    line-height: 1.6;
+    border-left: 1px solid var(--card-border, rgba(255,255,255,0.08));
+  }
+
+  /* ── Built-from lineage ────────────────────────────────────────── */
+  .proj-built-from {
+    font-family: "Geist Mono Variable", ui-monospace, monospace;
+    font-size: 12px;
+    margin: 6px 0 0;
+    color: var(--ink-muted, #888);
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    align-items: baseline;
+  }
+  .proj-built-label {
+    color: var(--accent, #ff4f8b);
+    font-weight: 700;
+    letter-spacing: 0.06em;
+  }
+  .proj-built-sep { opacity: 0.4; }
+  .proj-built-chip {
+    color: var(--accent-soft, #7fd9b0);
+  }
+  .proj-built-parent {
+    color: var(--ink-muted, #888);
+    margin-left: 4px;
+  }
+
+  /* ── Inline print player ───────────────────────────────────────── */
+  .proj-prints {
+    margin-top: 8px;
+    font-size: 12px;
+  }
+  .proj-prints summary {
+    cursor: pointer;
+    color: var(--ink-muted, #888);
+    font-family: "Geist Mono Variable", ui-monospace, monospace;
+    padding: 4px 0;
+  }
+  .proj-prints summary strong {
+    color: var(--accent, #ff4f8b);
+    font-weight: 700;
+  }
+  .proj-prints-list {
+    list-style: none;
+    padding: 6px 0 4px 12px;
+    margin: 0;
+    border-left: 1px solid rgba(255, 79, 139, 0.25);
+  }
+  .proj-print-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-family: "Geist Mono Variable", ui-monospace, monospace;
+    padding: 3px 0;
+    flex-wrap: wrap;
+  }
+  .proj-print-row[data-playing="true"] {
+    color: var(--accent, #ff4f8b);
+  }
+  .proj-print-row[data-unlinked="true"] {
+    opacity: 0.4;
+    text-decoration: line-through;
+  }
+  .print-play-btn {
+    background: rgba(127, 217, 176, 0.08);
+    color: var(--accent-soft, #7fd9b0);
+    border: 1px solid rgba(127, 217, 176, 0.4);
+    width: 22px;
+    height: 22px;
+    border-radius: 4px;
+    font-size: 10px;
+    cursor: pointer;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .print-play-btn:hover {
+    background: rgba(127, 217, 176, 0.2);
+  }
+  .print-play-btn[data-playing="true"] {
+    background: var(--accent-soft, #7fd9b0);
+    color: var(--ink-bg, #000);
+  }
+  .print-filename {
+    color: var(--ink);
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .print-duration {
+    color: var(--ink-muted, #888);
+    font-size: 11px;
+  }
+  .print-unlink-btn {
+    background: transparent;
+    color: var(--ink-muted, #888);
+    border: 1px solid transparent;
+    width: 18px;
+    height: 18px;
+    font-size: 10px;
+    cursor: pointer;
+    padding: 0;
+    border-radius: 3px;
+    opacity: 0.4;
+  }
+  .proj-print-row:hover .print-unlink-btn { opacity: 1; }
+  .print-unlink-btn:hover {
+    color: var(--err, #d33);
+    border-color: var(--err, #d33);
+  }
+  .proj-print-row .status-line {
+    flex-basis: 100%;
+    font-size: 10px;
+    padding-left: 30px;
+  }
+  .proj-actions {
+    margin-top: 10px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+  .audition-btn {
+    background: var(--accent, #ff4f8b);
+    color: var(--ink-bg, #000);
+    border: none;
+    padding: 6px 12px;
+    border-radius: 4px;
+    font-size: 12px;
+    font-weight: 700;
+    font-family: "Geist Mono Variable", ui-monospace, monospace;
+    cursor: pointer;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+  .audition-btn:hover { opacity: 0.85; }
+  .audition-btn:disabled { opacity: 0.5; cursor: default; }
+  .status-line {
+    font-family: "Geist Mono Variable", ui-monospace, monospace;
+    font-size: 11px;
+    color: var(--ink-muted, #888);
+  }
+  .status-line[data-tone="err"] { color: var(--err, #d33); }
+  .status-line[data-tone="ok"] { color: var(--ok, #7fd9b0); }
+  .error, .empty {
+    padding: 18px;
+    text-align: center;
+    color: var(--ink-muted, #888);
+  }
+  .error { color: var(--err, #d33); }
+
+  /* ── Pending prints banner ─────────────────────────────────────── */
+  .pending-banner {
+    margin: 16px 0 24px;
+    padding: 16px 18px;
+    background: rgba(255, 79, 139, 0.06);
+    border: 1px solid rgba(255, 79, 139, 0.3);
+    border-radius: 8px;
+  }
+  .pending-head h2 {
+    font-size: 14px;
+    font-weight: 700;
+    margin: 0 0 4px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--ink);
+  }
+  .pending-head h2 strong {
+    color: var(--accent, #ff4f8b);
+  }
+  .pending-sub {
+    font-size: 12px;
+    color: var(--ink-muted, #888);
+    margin: 0 0 12px;
+  }
+  .pending-sub code {
+    font-size: 11px;
+    background: rgba(0,0,0,0.05);
+    padding: 1px 5px;
+    border-radius: 3px;
+  }
+  .pending-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+  }
+  .pending-group {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+  .pending-batch-label {
+    font-family: "Geist Mono Variable", ui-monospace, monospace;
+    font-size: 11px;
+    color: var(--ink-muted, #888);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    margin: 0 0 4px;
+  }
+  .pending-batch-label strong {
+    color: var(--accent, #ff4f8b);
+  }
+  .pending-batch-pick {
+    margin-top: 4px;
+    padding: 8px 12px;
+    background: rgba(255, 79, 139, 0.07);
+    border: 1px dashed rgba(255, 79, 139, 0.35);
+    border-radius: 6px;
+  }
+  .pending-row {
+    background: rgba(0,0,0,0.15);
+    border: 1px solid rgba(255,255,255,0.06);
+    border-radius: 6px;
+    padding: 10px 12px;
+  }
+  .pending-row[data-linked="true"] {
+    opacity: 0.45;
+  }
+  .pending-meta {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin-bottom: 8px;
+  }
+  .pending-filename {
+    font-family: "Geist Mono Variable", ui-monospace, monospace;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--accent-soft, #7fd9b0);
+  }
+  .pending-tech {
+    font-family: "Geist Mono Variable", ui-monospace, monospace;
+    font-size: 11px;
+    color: var(--ink-muted, #888);
+  }
+  .pending-pick {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    align-items: center;
+  }
+  .pending-label {
+    font-family: "Geist Mono Variable", ui-monospace, monospace;
+    font-size: 11px;
+    color: var(--ink-muted, #888);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    margin-right: 4px;
+  }
+  .pending-suggestion {
+    background: rgba(127, 217, 176, 0.08);
+    color: var(--accent-soft, #7fd9b0);
+    border: 1px solid rgba(127, 217, 176, 0.3);
+    padding: 5px 10px;
+    border-radius: 4px;
+    font-size: 12px;
+    font-family: "Geist Mono Variable", ui-monospace, monospace;
+    cursor: pointer;
+    transition: background 120ms ease, transform 120ms ease;
+  }
+  .pending-suggestion:hover {
+    background: rgba(127, 217, 176, 0.18);
+    transform: translateY(-1px);
+  }
+  .pending-suggestion:disabled {
+    opacity: 0.4;
+    cursor: default;
+    transform: none;
+  }
+  .pending-tempo {
+    opacity: 0.7;
+    font-size: 11px;
+  }
+  .pending-more summary {
+    cursor: pointer;
+    font-size: 12px;
+    color: var(--ink-muted, #888);
+    font-family: "Geist Mono Variable", ui-monospace, monospace;
+    padding: 4px 8px;
+  }
+  .pending-more summary:hover { color: var(--ink); }
+  .pending-select {
+    margin-top: 6px;
+    font-family: "Geist Mono Variable", ui-monospace, monospace;
+    font-size: 12px;
+    background: rgba(0,0,0,0.3);
+    color: var(--ink);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 4px;
+    padding: 5px 8px;
+    max-width: 100%;
+  }
+  .pending-status {
+    font-family: "Geist Mono Variable", ui-monospace, monospace;
+    font-size: 11px;
+    color: var(--ink-muted, #888);
+    margin: 6px 0 0;
+    min-height: 1em;
+  }
+  .pending-status[data-tone="ok"] { color: var(--accent-soft, #7fd9b0); }
+  .pending-status[data-tone="err"] { color: var(--err, #d33); }
+</style>
+
+<script>
+  // Single audio element shared across project rows. Click "Audition
+  // bounced" to start playback; click again to stop.
+  const root = document.querySelector<HTMLElement>(".projects-page");
+  if (root) {
+    let audio: HTMLAudioElement | null = null;
+    let activeCard: HTMLElement | null = null;
+
+    const setStatus = (card: HTMLElement, text: string, tone: "" | "ok" | "err" = "") => {
+      const line = card.querySelector<HTMLElement>("[data-status-line]");
+      if (!line) return;
+      line.textContent = text;
+      if (tone) line.setAttribute("data-tone", tone);
+      else line.removeAttribute("data-tone");
+    };
+
+    const setBtnLabel = (card: HTMLElement, label: string) => {
+      const btn = card.querySelector<HTMLButtonElement>('[data-action="audition-bounce"]');
+      if (btn) btn.textContent = label;
+    };
+
+    const stopActive = () => {
+      if (audio) audio.pause();
+      if (activeCard) {
+        setBtnLabel(activeCard, "▶ Audition bounced render");
+        setStatus(activeCard, "");
+      }
+      activeCard = null;
+    };
+
+    root.addEventListener("click", async (e) => {
+      const btn = (e.target as HTMLElement | null)?.closest<HTMLElement>(
+        '[data-action="audition-bounce"]',
+      );
+      if (!btn) return;
+      const card = btn.closest<HTMLElement>(".proj-card");
+      if (!card) return;
+      const path = card.dataset.bouncedPath;
+      if (!path) return;
+
+      // Toggle if same card.
+      if (activeCard === card && audio && !audio.paused) {
+        audio.pause();
+        setBtnLabel(card, "▶ Audition bounced render");
+        setStatus(card, "Paused");
+        return;
+      }
+      stopActive();
+      if (!audio) {
+        audio = new Audio();
+        audio.preload = "auto";
+        audio.addEventListener("ended", () => {
+          if (activeCard) {
+            setBtnLabel(activeCard, "▶ Audition bounced render");
+            setStatus(activeCard, "");
+          }
+          activeCard = null;
+        });
+        audio.addEventListener("error", () => {
+          if (activeCard) setStatus(activeCard, "Failed to load", "err");
+          stopActive();
+        });
+      }
+      activeCard = card;
+      setBtnLabel(card, "■ Stop");
+      setStatus(card, "Streaming…");
+      // Same opus-variant gate as Buckets: long renders transcode on M1.
+      // We don't have duration on /projects rows so always request opus
+      // for safety — bounced renders are usually full songs (>10min often
+      // false, but a 200MB WAV is still painful raw). Skip if size hints
+      // become available later.
+      audio.src = `/api/console/asset?path=${encodeURIComponent(path)}&variant=opus`;
+      try {
+        await audio.play();
+        setStatus(card, "Playing");
+      } catch {
+        setStatus(card, "Play failed", "err");
+        stopActive();
+      }
+    });
+
+    // ── Print linker ────────────────────────────────────────────────────
+    // Click a suggestion chip OR pick from the fallback <select> to link
+    // a pending print to a project. On success the row dims and the
+    // suggestions disable; on failure the status line shows the reason.
+    const linkPrint = async (row: HTMLElement, projectId: number) => {
+      const path = row.dataset.pendingPath;
+      if (!path) return;
+      if (row.getAttribute("data-pending") === "true") return;
+      row.setAttribute("data-pending", "true");
+      const buttons = row.querySelectorAll<HTMLButtonElement>('[data-action="link-print"]');
+      const select = row.querySelector<HTMLSelectElement>('[data-action="link-print-select"]');
+      buttons.forEach((b) => (b.disabled = true));
+      if (select) select.disabled = true;
+      const setRowStatus = (text: string, tone: "" | "ok" | "err" = "") => {
+        const line = row.querySelector<HTMLElement>("[data-status-line]");
+        if (!line) return;
+        line.textContent = text;
+        if (tone) line.setAttribute("data-tone", tone);
+        else line.removeAttribute("data-tone");
+      };
+      setRowStatus("Linking…");
+      try {
+        const res = await fetch("/api/console/prints-link", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ path, project_asset_id: projectId }),
+        });
+        if (!res.ok) {
+          let detail = `HTTP ${res.status}`;
+          try {
+            const body = await res.json();
+            if (body?.error?.message) detail = body.error.message;
+            else if (typeof body?.detail === "string") detail = body.detail;
+          } catch {}
+          setRowStatus(`Link failed: ${detail}`, "err");
+          buttons.forEach((b) => (b.disabled = false));
+          if (select) select.disabled = false;
+          row.removeAttribute("data-pending");
+          return;
+        }
+        row.setAttribute("data-linked", "true");
+        setRowStatus("✓ Linked. Refresh to see the print on its project card.", "ok");
+      } catch {
+        setRowStatus("Link failed (network)", "err");
+        buttons.forEach((b) => (b.disabled = false));
+        if (select) select.disabled = false;
+        row.removeAttribute("data-pending");
+      }
+    };
+
+    root.addEventListener("click", (e) => {
+      const btn = (e.target as HTMLElement | null)?.closest<HTMLElement>(
+        '[data-action="link-print"]',
+      );
+      if (!btn) return;
+      const row = btn.closest<HTMLElement>(".pending-row");
+      const id = Number(btn.dataset.projectId);
+      if (!row || !Number.isFinite(id)) return;
+      linkPrint(row, id);
+    });
+    root.addEventListener("change", (e) => {
+      const sel = (e.target as HTMLElement | null)?.closest<HTMLSelectElement>(
+        '[data-action="link-print-select"]',
+      );
+      if (!sel || !sel.value) return;
+      const row = sel.closest<HTMLElement>(".pending-row");
+      const id = Number(sel.value);
+      if (!row || !Number.isFinite(id)) return;
+      linkPrint(row, id);
+    });
+
+    // ── Inline print player + unlink ────────────────────────────────
+    // Reuses the same singleton audio element used by audition-bounce, so
+    // playing a print on one card stops a bounce playing on another.
+    const setPrintRowStatus = (
+      row: HTMLElement, text: string, tone: "" | "ok" | "err" = "",
+    ) => {
+      const line = row.querySelector<HTMLElement>("[data-status-line]");
+      if (!line) return;
+      line.textContent = text;
+      if (tone) line.setAttribute("data-tone", tone);
+      else line.removeAttribute("data-tone");
+    };
+
+    const stopPrintIfActive = () => {
+      if (audio && !audio.paused) audio.pause();
+      const playing = document.querySelector<HTMLElement>(
+        '.proj-print-row[data-playing="true"]',
+      );
+      if (playing) {
+        playing.removeAttribute("data-playing");
+        const btn = playing.querySelector<HTMLButtonElement>(
+          '[data-action="audition-print"]',
+        );
+        if (btn) { btn.removeAttribute("data-playing"); btn.textContent = "▶"; }
+      }
+    };
+
+    root.addEventListener("click", async (e) => {
+      const btn = (e.target as HTMLElement | null)?.closest<HTMLElement>(
+        '[data-action="audition-print"]',
+      );
+      if (!btn) return;
+      const row = btn.closest<HTMLElement>(".proj-print-row");
+      const path = row?.dataset.printPath;
+      if (!row || !path) return;
+      const isPlayingThis = row.getAttribute("data-playing") === "true";
+      stopActive(); // halt any bounce playback
+      stopPrintIfActive();
+      if (isPlayingThis) return; // toggle off
+      if (!audio) {
+        audio = new Audio();
+        audio.preload = "auto";
+        audio.addEventListener("ended", () => stopPrintIfActive());
+        audio.addEventListener("error", () => {
+          const playing = document.querySelector<HTMLElement>(
+            '.proj-print-row[data-playing="true"]',
+          );
+          if (playing) setPrintRowStatus(playing, "Failed to load (iCloud may not have synced yet)", "err");
+          stopPrintIfActive();
+        });
+      }
+      row.setAttribute("data-playing", "true");
+      btn.setAttribute("data-playing", "true");
+      btn.textContent = "■";
+      setPrintRowStatus(row, "Streaming…");
+      audio.src = `/api/console/asset?path=${encodeURIComponent(path)}&variant=opus`;
+      try {
+        await audio.play();
+        setPrintRowStatus(row, "");
+      } catch {
+        setPrintRowStatus(row, "Play failed", "err");
+        stopPrintIfActive();
+      }
+    });
+
+    root.addEventListener("click", async (e) => {
+      const btn = (e.target as HTMLElement | null)?.closest<HTMLElement>(
+        '[data-action="unlink-print"]',
+      );
+      if (!btn) return;
+      const row = btn.closest<HTMLElement>(".proj-print-row");
+      const assetId = Number(btn.dataset.printAssetId);
+      if (!row || !Number.isFinite(assetId)) return;
+      if (row.getAttribute("data-pending") === "true") return;
+      row.setAttribute("data-pending", "true");
+      setPrintRowStatus(row, "Unlinking…");
+      try {
+        const res = await fetch("/api/console/prints-unlink", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ asset_id: assetId }),
+        });
+        if (!res.ok) {
+          let detail = `HTTP ${res.status}`;
+          try {
+            const body = await res.json();
+            if (body?.error?.message) detail = body.error.message;
+            else if (typeof body?.detail === "string") detail = body.detail;
+          } catch {}
+          setPrintRowStatus(row, `Unlink failed: ${detail}`, "err");
+          row.removeAttribute("data-pending");
+          return;
+        }
+        row.setAttribute("data-unlinked", "true");
+        setPrintRowStatus(row, "Unlinked. Refresh to remove.", "ok");
+      } catch {
+        setPrintRowStatus(row, "Unlink failed (network)", "err");
+        row.removeAttribute("data-pending");
+      }
+    });
+
+    // ── Batch linker: same gesture, all rows in the group ─────────────
+    const linkBatch = async (group: HTMLElement, projectId: number) => {
+      let paths: string[] = [];
+      try {
+        paths = JSON.parse(group.dataset.groupPaths || "[]");
+      } catch {}
+      if (!paths.length) return;
+      const batchStatus = group.querySelector<HTMLElement>("[data-batch-status]");
+      const setBatchStatus = (text: string, tone: "" | "ok" | "err" = "") => {
+        if (!batchStatus) return;
+        batchStatus.textContent = text;
+        if (tone) batchStatus.setAttribute("data-tone", tone);
+        else batchStatus.removeAttribute("data-tone");
+      };
+      const buttons = group.querySelectorAll<HTMLButtonElement>(
+        '[data-action="link-print-batch"]',
+      );
+      const selects = group.querySelectorAll<HTMLSelectElement>(
+        '[data-action="link-print-batch-select"]',
+      );
+      buttons.forEach((b) => (b.disabled = true));
+      selects.forEach((s) => (s.disabled = true));
+      setBatchStatus(`Linking ${paths.length}…`);
+      // Fire in parallel; the engine is idempotent on path. Each row
+      // gets its own dim on success.
+      const results = await Promise.allSettled(
+        paths.map((path) =>
+          fetch("/api/console/prints-link", {
+            method: "POST",
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify({ path, project_asset_id: projectId }),
+          }).then((r) => (r.ok ? r.json() : Promise.reject(new Error(`HTTP ${r.status}`)))),
+        ),
+      );
+      let ok = 0;
+      results.forEach((res, i) => {
+        const path = paths[i];
+        const row = group.querySelector<HTMLElement>(
+          `.pending-row[data-pending-path="${CSS.escape(path)}"]`,
+        );
+        if (!row) return;
+        if (res.status === "fulfilled") {
+          row.setAttribute("data-linked", "true");
+          ok += 1;
+        } else {
+          const line = row.querySelector<HTMLElement>("[data-status-line]");
+          if (line) {
+            line.textContent = `failed: ${res.reason?.message ?? res.reason}`;
+            line.setAttribute("data-tone", "err");
+          }
+        }
+      });
+      if (ok === paths.length) {
+        setBatchStatus(`✓ All ${paths.length} linked. Refresh to see them on the project card.`, "ok");
+      } else {
+        setBatchStatus(`${ok}/${paths.length} linked. ${paths.length - ok} failed — see individual rows.`, "err");
+        buttons.forEach((b) => (b.disabled = false));
+        selects.forEach((s) => (s.disabled = false));
+      }
+    };
+
+    root.addEventListener("click", (e) => {
+      const btn = (e.target as HTMLElement | null)?.closest<HTMLElement>(
+        '[data-action="link-print-batch"]',
+      );
+      if (!btn) return;
+      const group = btn.closest<HTMLElement>(".pending-group");
+      const id = Number(btn.dataset.projectId);
+      if (!group || !Number.isFinite(id)) return;
+      linkBatch(group, id);
+    });
+    root.addEventListener("change", (e) => {
+      const sel = (e.target as HTMLElement | null)?.closest<HTMLSelectElement>(
+        '[data-action="link-print-batch-select"]',
+      );
+      if (!sel || !sel.value) return;
+      const group = sel.closest<HTMLElement>(".pending-group");
+      const id = Number(sel.value);
+      if (!group || !Number.isFinite(id)) return;
+      linkBatch(group, id);
+    });
+  }
+</script>

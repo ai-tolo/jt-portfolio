@@ -637,7 +637,11 @@ const BUCKET_TITLE: Record<BucketView, string> = {
       clearAllPlayheadsExcept(card);
       activeCard = card;
       setAuditionBtnState(card, true);
-      a.src = `/api/console/asset?path=${encodeURIComponent(path)}`;
+      // Long files (>10min) request the opus-transcoded variant — a 33min
+      // WAV at 356MB becomes ~22MB and streams reliably over Funnel.
+      const durSec = Number(card.dataset.durationSeconds);
+      const variant = Number.isFinite(durSec) && durSec > 600 ? "&variant=opus" : "";
+      a.src = `/api/console/asset?path=${encodeURIComponent(path)}${variant}`;
 
       const startAtFraction = () => {
         if (seekFraction === undefined) return;
@@ -677,6 +681,304 @@ const BUCKET_TITLE: Record<BucketView, string> = {
       const rect = wf.getBoundingClientRect();
       const fraction = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
       playCard(card, fraction);
+    };
+
+    // ── Jam slicer: shift-drag on the waveform → region select ──────────
+    // Records [start_sec, end_sec] in source coords (derived from x
+    // fraction × duration_seconds), draws a translucent overlay, and shows
+    // a floating "Extract loop" button below the waveform. Click the
+    // button → POST /api/console/extract-loop → engine ffmpegs the region
+    // into _Soundbending/loops/extracted/ + inserts a child row with
+    // parent_id=<this card> for the lineage chip.
+    //
+    // The shift-drag click is suppressed via `suppressNextClick` so the
+    // existing seekFromWaveform handler doesn't run on mouseup.
+    let suppressNextClick = false;
+    let slicingState: {
+      card: HTMLElement;
+      wf: HTMLElement;
+      durationSec: number;
+      startX: number;
+      overlay: HTMLElement;
+    } | null = null;
+
+    const fmtSliceTime = (s: number): string => {
+      if (!Number.isFinite(s) || s < 0) return "0:00.0";
+      const m = Math.floor(s / 60);
+      const r = s - m * 60;
+      return `${m}:${r.toFixed(1).padStart(4, "0")}`;
+    };
+
+    const clearSlicerForCard = (card: HTMLElement) => {
+      card.querySelectorAll<HTMLElement>(
+        ".waveform-region-overlay, .extract-loop-btn",
+      ).forEach((el) => el.remove());
+      card.querySelectorAll<HTMLElement>(".waveform[data-slicing]").forEach((wf) =>
+        wf.removeAttribute("data-slicing"),
+      );
+    };
+
+    const buildExtractButton = (
+      card: HTMLElement,
+      startSec: number,
+      endSec: number,
+    ): HTMLButtonElement => {
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "extract-loop-btn";
+      btn.dataset.startSec = String(startSec);
+      btn.dataset.endSec = String(endSec);
+      btn.title = "Carve this region into _Soundbending/loops/ as a child row";
+      const label = document.createElement("span");
+      label.textContent = "✂ Extract loop ";
+      const range = document.createElement("span");
+      range.className = "extract-loop-range";
+      range.textContent = `${fmtSliceTime(startSec)}–${fmtSliceTime(endSec)}`;
+      const dismiss = document.createElement("span");
+      dismiss.className = "extract-loop-dismiss";
+      dismiss.textContent = "×";
+      dismiss.title = "Cancel";
+      btn.append(label, range, dismiss);
+      // Click on the × inside the button cancels without firing the extract.
+      btn.addEventListener("click", async (ev) => {
+        const target = ev.target as HTMLElement | null;
+        if (target?.classList.contains("extract-loop-dismiss")) {
+          ev.preventDefault();
+          ev.stopPropagation();
+          clearSlicerForCard(card);
+          return;
+        }
+        if (btn.dataset.busy === "true") return;
+        btn.dataset.busy = "true";
+        const assetId = card.dataset.assetId;
+        if (!assetId) return;
+        setStatus(card, "Extracting loop…");
+        try {
+          const res = await fetch("/api/console/extract-loop", {
+            method: "POST",
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify({
+              asset_id: Number(assetId),
+              start_sec: startSec,
+              end_sec: endSec,
+            }),
+          });
+          if (!res.ok) {
+            let detail = `HTTP ${res.status}`;
+            try {
+              const body = await res.json();
+              if (body?.error?.message) detail = body.error.message;
+              else if (body?.error?.kind === "http") detail = `engine HTTP ${body.error.status}`;
+              else if (typeof body?.detail === "string") detail = body.detail;
+            } catch {}
+            setStatus(card, `Extract failed: ${detail}`, "err");
+            btn.dataset.busy = "";
+            return;
+          }
+          const data = (await res.json()) as {
+            new_asset_id: number;
+            output_path: string;
+            duration_sec: number;
+          };
+          setStatus(
+            card,
+            `✓ Extracted to Loops · ${data.duration_sec.toFixed(1)}s (asset ${data.new_asset_id})`,
+            "ok",
+          );
+          clearSlicerForCard(card);
+        } catch {
+          setStatus(card, "Extract failed (network)", "err");
+          btn.dataset.busy = "";
+        }
+      });
+      return btn;
+    };
+
+    const onSliceMove = (e: MouseEvent) => {
+      if (!slicingState) return;
+      const { wf, startX, overlay } = slicingState;
+      const rect = wf.getBoundingClientRect();
+      const currX = Math.max(rect.left, Math.min(rect.right, e.clientX));
+      const a = Math.min(startX, currX) - rect.left;
+      const b = Math.max(startX, currX) - rect.left;
+      overlay.style.left = `${a}px`;
+      overlay.style.width = `${Math.max(1, b - a)}px`;
+    };
+
+    const onSliceUp = (e: MouseEvent) => {
+      if (!slicingState) return;
+      const { card, wf, durationSec, startX } = slicingState;
+      window.removeEventListener("mousemove", onSliceMove);
+      window.removeEventListener("mouseup", onSliceUp);
+      const rect = wf.getBoundingClientRect();
+      wf.removeAttribute("data-slicing");
+      const a = Math.max(rect.left, Math.min(rect.right, Math.min(startX, e.clientX)));
+      const b = Math.max(rect.left, Math.min(rect.right, Math.max(startX, e.clientX)));
+      const fA = (a - rect.left) / rect.width;
+      const fB = (b - rect.left) / rect.width;
+      const startSec = fA * durationSec;
+      const endSec = fB * durationSec;
+      // Reject zero-width or sub-100ms drags as fat-finger noise; the
+      // curator can re-shift-drag.
+      if (!(durationSec > 0) || endSec - startSec < 0.1) {
+        clearSlicerForCard(card);
+        slicingState = null;
+        return;
+      }
+      // Suppress the click that immediately follows mouseup so seek doesn't
+      // fire on top of our slicer.
+      suppressNextClick = true;
+      window.setTimeout(() => { suppressNextClick = false; }, 50);
+      // Replace the overlay (which is good for the gesture) with a
+      // final-positioned one + the extract button. Slicer state cleared so
+      // the next shift-drag starts fresh.
+      const extractBtn = buildExtractButton(card, startSec, endSec);
+      // Drop it in the .wave-row so it sits directly under the waveform.
+      const waveRow = card.querySelector<HTMLElement>(".wave-row");
+      (waveRow?.parentElement ?? card).insertBefore(
+        extractBtn,
+        waveRow?.nextSibling ?? null,
+      );
+      slicingState = null;
+    };
+
+    const startSlice = (e: MouseEvent, card: HTMLElement, wf: HTMLElement) => {
+      const durationSec = Number(card.dataset.durationSeconds);
+      if (!Number.isFinite(durationSec) || durationSec <= 0) {
+        // Without a known duration we can't translate x → seconds, so the
+        // affordance is silently disabled.
+        return;
+      }
+      // Tear down any prior slice on this or other cards first.
+      cards().forEach(clearSlicerForCard);
+      const rect = wf.getBoundingClientRect();
+      const startX = Math.max(rect.left, Math.min(rect.right, e.clientX));
+      const overlay = document.createElement("div");
+      overlay.className = "waveform-region-overlay";
+      overlay.style.left = `${startX - rect.left}px`;
+      overlay.style.width = "1px";
+      wf.appendChild(overlay);
+      wf.setAttribute("data-slicing", "true");
+      slicingState = { card, wf, durationSec, startX, overlay };
+      window.addEventListener("mousemove", onSliceMove);
+      window.addEventListener("mouseup", onSliceUp, { once: true });
+      e.preventDefault();
+    };
+
+    // ── Stem splitter: POST + 5s status poll ───────────────────────────
+    // Stores job_id on the card via data-stem-job-id so a re-render can
+    // pick the poll back up (page reload still loses it — TODO if curators
+    // ask for resume across reloads, persist to sessionStorage).
+    const STEM_POLL_MS = 5000;
+    const activeStemPolls = new Map<HTMLElement, number>();
+
+    const setStemProgress = (
+      card: HTMLElement,
+      text: string,
+      tone: "" | "ok" | "err" = "",
+    ) => {
+      const span = card.querySelector<HTMLElement>("[data-stem-progress]");
+      if (!span) return;
+      span.textContent = text;
+      if (tone) span.setAttribute("data-tone", tone);
+      else span.removeAttribute("data-tone");
+    };
+
+    const stopStemPoll = (card: HTMLElement) => {
+      const id = activeStemPolls.get(card);
+      if (id !== undefined) {
+        window.clearInterval(id);
+        activeStemPolls.delete(card);
+      }
+    };
+
+    const pollStemJob = async (card: HTMLElement, jobId: number) => {
+      try {
+        const res = await fetch(
+          `/api/console/split-stems-status?job_id=${jobId}`,
+        );
+        if (!res.ok) {
+          setStemProgress(card, `Status check failed (HTTP ${res.status})`, "err");
+          return;
+        }
+        const data = (await res.json()) as {
+          status: "running" | "done" | "failed";
+          progress?: number;
+          error?: string;
+          stem_asset_ids?: number[];
+        };
+        if (data.status === "running") {
+          const pct = typeof data.progress === "number"
+            ? ` ${Math.round(data.progress * 100)}%`
+            : "";
+          setStemProgress(card, `Splitting…${pct}`);
+        } else if (data.status === "done") {
+          stopStemPoll(card);
+          const n = data.stem_asset_ids?.length ?? 0;
+          setStemProgress(
+            card,
+            n > 0 ? `✓ ${n} stems ready — reload to see siblings` : "✓ Done",
+            "ok",
+          );
+          card.querySelectorAll<HTMLButtonElement>('[data-action="split-stems"]')
+            .forEach((b) => { b.dataset.busy = ""; });
+          card.removeAttribute("data-stem-job-id");
+        } else if (data.status === "failed") {
+          stopStemPoll(card);
+          setStemProgress(card, `Failed: ${data.error ?? "unknown"}`, "err");
+          card.querySelectorAll<HTMLButtonElement>('[data-action="split-stems"]')
+            .forEach((b) => { b.dataset.busy = ""; });
+          card.removeAttribute("data-stem-job-id");
+        }
+      } catch {
+        setStemProgress(card, "Status check failed (network)", "err");
+      }
+    };
+
+    const startSplitStems = async (card: HTMLElement, mode: "2" | "4") => {
+      if (card.dataset.stemJobId) {
+        setStemProgress(card, "Already running — wait for it to finish", "err");
+        return;
+      }
+      const assetId = card.dataset.assetId;
+      if (!assetId) return;
+      const buttons = card.querySelectorAll<HTMLButtonElement>(
+        '[data-action="split-stems"]',
+      );
+      buttons.forEach((b) => { b.dataset.busy = "true"; });
+      setStemProgress(card, "Kicking off Demucs…");
+      try {
+        const res = await fetch("/api/console/split-stems", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ asset_id: Number(assetId), mode }),
+        });
+        if (!res.ok) {
+          let detail = `HTTP ${res.status}`;
+          try {
+            const body = await res.json();
+            if (body?.error?.message) detail = body.error.message;
+            else if (typeof body?.detail === "string") detail = body.detail;
+          } catch {}
+          setStemProgress(card, `Failed: ${detail}`, "err");
+          buttons.forEach((b) => { b.dataset.busy = ""; });
+          return;
+        }
+        const data = (await res.json()) as { job_id: number };
+        card.dataset.stemJobId = String(data.job_id);
+        setStemProgress(card, `Splitting… (job ${data.job_id})`);
+        // First poll immediate, then setInterval. Engine may have already
+        // started reporting progress within the first second.
+        pollStemJob(card, data.job_id);
+        const intervalId = window.setInterval(
+          () => pollStemJob(card, data.job_id),
+          STEM_POLL_MS,
+        );
+        activeStemPolls.set(card, intervalId);
+      } catch {
+        setStemProgress(card, "Kickoff failed (network)", "err");
+        buttons.forEach((b) => { b.dataset.busy = ""; });
+      }
     };
 
     // ── Hold-to-archive (0.45s press) + Undo window ──────────────────────
@@ -739,7 +1041,20 @@ const BUCKET_TITLE: Record<BucketView, string> = {
       if (btn) {
         e.preventDefault();
         startTrashHold(btn);
+        return;
       }
+      // Shift-drag on a seekable waveform initiates jam-slicer region
+      // select. We use mousedown specifically (not pointerdown's full
+      // touch path) since the gesture is mouse-only and shiftKey is on
+      // the native MouseEvent.
+    });
+    root.addEventListener("mousedown", (e) => {
+      if (!e.shiftKey) return;
+      const wf = (e.target as HTMLElement)?.closest<HTMLElement>(".waveform");
+      if (!wf || wf.getAttribute("data-seekable") !== "true") return;
+      const card = wf.closest<HTMLElement>("[data-bucket-card]");
+      if (!card) return;
+      startSlice(e, card, wf);
     });
     document.addEventListener("pointerup", cancelTrashHold);
     document.addEventListener("pointercancel", cancelTrashHold);
@@ -750,8 +1065,11 @@ const BUCKET_TITLE: Record<BucketView, string> = {
       const t = e.target as HTMLElement | null;
       if (!t) return;
       // Waveform click → seek (or start playback at that position).
+      // Skip when a shift-drag just finished — that gesture writes its own
+      // overlay + extract button and the trailing click would clobber it.
       const wfHit = t.closest<HTMLElement>(".waveform");
       if (wfHit && wfHit.getAttribute("data-seekable") === "true") {
+        if (suppressNextClick) return;
         const card = wfHit.closest<HTMLElement>("[data-bucket-card]");
         if (card) {
           seekFromWaveform(e, card);
@@ -803,6 +1121,13 @@ const BUCKET_TITLE: Record<BucketView, string> = {
         case "promote-to-live":
           promoteToLive(card);
           break;
+        case "split-stems": {
+          const mode = btn.dataset.mode === "2" || btn.dataset.mode === "4"
+            ? btn.dataset.mode
+            : null;
+          if (mode) startSplitStems(card, mode);
+          break;
+        }
         case "bucket": {
           const target = btn.dataset.bucket as BucketName | undefined;
           if (!target) break;

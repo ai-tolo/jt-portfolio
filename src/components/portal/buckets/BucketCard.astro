@@ -168,14 +168,23 @@ const isLongJam =
   (item.bucket === "jam" || item.parent_bucket === "jam");
 const hasNoSummary = !item.summary || /^(insufficient|music or non-speech)/i.test(item.summary);
 
-const waveformSrc = (() => {
+const waveformSha1 = (() => {
   const wp = item.waveform_path;
   if (!wp) return null;
   const base = wp.split("/").pop() ?? wp;
-  const sha1 = base.replace(/\.png$/i, "");
-  if (!/^[a-f0-9]{40}$/i.test(sha1)) return null;
-  return `/api/console/waveform?sha1=${sha1}`;
+  const sha1 = base.replace(/\.png$/i, "").toLowerCase();
+  return /^[a-f0-9]{40}$/.test(sha1) ? sha1 : null;
 })();
+const waveformSrc = waveformSha1 ? `/api/console/waveform?sha1=${waveformSha1}` : null;
+// Spectrogram lives on the same sha1 namespace as the waveform — both are
+// keyed off sha1(path). Engine returns 404 for rows whose spectrogram PNG
+// isn't pre-generated yet (~25% of rows as of 2026-05-21 night batch); the
+// <img onerror> handler hides the surrounding <details> in that case.
+const spectrogramSrc = waveformSha1 ? `/api/console/spectrogram?sha1=${waveformSha1}` : null;
+
+// Stem split is meaningful only for actual audio with measurable duration.
+// Engine will further validate (e.g. minimum length) — this is a UI gate.
+const canSplitStems = (item.duration_seconds ?? 0) > 5;
 
 const tech: string[] = [];
 if (item.bpm) tech.push(`${Math.round(item.bpm)} BPM`);
@@ -200,6 +209,7 @@ const hasExpanded = true;
   data-parent-id={item.parent_id ? String(item.parent_id) : ""}
   data-path={item.path}
   data-filename={filename}
+  data-duration-seconds={String(item.duration_seconds ?? "")}
   data-live-loop-path={item.live_loop_path ?? ""}
   data-public={isPublic ? "1" : "0"}
   aria-label={`${title} — ${BUCKET_LABEL[currentBucket]}`}
@@ -232,6 +242,15 @@ const hasExpanded = true;
         {/* Inline sibling list — populated lazily on DUP click. Scoped to
             this card so multiple DUP chips don't fight for the same panel. */}
         <div class="dup-detail" data-dup-target hidden></div>
+        {item.print_of_project_id && (
+          <a
+            class="flag-chip flag-print"
+            href="/portal/projects"
+            title={`Linked print of: ${(item.print_of_display_name ?? item.print_of_filename ?? "project").replace(/\.als$/i, "")}`}
+          >
+            ↑ Print of {(item.print_of_display_name ?? item.print_of_filename ?? "project").replace(/\.als$/i, "")}
+          </a>
+        )}
       </h3>
 
       <div class="wave-row">
@@ -327,6 +346,17 @@ const hasExpanded = true;
   <!-- ── Expanded section (collapsed by default) ─────────────────────── -->
   {hasExpanded && (
     <div class="expanded" data-expanded hidden>
+      {spectrogramSrc && (
+        <details class="card-spectrogram">
+          <summary>spectrogram</summary>
+          <img
+            src={spectrogramSrc}
+            alt="mel spectrogram"
+            loading="lazy"
+            onerror="const d=this.closest('details');if(d){d.hidden=true}"
+          />
+        </details>
+      )}
       <dl class="exp">
         {/* Single Tags row — combines what used to be Visibility + Type +
             Tags into one chip strip. Order: PUBLIC (curator-toggleable,
@@ -464,6 +494,30 @@ const hasExpanded = true;
                   title="Copy + normalize to _Soundbending/loops/"
                 >→ Promote to Live</button>
               )}
+            </dd>
+          </>
+        )}
+        {canSplitStems && (
+          <>
+            <dt>Stems</dt>
+            <dd class="exp-stems">
+              <button
+                type="button"
+                class="stem-btn"
+                data-action="split-stems"
+                data-mode="2"
+                data-asset-id={String(item.asset_id)}
+                title="Demucs split → vocals + instrumental (~3-5 min on M1)"
+              >2-stem<span class="stem-btn-sub">vox · inst</span></button>
+              <button
+                type="button"
+                class="stem-btn"
+                data-action="split-stems"
+                data-mode="4"
+                data-asset-id={String(item.asset_id)}
+                title="Demucs split → drums + bass + vocals + other (~5-10 min on M1)"
+              >4-stem<span class="stem-btn-sub">drm · bass · vox · oth</span></button>
+              <span class="stem-progress" data-stem-progress aria-live="polite"></span>
             </dd>
           </>
         )}
@@ -864,6 +918,19 @@ const hasExpanded = true;
   }
   .flag-dup { color: rgba(245, 241, 232, 0.55); }
   .flag-orphan { color: #ff5a82; }
+  /* Print Capture lineage chip: pink to match the Promote accent and the
+     Pending banner on /portal/projects. Reads "↑ Print of [project]" and
+     links to /portal/projects so the curator can jump back to context. */
+  .flag-print {
+    color: #ff4f8b;
+    text-decoration: none;
+    font-size: 8.5px;
+    letter-spacing: 0.1em;
+    max-width: 22ch;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
 
   /* Inline dup-group panel rendered next to / below the title row. Renders
      siblings as a tight list with the canonical marked. Never auto-shown —
@@ -1485,6 +1552,186 @@ const hasExpanded = true;
     border-top: 1px solid rgba(14, 196, 252, 0.14);
     animation: exp-in 220ms ease;
   }
+
+  /* ── In-card spectrogram (collapsible) ────────────────────────────
+     Lives at the top of the expanded panel — visual companion to the
+     waveform. Closed by default so the image isn't fetched until the
+     curator asks for it (lazy + collapsed details defers most browsers).
+     Engine returns 404 for ~25% of rows whose PNG isn't pre-generated;
+     onerror hides this whole <details>. */
+  .card-spectrogram {
+    margin-bottom: 10px;
+    border: 1px solid rgba(14, 196, 252, 0.18);
+    border-radius: 4px;
+    background: rgba(14, 196, 252, 0.04);
+    overflow: hidden;
+  }
+  .card-spectrogram > summary {
+    cursor: pointer;
+    list-style: none;
+    padding: 5px 10px;
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: rgba(14, 196, 252, 0.78);
+    user-select: none;
+    transition: color 160ms ease, background 160ms ease;
+  }
+  .card-spectrogram > summary::-webkit-details-marker { display: none; }
+  .card-spectrogram > summary::before {
+    content: "▸ ";
+    display: inline-block;
+    margin-right: 6px;
+    color: rgba(14, 196, 252, 0.55);
+    transition: transform 160ms ease, color 160ms ease;
+  }
+  .card-spectrogram[open] > summary::before {
+    transform: rotate(90deg);
+    color: #0ec4fc;
+  }
+  .card-spectrogram > summary:hover,
+  .card-spectrogram > summary:focus-visible {
+    color: #6ed8ff;
+    background: rgba(14, 196, 252, 0.08);
+    outline: none;
+  }
+  .card-spectrogram img {
+    display: block;
+    width: 100%;
+    height: auto;
+    max-height: 220px;
+    object-fit: cover;
+    background: #07060c;
+  }
+
+  /* ── Stem splitter buttons + progress ─────────────────────────────
+     Two buttons (2-stem / 4-stem) with a sub-label, plus a live status
+     span that the page controller writes "Splitting… 42%" / "✓ 4 stems
+     ready" into via setStatus. Compact + cyan to match other workbench
+     actions. */
+  .exp-stems {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px 8px;
+    align-items: center;
+  }
+  .stem-btn {
+    display: inline-flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 1px;
+    font: inherit;
+    font-family: "Geist Variable", ui-sans-serif, system-ui, sans-serif;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    color: #0ec4fc;
+    background: rgba(14, 196, 252, 0.06);
+    border: 1px solid rgba(14, 196, 252, 0.42);
+    border-radius: 3px;
+    padding: 4px 9px;
+    cursor: pointer;
+    line-height: 1.15;
+    transition: color 160ms ease, border-color 160ms ease,
+                background 160ms ease, transform 80ms ease;
+  }
+  .stem-btn:hover,
+  .stem-btn:focus-visible {
+    color: #6ed8ff;
+    border-color: #6ed8ff;
+    background: rgba(14, 196, 252, 0.14);
+    outline: none;
+  }
+  .stem-btn:active { transform: translateY(1px); }
+  .stem-btn[data-busy="true"] {
+    opacity: 0.7;
+    cursor: progress;
+  }
+  .stem-btn-sub {
+    font-size: 8.5px;
+    font-weight: 500;
+    letter-spacing: 0.08em;
+    color: rgba(245, 241, 232, 0.5);
+    text-transform: uppercase;
+  }
+  .stem-progress {
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 10.5px;
+    color: rgba(245, 241, 232, 0.65);
+    line-height: 1;
+  }
+  .stem-progress[data-tone="ok"] { color: #00ff4d; }
+  .stem-progress[data-tone="err"] { color: #ff6e21; }
+
+  /* ── Jam slicer: region overlay + floating extract button ─────────
+     The waveform-region-overlay is positioned absolutely inside the
+     .waveform container by the shift-drag handler in [bucket].astro.
+     The extract button is a sibling rendered in .wave-row (positioned
+     below the waveform) so it stays adjacent to its region. */
+  .waveform { position: relative; }
+  .waveform-region-overlay {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    background: rgba(255, 79, 139, 0.30);
+    border-left: 2px solid #ff4f8b;
+    border-right: 2px solid #ff4f8b;
+    pointer-events: none;
+    z-index: 3;
+    box-shadow: 0 0 12px rgba(255, 79, 139, 0.35);
+  }
+  .extract-loop-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font: inherit;
+    font-family: "Geist Variable", ui-sans-serif, system-ui, sans-serif;
+    font-size: 10.5px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: #fff;
+    background: linear-gradient(135deg, #ff4f8b 0%, #ff6e21 100%);
+    border: 0;
+    border-radius: 4px;
+    padding: 5px 10px;
+    margin: 6px 0 0 0;
+    cursor: pointer;
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.22),
+      0 2px 8px rgba(255, 79, 139, 0.28);
+    transition: transform 80ms ease, box-shadow 160ms ease;
+  }
+  .extract-loop-btn:hover,
+  .extract-loop-btn:focus-visible {
+    outline: none;
+    transform: translateY(-1px);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.28),
+      0 4px 12px rgba(255, 79, 139, 0.4);
+  }
+  .extract-loop-btn[data-busy="true"] {
+    opacity: 0.65;
+    cursor: progress;
+  }
+  .extract-loop-btn .extract-loop-range {
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-style: italic;
+    font-weight: 500;
+    opacity: 0.85;
+  }
+  .extract-loop-btn .extract-loop-dismiss {
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 12px;
+    font-weight: 700;
+    opacity: 0.6;
+    margin-left: 2px;
+  }
+  .extract-loop-btn .extract-loop-dismiss:hover { opacity: 1; }
+  /* While shift-drag is in progress the waveform shows a crosshair so
+     the affordance is unambiguous. */
+  .waveform[data-slicing="true"] { cursor: crosshair !important; }
   @keyframes exp-in {
     from { opacity: 0; transform: translateY(-4px); }
     to { opacity: 1; transform: translateY(0); }

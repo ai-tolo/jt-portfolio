@@ -23,11 +23,18 @@ import type {
   BucketsListFilters,
   BucketsListResponse,
   BucketView,
+  ExtractLoopResponse,
   LineageResponse,
+  PendingPrintsResponse,
+  PrintLinkResponse,
+  PromoteCandidatesResponse,
   PromoteToLiveResponse,
   QualityStar,
   QualityStarResponse,
   RevealInFinderResponse,
+  SplitStemsResponse,
+  SplitStemsStatus,
+  StemSplitMode,
   TopTagsResponse,
 } from "./console-types";
 
@@ -229,6 +236,21 @@ export function projects(opts?: FetchOpts) {
   return call<ProjectsResponse>("/projects", opts);
 }
 
+/** Prints noticed by the M3 watcher (com.tolo.prints-watcher) that have
+ *  not yet been linked to a specific .als project. Returned with top-3
+ *  recent .als suggestions per row. */
+export function getPendingPrints(opts?: FetchOpts) {
+  return call<PendingPrintsResponse>("/prints/pending", opts);
+}
+
+export function linkPrint(path: string, project_asset_id: number) {
+  return _post<PrintLinkResponse>("/prints/link", { path, project_asset_id });
+}
+
+export function unlinkPrint(asset_id: number) {
+  return _post<{ ok: boolean; asset_id: number }>("/prints/unlink", { asset_id });
+}
+
 export function inboxAuto(opts?: FetchOpts) {
   return call<InboxResponse>("/inbox/auto", opts);
 }
@@ -247,9 +269,10 @@ export function assetByPath(path: string, opts?: FetchOpts) {
  * Caller must enforce auth before calling this. */
 export async function streamAsset(
   path: string,
-  init: { range?: string | null; signal?: AbortSignal } = {},
+  init: { range?: string | null; variant?: string | null; signal?: AbortSignal } = {},
 ): Promise<Response> {
   const params = new URLSearchParams({ path });
+  if (init.variant) params.set("variant", init.variant);
   const headers: Record<string, string> = { ...authHeaders() };
   if (init.range) headers.Range = init.range;
   return fetch(`${BASE}/file?${params}`, { headers, signal: init.signal });
@@ -266,6 +289,22 @@ export async function streamWaveform(
   init: { signal?: AbortSignal } = {},
 ): Promise<Response> {
   return fetch(`${BASE}/waveform/${sha1}.png`, {
+    headers: { ...authHeaders() },
+    signal: init.signal,
+  });
+}
+
+/** Stream a pre-generated mel-spectrogram PNG. The engine's
+ * `/spectrogram/<sha1>.png` endpoint serves files from
+ * `~/automation/data/spectrograms/` (rendered by
+ * `scripts/generate_spectrograms.py`). Returns 404 for rows whose spectrogram
+ * hasn't been generated yet (~25% as of 2026-05-21); the caller forwards
+ * that and BucketCard's `<img onerror>` hides the surrounding details. */
+export async function streamSpectrogram(
+  sha1: string,
+  init: { signal?: AbortSignal } = {},
+): Promise<Response> {
+  return fetch(`${BASE}/spectrogram/${sha1}.png`, {
     headers: { ...authHeaders() },
     signal: init.signal,
   });
@@ -420,6 +459,16 @@ export async function getBucketsList(
   return call<BucketsListResponse>(`/buckets?${params}`);
 }
 
+/** Ranked list of loops ready for promote-to-Live. Engine ranks by a
+ *  composite score: BPM + key set, 1.5–8s duration, high loop_density.
+ *  Already-promoted rows (live_loop_path set) are excluded server-side. */
+export async function getPromoteCandidates(
+  limit = 100,
+): Promise<ApiResult<PromoteCandidatesResponse>> {
+  const params = new URLSearchParams({ limit: String(limit) });
+  return call<PromoteCandidatesResponse>(`/buckets/promote-candidates?${params}`);
+}
+
 /** Top N tags by frequency for the current bucket+category view. The set
  *  is computed BEFORE the active tag filter is applied so the chip strip
  *  remains stable as the curator AND-narrows. */
@@ -496,6 +545,45 @@ export async function promoteToLive(
     { asset_id },
     { timeoutMs: 90_000 },
   );
+}
+
+/** Carve a [start_sec, end_sec] region of a source jam into a new loop row
+ *  via the engine's ffmpeg loudnorm pipeline. New row carries
+ *  parent_id=<source asset_id> + category='extracted-from-jam' so the
+ *  lineage chip on the resulting card points back to the jam. Bumped
+ *  timeout to 30s since ffmpeg can be slow on long source files / first
+ *  iCloud fetch. */
+export async function extractLoop(
+  asset_id: number,
+  start_sec: number,
+  end_sec: number,
+  label?: string,
+): Promise<ApiResult<ExtractLoopResponse>> {
+  const body: Record<string, unknown> = { asset_id, start_sec, end_sec };
+  if (label) body.label = label;
+  return _post<ExtractLoopResponse>("/buckets/extract-loop", body, {
+    timeoutMs: 30_000,
+  });
+}
+
+/** Kick off a Demucs stem-splitting job. Engine spawns the worker via
+ *  subprocess.Popen and returns a job_id immediately; the UI then polls
+ *  via getSplitStemsStatus() every 5s. */
+export async function splitStems(
+  asset_id: number,
+  mode: StemSplitMode,
+): Promise<ApiResult<SplitStemsResponse>> {
+  return _post<SplitStemsResponse>("/buckets/split-stems", { asset_id, mode });
+}
+
+/** Poll a stem-splitting job's status. On status='done' the response
+ *  includes the new stem_asset_ids (already inserted into the assets table
+ *  with parent_id pointing back to the source row). */
+export async function getSplitStemsStatus(
+  job_id: number,
+): Promise<ApiResult<SplitStemsStatus>> {
+  const params = new URLSearchParams({ job_id: String(job_id) });
+  return call<SplitStemsStatus>(`/buckets/split-stems/${job_id}?${params}`);
 }
 
 export async function setItemPublic(

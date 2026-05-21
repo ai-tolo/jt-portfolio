@@ -27,10 +27,11 @@ export const GET: APIRoute = async ({ request, url }) => {
   }
 
   const range = request.headers.get("range");
+  const variant = url.searchParams.get("variant");
 
   let upstream: Response;
   try {
-    upstream = await streamAsset(path, { range });
+    upstream = await streamAsset(path, { range, variant });
   } catch (e) {
     return new Response(
       JSON.stringify({ error: "unreachable", message: e instanceof Error ? e.message : "fetch failed" }),
