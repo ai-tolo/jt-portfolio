@@ -535,13 +535,29 @@ const BUCKET_TITLE: Record<BucketView, string> = {
 
     const updatePlayhead = () => {
       if (!activeCard || !audio) return;
+      // Loop wraparound — applied BEFORE reading currentTime for the visual
+      // position so the playhead never overshoots the end cap. -0.02s
+      // lookahead leaves room for the seek to settle without an audible click.
+      if (loopBounds && activeCard === loopBounds.card &&
+          audio.currentTime >= loopBounds.endSec - 0.02) {
+        audio.currentTime = loopBounds.startSec;
+      }
       const playhead = activeCard.querySelector<HTMLElement>("[data-playhead]");
       const time = activeCard.querySelector<HTMLElement>("[data-waveform-time]");
+      const cropPlayhead = activeCard.querySelector<HTMLElement>(
+        "[data-cropper-playhead]",
+      );
       const dur = audio.duration;
-      if (playhead && Number.isFinite(dur) && dur > 0) {
+      if (Number.isFinite(dur) && dur > 0) {
         const pct = (audio.currentTime / dur) * 100;
-        playhead.style.left = `${pct}%`;
-        playhead.hidden = false;
+        if (playhead) {
+          playhead.style.left = `${pct}%`;
+          playhead.hidden = false;
+        }
+        if (cropPlayhead) {
+          cropPlayhead.style.left = `${pct}%`;
+          cropPlayhead.hidden = false;
+        }
       }
       if (time) {
         const durStr = Number.isFinite(dur) && dur > 0 ? fmtTime(dur) : "—";
@@ -554,9 +570,14 @@ const BUCKET_TITLE: Record<BucketView, string> = {
       if (!card) return;
       const playhead = card.querySelector<HTMLElement>("[data-playhead]");
       const time = card.querySelector<HTMLElement>("[data-waveform-time]");
+      const cropPlayhead = card.querySelector<HTMLElement>("[data-cropper-playhead]");
       if (playhead) {
         playhead.hidden = true;
         playhead.style.left = "0";
+      }
+      if (cropPlayhead) {
+        cropPlayhead.hidden = true;
+        cropPlayhead.style.left = "0";
       }
       if (time) {
         time.hidden = true;
@@ -683,186 +704,495 @@ const BUCKET_TITLE: Record<BucketView, string> = {
       playCard(card, fraction);
     };
 
-    // ── Jam slicer: shift-drag on the waveform → region select ──────────
-    // Records [start_sec, end_sec] in source coords (derived from x
-    // fraction × duration_seconds), draws a translucent overlay, and shows
-    // a floating "Extract loop" button below the waveform. Click the
-    // button → POST /api/console/extract-loop → engine ffmpegs the region
-    // into _Soundbending/loops/extracted/ + inserts a child row with
-    // parent_id=<this card> for the lineage chip.
+    // ── Crop tool: Apple-style trim handles inside the Crop tab ────────
+    // Opening <details class="card-cropper"> initializes a default
+    // selection (BPM-snapped 4 bars when bpm is known, else 5s centered),
+    // renders the bar grid + draggable end caps + dim masks, and wires
+    // pointer drag handlers. The Export button POSTs the
+    // [start_sec, end_sec] region to /api/console/extract-loop → engine
+    // ffmpeg-loudnorms into _Soundbending/loops/extracted/ + inserts a
+    // child row with parent_id=<this card> for the lineage chip.
     //
-    // The shift-drag click is suppressed via `suppressNextClick` so the
-    // existing seekFromWaveform handler doesn't run on mouseup.
-    let suppressNextClick = false;
-    let slicingState: {
+    // State map is keyed by card so multiple cards can each have their
+    // own crop pending. WeakMap so closing a card naturally GCs its state.
+    type CropperState = {
       card: HTMLElement;
+      surface: HTMLElement;
       wf: HTMLElement;
+      startSec: number;
+      endSec: number;
       durationSec: number;
-      startX: number;
-      overlay: HTMLElement;
-    } | null = null;
+      bpm: number | null;
+      barSec: number | null;
+      snapThresholdSec: number;
+    };
+    const cropperStates = new WeakMap<HTMLElement, CropperState>();
 
-    const fmtSliceTime = (s: number): string => {
+    // Loop playback bounds. When set, updatePlayhead enforces a
+    // currentTime-jump from endSec back to startSec so the audio loops
+    // tightly within the crop selection. Only one card loops at a time.
+    let loopBounds: { card: HTMLElement; startSec: number; endSec: number } | null = null;
+
+    // Push the current cropper selection into loopBounds whenever the
+    // cropper is active for this card. Also clamps audio.currentTime back
+    // inside the new bounds (whether playing or paused) so the playhead
+    // never lives outside the loop frame.
+    const syncCropBounds = (card: HTMLElement, st: CropperState) => {
+      if (!loopBounds || loopBounds.card !== card) return;
+      loopBounds.startSec = st.startSec;
+      loopBounds.endSec = st.endSec;
+      if (audio && activeCard === card &&
+          (audio.currentTime < st.startSec || audio.currentTime > st.endSec)) {
+        audio.currentTime = st.startSec;
+        updatePlayhead();
+      }
+    };
+
+    // Dismisses the keyboard hint after the curator has clearly engaged
+    // (any handle drag, play, scrub, or export). Called once per cropper open.
+    const dismissCropHint = (card: HTMLElement) => {
+      const hint = card.querySelector<HTMLElement>("[data-cropper-hint]");
+      if (hint) hint.dataset.fade = "true";
+    };
+
+    const fmtCropTime = (s: number): string => {
       if (!Number.isFinite(s) || s < 0) return "0:00.0";
       const m = Math.floor(s / 60);
       const r = s - m * 60;
       return `${m}:${r.toFixed(1).padStart(4, "0")}`;
     };
 
-    const clearSlicerForCard = (card: HTMLElement) => {
-      card.querySelectorAll<HTMLElement>(
-        ".waveform-region-overlay, .extract-loop-btn",
-      ).forEach((el) => el.remove());
-      card.querySelectorAll<HTMLElement>(".waveform[data-slicing]").forEach((wf) =>
-        wf.removeAttribute("data-slicing"),
-      );
+    // Returns { bars, snapped:true } when the selection length is an integer
+    // bar count AND the start aligns with a bar boundary — the readout shows
+    // "N bars · snapped" in that case so the curator knows the loop will
+    // actually loop. Tolerance accounts for snap precision.
+    const cropBarsIfSnapped = (
+      state: CropperState,
+    ): { bars: number } | null => {
+      if (!state.barSec || state.barSec <= 0) return null;
+      const len = state.endSec - state.startSec;
+      const barsExact = len / state.barSec;
+      const bars = Math.round(barsExact);
+      if (bars < 1) return null;
+      const tol = 0.05;
+      if (Math.abs(barsExact - bars) > tol) return null;
+      const startBars = state.startSec / state.barSec;
+      if (Math.abs(startBars - Math.round(startBars)) > tol) return null;
+      return { bars };
     };
 
-    const buildExtractButton = (
-      card: HTMLElement,
-      startSec: number,
-      endSec: number,
-    ): HTMLButtonElement => {
-      const btn = document.createElement("button");
-      btn.type = "button";
-      btn.className = "extract-loop-btn";
-      btn.dataset.startSec = String(startSec);
-      btn.dataset.endSec = String(endSec);
-      btn.title = "Carve this region into _Soundbending/loops/ as a child row";
-      const label = document.createElement("span");
-      label.textContent = "✂ Extract loop ";
-      const range = document.createElement("span");
-      range.className = "extract-loop-range";
-      range.textContent = `${fmtSliceTime(startSec)}–${fmtSliceTime(endSec)}`;
-      const dismiss = document.createElement("span");
-      dismiss.className = "extract-loop-dismiss";
-      dismiss.textContent = "×";
-      dismiss.title = "Cancel";
-      btn.append(label, range, dismiss);
-      // Click on the × inside the button cancels without firing the extract.
-      btn.addEventListener("click", async (ev) => {
-        const target = ev.target as HTMLElement | null;
-        if (target?.classList.contains("extract-loop-dismiss")) {
-          ev.preventDefault();
-          ev.stopPropagation();
-          clearSlicerForCard(card);
+    const updateCropperUI = (state: CropperState) => {
+      const { wf, startSec, endSec, durationSec } = state;
+      const startPct = (startSec / durationSec) * 100;
+      const endPct = (endSec / durationSec) * 100;
+      const frame = wf.querySelector<HTMLElement>("[data-cropper-frame]");
+      const maskL = wf.querySelector<HTMLElement>("[data-cropper-mask-left]");
+      const maskR = wf.querySelector<HTMLElement>("[data-cropper-mask-right]");
+      if (frame) {
+        frame.style.left = `${startPct}%`;
+        frame.style.width = `${Math.max(0, endPct - startPct)}%`;
+      }
+      if (maskL) maskL.style.width = `${startPct}%`;
+      if (maskR) maskR.style.width = `${Math.max(0, 100 - endPct)}%`;
+      const startLabel = wf.querySelector<HTMLElement>(
+        '[data-cropper-time="start"]',
+      );
+      const endLabel = wf.querySelector<HTMLElement>(
+        '[data-cropper-time="end"]',
+      );
+      if (startLabel) startLabel.textContent = fmtCropTime(startSec);
+      if (endLabel) endLabel.textContent = fmtCropTime(endSec);
+      const readout = state.card.querySelector<HTMLElement>(
+        "[data-cropper-readout]",
+      );
+      if (readout) {
+        const len = endSec - startSec;
+        const barsInfo = cropBarsIfSnapped(state);
+        let html =
+          `<span class="cropper-readout-range">${fmtCropTime(startSec)} → ${fmtCropTime(endSec)}</span>` +
+          ` · <span class="cropper-readout-len">${len.toFixed(2)}s</span>`;
+        if (barsInfo) {
+          const noun = barsInfo.bars === 1 ? "bar" : "bars";
+          html += ` · <span class="cropper-readout-bars">${barsInfo.bars} ${noun}</span>`;
+          html += ` <span class="cropper-readout-snap">· snapped</span>`;
+        }
+        readout.innerHTML = html;
+      }
+    };
+
+    // Draw the bar grid (only when bpm known). Each bar = 4 beats; every
+    // `phraseEvery`-th gets the brighter "phrase" treatment so longer
+    // boundaries are visually distinct. Density-aware: skip bar ticks
+    // entirely when pixels-per-bar drops below 3 (visual noise).
+    const renderCropperBarTicks = (state: CropperState) => {
+      const ticksRoot = state.wf.querySelector<HTMLElement>(
+        "[data-cropper-bar-ticks]",
+      );
+      if (!ticksRoot) return;
+      ticksRoot.innerHTML = "";
+      if (!state.barSec || state.barSec <= 0) return;
+      const wfRect = state.wf.getBoundingClientRect();
+      if (wfRect.width <= 0) return;
+      const totalBars = Math.floor(state.durationSec / state.barSec);
+      if (totalBars < 1) return;
+      const pxPerBar = wfRect.width / totalBars;
+      if (pxPerBar < 3) return;
+      const phraseEvery = pxPerBar >= 14 ? 4 : pxPerBar >= 8 ? 8 : 16;
+      const frag = document.createDocumentFragment();
+      for (let i = 1; i < totalBars; i++) {
+        const pct = ((i * state.barSec) / state.durationSec) * 100;
+        const tick = document.createElement("div");
+        tick.className =
+          i % phraseEvery === 0 ? "cropper-bar-tick phrase" : "cropper-bar-tick";
+        tick.style.left = `${pct}%`;
+        frag.appendChild(tick);
+      }
+      ticksRoot.appendChild(frag);
+    };
+
+    // Default crop spans the entire track. The curator drags the end caps
+    // inward to trim — at which point bar snapping kicks in (handled in
+    // initCropper's pointer handlers). Starting at the full track keeps the
+    // mental model simple: "enter crop, hit play, hear the whole thing
+    // loop. Then trim down."
+    const computeDefaultCrop = (
+      durationSec: number,
+      _bpm: number | null,
+      _barSec: number | null,
+    ): { startSec: number; endSec: number } => {
+      return { startSec: 0, endSec: durationSec };
+    };
+
+    const initCropper = (card: HTMLElement, surface: HTMLElement) => {
+      const wf = surface.querySelector<HTMLElement>("[data-cropper-waveform]");
+      if (!wf) return;
+      const durationSec = Number(card.dataset.durationSeconds);
+      if (!Number.isFinite(durationSec) || durationSec <= 0) return;
+      const bpmRaw = Number(card.dataset.bpm);
+      const bpm = Number.isFinite(bpmRaw) && bpmRaw > 0 ? bpmRaw : null;
+      const barSec = bpm ? (60 / bpm) * 4 : null;
+      const { startSec, endSec } = computeDefaultCrop(durationSec, bpm, barSec);
+      const wfRect = wf.getBoundingClientRect();
+      const snapThresholdSec =
+        wfRect.width > 0 ? (8 / wfRect.width) * durationSec : 0.1;
+      const state: CropperState = {
+        card, surface, wf, startSec, endSec, durationSec, bpm, barSec,
+        snapThresholdSec,
+      };
+      cropperStates.set(card, state);
+      renderCropperBarTicks(state);
+      // Re-show the keyboard hint on each fresh crop-mode entry.
+      const hint = surface.querySelector<HTMLElement>("[data-cropper-hint]");
+      if (hint) delete hint.dataset.fade;
+
+      // Wire handle drag once per element (bound flag prevents duplicates).
+      const handles = wf.querySelectorAll<HTMLElement>("[data-cropper-handle]");
+      handles.forEach((h) => {
+        if (h.dataset.bound === "true") return;
+        h.dataset.bound = "true";
+        h.addEventListener("pointerdown", (e) => {
+          if (e.button !== 0 && e.pointerType === "mouse") return;
+          e.preventDefault();
+          // Don't let the frame's own pointerdown also start a region drag.
+          e.stopPropagation();
+          h.setPointerCapture(e.pointerId);
+          h.dataset.dragging = "true";
+        });
+        h.addEventListener("pointermove", (e) => {
+          if (!h.hasPointerCapture(e.pointerId)) return;
+          const st = cropperStates.get(card);
+          if (!st) return;
+          const rect = st.wf.getBoundingClientRect();
+          const x = Math.max(rect.left, Math.min(rect.right, e.clientX));
+          const fraction = (x - rect.left) / rect.width;
+          let sec = fraction * st.durationSec;
+          // Snap to nearest bar if close enough (in pixels → seconds).
+          if (st.barSec && st.barSec > 0) {
+            const nearestBar = Math.round(sec / st.barSec) * st.barSec;
+            if (Math.abs(sec - nearestBar) < st.snapThresholdSec) {
+              sec = nearestBar;
+            }
+          }
+          sec = Math.max(0, Math.min(st.durationSec, sec));
+          const minGap = 0.1;
+          const which = h.dataset.cropperHandle;
+          if (which === "start") {
+            st.startSec = Math.min(sec, st.endSec - minGap);
+          } else {
+            st.endSec = Math.max(sec, st.startSec + minGap);
+          }
+          updateCropperUI(st);
+          syncCropBounds(card, st);
+        });
+        const release = (e: PointerEvent) => {
+          if (h.hasPointerCapture(e.pointerId)) h.releasePointerCapture(e.pointerId);
+          delete h.dataset.dragging;
+        };
+        h.addEventListener("pointerup", release);
+        h.addEventListener("pointercancel", release);
+      });
+
+      // Wire frame-drag (slides the entire loop). Captures initial selection
+      // + cursor X; on move, shifts both startSec/endSec by the delta. The
+      // handle pointerdowns stopPropagation, so this never fires on a handle.
+      const frame = wf.querySelector<HTMLElement>("[data-cropper-frame]");
+      if (frame && frame.dataset.bound !== "true") {
+        frame.dataset.bound = "true";
+        let frameDragStart: { x: number; startSec: number; endSec: number } | null = null;
+        frame.addEventListener("pointerdown", (e) => {
+          if (e.button !== 0 && e.pointerType === "mouse") return;
+          // Defensive: skip if the click somehow landed on a handle anyway.
+          if ((e.target as HTMLElement)?.closest(".cropper-handle")) return;
+          e.preventDefault();
+          frame.setPointerCapture(e.pointerId);
+          frame.dataset.dragging = "true";
+          const st = cropperStates.get(card);
+          if (!st) return;
+          frameDragStart = { x: e.clientX, startSec: st.startSec, endSec: st.endSec };
+        });
+        frame.addEventListener("pointermove", (e) => {
+          if (!frame.hasPointerCapture(e.pointerId) || !frameDragStart) return;
+          const st = cropperStates.get(card);
+          if (!st) return;
+          const rect = st.wf.getBoundingClientRect();
+          const deltaPx = e.clientX - frameDragStart.x;
+          const deltaSec = (deltaPx / rect.width) * st.durationSec;
+          const selLen = frameDragStart.endSec - frameDragStart.startSec;
+          let newStart = frameDragStart.startSec + deltaSec;
+          newStart = Math.max(0, Math.min(st.durationSec - selLen, newStart));
+          if (st.barSec && st.barSec > 0) {
+            const nearestBar = Math.round(newStart / st.barSec) * st.barSec;
+            if (Math.abs(newStart - nearestBar) < st.snapThresholdSec) {
+              newStart = Math.max(0, Math.min(st.durationSec - selLen, nearestBar));
+            }
+          }
+          st.startSec = newStart;
+          st.endSec = newStart + selLen;
+          updateCropperUI(st);
+          syncCropBounds(card, st);
+        });
+        const releaseFrame = (e: PointerEvent) => {
+          if (frame.hasPointerCapture(e.pointerId)) frame.releasePointerCapture(e.pointerId);
+          delete frame.dataset.dragging;
+          frameDragStart = null;
+        };
+        frame.addEventListener("pointerup", releaseFrame);
+        frame.addEventListener("pointercancel", releaseFrame);
+      }
+
+      updateCropperUI(state);
+    };
+
+    const teardownCropper = (card: HTMLElement) => {
+      cropperStates.delete(card);
+    };
+
+    // Eagerly load the audio for this card and seek to startSec so the
+    // playhead can render at the left cap immediately on crop-mode entry
+    // and the first spacebar press starts playback without an initial
+    // seek delay. Sets loopBounds so subsequent skip / wraparound logic
+    // sees the correct range even before any play happens.
+    const preloadCropAudio = (card: HTMLElement) => {
+      const state = cropperStates.get(card);
+      if (!state) return;
+      const a = ensureAudio();
+      if (activeCard !== card) {
+        stopActive();
+        clearAllPlayheadsExcept(card);
+        activeCard = card;
+        const path = card.dataset.path;
+        if (!path) return;
+        const variant =
+          Number.isFinite(state.durationSec) && state.durationSec > 600
+            ? "&variant=opus" : "";
+        a.src = `/api/console/asset?path=${encodeURIComponent(path)}${variant}`;
+      }
+      loopBounds = { card, startSec: state.startSec, endSec: state.endSec };
+      const seekAndShowPlayhead = () => {
+        const st = cropperStates.get(card);
+        if (!st) return;
+        a.currentTime = st.startSec;
+        const ph = card.querySelector<HTMLElement>("[data-cropper-playhead]");
+        if (ph) {
+          ph.style.left = `${(st.startSec / st.durationSec) * 100}%`;
+          ph.hidden = false;
+        }
+      };
+      if (a.readyState >= 1) {
+        seekAndShowPlayhead();
+      } else {
+        a.addEventListener("loadedmetadata", seekAndShowPlayhead, { once: true });
+      }
+    };
+
+    // Spacebar in crop mode toggles play/pause. Resume-aware: if audio is
+    // already loaded for this card, just resume from currentTime (which
+    // crop-mode bounds enforcement guarantees is within the loop). If
+    // audio is paused outside the loop bounds (shouldn't happen in
+    // practice — bounds-clamp prevents it), snap back to start first.
+    const toggleCropPlay = async (card: HTMLElement) => {
+      const state = cropperStates.get(card);
+      if (!state) return;
+      const a = ensureAudio();
+      // Switch source if a different card is currently active.
+      if (activeCard !== card) {
+        preloadCropAudio(card);
+        // preloadCropAudio's seek may be async (waits for loadedmetadata);
+        // wait for it before play so currentTime is at startSec.
+        if (a.readyState < 1) {
+          await new Promise<void>((resolve) => {
+            a.addEventListener("loadedmetadata", () => resolve(), { once: true });
+          });
+        }
+      }
+      if (audio && !audio.paused) {
+        audio.pause();
+        return;
+      }
+      // About to play. Make sure currentTime is within bounds.
+      if (a.currentTime < state.startSec || a.currentTime > state.endSec) {
+        a.currentTime = state.startSec;
+        if (Math.abs(a.currentTime - state.startSec) > 0.05) {
+          await new Promise<void>((resolve) => {
+            const onSeeked = () => {
+              a.removeEventListener("seeked", onSeeked);
+              resolve();
+            };
+            a.addEventListener("seeked", onSeeked);
+          });
+        }
+      }
+      loopBounds = { card, startSec: state.startSec, endSec: state.endSec };
+      try {
+        await a.play();
+        updatePlayhead();
+      } catch {
+        if (audio) audio.pause();
+      }
+    };
+
+    // Skip the playhead by deltaSec, clamped within the loop bounds. Works
+    // while playing OR paused; the playhead visual updates immediately.
+    const skipInLoop = (card: HTMLElement, deltaSec: number) => {
+      const state = cropperStates.get(card);
+      if (!state || !audio || activeCard !== card) return;
+      let newTime = audio.currentTime + deltaSec;
+      newTime = Math.max(state.startSec, Math.min(state.endSec, newTime));
+      audio.currentTime = newTime;
+      updatePlayhead();
+      dismissCropHint(card);
+    };
+
+    // Enter/exit crop mode: swaps the wave-row with the cropper-surface via
+    // [data-crop-mode] on the card root. Crop mode owns audio playback for
+    // its card — entering stops normal audition on this card, exiting stops
+    // any loop that was playing.
+    const enterCropMode = (card: HTMLElement) => {
+      document
+        .querySelectorAll<HTMLElement>('[data-bucket-card][data-crop-mode="true"]')
+        .forEach((c) => { if (c !== card) exitCropMode(c); });
+      const surface = card.querySelector<HTMLElement>("[data-cropper-surface]");
+      if (!surface) return;
+      if (activeCard === card) stopActive();
+      card.dataset.cropMode = "true";
+      initCropper(card, surface);
+      // Eagerly load + seek to startSec so the playhead is visible at the
+      // left cap immediately and the first spacebar press plays without an
+      // initial seek delay.
+      preloadCropAudio(card);
+      // The catalog's duration_seconds is sometimes stale (we hit a case
+      // where catalog said 180s but the file was actually 317s). Probe the
+      // audio's real metadata silently; if it differs significantly, update
+      // state + re-derive the default selection so handles land on the
+      // correct file positions and Export trims the right range. Uses a
+      // throwaway audio element so it doesn't disturb the main playback
+      // singleton.
+      const path = card.dataset.path;
+      if (!path) return;
+      const probe = new Audio();
+      probe.preload = "metadata";
+      probe.src = `/api/console/asset?path=${encodeURIComponent(path)}`;
+      probe.addEventListener("loadedmetadata", () => {
+        const st = cropperStates.get(card);
+        const actual = probe.duration;
+        if (!st || !Number.isFinite(actual) || actual <= 0) return;
+        if (Math.abs(actual - st.durationSec) < 0.5) return;
+        st.durationSec = actual;
+        const { startSec, endSec } = computeDefaultCrop(actual, st.bpm, st.barSec);
+        st.startSec = startSec;
+        st.endSec = endSec;
+        const wfRect = st.wf.getBoundingClientRect();
+        st.snapThresholdSec =
+          wfRect.width > 0 ? (8 / wfRect.width) * actual : 0.1;
+        renderCropperBarTicks(st);
+        updateCropperUI(st);
+        card.dataset.durationSeconds = String(actual);
+        // If a loop is already playing for this card, refresh its bounds.
+        if (loopBounds?.card === card) {
+          loopBounds.startSec = st.startSec;
+          loopBounds.endSec = st.endSec;
+        }
+      }, { once: true });
+    };
+
+    const exitCropMode = (card: HTMLElement) => {
+      if (loopBounds?.card === card) {
+        if (audio) audio.pause();
+        loopBounds = null;
+      }
+      card.removeAttribute("data-crop-mode");
+      teardownCropper(card);
+    };
+
+    const commitExportCrop = async (card: HTMLElement) => {
+      const state = cropperStates.get(card);
+      if (!state) return;
+      const exportBtn = card.querySelector<HTMLButtonElement>(
+        '[data-action="export-crop"]',
+      );
+      if (exportBtn?.dataset.busy === "true") return;
+      if (exportBtn) exportBtn.dataset.busy = "true";
+      const len = state.endSec - state.startSec;
+      setStatus(card, `Exporting ${len.toFixed(2)}s…`);
+      try {
+        const res = await fetch("/api/console/extract-loop", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({
+            asset_id: Number(card.dataset.assetId),
+            start_sec: state.startSec,
+            end_sec: state.endSec,
+          }),
+        });
+        if (!res.ok) {
+          let detail = `HTTP ${res.status}`;
+          try {
+            const body = await res.json();
+            if (body?.error?.message) detail = body.error.message;
+            else if (body?.error?.kind === "http") detail = `engine HTTP ${body.error.status}`;
+            else if (typeof body?.detail === "string") detail = body.detail;
+          } catch {}
+          setStatus(card, `Export failed: ${detail}`, "err");
+          if (exportBtn) exportBtn.dataset.busy = "";
           return;
         }
-        if (btn.dataset.busy === "true") return;
-        btn.dataset.busy = "true";
-        const assetId = card.dataset.assetId;
-        if (!assetId) return;
-        setStatus(card, "Extracting loop…");
-        try {
-          const res = await fetch("/api/console/extract-loop", {
-            method: "POST",
-            headers: { "content-type": "application/json" },
-            body: JSON.stringify({
-              asset_id: Number(assetId),
-              start_sec: startSec,
-              end_sec: endSec,
-            }),
-          });
-          if (!res.ok) {
-            let detail = `HTTP ${res.status}`;
-            try {
-              const body = await res.json();
-              if (body?.error?.message) detail = body.error.message;
-              else if (body?.error?.kind === "http") detail = `engine HTTP ${body.error.status}`;
-              else if (typeof body?.detail === "string") detail = body.detail;
-            } catch {}
-            setStatus(card, `Extract failed: ${detail}`, "err");
-            btn.dataset.busy = "";
-            return;
-          }
-          const data = (await res.json()) as {
-            new_asset_id: number;
-            output_path: string;
-            duration_sec: number;
-          };
-          setStatus(
-            card,
-            `✓ Extracted to Loops · ${data.duration_sec.toFixed(1)}s (asset ${data.new_asset_id})`,
-            "ok",
-          );
-          clearSlicerForCard(card);
-        } catch {
-          setStatus(card, "Extract failed (network)", "err");
-          btn.dataset.busy = "";
-        }
-      });
-      return btn;
-    };
-
-    const onSliceMove = (e: MouseEvent) => {
-      if (!slicingState) return;
-      const { wf, startX, overlay } = slicingState;
-      const rect = wf.getBoundingClientRect();
-      const currX = Math.max(rect.left, Math.min(rect.right, e.clientX));
-      const a = Math.min(startX, currX) - rect.left;
-      const b = Math.max(startX, currX) - rect.left;
-      overlay.style.left = `${a}px`;
-      overlay.style.width = `${Math.max(1, b - a)}px`;
-    };
-
-    const onSliceUp = (e: MouseEvent) => {
-      if (!slicingState) return;
-      const { card, wf, durationSec, startX } = slicingState;
-      window.removeEventListener("mousemove", onSliceMove);
-      window.removeEventListener("mouseup", onSliceUp);
-      const rect = wf.getBoundingClientRect();
-      wf.removeAttribute("data-slicing");
-      const a = Math.max(rect.left, Math.min(rect.right, Math.min(startX, e.clientX)));
-      const b = Math.max(rect.left, Math.min(rect.right, Math.max(startX, e.clientX)));
-      const fA = (a - rect.left) / rect.width;
-      const fB = (b - rect.left) / rect.width;
-      const startSec = fA * durationSec;
-      const endSec = fB * durationSec;
-      // Reject zero-width or sub-100ms drags as fat-finger noise; the
-      // curator can re-shift-drag.
-      if (!(durationSec > 0) || endSec - startSec < 0.1) {
-        clearSlicerForCard(card);
-        slicingState = null;
-        return;
+        const data = (await res.json()) as {
+          new_asset_id: number;
+          output_path: string;
+          duration_sec: number;
+        };
+        setStatus(
+          card,
+          `✓ Exported · ${data.duration_sec.toFixed(2)}s (asset ${data.new_asset_id})`,
+          "ok",
+        );
+        if (exportBtn) exportBtn.dataset.busy = "";
+        // Stay in crop mode after a successful export — the curator may
+        // want to cut another loop from the same source without re-entering.
+      } catch {
+        setStatus(card, "Export failed (network)", "err");
+        if (exportBtn) exportBtn.dataset.busy = "";
       }
-      // Suppress the click that immediately follows mouseup so seek doesn't
-      // fire on top of our slicer.
-      suppressNextClick = true;
-      window.setTimeout(() => { suppressNextClick = false; }, 50);
-      // Replace the overlay (which is good for the gesture) with a
-      // final-positioned one + the extract button. Slicer state cleared so
-      // the next shift-drag starts fresh.
-      const extractBtn = buildExtractButton(card, startSec, endSec);
-      // Drop it in the .wave-row so it sits directly under the waveform.
-      const waveRow = card.querySelector<HTMLElement>(".wave-row");
-      (waveRow?.parentElement ?? card).insertBefore(
-        extractBtn,
-        waveRow?.nextSibling ?? null,
-      );
-      slicingState = null;
-    };
-
-    const startSlice = (e: MouseEvent, card: HTMLElement, wf: HTMLElement) => {
-      const durationSec = Number(card.dataset.durationSeconds);
-      if (!Number.isFinite(durationSec) || durationSec <= 0) {
-        // Without a known duration we can't translate x → seconds, so the
-        // affordance is silently disabled.
-        return;
-      }
-      // Tear down any prior slice on this or other cards first.
-      cards().forEach(clearSlicerForCard);
-      const rect = wf.getBoundingClientRect();
-      const startX = Math.max(rect.left, Math.min(rect.right, e.clientX));
-      const overlay = document.createElement("div");
-      overlay.className = "waveform-region-overlay";
-      overlay.style.left = `${startX - rect.left}px`;
-      overlay.style.width = "1px";
-      wf.appendChild(overlay);
-      wf.setAttribute("data-slicing", "true");
-      slicingState = { card, wf, durationSec, startX, overlay };
-      window.addEventListener("mousemove", onSliceMove);
-      window.addEventListener("mouseup", onSliceUp, { once: true });
-      e.preventDefault();
     };
 
     // ── Stem splitter: POST + 5s status poll ───────────────────────────
@@ -1041,20 +1371,7 @@ const BUCKET_TITLE: Record<BucketView, string> = {
       if (btn) {
         e.preventDefault();
         startTrashHold(btn);
-        return;
       }
-      // Shift-drag on a seekable waveform initiates jam-slicer region
-      // select. We use mousedown specifically (not pointerdown's full
-      // touch path) since the gesture is mouse-only and shiftKey is on
-      // the native MouseEvent.
-    });
-    root.addEventListener("mousedown", (e) => {
-      if (!e.shiftKey) return;
-      const wf = (e.target as HTMLElement)?.closest<HTMLElement>(".waveform");
-      if (!wf || wf.getAttribute("data-seekable") !== "true") return;
-      const card = wf.closest<HTMLElement>("[data-bucket-card]");
-      if (!card) return;
-      startSlice(e, card, wf);
     });
     document.addEventListener("pointerup", cancelTrashHold);
     document.addEventListener("pointercancel", cancelTrashHold);
@@ -1065,11 +1382,8 @@ const BUCKET_TITLE: Record<BucketView, string> = {
       const t = e.target as HTMLElement | null;
       if (!t) return;
       // Waveform click → seek (or start playback at that position).
-      // Skip when a shift-drag just finished — that gesture writes its own
-      // overlay + extract button and the trailing click would clobber it.
       const wfHit = t.closest<HTMLElement>(".waveform");
       if (wfHit && wfHit.getAttribute("data-seekable") === "true") {
-        if (suppressNextClick) return;
         const card = wfHit.closest<HTMLElement>("[data-bucket-card]");
         if (card) {
           seekFromWaveform(e, card);
@@ -1120,6 +1434,15 @@ const BUCKET_TITLE: Record<BucketView, string> = {
           break;
         case "promote-to-live":
           promoteToLive(card);
+          break;
+        case "enter-crop":
+          enterCropMode(card);
+          break;
+        case "exit-crop":
+          exitCropMode(card);
+          break;
+        case "export-crop":
+          commitExportCrop(card);
           break;
         case "split-stems": {
           const mode = btn.dataset.mode === "2" || btn.dataset.mode === "4"
@@ -1172,17 +1495,41 @@ const BUCKET_TITLE: Record<BucketView, string> = {
       const currentEl = focusedCard();
       const currentIdx = currentEl ? all.indexOf(currentEl) : -1;
 
-      // Arrow navigation. ←/↑ go back; →/↓ go forward. Wraps.
-      if (["ArrowRight", "ArrowDown"].includes(e.key)) {
+      // Arrow navigation. ↑/↓ always move between cards. ←/→ also move
+      // between cards by default, but in crop mode they're repurposed as
+      // in-loop scrub (±1s, clamped within bounds) since the focused crop
+      // surface needs left/right for navigation more than the card grid does.
+      const inCrop = currentEl?.dataset.cropMode === "true";
+      if (e.key === "ArrowDown") {
         e.preventDefault();
         const next = currentIdx < 0 ? 0 : (currentIdx + 1) % all.length;
         focusCard(next);
         return;
       }
-      if (["ArrowLeft", "ArrowUp"].includes(e.key)) {
+      if (e.key === "ArrowUp") {
         e.preventDefault();
         const prev = currentIdx < 0 ? 0 : (currentIdx - 1 + all.length) % all.length;
         focusCard(prev);
+        return;
+      }
+      if (e.key === "ArrowRight") {
+        e.preventDefault();
+        if (inCrop && currentEl) {
+          skipInLoop(currentEl, +1);
+        } else {
+          const next = currentIdx < 0 ? 0 : (currentIdx + 1) % all.length;
+          focusCard(next);
+        }
+        return;
+      }
+      if (e.key === "ArrowLeft") {
+        e.preventDefault();
+        if (inCrop && currentEl) {
+          skipInLoop(currentEl, -1);
+        } else {
+          const prev = currentIdx < 0 ? 0 : (currentIdx - 1 + all.length) % all.length;
+          focusCard(prev);
+        }
         return;
       }
 
@@ -1190,7 +1537,14 @@ const BUCKET_TITLE: Record<BucketView, string> = {
 
       if (e.key === " ") {
         e.preventDefault();
-        toggleAudition(currentEl);
+        // In crop mode, spacebar plays/pauses the loop selection; otherwise
+        // it plays the full track via the small waveform's audition path.
+        if (currentEl.dataset.cropMode === "true") {
+          toggleCropPlay(currentEl);
+          dismissCropHint(currentEl);
+        } else {
+          toggleAudition(currentEl);
+        }
         return;
       }
       if (e.key === "Escape") {
