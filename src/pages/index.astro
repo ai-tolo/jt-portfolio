@@ -1,6 +1,6 @@
 ---
 import Layout from "../layouts/Layout.astro";
-import WorkCard from "../components/WorkCard.astro";
+import WorkEntry from "../components/WorkEntry.astro";
 import Footer from "../components/Footer.astro";
 import { getCaseStudies } from "../lib/notion";
 
@@ -31,6 +31,13 @@ const works = await getCaseStudies();
             </p>
           </div>
         </div>
+
+        <div class="hero-foot">
+          <a class="hero-scroll" href="#work">
+            <span class="hero-scroll-label">Selected work</span>
+            <span class="hero-scroll-glyph" aria-hidden="true">↓</span>
+          </a>
+        </div>
       </div>
     </section>
 
@@ -56,11 +63,22 @@ const works = await getCaseStudies();
 
     <section class="section work" id="work" aria-labelledby="work-label">
       <div class="inner">
-        <span id="work-label" class="eyebrow">Selected work</span>
-        <ol class="list">
+        <header class="work-head">
+          <span id="work-label" class="eyebrow">Selected work</span>
+          <span class="work-head-count">
+            <span class="work-head-n">{String(works.length).padStart(2, "0")}</span>
+            <span class="work-head-of">case studies</span>
+          </span>
+          <span class="work-head-hint">
+            <kbd>↑</kbd><kbd>↓</kbd>
+            <span>to step</span>
+          </span>
+        </header>
+
+        <ol class="list" data-work-list>
           {works.map((w) => (
             <li>
-              <WorkCard
+              <WorkEntry
                 index={w.order}
                 name={w.name}
                 subtitle={w.subtitle}
@@ -72,96 +90,122 @@ const works = await getCaseStudies();
             </li>
           ))}
         </ol>
+
+        <div class="work-foot">
+          <a class="work-foot-link" href="/resume">
+            <span>Full resume</span>
+            <span aria-hidden="true">→</span>
+          </a>
+        </div>
       </div>
     </section>
   </main>
 
   <Footer />
 
-  {/* Hidden Portal entry. Type "console" anywhere on the home page to reveal
-      a corner badge linking to /portal/login. The badge stays visible for
-      10 s then fades; typing it again brings it back. The buffer ignores
-      keystrokes inside inputs/textareas and modifier-key combos. */}
-  <a id="portal-hint" class="portal-hint" href="/portal/login" hidden>
-    → Portal
-  </a>
+  {/* Work-list behavior: scroll-linked reveal, subtle parallax on the
+      cover image, and arrow-key navigation between entries. All scoped
+      to the home page. */}
   <script>
-    (() => {
-      const TRIGGER = "console";
-      const BUFFER_LEN = TRIGGER.length;
-      let buffer = "";
-      let hideTimer: number | null = null;
+    type Entry = HTMLAnchorElement & { __weIn?: boolean };
 
-      const hint = document.getElementById("portal-hint") as HTMLAnchorElement | null;
-      if (!hint) return;
+    const list = document.querySelector<HTMLOListElement>("[data-work-list]");
+    if (list) {
+      const entries = Array.from(list.querySelectorAll<Entry>(".we"));
 
-      const show = () => {
-        hint.hidden = false;
-        // Ensure transition runs each time.
-        hint.style.opacity = "0";
-        requestAnimationFrame(() => { hint.style.opacity = "1"; });
-        if (hideTimer) window.clearTimeout(hideTimer);
-        hideTimer = window.setTimeout(() => {
-          hint.style.opacity = "0";
-          window.setTimeout(() => { hint.hidden = true; }, 600);
-        }, 10000);
+      /* ── Reveal-on-scroll ──────────────────────────────────────── */
+      const io = new IntersectionObserver((records) => {
+        for (const r of records) {
+          if (r.isIntersecting) {
+            (r.target as Entry).classList.add("we-in");
+            io.unobserve(r.target);
+          }
+        }
+      }, { threshold: 0.18 });
+      entries.forEach((e) => io.observe(e));
+
+      /* ── Subtle parallax ───────────────────────────────────────────
+         Each cover frame translates a fraction of its distance from the
+         viewport center. Capped at ±28px. Skipped on reduced motion. */
+      const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+      const frames = list.querySelectorAll<HTMLElement>("[data-we-parallax]");
+
+      const update = () => {
+        const vh = window.innerHeight;
+        frames.forEach((f) => {
+          const r = f.getBoundingClientRect();
+          const center = r.top + r.height / 2;
+          const dist = (center - vh / 2) / vh;          // -0.5 .. 0.5 typical
+          const y = Math.max(-28, Math.min(28, -dist * 36));
+          f.style.setProperty("--we-parallax", `${y.toFixed(1)}px`);
+          f.style.transform = `translate3d(0, ${y.toFixed(1)}px, 0)`;
+        });
+      };
+
+      let ticking = false;
+      const onScroll = () => {
+        if (ticking) return;
+        ticking = true;
+        requestAnimationFrame(() => {
+          update();
+          ticking = false;
+        });
+      };
+
+      if (!reduce) {
+        update();
+        window.addEventListener("scroll", onScroll, { passive: true });
+        window.addEventListener("resize", onScroll);
+      }
+
+      /* ── Arrow-key step ─────────────────────────────────────────── */
+      const findCurrent = (): number => {
+        const vh = window.innerHeight;
+        let nearest = 0;
+        let nearestDist = Infinity;
+        entries.forEach((e, i) => {
+          const r = e.getBoundingClientRect();
+          const center = r.top + r.height / 2;
+          const d = Math.abs(center - vh / 2);
+          if (d < nearestDist) { nearestDist = d; nearest = i; }
+        });
+        return nearest;
       };
 
       document.addEventListener("keydown", (e) => {
-        if (e.metaKey || e.ctrlKey || e.altKey) return;
-        const target = e.target as HTMLElement | null;
-        const tag = target?.tagName?.toLowerCase();
-        if (tag === "input" || tag === "textarea" || target?.isContentEditable) return;
-        if (e.key.length !== 1) return;
-        const ch = e.key.toLowerCase();
-        if (!/^[a-z]$/.test(ch)) return;
-        buffer = (buffer + ch).slice(-BUFFER_LEN);
-        if (buffer === TRIGGER) show();
+        if (e.metaKey || e.ctrlKey || e.altKey || e.shiftKey) return;
+        const t = e.target as HTMLElement | null;
+        const tag = t?.tagName?.toLowerCase();
+        if (tag === "input" || tag === "textarea" || t?.isContentEditable) return;
+        if (e.key !== "ArrowDown" && e.key !== "ArrowUp") return;
+
+        // Only step when the work list is on screen.
+        const headerR = list.getBoundingClientRect();
+        const vh = window.innerHeight;
+        if (headerR.bottom < 0 || headerR.top > vh) return;
+
+        const i = findCurrent();
+        const next = e.key === "ArrowDown" ? i + 1 : i - 1;
+        if (next < 0 || next >= entries.length) return;
+        e.preventDefault();
+        entries[next].scrollIntoView({ behavior: "smooth", block: "center" });
       });
-    })();
+    }
   </script>
 </Layout>
-
-<style>
-  .portal-hint {
-    position: fixed;
-    bottom: var(--space-6);
-    left: var(--space-6);
-    z-index: 100;
-    font-size: var(--fs-eyebrow);
-    font-weight: var(--fw-semibold);
-    letter-spacing: var(--ls-eyebrow);
-    text-transform: uppercase;
-    color: var(--accent);
-    background: var(--bg);
-    border: 1px solid var(--accent);
-    padding: 8px 14px;
-    text-decoration: none;
-    transition: opacity 500ms ease, transform 200ms ease;
-  }
-  .portal-hint:hover,
-  .portal-hint:focus-visible {
-    background: var(--accent);
-    color: var(--bg);
-    transform: translateY(-1px);
-  }
-</style>
 
 <style>
   main {
     padding-top: var(--space-8);
   }
 
-  /* Hero — name as 4 stacked "clippings". Each chunk is a solid block
-     (inverted: text-color background, bg-color text). Padding varies per
-     chunk so each clipping is a different size/proportion, mimicking
-     hand-cut magazine cutouts. Tagline gets the same clipping treatment.
-     On-load stagger animation. Smooth theme transitions. */
+  /* Hero — kept as the chunk-clipping vocabulary. Adds a small
+     descender link to "Selected work" so the page invites a scroll. */
   .hero {
-    padding: var(--space-8) 0 var(--space-16);
+    padding: var(--space-8) 0 var(--space-4);
   }
   .hero-layout {
-    min-height: calc(100svh - var(--space-24));
+    min-height: calc(100svh - var(--space-32));
     display: flex;
     flex-direction: column;
     gap: var(--space-8);
@@ -189,7 +233,7 @@ const works = await getCaseStudies();
     width: fit-content;
     background: var(--ink);
     color: var(--ink-fg);
-    font-size: clamp(4rem, 16vw, 9.5rem);
+    font-size: clamp(3.5rem, 13vw, 8.25rem);
     font-weight: var(--fw-bold);
     letter-spacing: var(--ls-display);
     line-height: 0.82;
@@ -198,9 +242,6 @@ const works = await getCaseStudies();
                 color 280ms cubic-bezier(0.2, 0, 0, 1);
     animation: clip-in 700ms cubic-bezier(0.2, 0, 0, 1) backwards;
   }
-  /* Varied padding per chunk = "imperfect clipping" character.
-     Each chunk has different top/right/bottom/left + small horizontal
-     offset, giving the column a ragged, hand-cut feel. */
   .chunk:nth-child(1) {
     padding: 0.30em 0.42em 0.10em 0.30em;
     animation-delay: 60ms;
@@ -245,6 +286,39 @@ const works = await getCaseStudies();
     color: var(--muted);
   }
 
+  .hero-foot {
+    align-self: flex-start;
+    margin-top: auto;
+    animation: clip-in 700ms cubic-bezier(0.2, 0, 0, 1) 540ms backwards;
+  }
+  .hero-scroll {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-3);
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: var(--fs-eyebrow);
+    letter-spacing: var(--ls-eyebrow);
+    text-transform: uppercase;
+    color: var(--muted);
+    text-decoration: none;
+    padding: 8px 0;
+    border-bottom: 1px solid var(--line);
+    transition: color 200ms ease, border-color 200ms ease;
+  }
+  .hero-scroll:hover,
+  .hero-scroll:focus-visible {
+    color: var(--text);
+    border-color: var(--accent);
+  }
+  .hero-scroll-glyph {
+    display: inline-block;
+    animation: scroll-bob 2.2s ease-in-out infinite;
+  }
+  @keyframes scroll-bob {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(3px); }
+  }
+
   @keyframes clip-in {
     from {
       opacity: 0;
@@ -258,9 +332,11 @@ const works = await getCaseStudies();
 
   @media (prefers-reduced-motion: reduce) {
     .chunk,
-    .tagline {
+    .tagline,
+    .hero-foot {
       animation: none;
     }
+    .hero-scroll-glyph { animation: none; }
   }
 
   @media (min-width: 56rem) {
@@ -319,12 +395,86 @@ const works = await getCaseStudies();
     }
   }
 
-  /* Work */
-  .work .eyebrow {
+  /* Work head — eyebrow + count + keyboard hint */
+  .work-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-4);
+    flex-wrap: wrap;
+    padding-bottom: var(--space-8);
     margin-bottom: var(--space-4);
   }
-  .list {
+  .work-head-count {
+    display: inline-flex;
+    align-items: baseline;
+    gap: var(--space-2);
+  }
+  .work-head-n {
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-weight: var(--fw-bold);
+    font-size: clamp(1.25rem, 2.4vw, 1.75rem);
+    color: var(--ink);
+    background: var(--ink);
+    color: var(--ink-fg);
+    padding: 0.10em 0.36em;
+    letter-spacing: 0.04em;
+  }
+  .work-head-of {
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: var(--fs-eyebrow);
+    letter-spacing: var(--ls-eyebrow);
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  .work-head-hint {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-2);
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 0.75rem;
+    color: var(--muted);
+  }
+  .work-head-hint kbd {
+    font-family: inherit;
+    font-size: 0.7rem;
+    padding: 2px 6px;
+    border: 1px solid var(--line);
+    border-radius: 3px;
+    color: var(--text);
+    background: var(--surface-1);
+    line-height: 1;
+  }
+
+  /* Work list */
+  .work .list {
     list-style: none;
     padding: 0;
+    margin: 0;
+  }
+
+  .work-foot {
+    padding: var(--space-12) 0 var(--space-4);
+    border-top: 1px solid var(--line);
+    margin-top: var(--space-8);
+  }
+  .work-foot-link {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-2);
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: var(--fs-eyebrow);
+    letter-spacing: var(--ls-eyebrow);
+    text-transform: uppercase;
+    color: var(--accent);
+    text-decoration: none;
+    padding: var(--space-3) var(--space-4);
+    border: 1px solid var(--accent);
+    transition: color 200ms ease, background 200ms ease;
+  }
+  .work-foot-link:hover,
+  .work-foot-link:focus-visible {
+    color: var(--bg);
+    background: var(--accent);
   }
 </style>

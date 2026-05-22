@@ -1,0 +1,294 @@
+---
+// Editorial work entry. Replaces the WorkCard for the homepage's
+// /#work list. Each entry is its own near-fullscreen unit with a
+// chunk-clipped title (extending the hero's hand-cut vocabulary at a
+// smaller scale), a magazine-deck subtitle, an outcome paragraph, a
+// chip strip of tags, and a large cover image with subtle scroll-linked
+// parallax. The whole entry is one large link to the case study.
+//
+// Keyboard navigation (arrow up / down) cycles entries; see index.astro.
+
+interface Props {
+  index: number;
+  name: string;
+  subtitle: string;
+  outcome: string;
+  tags: string[];
+  slug: string;
+  cover?: string | null;
+}
+
+const { index, name, subtitle, outcome, tags, slug, cover } = Astro.props;
+const num = String(index).padStart(2, "0");
+// Each entry rotates a 0-3 visual variant for the title-chunk padding so
+// the column reads as hand-cut rather than uniform.
+const variant = ((index - 1) % 4 + 4) % 4;
+---
+
+<a
+  class="we"
+  href={`/case-studies/${slug}`}
+  data-we-entry={num}
+  aria-label={`Read case study: ${name} — ${subtitle}`}
+>
+  <div class="we-meta">
+    <p class="we-num">
+      <span class="we-num-pad">{num}</span>
+      <span class="we-num-slash">/</span>
+      <span class="we-num-of">selected work</span>
+    </p>
+
+    <h2 class={`we-name we-v${variant}`}>{name}</h2>
+
+    <p class="we-subtitle">{subtitle}</p>
+
+    <p class="we-outcome">{outcome}</p>
+
+    {tags.length > 0 && (
+      <ul class="we-tags">
+        {tags.slice(0, 4).map((t) => <li>{t}</li>)}
+      </ul>
+    )}
+
+    <p class="we-read">
+      <span class="we-read-label">Read case study</span>
+      <span class="we-read-arrow" aria-hidden="true">→</span>
+    </p>
+  </div>
+
+  <div class="we-cover" aria-hidden="true">
+    {cover ? (
+      <div class="we-cover-frame" data-we-parallax>
+        <img src={cover} alt="" loading="lazy" />
+      </div>
+    ) : (
+      <div class="we-cover-empty">
+        <span>{num}</span>
+      </div>
+    )}
+  </div>
+</a>
+
+<style>
+  /* Entry sits as a generous block; ~80vh on desktop, naturally
+     stacked on mobile. The hover state lifts the whole entry. */
+  .we {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: var(--space-8);
+    padding: var(--space-16) 0;
+    border-top: 1px solid var(--line);
+    position: relative;
+    color: var(--text);
+    isolation: isolate;
+  }
+
+  /* Hover affordances. The cover tilts a fraction; the chunk title
+     nudges; the read-link underline animates. Subtle on purpose. */
+  .we:hover .we-cover-frame,
+  .we:focus-visible .we-cover-frame {
+    transform: translate3d(0, var(--we-parallax, 0), 0) scale(1.018);
+    box-shadow: 0 24px 60px -30px rgba(0, 0, 0, 0.32);
+  }
+  .we:hover .we-name,
+  .we:focus-visible .we-name {
+    transform: translateX(2px);
+  }
+  .we:hover .we-read-arrow,
+  .we:focus-visible .we-read-arrow {
+    transform: translateX(3px);
+  }
+
+  /* Meta column */
+  .we-meta {
+    display: grid;
+    grid-template-rows: auto auto auto auto auto auto;
+    gap: var(--space-3);
+    align-content: start;
+    min-width: 0;
+  }
+
+  .we-num {
+    display: inline-flex;
+    align-items: baseline;
+    gap: 6px;
+    margin: 0;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: var(--fs-eyebrow);
+    letter-spacing: var(--ls-eyebrow);
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  .we-num-pad {
+    display: inline-block;
+    background: var(--ink);
+    color: var(--ink-fg);
+    padding: 0.34em 0.62em 0.20em;
+    font-weight: var(--fw-bold);
+    transition: background-color 280ms cubic-bezier(0.2, 0, 0, 1),
+                color 280ms cubic-bezier(0.2, 0, 0, 1);
+  }
+  .we-num-slash { color: var(--line); }
+  .we-num-of { color: var(--muted); }
+
+  /* Chunk-clipped name. Borrows the hero's hand-cut vocabulary
+     scaled down. Four variants cycle by entry index. */
+  .we-name {
+    display: inline-block;
+    width: fit-content;
+    max-width: 100%;
+    background: var(--ink);
+    color: var(--ink-fg);
+    font-size: clamp(2.25rem, 5.2vw, 4rem);
+    font-weight: var(--fw-bold);
+    letter-spacing: var(--ls-display);
+    line-height: 0.92;
+    text-transform: uppercase;
+    margin: 0;
+    transition: background-color 280ms cubic-bezier(0.2, 0, 0, 1),
+                color 280ms cubic-bezier(0.2, 0, 0, 1),
+                transform 220ms cubic-bezier(0.2, 0, 0, 1);
+    /* Allow break only at natural boundaries (the period in "Tolo.Cloud");
+       never split a word mid-character. */
+    word-break: normal;
+    overflow-wrap: normal;
+  }
+  .we-v0 { padding: 0.22em 0.40em 0.10em 0.28em; }
+  .we-v1 {
+    padding: 0.10em 0.52em 0.20em 0.16em;
+    margin-left: 0.06em;
+  }
+  .we-v2 {
+    padding: 0.10em 0.30em 0.06em 0.46em;
+    margin-left: -0.04em;
+  }
+  .we-v3 {
+    padding: 0.06em 0.50em 0.26em 0.20em;
+    margin-left: 0.04em;
+  }
+
+  .we-subtitle {
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-style: italic;
+    font-size: clamp(1.0625rem, 1.65vw, 1.375rem);
+    line-height: 1.35;
+    color: var(--text);
+    padding-left: 1rem;
+    border-left: 2px solid var(--accent);
+    max-width: 32ch;
+    margin: var(--space-2) 0 0;
+    transition: border-color 280ms cubic-bezier(0.2, 0, 0, 1);
+  }
+
+  .we-outcome {
+    color: var(--muted);
+    font-size: 1.0625rem;
+    font-weight: var(--fw-medium);
+    line-height: 1.55;
+    max-width: 52ch;
+    margin: var(--space-3) 0 0;
+  }
+
+  .we-tags {
+    list-style: none;
+    padding: 0;
+    margin: var(--space-4) 0 0;
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-3);
+    color: var(--muted);
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 0.8125rem;
+    letter-spacing: 0.02em;
+  }
+  .we-tags li {
+    padding: 4px 0;
+  }
+  .we-tags li::after {
+    content: "·";
+    margin-left: var(--space-3);
+    color: var(--line);
+  }
+  .we-tags li:last-child::after { content: ""; margin: 0; }
+
+  .we-read {
+    margin: var(--space-4) 0 0;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: var(--fs-eyebrow);
+    font-weight: var(--fw-bold);
+    letter-spacing: var(--ls-eyebrow);
+    text-transform: uppercase;
+    color: var(--accent);
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .we-read-arrow {
+    display: inline-block;
+    transition: transform 200ms cubic-bezier(0.2, 0, 0, 1);
+  }
+
+  /* Cover */
+  .we-cover {
+    position: relative;
+    align-self: start;
+  }
+  .we-cover-frame {
+    aspect-ratio: 16 / 10;
+    overflow: hidden;
+    background: var(--surface-1);
+    transition: transform 480ms cubic-bezier(0.2, 0, 0, 1),
+                box-shadow 480ms cubic-bezier(0.2, 0, 0, 1);
+    will-change: transform;
+  }
+  .we-cover-frame img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+    transition: filter 480ms ease;
+  }
+  .we-cover-empty {
+    aspect-ratio: 16 / 10;
+    display: grid;
+    place-items: center;
+    background: var(--surface-1);
+  }
+  .we-cover-empty span {
+    color: var(--line);
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: clamp(4rem, 12vw, 8rem);
+    font-weight: var(--fw-bold);
+    letter-spacing: var(--ls-display);
+    line-height: 1;
+  }
+
+  @media (min-width: 56rem) {
+    .we {
+      grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr);
+      gap: var(--space-16);
+      align-items: center;
+      padding: var(--space-24) 0;
+      min-height: 64vh;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .we-cover-frame { transition: none; }
+    .we-name { transition: background-color 280ms, color 280ms; }
+    .we-read-arrow { transition: none; }
+  }
+
+  /* Scroll-linked reveal. Each entry fades-up the first time it
+     intersects the viewport. */
+  .we { opacity: 0; transform: translateY(18px); }
+  .we.we-in {
+    opacity: 1;
+    transform: translateY(0);
+    transition: opacity 700ms cubic-bezier(0.2, 0, 0, 1), transform 700ms cubic-bezier(0.2, 0, 0, 1);
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .we { opacity: 1; transform: none; }
+    .we.we-in { transition: none; }
+  }
+</style>
