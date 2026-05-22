@@ -27,10 +27,10 @@
       <!-- ───── E0 ───── public portfolio WorkCard (no portal yet) -->
       <div class="ce-e0">
         <div class="ce-e0-num">02</div>
-        <h3 class="ce-e0-title">Tolo.Cloud</h3>
+        <h3 class="ce-e0-title">Audio Atlas</h3>
         <p class="ce-e0-sub">A creative archive that doesn't try to be creative for me.</p>
         <p class="ce-e0-tags"><span>AI Tooling</span> · <span>Web</span> · <span>Shipped</span></p>
-        <a class="ce-e0-link" href="#">Read case study →</a>
+        <p class="ce-e0-meta">An ordinary homepage list item. The entire card was the link. No portal, no playback, no catalog underneath.</p>
       </div>
 
       <!-- ───── E1 ───── First portal Card.astro -->
@@ -242,28 +242,49 @@
 
   <!-- RIGHT: scrubber + era meta -->
   <div class="ce-controls">
-    <ol class="ce-dots" role="listbox" aria-label="Era">
-      {Array.from({ length: 7 }).map((_, i) => (
-        <li>
-          <button
-            type="button"
-            class={`ce-dot ${i === 6 ? "active" : ""}`}
-            data-ce-era={String(i)}
-            aria-label={`Era ${i}`}
-          >{i}</button>
-        </li>
-      ))}
-    </ol>
-    <input
-      type="range"
-      min="0"
-      max="6"
-      step="1"
-      value="6"
-      class="ce-slider"
-      data-ce-slider
-      aria-label="Capability era"
-    />
+    <div class="ce-track-wrap" role="group" aria-label="Era scrubber">
+      <button
+        type="button"
+        class="ce-track-arrow"
+        data-ce-step="-1"
+        aria-label="Previous era"
+      >←</button>
+
+      <div class="ce-track">
+        <div class="ce-track-line" aria-hidden="true"></div>
+        <input
+          type="range"
+          min="0"
+          max="6"
+          step="1"
+          value="6"
+          class="ce-slider"
+          data-ce-slider
+          aria-label="Capability era"
+        />
+        <ol class="ce-dots" role="tablist" aria-label="Era">
+          {Array.from({ length: 7 }).map((_, i) => (
+            <li class="ce-dot-slot" style={`--pos: ${(i / 6) * 100}%`}>
+              <button
+                type="button"
+                class={`ce-dot ${i === 6 ? "active" : ""}`}
+                data-ce-era={String(i)}
+                role="tab"
+                aria-selected={i === 6 ? "true" : "false"}
+                aria-label={`Era ${i}`}
+              >{i}</button>
+            </li>
+          ))}
+        </ol>
+      </div>
+
+      <button
+        type="button"
+        class="ce-track-arrow"
+        data-ce-step="1"
+        aria-label="Next era"
+      >→</button>
+    </div>
     <div class="ce-meta">
       <p class="ce-meta-eyebrow" data-ce-eyebrow>E6 · 2026-05-22 · TODAY</p>
       <h4 class="ce-meta-title" data-ce-title>The card opens a pipeline</h4>
@@ -359,11 +380,46 @@
     });
   };
 
+  let currentEra = 6;
+  const applyAndTrack = (i: number) => {
+    currentEra = Math.max(0, Math.min(6, i));
+    apply(currentEra);
+    // Keep aria-selected in sync on dots (apply only swaps "active").
+    dots?.forEach((d) => {
+      const on = Number(d.dataset.ceEra) === currentEra;
+      d.setAttribute("aria-selected", on ? "true" : "false");
+    });
+  };
+
   slider?.addEventListener("input", (e) => {
-    apply(Number((e.target as HTMLInputElement).value));
+    applyAndTrack(Number((e.target as HTMLInputElement).value));
   });
   dots?.forEach((d) => {
-    d.addEventListener("click", () => apply(Number(d.dataset.ceEra)));
+    d.addEventListener("click", () => applyAndTrack(Number(d.dataset.ceEra)));
+  });
+
+  // Prev / next chevrons on either side of the track.
+  const arrows = stage?.querySelectorAll<HTMLButtonElement>("[data-ce-step]") ?? [];
+  arrows.forEach((a) => {
+    a.addEventListener("click", () => {
+      applyAndTrack(currentEra + Number(a.dataset.ceStep || 0));
+    });
+  });
+
+  // Document-level arrow-key navigation when the scrubber is on screen.
+  // Skipped inside inputs / contenteditable so we don't interfere with
+  // typing elsewhere on the page.
+  document.addEventListener("keydown", (e) => {
+    if (e.metaKey || e.ctrlKey || e.altKey || e.shiftKey) return;
+    if (e.key !== "ArrowLeft" && e.key !== "ArrowRight") return;
+    const t = e.target as HTMLElement | null;
+    const tag = t?.tagName?.toLowerCase();
+    if (tag === "input" || tag === "textarea" || t?.isContentEditable) return;
+    if (!stage) return;
+    const r = stage.getBoundingClientRect();
+    if (r.bottom < 0 || r.top > window.innerHeight) return;
+    e.preventDefault();
+    applyAndTrack(currentEra + (e.key === "ArrowRight" ? 1 : -1));
   });
 
   // Auto-walkthrough — start at E0, walk to E6 with a beat between each
@@ -372,16 +428,17 @@
   const onTouch = () => { touched = true; };
   slider?.addEventListener("pointerdown", onTouch, { once: true });
   dots?.forEach((d) => d.addEventListener("click", onTouch, { once: true }));
+  arrows.forEach((a) => a.addEventListener("click", onTouch, { once: true }));
 
   const io = new IntersectionObserver((entries) => {
     for (const e of entries) {
       if (!e.isIntersecting) continue;
-      apply(0);
+      applyAndTrack(0);
       let i = 0;
       const step = () => {
         if (touched) return;
         i = Math.min(6, i + 1);
-        apply(i);
+        applyAndTrack(i);
         if (i < 6) window.setTimeout(step, 1400);
       };
       window.setTimeout(step, 900);
@@ -492,15 +549,14 @@
     margin: 0 0 22px;
     font-family: ui-monospace, monospace;
   }
-  .ce-e0-link {
-    font-size: 12px;
-    letter-spacing: 0.18em;
-    text-transform: uppercase;
-    color: #ff5a3c;
-    text-decoration: none;
-    border-bottom: 1px solid #ff5a3c;
-    padding-bottom: 2px;
-    font-weight: 700;
+  .ce-e0-meta {
+    font-family: ui-monospace, monospace;
+    font-style: italic;
+    font-size: 13px;
+    color: rgba(245, 241, 232, 0.45);
+    margin: 0;
+    line-height: 1.55;
+    max-width: 48ch;
   }
 
   /* ─────────── E1 ─────────── first portal Card.astro */
@@ -1371,60 +1427,154 @@
     gap: 18px;
     padding-top: 8px;
   }
-  .ce-dots {
-    list-style: none;
-    padding: 0;
-    margin: 0;
-    display: flex;
-    gap: 6px;
+
+  /* Unified scrubber: track line + slider + dots all share the same
+     horizontal axis so the dots sit ON the slider track at their
+     corresponding values. Prev / next chevrons sit on either side. */
+  .ce-track-wrap {
+    display: grid;
+    grid-template-columns: 32px 1fr 32px;
+    gap: 12px;
+    align-items: center;
   }
-  .ce-dot {
-    width: 26px;
-    height: 26px;
+  .ce-track-arrow {
+    width: 32px;
+    height: 32px;
     border-radius: 50%;
-    background: rgba(245, 241, 232, 0.04);
     border: 1px solid rgba(245, 241, 232, 0.18);
-    color: rgba(245, 241, 232, 0.55);
-    font-family: ui-monospace, monospace;
-    font-size: 11px;
-    font-weight: 700;
+    background: rgba(245, 241, 232, 0.04);
+    color: rgba(245, 241, 232, 0.72);
+    font-size: 14px;
     cursor: pointer;
     transition: color 160ms ease, border-color 160ms ease, background 160ms ease;
+    line-height: 0;
+    display: grid;
+    place-items: center;
   }
-  .ce-dot:hover { color: #f5f1e8; border-color: rgba(245, 241, 232, 0.45); }
-  .ce-dot.active {
-    color: #0e0c14;
-    border-color: var(--brand-orange);
-    background: var(--brand-grad);
+  .ce-track-arrow:hover {
+    color: #f5f1e8;
+    border-color: rgba(245, 241, 232, 0.45);
+    background: rgba(245, 241, 232, 0.08);
   }
+  .ce-track-arrow:focus-visible {
+    outline: 2px solid var(--brand-orange);
+    outline-offset: 2px;
+  }
+
+  .ce-track {
+    position: relative;
+    height: 30px;
+    /* The horizontal track padding equals half a dot's width so the
+       first/last dot can sit at 0% / 100% without clipping. */
+    padding: 0 13px;
+  }
+  .ce-track-line {
+    position: absolute;
+    left: 13px;
+    right: 13px;
+    top: 50%;
+    height: 4px;
+    margin-top: -2px;
+    background: rgba(245, 241, 232, 0.10);
+    border-radius: 2px;
+    pointer-events: none;
+  }
+
+  /* Slider: hide its native track (we render our own line above) and
+     keep only the thumb visible. It still drives input behavior. */
   .ce-slider {
     -webkit-appearance: none;
     appearance: none;
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 0;
     width: 100%;
-    height: 4px;
-    background: rgba(245, 241, 232, 0.10);
-    border-radius: 2px;
+    height: 30px;
+    background: transparent;
     outline: none;
     cursor: ew-resize;
+    z-index: 3;
+  }
+  .ce-slider::-webkit-slider-runnable-track {
+    height: 30px;
+    background: transparent;
+  }
+  .ce-slider::-moz-range-track {
+    height: 30px;
+    background: transparent;
   }
   .ce-slider::-webkit-slider-thumb {
     -webkit-appearance: none;
     appearance: none;
-    width: 18px;
-    height: 18px;
+    width: 26px;
+    height: 26px;
+    margin-top: 2px;
     border-radius: 50%;
     background: linear-gradient(90deg, #ff2761 0%, #ffb347 100%);
     border: 2px solid #07060c;
     cursor: grab;
-    box-shadow: 0 0 0 2px rgba(255, 90, 60, 0.32);
+    box-shadow: 0 0 0 3px rgba(255, 90, 60, 0.18);
   }
   .ce-slider::-moz-range-thumb {
-    width: 18px;
-    height: 18px;
+    width: 26px;
+    height: 26px;
     border-radius: 50%;
     background: linear-gradient(90deg, #ff2761 0%, #ffb347 100%);
     border: 2px solid #07060c;
     cursor: grab;
+    box-shadow: 0 0 0 3px rgba(255, 90, 60, 0.18);
+  }
+  .ce-slider:active::-webkit-slider-thumb { cursor: grabbing; }
+  .ce-slider:active::-moz-range-thumb { cursor: grabbing; }
+  .ce-slider:focus-visible::-webkit-slider-thumb {
+    box-shadow: 0 0 0 3px rgba(255, 90, 60, 0.45), 0 0 0 5px rgba(255, 90, 60, 0.20);
+  }
+
+  /* Dots overlay: each slot is positioned at i/6 along the track. The
+     dot itself centers on that position via translateX(-50%). */
+  .ce-dots {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    position: absolute;
+    inset: 0;
+    z-index: 2;
+    pointer-events: none;
+  }
+  .ce-dot-slot {
+    position: absolute;
+    top: 50%;
+    left: calc(13px + (100% - 26px) * var(--pos) / 100);
+    transform: translate(-50%, -50%);
+    pointer-events: auto;
+  }
+  .ce-dot {
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    background: #07060c;
+    border: 1px solid rgba(245, 241, 232, 0.32);
+    color: rgba(245, 241, 232, 0.62);
+    font-family: ui-monospace, monospace;
+    font-size: 10px;
+    font-weight: 700;
+    cursor: pointer;
+    display: grid;
+    place-items: center;
+    line-height: 1;
+    padding: 0;
+    transition: color 160ms ease, border-color 160ms ease, background 160ms ease, transform 160ms ease;
+  }
+  .ce-dot:hover {
+    color: #f5f1e8;
+    border-color: rgba(245, 241, 232, 0.55);
+    transform: scale(1.08);
+  }
+  .ce-dot.active {
+    color: #0e0c14;
+    border-color: var(--brand-orange);
+    background: var(--brand-grad);
   }
 
   .ce-meta {

@@ -103,8 +103,19 @@ async function main() {
     // Notion lets you set a Cover via the file-upload control or via
     // external URL. File-type covers have signed URLs that expire (~1 hr),
     // so we download them to /public/case-studies/[slug]/cover.[ext].
+    //
+    // Escape hatch: if /public/case-studies/[slug]/cover.lock exists, skip
+    // the Notion download and keep whatever cover image is already on disk.
+    // Use this when a slug has a hand-curated cover that should not be
+    // overwritten by re-syncs from Notion.
     const coverFile = page.properties.Cover?.files?.[0];
-    if (coverFile?.file?.url) {
+    const coverLock = await fs
+      .stat(path.join(dir, "cover.lock"))
+      .then(() => true)
+      .catch(() => false);
+    if (coverLock) {
+      console.log(`  ${slug}/cover.*  [locked — keeping local copy]`);
+    } else if (coverFile?.file?.url) {
       await fs.mkdir(dir, { recursive: true });
       const url = coverFile.file.url;
       const ext = extFromUrl(url);
