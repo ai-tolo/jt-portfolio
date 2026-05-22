@@ -1,0 +1,1589 @@
+---
+import PortalLayout from "../../layouts/PortalLayout.astro";
+import { listMixJobs, listMixPairs } from "../../lib/console-api";
+import type {
+  MixJobSummary,
+  MixJobStatus,
+  MixPairItem,
+} from "../../lib/console-types";
+
+// Engineer (Build 5) lobby page. Lists mix jobs by status and surfaces
+// A/B pairs awaiting judgement. Phase 0 lands the lifecycle plumbing
+// (queue, worker, status tracking); Phase 1 fills in real variant
+// rendering, at which point the "Pair Tinder" section becomes live.
+//
+// Graceful fallback when the engine is unreachable: page renders with
+// empty buckets + a small notice, mirroring rotation.astro's pattern.
+
+let jobs: MixJobSummary[] = [];
+let pairs: MixPairItem[] = [];
+let usingMock = true;
+let fetchError: string | null = null;
+
+try {
+  const jobsRes = await listMixJobs(50);
+  if (jobsRes.ok) {
+    jobs = jobsRes.data.items;
+    usingMock = false;
+  } else {
+    fetchError =
+      jobsRes.error.kind === "http"
+        ? `engine returned ${jobsRes.error.status}`
+        : "engine unreachable";
+  }
+  // Bumped from 10 → 30 so multiple ready jobs surface their pairs at once.
+  // The engine already orders ready jobs oldest-first, so newer renders
+  // appear at the bottom of the page.
+  const pairsRes = await listMixPairs(30);
+  if (pairsRes.ok) pairs = pairsRes.data.items;
+} catch (e) {
+  fetchError = e instanceof Error ? e.message : "unknown error";
+}
+
+const ACTIVE: MixJobStatus[] = ["pending", "splitting_stems", "rendering"];
+const TERMINAL_OK: MixJobStatus[] = ["ready", "complete", "noop_complete"];
+
+const activeJobs = jobs.filter((j) => ACTIVE.includes(j.status));
+const readyJobs = jobs.filter((j) => j.status === "ready");
+const completedJobs = jobs.filter((j) =>
+  ["complete", "noop_complete"].includes(j.status),
+);
+const errorJobs = jobs.filter((j) => j.status === "error");
+
+const STATUS_LABEL: Record<MixJobStatus, string> = {
+  pending: "queued",
+  splitting_stems: "splitting stems",
+  rendering: "rendering variants",
+  ready: "ready to judge",
+  complete: "all judgements collected",
+  noop_complete: "Phase 0 noop · awaiting real renderer",
+  error: "errored",
+};
+
+function jobTitle(j: MixJobSummary): string {
+  return (
+    j.source_display_name ||
+    j.source_filename ||
+    `asset ${j.source_asset_id}`
+  );
+}
+
+function fmtTime(iso: string | null): string {
+  if (!iso) return "—";
+  const d = new Date(iso.replace(" ", "T") + (iso.endsWith("Z") ? "" : "Z"));
+  if (Number.isNaN(d.getTime())) return iso;
+  return d.toLocaleString("en-US", {
+    month: "short",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+  });
+}
+
+// Helper kept un-typed because Astro's template-body parser treats
+// `<string, string>` generic syntax as a JSX tag and fails to compile
+// when the function is invoked inside the .map() in the template.
+function stemSoloUrls(sf) {
+  if (!sf) return {};
+  const out = {};
+  for (const [name, path] of Object.entries(sf)) {
+    out[name] = `/api/console/asset?path=${encodeURIComponent(path)}&variant=opus`;
+  }
+  return out;
+}
+---
+
+<PortalLayout title="Engineer · Portal" current="engineer">
+  <section class="engineer">
+    <header class="intro">
+      <h1>Engineer</h1>
+      <p class="lede">
+        Send a track here from <a href="/portal/buckets/tracks">Buckets</a>. The
+        engineer-worker on M1 picks it up, renders A/B variants along three
+        taste axes (focal, space, dynamics), and surfaces them below as pairs
+        to judge. Phase 0 lands the lifecycle; renders go live in Phase 1.
+      </p>
+      {fetchError && (
+        <p class="notice">Engine unreachable: {fetchError}. Showing empty state.</p>
+      )}
+    </header>
+
+    <div class="cols">
+      <section class="col">
+        <h2>In flight <span class="count">{activeJobs.length}</span></h2>
+        {activeJobs.length === 0 ? (
+          <p class="empty">Nothing in flight.</p>
+        ) : (
+          <ul class="job-list">
+            {activeJobs.map((j) => (
+              <li class="job">
+                <div class="job-title">{jobTitle(j)}</div>
+                <div class="job-meta">
+                  <span class={`status status-${j.status}`}>{STATUS_LABEL[j.status]}</span>
+                  <span class="started">started {fmtTime(j.started_at)}</span>
+                </div>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
+
+      <section class="col">
+        <h2>Ready to judge <span class="count">{readyJobs.length}</span></h2>
+        {readyJobs.length === 0 ? (
+          <p class="empty">No pairs awaiting judgement.</p>
+        ) : (
+          <ul class="job-list">
+            {readyJobs.map((j) => (
+              <li class="job">
+                <div class="job-title">{jobTitle(j)}</div>
+                <div class="job-meta">
+                  <span class="status status-ready">{j.variant_count} variants · {j.judgement_count} judged</span>
+                </div>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
+
+      <section class="col">
+        <h2>Completed <span class="count">{completedJobs.length}</span></h2>
+        {completedJobs.length === 0 ? (
+          <p class="empty">No completed jobs yet.</p>
+        ) : (
+          <ul class="job-list">
+            {completedJobs.slice(0, 10).map((j) => (
+              <li class="job">
+                <div class="job-title">{jobTitle(j)}</div>
+                <div class="job-meta">
+                  <span class={`status status-${j.status}`}>{STATUS_LABEL[j.status]}</span>
+                  <span class="finished">finished {fmtTime(j.finished_at)}</span>
+                </div>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
+
+      {errorJobs.length > 0 && (
+        <section class="col col-error">
+          <h2>Errored <span class="count">{errorJobs.length}</span></h2>
+          <ul class="job-list">
+            {errorJobs.map((j) => (
+              <li class="job">
+                <div class="job-title">{jobTitle(j)}</div>
+                <div class="job-error">{j.error}</div>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+    </div>
+
+    <section class="pair-tinder">
+      <h2>Pair tinder <span class="hint">space play/pause · A/B switch · ← → seek · Enter pick current · 1/2 pick A/B · S skip</span></h2>
+      {pairs.length === 0 ? (
+        <p class="empty">
+          No pairs to judge. Send a track from <a href="/portal/buckets/tracks">Buckets</a> and come back when its job is "ready to judge".
+        </p>
+      ) : (
+        <ul class="pair-list">
+          {pairs.map((p, i) => {
+            const waveSrc = p.source_waveform_sha1
+              ? `/api/console/waveform?sha1=${p.source_waveform_sha1}`
+              : null;
+            const aUrl = p.variant_a.asset_path
+              ? `/api/console/asset?path=${encodeURIComponent(p.variant_a.asset_path)}&variant=opus`
+              : "";
+            const bUrl = p.variant_b.asset_path
+              ? `/api/console/asset?path=${encodeURIComponent(p.variant_b.asset_path)}&variant=opus`
+              : "";
+            // Build a {stem_name: opus_url} map per side for solo playback.
+            const stemUrlsA = stemSoloUrls(p.variant_a.stem_files);
+            const stemUrlsB = stemSoloUrls(p.variant_b.stem_files);
+            return (
+              <li
+                class={`pair${i === 0 ? " pair-active" : ""}`}
+                data-pair
+                data-job-id={p.job_id}
+                data-axis={p.axis}
+                data-a={p.variant_a.id}
+                data-b={p.variant_b.id}
+                data-source-asset-id={p.source_asset_id}
+                data-duration={p.source_duration_seconds ?? ""}
+                data-side="a"
+                data-url-a={aUrl}
+                data-url-b={bUrl}
+                data-stem-urls-a={JSON.stringify(stemUrlsA)}
+                data-stem-urls-b={JSON.stringify(stemUrlsB)}
+              >
+                <div class="pair-head">
+                  <span class="pair-source">{p.job_source_display}</span>
+                  <span class="pair-axis">{p.axis}</span>
+                </div>
+
+                <div class="pair-stage">
+                  <div class="pair-waveform" data-stage-waveform>
+                    {waveSrc ? (
+                      <img src={waveSrc} alt="" loading="lazy" />
+                    ) : (
+                      <div class="pair-waveform-fallback">no waveform for source</div>
+                    )}
+                    <div class="pair-playhead" data-playhead hidden></div>
+                  </div>
+                  <div class="pair-transport">
+                    <button class="transport-btn" data-skip="-10" aria-label="Back 10 seconds">⏮</button>
+                    <button class="transport-btn transport-play" data-toggle-play aria-label="Play / pause">▶</button>
+                    <button class="transport-btn" data-skip="10" aria-label="Forward 10 seconds">⏭</button>
+                    <span class="pair-time" data-time>0:00 / —:—</span>
+                    <div class="ab-switch" role="group" aria-label="Switch between variant A and B">
+                      <button class="ab-side ab-side-active" data-side-btn="a">
+                        <span class="ab-key">A</span>
+                        <span class="ab-label">{p.variant_a.pole.replace(/_/g, " ")}</span>
+                      </button>
+                      <button class="ab-side" data-side-btn="b">
+                        <span class="ab-key">B</span>
+                        <span class="ab-label">{p.variant_b.pole.replace(/_/g, " ")}</span>
+                      </button>
+                    </div>
+                  </div>
+
+                  <div class="pair-translation">
+                    {[
+                      { side: "a" as const, variant: p.variant_a },
+                      { side: "b" as const, variant: p.variant_b },
+                    ].map(({ side, variant }) => {
+                      const tr = variant.translation;
+                      const flags = tr?.summary_flags ?? [];
+                      return (
+                        <div class={`translation-strip translation-${side}`} title={flags.length > 0 ? `translation flags for variant ${side.toUpperCase()}` : "translation check clean"}>
+                          {flags.length === 0 ? (
+                            <span class="translation-clean">✓ translates clean</span>
+                          ) : (
+                            flags.slice(0, 4).map((f) => (
+                              <span class="translation-flag">⚠ {f}</span>
+                            ))
+                          )}
+                          {flags.length > 4 && (
+                            <span class="translation-more">+{flags.length - 4} more</span>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  {(Object.keys(stemUrlsA).length > 0 || Object.keys(stemUrlsB).length > 0) && (
+                    <div class="pair-solo-bar">
+                      <span class="solo-bar-label">solo</span>
+                      <button class="solo-btn solo-btn-full" data-solo-full data-active="true">FULL MIX</button>
+                      {[...new Set([...Object.keys(stemUrlsA), ...Object.keys(stemUrlsB)])].map((stem) => (
+                        <button class="solo-btn" data-solo-stem={stem}>{stem}</button>
+                      ))}
+                    </div>
+                  )}
+
+                  <div class="pair-reasoning">
+                    {[
+                      { side: "a" as const, variant: p.variant_a },
+                      { side: "b" as const, variant: p.variant_b },
+                    ].map(({ side, variant }) => {
+                      const plan = variant.plan;
+                      return (
+                        <details class={`plan-card plan-${side}`} data-plan-side={side}>
+                          <summary>
+                            <span class="plan-side-tag">{side.toUpperCase()}</span>
+                            <span class="plan-philosophy">
+                              {plan?.philosophy_summary ?? "no plan recorded"}
+                            </span>
+                            <span class="plan-toggle">▾</span>
+                          </summary>
+                          {plan ? (
+                            <div class="plan-body">
+                              {Object.entries(plan.stems ?? {}).map(([name, stem]) => (
+                                <div class="plan-stem">
+                                  <div class="plan-stem-head">
+                                    <span class="plan-stem-name">{name}</span>
+                                    <span class="plan-stem-role">{stem.role}</span>
+                                    {typeof stem.level_offset_db === "number" && stem.level_offset_db !== 0 && (
+                                      <span class="plan-stem-level">
+                                        {stem.level_offset_db > 0 ? "+" : ""}{stem.level_offset_db.toFixed(1)} dB
+                                      </span>
+                                    )}
+                                  </div>
+                                  {(stem.moves ?? []).length === 0 ? (
+                                    <div class="plan-move plan-move-noop">left alone</div>
+                                  ) : (
+                                    <ul class="plan-moves">
+                                      {stem.moves.map((m) => {
+                                        const params: string[] = [];
+                                        if (typeof m.freq_hz === "number") params.push(`${Math.round(m.freq_hz)}Hz`);
+                                        if (typeof m.gain_db === "number") params.push(`${m.gain_db > 0 ? "+" : ""}${m.gain_db.toFixed(1)}dB`);
+                                        if (typeof m.q === "number" && m.type !== "compressor") params.push(`Q${m.q.toFixed(2)}`);
+                                        if (typeof m.threshold_db === "number") params.push(`thr ${m.threshold_db.toFixed(1)}dB`);
+                                        if (typeof m.ratio === "number") params.push(`${m.ratio}:1`);
+                                        if (typeof m.attack_ms === "number") params.push(`atk ${m.attack_ms}ms`);
+                                        if (typeof m.release_ms === "number") params.push(`rel ${m.release_ms}ms`);
+                                        if (typeof m.wet_level === "number") params.push(`wet ${m.wet_level.toFixed(2)}`);
+                                        if (typeof m.room_size === "number") params.push(`room ${m.room_size.toFixed(2)}`);
+                                        if (typeof m.drive_db === "number") params.push(`drive ${m.drive_db.toFixed(1)}dB`);
+                                        if (typeof m.position === "number") params.push(`pan ${m.position.toFixed(2)}`);
+                                        if (typeof m.width === "number") params.push(`width ${m.width.toFixed(2)}`);
+                                        return (
+                                          <li>
+                                            <span class="plan-move-head">
+                                              <span class="plan-move-type">{m.type.replace(/_/g, " ")}</span>
+                                              {params.length > 0 && <span class="plan-move-params">{params.join(" · ")}</span>}
+                                            </span>
+                                            {m.reasoning && <span class="plan-move-why">{m.reasoning}</span>}
+                                          </li>
+                                        );
+                                      })}
+                                    </ul>
+                                  )}
+                                </div>
+                              ))}
+                              {(plan.relationships ?? []).length > 0 && (
+                                <div class="plan-relationships">
+                                  <div class="plan-stem-head">
+                                    <span class="plan-stem-name">relationships</span>
+                                  </div>
+                                  <ul class="plan-moves">
+                                    {plan.relationships.map((r) => (
+                                      <li>
+                                        <span class="plan-move-head">
+                                          <span class="plan-move-type">{r.type.replace(/_/g, " ")}</span>
+                                          <span class="plan-move-params">
+                                            {r.trigger_stem ?? "?"} → {r.target_stem ?? "?"}
+                                            {typeof r.amount_db === "number" && ` · ${r.amount_db.toFixed(1)}dB`}
+                                          </span>
+                                        </span>
+                                        {r.reasoning && <span class="plan-move-why">{r.reasoning}</span>}
+                                      </li>
+                                    ))}
+                                  </ul>
+                                </div>
+                              )}
+                              {(plan.bus?.moves ?? []).length > 0 && (
+                                <div class="plan-stem">
+                                  <div class="plan-stem-head">
+                                    <span class="plan-stem-name">bus</span>
+                                    <span class="plan-stem-role">target {plan.bus.target_lufs} LUFS</span>
+                                  </div>
+                                  <ul class="plan-moves">
+                                    {plan.bus.moves.map((m) => {
+                                      const params: string[] = [];
+                                      if (typeof m.freq_hz === "number") params.push(`${Math.round(m.freq_hz)}Hz`);
+                                      if (typeof m.gain_db === "number") params.push(`${m.gain_db > 0 ? "+" : ""}${m.gain_db.toFixed(1)}dB`);
+                                      if (typeof m.threshold_db === "number") params.push(`thr ${m.threshold_db.toFixed(1)}dB`);
+                                      if (typeof m.ratio === "number") params.push(`${m.ratio}:1`);
+                                      if (typeof m.drive_db === "number") params.push(`drive ${m.drive_db.toFixed(1)}dB`);
+                                      return (
+                                        <li>
+                                          <span class="plan-move-head">
+                                            <span class="plan-move-type">{m.type.replace(/_/g, " ")}</span>
+                                            {params.length > 0 && <span class="plan-move-params">{params.join(" · ")}</span>}
+                                          </span>
+                                          {m.reasoning && <span class="plan-move-why">{m.reasoning}</span>}
+                                        </li>
+                                      );
+                                    })}
+                                  </ul>
+                                </div>
+                              )}
+                              {((plan as any).sections ?? []).length > 0 && (
+                                <div class="plan-stem">
+                                  <div class="plan-stem-head">
+                                    <span class="plan-stem-name">sections</span>
+                                    <span class="plan-stem-role">{(plan as any).sections.length} per-section overrides</span>
+                                  </div>
+                                  <ul class="plan-moves">
+                                    {(plan as any).sections.map((s: any) => {
+                                      const stemOverrides = s.stems ? Object.entries(s.stems) : [];
+                                      return (
+                                        <li>
+                                          <span class="plan-move-head">
+                                            <span class="plan-move-type">{s.label ?? "section"}</span>
+                                            <span class="plan-move-params">
+                                              {typeof s.start_s === "number" ? `${s.start_s.toFixed(1)}-${s.end_s.toFixed(1)}s` : ""}
+                                            </span>
+                                          </span>
+                                          {s.reasoning && <span class="plan-move-why">{s.reasoning}</span>}
+                                          {stemOverrides.length > 0 && (
+                                            <span class="plan-section-detail">
+                                              {stemOverrides.map(([name, ov]: any) => {
+                                                const d = ov.level_offset_delta_db;
+                                                const ex = (ov.extra_moves ?? []).length;
+                                                const parts: string[] = [];
+                                                if (typeof d === "number" && d !== 0) parts.push(`${d > 0 ? "+" : ""}${d.toFixed(1)}dB`);
+                                                if (ex > 0) parts.push(`+${ex} move${ex > 1 ? "s" : ""}`);
+                                                return parts.length > 0
+                                                  ? `${name}: ${parts.join(" · ")}`
+                                                  : null;
+                                              }).filter(Boolean).join("  ·  ")}
+                                            </span>
+                                          )}
+                                        </li>
+                                      );
+                                    })}
+                                  </ul>
+                                </div>
+                              )}
+                            </div>
+                          ) : null}
+                        </details>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                <textarea
+                  class="comment"
+                  data-comment
+                  rows="2"
+                  placeholder="Notes (optional). What worked, what didn't, what you'd change."
+                ></textarea>
+
+                <div class="pair-foot">
+                  <button class="skip-btn" data-pick="skip">SKIP</button>
+                  <span class="now-playing" data-now-playing></span>
+                  <button class="pick-btn pick-a" data-pick="a">PICK A</button>
+                  <button class="pick-btn pick-b" data-pick="b">PICK B</button>
+                </div>
+                <div class="pair-retry" data-retry-zone hidden>
+                  <span class="retry-msg" data-retry-msg></span>
+                  <div class="retry-actions">
+                    <button class="retry-btn retry-btn-secondary" data-pick="next">NEXT PAIR</button>
+                    <button class="retry-btn" data-retry>TRY THIS AXIS AGAIN</button>
+                  </div>
+                </div>
+              </li>
+            );
+          })}
+        </ul>
+      )}
+    </section>
+  </section>
+</PortalLayout>
+
+<style>
+  .engineer {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 24px 16px 64px;
+    color: var(--ink);
+  }
+  .intro h1 {
+    font-size: 28px;
+    margin: 0 0 6px;
+    letter-spacing: 0.02em;
+  }
+  .lede {
+    margin: 0 0 12px;
+    opacity: 0.78;
+    line-height: 1.45;
+    max-width: 640px;
+  }
+  .lede a { color: var(--accent, currentColor); }
+  .notice {
+    font-size: 13px;
+    color: #b54;
+    background: rgba(181, 84, 68, 0.08);
+    padding: 8px 12px;
+    border-radius: 4px;
+    margin: 8px 0 0;
+  }
+  .cols {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    gap: 16px;
+    margin: 24px 0;
+  }
+  .col h2 {
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    margin: 0 0 10px;
+    opacity: 0.7;
+  }
+  .col .count {
+    background: var(--ink);
+    color: var(--ink-fg);
+    padding: 1px 7px;
+    border-radius: 99px;
+    font-size: 11px;
+    margin-left: 4px;
+  }
+  .col-error h2 { color: #b54; }
+  .empty {
+    font-size: 13px;
+    opacity: 0.55;
+    margin: 0;
+  }
+  .job-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .job {
+    background: rgba(0,0,0,0.04);
+    padding: 8px 10px;
+    border-radius: 4px;
+  }
+  .job-title {
+    font-size: 14px;
+    font-weight: 600;
+    margin-bottom: 2px;
+  }
+  .job-meta {
+    font-size: 11px;
+    opacity: 0.6;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .status {
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+  .status-pending { color: #b85; }
+  .status-splitting_stems, .status-rendering { color: #58a; }
+  .status-ready { color: #5a8; }
+  .status-noop_complete { color: #777; }
+  .status-complete { color: #5a8; }
+  .status-error { color: #b54; }
+  .job-error {
+    font-size: 12px;
+    color: #b54;
+    margin-top: 4px;
+    word-break: break-word;
+  }
+  .pair-tinder {
+    margin-top: 32px;
+    padding-top: 20px;
+    border-top: 1px solid rgba(0,0,0,0.08);
+  }
+  .pair-tinder h2 {
+    font-size: 14px;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    margin: 0 0 12px;
+    display: flex;
+    align-items: baseline;
+    gap: 12px;
+  }
+  .pair-tinder h2 .hint {
+    font-size: 10.5px;
+    letter-spacing: 0.08em;
+    opacity: 0.5;
+    font-weight: 500;
+  }
+  .pair-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+  .pair {
+    background: rgba(0,0,0,0.04);
+    padding: 14px;
+    border-radius: 6px;
+    border: 1px solid transparent;
+  }
+  .pair-active {
+    border-color: rgba(14, 196, 252, 0.4);
+  }
+  .pair-head {
+    display: flex;
+    justify-content: space-between;
+    font-size: 12px;
+    opacity: 0.75;
+    margin-bottom: 12px;
+  }
+  .pair-head .pair-axis {
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    font-weight: 700;
+  }
+  .pair-stage {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  .pair-waveform {
+    position: relative;
+    background: rgba(14, 196, 252, 0.05);
+    border: 1px solid rgba(14, 196, 252, 0.18);
+    border-radius: 4px;
+    height: 96px;
+    cursor: pointer;
+    overflow: hidden;
+  }
+  .pair-waveform img {
+    width: 100%;
+    height: 100%;
+    object-fit: fill;
+    display: block;
+    opacity: 0.78;
+    pointer-events: none;
+  }
+  .pair-waveform-fallback {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    font-size: 12px;
+    opacity: 0.5;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  }
+  .pair-playhead {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: 2px;
+    background: #ff3b6e;
+    box-shadow: 0 0 6px rgba(255, 59, 110, 0.7);
+    pointer-events: none;
+    transition: left 80ms linear;
+  }
+  .pair-transport {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+  .transport-btn {
+    background: rgba(245, 241, 232, 0.06);
+    color: var(--ink);
+    border: 1px solid rgba(245, 241, 232, 0.18);
+    border-radius: 3px;
+    padding: 6px 12px;
+    font-size: 14px;
+    line-height: 1;
+    cursor: pointer;
+    transition: background 120ms ease, transform 80ms ease;
+    font-family: inherit;
+  }
+  .transport-btn:hover {
+    background: rgba(245, 241, 232, 0.12);
+    transform: translateY(-1px);
+  }
+  .transport-play {
+    background: #0ec4fc;
+    color: #0d060f;
+    border-color: #0ec4fc;
+    font-weight: 700;
+    min-width: 40px;
+  }
+  .transport-play[data-state="playing"]::before { content: "■"; }
+  .transport-play[data-state="paused"]::before { content: "▶"; }
+  .transport-play::before { content: "▶"; }
+  .transport-play {
+    /* hide the inline ▶ glyph; the ::before pseudo-element drives the icon */
+    font-size: 0;
+  }
+  .transport-play::before {
+    font-size: 13px;
+  }
+  .pair-time {
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 12px;
+    opacity: 0.7;
+    min-width: 88px;
+  }
+  /* A/B switch fills the remaining row width so the buttons get big enough
+     for the variant labels to read at a glance. A uses the M1 cyan, B uses
+     the M3 pink (same tokens the StatusBar uses) so the two sides are
+     immediately distinguishable even before the active highlight. */
+  .ab-switch {
+    display: flex;
+    flex: 1;
+    min-width: 220px;
+    gap: 6px;
+  }
+  .ab-side {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    background: transparent;
+    border: 1px solid;
+    border-radius: 4px;
+    padding: 12px 18px;
+    cursor: pointer;
+    font-family: inherit;
+    font-size: 13px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    font-weight: 700;
+    transition: background 140ms ease, color 140ms ease,
+                border-color 140ms ease, transform 80ms ease;
+  }
+  .ab-side:hover {
+    transform: translateY(-1px);
+  }
+  [data-side-btn="a"] {
+    color: #0ec4fc;
+    border-color: rgba(14, 196, 252, 0.45);
+    background: rgba(14, 196, 252, 0.07);
+  }
+  [data-side-btn="a"]:hover {
+    border-color: #0ec4fc;
+    background: rgba(14, 196, 252, 0.16);
+    color: #b8efff;
+  }
+  [data-side-btn="a"].ab-side-active {
+    background: #0ec4fc;
+    color: #0d060f;
+    border-color: #0ec4fc;
+    box-shadow: 0 0 16px rgba(14, 196, 252, 0.35);
+  }
+  [data-side-btn="b"] {
+    color: #ff3b6e;
+    border-color: rgba(255, 59, 110, 0.45);
+    background: rgba(255, 59, 110, 0.07);
+  }
+  [data-side-btn="b"]:hover {
+    border-color: #ff3b6e;
+    background: rgba(255, 59, 110, 0.16);
+    color: #ffb6c8;
+  }
+  [data-side-btn="b"].ab-side-active {
+    background: #ff3b6e;
+    color: #0d060f;
+    border-color: #ff3b6e;
+    box-shadow: 0 0 16px rgba(255, 59, 110, 0.35);
+  }
+  .ab-key {
+    font-size: 15px;
+    font-weight: 900;
+    letter-spacing: 0.04em;
+  }
+  .ab-label {
+    font-size: 12.5px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+  }
+  /* Transport controls (skip/play/skip/time) shouldn't compete with the
+     A/B switch for space — pin them to their natural width. */
+  .pair-transport .transport-btn,
+  .pair-transport .pair-time {
+    flex-shrink: 0;
+  }
+
+  /* Solo bar — click a stem name to hear just that processed stem on both
+     A and B sides. "FULL MIX" restores the bus output. Useful diagnostic
+     for understanding what each stem chain actually does. */
+  .pair-solo-bar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    align-items: center;
+    margin-top: 4px;
+    padding: 4px 0;
+  }
+  .solo-bar-label {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    opacity: 0.45;
+    margin-right: 4px;
+  }
+  .solo-btn {
+    background: transparent;
+    color: rgba(245, 241, 232, 0.65);
+    border: 1px solid rgba(245, 241, 232, 0.18);
+    border-radius: 999px;
+    padding: 5px 12px;
+    font-size: 10.5px;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: lowercase;
+    cursor: pointer;
+    font-family: inherit;
+    transition: background 120ms ease, border-color 120ms ease, color 120ms ease;
+  }
+  .solo-btn:hover {
+    color: var(--ink);
+    border-color: rgba(245, 241, 232, 0.4);
+  }
+  .solo-btn[data-active="true"] {
+    background: rgba(255, 184, 77, 0.16);
+    border-color: #ffb84d;
+    color: #ffd28a;
+    box-shadow: 0 0 12px rgba(255, 184, 77, 0.25);
+  }
+  .solo-btn-full {
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+  }
+
+  /* Translation badges — small flags per side surfacing playback-target
+     concerns ("phone: vocal disappears", "club: stereo collapses"). The
+     curator sees them before listening so they go in with context. */
+  .pair-translation {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    margin-top: 4px;
+  }
+  .translation-strip {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    padding: 4px 0;
+    align-items: center;
+    min-height: 22px;
+  }
+  .translation-flag, .translation-clean, .translation-more {
+    font-size: 10.5px;
+    line-height: 1;
+    padding: 4px 8px;
+    border-radius: 999px;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+  }
+  .translation-flag {
+    background: rgba(255, 110, 33, 0.12);
+    color: #ff8a3d;
+    border: 1px solid rgba(255, 110, 33, 0.32);
+  }
+  .translation-clean {
+    background: rgba(0, 255, 77, 0.08);
+    color: #6fe49a;
+    border: 1px solid rgba(0, 255, 77, 0.24);
+  }
+  .translation-more {
+    color: rgba(245, 241, 232, 0.5);
+    font-style: italic;
+  }
+  @media (max-width: 720px) {
+    .pair-translation { grid-template-columns: 1fr; }
+  }
+
+  /* Reasoning panels — one collapsible disclosure per variant, themed to
+     match the A/B switch (cyan for A, pink for B) so the curator's eye
+     associates the plan text with the audio they just heard. */
+  .pair-reasoning {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    margin-top: 4px;
+  }
+  .plan-card {
+    background: rgba(0, 0, 0, 0.16);
+    border: 1px solid;
+    border-radius: 4px;
+    padding: 0;
+    font-size: 12px;
+    line-height: 1.45;
+    overflow: hidden;
+  }
+  .plan-a { border-color: rgba(14, 196, 252, 0.32); }
+  .plan-b { border-color: rgba(255, 59, 110, 0.32); }
+  .plan-card[open] {
+    background: rgba(0, 0, 0, 0.28);
+  }
+  .plan-card summary {
+    list-style: none;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 12px;
+    user-select: none;
+  }
+  .plan-card summary::-webkit-details-marker { display: none; }
+  .plan-side-tag {
+    flex-shrink: 0;
+    font-size: 11px;
+    font-weight: 900;
+    letter-spacing: 0.1em;
+    padding: 3px 8px;
+    border-radius: 3px;
+  }
+  .plan-a .plan-side-tag {
+    background: rgba(14, 196, 252, 0.22);
+    color: #0ec4fc;
+  }
+  .plan-b .plan-side-tag {
+    background: rgba(255, 59, 110, 0.22);
+    color: #ff3b6e;
+  }
+  .plan-philosophy {
+    flex: 1;
+    font-size: 12px;
+    line-height: 1.4;
+    color: rgba(245, 241, 232, 0.85);
+  }
+  .plan-toggle {
+    flex-shrink: 0;
+    opacity: 0.5;
+    font-size: 12px;
+    transition: transform 140ms ease;
+  }
+  .plan-card[open] .plan-toggle { transform: rotate(180deg); }
+  .plan-body {
+    padding: 0 12px 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  .plan-stem, .plan-relationships {
+    padding: 8px 10px;
+    background: rgba(245, 241, 232, 0.03);
+    border-radius: 3px;
+    border-left: 2px solid rgba(245, 241, 232, 0.12);
+  }
+  .plan-a .plan-stem, .plan-a .plan-relationships {
+    border-left-color: rgba(14, 196, 252, 0.5);
+  }
+  .plan-b .plan-stem, .plan-b .plan-relationships {
+    border-left-color: rgba(255, 59, 110, 0.5);
+  }
+  .plan-stem-head {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    margin-bottom: 6px;
+    flex-wrap: wrap;
+  }
+  .plan-stem-name {
+    font-weight: 700;
+    text-transform: uppercase;
+    font-size: 10.5px;
+    letter-spacing: 0.08em;
+    color: var(--ink);
+  }
+  .plan-stem-role {
+    font-size: 10.5px;
+    opacity: 0.55;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  }
+  .plan-stem-level {
+    font-size: 10.5px;
+    font-weight: 700;
+    color: #ffb84d;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  }
+  .plan-moves {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .plan-moves li {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+  .plan-move-head {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+  .plan-move-type {
+    font-weight: 700;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--ink);
+  }
+  .plan-move-params {
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 10.5px;
+    color: rgba(245, 241, 232, 0.6);
+  }
+  .plan-move-why {
+    font-size: 11.5px;
+    line-height: 1.4;
+    color: rgba(245, 241, 232, 0.7);
+    font-style: italic;
+  }
+  .plan-move-noop {
+    font-size: 11px;
+    opacity: 0.45;
+    font-style: italic;
+  }
+  .plan-section-detail {
+    font-size: 10.5px;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    color: rgba(245, 241, 232, 0.55);
+    padding-top: 2px;
+  }
+  /* Collapse to single column on narrower viewports. */
+  @media (max-width: 720px) {
+    .pair-reasoning { grid-template-columns: 1fr; }
+  }
+  /* Active-side panel gets a subtle ring so the eye is drawn to it. */
+  .pair-active[data-side="a"] .plan-a {
+    box-shadow: 0 0 0 1px rgba(14, 196, 252, 0.32) inset;
+  }
+  .pair-active[data-side="b"] .plan-b {
+    box-shadow: 0 0 0 1px rgba(255, 59, 110, 0.32) inset;
+  }
+  .pick-btn {
+    background: transparent;
+    color: var(--ink);
+    border: 1px solid rgba(245, 241, 232, 0.3);
+    padding: 8px 14px;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    border-radius: 3px;
+    cursor: pointer;
+    transition: background 120ms ease, border-color 120ms ease;
+  }
+  .pick-btn:hover {
+    background: rgba(0, 255, 77, 0.1);
+    border-color: #00ff4d;
+    color: #00ff4d;
+  }
+  .pick-a:hover { color: #00ff4d; }
+  .pick-b:hover { color: #00ff4d; }
+  .pair-foot {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 12px;
+    font-size: 11px;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+  .pair-foot .now-playing { flex: 1; }
+  .skip-btn {
+    background: transparent;
+    color: rgba(245, 241, 232, 0.5);
+    border: 1px solid rgba(245, 241, 232, 0.18);
+    padding: 5px 12px;
+    font-size: 10.5px;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    border-radius: 3px;
+    cursor: pointer;
+  }
+  .skip-btn:hover { color: #ff6e21; border-color: #ff6e21; }
+  .now-playing {
+    opacity: 0.55;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  }
+  .comment {
+    width: 100%;
+    margin-top: 12px;
+    padding: 10px 12px;
+    background: rgba(0, 0, 0, 0.18);
+    border: 1px solid rgba(245, 241, 232, 0.12);
+    border-radius: 4px;
+    color: var(--ink);
+    font-family: inherit;
+    font-size: 13px;
+    line-height: 1.4;
+    resize: vertical;
+    min-height: 48px;
+    box-sizing: border-box;
+  }
+  .comment::placeholder {
+    color: rgba(245, 241, 232, 0.35);
+  }
+  .comment:focus {
+    outline: none;
+    border-color: rgba(14, 196, 252, 0.4);
+    background: rgba(0, 0, 0, 0.28);
+  }
+  .pair-retry {
+    margin-top: 10px;
+    padding-top: 10px;
+    border-top: 1px dashed rgba(245, 241, 232, 0.12);
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+  .pair-retry[hidden] {
+    display: none;
+  }
+  .retry-msg {
+    font-size: 11px;
+    opacity: 0.65;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    flex: 1;
+    min-width: 0;
+  }
+  .retry-btn {
+    background: rgba(255, 184, 77, 0.08);
+    color: #ffb84d;
+    border: 1px solid rgba(255, 184, 77, 0.42);
+    padding: 8px 14px;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    border-radius: 3px;
+    cursor: pointer;
+    transition: background 120ms ease, transform 120ms ease;
+  }
+  .retry-btn:hover {
+    background: rgba(255, 184, 77, 0.18);
+    color: #ffd28a;
+    border-color: #ffd28a;
+  }
+  .retry-btn[data-busy="true"] {
+    opacity: 0.6;
+    cursor: progress;
+  }
+  .retry-actions {
+    display: flex;
+    gap: 8px;
+    flex-shrink: 0;
+  }
+  .retry-btn-secondary {
+    background: transparent;
+    color: rgba(245, 241, 232, 0.6);
+    border-color: rgba(245, 241, 232, 0.2);
+  }
+  .retry-btn-secondary:hover {
+    background: rgba(245, 241, 232, 0.05);
+    color: var(--ink);
+    border-color: rgba(245, 241, 232, 0.4);
+  }
+</style>
+
+<script>
+  // Pair-tinder controller. The pair surfaces a single shared waveform
+  // (the source track's pre-rendered PNG) with one playhead. Two audio
+  // elements hold the A and B variants and stay synced on currentTime;
+  // toggling A/B is an instant swap, not a stop/restart, so the curator
+  // hears the same moment in both versions. Click the waveform to seek,
+  // arrows to step ±10s, space to play/pause.
+  //
+  // Audio is opus-transcoded via /api/console/asset?...&variant=opus.
+
+  const audioA = new Audio();
+  const audioB = new Audio();
+  for (const a of [audioA, audioB]) {
+    a.preload = "auto";
+  }
+  let activePairEl: HTMLElement | null = null;
+  let currentSide: "a" | "b" = "a";
+  let currentSolo: string | null = null;
+  let playheadRaf: number | null = null;
+
+  function urlForSide(pair: HTMLElement, side: "a" | "b"): string {
+    if (!currentSolo) {
+      return (side === "a" ? pair.dataset.urlA : pair.dataset.urlB) ?? "";
+    }
+    try {
+      const json = side === "a" ? pair.dataset.stemUrlsA : pair.dataset.stemUrlsB;
+      const map = JSON.parse(json || "{}") as Record<string, string>;
+      // Fall back to bus URL if this side lacks the soloed stem (e.g. it
+      // was muted in this variant's plan).
+      return map[currentSolo] || (side === "a" ? pair.dataset.urlA : pair.dataset.urlB) || "";
+    } catch {
+      return (side === "a" ? pair.dataset.urlA : pair.dataset.urlB) ?? "";
+    }
+  }
+
+  function refreshSoloBar(pair: HTMLElement) {
+    pair.querySelectorAll<HTMLElement>("[data-solo-stem], [data-solo-full]").forEach((btn) => {
+      let active = false;
+      if (btn.hasAttribute("data-solo-full")) active = currentSolo === null;
+      else active = btn.dataset.soloStem === currentSolo;
+      if (active) btn.dataset.active = "true";
+      else delete btn.dataset.active;
+    });
+  }
+
+  function applyCurrentUrls(pair: HTMLElement, restartIfPlaying = true) {
+    const t = activeAudio().currentTime;
+    const wasPlaying = !activeAudio().paused;
+    audioA.src = urlForSide(pair, "a");
+    audioB.src = urlForSide(pair, "b");
+    // Restore playhead position on both elements (they buffer-load
+    // asynchronously; setting currentTime before metadata loads is silently
+    // discarded, so set again after canplay).
+    const restore = () => {
+      try { audioA.currentTime = t; } catch {}
+      try { audioB.currentTime = t; } catch {}
+    };
+    restore();
+    audioA.addEventListener("loadedmetadata", restore, { once: true });
+    audioB.addEventListener("loadedmetadata", restore, { once: true });
+    if (wasPlaying && restartIfPlaying) {
+      activeAudio().play().catch(() => {});
+    }
+  }
+
+  function setSolo(stem: string | null) {
+    const pair = activePairEl;
+    if (!pair) return;
+    if (currentSolo === stem) return;
+    currentSolo = stem;
+    refreshSoloBar(pair);
+    applyCurrentUrls(pair);
+  }
+
+  function activePair(): HTMLElement | null {
+    return document.querySelector<HTMLElement>(".pair-active");
+  }
+
+  function activeAudio(): HTMLAudioElement {
+    return currentSide === "a" ? audioA : audioB;
+  }
+
+  function inactiveAudio(): HTMLAudioElement {
+    return currentSide === "a" ? audioB : audioA;
+  }
+
+  function fmtTime(s: number): string {
+    if (!Number.isFinite(s) || s < 0) return "0:00";
+    const m = Math.floor(s / 60);
+    const r = Math.floor(s % 60);
+    return `${m}:${String(r).padStart(2, "0")}`;
+  }
+
+  function setNowPlaying(pair: HTMLElement, label: string) {
+    const node = pair.querySelector<HTMLElement>("[data-now-playing]");
+    if (node) node.textContent = label;
+  }
+
+  function updateTime(pair: HTMLElement) {
+    const a = activeAudio();
+    const dur = Number(pair.dataset.duration || a.duration || 0);
+    const node = pair.querySelector<HTMLElement>("[data-time]");
+    if (node) {
+      node.textContent = `${fmtTime(a.currentTime)} / ${fmtTime(dur)}`;
+    }
+    const ph = pair.querySelector<HTMLElement>("[data-playhead]");
+    if (ph && dur > 0) {
+      ph.hidden = false;
+      ph.style.left = `${Math.min(100, (a.currentTime / dur) * 100)}%`;
+    }
+  }
+
+  function tickPlayhead() {
+    const pair = activePairEl;
+    if (!pair) return;
+    updateTime(pair);
+    playheadRaf = requestAnimationFrame(tickPlayhead);
+  }
+
+  function startTicking() {
+    if (playheadRaf !== null) return;
+    playheadRaf = requestAnimationFrame(tickPlayhead);
+  }
+
+  function stopTicking() {
+    if (playheadRaf !== null) {
+      cancelAnimationFrame(playheadRaf);
+      playheadRaf = null;
+    }
+  }
+
+  function setPlayButton(pair: HTMLElement, state: "playing" | "paused") {
+    const btn = pair.querySelector<HTMLElement>("[data-toggle-play]");
+    if (btn) btn.dataset.state = state;
+  }
+
+  function setActivePair(pair: HTMLElement) {
+    activePairEl = pair;
+    currentSide = (pair.dataset.side as "a" | "b") || "a";
+    currentSolo = null;
+    audioA.src = pair.dataset.urlA || "";
+    audioB.src = pair.dataset.urlB || "";
+    audioA.currentTime = 0;
+    audioB.currentTime = 0;
+    setPlayButton(pair, "paused");
+    updateTime(pair);
+    reflectSide(pair, currentSide);
+    refreshSoloBar(pair);
+  }
+
+  function reflectSide(pair: HTMLElement, side: "a" | "b") {
+    pair.dataset.side = side;
+    pair.querySelectorAll<HTMLElement>("[data-side-btn]").forEach((btn) => {
+      btn.classList.toggle("ab-side-active", btn.dataset.sideBtn === side);
+    });
+    const label = pair.querySelector<HTMLElement>(`[data-side-btn="${side}"] .ab-label`);
+    setNowPlaying(pair, `now playing: ${side.toUpperCase()} · ${label?.textContent ?? ""}`);
+  }
+
+  async function togglePlay() {
+    const pair = activePairEl;
+    if (!pair) return;
+    const a = activeAudio();
+    if (a.paused) {
+      try {
+        await a.play();
+        setPlayButton(pair, "playing");
+        startTicking();
+      } catch (e) {
+        setNowPlaying(pair, `play failed: ${(e as Error).message ?? e}`);
+      }
+    } else {
+      a.pause();
+      setPlayButton(pair, "paused");
+      stopTicking();
+    }
+  }
+
+  function switchSide(side: "a" | "b") {
+    const pair = activePairEl;
+    if (!pair || side === currentSide) return;
+    const prev = activeAudio();
+    const wasPlaying = !prev.paused;
+    const t = prev.currentTime;
+    prev.pause();
+    currentSide = side;
+    const next = activeAudio();
+    next.currentTime = t;
+    reflectSide(pair, side);
+    if (wasPlaying) {
+      next.play().then(() => setPlayButton(pair, "playing")).catch(() => {});
+    }
+  }
+
+  function seekTo(seconds: number) {
+    const pair = activePairEl;
+    if (!pair) return;
+    const dur = Number(pair.dataset.duration || activeAudio().duration || 0);
+    const t = Math.max(0, Math.min(dur || Infinity, seconds));
+    audioA.currentTime = t;
+    audioB.currentTime = t;
+    updateTime(pair);
+  }
+
+  function skipBy(delta: number) {
+    seekTo(activeAudio().currentTime + delta);
+  }
+
+  function seekFromClick(e: MouseEvent) {
+    const pair = activePairEl;
+    if (!pair) return;
+    const wave = pair.querySelector<HTMLElement>("[data-stage-waveform]");
+    if (!wave) return;
+    const rect = wave.getBoundingClientRect();
+    const fraction = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+    const dur = Number(pair.dataset.duration || activeAudio().duration || 0);
+    if (dur > 0) seekTo(fraction * dur);
+  }
+
+  function stopAll() {
+    audioA.pause();
+    audioB.pause();
+    audioA.currentTime = 0;
+    audioB.currentTime = 0;
+    stopTicking();
+  }
+
+  function getComment(pair: HTMLElement): string {
+    const ta = pair.querySelector<HTMLTextAreaElement>("[data-comment]");
+    return ta?.value.trim() ?? "";
+  }
+
+  async function commit(pair: HTMLElement, choice: "a" | "b" | "skip") {
+    stopAll();
+    setPlayButton(pair, "paused");
+    const jobId = Number(pair.dataset.jobId);
+    const axis = pair.dataset.axis ?? null;
+    const aId = Number(pair.dataset.a);
+    const bId = Number(pair.dataset.b);
+    const chosen = choice === "a" ? aId : choice === "b" ? bId : null;
+    const comment = getComment(pair);
+    setNowPlaying(pair, "recording…");
+    const res = await fetch("/api/console/mix-judgement", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        job_id: jobId,
+        variant_a_id: aId,
+        variant_b_id: bId,
+        chosen_variant_id: chosen,
+        axis,
+        comment: comment || null,
+      }),
+    });
+    if (!res.ok) {
+      setNowPlaying(pair, `judgement failed: HTTP ${res.status}`);
+      return;
+    }
+    // If the curator left a comment, surface the retry-this-axis CTA in
+    // place; otherwise advance to the next pair immediately.
+    if (comment) {
+      const zone = pair.querySelector<HTMLElement>("[data-retry-zone]");
+      const msg = pair.querySelector<HTMLElement>("[data-retry-msg]");
+      if (zone) zone.hidden = false;
+      if (msg) msg.textContent = `recorded: "${comment.slice(0, 80)}${comment.length > 80 ? "…" : ""}"`;
+      pair.dataset.committed = "true";
+      setNowPlaying(pair, "");
+      return;
+    }
+    advancePair(pair);
+  }
+
+  function advancePair(pair: HTMLElement) {
+    stopAll();
+    pair.classList.remove("pair-active");
+    pair.style.opacity = "0.35";
+    const next = pair.nextElementSibling as HTMLElement | null;
+    if (next?.matches?.(".pair")) {
+      next.classList.add("pair-active");
+      setActivePair(next);
+      next.scrollIntoView({ behavior: "smooth", block: "center" });
+    } else {
+      window.location.reload();
+    }
+  }
+
+  async function retryAxis(pair: HTMLElement) {
+    const sourceAssetId = Number(pair.dataset.sourceAssetId);
+    const jobId = Number(pair.dataset.jobId);
+    const axis = pair.dataset.axis ?? null;
+    const feedback = getComment(pair);
+    if (!sourceAssetId || !axis || !feedback) return;
+    const btn = pair.querySelector<HTMLButtonElement>("[data-retry]");
+    const msg = pair.querySelector<HTMLElement>("[data-retry-msg]");
+    if (btn) btn.dataset.busy = "true";
+    if (msg) msg.textContent = "queueing retry…";
+    const res = await fetch("/api/console/mix-jobs-create", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        source_asset_id: sourceAssetId,
+        retry_axis: axis,
+        feedback_text: feedback,
+        parent_job_id: jobId,
+      }),
+    });
+    if (!res.ok) {
+      if (msg) msg.textContent = `retry failed: HTTP ${res.status}`;
+      if (btn) btn.dataset.busy = "";
+      return;
+    }
+    const data = (await res.json()) as { job_id: number };
+    if (msg) {
+      msg.textContent = `retry queued (job ${data.job_id}). New variants for ${axis} will appear in ~5 min on reload.`;
+    }
+    if (btn) {
+      btn.disabled = true;
+      btn.dataset.busy = "";
+      btn.textContent = `RETRY QUEUED · job ${data.job_id}`;
+    }
+    // Auto-advance after a retry so the curator can keep judging while the
+    // new variants render in the background.
+    setTimeout(() => advancePair(pair), 1600);
+  }
+
+  document.addEventListener("click", (e) => {
+    const target = e.target as HTMLElement;
+    const ap = activePair();
+    if (!ap) return;
+
+    // Transport: skip ±N, toggle play
+    const skip = target.closest<HTMLElement>("[data-skip]");
+    if (skip) {
+      skipBy(Number(skip.dataset.skip));
+      return;
+    }
+    if (target.closest("[data-toggle-play]")) {
+      togglePlay();
+      return;
+    }
+
+    // A/B switch
+    const sideBtn = target.closest<HTMLElement>("[data-side-btn]");
+    if (sideBtn) {
+      switchSide(sideBtn.dataset.sideBtn as "a" | "b");
+      return;
+    }
+
+    // Click anywhere on the waveform = seek
+    if (target.closest("[data-stage-waveform]")) {
+      seekFromClick(e);
+      return;
+    }
+
+    // Solo bar: stem-name pill or FULL MIX restore
+    const soloFull = target.closest<HTMLElement>("[data-solo-full]");
+    if (soloFull) {
+      setSolo(null);
+      return;
+    }
+    const soloStem = target.closest<HTMLElement>("[data-solo-stem]");
+    if (soloStem) {
+      const next = soloStem.dataset.soloStem ?? null;
+      // Click the already-active stem to toggle off (restore full mix).
+      setSolo(currentSolo === next ? null : next);
+      return;
+    }
+
+    const pickBtn = target.closest<HTMLElement>("[data-pick]");
+    if (pickBtn) {
+      const pair = pickBtn.closest<HTMLElement>(".pair");
+      if (!pair) return;
+      const choice = pickBtn.dataset.pick;
+      if (choice === "next") {
+        advancePair(pair);
+        return;
+      }
+      if (pair.dataset.committed === "true") return;
+      commit(pair, choice as "a" | "b" | "skip");
+      return;
+    }
+    const retryBtn = target.closest<HTMLElement>("[data-retry]");
+    if (retryBtn) {
+      const pair = retryBtn.closest<HTMLElement>(".pair");
+      if (!pair) return;
+      retryAxis(pair);
+    }
+  });
+
+  document.addEventListener("keydown", (e) => {
+    // Ignore when typing in inputs.
+    const tag = (document.activeElement?.tagName ?? "").toLowerCase();
+    if (tag === "input" || tag === "textarea") return;
+    const pair = activePair();
+    if (!pair) return;
+    const k = e.key.toLowerCase();
+    if (pair.dataset.committed === "true") {
+      if (k === "n" || k === "enter") { e.preventDefault(); advancePair(pair); }
+      return;
+    }
+    // A/B switch (instant, doesn't commit). Space play/pause. Arrows seek
+    // ±10s. Enter picks the currently-playing side. 1/2 pick A/B directly.
+    // S/Esc skip the pair.
+    if (k === "a") { e.preventDefault(); switchSide("a"); }
+    else if (k === "b") { e.preventDefault(); switchSide("b"); }
+    else if (k === " ") { e.preventDefault(); togglePlay(); }
+    else if (k === "arrowleft") { e.preventDefault(); skipBy(-10); }
+    else if (k === "arrowright") { e.preventDefault(); skipBy(10); }
+    else if (k === "enter") { e.preventDefault(); commit(pair, currentSide); }
+    else if (k === "1") { e.preventDefault(); commit(pair, "a"); }
+    else if (k === "2") { e.preventDefault(); commit(pair, "b"); }
+    else if (k === "s" || k === "escape") { e.preventDefault(); commit(pair, "skip"); }
+  });
+
+  for (const a of [audioA, audioB]) {
+    a.addEventListener("ended", () => {
+      const pair = activePairEl;
+      if (pair) setPlayButton(pair, "paused");
+      stopTicking();
+    });
+    a.addEventListener("loadedmetadata", () => {
+      const pair = activePairEl;
+      if (pair) updateTime(pair);
+    });
+  }
+
+  // Initialize: first .pair-active becomes the active pair.
+  const initial = activePair();
+  if (initial) setActivePair(initial);
+</script>

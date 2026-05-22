@@ -494,3 +494,154 @@ export interface RevealInFinderResponse {
    *  display in the UI. */
   revealed_path: string | null;
 }
+
+// ── Engineer (Build 5) ────────────────────────────────────────────────────
+// Mix-agent lifecycle: curator clicks "Send to Engineer" on a Bucket card,
+// engine inserts a mix_jobs row, the engineer-worker daemon on M1 picks it
+// up, ensures stems exist (or falls back to single-file mastering), renders
+// six variants along three taste axes (focal, space, dynamics), and writes
+// variant assets + mix_variants rows. The Engineer page polls /mix/jobs
+// and surfaces 'ready' jobs as A/B pairs via /mix/pairs.
+
+export type MixJobStatus =
+  | "pending"
+  | "splitting_stems"
+  | "rendering"
+  | "ready"
+  | "complete"
+  | "noop_complete"
+  | "error";
+
+export type MixAxis = "focal" | "space" | "dynamics";
+export type MixPole =
+  | "forward_bright"
+  | "recessed_warm"
+  | "punchy_dry"
+  | "spacious_wet"
+  | "modern_compressed"
+  | "vintage_open";
+
+export interface MixJobSummary {
+  id: number;
+  source_asset_id: number;
+  source_filename: string | null;
+  source_display_name: string | null;
+  status: MixJobStatus;
+  started_at: string;
+  finished_at: string | null;
+  error: string | null;
+  variant_count: number;
+  judgement_count: number;
+}
+
+export interface MixJobsListResponse {
+  total: number;
+  items: MixJobSummary[];
+}
+
+export interface CreateMixJobResponse {
+  ok: true;
+  job_id: number;
+  status: MixJobStatus;
+}
+
+export interface MixMove {
+  type: string;
+  reasoning?: string;
+  freq_hz?: number;
+  q?: number;
+  gain_db?: number;
+  threshold_db?: number;
+  ratio?: number;
+  attack_ms?: number;
+  release_ms?: number;
+  room_size?: number;
+  damping?: number;
+  wet_level?: number;
+  dry_level?: number;
+  delay_seconds?: number;
+  feedback?: number;
+  mix?: number;
+  drive_db?: number;
+  position?: number;
+  width?: number;
+}
+
+export interface MixStemPlan {
+  role: string;
+  moves: MixMove[];
+  level_offset_db?: number;
+}
+
+export interface MixRelationship {
+  type: string;
+  trigger_stem?: string;
+  target_stem?: string;
+  amount_db?: number;
+  threshold_db?: number;
+  release_ms?: number;
+  reasoning?: string;
+}
+
+export interface MixBusPlan {
+  moves: MixMove[];
+  target_lufs: number;
+}
+
+export interface MixPlan {
+  philosophy_summary: string;
+  stems: Record<string, MixStemPlan>;
+  relationships: MixRelationship[];
+  bus: MixBusPlan;
+}
+
+export interface TranslationTargetReport {
+  target: string;
+  band_db: Record<string, number>;
+  band_delta_db: Record<string, number>;
+  stereo_width: number;
+  flags: string[];
+}
+
+export interface TranslationReport {
+  reference: { band_db: Record<string, number>; stereo_width: number };
+  targets: TranslationTargetReport[];
+  summary_flags: string[];
+}
+
+export interface MixVariantSummary {
+  id: number;
+  job_id: number;
+  asset_id: number | null;
+  axis: MixAxis;
+  pole: MixPole;
+  asset_path: string | null;
+  asset_filename: string | null;
+  duration_seconds: number | null;
+  plan: MixPlan | null;
+  translation: TranslationReport | null;
+  /** Map of stem_name → absolute path of the soloed-stem wav. Lets the
+   *  curator audition each processed stem alone for diagnostic listening. */
+  stem_files: Record<string, string> | null;
+}
+
+export interface MixPairItem {
+  job_id: number;
+  job_source_display: string | null;
+  source_asset_id: number;
+  source_waveform_sha1: string | null;
+  source_duration_seconds: number | null;
+  axis: MixAxis;
+  variant_a: MixVariantSummary;
+  variant_b: MixVariantSummary;
+}
+
+export interface MixPairsResponse {
+  total: number;
+  items: MixPairItem[];
+}
+
+export interface MixJudgementResponse {
+  ok: true;
+  judgement_id: number;
+}

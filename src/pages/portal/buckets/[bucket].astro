@@ -1265,6 +1265,56 @@ const BUCKET_TITLE: Record<BucketView, string> = {
       }
     };
 
+    const setEngineerStatus = (
+      card: HTMLElement,
+      msg: string,
+      tone?: "ok" | "err",
+    ) => {
+      const node = card.querySelector<HTMLElement>("[data-engineer-status]");
+      if (!node) return;
+      node.textContent = msg;
+      if (tone) node.dataset.tone = tone;
+      else delete node.dataset.tone;
+    };
+
+    const sendToEngineer = async (card: HTMLElement) => {
+      const assetId = card.dataset.assetId;
+      if (!assetId) return;
+      const buttons = card.querySelectorAll<HTMLButtonElement>(
+        '[data-action="send-to-engineer"]',
+      );
+      buttons.forEach((b) => { b.dataset.busy = "true"; });
+      setEngineerStatus(card, "Queueing…");
+      try {
+        const res = await fetch("/api/console/mix-jobs-create", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ source_asset_id: Number(assetId) }),
+        });
+        if (!res.ok) {
+          let detail = `HTTP ${res.status}`;
+          try {
+            const body = await res.json();
+            if (body?.error?.message) detail = body.error.message;
+            else if (typeof body?.detail === "string") detail = body.detail;
+          } catch {}
+          setEngineerStatus(card, `Failed: ${detail}`, "err");
+          buttons.forEach((b) => { b.dataset.busy = ""; });
+          return;
+        }
+        const data = (await res.json()) as { job_id: number; status: string };
+        setEngineerStatus(
+          card,
+          `✓ job ${data.job_id} (${data.status}) — see Engineer tab`,
+          "ok",
+        );
+        buttons.forEach((b) => { b.dataset.busy = ""; });
+      } catch {
+        setEngineerStatus(card, "Kickoff failed (network)", "err");
+        buttons.forEach((b) => { b.dataset.busy = ""; });
+      }
+    };
+
     const startSplitStems = async (card: HTMLElement, mode: "2" | "4") => {
       if (card.dataset.stemJobId) {
         setStemProgress(card, "Already running — wait for it to finish", "err");
@@ -1451,6 +1501,9 @@ const BUCKET_TITLE: Record<BucketView, string> = {
           if (mode) startSplitStems(card, mode);
           break;
         }
+        case "send-to-engineer":
+          sendToEngineer(card);
+          break;
         case "bucket": {
           const target = btn.dataset.bucket as BucketName | undefined;
           if (!target) break;

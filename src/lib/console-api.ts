@@ -36,6 +36,11 @@ import type {
   SplitStemsStatus,
   StemSplitMode,
   TopTagsResponse,
+  CreateMixJobResponse,
+  MixJobSummary,
+  MixJobsListResponse,
+  MixPairsResponse,
+  MixJudgementResponse,
 } from "./console-types";
 
 // process.env is checked first so Vercel's runtime env vars always win in
@@ -641,4 +646,59 @@ export async function setItemPublic(
       },
     };
   }
+}
+
+// ── Engineer (Build 5) ────────────────────────────────────────────────────
+/** List recent mix jobs (newest first). */
+export async function listMixJobs(
+  limit = 50,
+): Promise<ApiResult<MixJobsListResponse>> {
+  const params = new URLSearchParams({ limit: String(limit) });
+  return call<MixJobsListResponse>(`/mix/jobs?${params}`);
+}
+
+/** Enqueue a new mix job for the given asset. Returns immediately with
+ *  job_id; the engineer-worker daemon picks it up on its next poll.
+ *
+ *  Phase 2: pass retry_axis + feedback_text to queue a focused retry that
+ *  re-renders just that axis's two poles with the curator's notes baked
+ *  into the planner prompt. parent_job_id is bookkeeping only. */
+export async function createMixJob(
+  source_asset_id: number,
+  opts: {
+    retry_axis?: string | null;
+    feedback_text?: string | null;
+    parent_job_id?: number | null;
+  } = {},
+): Promise<ApiResult<CreateMixJobResponse>> {
+  const body: Record<string, unknown> = { source_asset_id };
+  if (opts.retry_axis) body.retry_axis = opts.retry_axis;
+  if (opts.feedback_text) body.feedback_text = opts.feedback_text;
+  if (opts.parent_job_id) body.parent_job_id = opts.parent_job_id;
+  return _post<CreateMixJobResponse>("/mix/jobs/create", body);
+}
+
+export async function getMixJob(
+  job_id: number,
+): Promise<ApiResult<MixJobSummary>> {
+  return call<MixJobSummary>(`/mix/jobs/${job_id}`);
+}
+
+/** Next A/B pairs awaiting judgement, across all 'ready' jobs. */
+export async function listMixPairs(
+  limit = 10,
+): Promise<ApiResult<MixPairsResponse>> {
+  const params = new URLSearchParams({ limit: String(limit) });
+  return call<MixPairsResponse>(`/mix/pairs?${params}`);
+}
+
+export async function postMixJudgement(body: {
+  job_id: number;
+  variant_a_id: number;
+  variant_b_id: number;
+  chosen_variant_id: number | null;
+  axis?: string | null;
+  comment?: string | null;
+}): Promise<ApiResult<MixJudgementResponse>> {
+  return _post<MixJudgementResponse>("/mix/judgement", body);
 }
