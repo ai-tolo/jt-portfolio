@@ -8,12 +8,20 @@ import { getCaseStudies, getCaseStudyBySlug } from "../../lib/notion";
 
 export const prerender = true;
 
-// Slugs that own a dedicated custom .astro page. Skip them here so the
-// custom page wins the route. Notion still drives the metadata (title,
-// tags, cover) for the homepage list; only the body content is custom.
-const CUSTOM_SLUGS = new Set(["the-console", "chs", "crediverso", "momence", "raylu"]);
-
 export async function getStaticPaths() {
+  // Slugs that own a dedicated custom .astro page. Skip them here so
+  // the custom page wins the route. Notion still drives the metadata
+  // (title, tags, cover) for the homepage list; only the body is
+  // custom. Defined inside getStaticPaths because Astro runs it in an
+  // isolated scope at build time — module-level identifiers aren't
+  // visible.
+  const CUSTOM_SLUGS = new Set([
+    "the-console",
+    "chs",
+    "crediverso",
+    "momence",
+    "raylu",
+  ]);
   const studies = await getCaseStudies();
   return studies
     .filter((s) => !CUSTOM_SLUGS.has(s.slug))
