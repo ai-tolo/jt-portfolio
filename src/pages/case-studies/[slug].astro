@@ -8,9 +8,16 @@ import { getCaseStudies, getCaseStudyBySlug } from "../../lib/notion";
 
 export const prerender = true;
 
+// Slugs that own a dedicated custom .astro page. Skip them here so the
+// custom page wins the route. Notion still drives the metadata (title,
+// tags, cover) for the homepage list; only the body content is custom.
+const CUSTOM_SLUGS = new Set(["the-console"]);
+
 export async function getStaticPaths() {
   const studies = await getCaseStudies();
-  return studies.map((s) => ({ params: { slug: s.slug } }));
+  return studies
+    .filter((s) => !CUSTOM_SLUGS.has(s.slug))
+    .map((s) => ({ params: { slug: s.slug } }));
 }
 
 const { slug } = Astro.params;

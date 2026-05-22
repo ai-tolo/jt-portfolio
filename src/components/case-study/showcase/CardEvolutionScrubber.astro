@@ -1,0 +1,814 @@
+---
+// Live "the card grew up" demo. One BucketCard markup, six design eras
+// applied via data-round attribute. Drag the slider (or click a dot) to
+// scrub through history.
+//
+// Each round flips a single .ce-round-N class on the card root. The
+// per-round CSS targets that class to morph the visual treatment back
+// in time (cassette tape labels, lettered J/L/F/T tiles, pink-orange
+// wave buttons, etc.). One DOM, six designs.
+---
+
+<div class="ce-stage" data-ce-stage>
+  <div class="ce-card-frame">
+    <article class="ce-card" data-ce-card data-ce-round="5" data-bucket="loops">
+      <!-- Round 1 (cassette-spine): date column lives on the right, title row sits center-ish. Other rounds: date moves to subtitle below. -->
+      <div class="ce-grid">
+        <div class="ce-mid">
+          <!-- R1 only: a tape-label "Public + date" strip above the title. -->
+          <div class="ce-spine">
+            <span class="ce-spine-pub">○ PUBLIC</span>
+            <span class="ce-spine-date">06 / 15 / 2024</span>
+          </div>
+
+          <!-- R2 only: a chunky kudos "Buckeye ⚡" ticker. -->
+          <div class="ce-kudos">
+            <span class="ce-kudos-lbl">KUDOS</span>
+            <span class="ce-kudos-bar">
+              <span class="ce-kudos-fill"></span>
+            </span>
+            <span class="ce-kudos-count">12 ⚡</span>
+          </div>
+
+          <h3 class="ce-title">
+            <span class="ce-title-text">NOIZU_125_shaker_loop_tight_01</span>
+            <span class="ce-title-ext">.wav</span>
+          </h3>
+
+          <!-- BPM/key — different rounds put it under TECH or as a subtitle. -->
+          <div class="ce-bpm-row">
+            <span class="ce-bpm-n">99</span>
+            <span class="ce-bpm-u">BPM</span>
+            <span class="ce-bpm-sep">·</span>
+            <span class="ce-key">E</span>
+            <span class="ce-key-mode">major</span>
+          </div>
+
+          <div class="ce-wave-row">
+            <span class="ce-duration">0:04</span>
+            <div class="ce-waveform">
+              <div class="ce-fake-wave" aria-hidden="true">
+                {Array.from({ length: 56 }).map((_, i) => {
+                  const h = 36 + Math.round(30 * Math.sin(i * 0.42) + 18 * Math.cos(i * 0.83));
+                  return <span class="ce-fake-bar" style={`height:${Math.max(20, Math.min(96, h))}%`}></span>;
+                })}
+              </div>
+            </div>
+            <button type="button" class="ce-crop" aria-label="Crop">✂</button>
+          </div>
+
+          <!-- R3+ date subtitle. -->
+          <div class="ce-date-sub">
+            <span class="ce-date-rel">1y</span>
+            <span class="ce-date-bracket"> [</span><span class="ce-date-stamp">06-15-2024</span><span class="ce-date-bracket">]</span>
+            <span class="ce-date-sep"> · </span>
+            <span class="ce-date-days">704d</span>
+            <span class="ce-date-chev">▾</span>
+          </div>
+        </div>
+
+        <!-- Date column for R1 cassette-spine only. -->
+        <div class="ce-date-col">
+          <span class="ce-date-col-day">15</span>
+          <span class="ce-date-col-mon">JUN</span>
+          <span class="ce-date-col-yr">2024</span>
+        </div>
+
+        <!-- J/L/F/T — same data, different layouts per round. -->
+        <div class="ce-cat" role="group" aria-label="Category">
+          <button type="button" class="ce-cat-btn" data-bucket="jam"><span>JAM</span></button>
+          <button type="button" class="ce-cat-btn active" data-bucket="loops"><span>LOOP</span></button>
+          <button type="button" class="ce-cat-btn" data-bucket="field"><span>FIELD</span></button>
+          <button type="button" class="ce-cat-btn" data-bucket="tracks"><span>TRACK</span></button>
+        </div>
+
+        <button type="button" class="ce-trash" aria-label="Archive">
+          <span class="ce-trash-glyph">✕</span>
+        </button>
+      </div>
+    </article>
+  </div>
+
+  <div class="ce-controls">
+    <ol class="ce-dots" role="listbox" aria-label="Design round">
+      {Array.from({ length: 6 }).map((_, i) => (
+        <li>
+          <button
+            type="button"
+            class={`ce-dot ${i === 5 ? "active" : ""}`}
+            data-ce-round={String(i)}
+            aria-label={`Round ${i + 1}`}
+          >{i + 1}</button>
+        </li>
+      ))}
+    </ol>
+    <input
+      type="range"
+      min="0"
+      max="5"
+      step="1"
+      value="5"
+      class="ce-slider"
+      data-ce-slider
+      aria-label="Design iteration"
+    />
+    <div class="ce-meta">
+      <p class="ce-meta-eyebrow" data-ce-eyebrow>ROUND 6 · 2026-05-21</p>
+      <h4 class="ce-meta-title" data-ce-title>Selected · gradient reveal</h4>
+      <p class="ce-meta-note" data-ce-note>The selected card wears the brand gradient on the title chip alone. Everything else, restraint.</p>
+      <p class="ce-meta-commit" data-ce-commit>018c726 · scoped selected-card gradient to the title chip</p>
+    </div>
+  </div>
+</div>
+
+<script>
+  const ROUNDS = [
+    {
+      title: "Cassette-spine",
+      note: "Tape-label tags, letter tiles, a date-stack column on the right. Built off a Figma redesign.",
+      commit: "add664c · ported the Figma redesign with tape labels",
+      date: "2026-05-18",
+    },
+    {
+      title: "Pink→orange buttons",
+      note: "Waveform-textured buttons, blue rings, a three-cell dashboard widget. Cassette spine stays.",
+      commit: "bd7dbe0 · gradient buttons, blue rings, 3-cell widget",
+      date: "2026-05-19",
+    },
+    {
+      title: "Title-led green",
+      note: "Title moves to the top in neon italic mono. Kudos lives as a ⚡ inline. Date becomes a subtitle.",
+      commit: "65f71e8 · title-led, date-right, inline kudos",
+      date: "2026-05-20",
+    },
+    {
+      title: "LCD duration",
+      note: "Duration becomes a pink LCD overlay to the left of the waveform. The selected-card treatment cools off.",
+      commit: "5a78a76 · LCD duration overlay; calmer selected state",
+      date: "2026-05-20",
+    },
+    {
+      title: "Medicine-container J/L/F/T",
+      note: "Lettered tiles become a vertical pill with shared horizontal dividers. Active tile picks up a pink-red wash.",
+      commit: "b391790 · vertical medicine container, full-word tiles",
+      date: "2026-05-21",
+    },
+    {
+      title: "Selected · gradient reveal",
+      note: "The selected card wears the brand gradient on the title chip alone. Everything else, restraint.",
+      commit: "018c726 · scoped selected-card gradient to the title chip",
+      date: "2026-05-21",
+    },
+  ];
+
+  const stage = document.querySelector<HTMLElement>("[data-ce-stage]");
+  const card = stage?.querySelector<HTMLElement>("[data-ce-card]");
+  const slider = stage?.querySelector<HTMLInputElement>("[data-ce-slider]");
+  const dots = stage?.querySelectorAll<HTMLElement>(".ce-dot");
+  const eyebrow = stage?.querySelector<HTMLElement>("[data-ce-eyebrow]");
+  const title = stage?.querySelector<HTMLElement>("[data-ce-title]");
+  const note = stage?.querySelector<HTMLElement>("[data-ce-note]");
+  const commit = stage?.querySelector<HTMLElement>("[data-ce-commit]");
+
+  const apply = (idx: number) => {
+    if (!card) return;
+    const i = Math.max(0, Math.min(5, idx));
+    card.dataset.ceRound = String(i);
+    if (slider) slider.value = String(i);
+    dots?.forEach((d) => d.classList.toggle("active", Number(d.dataset.ceRound) === i));
+    const r = ROUNDS[i];
+    if (eyebrow) eyebrow.textContent = `ROUND ${i + 1} · ${r.date}`;
+    if (title) title.textContent = r.title;
+    if (note) note.textContent = r.note;
+    if (commit) commit.textContent = r.commit;
+  };
+
+  slider?.addEventListener("input", (e) => {
+    apply(Number((e.target as HTMLInputElement).value));
+  });
+  dots?.forEach((d) => {
+    d.addEventListener("click", () => apply(Number(d.dataset.ceRound)));
+  });
+
+  // Auto-walkthrough — slow drift forward when the stage first enters the
+  // viewport, until the user touches the slider.
+  let touched = false;
+  const onTouch = () => { touched = true; };
+  slider?.addEventListener("pointerdown", onTouch, { once: true });
+  dots?.forEach((d) => d.addEventListener("click", onTouch, { once: true }));
+
+  const io = new IntersectionObserver((entries) => {
+    for (const e of entries) {
+      if (!e.isIntersecting) continue;
+      // Start at round 0 and walk forward.
+      apply(0);
+      let i = 0;
+      const step = () => {
+        if (touched) return;
+        i = Math.min(5, i + 1);
+        apply(i);
+        if (i < 5) window.setTimeout(step, 1100);
+      };
+      window.setTimeout(step, 700);
+      io.disconnect();
+    }
+  }, { threshold: 0.5 });
+  if (stage) io.observe(stage);
+</script>
+
+<style>
+  /* Stage: card frame on the left, scrubber + meta on the right. Stacks on narrow screens. */
+  .ce-stage {
+    display: grid;
+    grid-template-columns: minmax(0, 1.4fr) minmax(280px, 1fr);
+    gap: 36px;
+    align-items: start;
+  }
+  @media (max-width: 880px) {
+    .ce-stage { grid-template-columns: 1fr; }
+  }
+
+  .ce-card-frame {
+    background:
+      radial-gradient(80% 60% at 50% 0%, rgba(255, 90, 60, 0.10) 0%, transparent 70%),
+      #07060c;
+    padding: 36px 24px;
+    border-radius: 6px;
+    border: 1px solid rgba(245, 241, 232, 0.06);
+  }
+
+  /* ── Base card (matches round 6, the current shipping design) ─────── */
+  .ce-card {
+    position: relative;
+    background: rgba(15, 10, 18, 0.94);
+    border: 1px solid rgba(245, 241, 232, 0.10);
+    border-radius: 8px;
+    overflow: hidden;
+    font-family: "Geist Variable", ui-sans-serif, system-ui, sans-serif;
+    color: #f5f1e8;
+    transition: border-color 320ms ease, background 320ms ease, box-shadow 320ms ease;
+  }
+  .ce-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto auto 44px;
+    align-items: stretch;
+    padding: 18px 0 18px 22px;
+    transition: grid-template-columns 320ms ease, padding 320ms ease;
+  }
+  .ce-mid {
+    grid-column: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    padding: 0 20px 0 0;
+    min-width: 0;
+  }
+
+  /* Cassette spine row — Round 1 only. */
+  .ce-spine {
+    display: none;
+    align-items: center;
+    gap: 10px;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 9px;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: rgba(245, 241, 232, 0.5);
+    background: linear-gradient(90deg, rgba(255, 215, 130, 0.10), rgba(255, 215, 130, 0));
+    border: 1px solid rgba(255, 215, 130, 0.18);
+    border-radius: 2px;
+    padding: 4px 8px;
+    width: fit-content;
+  }
+  .ce-spine-pub { color: #ffb347; border-right: 1px solid rgba(255, 179, 71, 0.32); padding-right: 8px; }
+  .ce-spine-date { color: rgba(245, 241, 232, 0.72); font-feature-settings: "tnum"; }
+
+  /* Kudos row — Round 2 only. */
+  .ce-kudos {
+    display: none;
+    align-items: center;
+    gap: 8px;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 10px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: rgba(245, 241, 232, 0.55);
+  }
+  .ce-kudos-lbl { color: rgba(245, 241, 232, 0.4); }
+  .ce-kudos-bar {
+    flex: 0 0 90px;
+    height: 4px;
+    background: rgba(245, 241, 232, 0.08);
+    border-radius: 2px;
+    overflow: hidden;
+  }
+  .ce-kudos-fill {
+    display: block;
+    height: 100%;
+    width: 60%;
+    background: linear-gradient(90deg, #0ec4fc 0%, #00ff4d 100%);
+  }
+  .ce-kudos-count { color: #ffb347; font-weight: 700; }
+
+  /* Title — Round 3+ in neon green. R1/R2 use a quieter cream. */
+  .ce-title {
+    margin: 0;
+    line-height: 1.05;
+    min-width: 0;
+  }
+  .ce-title-text {
+    display: inline-block;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-style: italic;
+    font-size: 17px;
+    font-weight: 700;
+    color: #00ff4d;
+    background: rgba(0, 255, 77, 0.04);
+    border: 1px solid rgba(0, 255, 77, 0.32);
+    border-radius: 4px;
+    padding: 5px 10px;
+    margin-left: -10px;
+    box-shadow: 0 0 12px rgba(0, 255, 77, 0.12);
+    transition: color 320ms ease, background 320ms ease, border-color 320ms ease, box-shadow 320ms ease;
+  }
+  .ce-title-ext {
+    color: #f5f1e8;
+    opacity: 0.42;
+    font-style: italic;
+    font-weight: 500;
+    font-size: 0.6em;
+  }
+
+  /* BPM/key inline — Round 3 only as a subtitle. */
+  .ce-bpm-row {
+    display: none;
+    align-items: baseline;
+    gap: 4px;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-style: italic;
+    font-feature-settings: "tnum";
+  }
+  .ce-bpm-n { font-size: 13px; font-weight: 700; color: #0ec4fc; }
+  .ce-bpm-u { font-size: 13px; color: rgba(245, 241, 232, 0.55); margin-left: 2px; }
+  .ce-bpm-sep { color: rgba(245, 241, 232, 0.32); margin: 0 4px; }
+  .ce-key { font-size: 13px; font-weight: 700; color: #0ec4fc; }
+  .ce-key-mode { font-size: 13px; color: rgba(245, 241, 232, 0.55); margin-left: 4px; }
+
+  .ce-wave-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-width: 0;
+  }
+
+  /* LCD duration — R4+. Earlier rounds render duration inline elsewhere. */
+  .ce-duration {
+    flex: 0 0 auto;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-style: italic;
+    font-size: 16px;
+    font-weight: 700;
+    color: #ff3b6e;
+    font-feature-settings: "tnum";
+    line-height: 1;
+    letter-spacing: 0.04em;
+    min-width: 3.6em;
+    text-align: right;
+    text-shadow:
+      0 0 4px rgba(255, 59, 110, 0.65),
+      0 0 10px rgba(255, 59, 110, 0.35);
+    transition: color 320ms ease, text-shadow 320ms ease, font-size 320ms ease;
+  }
+
+  .ce-waveform {
+    position: relative;
+    flex: 1 1 auto;
+    height: 48px;
+    background: #07060c;
+    border-radius: 3px;
+    overflow: hidden;
+  }
+  .ce-fake-wave {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    gap: 2px;
+    padding: 0 6px;
+  }
+  .ce-fake-bar {
+    flex: 1 1 0;
+    background: linear-gradient(180deg, rgba(14, 196, 252, 0.65) 0%, rgba(14, 196, 252, 0.35) 100%);
+    border-radius: 1px;
+    transition: background 320ms ease;
+  }
+  .ce-crop {
+    font: inherit;
+    font-size: 14px;
+    color: rgba(245, 241, 232, 0.55);
+    background: transparent;
+    border: 1px solid rgba(245, 241, 232, 0.18);
+    border-radius: 3px;
+    width: 28px;
+    height: 28px;
+    cursor: pointer;
+    transition: color 160ms ease, border-color 160ms ease;
+  }
+  .ce-crop:hover { color: #0ec4fc; border-color: rgba(14, 196, 252, 0.55); }
+
+  /* Date subtitle — Rounds 3+. */
+  .ce-date-sub {
+    display: none;
+    align-items: baseline;
+    gap: 2px;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    color: rgba(245, 241, 232, 0.72);
+    padding: 4px 0;
+  }
+  .ce-date-rel { color: #f5f1e8; font-weight: 700; }
+  .ce-date-bracket { color: rgba(245, 241, 232, 0.32); font-weight: 500; }
+  .ce-date-stamp { color: rgba(245, 241, 232, 0.65); }
+  .ce-date-sep { color: rgba(245, 241, 232, 0.32); }
+  .ce-date-days { color: rgba(245, 241, 232, 0.5); font-feature-settings: "tnum"; }
+  .ce-date-chev { color: rgba(245, 241, 232, 0.55); font-size: 12px; margin-left: 8px; }
+
+  /* Date column on right — Round 1 cassette only. */
+  .ce-date-col {
+    grid-column: 2;
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 4px 14px;
+    border-left: 1px solid rgba(255, 215, 130, 0.18);
+    border-right: 1px solid rgba(255, 215, 130, 0.18);
+    background: linear-gradient(180deg, rgba(255, 215, 130, 0.06), rgba(255, 215, 130, 0.0));
+    color: rgba(245, 241, 232, 0.78);
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    line-height: 1;
+  }
+  .ce-date-col-day { font-size: 22px; font-weight: 700; color: #ffb347; }
+  .ce-date-col-mon { font-size: 9px; letter-spacing: 0.22em; margin-top: 4px; color: rgba(245, 241, 232, 0.62); }
+  .ce-date-col-yr { font-size: 9px; letter-spacing: 0.22em; margin-top: 2px; color: rgba(245, 241, 232, 0.42); }
+
+  /* J/L/F/T pill */
+  .ce-cat {
+    grid-column: 3;
+    align-self: stretch;
+    margin: -18px 0 -18px 12px;
+    display: flex;
+    flex-direction: column;
+    width: 68px;
+    border: 1px solid rgba(245, 241, 232, 0.22);
+    border-right: 0;
+    border-radius: 5px 0 0 5px;
+    overflow: hidden;
+    background: rgba(245, 241, 232, 0.025);
+    transition: flex-direction 320ms ease, width 320ms ease, border 320ms ease, background 320ms ease;
+  }
+  .ce-cat-btn {
+    flex: 1 1 0;
+    min-height: 32px;
+    font: inherit;
+    color: rgba(245, 241, 232, 0.7);
+    background: transparent;
+    border: 0;
+    border-top: 1px solid rgba(245, 241, 232, 0.22);
+    padding: 0 6px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: color 160ms ease, background 160ms ease, border 160ms ease;
+  }
+  .ce-cat-btn:first-child { border-top: 0; }
+  .ce-cat-btn span {
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-style: italic;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+  }
+  .ce-cat-btn.active {
+    color: #ff2761;
+    background: rgba(255, 39, 97, 0.14);
+  }
+  .ce-cat-btn.active,
+  .ce-cat-btn.active + .ce-cat-btn {
+    border-top-color: rgba(255, 39, 97, 0.45);
+  }
+  .ce-cat-btn.active:first-child { border-top: 0; }
+
+  /* Archive X */
+  .ce-trash {
+    grid-column: 4;
+    align-self: stretch;
+    margin: -18px 0 -18px 0;
+    font: inherit;
+    font-size: 16px;
+    font-weight: 700;
+    color: rgba(245, 241, 232, 0.45);
+    background: linear-gradient(180deg, rgba(47, 7, 18, 0.38) 0%, rgba(47, 7, 18, 0.62) 100%);
+    border: 0;
+    border-left: 1px solid rgba(255, 39, 97, 0.18);
+    border-radius: 0 7px 7px 0;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .ce-trash:hover {
+    color: #fff;
+    background: linear-gradient(180deg, rgba(78, 12, 30, 0.62) 0%, rgba(255, 39, 97, 0.28) 100%);
+  }
+
+  /* ─────────── ROUND-SPECIFIC OVERRIDES ─────────── */
+
+  /* R1 — Cassette spine. Title row, BPM under title, NO date subtitle (date moves to right column). */
+  .ce-card[data-ce-round="0"] { background: rgba(20, 14, 8, 0.94); border-color: rgba(255, 215, 130, 0.28); }
+  .ce-card[data-ce-round="0"] .ce-grid { grid-template-columns: minmax(0, 1fr) 76px auto 44px; }
+  .ce-card[data-ce-round="0"] .ce-spine { display: inline-flex; }
+  .ce-card[data-ce-round="0"] .ce-title-text {
+    color: rgba(245, 241, 232, 0.88);
+    background: rgba(245, 241, 232, 0.04);
+    border-color: rgba(245, 241, 232, 0.18);
+    font-style: normal;
+    box-shadow: none;
+  }
+  .ce-card[data-ce-round="0"] .ce-bpm-row { display: inline-flex; }
+  .ce-card[data-ce-round="0"] .ce-duration { display: none; }
+  .ce-card[data-ce-round="0"] .ce-date-col { display: flex; }
+  /* Lettered tile boxes — small caps inside boxes, not the medicine pill. */
+  .ce-card[data-ce-round="0"] .ce-cat {
+    flex-direction: row;
+    width: auto;
+    align-self: center;
+    margin: 0 12px;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    gap: 4px;
+  }
+  .ce-card[data-ce-round="0"] .ce-cat-btn {
+    flex: 0 0 auto;
+    width: 26px;
+    height: 26px;
+    border: 1px solid rgba(255, 215, 130, 0.32);
+    border-radius: 3px;
+    background: rgba(255, 215, 130, 0.06);
+  }
+  .ce-card[data-ce-round="0"] .ce-cat-btn span {
+    font-size: 10px;
+    letter-spacing: 0;
+  }
+  .ce-card[data-ce-round="0"] .ce-cat-btn.active {
+    color: #ffb347;
+    border-color: #ffb347;
+    background: rgba(255, 179, 71, 0.18);
+  }
+  /* Hide the only-LOOP word; in cassette era it's just "L". */
+  .ce-card[data-ce-round="0"] .ce-cat-btn span::before { content: attr(data-letter); }
+  .ce-card[data-ce-round="0"] .ce-cat-btn[data-bucket="jam"] span { font-size: 0; }
+  .ce-card[data-ce-round="0"] .ce-cat-btn[data-bucket="jam"] span::after { content: "J"; font-size: 11px; }
+  .ce-card[data-ce-round="0"] .ce-cat-btn[data-bucket="loops"] span { font-size: 0; }
+  .ce-card[data-ce-round="0"] .ce-cat-btn[data-bucket="loops"] span::after { content: "L"; font-size: 11px; }
+  .ce-card[data-ce-round="0"] .ce-cat-btn[data-bucket="field"] span { font-size: 0; }
+  .ce-card[data-ce-round="0"] .ce-cat-btn[data-bucket="field"] span::after { content: "F"; font-size: 11px; }
+  .ce-card[data-ce-round="0"] .ce-cat-btn[data-bucket="tracks"] span { font-size: 0; }
+  .ce-card[data-ce-round="0"] .ce-cat-btn[data-bucket="tracks"] span::after { content: "T"; font-size: 11px; }
+  /* Waveform recolored with sepia/brown tint to match cassette palette. */
+  .ce-card[data-ce-round="0"] .ce-fake-bar {
+    background: linear-gradient(180deg, rgba(255, 215, 130, 0.65) 0%, rgba(255, 179, 71, 0.32) 100%);
+  }
+
+  /* R2 — Pink→orange buttons, blue rings, kudos ticker. */
+  .ce-card[data-ce-round="1"] .ce-kudos { display: flex; }
+  .ce-card[data-ce-round="1"] .ce-title-text {
+    color: rgba(245, 241, 232, 0.88);
+    background: rgba(245, 241, 232, 0.04);
+    border-color: rgba(245, 241, 232, 0.18);
+    font-style: normal;
+    box-shadow: none;
+  }
+  .ce-card[data-ce-round="1"] .ce-bpm-row { display: inline-flex; }
+  .ce-card[data-ce-round="1"] .ce-fake-bar {
+    background: linear-gradient(180deg, #ff2761 0%, #ff5a3c 50%, #ffb347 100%);
+  }
+  .ce-card[data-ce-round="1"] .ce-cat {
+    flex-direction: row;
+    width: auto;
+    align-self: center;
+    margin: 0 12px;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    gap: 6px;
+  }
+  .ce-card[data-ce-round="1"] .ce-cat-btn {
+    flex: 0 0 auto;
+    width: 28px;
+    height: 28px;
+    border: 1px solid rgba(14, 196, 252, 0.55);
+    border-radius: 50%;
+    background: rgba(14, 196, 252, 0.06);
+  }
+  .ce-card[data-ce-round="1"] .ce-cat-btn span {
+    font-size: 0;
+  }
+  .ce-card[data-ce-round="1"] .ce-cat-btn span::after {
+    content: attr(data-letter);
+    font-size: 10px;
+    font-weight: 700;
+    color: #0ec4fc;
+  }
+  .ce-card[data-ce-round="1"] .ce-cat-btn[data-bucket="jam"] span::after { content: "J"; }
+  .ce-card[data-ce-round="1"] .ce-cat-btn[data-bucket="loops"] span::after { content: "L"; }
+  .ce-card[data-ce-round="1"] .ce-cat-btn[data-bucket="field"] span::after { content: "F"; }
+  .ce-card[data-ce-round="1"] .ce-cat-btn[data-bucket="tracks"] span::after { content: "T"; }
+  .ce-card[data-ce-round="1"] .ce-cat-btn.active {
+    background: linear-gradient(90deg, #ff2761 0%, #ff5a3c 100%);
+    border-color: #ff5a3c;
+  }
+  .ce-card[data-ce-round="1"] .ce-cat-btn.active span::after { color: #0e0c14; }
+  .ce-card[data-ce-round="1"] .ce-duration { display: none; }
+
+  /* R3 — Title-led green with ⚡ kudos inline, BPM subtitle, date subtitle. */
+  .ce-card[data-ce-round="2"] .ce-bpm-row { display: inline-flex; }
+  .ce-card[data-ce-round="2"] .ce-date-sub { display: inline-flex; }
+  .ce-card[data-ce-round="2"] .ce-duration { display: none; }
+  .ce-card[data-ce-round="2"] .ce-title-text::after {
+    content: " ⚡";
+    color: #ffb347;
+    margin-left: 4px;
+  }
+  /* Pill goes vertical here but without the medicine container yet — looser stack of buttons. */
+  .ce-card[data-ce-round="2"] .ce-cat {
+    flex-direction: column;
+    width: 60px;
+    border: 0;
+    background: transparent;
+    gap: 3px;
+    margin: 0 12px;
+    align-self: center;
+  }
+  .ce-card[data-ce-round="2"] .ce-cat-btn {
+    border: 1px solid rgba(245, 241, 232, 0.22);
+    border-radius: 3px;
+    background: rgba(245, 241, 232, 0.03);
+    min-height: 22px;
+  }
+  .ce-card[data-ce-round="2"] .ce-cat-btn.active {
+    border-color: rgba(0, 255, 77, 0.55);
+    color: #00ff4d;
+    background: rgba(0, 255, 77, 0.10);
+  }
+
+  /* R4 — LCD duration appears, selected calmer. */
+  .ce-card[data-ce-round="3"] .ce-date-sub { display: inline-flex; }
+  .ce-card[data-ce-round="3"] .ce-bpm-row { display: none; }  /* BPM moves into Tech in expanded panel; not shown in collapsed view here. */
+  .ce-card[data-ce-round="3"] .ce-duration { display: inline-block; }
+  .ce-card[data-ce-round="3"] .ce-cat {
+    flex-direction: column;
+    width: 60px;
+    border: 0;
+    background: transparent;
+    gap: 3px;
+    margin: 0 12px;
+    align-self: center;
+  }
+  .ce-card[data-ce-round="3"] .ce-cat-btn {
+    border: 1px solid rgba(245, 241, 232, 0.22);
+    border-radius: 3px;
+    background: rgba(245, 241, 232, 0.03);
+    min-height: 22px;
+  }
+  .ce-card[data-ce-round="3"] .ce-cat-btn.active {
+    border-color: rgba(255, 39, 97, 0.45);
+    color: #ff2761;
+    background: rgba(255, 39, 97, 0.10);
+  }
+
+  /* R5 — Medicine-container J/L/F/T (the current shape with shared dividers). */
+  .ce-card[data-ce-round="4"] .ce-date-sub { display: inline-flex; }
+  .ce-card[data-ce-round="4"] .ce-duration { display: inline-block; }
+  /* Card uses the base .ce-cat styles (vertical medicine container). */
+
+  /* R6 — Final selected gradient reveal on title chip. */
+  .ce-card[data-ce-round="5"] .ce-date-sub { display: inline-flex; }
+  .ce-card[data-ce-round="5"] .ce-duration { display: inline-block; }
+  .ce-card[data-ce-round="5"] {
+    border-color: rgba(255, 90, 60, 0.45);
+    box-shadow: 0 0 0 1px rgba(255, 90, 60, 0.18), 0 0 32px -8px rgba(255, 90, 60, 0.18);
+  }
+  .ce-card[data-ce-round="5"] .ce-title-text {
+    background: linear-gradient(90deg, rgba(255, 39, 97, 0.18) 0%, rgba(255, 90, 60, 0.18) 50%, rgba(255, 179, 71, 0.18) 100%);
+    border-color: rgba(255, 90, 60, 0.45);
+    box-shadow: 0 0 12px rgba(255, 90, 60, 0.18);
+  }
+
+  /* ── Scrubber + meta column ────────────────────────────────────────── */
+  .ce-controls {
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+    padding-top: 8px;
+  }
+  .ce-dots {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    gap: 6px;
+  }
+  .ce-dot {
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    background: rgba(245, 241, 232, 0.04);
+    border: 1px solid rgba(245, 241, 232, 0.18);
+    color: rgba(245, 241, 232, 0.55);
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 11px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: color 160ms ease, border-color 160ms ease, background 160ms ease;
+  }
+  .ce-dot:hover { color: #f5f1e8; border-color: rgba(245, 241, 232, 0.45); }
+  .ce-dot.active {
+    color: #0e0c14;
+    border-color: var(--brand-orange);
+    background: var(--brand-grad);
+  }
+
+  .ce-slider {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 100%;
+    height: 4px;
+    background: rgba(245, 241, 232, 0.10);
+    border-radius: 2px;
+    outline: none;
+    cursor: pointer;
+  }
+  .ce-slider::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: linear-gradient(90deg, #ff2761 0%, #ffb347 100%);
+    border: 2px solid #07060c;
+    cursor: grab;
+    box-shadow: 0 0 0 2px rgba(255, 90, 60, 0.32);
+  }
+  .ce-slider::-moz-range-thumb {
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: linear-gradient(90deg, #ff2761 0%, #ffb347 100%);
+    border: 2px solid #07060c;
+    cursor: grab;
+    box-shadow: 0 0 0 2px rgba(255, 90, 60, 0.32);
+  }
+
+  .ce-meta {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding-top: 6px;
+    border-top: 1px solid rgba(245, 241, 232, 0.08);
+  }
+  .ce-meta-eyebrow {
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 10px;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: rgba(245, 241, 232, 0.48);
+    margin: 0;
+  }
+  .ce-meta-title {
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-style: italic;
+    font-size: 20px;
+    font-weight: 700;
+    color: #f5f1e8;
+    margin: 0;
+    line-height: 1.15;
+  }
+  .ce-meta-note {
+    font-size: 14px;
+    color: rgba(245, 241, 232, 0.72);
+    margin: 4px 0 0;
+    line-height: 1.5;
+  }
+  .ce-meta-commit {
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 10px;
+    color: rgba(245, 241, 232, 0.32);
+    margin: 8px 0 0;
+    letter-spacing: 0.04em;
+  }
+</style>

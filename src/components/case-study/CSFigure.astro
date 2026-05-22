@@ -1,0 +1,69 @@
+---
+// A static figure with an optional caption. Defaults to full-bleed (1280
+// max) so figures never get crushed into a prose column. For inline
+// diagrams that should sit beside text, use width="prose".
+interface Props {
+  src: string;
+  alt: string;
+  caption?: string;
+  /** "bleed" (default), "wide", or "prose". */
+  width?: "bleed" | "wide" | "prose";
+  /** Add a dark frame around the image. */
+  framed?: boolean;
+}
+
+const {
+  src,
+  alt,
+  caption,
+  width = "wide",
+  framed = false,
+} = Astro.props;
+const wrapClass =
+  width === "bleed" ? "cs-bleed" : width === "wide" ? "cs-wide" : "cs-narrow";
+---
+
+<figure class={`cs-fig ${wrapClass}`}>
+  <div class:list={["cs-fig-frame", { framed }]}>
+    <img src={src} alt={alt} loading="lazy" />
+  </div>
+  {caption && <figcaption class="cs-fig-caption">{caption}</figcaption>}
+</figure>
+
+<style>
+  /* When .cs-fig is also .cs-bleed, the margin shorthand would reset the
+     margin-left: 50% trick. Use longhand to leave left/right untouched on
+     bleed; cs-wide/cs-narrow already center via their own auto margins. */
+  .cs-fig {
+    margin-top: 32px;
+    margin-bottom: 32px;
+  }
+  .cs-fig.cs-wide,
+  .cs-fig.cs-narrow {
+    margin-left: auto;
+    margin-right: auto;
+  }
+  .cs-fig-frame {
+    overflow: hidden;
+    border-radius: 4px;
+  }
+  .cs-fig-frame.framed {
+    background: var(--cs-surface);
+    border: 1px solid var(--cs-line);
+    padding: 16px;
+  }
+  .cs-fig img {
+    display: block;
+    width: 100%;
+    height: auto;
+  }
+  .cs-fig-caption {
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-style: italic;
+    font-size: 12.5px;
+    color: rgba(245, 241, 232, 0.55);
+    line-height: 1.5;
+    margin-top: 14px;
+    max-width: 80ch;
+  }
+</style>

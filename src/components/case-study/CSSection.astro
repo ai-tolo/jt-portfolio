@@ -1,0 +1,74 @@
+---
+// A case-study section. Numbered eyebrow + italic mono title + optional
+// deck. The default slot is the body content. A `live` slot wraps a
+// pull-quote / principle treatment.
+interface Props {
+  /** "01" eyebrow numeral. */
+  num?: string;
+  /** Section heading. Required. */
+  title: string;
+  /** Short deck under the title. */
+  deck?: string;
+  /** Skip the top divider (use for the section right after the hero). */
+  noTopRule?: boolean;
+  /** Width preset for the section content. Defaults to "wide". */
+  width?: "narrow" | "wide" | "bleed";
+}
+
+const { num, title, deck, noTopRule = false, width = "wide" } = Astro.props;
+const innerClass =
+  width === "narrow" ? "cs-narrow" : width === "bleed" ? "cs-bleed" : "cs-inner";
+---
+
+<section class:list={["cs-section", { "cs-rule": !noTopRule }]}>
+  <div class="cs-inner cs-section-head">
+    {num && <p class="cs-section-num">{num}</p>}
+    <h2 class="cs-section-title">{title}</h2>
+    {deck && <p class="cs-section-deck">{deck}</p>}
+  </div>
+
+  <div class={innerClass}>
+    <slot />
+  </div>
+</section>
+
+<style>
+  .cs-section {
+    padding: 80px 0 32px;
+  }
+  .cs-section.cs-rule {
+    border-top: 1px solid rgba(245, 241, 232, 0.08);
+  }
+
+  .cs-section-head {
+    margin-bottom: 36px;
+    text-align: left;
+  }
+  .cs-section-num {
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 11px;
+    letter-spacing: 0.28em;
+    text-transform: uppercase;
+    color: rgba(245, 241, 232, 0.48);
+    margin: 0 0 12px;
+  }
+  .cs-section-title {
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-style: italic;
+    font-weight: 700;
+    font-size: clamp(28px, 4.5vw, 42px);
+    letter-spacing: -0.01em;
+    line-height: 1.1;
+    margin: 0;
+    color: #f5f1e8;
+    max-width: 22ch;
+  }
+  .cs-section-deck {
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 14px;
+    color: rgba(245, 241, 232, 0.62);
+    margin: 14px 0 0;
+    max-width: 60ch;
+    line-height: 1.5;
+  }
+</style>

@@ -1,0 +1,438 @@
+---
+// Storytelling BucketCard. Visual + interactions lifted from the actual
+// portal/buckets/BucketCard.astro, scoped down to what the case study
+// needs to teach. Interactions wired up here are:
+//   - waveform fake-play (animated playhead sweeps L→R, click pauses)
+//   - J/L/F/T pill toggle (clicking re-assigns the active category)
+//   - title click-to-rename (inline contenteditable)
+//   - hold-to-archive (0.45s press flips card to "Archived. UNDO" state)
+//   - date row expand reveals tags + tech + lineage
+//
+// Mock data is passed in via props so multiple cards on the page can
+// show distinct states (e.g. "in Live", "voice memo", "loop sorted").
+import "./bucket-card-shared.css";
+
+interface Props {
+  /** Display title (the green italic mono one). */
+  title: string;
+  /** Extension shown at 60% opacity, e.g. ".wav". Omit to leave off. */
+  ext?: string;
+  /** Duration label "M:SS". */
+  duration: string;
+  /** BPM number, omit when unknown. */
+  bpm?: number;
+  /** Key string, e.g. "A# major" — normalized internally. */
+  keyStr?: string;
+  /** Relative age + stamp + days. e.g. {rel:"1y", stamp:"06-15-2024", days:"704d"}. */
+  date?: { rel: string; stamp: string; days: string };
+  /** Silence ratio 0..1 — only shown if > 0.2 in the date row. */
+  silenceRatio?: number;
+  /** Which category pill is active. */
+  bucket?: "inbox" | "jam" | "loops" | "field" | "tracks";
+  /** Render the "✓ In Live" badge state in place of the Promote button. */
+  inLive?: boolean;
+  /** Render a fake (CSS-only) waveform image instead of a placeholder. */
+  fakeWaveform?: boolean;
+  /** Inline tag chips for the expanded panel. */
+  tags?: string[];
+  /** Engine-derived content type chip. */
+  contentType?: string;
+  /** Engine-derived source type chip. */
+  sourceType?: string;
+  /** Optional lineage breadcrumb. */
+  lineage?: { word: string; parent: string };
+  /** Initially expanded (default false). */
+  expanded?: boolean;
+  /** Hide certain expanded rows for cleaner storytelling. */
+  hideStems?: boolean;
+  /** Visually mark this card as currently "playing" (no scripting). */
+  playing?: boolean;
+  /** Optional unique id; auto-generated if absent. */
+  cardId?: string;
+}
+
+const {
+  title,
+  ext,
+  duration,
+  bpm,
+  keyStr,
+  date,
+  silenceRatio,
+  bucket = "inbox",
+  inLive = false,
+  fakeWaveform = true,
+  tags = [],
+  contentType,
+  sourceType,
+  lineage,
+  expanded = false,
+  hideStems = true,
+  playing = false,
+  cardId,
+} = Astro.props;
+
+const id = cardId ?? `bc-${Math.random().toString(36).slice(2, 10)}`;
+
+const keyInfo = (() => {
+  if (!keyStr) return { letter: null as string | null, mode: null as string | null };
+  const s = String(keyStr).trim();
+  let m = s.match(/^([A-Ga-g][#b]?)\s*(major|minor|maj|min)\b/i);
+  if (m) {
+    const mode = m[2].toLowerCase().startsWith("min") ? "minor" : "major";
+    return { letter: m[1].toUpperCase().replace("B", "b"), mode };
+  }
+  m = s.match(/^([A-Ga-g][#b]?)m$/);
+  if (m) return { letter: m[1].toUpperCase().replace("B", "b"), mode: "minor" };
+  m = s.match(/^([A-Ga-g][#b]?)$/);
+  if (m) return { letter: m[1].toUpperCase().replace("B", "b"), mode: "major" };
+  return { letter: s, mode: null };
+})();
+
+const CATEGORIES = [
+  { id: "jam", label: "JAM", kbd: "J" },
+  { id: "loops", label: "LOOP", kbd: "L" },
+  { id: "field", label: "FIELD", kbd: "F" },
+  { id: "tracks", label: "TRACK", kbd: "T" },
+] as const;
+---
+
+<article
+  class="bc-card"
+  data-bc
+  data-id={id}
+  data-bucket={bucket}
+  data-playing={playing ? "true" : "false"}
+  data-expanded={expanded ? "true" : "false"}
+  tabindex="0"
+  aria-label={`${title} — ${bucket}`}
+>
+  <div class="bc-grid">
+    <!-- Main column -->
+    <div class="bc-mid">
+      <h3 class="bc-title">
+        <button
+          type="button"
+          class="bc-title-edit"
+          data-bc-rename
+          title="Click to rename"
+        ><span class="bc-title-base" data-bc-title-text>{title}</span>{ext && <span class="bc-title-ext">{ext}</span>}</button>
+      </h3>
+
+      <div class="bc-wave-row">
+        <span class="bc-duration" aria-label="Duration">{duration}</span>
+        <div
+          class="bc-waveform"
+          data-bc-waveform
+          title="Click to play"
+        >
+          {fakeWaveform ? (
+            <div class="bc-fake-wave" aria-hidden="true">
+              {Array.from({ length: 56 }).map((_, i) => {
+                const h = 32 + Math.round(28 * Math.sin(i * 0.42) + 22 * Math.cos(i * 0.83));
+                const pct = Math.max(18, Math.min(96, h));
+                return <span class="bc-fake-wave-bar" style={`height:${pct}%`}></span>;
+              })}
+            </div>
+          ) : (
+            <div class="bc-wave-placeholder">no waveform yet</div>
+          )}
+          <div class="bc-playhead" data-bc-playhead></div>
+        </div>
+      </div>
+
+      <button
+        type="button"
+        class="bc-date"
+        data-bc-expand
+        aria-expanded={expanded ? "true" : "false"}
+      >
+        {date ? (
+          <>
+            <span class="bc-date-rel">{date.rel}</span>
+            <span class="bc-date-bracket"> [</span><span class="bc-date-stamp">{date.stamp}</span><span class="bc-date-bracket">]</span>
+            <span class="bc-date-sep"> · </span>
+            <span class="bc-date-days">{date.days}</span>
+            {silenceRatio !== undefined && silenceRatio > 0.2 && (
+              <>
+                <span class="bc-date-sep"> · </span>
+                <span class="bc-silence">{Math.round(silenceRatio * 100)}% silent</span>
+              </>
+            )}
+          </>
+        ) : (
+          <span class="bc-date-rel">date unknown</span>
+        )}
+        <span class="bc-date-chev" aria-hidden="true">▾</span>
+      </button>
+
+      <p class="bc-status" data-bc-status aria-live="polite"></p>
+    </div>
+
+    <!-- J/L/F/T pill -->
+    <div class="bc-cat" role="group" aria-label="Assign to category">
+      {CATEGORIES.map((c) => (
+        <button
+          type="button"
+          class:list={["bc-cat-btn", { active: bucket === c.id }]}
+          data-bc-cat={c.id}
+          aria-label={`Assign to ${c.label}`}
+        >
+          <span class="bc-cat-label">{c.label}</span>
+        </button>
+      ))}
+    </div>
+
+    <!-- Archive column -->
+    <button
+      type="button"
+      class="bc-trash"
+      data-bc-trash
+      title="Hold to archive"
+      aria-label="Hold to archive"
+    >
+      <span class="bc-hold-fill" aria-hidden="true"></span>
+      <span class="bc-hold-glyph">✕</span>
+    </button>
+  </div>
+
+  <!-- Expanded panel -->
+  <div class="bc-exp" data-bc-exp hidden={!expanded}>
+    <dl class="bc-dl">
+      <dt>Tags</dt>
+      <dd class="bc-tags">
+        <button
+          type="button"
+          class="bc-chip bc-chip-pub"
+          data-bc-pub
+          aria-pressed="false"
+          title="Mark public on /sounds"
+        >○ PUBLIC</button>
+        {contentType && <span class="bc-chip bc-chip-derived">{contentType}</span>}
+        {sourceType && <span class="bc-chip bc-chip-derived">{sourceType}</span>}
+        {tags.map((t) => (
+          <span class="bc-chip bc-chip-tag">
+            {t}
+            <button type="button" class="bc-chip-x" aria-label={`Remove ${t}`}>×</button>
+          </span>
+        ))}
+        <button type="button" class="bc-chip bc-chip-add">+ add</button>
+      </dd>
+
+      {(bpm || keyStr) && (
+        <>
+          <dt>Tech</dt>
+          <dd class="bc-tech">
+            {bpm && (
+              <>
+                <span class="bc-bpm">{Math.round(bpm)}</span>
+                <span class="bc-bpm-unit">BPM</span>
+              </>
+            )}
+            {bpm && keyStr && <span class="bc-tech-sep">·</span>}
+            {keyStr && (
+              <>
+                <span class="bc-key">{keyInfo.letter || "—"}</span>
+                {keyInfo.mode && <span class="bc-key-mode">{keyInfo.mode}</span>}
+              </>
+            )}
+          </dd>
+        </>
+      )}
+
+      {lineage && (
+        <>
+          <dt>Lineage</dt>
+          <dd class="bc-lineage">
+            <span class="bc-lineage-from">from {lineage.word}:</span>
+            <span class="bc-lineage-link">{lineage.parent}</span>
+          </dd>
+        </>
+      )}
+
+      {bucket === "loops" && (
+        <>
+          <dt>Live</dt>
+          <dd>
+            {inLive ? (
+              <span class="bc-in-live">✓ In Live</span>
+            ) : (
+              <button type="button" class="bc-promote" data-bc-promote>→ Promote to Live</button>
+            )}
+          </dd>
+        </>
+      )}
+
+      {!hideStems && (
+        <>
+          <dt>Stems</dt>
+          <dd class="bc-stems">
+            <button type="button" class="bc-stem-btn">2-stem<span class="bc-stem-sub">vox · inst</span></button>
+            <button type="button" class="bc-stem-btn">4-stem<span class="bc-stem-sub">drm · bass · vox · oth</span></button>
+          </dd>
+          <dt>Engineer</dt>
+          <dd>
+            <button type="button" class="bc-eng-btn">→ Send to Engineer</button>
+          </dd>
+        </>
+      )}
+    </dl>
+  </div>
+</article>
+
+<script>
+  // Wire up the interactions a single time, scoped to all .bc-card elements
+  // on the page. Idempotent — safe to inject multiple times via Astro's
+  // bundling because we de-dupe via a marker attribute.
+  const setup = () => {
+    document.querySelectorAll<HTMLElement>(".bc-card[data-bc]").forEach((card) => {
+      if (card.dataset.bcWired === "true") return;
+      card.dataset.bcWired = "true";
+
+      // Click waveform → fake play. Click again → pause. Auto-resets after sweep.
+      const wave = card.querySelector<HTMLElement>("[data-bc-waveform]");
+      const head = card.querySelector<HTMLElement>("[data-bc-playhead]");
+      let playTimer: number | null = null;
+      let startedAt = 0;
+      let duration = 5500;
+
+      const stopPlay = () => {
+        if (playTimer !== null) {
+          cancelAnimationFrame(playTimer);
+          playTimer = null;
+        }
+        card.dataset.playing = "false";
+        if (head) head.style.left = "0%";
+      };
+      const startPlay = () => {
+        startedAt = performance.now();
+        card.dataset.playing = "true";
+        const tick = () => {
+          const t = (performance.now() - startedAt) / duration;
+          if (head) head.style.left = `${Math.min(100, t * 100)}%`;
+          if (t >= 1) {
+            stopPlay();
+            return;
+          }
+          playTimer = requestAnimationFrame(tick);
+        };
+        playTimer = requestAnimationFrame(tick);
+      };
+      wave?.addEventListener("click", (e) => {
+        e.preventDefault();
+        if (card.dataset.playing === "true") stopPlay();
+        else startPlay();
+      });
+
+      // Category toggle.
+      card.querySelectorAll<HTMLElement>("[data-bc-cat]").forEach((btn) => {
+        btn.addEventListener("click", () => {
+          const id = btn.dataset.bcCat!;
+          card.dataset.bucket = id;
+          card.querySelectorAll<HTMLElement>(".bc-cat-btn").forEach((b) => {
+            b.classList.toggle("active", b.dataset.bcCat === id);
+          });
+          showStatus(card, `bucket → ${id}`);
+        });
+      });
+
+      // Expand toggle.
+      const expandBtn = card.querySelector<HTMLElement>("[data-bc-expand]");
+      const exp = card.querySelector<HTMLElement>("[data-bc-exp]");
+      expandBtn?.addEventListener("click", () => {
+        const open = card.dataset.expanded !== "true";
+        card.dataset.expanded = open ? "true" : "false";
+        expandBtn.setAttribute("aria-expanded", open ? "true" : "false");
+        if (exp) {
+          if (open) exp.removeAttribute("hidden");
+          else exp.setAttribute("hidden", "");
+        }
+      });
+
+      // Inline rename.
+      card.querySelector<HTMLElement>("[data-bc-rename]")?.addEventListener("click", (e) => {
+        e.preventDefault();
+        const textEl = card.querySelector<HTMLElement>("[data-bc-title-text]");
+        if (!textEl) return;
+        textEl.setAttribute("contenteditable", "true");
+        textEl.focus();
+        const sel = window.getSelection();
+        const range = document.createRange();
+        range.selectNodeContents(textEl);
+        sel?.removeAllRanges();
+        sel?.addRange(range);
+        const finish = () => {
+          textEl.removeAttribute("contenteditable");
+          showStatus(card, "renamed (demo)");
+          textEl.removeEventListener("blur", finish);
+          textEl.removeEventListener("keydown", onKey);
+        };
+        const onKey = (k: KeyboardEvent) => {
+          if (k.key === "Enter" || k.key === "Escape") {
+            k.preventDefault();
+            textEl.blur();
+          }
+        };
+        textEl.addEventListener("blur", finish);
+        textEl.addEventListener("keydown", onKey);
+      });
+
+      // PUBLIC chip toggle.
+      card.querySelector<HTMLElement>("[data-bc-pub]")?.addEventListener("click", (e) => {
+        e.preventDefault();
+        const btn = e.currentTarget as HTMLElement;
+        const on = btn.classList.toggle("on");
+        btn.setAttribute("aria-pressed", on ? "true" : "false");
+        btn.textContent = on ? "● PUBLIC" : "○ PUBLIC";
+      });
+
+      // Hold-to-archive (0.45s).
+      const trash = card.querySelector<HTMLElement>("[data-bc-trash]");
+      let holdT: number | null = null;
+      let holding = false;
+      const startHold = () => {
+        if (holding) return;
+        holding = true;
+        trash?.setAttribute("data-holding", "true");
+        holdT = window.setTimeout(() => {
+          card.dataset.archiving = "true";
+          showStatus(card, "Archived. UNDO →", true);
+          window.setTimeout(() => {
+            delete card.dataset.archiving;
+            showStatus(card, "");
+          }, 6000);
+          cancelHold();
+        }, 450);
+      };
+      const cancelHold = () => {
+        holding = false;
+        if (holdT !== null) {
+          window.clearTimeout(holdT);
+          holdT = null;
+        }
+        trash?.removeAttribute("data-holding");
+      };
+      trash?.addEventListener("mousedown", startHold);
+      trash?.addEventListener("touchstart", startHold, { passive: true });
+      trash?.addEventListener("mouseup", cancelHold);
+      trash?.addEventListener("mouseleave", cancelHold);
+      trash?.addEventListener("touchend", cancelHold);
+    });
+  };
+
+  const showStatus = (card: HTMLElement, msg: string, persist = false) => {
+    const el = card.querySelector<HTMLElement>("[data-bc-status]");
+    if (!el) return;
+    el.textContent = msg;
+    if (!persist && msg) {
+      window.setTimeout(() => {
+        if (el.textContent === msg) el.textContent = "";
+      }, 1800);
+    }
+  };
+
+  setup();
+  // Also wire any cards that render in via client-side fragments later.
+  const mo = new MutationObserver(setup);
+  mo.observe(document.body, { childList: true, subtree: true });
+</script>

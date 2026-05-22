@@ -1,0 +1,226 @@
+---
+// Layout wrapper for rich, custom case-study pages. Pins the portal dark
+// palette via [data-theme="dark"] so the public site's theme cycling
+// doesn't reach in. Provides the shared brand tokens used by the CS
+// primitives.
+import "@fontsource-variable/geist";
+import "@fontsource-variable/space-grotesk";
+import "../../styles/tokens.css";
+import Footer from "../Footer.astro";
+
+interface Props {
+  title: string;
+  description?: string;
+  /** Open-graph cover URL. Falls back to /og-image.png. */
+  ogImage?: string;
+}
+
+const { title, description, ogImage = "/og-image.png" } = Astro.props;
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>{title}</title>
+    {description && <meta name="description" content={description} />}
+    <meta property="og:title" content={title} />
+    {description && <meta property="og:description" content={description} />}
+    <meta property="og:image" content={ogImage} />
+    <meta property="og:type" content="article" />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    {/* Tolo.Cloud case study runs in the portal's pinned dark theme so the
+        page looks and feels like the product it describes. The public site
+        theme cycler is bypassed entirely on this route. */}
+    <script is:inline>
+      document.documentElement.dataset.theme = "dark";
+    </script>
+  </head>
+  <body class="cs-body">
+    <header class="cs-nav">
+      <div class="inner">
+        <a class="back" href="/#work">← back to selected work</a>
+        <a class="resume" href="/resume">resume →</a>
+      </div>
+    </header>
+
+    <main class="cs-main">
+      <slot />
+    </main>
+
+    <Footer />
+  </body>
+</html>
+
+<style is:global>
+  /* Custom case-study pages run on a focused, dark canvas. They opt OUT
+     of the public-site theme cycler — the <script is:inline> in the head
+     pins data-theme="dark" so the only palette in play is the portal's. */
+  :root[data-theme="dark"] .cs-body {
+    /* Brand tokens lifted from the portal so the case study can speak
+       with the product's voice. */
+    --brand-pink: #ff2761;
+    --brand-orange: #ff5a3c;
+    --brand-yellow: #ffb347;
+    --brand-cyan: #0ec4fc;
+    --brand-green: #00ff4d;
+    --brand-grad: linear-gradient(90deg, #ff2761 0%, #ff5a3c 50%, #ffb347 100%);
+    --brand-grad-soft: linear-gradient(90deg, rgba(255,39,97,0.18) 0%, rgba(255,90,60,0.18) 50%, rgba(255,179,71,0.18) 100%);
+
+    --cs-bg: #07060c;
+    --cs-surface: #0f0a12;
+    --cs-surface-2: #15101a;
+    --cs-text: #f5f1e8;
+    --cs-text-muted: rgba(245, 241, 232, 0.62);
+    --cs-text-dim: rgba(245, 241, 232, 0.38);
+    --cs-line: rgba(245, 241, 232, 0.10);
+    --cs-line-strong: rgba(245, 241, 232, 0.22);
+
+    background: var(--cs-bg);
+    color: var(--cs-text);
+    font-family: "Geist Variable", ui-sans-serif, system-ui, sans-serif;
+    line-height: 1.55;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+
+  .cs-body * {
+    box-sizing: border-box;
+  }
+
+  /* Subtle starfield-ish noise so the dark canvas doesn't feel flat. The
+     speckles.svg is reused from the public homepage; here we cut its
+     alpha way down. */
+  .cs-body::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    background-image: url("/speckles.svg");
+    background-repeat: repeat;
+    opacity: 0.06;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .cs-body .cs-main,
+  .cs-body .cs-nav,
+  .cs-body footer {
+    position: relative;
+    z-index: 1;
+  }
+
+  /* Slim top nav — back link on the left, resume on the right. Lower
+     gravity than the portfolio's main header so it doesn't compete with
+     the hero. */
+  .cs-nav {
+    padding: 22px 0;
+    border-bottom: 1px solid var(--cs-line);
+  }
+  .cs-nav .inner {
+    max-width: 1280px;
+    margin: 0 auto;
+    padding: 0 32px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .cs-nav .back,
+  .cs-nav .resume {
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 11px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--cs-text-muted);
+    text-decoration: none;
+    padding: 6px 10px;
+    border: 1px solid transparent;
+    border-radius: 2px;
+    transition: color 160ms ease, border-color 160ms ease;
+  }
+  .cs-nav .back:hover,
+  .cs-nav .back:focus-visible,
+  .cs-nav .resume:hover,
+  .cs-nav .resume:focus-visible {
+    color: var(--cs-text);
+    border-color: var(--cs-line-strong);
+    outline: none;
+  }
+  .cs-nav .resume {
+    color: var(--brand-orange);
+    border-color: rgba(255, 90, 60, 0.55);
+  }
+  .cs-nav .resume:hover,
+  .cs-nav .resume:focus-visible {
+    color: var(--cs-text);
+    border-color: var(--brand-orange);
+    background: rgba(255, 90, 60, 0.08);
+  }
+
+  /* Body-wide section spacing. Sections are full-bleed (1fr) and content
+     lives in .cs-inner which limits to a generous reading width but lets
+     figures break out via .cs-bleed. */
+  .cs-main {
+    padding: 0 0 96px;
+  }
+
+  .cs-inner {
+    max-width: 1160px;
+    margin: 0 auto;
+    padding: 0 32px;
+  }
+  .cs-narrow {
+    max-width: 720px;
+    margin: 0 auto;
+    padding: 0 32px;
+  }
+  .cs-wide {
+    max-width: 1440px;
+    margin: 0 auto;
+    padding: 0 32px;
+  }
+  /* Full-bleed escape for figures that want every available pixel. */
+  .cs-bleed {
+    width: 100vw;
+    margin-left: 50%;
+    transform: translateX(-50%);
+  }
+
+  /* Typography defaults for case-study prose. Light cream on near-black,
+     a hair larger than the public-site default so it reads at scale. */
+  .cs-main p {
+    font-size: 17px;
+    line-height: 1.65;
+    color: rgba(245, 241, 232, 0.88);
+    margin: 0 0 18px;
+    max-width: 64ch;
+  }
+  .cs-main p:last-child { margin-bottom: 0; }
+  .cs-main p code,
+  .cs-main li code,
+  .cs-main td code {
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 0.88em;
+    background: rgba(14, 196, 252, 0.08);
+    color: var(--brand-cyan);
+    border: 1px solid rgba(14, 196, 252, 0.18);
+    border-radius: 3px;
+    padding: 1px 5px;
+  }
+  .cs-main strong { color: var(--cs-text); font-weight: 700; }
+  .cs-main a {
+    color: var(--cs-text);
+    text-decoration: underline;
+    text-decoration-color: var(--brand-orange);
+    text-underline-offset: 4px;
+    text-decoration-thickness: 1px;
+  }
+  .cs-main a:hover { text-decoration-thickness: 2px; }
+
+  /* Footer on the dark case-study route should sit on the dark canvas
+     without re-introducing the public theme tokens. */
+  .cs-body footer {
+    border-top: 1px solid var(--cs-line);
+    margin-top: 64px;
+  }
+</style>

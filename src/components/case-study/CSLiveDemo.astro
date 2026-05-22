@@ -1,0 +1,92 @@
+---
+// Wraps an interactive demo with a "LIVE" badge and caption. The frame is
+// styled like a piece of glass studio gear sitting in front of you — the
+// affordance to read it as something you can touch.
+interface Props {
+  /** Label shown on the LIVE badge. Default "LIVE". */
+  label?: string;
+  /** Caption rendered below the demo. */
+  caption?: string;
+  /** Allow the demo frame to bleed full-width. */
+  bleed?: boolean;
+  /** Adjusts inner padding. "tight" for cards, "comfy" (default) for diagrams. */
+  pad?: "tight" | "comfy" | "none";
+}
+
+const { label = "LIVE", caption, bleed = false, pad = "comfy" } = Astro.props;
+---
+
+<figure class:list={["cs-live", `cs-live-pad-${pad}`, { "cs-bleed": bleed }]}>
+  <div class="cs-live-frame">
+    <span class="cs-live-badge" aria-label="Live interactive demo">
+      <span class="cs-live-dot" aria-hidden="true"></span>
+      {label}
+    </span>
+    <slot />
+  </div>
+  {caption && <figcaption class="cs-live-caption">{caption}</figcaption>}
+</figure>
+
+<style>
+  .cs-live {
+    /* Avoid shorthand `margin` here — it would reset margin-left to 0 and
+       break the .cs-bleed trick (which relies on margin-left: 50%). */
+    margin-top: 32px;
+    margin-bottom: 32px;
+  }
+  .cs-live-frame {
+    position: relative;
+    background: linear-gradient(180deg, var(--cs-surface) 0%, #08070d 100%);
+    border: 1px solid var(--cs-line);
+    border-radius: 6px;
+    box-shadow:
+      0 1px 0 rgba(245, 241, 232, 0.04) inset,
+      0 24px 60px -28px rgba(0, 0, 0, 0.75);
+  }
+  .cs-live-pad-comfy .cs-live-frame { padding: 38px; }
+  .cs-live-pad-tight .cs-live-frame { padding: 20px; }
+  .cs-live-pad-none .cs-live-frame { padding: 0; overflow: hidden; }
+
+  .cs-live-badge {
+    position: absolute;
+    top: 14px;
+    right: 14px;
+    z-index: 5;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 9.5px;
+    font-weight: 700;
+    letter-spacing: 0.24em;
+    text-transform: uppercase;
+    color: var(--brand-green);
+    background: rgba(0, 255, 77, 0.06);
+    border: 1px solid rgba(0, 255, 77, 0.45);
+    border-radius: 2px;
+    padding: 4px 8px;
+    pointer-events: none;
+  }
+  .cs-live-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--brand-green);
+    box-shadow: 0 0 6px var(--brand-green);
+    animation: cs-live-pulse 1.6s ease-in-out infinite;
+  }
+  @keyframes cs-live-pulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.42; transform: scale(0.8); }
+  }
+
+  .cs-live-caption {
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-style: italic;
+    font-size: 12.5px;
+    color: rgba(245, 241, 232, 0.55);
+    line-height: 1.5;
+    margin-top: 14px;
+    max-width: 80ch;
+  }
+</style>

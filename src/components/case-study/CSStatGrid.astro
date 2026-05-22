@@ -1,0 +1,141 @@
+---
+// Animated count-up stats grid. Each stat lights up when scrolled into
+// view; the digits animate from 0 to the target value over ~900ms.
+
+interface Stat {
+  /** Numeric target — for count-up. */
+  n: number;
+  /** Suffix appended after the number (e.g. "%", "+", "k"). */
+  suffix?: string;
+  /** Prefix prepended before the number (rare — usually used for "$"). */
+  prefix?: string;
+  /** Label below the number. */
+  label: string;
+  /** Format hint: "int" (default) for whole numbers, "decimal" for one-decimal floats, "compact" for k/M. */
+  format?: "int" | "decimal" | "compact";
+  /** Accent color slot. */
+  color?: "pink" | "cyan" | "yellow" | "green" | "white";
+}
+
+interface Props {
+  stats: Stat[];
+}
+
+const { stats } = Astro.props;
+---
+
+<div class="cs-stats">
+  {stats.map((s) => (
+    <div
+      class:list={["cs-stat", `cs-stat-${s.color ?? "white"}`]}
+      data-target={String(s.n)}
+      data-format={s.format ?? "int"}
+    >
+      <div class="cs-stat-n">
+        {s.prefix && <span class="cs-stat-prefix">{s.prefix}</span>}
+        <span class="cs-stat-num" data-stat-num>0</span>
+        {s.suffix && <span class="cs-stat-suffix">{s.suffix}</span>}
+      </div>
+      <div class="cs-stat-lbl">{s.label}</div>
+    </div>
+  ))}
+</div>
+
+<script>
+  // Count-up on first scroll-into-view. Uses IntersectionObserver and the
+  // requestAnimationFrame clock.
+  const els = document.querySelectorAll<HTMLElement>(".cs-stat");
+  const formatInt = (n: number) => Math.round(n).toLocaleString("en-US");
+  const formatDecimal = (n: number) => n.toFixed(1);
+  const formatCompact = (n: number) => {
+    if (n >= 1000) return (n / 1000).toFixed(1) + "k";
+    return Math.round(n).toString();
+  };
+
+  const animate = (el: HTMLElement) => {
+    const target = Number(el.dataset.target ?? "0");
+    const format = el.dataset.format ?? "int";
+    const out = el.querySelector<HTMLElement>("[data-stat-num]");
+    if (!out) return;
+    const duration = 1100;
+    const start = performance.now();
+    const tick = (now: number) => {
+      const t = Math.min(1, (now - start) / duration);
+      const eased = 1 - Math.pow(1 - t, 3);
+      const val = target * eased;
+      if (format === "decimal") out.textContent = formatDecimal(val);
+      else if (format === "compact") out.textContent = formatCompact(val);
+      else out.textContent = formatInt(val);
+      if (t < 1) requestAnimationFrame(tick);
+    };
+    requestAnimationFrame(tick);
+  };
+
+  const io = new IntersectionObserver((entries) => {
+    for (const e of entries) {
+      if (e.isIntersecting) {
+        animate(e.target as HTMLElement);
+        io.unobserve(e.target);
+      }
+    }
+  }, { threshold: 0.4 });
+  els.forEach((el) => io.observe(el));
+</script>
+
+<style>
+  .cs-stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 14px;
+    margin: 32px 0;
+  }
+  .cs-stat {
+    background: var(--cs-surface);
+    border: 1px solid var(--cs-line);
+    padding: 24px 22px;
+    border-radius: 4px;
+    transition: border-color 200ms ease;
+  }
+  .cs-stat:hover { border-color: rgba(245, 241, 232, 0.22); }
+  .cs-stat-n {
+    display: flex;
+    align-items: baseline;
+    gap: 4px;
+    margin-bottom: 8px;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-style: italic;
+    font-weight: 700;
+    font-feature-settings: "tnum";
+  }
+  .cs-stat-num {
+    font-size: clamp(36px, 5vw, 56px);
+    line-height: 0.95;
+  }
+  .cs-stat-prefix,
+  .cs-stat-suffix {
+    font-size: clamp(22px, 3vw, 32px);
+    opacity: 0.78;
+  }
+  .cs-stat-lbl {
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 11px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: rgba(245, 241, 232, 0.55);
+  }
+  .cs-stat-pink .cs-stat-num,
+  .cs-stat-pink .cs-stat-prefix,
+  .cs-stat-pink .cs-stat-suffix { color: var(--brand-pink); }
+  .cs-stat-cyan .cs-stat-num,
+  .cs-stat-cyan .cs-stat-prefix,
+  .cs-stat-cyan .cs-stat-suffix { color: var(--brand-cyan); }
+  .cs-stat-yellow .cs-stat-num,
+  .cs-stat-yellow .cs-stat-prefix,
+  .cs-stat-yellow .cs-stat-suffix { color: var(--brand-yellow); }
+  .cs-stat-green .cs-stat-num,
+  .cs-stat-green .cs-stat-prefix,
+  .cs-stat-green .cs-stat-suffix { color: var(--brand-green); }
+  .cs-stat-white .cs-stat-num,
+  .cs-stat-white .cs-stat-prefix,
+  .cs-stat-white .cs-stat-suffix { color: var(--cs-text); }
+</style>
