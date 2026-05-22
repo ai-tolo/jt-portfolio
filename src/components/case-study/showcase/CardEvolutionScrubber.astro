@@ -1,52 +1,101 @@
 ---
-// Live "the card grew up" demo. One BucketCard markup, six design eras
-// applied via data-round attribute. Drag the slider (or click a dot) to
-// scrub through history.
+// "The card grew up" — capability-evolution scrubber.
 //
-// Each round flips a single .ce-round-N class on the card root. The
-// per-round CSS targets that class to morph the visual treatment back
-// in time (cassette tape labels, lettered J/L/F/T tiles, pink-orange
-// wave buttons, etc.). One DOM, six designs.
+// This is the spine of the case study. Each era is a real git commit
+// where the card gained a capability the previous era couldn't do.
+// The visual shifts are real but secondary — the headline is *what the
+// row could DO* at each stage. Drag the slider to walk through history.
+//
+// Sources: lifted markup + the surviving CSS conventions per era from
+// these commits on the jt-portfolio repo:
+//   E0  6666ed3  2026-05-12  Initial portfolio (no portal, no playback)
+//   E1  d79f9b2  2026-05-15  First portal Card: filename + metadata + Listen link
+//   E2  d47581f  2026-05-17  BucketCard arrives: waveform image + ▶ Audition btn
+//   E3  de712c2  2026-05-18  Waveform doubles as play surface; ▶ btn deleted
+//   E4  61b99b3  2026-05-18  Expand panel (tags + tech + lineage); J/L/F/T bucketing
+//   E5  c1b81f5  2026-05-21  Crop tool (✂), stem split (2/4), spectrogram, lineage chips
+//   E6  d5c8871  2026-05-21  "→ Send to Engineer" button — card opens a pipeline
 ---
 
 <div class="ce-stage" data-ce-stage>
+  <!-- LEFT: real card markup for the current era. -->
   <div class="ce-card-frame">
-    <article class="ce-card" data-ce-card data-ce-round="5" data-bucket="loops">
-      <!-- Round 1 (cassette-spine): date column lives on the right, title row sits center-ish. Other rounds: date moves to subtitle below. -->
-      <div class="ce-grid">
-        <div class="ce-mid">
-          <!-- R1 only: a tape-label "Public + date" strip above the title. -->
-          <div class="ce-spine">
-            <span class="ce-spine-pub">○ PUBLIC</span>
-            <span class="ce-spine-date">06 / 15 / 2024</span>
+    <!-- The wrapper carries data-era which scopes the per-era stylesheet
+         below. Markup is the union of all eras' DOM; per-era CSS hides
+         what doesn't belong. -->
+    <article class="ce-card" data-ce-card data-era="6">
+      <!-- ───── E0 ───── public portfolio WorkCard (no portal yet) -->
+      <div class="ce-e0">
+        <div class="ce-e0-num">02</div>
+        <h3 class="ce-e0-title">Tolo.Cloud</h3>
+        <p class="ce-e0-sub">A creative archive that doesn't try to be creative for me.</p>
+        <p class="ce-e0-tags"><span>AI Tooling</span> · <span>Web</span> · <span>Shipped</span></p>
+        <a class="ce-e0-link" href="#">Read case study →</a>
+      </div>
+
+      <!-- ───── E1 ───── First portal Card.astro -->
+      <div class="ce-e1">
+        <header class="ce-e1-meta">
+          <span class="ce-e1-eyebrow">VOICE MEMO</span>
+          <span class="ce-e1-date">Oct 23, 2024</span>
+        </header>
+        <h3 class="ce-e1-title">VOX_Tolo_0007.wav</h3>
+        <p class="ce-e1-summary">A short voice memo, captured between sets. Possible lyric fragment.</p>
+        <p class="ce-e1-audio"><span>0:30</span> · <span>VOICE-NOTE</span></p>
+        <ul class="ce-e1-tags">
+          <li>voice-memo</li><li>idea-fragment</li><li>first-person</li>
+        </ul>
+        <footer class="ce-e1-actions">
+          <button type="button" class="ce-e1-queue">+ Queue</button>
+          <a class="ce-e1-listen" href="#">Listen →</a>
+        </footer>
+      </div>
+
+      <!-- ───── E2 ───── First BucketCard: waveform image + dedicated ▶ -->
+      <div class="ce-e2">
+        <div class="ce-e2-wave">
+          <div class="ce-fake-wave ce-fake-wave-mid" aria-hidden="true">
+            {Array.from({ length: 56 }).map((_, i) => {
+              const h = 36 + Math.round(30 * Math.sin(i * 0.42) + 18 * Math.cos(i * 0.83));
+              return <span class="ce-fake-bar" style={`height:${Math.max(20, Math.min(96, h))}%`}></span>;
+            })}
           </div>
+        </div>
+        <header class="ce-e2-head">
+          <h3 class="ce-e2-title">NOIZU_125_shaker_loop_tight_01.wav</h3>
+          <button type="button" class="ce-e2-play" aria-label="Audition">▶ <span class="ce-e2-kbd">Space</span></button>
+        </header>
+        <div class="ce-e2-bucket-row">
+          <span class="ce-e2-badge">Loop</span>
+          <span class="ce-e2-kbds"><kbd>V</kbd><kbd>L</kbd><kbd>S</kbd><kbd>X</kbd></span>
+        </div>
+      </div>
 
-          <!-- R2 only: a chunky kudos "Buckeye ⚡" ticker. -->
-          <div class="ce-kudos">
-            <span class="ce-kudos-lbl">KUDOS</span>
-            <span class="ce-kudos-bar">
-              <span class="ce-kudos-fill"></span>
-            </span>
-            <span class="ce-kudos-count">12 ⚡</span>
+      <!-- ───── E3 ───── Waveform IS the play surface -->
+      <div class="ce-e3">
+        <h3 class="ce-e3-title">NOIZU_125_shaker_loop_tight_01<span class="ce-e3-ext">.wav</span></h3>
+        <div class="ce-e3-wave-row">
+          <span class="ce-e3-dur">0:04</span>
+          <div class="ce-e3-wave">
+            <div class="ce-fake-wave" aria-hidden="true">
+              {Array.from({ length: 56 }).map((_, i) => {
+                const h = 36 + Math.round(30 * Math.sin(i * 0.42) + 18 * Math.cos(i * 0.83));
+                return <span class="ce-fake-bar" style={`height:${Math.max(20, Math.min(96, h))}%`}></span>;
+              })}
+            </div>
+            <div class="ce-e3-playhead"></div>
           </div>
+        </div>
+        <span class="ce-e3-badge">Loop</span>
+      </div>
 
-          <h3 class="ce-title">
-            <span class="ce-title-text">NOIZU_125_shaker_loop_tight_01</span>
-            <span class="ce-title-ext">.wav</span>
-          </h3>
-
-          <!-- BPM/key — different rounds put it under TECH or as a subtitle. -->
-          <div class="ce-bpm-row">
-            <span class="ce-bpm-n">99</span>
-            <span class="ce-bpm-u">BPM</span>
-            <span class="ce-bpm-sep">·</span>
-            <span class="ce-key">E</span>
-            <span class="ce-key-mode">major</span>
-          </div>
-
-          <div class="ce-wave-row">
-            <span class="ce-duration">0:04</span>
-            <div class="ce-waveform">
+      <!-- ───── E4 ───── J/L/F/T bucketing + expand panel -->
+      <div class="ce-e4">
+        <div class="ce-e4-main">
+          <h3 class="ce-e4-title">NOIZU_125_shaker_loop_tight_01<span class="ce-e4-ext">.wav</span></h3>
+          <div class="ce-e4-wave-row">
+            <span class="ce-e4-dur">0:04</span>
+            <div class="ce-e4-wave">
               <div class="ce-fake-wave" aria-hidden="true">
                 {Array.from({ length: 56 }).map((_, i) => {
                   const h = 36 + Math.round(30 * Math.sin(i * 0.42) + 18 * Math.cos(i * 0.83));
@@ -54,110 +103,211 @@
                 })}
               </div>
             </div>
-            <button type="button" class="ce-crop" aria-label="Crop">✂</button>
           </div>
+          <button type="button" class="ce-e4-date">
+            <span>1y</span> <span>[06-15-2024]</span> <span class="ce-e4-chev">▾</span>
+          </button>
+          <dl class="ce-e4-exp">
+            <dt>TAGS</dt><dd><span class="ce-e4-chip">○ PUBLIC</span><span class="ce-e4-chip">loop</span><span class="ce-e4-chip">sample</span></dd>
+            <dt>TECH</dt><dd><span class="ce-e4-cy">99</span> BPM · <span class="ce-e4-cy">E</span> major</dd>
+            <dt>LINEAGE</dt><dd>from sample: <span class="ce-e4-link">NOIZU pack v3</span></dd>
+          </dl>
+        </div>
+        <div class="ce-e4-cat" role="group">
+          <button class="ce-e4-cat-btn"><span>JAM</span></button>
+          <button class="ce-e4-cat-btn active"><span>LOOP</span></button>
+          <button class="ce-e4-cat-btn"><span>FIELD</span></button>
+          <button class="ce-e4-cat-btn"><span>TRACK</span></button>
+        </div>
+        <button class="ce-e4-x">✕</button>
+      </div>
 
-          <!-- R3+ date subtitle. -->
-          <div class="ce-date-sub">
-            <span class="ce-date-rel">1y</span>
-            <span class="ce-date-bracket"> [</span><span class="ce-date-stamp">06-15-2024</span><span class="ce-date-bracket">]</span>
-            <span class="ce-date-sep"> · </span>
-            <span class="ce-date-days">704d</span>
-            <span class="ce-date-chev">▾</span>
+      <!-- ───── E5 ───── Crop ✂, stem split (2/4), spectrogram, Promote -->
+      <div class="ce-e5">
+        <div class="ce-e5-main">
+          <h3 class="ce-e5-title">NOIZU_125_shaker_loop_tight_01<span class="ce-e5-ext">.wav</span></h3>
+          <div class="ce-e5-wave-row">
+            <span class="ce-e5-dur">0:04</span>
+            <div class="ce-e5-wave">
+              <div class="ce-fake-wave" aria-hidden="true">
+                {Array.from({ length: 56 }).map((_, i) => {
+                  const h = 36 + Math.round(30 * Math.sin(i * 0.42) + 18 * Math.cos(i * 0.83));
+                  return <span class="ce-fake-bar" style={`height:${Math.max(20, Math.min(96, h))}%`}></span>;
+                })}
+              </div>
+            </div>
+            <button type="button" class="ce-e5-crop" title="Crop a loop">✂</button>
           </div>
+          <button type="button" class="ce-e5-date">
+            <span>1y</span> <span>[06-15-2024]</span> · <span class="ce-e5-days">704d</span>
+          </button>
+          <dl class="ce-e5-exp">
+            <dt>SPECTRO</dt><dd><span class="ce-e5-spec">▸ preview</span></dd>
+            <dt>STEMS</dt>
+            <dd>
+              <button class="ce-e5-stem">2-stem<span>vox · inst</span></button>
+              <button class="ce-e5-stem">4-stem<span>drm · bass · vox · oth</span></button>
+            </dd>
+            <dt>LIVE</dt>
+            <dd><button class="ce-e5-promote">→ Promote to Live</button></dd>
+          </dl>
         </div>
-
-        <!-- Date column for R1 cassette-spine only. -->
-        <div class="ce-date-col">
-          <span class="ce-date-col-day">15</span>
-          <span class="ce-date-col-mon">JUN</span>
-          <span class="ce-date-col-yr">2024</span>
+        <div class="ce-e5-cat" role="group">
+          <button class="ce-e5-cat-btn"><span>JAM</span></button>
+          <button class="ce-e5-cat-btn active"><span>LOOP</span></button>
+          <button class="ce-e5-cat-btn"><span>FIELD</span></button>
+          <button class="ce-e5-cat-btn"><span>TRACK</span></button>
         </div>
+        <button class="ce-e5-x">✕</button>
+      </div>
 
-        <!-- J/L/F/T — same data, different layouts per round. -->
-        <div class="ce-cat" role="group" aria-label="Category">
-          <button type="button" class="ce-cat-btn" data-bucket="jam"><span>JAM</span></button>
-          <button type="button" class="ce-cat-btn active" data-bucket="loops"><span>LOOP</span></button>
-          <button type="button" class="ce-cat-btn" data-bucket="field"><span>FIELD</span></button>
-          <button type="button" class="ce-cat-btn" data-bucket="tracks"><span>TRACK</span></button>
+      <!-- ───── E6 ───── Send-to-Engineer pipeline button arrives -->
+      <div class="ce-e6">
+        <div class="ce-e6-main">
+          <h3 class="ce-e6-title">NOIZU_125_shaker_loop_tight_01<span class="ce-e6-ext">.wav</span></h3>
+          <div class="ce-e6-wave-row">
+            <span class="ce-e6-dur">0:04</span>
+            <div class="ce-e6-wave">
+              <div class="ce-fake-wave" aria-hidden="true">
+                {Array.from({ length: 56 }).map((_, i) => {
+                  const h = 36 + Math.round(30 * Math.sin(i * 0.42) + 18 * Math.cos(i * 0.83));
+                  return <span class="ce-fake-bar" style={`height:${Math.max(20, Math.min(96, h))}%`}></span>;
+                })}
+              </div>
+            </div>
+            <button type="button" class="ce-e6-crop" title="Crop a loop">✂</button>
+          </div>
+          <button type="button" class="ce-e6-date">
+            <span>1y</span> <span>[06-15-2024]</span> · <span class="ce-e6-days">704d</span>
+          </button>
+          <dl class="ce-e6-exp">
+            <dt>STEMS</dt>
+            <dd>
+              <button class="ce-e6-stem">2-stem</button>
+              <button class="ce-e6-stem">4-stem</button>
+            </dd>
+            <dt>LIVE</dt><dd><span class="ce-e6-in-live">✓ In Live</span></dd>
+            <dt>ENGINEER</dt>
+            <dd><button class="ce-e6-eng">→ Send to Engineer</button></dd>
+          </dl>
         </div>
-
-        <button type="button" class="ce-trash" aria-label="Archive">
-          <span class="ce-trash-glyph">✕</span>
-        </button>
+        <div class="ce-e6-cat" role="group">
+          <button class="ce-e6-cat-btn"><span>JAM</span></button>
+          <button class="ce-e6-cat-btn active"><span>LOOP</span></button>
+          <button class="ce-e6-cat-btn"><span>FIELD</span></button>
+          <button class="ce-e6-cat-btn"><span>TRACK</span></button>
+        </div>
+        <button class="ce-e6-x">✕</button>
       </div>
     </article>
+
+    <!-- Capability chips strip below the card. Each chip's data-since
+         flips to .on at its first appearance era. -->
+    <div class="ce-caps">
+      <span class="ce-caps-lbl">Card verbs</span>
+      <ul class="ce-caps-list">
+        <li data-since="1"><span>Queue</span></li>
+        <li data-since="1"><span>Listen →</span></li>
+        <li data-since="2"><span>Waveform</span></li>
+        <li data-since="2"><span>▶ Audition</span></li>
+        <li data-since="3"><span>Click waveform = play</span></li>
+        <li data-since="4"><span>Bucket J/L/F/T</span></li>
+        <li data-since="4"><span>Expand panel</span></li>
+        <li data-since="4"><span>Inline rename</span></li>
+        <li data-since="4"><span>Hold ✕ to archive</span></li>
+        <li data-since="5"><span>✂ Crop loop</span></li>
+        <li data-since="5"><span>Split stems</span></li>
+        <li data-since="5"><span>Spectrogram</span></li>
+        <li data-since="5"><span>→ Promote to Live</span></li>
+        <li data-since="6"><span>→ Send to Engineer</span></li>
+      </ul>
+    </div>
   </div>
 
+  <!-- RIGHT: scrubber + era meta -->
   <div class="ce-controls">
-    <ol class="ce-dots" role="listbox" aria-label="Design round">
-      {Array.from({ length: 6 }).map((_, i) => (
+    <ol class="ce-dots" role="listbox" aria-label="Era">
+      {Array.from({ length: 7 }).map((_, i) => (
         <li>
           <button
             type="button"
-            class={`ce-dot ${i === 5 ? "active" : ""}`}
-            data-ce-round={String(i)}
-            aria-label={`Round ${i + 1}`}
-          >{i + 1}</button>
+            class={`ce-dot ${i === 6 ? "active" : ""}`}
+            data-ce-era={String(i)}
+            aria-label={`Era ${i}`}
+          >{i}</button>
         </li>
       ))}
     </ol>
     <input
       type="range"
       min="0"
-      max="5"
+      max="6"
       step="1"
-      value="5"
+      value="6"
       class="ce-slider"
       data-ce-slider
-      aria-label="Design iteration"
+      aria-label="Capability era"
     />
     <div class="ce-meta">
-      <p class="ce-meta-eyebrow" data-ce-eyebrow>ROUND 6 · 2026-05-21</p>
-      <h4 class="ce-meta-title" data-ce-title>Selected · gradient reveal</h4>
-      <p class="ce-meta-note" data-ce-note>The selected card wears the brand gradient on the title chip alone. Everything else, restraint.</p>
-      <p class="ce-meta-commit" data-ce-commit>018c726 · scoped selected-card gradient to the title chip</p>
+      <p class="ce-meta-eyebrow" data-ce-eyebrow>E6 · 2026-05-22 · TODAY</p>
+      <h4 class="ce-meta-title" data-ce-title>The card opens a pipeline</h4>
+      <p class="ce-meta-since" data-ce-since>New this era: <strong>→ Send to Engineer</strong> — one click hands the row to the mix agent. Six variants render across three taste axes for A/B feedback.</p>
+      <p class="ce-meta-note" data-ce-note>Fewer pages, more verbs per row. The portal is now three tabs (Buckets / Projects / Engineer / Diary) — five tabs collapsed because the card carries the work.</p>
+      <p class="ce-meta-commit" data-ce-commit>d5c8871 · engineer ships to production</p>
     </div>
   </div>
 </div>
 
 <script>
-  const ROUNDS = [
+  const ERAS = [
     {
-      title: "Cassette-spine",
-      note: "Tape-label tags, letter tiles, a date-stack column on the right. Built off a Figma redesign.",
-      commit: "add664c · ported the Figma redesign with tape labels",
-      date: "2026-05-18",
+      eyebrow: "E0 · 2026-05-12 · DAY ZERO",
+      title: "A portfolio that couldn't play audio",
+      since: "What this era could DO: open a case study page. That's it. The card was a homepage list item linking to a Notion-rendered article.",
+      note: "There was no portal, no catalog, no playback. Just a public site with case studies fetched from a Notion database at build time.",
+      commit: "6666ed3 · Initial portfolio with Notion-backed content",
     },
     {
-      title: "Pink→orange buttons",
-      note: "Waveform-textured buttons, blue rings, a three-cell dashboard widget. Cassette spine stays.",
-      commit: "bd7dbe0 · gradient buttons, blue rings, 3-cell widget",
-      date: "2026-05-19",
+      eyebrow: "E1 · 2026-05-15 · FIRST PORTAL",
+      title: "Filename + metadata + a separate Listen page",
+      since: "New this era: the row exists. <strong>Queue</strong> for later, <strong>Listen →</strong> opens a dedicated Listen page. Nothing happens inside the card itself.",
+      note: "The portal had five tabs: Surprise, Library, Workbench, Projects, Listen. The card was a pointer, not a tool. Lots of pages, almost no functionality per row.",
+      commit: "d79f9b2 · publish: portal v1 with Card.astro",
     },
     {
-      title: "Title-led green",
-      note: "Title moves to the top in neon italic mono. Kudos lives as a ⚡ inline. Date becomes a subtitle.",
-      commit: "65f71e8 · title-led, date-right, inline kudos",
-      date: "2026-05-20",
+      eyebrow: "E2 · 2026-05-17 · WAVEFORM ARRIVES",
+      title: "The row earns a visual fingerprint",
+      since: "New this era: <strong>Waveform image</strong> (640×80 PNG from the engine's sweeper). A dedicated <strong>▶ Audition</strong> button. <strong>Bucket badges</strong> (Inbox / Voice Memo / Loop / Song / Trash).",
+      note: "First BucketCard. Triage finally has a shape, but the play button still lives in the row toolbar. The waveform is decorative; clicking it does nothing.",
+      commit: "d47581f · publish: Buckets surface with BucketCard",
     },
     {
-      title: "LCD duration",
-      note: "Duration becomes a pink LCD overlay to the left of the waveform. The selected-card treatment cools off.",
-      commit: "5a78a76 · LCD duration overlay; calmer selected state",
-      date: "2026-05-20",
+      eyebrow: "E3 · 2026-05-18 · THE WAVEFORM PLAYS",
+      title: "The card becomes alive",
+      since: "New this era: <strong>Click the waveform</strong> to play from the start. Click again to seek. Spacebar toggles. The dedicated ▶ button got deleted. The visual is the verb.",
+      note: "First time the catalog felt like a player, not a database browser. Long voice memos (a 2-hour drive ramble) could be navigated to a specific peak in seconds.",
+      commit: "de712c2 · waveform as the play surface",
     },
     {
-      title: "Medicine-container J/L/F/T",
-      note: "Lettered tiles become a vertical pill with shared horizontal dividers. Active tile picks up a pink-red wash.",
-      commit: "b391790 · vertical medicine container, full-word tiles",
-      date: "2026-05-21",
+      eyebrow: "E4 · 2026-05-18 · THE CARD CARRIES META",
+      title: "Bucket. Expand. Rename.",
+      since: "New this era: <strong>J/L/F/T pill</strong> bucketing in one click. <strong>Expand panel</strong> with tags, tech, lineage. <strong>Inline rename</strong> on the title. <strong>Hold ✕ to archive</strong> (0.45s, soft-delete with undo).",
+      note: "Surprise + Library got 307-redirected into Buckets the same evening. Five portal tabs collapsed into three because the card now did what the old tabs were supposed to.",
+      commit: "61b99b3 · publish: Buckets unified browse + triage",
     },
     {
-      title: "Selected · gradient reveal",
-      note: "The selected card wears the brand gradient on the title chip alone. Everything else, restraint.",
-      commit: "018c726 · scoped selected-card gradient to the title chip",
-      date: "2026-05-21",
+      eyebrow: "E5 · 2026-05-21 · THE CARD CARRIES TOOLS",
+      title: "Crop. Split. Promote.",
+      since: "New this era: <strong>✂ Crop tool</strong> on the waveform — slice a loop out of a 30-min jam. <strong>Stem split</strong> (2-stem vox/inst, 4-stem drm/bass/vox/oth). <strong>Spectrogram</strong> preview. <strong>→ Promote to Live</strong> copies + loudnorms into Ableton's own browser.",
+      note: "The card became a workbench. Pages disappeared — Workbench and Promote routes got hidden because every card now offered what those tabs offered. The row is the verb.",
+      commit: "c1b81f5 · publish: jam cropper, stem splitter, promote-to-live",
+    },
+    {
+      eyebrow: "E6 · 2026-05-22 · CARD → PIPELINE",
+      title: "The card opens a pipeline",
+      since: "New this era: <strong>→ Send to Engineer</strong>. One click hands the row to a mix agent that renders six variants across three taste axes. A/B pair-tinder feedback. Cross-axis memory.",
+      note: "From a Squarespace-style list of filenames to a row that can play, crop, split, promote, and trigger a downstream rendering pipeline. The portal tab count went from 5 to 4 (and the cards do more than the original 5 did combined).",
+      commit: "d5c8871 · Engineer (Build 5) ships to production",
     },
   ];
 
@@ -167,31 +317,41 @@
   const dots = stage?.querySelectorAll<HTMLElement>(".ce-dot");
   const eyebrow = stage?.querySelector<HTMLElement>("[data-ce-eyebrow]");
   const title = stage?.querySelector<HTMLElement>("[data-ce-title]");
+  const since = stage?.querySelector<HTMLElement>("[data-ce-since]");
   const note = stage?.querySelector<HTMLElement>("[data-ce-note]");
   const commit = stage?.querySelector<HTMLElement>("[data-ce-commit]");
+  const caps = stage?.querySelectorAll<HTMLElement>(".ce-caps-list li");
 
   const apply = (idx: number) => {
     if (!card) return;
-    const i = Math.max(0, Math.min(5, idx));
-    card.dataset.ceRound = String(i);
+    const i = Math.max(0, Math.min(6, idx));
+    card.dataset.era = String(i);
     if (slider) slider.value = String(i);
-    dots?.forEach((d) => d.classList.toggle("active", Number(d.dataset.ceRound) === i));
-    const r = ROUNDS[i];
-    if (eyebrow) eyebrow.textContent = `ROUND ${i + 1} · ${r.date}`;
-    if (title) title.textContent = r.title;
-    if (note) note.textContent = r.note;
-    if (commit) commit.textContent = r.commit;
+    dots?.forEach((d) => d.classList.toggle("active", Number(d.dataset.ceEra) === i));
+    const e = ERAS[i];
+    if (eyebrow) eyebrow.textContent = e.eyebrow;
+    if (title) title.textContent = e.title;
+    if (since) since.innerHTML = e.since;
+    if (note) note.textContent = e.note;
+    if (commit) commit.textContent = e.commit;
+    caps?.forEach((li) => {
+      const sinceEra = Number(li.dataset.since ?? "999");
+      li.classList.toggle("on", i >= sinceEra);
+      // Mark the chip(s) that JUST appeared in this era so they get a brief
+      // glow as the user enters the era.
+      li.classList.toggle("just", i === sinceEra);
+    });
   };
 
   slider?.addEventListener("input", (e) => {
     apply(Number((e.target as HTMLInputElement).value));
   });
   dots?.forEach((d) => {
-    d.addEventListener("click", () => apply(Number(d.dataset.ceRound)));
+    d.addEventListener("click", () => apply(Number(d.dataset.ceEra)));
   });
 
-  // Auto-walkthrough — slow drift forward when the stage first enters the
-  // viewport, until the user touches the slider.
+  // Auto-walkthrough — start at E0, walk to E6 with a beat between each
+  // step. Aborts on first user interaction.
   let touched = false;
   const onTouch = () => { touched = true; };
   slider?.addEventListener("pointerdown", onTouch, { once: true });
@@ -200,31 +360,30 @@
   const io = new IntersectionObserver((entries) => {
     for (const e of entries) {
       if (!e.isIntersecting) continue;
-      // Start at round 0 and walk forward.
       apply(0);
       let i = 0;
       const step = () => {
         if (touched) return;
-        i = Math.min(5, i + 1);
+        i = Math.min(6, i + 1);
         apply(i);
-        if (i < 5) window.setTimeout(step, 1100);
+        if (i < 6) window.setTimeout(step, 1400);
       };
-      window.setTimeout(step, 700);
+      window.setTimeout(step, 900);
       io.disconnect();
     }
-  }, { threshold: 0.5 });
+  }, { threshold: 0.4 });
   if (stage) io.observe(stage);
 </script>
 
 <style>
-  /* Stage: card frame on the left, scrubber + meta on the right. Stacks on narrow screens. */
+  /* Stage */
   .ce-stage {
     display: grid;
-    grid-template-columns: minmax(0, 1.4fr) minmax(280px, 1fr);
-    gap: 36px;
+    grid-template-columns: minmax(0, 1.4fr) minmax(300px, 1fr);
+    gap: 40px;
     align-items: start;
   }
-  @media (max-width: 880px) {
+  @media (max-width: 980px) {
     .ce-stage { grid-template-columns: 1fr; }
   }
 
@@ -232,162 +391,33 @@
     background:
       radial-gradient(80% 60% at 50% 0%, rgba(255, 90, 60, 0.10) 0%, transparent 70%),
       #07060c;
-    padding: 36px 24px;
+    padding: 32px 28px;
     border-radius: 6px;
     border: 1px solid rgba(245, 241, 232, 0.06);
-  }
-
-  /* ── Base card (matches round 6, the current shipping design) ─────── */
-  .ce-card {
-    position: relative;
-    background: rgba(15, 10, 18, 0.94);
-    border: 1px solid rgba(245, 241, 232, 0.10);
-    border-radius: 8px;
-    overflow: hidden;
-    font-family: "Geist Variable", ui-sans-serif, system-ui, sans-serif;
-    color: #f5f1e8;
-    transition: border-color 320ms ease, background 320ms ease, box-shadow 320ms ease;
-  }
-  .ce-grid {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) auto auto 44px;
-    align-items: stretch;
-    padding: 18px 0 18px 22px;
-    transition: grid-template-columns 320ms ease, padding 320ms ease;
-  }
-  .ce-mid {
-    grid-column: 1;
+    min-height: 360px;
     display: flex;
     flex-direction: column;
-    gap: 12px;
-    padding: 0 20px 0 0;
-    min-width: 0;
+    gap: 24px;
   }
 
-  /* Cassette spine row — Round 1 only. */
-  .ce-spine {
-    display: none;
-    align-items: center;
-    gap: 10px;
-    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-    font-size: 9px;
-    letter-spacing: 0.22em;
-    text-transform: uppercase;
-    color: rgba(245, 241, 232, 0.5);
-    background: linear-gradient(90deg, rgba(255, 215, 130, 0.10), rgba(255, 215, 130, 0));
-    border: 1px solid rgba(255, 215, 130, 0.18);
-    border-radius: 2px;
-    padding: 4px 8px;
-    width: fit-content;
-  }
-  .ce-spine-pub { color: #ffb347; border-right: 1px solid rgba(255, 179, 71, 0.32); padding-right: 8px; }
-  .ce-spine-date { color: rgba(245, 241, 232, 0.72); font-feature-settings: "tnum"; }
-
-  /* Kudos row — Round 2 only. */
-  .ce-kudos {
-    display: none;
-    align-items: center;
-    gap: 8px;
-    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-    font-size: 10px;
-    letter-spacing: 0.18em;
-    text-transform: uppercase;
-    color: rgba(245, 241, 232, 0.55);
-  }
-  .ce-kudos-lbl { color: rgba(245, 241, 232, 0.4); }
-  .ce-kudos-bar {
-    flex: 0 0 90px;
-    height: 4px;
-    background: rgba(245, 241, 232, 0.08);
-    border-radius: 2px;
-    overflow: hidden;
-  }
-  .ce-kudos-fill {
-    display: block;
-    height: 100%;
-    width: 60%;
-    background: linear-gradient(90deg, #0ec4fc 0%, #00ff4d 100%);
-  }
-  .ce-kudos-count { color: #ffb347; font-weight: 700; }
-
-  /* Title — Round 3+ in neon green. R1/R2 use a quieter cream. */
-  .ce-title {
-    margin: 0;
-    line-height: 1.05;
-    min-width: 0;
-  }
-  .ce-title-text {
-    display: inline-block;
-    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-    font-style: italic;
-    font-size: 17px;
-    font-weight: 700;
-    color: #00ff4d;
-    background: rgba(0, 255, 77, 0.04);
-    border: 1px solid rgba(0, 255, 77, 0.32);
-    border-radius: 4px;
-    padding: 5px 10px;
-    margin-left: -10px;
-    box-shadow: 0 0 12px rgba(0, 255, 77, 0.12);
-    transition: color 320ms ease, background 320ms ease, border-color 320ms ease, box-shadow 320ms ease;
-  }
-  .ce-title-ext {
-    color: #f5f1e8;
-    opacity: 0.42;
-    font-style: italic;
-    font-weight: 500;
-    font-size: 0.6em;
-  }
-
-  /* BPM/key inline — Round 3 only as a subtitle. */
-  .ce-bpm-row {
-    display: none;
-    align-items: baseline;
-    gap: 4px;
-    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-    font-style: italic;
-    font-feature-settings: "tnum";
-  }
-  .ce-bpm-n { font-size: 13px; font-weight: 700; color: #0ec4fc; }
-  .ce-bpm-u { font-size: 13px; color: rgba(245, 241, 232, 0.55); margin-left: 2px; }
-  .ce-bpm-sep { color: rgba(245, 241, 232, 0.32); margin: 0 4px; }
-  .ce-key { font-size: 13px; font-weight: 700; color: #0ec4fc; }
-  .ce-key-mode { font-size: 13px; color: rgba(245, 241, 232, 0.55); margin-left: 4px; }
-
-  .ce-wave-row {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    min-width: 0;
-  }
-
-  /* LCD duration — R4+. Earlier rounds render duration inline elsewhere. */
-  .ce-duration {
-    flex: 0 0 auto;
-    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-    font-style: italic;
-    font-size: 16px;
-    font-weight: 700;
-    color: #ff3b6e;
-    font-feature-settings: "tnum";
-    line-height: 1;
-    letter-spacing: 0.04em;
-    min-width: 3.6em;
-    text-align: right;
-    text-shadow:
-      0 0 4px rgba(255, 59, 110, 0.65),
-      0 0 10px rgba(255, 59, 110, 0.35);
-    transition: color 320ms ease, text-shadow 320ms ease, font-size 320ms ease;
-  }
-
-  .ce-waveform {
+  .ce-card {
     position: relative;
-    flex: 1 1 auto;
-    height: 48px;
-    background: #07060c;
-    border-radius: 3px;
-    overflow: hidden;
+    transition: background 280ms ease, border-color 280ms ease;
+    color: #f5f1e8;
+    font-family: "Geist Variable", ui-sans-serif, system-ui, sans-serif;
   }
+
+  /* Hide ALL era subtrees by default; the data-era selector reveals one. */
+  .ce-card > [class^="ce-e"] { display: none; }
+  .ce-card[data-era="0"] > .ce-e0 { display: block; }
+  .ce-card[data-era="1"] > .ce-e1 { display: block; }
+  .ce-card[data-era="2"] > .ce-e2 { display: block; }
+  .ce-card[data-era="3"] > .ce-e3 { display: block; }
+  .ce-card[data-era="4"] > .ce-e4 { display: grid; }
+  .ce-card[data-era="5"] > .ce-e5 { display: grid; }
+  .ce-card[data-era="6"] > .ce-e6 { display: grid; }
+
+  /* Shared fake waveform — used by eras 2–6. */
   .ce-fake-wave {
     position: absolute;
     inset: 0;
@@ -402,314 +432,840 @@
     border-radius: 1px;
     transition: background 320ms ease;
   }
-  .ce-crop {
-    font: inherit;
-    font-size: 14px;
-    color: rgba(245, 241, 232, 0.55);
-    background: transparent;
-    border: 1px solid rgba(245, 241, 232, 0.18);
-    border-radius: 3px;
-    width: 28px;
-    height: 28px;
-    cursor: pointer;
-    transition: color 160ms ease, border-color 160ms ease;
+  .ce-fake-wave-mid .ce-fake-bar {
+    background: linear-gradient(180deg, rgba(245, 241, 232, 0.55) 0%, rgba(245, 241, 232, 0.18) 100%);
   }
-  .ce-crop:hover { color: #0ec4fc; border-color: rgba(14, 196, 252, 0.55); }
 
-  /* Date subtitle — Rounds 3+. */
-  .ce-date-sub {
-    display: none;
+  /* ─────────── E0 ─────────── public-site WorkCard era */
+  .ce-e0 {
+    background: #f5f1e8;
+    color: #15130f;
+    padding: 36px 32px;
+    border-radius: 0;
+    font-family: "Geist Variable", ui-sans-serif, system-ui, sans-serif;
+    border: 1px solid #cdc4b3;
+  }
+  .ce-e0-num {
+    font-family: ui-monospace, monospace;
+    font-size: 11px;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: #7a746c;
+    margin-bottom: 12px;
+  }
+  .ce-e0-title {
+    font-family: ui-sans-serif, system-ui, sans-serif;
+    font-size: 36px;
+    font-weight: 700;
+    line-height: 1;
+    color: #15130f;
+    margin: 0 0 14px;
+  }
+  .ce-e0-sub {
+    font-size: 16px;
+    color: #5a5650;
+    margin: 0 0 14px;
+    max-width: 30ch;
+    line-height: 1.4;
+  }
+  .ce-e0-tags {
+    font-size: 11px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: #7a746c;
+    margin: 0 0 22px;
+    font-family: ui-monospace, monospace;
+  }
+  .ce-e0-link {
+    font-size: 12px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: #ff5a3c;
+    text-decoration: none;
+    border-bottom: 1px solid #ff5a3c;
+    padding-bottom: 2px;
+    font-weight: 700;
+  }
+
+  /* ─────────── E1 ─────────── first portal Card.astro */
+  .ce-e1 {
+    background: rgba(245, 241, 232, 0.04);
+    border: 1px solid rgba(245, 241, 232, 0.18);
+    padding: 22px 24px;
+    display: grid;
+    gap: 12px;
+    color: #f5f1e8;
+  }
+  .ce-e1-meta {
+    display: flex;
+    justify-content: space-between;
     align-items: baseline;
-    gap: 2px;
-    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  }
+  .ce-e1-eyebrow {
+    font-family: ui-monospace, monospace;
+    font-size: 11px;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: rgba(245, 241, 232, 0.48);
+  }
+  .ce-e1-date {
+    font-family: ui-monospace, monospace;
+    font-size: 11px;
+    color: rgba(245, 241, 232, 0.48);
+  }
+  .ce-e1-title {
+    font-size: 17px;
+    font-weight: 600;
+    word-break: break-all;
+    margin: 0;
+    line-height: 1.3;
+  }
+  .ce-e1-summary {
+    font-size: 13px;
+    line-height: 1.55;
+    color: rgba(245, 241, 232, 0.78);
+    margin: 0;
+  }
+  .ce-e1-audio {
+    font-family: ui-monospace, monospace;
+    font-size: 11px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: #ff5a3c;
+    margin: 0;
+  }
+  .ce-e1-tags {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px 6px;
+  }
+  .ce-e1-tags li {
+    font-size: 11px;
+    color: rgba(245, 241, 232, 0.62);
+    border: 1px solid rgba(245, 241, 232, 0.18);
+    padding: 2px 6px;
+  }
+  .ce-e1-actions {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    border-top: 1px solid rgba(245, 241, 232, 0.10);
+    padding-top: 12px;
+  }
+  .ce-e1-queue,
+  .ce-e1-listen {
+    font-family: ui-monospace, monospace;
+    font-size: 11px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: rgba(245, 241, 232, 0.78);
+    background: transparent;
+    border: 1px solid rgba(245, 241, 232, 0.32);
+    padding: 6px 12px;
+    text-decoration: none;
+    cursor: pointer;
+  }
+  .ce-e1-listen {
+    color: #ff5a3c;
+    border-color: rgba(255, 90, 60, 0.55);
+  }
+
+  /* ─────────── E2 ─────────── waveform image + dedicated ▶ Audition */
+  .ce-e2 {
+    background: rgba(245, 241, 232, 0.04);
+    border: 1px solid rgba(245, 241, 232, 0.18);
+    padding: 18px 20px;
+    color: #f5f1e8;
+  }
+  .ce-e2-wave {
+    position: relative;
+    height: 80px;
+    background: #07060c;
+    border-radius: 3px;
+    overflow: hidden;
+    margin-bottom: 14px;
+  }
+  .ce-e2-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    margin-bottom: 10px;
+  }
+  .ce-e2-title {
+    font-size: 15px;
+    font-weight: 600;
+    margin: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    min-width: 0;
+  }
+  .ce-e2-play {
+    flex: 0 0 auto;
+    font-family: ui-monospace, monospace;
+    font-size: 12px;
+    color: #ff5a3c;
+    background: rgba(255, 90, 60, 0.06);
+    border: 1px solid rgba(255, 90, 60, 0.45);
+    padding: 5px 10px;
+    cursor: pointer;
+    border-radius: 2px;
+  }
+  .ce-e2-kbd {
+    font-size: 9px;
+    color: rgba(245, 241, 232, 0.55);
+    margin-left: 6px;
+    letter-spacing: 0.1em;
+  }
+  .ce-e2-bucket-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+  }
+  .ce-e2-badge {
+    font-family: ui-monospace, monospace;
+    font-size: 10px;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: #ff2761;
+    background: rgba(255, 39, 97, 0.10);
+    border: 1px solid rgba(255, 39, 97, 0.45);
+    padding: 3px 8px;
+    border-radius: 2px;
+  }
+  .ce-e2-kbds {
+    display: inline-flex;
+    gap: 4px;
+  }
+  .ce-e2-kbds kbd {
+    font-family: ui-monospace, monospace;
+    font-size: 9px;
+    color: rgba(245, 241, 232, 0.48);
+    border: 1px solid rgba(245, 241, 232, 0.18);
+    padding: 1px 4px;
+    border-radius: 1px;
+  }
+
+  /* ─────────── E3 ─────────── waveform plays, ▶ button gone */
+  .ce-e3 {
+    background: rgba(245, 241, 232, 0.04);
+    border: 1px solid rgba(245, 241, 232, 0.18);
+    padding: 18px 20px;
+    color: #f5f1e8;
+    position: relative;
+  }
+  .ce-e3-title {
+    font-family: ui-monospace, monospace;
+    font-style: italic;
+    font-size: 17px;
+    font-weight: 700;
+    color: #00ff4d;
+    background: rgba(0, 255, 77, 0.04);
+    border: 1px solid rgba(0, 255, 77, 0.32);
+    border-radius: 4px;
+    padding: 5px 10px;
+    margin: 0 0 14px;
+    display: inline-block;
+    max-width: 100%;
+    box-shadow: 0 0 12px rgba(0, 255, 77, 0.12);
+  }
+  .ce-e3-ext { color: #f5f1e8; opacity: 0.42; font-weight: 500; font-size: 0.6em; }
+  .ce-e3-wave-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 12px;
+  }
+  .ce-e3-dur {
+    font-family: ui-monospace, monospace;
+    font-style: italic;
+    font-size: 16px;
+    font-weight: 700;
+    color: #ff3b6e;
+    min-width: 3.6em;
+    text-align: right;
+    text-shadow: 0 0 4px rgba(255, 59, 110, 0.65), 0 0 10px rgba(255, 59, 110, 0.35);
+  }
+  .ce-e3-wave {
+    position: relative;
+    flex: 1 1 auto;
+    height: 48px;
+    background: #07060c;
+    border-radius: 3px;
+    overflow: hidden;
+    cursor: pointer;
+  }
+  .ce-e3-wave:hover {
+    box-shadow: inset 0 0 0 1px rgba(14, 196, 252, 0.45);
+  }
+  .ce-e3-playhead {
+    position: absolute;
+    top: 0; bottom: 0;
+    width: 2px;
+    background: #ff3b6e;
+    box-shadow: 0 0 6px rgba(255, 59, 110, 0.6);
+    animation: ce-e3-play 4500ms linear infinite;
+  }
+  @keyframes ce-e3-play {
+    from { left: 0%; }
+    to { left: 100%; }
+  }
+  .ce-e3-badge {
+    font-family: ui-monospace, monospace;
+    font-size: 10px;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: #ff2761;
+    background: rgba(255, 39, 97, 0.10);
+    border: 1px solid rgba(255, 39, 97, 0.45);
+    padding: 3px 8px;
+    border-radius: 2px;
+  }
+
+  /* ─────────── E4 ─────────── J/L/F/T + expand panel + hold-to-archive */
+  .ce-e4 {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 68px 42px;
+    background: rgba(15, 10, 18, 0.94);
+    border: 1px solid rgba(245, 241, 232, 0.10);
+    border-radius: 8px;
+    overflow: hidden;
+    color: #f5f1e8;
+  }
+  .ce-e4-main {
+    padding: 18px 22px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    min-width: 0;
+  }
+  .ce-e4-title {
+    font-family: ui-monospace, monospace;
+    font-style: italic;
+    font-size: 17px;
+    font-weight: 700;
+    color: #00ff4d;
+    background: rgba(0, 255, 77, 0.04);
+    border: 1px solid rgba(0, 255, 77, 0.32);
+    border-radius: 4px;
+    padding: 5px 10px;
+    margin: 0;
+    display: inline-block;
+    box-shadow: 0 0 12px rgba(0, 255, 77, 0.12);
+    align-self: flex-start;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    max-width: 100%;
+  }
+  .ce-e4-ext { color: #f5f1e8; opacity: 0.42; font-weight: 500; font-size: 0.6em; }
+  .ce-e4-wave-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .ce-e4-dur {
+    font-family: ui-monospace, monospace;
+    font-style: italic;
+    font-size: 16px;
+    font-weight: 700;
+    color: #ff3b6e;
+    min-width: 3.6em;
+    text-align: right;
+    text-shadow: 0 0 4px rgba(255, 59, 110, 0.65);
+  }
+  .ce-e4-wave {
+    position: relative;
+    flex: 1;
+    height: 48px;
+    background: #07060c;
+    border-radius: 3px;
+    overflow: hidden;
+  }
+  .ce-e4-date {
+    font-family: ui-monospace, monospace;
     font-size: 13px;
     font-weight: 600;
-    letter-spacing: 0.02em;
     color: rgba(245, 241, 232, 0.72);
-    padding: 4px 0;
-  }
-  .ce-date-rel { color: #f5f1e8; font-weight: 700; }
-  .ce-date-bracket { color: rgba(245, 241, 232, 0.32); font-weight: 500; }
-  .ce-date-stamp { color: rgba(245, 241, 232, 0.65); }
-  .ce-date-sep { color: rgba(245, 241, 232, 0.32); }
-  .ce-date-days { color: rgba(245, 241, 232, 0.5); font-feature-settings: "tnum"; }
-  .ce-date-chev { color: rgba(245, 241, 232, 0.55); font-size: 12px; margin-left: 8px; }
-
-  /* Date column on right — Round 1 cassette only. */
-  .ce-date-col {
-    grid-column: 2;
-    display: none;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    padding: 4px 14px;
-    border-left: 1px solid rgba(255, 215, 130, 0.18);
-    border-right: 1px solid rgba(255, 215, 130, 0.18);
-    background: linear-gradient(180deg, rgba(255, 215, 130, 0.06), rgba(255, 215, 130, 0.0));
-    color: rgba(245, 241, 232, 0.78);
-    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-    line-height: 1;
-  }
-  .ce-date-col-day { font-size: 22px; font-weight: 700; color: #ffb347; }
-  .ce-date-col-mon { font-size: 9px; letter-spacing: 0.22em; margin-top: 4px; color: rgba(245, 241, 232, 0.62); }
-  .ce-date-col-yr { font-size: 9px; letter-spacing: 0.22em; margin-top: 2px; color: rgba(245, 241, 232, 0.42); }
-
-  /* J/L/F/T pill */
-  .ce-cat {
-    grid-column: 3;
-    align-self: stretch;
-    margin: -18px 0 -18px 12px;
-    display: flex;
-    flex-direction: column;
-    width: 68px;
-    border: 1px solid rgba(245, 241, 232, 0.22);
-    border-right: 0;
-    border-radius: 5px 0 0 5px;
-    overflow: hidden;
-    background: rgba(245, 241, 232, 0.025);
-    transition: flex-direction 320ms ease, width 320ms ease, border 320ms ease, background 320ms ease;
-  }
-  .ce-cat-btn {
-    flex: 1 1 0;
-    min-height: 32px;
-    font: inherit;
-    color: rgba(245, 241, 232, 0.7);
     background: transparent;
     border: 0;
-    border-top: 1px solid rgba(245, 241, 232, 0.22);
-    padding: 0 6px;
+    padding: 5px 0;
+    text-align: left;
     cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    transition: color 160ms ease, background 160ms ease, border 160ms ease;
   }
-  .ce-cat-btn:first-child { border-top: 0; }
-  .ce-cat-btn span {
-    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  .ce-e4-chev { color: rgba(14, 196, 252, 0.78); margin-left: 8px; }
+  .ce-e4-exp {
+    display: grid;
+    grid-template-columns: 80px 1fr;
+    gap: 6px 12px;
+    margin: 12px 0 0;
+    border-top: 1px solid rgba(245, 241, 232, 0.10);
+    padding-top: 12px;
+    font-size: 12px;
+  }
+  .ce-e4-exp dt {
+    font-family: ui-monospace, monospace;
+    font-size: 9px;
+    letter-spacing: 0.18em;
+    color: rgba(14, 196, 252, 0.78);
+  }
+  .ce-e4-exp dd { margin: 0; color: rgba(245, 241, 232, 0.82); }
+  .ce-e4-chip {
+    display: inline-block;
+    font-family: ui-monospace, monospace;
+    font-size: 10px;
+    color: rgba(245, 241, 232, 0.72);
+    border: 1px solid rgba(245, 241, 232, 0.18);
+    padding: 2px 7px;
+    margin-right: 4px;
+    border-radius: 3px;
+  }
+  .ce-e4-cy { color: #0ec4fc; font-weight: 700; font-style: italic; }
+  .ce-e4-link { color: #0ec4fc; text-decoration: underline; }
+  .ce-e4-cat {
+    display: flex;
+    flex-direction: column;
+    border-left: 1px solid rgba(245, 241, 232, 0.22);
+    border-right: 0;
+    background: rgba(245, 241, 232, 0.025);
+  }
+  .ce-e4-cat-btn {
+    flex: 1 1 0;
+    font-family: ui-monospace, monospace;
     font-style: italic;
     font-size: 12px;
     font-weight: 700;
     letter-spacing: 0.08em;
+    color: rgba(245, 241, 232, 0.7);
+    background: transparent;
+    border: 0;
+    border-top: 1px solid rgba(245, 241, 232, 0.22);
+    cursor: pointer;
+    padding: 0 6px;
+    min-height: 32px;
   }
-  .ce-cat-btn.active {
+  .ce-e4-cat-btn:first-child { border-top: 0; }
+  .ce-e4-cat-btn.active {
     color: #ff2761;
     background: rgba(255, 39, 97, 0.14);
   }
-  .ce-cat-btn.active,
-  .ce-cat-btn.active + .ce-cat-btn {
+  .ce-e4-cat-btn.active + .ce-e4-cat-btn {
     border-top-color: rgba(255, 39, 97, 0.45);
   }
-  .ce-cat-btn.active:first-child { border-top: 0; }
-
-  /* Archive X */
-  .ce-trash {
-    grid-column: 4;
-    align-self: stretch;
-    margin: -18px 0 -18px 0;
-    font: inherit;
+  .ce-e4-x {
+    font-family: inherit;
     font-size: 16px;
     font-weight: 700;
     color: rgba(245, 241, 232, 0.45);
     background: linear-gradient(180deg, rgba(47, 7, 18, 0.38) 0%, rgba(47, 7, 18, 0.62) 100%);
     border: 0;
     border-left: 1px solid rgba(255, 39, 97, 0.18);
-    border-radius: 0 7px 7px 0;
     cursor: pointer;
+  }
+
+  /* ─────────── E5 ─────────── adds ✂, stems, spectrogram, Promote */
+  .ce-e5 {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 68px 42px;
+    background: rgba(15, 10, 18, 0.94);
+    border: 1px solid rgba(245, 241, 232, 0.10);
+    border-radius: 8px;
+    overflow: hidden;
+    color: #f5f1e8;
+  }
+  .ce-e5-main {
+    padding: 18px 22px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    min-width: 0;
+  }
+  .ce-e5-title {
+    font-family: ui-monospace, monospace;
+    font-style: italic;
+    font-size: 17px;
+    font-weight: 700;
+    color: #00ff4d;
+    background: rgba(0, 255, 77, 0.04);
+    border: 1px solid rgba(0, 255, 77, 0.32);
+    border-radius: 4px;
+    padding: 5px 10px;
+    margin: 0;
+    align-self: flex-start;
+    box-shadow: 0 0 12px rgba(0, 255, 77, 0.12);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    max-width: 100%;
+  }
+  .ce-e5-ext { color: #f5f1e8; opacity: 0.42; font-weight: 500; font-size: 0.6em; }
+  .ce-e5-wave-row {
     display: flex;
     align-items: center;
-    justify-content: center;
+    gap: 12px;
   }
-  .ce-trash:hover {
-    color: #fff;
-    background: linear-gradient(180deg, rgba(78, 12, 30, 0.62) 0%, rgba(255, 39, 97, 0.28) 100%);
+  .ce-e5-dur {
+    font-family: ui-monospace, monospace;
+    font-style: italic;
+    font-size: 16px;
+    font-weight: 700;
+    color: #ff3b6e;
+    min-width: 3.6em;
+    text-align: right;
+    text-shadow: 0 0 4px rgba(255, 59, 110, 0.65);
   }
-
-  /* ─────────── ROUND-SPECIFIC OVERRIDES ─────────── */
-
-  /* R1 — Cassette spine. Title row, BPM under title, NO date subtitle (date moves to right column). */
-  .ce-card[data-ce-round="0"] { background: rgba(20, 14, 8, 0.94); border-color: rgba(255, 215, 130, 0.28); }
-  .ce-card[data-ce-round="0"] .ce-grid { grid-template-columns: minmax(0, 1fr) 76px auto 44px; }
-  .ce-card[data-ce-round="0"] .ce-spine { display: inline-flex; }
-  .ce-card[data-ce-round="0"] .ce-title-text {
-    color: rgba(245, 241, 232, 0.88);
-    background: rgba(245, 241, 232, 0.04);
-    border-color: rgba(245, 241, 232, 0.18);
-    font-style: normal;
-    box-shadow: none;
-  }
-  .ce-card[data-ce-round="0"] .ce-bpm-row { display: inline-flex; }
-  .ce-card[data-ce-round="0"] .ce-duration { display: none; }
-  .ce-card[data-ce-round="0"] .ce-date-col { display: flex; }
-  /* Lettered tile boxes — small caps inside boxes, not the medicine pill. */
-  .ce-card[data-ce-round="0"] .ce-cat {
-    flex-direction: row;
-    width: auto;
-    align-self: center;
-    margin: 0 12px;
-    border: 0;
-    border-radius: 0;
-    background: transparent;
-    gap: 4px;
-  }
-  .ce-card[data-ce-round="0"] .ce-cat-btn {
-    flex: 0 0 auto;
-    width: 26px;
-    height: 26px;
-    border: 1px solid rgba(255, 215, 130, 0.32);
+  .ce-e5-wave {
+    position: relative;
+    flex: 1;
+    height: 48px;
+    background: #07060c;
     border-radius: 3px;
-    background: rgba(255, 215, 130, 0.06);
+    overflow: hidden;
   }
-  .ce-card[data-ce-round="0"] .ce-cat-btn span {
-    font-size: 10px;
-    letter-spacing: 0;
-  }
-  .ce-card[data-ce-round="0"] .ce-cat-btn.active {
-    color: #ffb347;
-    border-color: #ffb347;
-    background: rgba(255, 179, 71, 0.18);
-  }
-  /* Hide the only-LOOP word; in cassette era it's just "L". */
-  .ce-card[data-ce-round="0"] .ce-cat-btn span::before { content: attr(data-letter); }
-  .ce-card[data-ce-round="0"] .ce-cat-btn[data-bucket="jam"] span { font-size: 0; }
-  .ce-card[data-ce-round="0"] .ce-cat-btn[data-bucket="jam"] span::after { content: "J"; font-size: 11px; }
-  .ce-card[data-ce-round="0"] .ce-cat-btn[data-bucket="loops"] span { font-size: 0; }
-  .ce-card[data-ce-round="0"] .ce-cat-btn[data-bucket="loops"] span::after { content: "L"; font-size: 11px; }
-  .ce-card[data-ce-round="0"] .ce-cat-btn[data-bucket="field"] span { font-size: 0; }
-  .ce-card[data-ce-round="0"] .ce-cat-btn[data-bucket="field"] span::after { content: "F"; font-size: 11px; }
-  .ce-card[data-ce-round="0"] .ce-cat-btn[data-bucket="tracks"] span { font-size: 0; }
-  .ce-card[data-ce-round="0"] .ce-cat-btn[data-bucket="tracks"] span::after { content: "T"; font-size: 11px; }
-  /* Waveform recolored with sepia/brown tint to match cassette palette. */
-  .ce-card[data-ce-round="0"] .ce-fake-bar {
-    background: linear-gradient(180deg, rgba(255, 215, 130, 0.65) 0%, rgba(255, 179, 71, 0.32) 100%);
-  }
-
-  /* R2 — Pink→orange buttons, blue rings, kudos ticker. */
-  .ce-card[data-ce-round="1"] .ce-kudos { display: flex; }
-  .ce-card[data-ce-round="1"] .ce-title-text {
-    color: rgba(245, 241, 232, 0.88);
-    background: rgba(245, 241, 232, 0.04);
-    border-color: rgba(245, 241, 232, 0.18);
-    font-style: normal;
-    box-shadow: none;
-  }
-  .ce-card[data-ce-round="1"] .ce-bpm-row { display: inline-flex; }
-  .ce-card[data-ce-round="1"] .ce-fake-bar {
-    background: linear-gradient(180deg, #ff2761 0%, #ff5a3c 50%, #ffb347 100%);
-  }
-  .ce-card[data-ce-round="1"] .ce-cat {
-    flex-direction: row;
-    width: auto;
-    align-self: center;
-    margin: 0 12px;
-    border: 0;
-    border-radius: 0;
+  .ce-e5-crop {
+    font-size: 14px;
+    color: rgba(14, 196, 252, 0.78);
     background: transparent;
-    gap: 6px;
-  }
-  .ce-card[data-ce-round="1"] .ce-cat-btn {
-    flex: 0 0 auto;
+    border: 1px solid rgba(14, 196, 252, 0.45);
+    border-radius: 3px;
     width: 28px;
     height: 28px;
-    border: 1px solid rgba(14, 196, 252, 0.55);
-    border-radius: 50%;
+    cursor: pointer;
+  }
+  .ce-e5-date {
+    font-family: ui-monospace, monospace;
+    font-size: 13px;
+    font-weight: 600;
+    color: rgba(245, 241, 232, 0.72);
+    background: transparent;
+    border: 0;
+    padding: 5px 0;
+    text-align: left;
+    cursor: pointer;
+  }
+  .ce-e5-days { color: rgba(245, 241, 232, 0.5); }
+  .ce-e5-exp {
+    display: grid;
+    grid-template-columns: 80px 1fr;
+    gap: 6px 12px;
+    margin: 12px 0 0;
+    border-top: 1px solid rgba(245, 241, 232, 0.10);
+    padding-top: 12px;
+    font-size: 12px;
+  }
+  .ce-e5-exp dt {
+    font-family: ui-monospace, monospace;
+    font-size: 9px;
+    letter-spacing: 0.18em;
+    color: rgba(14, 196, 252, 0.78);
+  }
+  .ce-e5-exp dd { margin: 0; }
+  .ce-e5-spec { color: rgba(14, 196, 252, 0.78); font-family: ui-monospace, monospace; }
+  .ce-e5-stem {
+    font-family: ui-monospace, monospace;
+    font-style: italic;
+    font-size: 10.5px;
+    font-weight: 600;
+    color: rgba(245, 241, 232, 0.82);
     background: rgba(14, 196, 252, 0.06);
+    border: 1px solid rgba(14, 196, 252, 0.32);
+    border-radius: 3px;
+    padding: 5px 8px;
+    margin-right: 6px;
+    cursor: pointer;
+    display: inline-flex;
+    flex-direction: column;
+    line-height: 1.2;
   }
-  .ce-card[data-ce-round="1"] .ce-cat-btn span {
-    font-size: 0;
+  .ce-e5-stem span {
+    font-size: 9px;
+    color: rgba(245, 241, 232, 0.45);
+    letter-spacing: 0.06em;
+    font-style: normal;
   }
-  .ce-card[data-ce-round="1"] .ce-cat-btn span::after {
-    content: attr(data-letter);
-    font-size: 10px;
+  .ce-e5-promote {
+    font-family: ui-monospace, monospace;
+    font-style: italic;
+    font-size: 11px;
     font-weight: 700;
-    color: #0ec4fc;
-  }
-  .ce-card[data-ce-round="1"] .ce-cat-btn[data-bucket="jam"] span::after { content: "J"; }
-  .ce-card[data-ce-round="1"] .ce-cat-btn[data-bucket="loops"] span::after { content: "L"; }
-  .ce-card[data-ce-round="1"] .ce-cat-btn[data-bucket="field"] span::after { content: "F"; }
-  .ce-card[data-ce-round="1"] .ce-cat-btn[data-bucket="tracks"] span::after { content: "T"; }
-  .ce-card[data-ce-round="1"] .ce-cat-btn.active {
-    background: linear-gradient(90deg, #ff2761 0%, #ff5a3c 100%);
-    border-color: #ff5a3c;
-  }
-  .ce-card[data-ce-round="1"] .ce-cat-btn.active span::after { color: #0e0c14; }
-  .ce-card[data-ce-round="1"] .ce-duration { display: none; }
-
-  /* R3 — Title-led green with ⚡ kudos inline, BPM subtitle, date subtitle. */
-  .ce-card[data-ce-round="2"] .ce-bpm-row { display: inline-flex; }
-  .ce-card[data-ce-round="2"] .ce-date-sub { display: inline-flex; }
-  .ce-card[data-ce-round="2"] .ce-duration { display: none; }
-  .ce-card[data-ce-round="2"] .ce-title-text::after {
-    content: " ⚡";
-    color: #ffb347;
-    margin-left: 4px;
-  }
-  /* Pill goes vertical here but without the medicine container yet — looser stack of buttons. */
-  .ce-card[data-ce-round="2"] .ce-cat {
-    flex-direction: column;
-    width: 60px;
+    color: #0e0c14;
+    background: linear-gradient(90deg, #ff2761 0%, #ff5a3c 50%, #ffb347 100%);
     border: 0;
-    background: transparent;
-    gap: 3px;
-    margin: 0 12px;
-    align-self: center;
-  }
-  .ce-card[data-ce-round="2"] .ce-cat-btn {
-    border: 1px solid rgba(245, 241, 232, 0.22);
     border-radius: 3px;
-    background: rgba(245, 241, 232, 0.03);
-    min-height: 22px;
+    padding: 6px 12px;
+    cursor: pointer;
   }
-  .ce-card[data-ce-round="2"] .ce-cat-btn.active {
-    border-color: rgba(0, 255, 77, 0.55);
-    color: #00ff4d;
-    background: rgba(0, 255, 77, 0.10);
+  .ce-e5-cat,
+  .ce-e5-x {
+    /* Inherit the same shape as E4. */
   }
-
-  /* R4 — LCD duration appears, selected calmer. */
-  .ce-card[data-ce-round="3"] .ce-date-sub { display: inline-flex; }
-  .ce-card[data-ce-round="3"] .ce-bpm-row { display: none; }  /* BPM moves into Tech in expanded panel; not shown in collapsed view here. */
-  .ce-card[data-ce-round="3"] .ce-duration { display: inline-block; }
-  .ce-card[data-ce-round="3"] .ce-cat {
+  .ce-e5-cat {
+    display: flex;
     flex-direction: column;
-    width: 60px;
-    border: 0;
+    border-left: 1px solid rgba(245, 241, 232, 0.22);
+    background: rgba(245, 241, 232, 0.025);
+  }
+  .ce-e5-cat-btn {
+    flex: 1 1 0;
+    font-family: ui-monospace, monospace;
+    font-style: italic;
+    font-size: 12px;
+    font-weight: 700;
+    color: rgba(245, 241, 232, 0.7);
     background: transparent;
-    gap: 3px;
-    margin: 0 12px;
-    align-self: center;
+    border: 0;
+    border-top: 1px solid rgba(245, 241, 232, 0.22);
+    min-height: 32px;
+    cursor: pointer;
   }
-  .ce-card[data-ce-round="3"] .ce-cat-btn {
-    border: 1px solid rgba(245, 241, 232, 0.22);
-    border-radius: 3px;
-    background: rgba(245, 241, 232, 0.03);
-    min-height: 22px;
-  }
-  .ce-card[data-ce-round="3"] .ce-cat-btn.active {
-    border-color: rgba(255, 39, 97, 0.45);
+  .ce-e5-cat-btn:first-child { border-top: 0; }
+  .ce-e5-cat-btn.active {
     color: #ff2761;
-    background: rgba(255, 39, 97, 0.10);
+    background: rgba(255, 39, 97, 0.14);
+  }
+  .ce-e5-cat-btn.active + .ce-e5-cat-btn {
+    border-top-color: rgba(255, 39, 97, 0.45);
+  }
+  .ce-e5-x {
+    font-family: inherit;
+    font-size: 16px;
+    font-weight: 700;
+    color: rgba(245, 241, 232, 0.45);
+    background: linear-gradient(180deg, rgba(47, 7, 18, 0.38) 0%, rgba(47, 7, 18, 0.62) 100%);
+    border: 0;
+    border-left: 1px solid rgba(255, 39, 97, 0.18);
+    cursor: pointer;
   }
 
-  /* R5 — Medicine-container J/L/F/T (the current shape with shared dividers). */
-  .ce-card[data-ce-round="4"] .ce-date-sub { display: inline-flex; }
-  .ce-card[data-ce-round="4"] .ce-duration { display: inline-block; }
-  /* Card uses the base .ce-cat styles (vertical medicine container). */
-
-  /* R6 — Final selected gradient reveal on title chip. */
-  .ce-card[data-ce-round="5"] .ce-date-sub { display: inline-flex; }
-  .ce-card[data-ce-round="5"] .ce-duration { display: inline-block; }
-  .ce-card[data-ce-round="5"] {
-    border-color: rgba(255, 90, 60, 0.45);
+  /* ─────────── E6 ─────────── card → pipeline. Inherits E5 + ✓ In Live + Engineer. */
+  .ce-e6 {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 68px 42px;
+    background: rgba(15, 10, 18, 0.94);
+    border: 1px solid rgba(255, 90, 60, 0.45);
     box-shadow: 0 0 0 1px rgba(255, 90, 60, 0.18), 0 0 32px -8px rgba(255, 90, 60, 0.18);
+    border-radius: 8px;
+    overflow: hidden;
+    color: #f5f1e8;
   }
-  .ce-card[data-ce-round="5"] .ce-title-text {
+  .ce-e6-main {
+    padding: 18px 22px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    min-width: 0;
+  }
+  .ce-e6-title {
+    font-family: ui-monospace, monospace;
+    font-style: italic;
+    font-size: 17px;
+    font-weight: 700;
+    color: #00ff4d;
     background: linear-gradient(90deg, rgba(255, 39, 97, 0.18) 0%, rgba(255, 90, 60, 0.18) 50%, rgba(255, 179, 71, 0.18) 100%);
-    border-color: rgba(255, 90, 60, 0.45);
+    border: 1px solid rgba(255, 90, 60, 0.45);
+    border-radius: 4px;
+    padding: 5px 10px;
+    margin: 0;
+    align-self: flex-start;
     box-shadow: 0 0 12px rgba(255, 90, 60, 0.18);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    max-width: 100%;
+  }
+  .ce-e6-ext { color: #f5f1e8; opacity: 0.42; font-weight: 500; font-size: 0.6em; }
+  .ce-e6-wave-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .ce-e6-dur {
+    font-family: ui-monospace, monospace;
+    font-style: italic;
+    font-size: 16px;
+    font-weight: 700;
+    color: #ff3b6e;
+    min-width: 3.6em;
+    text-align: right;
+    text-shadow: 0 0 4px rgba(255, 59, 110, 0.65);
+  }
+  .ce-e6-wave {
+    position: relative;
+    flex: 1;
+    height: 48px;
+    background: #07060c;
+    border-radius: 3px;
+    overflow: hidden;
+  }
+  .ce-e6-crop {
+    font-size: 14px;
+    color: rgba(14, 196, 252, 0.78);
+    background: transparent;
+    border: 1px solid rgba(14, 196, 252, 0.45);
+    border-radius: 3px;
+    width: 28px;
+    height: 28px;
+    cursor: pointer;
+  }
+  .ce-e6-date {
+    font-family: ui-monospace, monospace;
+    font-size: 13px;
+    font-weight: 600;
+    color: rgba(245, 241, 232, 0.72);
+    background: transparent;
+    border: 0;
+    padding: 5px 0;
+    text-align: left;
+    cursor: pointer;
+  }
+  .ce-e6-days { color: rgba(245, 241, 232, 0.5); }
+  .ce-e6-exp {
+    display: grid;
+    grid-template-columns: 80px 1fr;
+    gap: 6px 12px;
+    margin: 12px 0 0;
+    border-top: 1px solid rgba(245, 241, 232, 0.10);
+    padding-top: 12px;
+    font-size: 12px;
+  }
+  .ce-e6-exp dt {
+    font-family: ui-monospace, monospace;
+    font-size: 9px;
+    letter-spacing: 0.18em;
+    color: rgba(14, 196, 252, 0.78);
+  }
+  .ce-e6-exp dd { margin: 0; }
+  .ce-e6-stem {
+    font-family: ui-monospace, monospace;
+    font-style: italic;
+    font-size: 10.5px;
+    font-weight: 600;
+    color: rgba(245, 241, 232, 0.82);
+    background: rgba(14, 196, 252, 0.06);
+    border: 1px solid rgba(14, 196, 252, 0.32);
+    border-radius: 3px;
+    padding: 5px 8px;
+    margin-right: 6px;
+    cursor: pointer;
+  }
+  .ce-e6-in-live {
+    font-family: ui-monospace, monospace;
+    font-style: italic;
+    font-size: 12px;
+    font-weight: 700;
+    color: #00ff4d;
+    background: rgba(0, 255, 77, 0.08);
+    border: 1px solid rgba(0, 255, 77, 0.45);
+    border-radius: 3px;
+    padding: 4px 9px;
+    box-shadow: 0 0 12px rgba(0, 255, 77, 0.18);
+  }
+  .ce-e6-eng {
+    font-family: ui-monospace, monospace;
+    font-style: italic;
+    font-size: 11px;
+    font-weight: 700;
+    color: #0e0c14;
+    background: linear-gradient(90deg, #0ec4fc 0%, #22f0ff 100%);
+    border: 0;
+    border-radius: 3px;
+    padding: 6px 12px;
+    cursor: pointer;
+    box-shadow: 0 0 16px rgba(14, 196, 252, 0.32);
+  }
+  .ce-e6-cat {
+    display: flex;
+    flex-direction: column;
+    border-left: 1px solid rgba(245, 241, 232, 0.22);
+    background: rgba(245, 241, 232, 0.025);
+  }
+  .ce-e6-cat-btn {
+    flex: 1 1 0;
+    font-family: ui-monospace, monospace;
+    font-style: italic;
+    font-size: 12px;
+    font-weight: 700;
+    color: rgba(245, 241, 232, 0.7);
+    background: transparent;
+    border: 0;
+    border-top: 1px solid rgba(245, 241, 232, 0.22);
+    min-height: 32px;
+    cursor: pointer;
+  }
+  .ce-e6-cat-btn:first-child { border-top: 0; }
+  .ce-e6-cat-btn.active {
+    color: #ff2761;
+    background: rgba(255, 39, 97, 0.14);
+  }
+  .ce-e6-cat-btn.active + .ce-e6-cat-btn {
+    border-top-color: rgba(255, 39, 97, 0.45);
+  }
+  .ce-e6-x {
+    font-family: inherit;
+    font-size: 16px;
+    font-weight: 700;
+    color: rgba(245, 241, 232, 0.45);
+    background: linear-gradient(180deg, rgba(47, 7, 18, 0.38) 0%, rgba(47, 7, 18, 0.62) 100%);
+    border: 0;
+    border-left: 1px solid rgba(255, 39, 97, 0.18);
+    cursor: pointer;
   }
 
-  /* ── Scrubber + meta column ────────────────────────────────────────── */
+  /* ─────────── Capability chip strip ─────────── */
+  .ce-caps {
+    display: grid;
+    grid-template-columns: max-content 1fr;
+    gap: 14px;
+    align-items: center;
+    padding-top: 14px;
+    border-top: 1px dashed rgba(245, 241, 232, 0.12);
+  }
+  .ce-caps-lbl {
+    font-family: ui-monospace, monospace;
+    font-size: 9px;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: rgba(245, 241, 232, 0.42);
+  }
+  .ce-caps-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px 6px;
+  }
+  .ce-caps-list li {
+    font-family: ui-monospace, monospace;
+    font-size: 10.5px;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    color: rgba(245, 241, 232, 0.22);
+    background: transparent;
+    border: 1px solid rgba(245, 241, 232, 0.10);
+    border-radius: 2px;
+    padding: 3px 8px;
+    transition: color 280ms ease, border-color 280ms ease, background 280ms ease, transform 280ms ease;
+  }
+  .ce-caps-list li.on {
+    color: #f5f1e8;
+    border-color: rgba(255, 90, 60, 0.55);
+    background: rgba(255, 90, 60, 0.08);
+  }
+  .ce-caps-list li.on.just {
+    color: #ffb347;
+    border-color: rgba(255, 179, 71, 0.78);
+    background: rgba(255, 179, 71, 0.12);
+    box-shadow: 0 0 12px rgba(255, 179, 71, 0.32);
+    transform: translateY(-1px);
+  }
+
+  /* ─────────── Scrubber + era meta column ─────────── */
   .ce-controls {
     display: flex;
     flex-direction: column;
@@ -730,7 +1286,7 @@
     background: rgba(245, 241, 232, 0.04);
     border: 1px solid rgba(245, 241, 232, 0.18);
     color: rgba(245, 241, 232, 0.55);
-    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-family: ui-monospace, monospace;
     font-size: 11px;
     font-weight: 700;
     cursor: pointer;
@@ -742,7 +1298,6 @@
     border-color: var(--brand-orange);
     background: var(--brand-grad);
   }
-
   .ce-slider {
     -webkit-appearance: none;
     appearance: none;
@@ -751,7 +1306,7 @@
     background: rgba(245, 241, 232, 0.10);
     border-radius: 2px;
     outline: none;
-    cursor: pointer;
+    cursor: ew-resize;
   }
   .ce-slider::-webkit-slider-thumb {
     -webkit-appearance: none;
@@ -771,7 +1326,6 @@
     background: linear-gradient(90deg, #ff2761 0%, #ffb347 100%);
     border: 2px solid #07060c;
     cursor: grab;
-    box-shadow: 0 0 0 2px rgba(255, 90, 60, 0.32);
   }
 
   .ce-meta {
@@ -782,33 +1336,39 @@
     border-top: 1px solid rgba(245, 241, 232, 0.08);
   }
   .ce-meta-eyebrow {
-    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-family: ui-monospace, monospace;
     font-size: 10px;
     letter-spacing: 0.22em;
-    text-transform: uppercase;
     color: rgba(245, 241, 232, 0.48);
     margin: 0;
   }
   .ce-meta-title {
-    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-family: ui-monospace, monospace;
     font-style: italic;
-    font-size: 20px;
+    font-size: 22px;
     font-weight: 700;
     color: #f5f1e8;
     margin: 0;
     line-height: 1.15;
   }
-  .ce-meta-note {
+  .ce-meta-since {
     font-size: 14px;
-    color: rgba(245, 241, 232, 0.72);
+    color: rgba(245, 241, 232, 0.88);
+    margin: 10px 0 0;
+    line-height: 1.5;
+  }
+  .ce-meta-since strong { color: #ffb347; font-weight: 700; }
+  .ce-meta-note {
+    font-size: 13px;
+    color: rgba(245, 241, 232, 0.62);
     margin: 4px 0 0;
     line-height: 1.5;
   }
   .ce-meta-commit {
-    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-family: ui-monospace, monospace;
     font-size: 10px;
     color: rgba(245, 241, 232, 0.32);
-    margin: 8px 0 0;
+    margin: 12px 0 0;
     letter-spacing: 0.04em;
   }
 </style>
