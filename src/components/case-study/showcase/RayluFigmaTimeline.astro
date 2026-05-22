@@ -1,0 +1,365 @@
+---
+// The Figma file as alignment artifact. A horizontal scroller of the
+// linear workspace timeline the team used during the engagement. Each
+// section is a stop founders could navigate to without designer
+// intervention — brand, competitor analysis, low-fi, hi-fi, prototype.
+// Click an index dot or use the prev/next chevrons to advance.
+//
+// The mock here approximates the actual Figma layout: vertically
+// expanding sections, each one date-stamped, with a representative
+// summary chip and a thumbnail strip.
+
+const SECTIONS = [
+  {
+    id: "01",
+    name: "Brand",
+    date: "Apr 2023",
+    note: "First palette explorations, the whale mascot, and the headline thesis: \"tools to make ML safe.\"",
+    chips: ["palette", "whale", "tone-of-voice"],
+    accent: "cyan",
+    asset: "/case-studies/raylu/cover.png",
+    assetAlt: "Raylu pixel-art whale mascot on teal.",
+    assetCaption: "The whale mascot, picked because it reads as friendly at any scale.",
+  },
+  {
+    id: "02",
+    name: "Competitive analysis",
+    date: "Apr 2023",
+    note: "Five sibling ML-tooling products mapped on a 2x2 of fidelity vs scope, with takeaways pinned per quadrant.",
+    chips: ["Snorkel", "Weights & Biases", "Roboflow", "DataRobot", "Galileo"],
+    accent: "pink",
+    asset: null,
+    assetCaption: "Competitive read kept the work honest — no surface that someone else already shipped.",
+  },
+  {
+    id: "03",
+    name: "Strategy / thesis",
+    date: "May 2023",
+    note: "Goal: provide necessary tools to make ML safe. Deterministic vs unbounded — we built for the unbounded case.",
+    chips: ["observability", "pipelines, not models", "human-rules over"],
+    accent: "yellow",
+    asset: "/case-studies/raylu/notion-35fed8d4704f80d780aaf0ab65e049a7.png",
+    assetAlt: "Strategy slide: Raylu's goal is to provide tools that make ML safe. ML splits into Deterministic and Unbounded; we work in the unbounded case via pipelines.",
+    assetCaption: "Pipelines, not single models. Human-inserted rules over the chain. That positioning carried into every screen.",
+  },
+  {
+    id: "04",
+    name: "Wireframes",
+    date: "Jun 2023",
+    note: "Founder sketches translated into low-fi Figma frames. Two starting paths: talk to a chat bot, or boot a premade system.",
+    chips: ["chat-first", "premade systems", "two-path entry"],
+    accent: "white",
+    asset: "/case-studies/raylu/notion-35fed8d4704f808d9ca0f53a5b38a89d.png",
+    assetAlt: "Founder sketch for the model-prototype starting page. Sidebar icons, a chat-style interface, and an All systems grid of recommendation-system cards. Annotated: 'either talk to chat bot or boot up premade system.'",
+    assetCaption: "Founder sketch (mid-Zoom call, then traced in Figma the same afternoon). The annotation under it became the V0 nav model.",
+  },
+  {
+    id: "05",
+    name: "Hi-fi prototype",
+    date: "Jul 2023",
+    note: "Pipeline builder hi-fi, with model-integration nav, label-errors workflow, and UMAP slicing. Clickable for investor demos.",
+    chips: ["pipeline UI", "UMAP slicing", "label errors"],
+    accent: "green",
+    asset: "/case-studies/raylu/notion-35fed8d4704f8005968fd121bdbfc1d8.png",
+    assetAlt: "Raylu hi-fi UMAP slicing UI. A scatterplot with orange and green clusters, a left rail of sliders (point size, opacity, thumbnail size), and a UMAP reduction-algorithm selector. Model Integration button top right.",
+    assetCaption: "The pipeline builder's UMAP slice surface. Investor demos clicked into this screen to feel \"this is real.\"",
+  },
+];
+---
+
+<div class="ry-tl" data-ry-tl>
+  <div class="ry-tl-controls">
+    <button type="button" class="ry-tl-nav" data-ry-tl-nav="prev" aria-label="Previous section">←</button>
+    <div class="ry-tl-dots" role="tablist" aria-label="Workspace sections">
+      {SECTIONS.map((s, i) => (
+        <button
+          type="button"
+          class:list={["ry-tl-dot", { active: i === 0 }]}
+          role="tab"
+          aria-selected={i === 0 ? "true" : "false"}
+          data-ry-tl-dot={i}
+        >
+          <span class="ry-tl-dot-id">{s.id}</span>
+          <span class="ry-tl-dot-name">{s.name}</span>
+        </button>
+      ))}
+    </div>
+    <button type="button" class="ry-tl-nav" data-ry-tl-nav="next" aria-label="Next section">→</button>
+  </div>
+
+  <div class="ry-tl-scroller" data-ry-tl-scroller>
+    {SECTIONS.map((s, i) => (
+      <div class:list={["ry-tl-section", `ry-tl-accent-${s.accent}`]} data-ry-tl-section={i}>
+        <div class="ry-tl-section-head">
+          <span class="ry-tl-section-id">{s.id} / 05</span>
+          <span class="ry-tl-section-date">{s.date}</span>
+        </div>
+        <h4 class="ry-tl-section-name">{s.name}</h4>
+        <p class="ry-tl-section-note">{s.note}</p>
+        <ul class="ry-tl-section-chips">
+          {s.chips.map((c) => <li>{c}</li>)}
+        </ul>
+        <div class:list={["ry-tl-section-art", { "ry-tl-section-empty": !s.asset }]}>
+          {s.asset ? (
+            <img src={s.asset} alt={s.assetAlt} loading="lazy" />
+          ) : (
+            <div class="ry-tl-empty-grid">
+              <span>Snorkel</span><span>W&B</span><span>Roboflow</span>
+              <span>DataRobot</span><span>Galileo</span><span>+</span>
+            </div>
+          )}
+        </div>
+        <p class="ry-tl-section-cap">{s.assetCaption}</p>
+      </div>
+    ))}
+  </div>
+</div>
+
+<script>
+  const root = document.querySelector<HTMLElement>("[data-ry-tl]");
+  if (root) {
+    const scroller = root.querySelector<HTMLElement>("[data-ry-tl-scroller]");
+    const sections = root.querySelectorAll<HTMLElement>("[data-ry-tl-section]");
+    const dots = root.querySelectorAll<HTMLButtonElement>("[data-ry-tl-dot]");
+    const navs = root.querySelectorAll<HTMLButtonElement>("[data-ry-tl-nav]");
+    let active = 0;
+    let programmatic = 0;
+
+    const setActive = (i: number) => {
+      active = i;
+      dots.forEach((d, j) => {
+        d.classList.toggle("active", j === active);
+        d.setAttribute("aria-selected", j === active ? "true" : "false");
+      });
+    };
+
+    const goto = (i: number) => {
+      const next = Math.max(0, Math.min(sections.length - 1, i));
+      const target = sections[next];
+      setActive(next);
+      if (target && scroller) {
+        programmatic = Date.now() + 600;
+        scroller.scrollTo({ left: target.offsetLeft - scroller.offsetLeft, behavior: "smooth" });
+      }
+    };
+
+    dots.forEach((d, i) => d.addEventListener("click", () => goto(i)));
+    navs.forEach((n) => {
+      n.addEventListener("click", () => {
+        if (n.dataset.ryTlNav === "prev") goto(active - 1);
+        else goto(active + 1);
+      });
+    });
+
+    // Update active dot when user scrolls manually, but ignore the
+    // smooth-scroll cascade that follows a programmatic goto().
+    scroller?.addEventListener("scroll", () => {
+      if (Date.now() < programmatic) return;
+      const center = scroller.scrollLeft + scroller.clientWidth / 2;
+      let nearest = 0;
+      let nearestDist = Infinity;
+      sections.forEach((s, i) => {
+        const sCenter = s.offsetLeft - scroller.offsetLeft + s.clientWidth / 2;
+        const d = Math.abs(sCenter - center);
+        if (d < nearestDist) { nearestDist = d; nearest = i; }
+      });
+      if (nearest !== active) setActive(nearest);
+    });
+  }
+</script>
+
+<style>
+  .ry-tl { display: grid; gap: 16px; }
+
+  .ry-tl-controls {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .ry-tl-nav {
+    flex: 0 0 36px;
+    height: 36px;
+    border-radius: 4px;
+    border: 1px solid var(--cs-line);
+    background: rgba(245, 241, 232, 0.02);
+    color: var(--cs-text);
+    cursor: pointer;
+    font-size: 16px;
+    transition: border-color 160ms ease, background 160ms ease;
+  }
+  .ry-tl-nav:hover {
+    border-color: var(--cs-line-strong);
+    background: rgba(245, 241, 232, 0.04);
+  }
+  .ry-tl-dots {
+    flex: 1;
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 4px;
+    overflow-x: auto;
+  }
+  @media (max-width: 720px) {
+    .ry-tl-dots { grid-template-columns: repeat(5, minmax(120px, 1fr)); }
+  }
+  .ry-tl-dot {
+    display: grid;
+    gap: 2px;
+    text-align: left;
+    background: rgba(245, 241, 232, 0.02);
+    border: 1px solid var(--cs-line);
+    border-radius: 3px;
+    padding: 6px 8px;
+    cursor: pointer;
+    transition: border-color 160ms ease, background 160ms ease;
+  }
+  .ry-tl-dot:hover {
+    border-color: var(--cs-line-strong);
+    background: rgba(245, 241, 232, 0.04);
+  }
+  .ry-tl-dot.active {
+    border-color: var(--brand-orange);
+    background: rgba(255, 90, 60, 0.07);
+  }
+  .ry-tl-dot-id {
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 9.5px;
+    letter-spacing: 0.22em;
+    color: rgba(245, 241, 232, 0.45);
+  }
+  .ry-tl-dot.active .ry-tl-dot-id { color: var(--brand-orange); }
+  .ry-tl-dot-name {
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-style: italic;
+    font-weight: 700;
+    font-size: 12px;
+    color: var(--cs-text);
+  }
+
+  .ry-tl-scroller {
+    display: flex;
+    gap: 18px;
+    overflow-x: auto;
+    overflow-y: hidden;
+    padding: 8px 4px 18px;
+    scroll-snap-type: x mandatory;
+    -webkit-overflow-scrolling: touch;
+  }
+  .ry-tl-scroller::-webkit-scrollbar {
+    height: 6px;
+  }
+  .ry-tl-scroller::-webkit-scrollbar-thumb {
+    background: rgba(245, 241, 232, 0.16);
+    border-radius: 3px;
+  }
+
+  .ry-tl-section {
+    flex: 0 0 min(720px, 88%);
+    scroll-snap-align: start;
+    background: rgba(245, 241, 232, 0.025);
+    border: 1px solid var(--cs-line);
+    border-top: 3px solid var(--brand-orange);
+    border-radius: 4px;
+    padding: 20px 22px;
+    display: grid;
+    gap: 12px;
+  }
+  .ry-tl-accent-cyan { border-top-color: var(--brand-cyan); }
+  .ry-tl-accent-pink { border-top-color: var(--brand-pink); }
+  .ry-tl-accent-yellow { border-top-color: var(--brand-yellow); }
+  .ry-tl-accent-white { border-top-color: rgba(245, 241, 232, 0.62); }
+  .ry-tl-accent-green { border-top-color: var(--brand-green); }
+
+  .ry-tl-section-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+  }
+  .ry-tl-section-id, .ry-tl-section-date {
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 10px;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: rgba(245, 241, 232, 0.55);
+  }
+  .ry-tl-section-name {
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-style: italic;
+    font-weight: 700;
+    font-size: 22px;
+    color: var(--cs-text);
+    margin: 0;
+  }
+  .ry-tl-section-note {
+    font-size: 14px;
+    line-height: 1.55;
+    color: rgba(245, 241, 232, 0.78);
+    margin: 0 !important;
+    max-width: none !important;
+  }
+  .ry-tl-section-chips {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+  .ry-tl-section-chips li {
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 10.5px;
+    letter-spacing: 0.06em;
+    color: rgba(245, 241, 232, 0.72);
+    padding: 3px 8px;
+    background: rgba(245, 241, 232, 0.04);
+    border: 1px solid var(--cs-line);
+    border-radius: 2px;
+  }
+  .ry-tl-section-art {
+    border: 1px solid var(--cs-line);
+    border-radius: 4px;
+    overflow: hidden;
+    background: #07060c;
+    min-height: 180px;
+  }
+  .ry-tl-section-art img {
+    display: block;
+    width: 100%;
+    height: auto;
+  }
+  .ry-tl-section-empty {
+    padding: 14px;
+    min-height: 200px;
+  }
+  .ry-tl-empty-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+    height: 100%;
+  }
+  .ry-tl-empty-grid span {
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-style: italic;
+    font-size: 13px;
+    color: rgba(245, 241, 232, 0.72);
+    padding: 18px 12px;
+    text-align: center;
+    background: rgba(245, 241, 232, 0.02);
+    border: 1px dashed rgba(245, 241, 232, 0.18);
+    border-radius: 3px;
+    display: grid;
+    place-items: center;
+  }
+  .ry-tl-empty-grid span:last-child {
+    color: var(--brand-orange);
+    border-color: rgba(255, 90, 60, 0.45);
+  }
+  .ry-tl-section-cap {
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-style: italic;
+    font-size: 12px;
+    color: rgba(245, 241, 232, 0.55);
+    margin: 0 !important;
+    line-height: 1.5;
+    max-width: none !important;
+  }
+</style>
