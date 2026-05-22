@@ -1,0 +1,419 @@
+---
+// Role-aware docs-chat. Pick a role (Sales / GTM / Finance / Ops). The
+// docs-chat panel below swaps its starter prompts to that role's actual
+// jobs. Click a starter — the chat shows a faux response that uses the
+// same UI patterns the docs-chat itself ships with (template chips,
+// embedded-resource pills, quick prompts).
+//
+// This is the design pattern the real CHS docs-chat ships with: each role
+// lands in a chat whose starter prompts are already framed in their own
+// language. The mock data here is plausible without revealing internals.
+
+const ROLES = [
+  {
+    id: "sales",
+    name: "Sales",
+    blurb: "Account research, follow-ups, deal-review summaries.",
+    starters: [
+      {
+        label: "Build a KB from our last 10 deal-review decks",
+        kind: "Knowledge base",
+        chip: "TEMPLATE · embedded resource",
+        body: "Point ChatCHS at the /Sales/Deal Reviews SharePoint folder. I'll watch for new decks weekly and re-embed.",
+        tail: "indexes 10 decks · ~28k tokens · refresh: weekly Mon 06:00 CST",
+      },
+      {
+        label: "Draft a follow-up email in our sales voice",
+        kind: "Voice-trained prompt",
+        chip: "PROMPT · sales-voice-v3",
+        body: "Thanks for the time on Tuesday, Mike. Two things you flagged that I want to come back to before our next sync...",
+        tail: "uses sales-voice-v3 · trained on 412 closed-won emails",
+      },
+      {
+        label: "Summarize the Acme Co. Q2 transcript",
+        kind: "Task flow",
+        chip: "WORKFLOW · transcript → brief",
+        body: "Three takeaways for the deal team:  1) Mike is the budget owner, not Sarah.  2) Renewal cycle moved to Q4.  3) They're evaluating Sunchild for the Q3 pilot.",
+        tail: "pulls from Gong · 38 min transcript · 3-bullet brief",
+      },
+    ],
+  },
+  {
+    id: "gtm",
+    name: "GTM",
+    blurb: "Launch comms, campaign briefs, customer story reframes.",
+    starters: [
+      {
+        label: "Build a KB from the GTM Drive, refresh weekly",
+        kind: "Knowledge base",
+        chip: "TEMPLATE · embedded resource",
+        body: "Build a KB from our shared GTM Drive folder, tagged by quarter, with weekly auto-refresh.",
+        tail: "indexes 184 files across 6 quarters · refresh: Sun 23:00 CST",
+      },
+      {
+        label: "Write a launch blurb for the seed-treatment module",
+        kind: "Voice-trained prompt",
+        chip: "PROMPT · gtm-voice-v2",
+        body: "Headline: a seed-treatment system that talks to your planter.  Sub: row-by-row decisions, made before the row.",
+        tail: "uses gtm-voice-v2 · audience: ag retailer · channel: LinkedIn",
+      },
+      {
+        label: "Reframe a customer story for LinkedIn",
+        kind: "Task flow",
+        chip: "WORKFLOW · case-study → social",
+        body: "From a 4-page case study, you get: 1 carousel deck, 1 short post, 1 newsletter pull-quote. Each one routes to the right channel cadence.",
+        tail: "outputs 3 channel variants · keeps the customer quote verbatim",
+      },
+    ],
+  },
+  {
+    id: "finance",
+    name: "Finance",
+    blurb: "Variance summaries, trend pulls, board narratives.",
+    starters: [
+      {
+        label: "Variance summary on the latest grain-trading PnL",
+        kind: "Task flow",
+        chip: "WORKFLOW · pnl → variance brief",
+        body: "Three movers vs forecast:  · Soybean basis tightened 14¢ in IL  · Rail tender costs +9% MoM  · Hedging gains carried Q2.",
+        tail: "reads the Q2 PnL workbook · 3-mover summary by default",
+      },
+      {
+        label: "Pull last quarter's freight cost trend",
+        kind: "Knowledge base",
+        chip: "DATASET · freight-costs-2026q1",
+        body: "Trend: total freight up 6.4% QoQ, driven by Pacific Northwest rail. Truck spot rates flat. Most affected lanes: Tacoma, Portland, Long Beach.",
+        tail: "queries the freight-costs view · returns trend + top affected lanes",
+      },
+      {
+        label: "Summarize Q4 board narrative for the FP&A team",
+        kind: "Voice-trained prompt",
+        chip: "PROMPT · board-voice",
+        body: "Q4 delivered against the three commitments tabled at the September board: margin recovery, freight discipline, and seed-treatment ramp.",
+        tail: "uses board-voice · 3-paragraph cap · plain language only",
+      },
+    ],
+  },
+  {
+    id: "ops",
+    name: "Ops",
+    blurb: "SOP conversion, safety stand-down search, field translation.",
+    starters: [
+      {
+        label: "Convert this SOP into a how-to flow",
+        kind: "Task flow",
+        chip: "WORKFLOW · sop → checklist",
+        body: "Step 1: Verify shutoff. Step 2: Visual inspection of seal. Step 3: Pressure test at 80 PSI. Step 4: Log result to inspection board.",
+        tail: "reads PDF SOP · outputs role-tagged checklist + log fields",
+      },
+      {
+        label: "Find every Confluence page on safety stand-down",
+        kind: "Knowledge base",
+        chip: "DATASET · confluence-safety",
+        body: "12 pages found, 4 are policy-of-record. Most recent revision: 2026-04-18 (Topeka site). The others are quarterly drills.",
+        tail: "searches Confluence · flags policy vs drill · last-modified ranked",
+      },
+      {
+        label: "Translate this checklist into Spanish for Topeka",
+        kind: "Voice-trained prompt",
+        chip: "PROMPT · field-spanish",
+        body: "Paso 1: Verificar el cierre. Paso 2: Inspección visual del sello. Paso 3: Prueba de presión a 80 PSI. Paso 4: Registrar el resultado.",
+        tail: "uses field-spanish · keeps measurement units, line-by-line parity",
+      },
+    ],
+  },
+];
+---
+
+<div class="chs-rp" data-chs-rp>
+  <div class="chs-rp-roles" role="tablist" aria-label="Pick a role">
+    {ROLES.map((r, i) => (
+      <button
+        type="button"
+        class:list={["chs-rp-role", { active: i === 0 }]}
+        role="tab"
+        aria-selected={i === 0 ? "true" : "false"}
+        data-chs-rp-role={r.id}
+      >
+        <span class="chs-rp-role-name">{r.name}</span>
+        <span class="chs-rp-role-blurb">{r.blurb}</span>
+      </button>
+    ))}
+  </div>
+
+  <div class="chs-rp-chat" aria-live="polite">
+    <div class="chs-rp-chat-head">
+      <span class="chs-rp-dot" aria-hidden="true"></span>
+      <span class="chs-rp-chat-title">ChatCHS · Docs assistant</span>
+      <span class="chs-rp-chat-role" data-chs-rp-chat-role>You · Sales</span>
+    </div>
+
+    {ROLES.map((r, i) => (
+      <div class:list={["chs-rp-pane", { active: i === 0 }]} data-chs-rp-pane={r.id}>
+        <p class="chs-rp-prompt">Hi, I'm new to ChatCHS. Where do I start as someone in <em>{r.name}</em>?</p>
+        <p class="chs-rp-reply">Three starting flows match your role. Pick one to see what comes back.</p>
+        <ul class="chs-rp-starters">
+          {r.starters.map((s, j) => (
+            <li>
+              <button
+                type="button"
+                class:list={["chs-rp-starter", { active: j === 0 }]}
+                data-chs-rp-starter={`${r.id}-${j}`}
+              >
+                <span class="chs-rp-starter-arrow">→</span>
+                <span class="chs-rp-starter-label">{s.label}</span>
+                <span class="chs-rp-starter-kind">{s.kind}</span>
+              </button>
+            </li>
+          ))}
+        </ul>
+
+        {r.starters.map((s, j) => (
+          <div class:list={["chs-rp-response", { active: j === 0 }]} data-chs-rp-response={`${r.id}-${j}`}>
+            <span class="chs-rp-chip">{s.chip}</span>
+            <p class="chs-rp-response-body">{s.body}</p>
+            <p class="chs-rp-response-tail">{s.tail}</p>
+          </div>
+        ))}
+      </div>
+    ))}
+  </div>
+</div>
+
+<script>
+  const root = document.querySelector<HTMLElement>("[data-chs-rp]");
+  if (root) {
+    const roleBtns = root.querySelectorAll<HTMLButtonElement>("[data-chs-rp-role]");
+    const panes = root.querySelectorAll<HTMLElement>("[data-chs-rp-pane]");
+    const chatRoleLbl = root.querySelector<HTMLElement>("[data-chs-rp-chat-role]");
+
+    const activateRole = (id: string) => {
+      roleBtns.forEach((b) => {
+        const on = b.dataset.chsRpRole === id;
+        b.classList.toggle("active", on);
+        b.setAttribute("aria-selected", on ? "true" : "false");
+      });
+      panes.forEach((p) => p.classList.toggle("active", p.dataset.chsRpPane === id));
+      const label = root.querySelector<HTMLElement>(`[data-chs-rp-role="${id}"] .chs-rp-role-name`);
+      if (chatRoleLbl && label) chatRoleLbl.textContent = `You · ${label.textContent}`;
+    };
+
+    roleBtns.forEach((b) => {
+      b.addEventListener("click", () => activateRole(b.dataset.chsRpRole || ""));
+    });
+
+    const starterBtns = root.querySelectorAll<HTMLButtonElement>("[data-chs-rp-starter]");
+    starterBtns.forEach((b) => {
+      b.addEventListener("click", () => {
+        const id = b.dataset.chsRpStarter || "";
+        const pane = b.closest<HTMLElement>("[data-chs-rp-pane]");
+        if (!pane) return;
+        pane.querySelectorAll<HTMLButtonElement>("[data-chs-rp-starter]").forEach((s) =>
+          s.classList.toggle("active", s === b)
+        );
+        pane.querySelectorAll<HTMLElement>("[data-chs-rp-response]").forEach((r) =>
+          r.classList.toggle("active", r.dataset.chsRpResponse === id)
+        );
+      });
+    });
+  }
+</script>
+
+<style>
+  .chs-rp {
+    display: grid;
+    grid-template-columns: minmax(220px, 280px) minmax(0, 1fr);
+    gap: 28px;
+    align-items: start;
+  }
+  @media (max-width: 880px) {
+    .chs-rp { grid-template-columns: 1fr; }
+  }
+
+  /* Role rail */
+  .chs-rp-roles {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .chs-rp-role {
+    display: grid;
+    gap: 4px;
+    text-align: left;
+    background: rgba(245, 241, 232, 0.02);
+    border: 1px solid var(--cs-line);
+    border-radius: 4px;
+    padding: 12px 14px;
+    color: var(--cs-text);
+    cursor: pointer;
+    transition: border-color 160ms ease, background 160ms ease;
+  }
+  .chs-rp-role:hover {
+    border-color: var(--cs-line-strong);
+    background: rgba(245, 241, 232, 0.04);
+  }
+  .chs-rp-role.active {
+    border-color: var(--brand-orange);
+    background: rgba(255, 90, 60, 0.06);
+  }
+  .chs-rp-role-name {
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-style: italic;
+    font-weight: 700;
+    font-size: 15px;
+    color: var(--cs-text);
+  }
+  .chs-rp-role.active .chs-rp-role-name {
+    color: var(--brand-orange);
+  }
+  .chs-rp-role-blurb {
+    font-size: 12px;
+    color: rgba(245, 241, 232, 0.55);
+    line-height: 1.4;
+  }
+
+  /* Chat surface */
+  .chs-rp-chat {
+    background: #07060c;
+    border: 1px solid var(--cs-line);
+    border-radius: 6px;
+    overflow: hidden;
+  }
+  .chs-rp-chat-head {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 11px 16px;
+    border-bottom: 1px solid var(--cs-line);
+    background: rgba(245, 241, 232, 0.025);
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 11.5px;
+    color: rgba(245, 241, 232, 0.62);
+  }
+  .chs-rp-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--brand-orange);
+    box-shadow: 0 0 8px var(--brand-orange);
+  }
+  .chs-rp-chat-title { flex: 1; }
+  .chs-rp-chat-role {
+    color: var(--brand-cyan);
+    font-style: italic;
+  }
+
+  .chs-rp-pane { display: none; padding: 22px 22px 20px; }
+  .chs-rp-pane.active { display: block; }
+
+  .chs-rp-prompt {
+    display: inline-block;
+    background: rgba(255, 90, 60, 0.10);
+    border: 1px solid rgba(255, 90, 60, 0.32);
+    color: var(--cs-text);
+    border-radius: 12px 12px 4px 12px;
+    padding: 9px 14px;
+    font-size: 14px;
+    line-height: 1.5;
+    margin: 0 0 14px;
+    max-width: 80%;
+    align-self: flex-end;
+  }
+  .chs-rp-prompt em {
+    font-style: italic;
+    color: var(--brand-orange);
+    font-weight: 700;
+  }
+
+  .chs-rp-reply {
+    font-size: 13.5px;
+    color: rgba(245, 241, 232, 0.72);
+    margin: 0 0 14px;
+    font-style: italic;
+  }
+
+  .chs-rp-starters {
+    list-style: none;
+    padding: 0;
+    margin: 0 0 14px;
+    display: grid;
+    gap: 6px;
+  }
+  .chs-rp-starter {
+    display: grid;
+    grid-template-columns: 18px 1fr auto;
+    gap: 12px;
+    align-items: center;
+    width: 100%;
+    text-align: left;
+    background: rgba(245, 241, 232, 0.02);
+    border: 1px solid var(--cs-line);
+    border-radius: 4px;
+    padding: 10px 14px;
+    cursor: pointer;
+    transition: border-color 160ms ease, background 160ms ease;
+  }
+  .chs-rp-starter:hover {
+    border-color: var(--cs-line-strong);
+    background: rgba(245, 241, 232, 0.04);
+  }
+  .chs-rp-starter.active {
+    border-color: var(--brand-cyan);
+    background: rgba(14, 196, 252, 0.05);
+  }
+  .chs-rp-starter-arrow {
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    color: rgba(245, 241, 232, 0.45);
+    font-weight: 700;
+  }
+  .chs-rp-starter.active .chs-rp-starter-arrow { color: var(--brand-cyan); }
+  .chs-rp-starter-label {
+    font-size: 14px;
+    color: var(--cs-text);
+    line-height: 1.4;
+  }
+  .chs-rp-starter-kind {
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 10px;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: rgba(245, 241, 232, 0.45);
+  }
+
+  .chs-rp-response {
+    display: none;
+    border-top: 1px solid var(--cs-line);
+    padding-top: 16px;
+    margin-top: 6px;
+  }
+  .chs-rp-response.active { display: block; }
+  .chs-rp-chip {
+    display: inline-block;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 10px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--brand-cyan);
+    background: rgba(14, 196, 252, 0.07);
+    border: 1px solid rgba(14, 196, 252, 0.35);
+    border-radius: 2px;
+    padding: 3px 7px;
+    margin-bottom: 10px;
+  }
+  .chs-rp-response-body {
+    font-size: 14.5px;
+    line-height: 1.55;
+    color: var(--cs-text);
+    margin: 0 0 8px;
+    padding: 10px 14px;
+    background: rgba(0, 255, 77, 0.04);
+    border-left: 2px solid rgba(0, 255, 77, 0.45);
+    border-radius: 2px;
+  }
+  .chs-rp-response-tail {
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 11.5px;
+    color: rgba(245, 241, 232, 0.45);
+    margin: 0;
+  }
+</style>
