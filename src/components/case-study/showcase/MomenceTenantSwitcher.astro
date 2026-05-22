@@ -1,0 +1,390 @@
+---
+// Tenant switcher. The four-category schema stays constant on the left.
+// On the right, a customer-detail card reshuffles its priority order
+// and its flex-field labels based on which tenant is active. Same
+// schema, different business — that is the modularity argument.
+
+const TENANTS = [
+  {
+    id: "yoga",
+    name: "Yoga studio",
+    tag: "LoHi Studio · Denver",
+    leadKpi: { label: "Sessions attended", n: "44", trend: "+11%" },
+    secondaryKpi: { label: "Total spend", n: "$863", trend: "+17%" },
+    subs: ["Barre Fit Advanced · 1st renewal", "Vinyasa Pro"],
+    flexFields: ["Mat preference", "Instructor pref", "Injury notes"],
+    tags: ["Yoga", "Pilates", "Core Series", "Concession"],
+    activity: ["Check in · Gentle Vinyasa · 3h ago", "Payment · $37 · Feb Guest Pass · 2d", "Email · May Availability · 3d"],
+  },
+  {
+    id: "coaching",
+    name: "B2B coaching",
+    tag: "Lattice for Coaches · Remote",
+    leadKpi: { label: "Hours coached", n: "112", trend: "+24%" },
+    secondaryKpi: { label: "Contract", n: "$12,400", trend: "renews 90d" },
+    subs: ["Enterprise team coaching · Q2 cohort", "Executive 1:1 · Q3"],
+    flexFields: ["Engagement type", "Renewal owner", "Success metric"],
+    tags: ["Mid-market", "Executive", "Active", "Renewal"],
+    activity: ["1:1 session · Susan B. · 4h ago", "Invoice · $4,200 · Q2 · 1d", "Email · Q3 scope discussion · 5d"],
+  },
+  {
+    id: "pilates",
+    name: "Pilates / reformer",
+    tag: "RebelReformer · Brooklyn",
+    leadKpi: { label: "Reformer sessions", n: "27", trend: "+8%" },
+    secondaryKpi: { label: "Total spend", n: "$1,420", trend: "+22%" },
+    subs: ["Reformer Founder · monthly", "Tower Add-on"],
+    flexFields: ["Apparatus pref", "Spring strength", "Body comp goal"],
+    tags: ["Reformer", "Tower", "Founder", "Beginner"],
+    activity: ["Check in · Reformer 102 · 1h ago", "Payment · $42 · Drop-in · 2d", "Note · added stretch goal · 3d"],
+  },
+  {
+    id: "wellness",
+    name: "Massage / wellness",
+    tag: "GoodPress Wellness · Austin",
+    leadKpi: { label: "Treatments YTD", n: "9", trend: "+50%" },
+    secondaryKpi: { label: "Total spend", n: "$1,140", trend: "+30%" },
+    subs: ["Monthly Member · auto-renew", "Add-on: Cupping"],
+    flexFields: ["Allergy notes", "Therapist pref", "Pressure preference"],
+    tags: ["Deep tissue", "Member", "Sensitive skin", "Returning"],
+    activity: ["Treatment · 90-min deep · 5d ago", "Payment · $135 · Renewal · 7d", "Note · update allergies · 12d"],
+  },
+];
+
+const CATEGORIES = [
+  { id: "contact", name: "Client Contact", desc: "Identity, communication." },
+  { id: "business", name: "Business-Specific", desc: "Financials, subscriptions, credits." },
+  { id: "flex", name: "Flex Fields", desc: "Per-tenant custom configuration." },
+  { id: "activity", name: "User Interactions", desc: "Activity, messages, notes." },
+];
+---
+
+<div class="mo-tn" data-mo-tn>
+  <div class="mo-tn-picker" role="tablist" aria-label="Pick a tenant">
+    {TENANTS.map((t, i) => (
+      <button
+        type="button"
+        class:list={["mo-tn-opt", { active: i === 0 }]}
+        role="tab"
+        aria-selected={i === 0 ? "true" : "false"}
+        data-mo-tn-opt={t.id}
+      >
+        <span class="mo-tn-opt-name">{t.name}</span>
+        <span class="mo-tn-opt-tag">{t.tag}</span>
+      </button>
+    ))}
+  </div>
+
+  <div class="mo-tn-stage">
+    <div class="mo-tn-schema">
+      <span class="mo-tn-rail-lbl">SCHEMA — STAYS CONSTANT</span>
+      <ul>
+        {CATEGORIES.map((c) => (
+          <li>
+            <span class="mo-tn-cat-name">{c.name}</span>
+            <span class="mo-tn-cat-desc">{c.desc}</span>
+          </li>
+        ))}
+      </ul>
+      <p class="mo-tn-rail-foot">Same four primitives. What changes per tenant is priority, density, and flex.</p>
+    </div>
+
+    {TENANTS.map((t, i) => (
+      <div class:list={["mo-tn-card", { active: i === 0 }]} data-mo-tn-card={t.id}>
+        <div class="mo-tn-card-head">
+          <div class="mo-tn-avatar"><span>YK</span></div>
+          <div>
+            <p class="mo-tn-card-name">Yaz Kahrouf</p>
+            <p class="mo-tn-card-meta">Joined Aug 2022 · <span class="mo-tn-on">attended today</span></p>
+            <p class="mo-tn-card-tenant"><strong>{t.name}</strong> · {t.tag}</p>
+          </div>
+        </div>
+
+        <div class="mo-tn-kpis">
+          <div class="mo-tn-kpi mo-tn-kpi-lead">
+            <span class="mo-tn-kpi-lbl">{t.leadKpi.label}</span>
+            <span class="mo-tn-kpi-n">{t.leadKpi.n}</span>
+            <span class="mo-tn-kpi-trend">↗ {t.leadKpi.trend}</span>
+          </div>
+          <div class="mo-tn-kpi">
+            <span class="mo-tn-kpi-lbl">{t.secondaryKpi.label}</span>
+            <span class="mo-tn-kpi-n">{t.secondaryKpi.n}</span>
+            <span class="mo-tn-kpi-trend">↗ {t.secondaryKpi.trend}</span>
+          </div>
+        </div>
+
+        <div class="mo-tn-row">
+          <span class="mo-tn-row-lbl">Subscriptions</span>
+          <ul class="mo-tn-subs">
+            {t.subs.map((s) => <li>{s}</li>)}
+          </ul>
+        </div>
+
+        <div class="mo-tn-row">
+          <span class="mo-tn-row-lbl">Flex fields</span>
+          <ul class="mo-tn-flex">
+            {t.flexFields.map((f) => <li>{f}</li>)}
+          </ul>
+        </div>
+
+        <div class="mo-tn-row">
+          <span class="mo-tn-row-lbl">Tags</span>
+          <ul class="mo-tn-tags">
+            {t.tags.map((tag) => <li>{tag}</li>)}
+          </ul>
+        </div>
+
+        <div class="mo-tn-row mo-tn-row-activity">
+          <span class="mo-tn-row-lbl">Recent activity</span>
+          <ul class="mo-tn-activity">
+            {t.activity.map((a) => <li>· {a}</li>)}
+          </ul>
+        </div>
+      </div>
+    ))}
+  </div>
+</div>
+
+<script>
+  const root = document.querySelector<HTMLElement>("[data-mo-tn]");
+  if (root) {
+    const opts = root.querySelectorAll<HTMLButtonElement>("[data-mo-tn-opt]");
+    const cards = root.querySelectorAll<HTMLElement>("[data-mo-tn-card]");
+    opts.forEach((o) => {
+      o.addEventListener("click", () => {
+        opts.forEach((b) => {
+          const on = b === o;
+          b.classList.toggle("active", on);
+          b.setAttribute("aria-selected", on ? "true" : "false");
+        });
+        cards.forEach((c) => c.classList.toggle("active", c.dataset.moTnCard === o.dataset.moTnOpt));
+      });
+    });
+  }
+</script>
+
+<style>
+  .mo-tn { display: grid; gap: 22px; }
+
+  .mo-tn-picker {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 8px;
+  }
+  @media (max-width: 880px) {
+    .mo-tn-picker { grid-template-columns: 1fr 1fr; }
+  }
+  .mo-tn-opt {
+    text-align: left;
+    background: rgba(245, 241, 232, 0.02);
+    border: 1px solid var(--cs-line);
+    border-radius: 4px;
+    padding: 12px 14px;
+    cursor: pointer;
+    transition: border-color 160ms ease, background 160ms ease;
+    display: grid;
+    gap: 4px;
+  }
+  .mo-tn-opt:hover {
+    border-color: var(--cs-line-strong);
+    background: rgba(245, 241, 232, 0.04);
+  }
+  .mo-tn-opt.active {
+    border-color: var(--brand-orange);
+    background: rgba(255, 90, 60, 0.06);
+  }
+  .mo-tn-opt-name {
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-style: italic;
+    font-weight: 700;
+    font-size: 14px;
+    color: var(--cs-text);
+  }
+  .mo-tn-opt.active .mo-tn-opt-name { color: var(--brand-orange); }
+  .mo-tn-opt-tag {
+    font-size: 11.5px;
+    color: rgba(245, 241, 232, 0.55);
+    line-height: 1.3;
+  }
+
+  .mo-tn-stage {
+    display: grid;
+    grid-template-columns: minmax(220px, 280px) minmax(0, 1fr);
+    gap: 24px;
+    align-items: start;
+    position: relative;
+  }
+  @media (max-width: 880px) {
+    .mo-tn-stage { grid-template-columns: 1fr; }
+  }
+
+  /* Schema rail */
+  .mo-tn-schema {
+    background: rgba(14, 196, 252, 0.03);
+    border: 1px dashed rgba(14, 196, 252, 0.30);
+    border-radius: 4px;
+    padding: 16px 18px;
+  }
+  .mo-tn-rail-lbl {
+    display: block;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 10px;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: var(--brand-cyan);
+    margin-bottom: 12px;
+  }
+  .mo-tn-schema ul { list-style: none; padding: 0; margin: 0 0 14px; display: grid; gap: 8px; }
+  .mo-tn-schema li {
+    padding: 8px 10px;
+    background: rgba(245, 241, 232, 0.03);
+    border: 1px solid var(--cs-line);
+    border-radius: 3px;
+    display: grid;
+    gap: 2px;
+  }
+  .mo-tn-cat-name {
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-style: italic;
+    font-weight: 700;
+    font-size: 12.5px;
+    color: var(--cs-text);
+  }
+  .mo-tn-cat-desc { font-size: 11px; color: rgba(245, 241, 232, 0.55); line-height: 1.4; }
+  .mo-tn-rail-foot {
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-style: italic;
+    font-size: 11.5px;
+    color: rgba(245, 241, 232, 0.55);
+    margin: 0;
+    line-height: 1.5;
+    max-width: none !important;
+  }
+
+  /* Customer card */
+  .mo-tn-card {
+    display: none;
+    background: #fff;
+    color: #1c1c1e;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 24px 60px -30px rgba(0,0,0,0.7), 0 0 0 1px rgba(245, 241, 232, 0.06);
+    font-family: "Geist Variable", ui-sans-serif, system-ui, sans-serif;
+  }
+  .mo-tn-card.active { display: block; }
+
+  .mo-tn-card-head {
+    background: #2e2e35;
+    color: #f5f5f7;
+    padding: 16px 18px;
+    display: flex;
+    gap: 14px;
+    align-items: center;
+  }
+  .mo-tn-avatar {
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    background: #1c1c1e;
+    display: grid;
+    place-items: center;
+    font-weight: 700;
+    color: #fff;
+    font-size: 18px;
+  }
+  .mo-tn-card-name {
+    font-size: 22px;
+    font-weight: 800;
+    margin: 0 0 2px;
+  }
+  .mo-tn-card-meta {
+    font-size: 12px;
+    color: rgba(245, 245, 247, 0.62);
+    margin: 0 0 2px;
+  }
+  .mo-tn-on { color: #4ade80; }
+  .mo-tn-card-tenant {
+    font-size: 11.5px;
+    color: rgba(245, 245, 247, 0.62);
+    margin: 0;
+    font-style: italic;
+  }
+  .mo-tn-card-tenant strong { color: #fbbf24; font-style: normal; font-weight: 700; }
+
+  .mo-tn-kpis {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    padding: 16px 18px 8px;
+    background: #fafafa;
+  }
+  .mo-tn-kpi {
+    background: #fff;
+    border-radius: 8px;
+    padding: 12px 14px;
+    box-shadow: 0 1px 0 rgba(0,0,0,0.04), 0 4px 18px -10px rgba(0,0,0,0.10);
+    display: grid;
+    gap: 2px;
+  }
+  .mo-tn-kpi-lead { border: 1.5px solid #7c3aed; box-shadow: 0 1px 0 rgba(0,0,0,0.04), 0 8px 20px -10px rgba(124, 58, 237, 0.32); }
+  .mo-tn-kpi-lbl { font-size: 11px; color: #555; }
+  .mo-tn-kpi-n { font-size: 22px; font-weight: 800; color: #1c1c1e; }
+  .mo-tn-kpi-trend { font-size: 11px; color: #7c3aed; font-weight: 700; }
+
+  .mo-tn-row {
+    padding: 12px 18px;
+    border-top: 1px solid #f0f0f0;
+    display: grid;
+    grid-template-columns: 110px 1fr;
+    gap: 12px;
+    align-items: start;
+    background: #fff;
+  }
+  .mo-tn-row-lbl {
+    font-size: 11px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: #888;
+    padding-top: 2px;
+  }
+  .mo-tn-subs, .mo-tn-flex, .mo-tn-tags, .mo-tn-activity {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+  .mo-tn-activity { flex-direction: column; gap: 4px; }
+  .mo-tn-subs li {
+    font-size: 11.5px;
+    padding: 3px 8px;
+    border-radius: 3px;
+    background: #ede9fe;
+    color: #5b21b6;
+    font-weight: 600;
+  }
+  .mo-tn-flex li {
+    font-size: 11.5px;
+    padding: 3px 8px;
+    border-radius: 3px;
+    background: #fef3c7;
+    color: #92400e;
+    font-weight: 600;
+  }
+  .mo-tn-tags li {
+    font-size: 11.5px;
+    padding: 3px 8px;
+    border-radius: 3px;
+    background: #f1f5f9;
+    color: #475569;
+    font-weight: 600;
+  }
+  .mo-tn-activity li {
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 11.5px;
+    color: #1c1c1e;
+    line-height: 1.5;
+  }
+  .mo-tn-row-activity { padding-bottom: 18px; }
+</style>
