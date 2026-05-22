@@ -52,6 +52,15 @@ function readRichText(prop: unknown): string {
   return rt.map((t) => t.plain_text ?? "").join("");
 }
 
+// Per-slug cover overrides. Use when a slug ships a hand-curated cover
+// asset whose extension differs from whatever Notion has on file. The
+// override wins over Notion's file extension and over external URLs.
+// Paired with cover.lock in /public/case-studies/[slug]/ + the lock
+// check inside scripts/sync-notion-images.mjs.
+const COVER_OVERRIDE: Record<string, string> = {
+  "the-console": "/case-studies/the-console/cover.svg",
+};
+
 function normalizePage(page: PageObjectResponse): CaseStudyMeta {
   // Notion's TS types for properties are a discriminated union; the `any`
   // here keeps the access concise. Each property is read defensively.
@@ -62,10 +71,12 @@ function normalizePage(page: PageObjectResponse): CaseStudyMeta {
   // Rewrite file-type covers to point at the local copy that the prebuild
   // script downloads to /public/case-studies/[slug]/cover.[ext]. External
   // URLs (set via Notion's "embed by URL" cover option) are stable, used
-  // as-is.
+  // as-is. Per-slug overrides above win over both.
   const coverFile = p.Cover?.files?.[0];
   let cover: string | null = null;
-  if (coverFile?.file?.url) {
+  if (COVER_OVERRIDE[slug]) {
+    cover = COVER_OVERRIDE[slug];
+  } else if (coverFile?.file?.url) {
     const ext = extFromUrl(coverFile.file.url);
     cover = `/case-studies/${slug}/cover.${ext}`;
   } else if (coverFile?.external?.url) {
