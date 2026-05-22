@@ -1,0 +1,591 @@
+---
+// Live "rip a loop from a jam" interactive.
+//
+// Visualizes the actual ✂ crop tool on the production BucketCard: a tall
+// waveform showing a 5-minute jam, a cyan crop frame draggable + handle-
+// resizeable, bar-grid ticks (since BPM is "known" in the demo), a
+// readout, and a transport that loops only the cropped region.
+//
+// Interactions wired up:
+//   - Drag handles to retrim each end
+//   - Drag the frame body to slide both caps together (Apple Photos style)
+//   - Snap to bars when BPM is known (toggle off via ⊕ keystroke)
+//   - Spacebar plays the loop region; second press pauses
+//   - ←/→ arrow keys scrub the playhead within the loop ±1s
+//   - Export commits the crop (just flashes a status)
+
+const JAM = {
+  name: "rainforest_post_karoke",
+  duration: 5 * 60 + 42,      // 5:42
+  bpm: 100,                   // → bar = 60/100 * 4 = 2.4s
+};
+
+const TOTAL_BARS = Math.floor(JAM.duration / (60 / JAM.bpm * 4));
+---
+
+<div class="lc-stage" data-lc-stage>
+  <div class="lc-head">
+    <span class="lc-source">{JAM.name}<span class="lc-ext">.wav</span></span>
+    <span class="lc-tech">5:42 · 100 BPM · {TOTAL_BARS} bars · key Em</span>
+  </div>
+
+  <div class="lc-wave" data-lc-wave>
+    <!-- Faux waveform (deterministic so the layout is repeatable). -->
+    {Array.from({ length: 184 }).map((_, i) => {
+      const t = i / 184;
+      // Make the waveform feel like a 5-min jam: quieter intro, loud chorus
+      // sections, a fade tail.
+      const env = (t < 0.06) ? 0.32 :
+                  (t < 0.18) ? 0.42 + 0.10 * Math.sin(i * 0.21) :
+                  (t < 0.34) ? 0.62 + 0.18 * Math.sin(i * 0.16) :
+                  (t < 0.52) ? 0.78 + 0.12 * Math.cos(i * 0.18) :
+                  (t < 0.68) ? 0.62 + 0.16 * Math.sin(i * 0.17) :
+                  (t < 0.84) ? 0.84 + 0.10 * Math.cos(i * 0.14) :
+                                0.52 + 0.18 * Math.sin(i * 0.22);
+      const h = Math.max(8, Math.min(96, env * 100 + 4 * Math.sin(i * 0.7)));
+      return <span class="lc-bar" style={`height:${h}%`}></span>;
+    })}
+
+    <!-- Bar-grid ticks (shown when BPM is known). -->
+    <div class="lc-bars" data-lc-bars>
+      {Array.from({ length: TOTAL_BARS + 1 }).map((_, i) => (
+        <span class="lc-bar-tick" style={`left:${(i / TOTAL_BARS) * 100}%`}></span>
+      ))}
+    </div>
+
+    <!-- Crop frame. data-lc-frame's --start / --end are percent (0..100). -->
+    <div
+      class="lc-mask lc-mask-left"
+      data-lc-mask-left
+      style="--w: 18%"
+      aria-hidden="true"
+    ></div>
+    <div
+      class="lc-mask lc-mask-right"
+      data-lc-mask-right
+      style="--w: 28%"
+      aria-hidden="true"
+    ></div>
+
+    <div
+      class="lc-frame"
+      data-lc-frame
+      style="--start: 18%; --end: 72%"
+      title="Drag to slide"
+    >
+      <button
+        type="button"
+        class="lc-handle lc-handle-start"
+        data-lc-handle="start"
+        aria-label="Drag to set loop start"
+      ><span class="lc-handle-time" data-lc-time-start>0:25</span></button>
+      <span class="lc-bar-count" data-lc-bar-count>13 bars · 31.2s</span>
+      <button
+        type="button"
+        class="lc-handle lc-handle-end"
+        data-lc-handle="end"
+        aria-label="Drag to set loop end"
+      ><span class="lc-handle-time" data-lc-time-end>1:48</span></button>
+    </div>
+
+    <!-- Playhead inside the loop. Hidden until play starts. -->
+    <div class="lc-playhead" data-lc-playhead hidden></div>
+  </div>
+
+  <div class="lc-toolbar">
+    <button type="button" class="lc-btn lc-play" data-lc-play>▶ play loop</button>
+    <button type="button" class="lc-btn lc-snap on" data-lc-snap aria-pressed="true">⌘ snap to bars</button>
+    <span class="lc-readout" data-lc-readout>13 bars · 31.2s · 0:25 → 1:48</span>
+    <button type="button" class="lc-btn lc-export" data-lc-export>✂ export to _Soundbending/loops/extracted/</button>
+  </div>
+
+  <p class="lc-hint" data-lc-hint>
+    <kbd>space</kbd> play / pause &nbsp;·&nbsp;
+    <kbd>←</kbd><kbd>→</kbd> scrub ±1s in the loop &nbsp;·&nbsp;
+    <kbd>⌘</kbd> toggle bar snap &nbsp;·&nbsp;
+    drag the frame body to slide &nbsp;·&nbsp;
+    drag a handle to retrim
+  </p>
+
+  <p class="lc-status" data-lc-status aria-live="polite"></p>
+</div>
+
+<script>
+  const DURATION = 5 * 60 + 42; // 5:42
+  const BPM = 100;
+  const BAR_S = (60 / BPM) * 4; // 2.4s per bar
+
+  const stage = document.querySelector<HTMLElement>("[data-lc-stage]");
+  if (!stage) throw new Error("lc-stage missing");
+
+  const wave = stage.querySelector<HTMLElement>("[data-lc-wave]");
+  const frame = stage.querySelector<HTMLElement>("[data-lc-frame]");
+  const maskLeft = stage.querySelector<HTMLElement>("[data-lc-mask-left]");
+  const maskRight = stage.querySelector<HTMLElement>("[data-lc-mask-right]");
+  const handleStart = stage.querySelector<HTMLElement>('[data-lc-handle="start"]');
+  const handleEnd = stage.querySelector<HTMLElement>('[data-lc-handle="end"]');
+  const timeStart = stage.querySelector<HTMLElement>("[data-lc-time-start]");
+  const timeEnd = stage.querySelector<HTMLElement>("[data-lc-time-end]");
+  const barCount = stage.querySelector<HTMLElement>("[data-lc-bar-count]");
+  const readout = stage.querySelector<HTMLElement>("[data-lc-readout]");
+  const playBtn = stage.querySelector<HTMLButtonElement>("[data-lc-play]");
+  const snapBtn = stage.querySelector<HTMLButtonElement>("[data-lc-snap]");
+  const exportBtn = stage.querySelector<HTMLButtonElement>("[data-lc-export]");
+  const playhead = stage.querySelector<HTMLElement>("[data-lc-playhead]");
+  const status = stage.querySelector<HTMLElement>("[data-lc-status]");
+
+  let startPct = 18;
+  let endPct = 72;
+  let snapOn = true;
+  let dragging: "start" | "end" | "frame" | null = null;
+  let dragStartX = 0;
+  let dragStartStart = 0;
+  let dragStartEnd = 0;
+  let playing = false;
+  let raf: number | null = null;
+  let playStartedAt = 0;
+  let playOffset = 0; // seconds within the loop
+
+  function fmt(s: number): string {
+    if (s < 0) s = 0;
+    const m = Math.floor(s / 60);
+    const r = Math.floor(s % 60);
+    return `${m}:${String(r).padStart(2, "0")}`;
+  }
+
+  function snap(pct: number): number {
+    if (!snapOn) return pct;
+    const t = (pct / 100) * DURATION;
+    const bar = Math.round(t / BAR_S);
+    const snapped = Math.max(0, Math.min(DURATION, bar * BAR_S));
+    return (snapped / DURATION) * 100;
+  }
+
+  function flash(msg: string) {
+    if (!status) return;
+    status.textContent = msg;
+    window.setTimeout(() => {
+      if (status.textContent === msg) status.textContent = "";
+    }, 2000);
+  }
+
+  function render() {
+    if (frame) {
+      frame.style.setProperty("--start", startPct + "%");
+      frame.style.setProperty("--end", endPct + "%");
+    }
+    if (maskLeft) maskLeft.style.setProperty("--w", startPct + "%");
+    if (maskRight) maskRight.style.setProperty("--w", (100 - endPct) + "%");
+    const startS = (startPct / 100) * DURATION;
+    const endS = (endPct / 100) * DURATION;
+    const lenS = endS - startS;
+    const bars = lenS / BAR_S;
+    if (timeStart) timeStart.textContent = fmt(startS);
+    if (timeEnd) timeEnd.textContent = fmt(endS);
+    if (barCount) barCount.textContent = `${bars.toFixed(bars % 1 < 0.05 ? 0 : 1)} bars · ${lenS.toFixed(1)}s`;
+    if (readout) readout.textContent = `${bars.toFixed(bars % 1 < 0.05 ? 0 : 1)} bars · ${lenS.toFixed(1)}s · ${fmt(startS)} → ${fmt(endS)}`;
+  }
+
+  function pxToPct(px: number): number {
+    if (!wave) return 0;
+    const r = wave.getBoundingClientRect();
+    return Math.max(0, Math.min(100, ((px - r.left) / r.width) * 100));
+  }
+
+  // Drag handlers
+  function onPointerDown(e: PointerEvent, which: "start" | "end" | "frame") {
+    e.preventDefault();
+    dragging = which;
+    dragStartX = e.clientX;
+    dragStartStart = startPct;
+    dragStartEnd = endPct;
+    (e.target as HTMLElement)?.setPointerCapture?.(e.pointerId);
+  }
+  function onPointerMove(e: PointerEvent) {
+    if (!dragging || !wave) return;
+    const r = wave.getBoundingClientRect();
+    const deltaPct = ((e.clientX - dragStartX) / r.width) * 100;
+    if (dragging === "start") {
+      const next = Math.max(0, Math.min(endPct - 2, dragStartStart + deltaPct));
+      startPct = snap(next);
+    } else if (dragging === "end") {
+      const next = Math.max(startPct + 2, Math.min(100, dragStartEnd + deltaPct));
+      endPct = snap(next);
+    } else if (dragging === "frame") {
+      const len = dragStartEnd - dragStartStart;
+      let newStart = Math.max(0, Math.min(100 - len, dragStartStart + deltaPct));
+      newStart = snap(newStart);
+      startPct = newStart;
+      endPct = newStart + len;
+    }
+    render();
+  }
+  function onPointerUp() {
+    dragging = null;
+  }
+
+  handleStart?.addEventListener("pointerdown", (e) => onPointerDown(e, "start"));
+  handleEnd?.addEventListener("pointerdown", (e) => onPointerDown(e, "end"));
+  frame?.addEventListener("pointerdown", (e) => {
+    // Only fire frame drag when click is on the frame body, not a handle.
+    if ((e.target as HTMLElement).closest("[data-lc-handle]")) return;
+    onPointerDown(e, "frame");
+  });
+  document.addEventListener("pointermove", onPointerMove);
+  document.addEventListener("pointerup", onPointerUp);
+
+  // Snap toggle
+  snapBtn?.addEventListener("click", () => {
+    snapOn = !snapOn;
+    snapBtn?.classList.toggle("on", snapOn);
+    snapBtn?.setAttribute("aria-pressed", snapOn ? "true" : "false");
+    if (snapOn) {
+      startPct = snap(startPct);
+      endPct = snap(endPct);
+      render();
+    }
+    flash(snapOn ? "bar snap on" : "bar snap off");
+  });
+
+  // Play loop
+  function startPlay() {
+    if (playing) return;
+    playing = true;
+    if (playBtn) playBtn.textContent = "❚❚ pause";
+    if (playhead) playhead.removeAttribute("hidden");
+    playStartedAt = performance.now();
+    const tick = () => {
+      if (!playing) return;
+      const lenS = ((endPct - startPct) / 100) * DURATION;
+      const elapsed = ((performance.now() - playStartedAt) / 1000 + playOffset) % lenS;
+      const headPct = startPct + (elapsed / lenS) * (endPct - startPct);
+      if (playhead) playhead.style.left = headPct + "%";
+      raf = requestAnimationFrame(tick);
+    };
+    raf = requestAnimationFrame(tick);
+  }
+  function stopPlay() {
+    playing = false;
+    if (playBtn) playBtn.textContent = "▶ play loop";
+    if (raf !== null) { cancelAnimationFrame(raf); raf = null; }
+    playOffset = 0;
+    if (playhead) playhead.setAttribute("hidden", "");
+  }
+  function togglePlay() { if (playing) stopPlay(); else startPlay(); }
+  playBtn?.addEventListener("click", togglePlay);
+
+  // Export
+  exportBtn?.addEventListener("click", () => {
+    const startS = (startPct / 100) * DURATION;
+    const endS = (endPct / 100) * DURATION;
+    const bars = (endS - startS) / BAR_S;
+    flash(`exported ${bars.toFixed(0)}-bar loop @ 100 BPM to _Soundbending/loops/extracted/`);
+    exportBtn.classList.add("just");
+    window.setTimeout(() => exportBtn.classList.remove("just"), 900);
+  });
+
+  // Keyboard
+  stage.tabIndex = 0;
+  stage.addEventListener("keydown", (e) => {
+    const k = e.key.toLowerCase();
+    if (k === " " || k === "spacebar") { e.preventDefault(); togglePlay(); }
+    else if (k === "arrowleft") {
+      e.preventDefault();
+      const lenS = ((endPct - startPct) / 100) * DURATION;
+      playOffset = Math.max(0, playOffset - 1);
+      flash(`-1s in loop (${playOffset.toFixed(0)}/${lenS.toFixed(0)})`);
+    }
+    else if (k === "arrowright") {
+      e.preventDefault();
+      const lenS = ((endPct - startPct) / 100) * DURATION;
+      playOffset = Math.min(lenS - 0.1, playOffset + 1);
+      flash(`+1s in loop (${playOffset.toFixed(0)}/${lenS.toFixed(0)})`);
+    }
+    else if (k === "meta" || k === "control") {
+      // Same effect as clicking snap toggle.
+      e.preventDefault();
+      snapBtn?.click();
+    }
+  });
+
+  render();
+</script>
+
+<style>
+  .lc-stage {
+    background: rgba(15, 10, 18, 0.94);
+    border: 1px solid rgba(245, 241, 232, 0.10);
+    border-radius: 8px;
+    padding: 22px 24px 18px;
+    color: #f5f1e8;
+    font-family: "Geist Variable", ui-sans-serif, system-ui, sans-serif;
+    outline: none;
+  }
+  .lc-stage:focus-visible {
+    border-color: rgba(255, 90, 60, 0.45);
+    box-shadow: 0 0 0 1px rgba(255, 90, 60, 0.32);
+  }
+
+  .lc-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 14px;
+    margin-bottom: 14px;
+  }
+  .lc-source {
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-style: italic;
+    font-size: 16px;
+    font-weight: 700;
+    color: #00ff4d;
+    background: rgba(0, 255, 77, 0.04);
+    border: 1px solid rgba(0, 255, 77, 0.32);
+    border-radius: 4px;
+    padding: 5px 10px;
+    box-shadow: 0 0 12px rgba(0, 255, 77, 0.12);
+  }
+  .lc-ext { opacity: 0.42; font-weight: 500; font-size: 0.7em; color: #f5f1e8; }
+  .lc-tech {
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 12px;
+    color: rgba(245, 241, 232, 0.62);
+  }
+
+  /* Waveform — taller than the BucketCard waveform so the crop frame is
+     a real visual frame, not a thin strip. */
+  .lc-wave {
+    position: relative;
+    height: 144px;
+    background: #07060c;
+    border-radius: 4px;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    gap: 1px;
+    padding: 0 4px;
+    user-select: none;
+    touch-action: none;
+  }
+  .lc-bar {
+    flex: 1 1 0;
+    background: linear-gradient(180deg, rgba(14, 196, 252, 0.55) 0%, rgba(14, 196, 252, 0.22) 100%);
+    border-radius: 1px;
+  }
+  /* Bars OUTSIDE the crop frame get desaturated. We approximate this by
+     letting the mask elements sit ABOVE the bars at low alpha. */
+  .lc-mask {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    background: rgba(7, 6, 12, 0.72);
+    pointer-events: none;
+    z-index: 1;
+  }
+  .lc-mask-left {
+    left: 0;
+    width: var(--w, 0%);
+  }
+  .lc-mask-right {
+    right: 0;
+    width: var(--w, 0%);
+  }
+
+  /* Bar grid ticks. */
+  .lc-bars {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    z-index: 2;
+  }
+  .lc-bar-tick {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: 1px;
+    background: rgba(245, 241, 232, 0.08);
+  }
+
+  /* Crop frame. */
+  .lc-frame {
+    position: absolute;
+    top: 4px;
+    bottom: 4px;
+    left: var(--start, 18%);
+    width: calc(var(--end, 72%) - var(--start, 18%));
+    border: 2px solid var(--brand-cyan);
+    border-radius: 3px;
+    background: rgba(14, 196, 252, 0.06);
+    cursor: grab;
+    z-index: 3;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    box-shadow:
+      0 0 0 1px rgba(7, 6, 12, 0.85),
+      0 0 14px rgba(14, 196, 252, 0.32);
+    transition: border-color 160ms ease, box-shadow 160ms ease;
+  }
+  .lc-frame:active { cursor: grabbing; }
+  .lc-frame:hover {
+    border-color: #22f0ff;
+  }
+  .lc-handle {
+    width: 14px;
+    height: 100%;
+    flex: 0 0 14px;
+    background: var(--brand-cyan);
+    border: 0;
+    border-radius: 0;
+    cursor: ew-resize;
+    position: relative;
+    padding: 0;
+    color: #0e0c14;
+  }
+  .lc-handle::before {
+    content: "";
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 2px;
+    height: 30%;
+    background: #0e0c14;
+    box-shadow: -3px 0 0 #0e0c14, 3px 0 0 #0e0c14;
+  }
+  .lc-handle-time {
+    position: absolute;
+    top: -22px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 10px;
+    color: var(--brand-cyan);
+    background: rgba(7, 6, 12, 0.85);
+    border: 1px solid rgba(14, 196, 252, 0.45);
+    padding: 1px 5px;
+    border-radius: 2px;
+    pointer-events: none;
+    white-space: nowrap;
+    font-feature-settings: "tnum";
+  }
+  .lc-handle-end .lc-handle-time {
+    top: auto;
+    bottom: -22px;
+  }
+  .lc-bar-count {
+    flex: 1 1 auto;
+    text-align: center;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 11px;
+    color: var(--brand-cyan);
+    background: rgba(7, 6, 12, 0.55);
+    padding: 2px 6px;
+    border-radius: 2px;
+    pointer-events: none;
+    white-space: nowrap;
+    text-shadow: 0 0 8px rgba(14, 196, 252, 0.55);
+  }
+
+  .lc-playhead {
+    position: absolute;
+    top: 4px;
+    bottom: 4px;
+    width: 2px;
+    left: 0%;
+    background: #ff3b6e;
+    box-shadow: 0 0 8px rgba(255, 59, 110, 0.7);
+    pointer-events: none;
+    z-index: 4;
+  }
+
+  /* Toolbar under the wave. */
+  .lc-toolbar {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-top: 14px;
+    flex-wrap: wrap;
+  }
+  .lc-btn {
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-style: italic;
+    font-size: 12px;
+    font-weight: 700;
+    color: rgba(245, 241, 232, 0.88);
+    background: rgba(245, 241, 232, 0.03);
+    border: 1px solid rgba(245, 241, 232, 0.22);
+    border-radius: 3px;
+    padding: 7px 12px;
+    cursor: pointer;
+    transition: color 160ms ease, border-color 160ms ease, background 160ms ease;
+  }
+  .lc-btn:hover { color: #f5f1e8; border-color: rgba(245, 241, 232, 0.45); }
+  .lc-btn.lc-play {
+    color: var(--brand-cyan);
+    border-color: rgba(14, 196, 252, 0.45);
+  }
+  .lc-btn.lc-play:hover {
+    color: #22f0ff;
+    border-color: var(--brand-cyan);
+  }
+  .lc-btn.lc-snap.on {
+    color: var(--brand-yellow);
+    border-color: rgba(255, 179, 71, 0.55);
+    background: rgba(255, 179, 71, 0.06);
+  }
+  .lc-btn.lc-export {
+    color: #0e0c14;
+    background: linear-gradient(90deg, #ff2761 0%, #ff5a3c 50%, #ffb347 100%);
+    border-color: transparent;
+    margin-left: auto;
+  }
+  .lc-btn.lc-export:hover { filter: brightness(1.08); }
+  .lc-btn.lc-export.just {
+    box-shadow: 0 0 0 3px rgba(255, 90, 60, 0.32);
+    animation: lc-flash 540ms ease-out;
+  }
+  @keyframes lc-flash {
+    0% { transform: scale(0.98); }
+    60% { transform: scale(1.04); }
+    100% { transform: scale(1); }
+  }
+  .lc-readout {
+    flex: 1 1 auto;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 11.5px;
+    color: rgba(245, 241, 232, 0.78);
+    font-feature-settings: "tnum";
+    text-align: center;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .lc-hint {
+    margin: 12px 0 0;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 11px;
+    color: rgba(245, 241, 232, 0.48);
+    line-height: 1.6;
+  }
+  .lc-hint kbd {
+    font-family: inherit;
+    font-size: 10px;
+    color: rgba(245, 241, 232, 0.78);
+    border: 1px solid rgba(245, 241, 232, 0.22);
+    background: rgba(245, 241, 232, 0.03);
+    border-radius: 2px;
+    padding: 1px 5px;
+    margin: 0 1px;
+  }
+  .lc-status {
+    margin: 8px 0 0;
+    min-height: 14px;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 11px;
+    color: var(--brand-cyan);
+    line-height: 1.4;
+  }
+</style>
