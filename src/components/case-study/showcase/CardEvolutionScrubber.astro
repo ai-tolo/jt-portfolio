@@ -23,7 +23,7 @@
     <!-- The wrapper carries data-era which scopes the per-era stylesheet
          below. Markup is the union of all eras' DOM; per-era CSS hides
          what doesn't belong. -->
-    <article class="ce-card" data-ce-card data-era="6">
+    <article class="ce-card" data-ce-card data-era="0">
       <!-- ───── E0 ───── public portfolio WorkCard (no portal yet) -->
       <div class="ce-e0">
         <div class="ce-e0-num">02</div>
@@ -257,7 +257,7 @@
           min="0"
           max="6"
           step="1"
-          value="6"
+          value="0"
           class="ce-slider"
           data-ce-slider
           aria-label="Capability era"
@@ -267,10 +267,10 @@
             <li class="ce-dot-slot" style={`--pos: ${(i / 6) * 100}%`}>
               <button
                 type="button"
-                class={`ce-dot ${i === 6 ? "active" : ""}`}
+                class={`ce-dot ${i === 0 ? "active" : ""}`}
                 data-ce-era={String(i)}
                 role="tab"
-                aria-selected={i === 6 ? "true" : "false"}
+                aria-selected={i === 0 ? "true" : "false"}
                 aria-label={`Era ${i}`}
               >{i}</button>
             </li>
@@ -280,17 +280,18 @@
 
       <button
         type="button"
-        class="ce-track-arrow"
+        class="ce-track-arrow ce-track-arrow-next"
         data-ce-step="1"
+        data-ce-beacon
         aria-label="Next era"
       >→</button>
     </div>
     <div class="ce-meta">
-      <p class="ce-meta-eyebrow" data-ce-eyebrow>E6 · 2026-05-22 · TODAY</p>
-      <h4 class="ce-meta-title" data-ce-title>The card opens a pipeline</h4>
-      <p class="ce-meta-since" data-ce-since>New this era: <strong>→ Send to Engineer</strong> — one click hands the row to the mix agent. Six variants render across three taste axes for A/B feedback.</p>
-      <p class="ce-meta-note" data-ce-note>Fewer pages, more verbs per row. The portal is now three tabs (Buckets / Projects / Engineer / Diary) — five tabs collapsed because the card carries the work.</p>
-      <p class="ce-meta-commit" data-ce-commit>d5c8871 · engineer ships to production</p>
+      <p class="ce-meta-eyebrow" data-ce-eyebrow>E0 · 2026-05-12 · DAY ZERO</p>
+      <h4 class="ce-meta-title" data-ce-title>A portfolio that couldn't play audio</h4>
+      <p class="ce-meta-since" data-ce-since>What this era could DO: open a case study page. That's it. The card was a homepage list item linking to a Notion-rendered article.</p>
+      <p class="ce-meta-note" data-ce-note>There was no portal, no catalog, no playback. Just a public site with case studies fetched from a Notion database at build time.</p>
+      <p class="ce-meta-commit" data-ce-commit>6666ed3 · Initial portfolio with Notion-backed content</p>
     </div>
   </div>
 </div>
@@ -380,7 +381,15 @@
     });
   };
 
-  let currentEra = 6;
+  let currentEra = 0;
+  const beaconTargets = stage?.querySelectorAll<HTMLElement>("[data-ce-beacon]") ?? [];
+  let beaconStopped = false;
+  const stopBeacon = () => {
+    if (beaconStopped) return;
+    beaconStopped = true;
+    beaconTargets.forEach((b) => b.removeAttribute("data-ce-beacon"));
+  };
+
   const applyAndTrack = (i: number) => {
     currentEra = Math.max(0, Math.min(6, i));
     apply(currentEra);
@@ -391,17 +400,24 @@
     });
   };
 
+  // Any user interaction with the scrubber kills the beacon — the user
+  // has shown they know how to drive it.
   slider?.addEventListener("input", (e) => {
+    stopBeacon();
     applyAndTrack(Number((e.target as HTMLInputElement).value));
   });
   dots?.forEach((d) => {
-    d.addEventListener("click", () => applyAndTrack(Number(d.dataset.ceEra)));
+    d.addEventListener("click", () => {
+      stopBeacon();
+      applyAndTrack(Number(d.dataset.ceEra));
+    });
   });
 
   // Prev / next chevrons on either side of the track.
   const arrows = stage?.querySelectorAll<HTMLButtonElement>("[data-ce-step]") ?? [];
   arrows.forEach((a) => {
     a.addEventListener("click", () => {
+      stopBeacon();
       applyAndTrack(currentEra + Number(a.dataset.ceStep || 0));
     });
   });
@@ -419,33 +435,9 @@
     const r = stage.getBoundingClientRect();
     if (r.bottom < 0 || r.top > window.innerHeight) return;
     e.preventDefault();
+    stopBeacon();
     applyAndTrack(currentEra + (e.key === "ArrowRight" ? 1 : -1));
   });
-
-  // Auto-walkthrough — start at E0, walk to E6 with a beat between each
-  // step. Aborts on first user interaction.
-  let touched = false;
-  const onTouch = () => { touched = true; };
-  slider?.addEventListener("pointerdown", onTouch, { once: true });
-  dots?.forEach((d) => d.addEventListener("click", onTouch, { once: true }));
-  arrows.forEach((a) => a.addEventListener("click", onTouch, { once: true }));
-
-  const io = new IntersectionObserver((entries) => {
-    for (const e of entries) {
-      if (!e.isIntersecting) continue;
-      applyAndTrack(0);
-      let i = 0;
-      const step = () => {
-        if (touched) return;
-        i = Math.min(6, i + 1);
-        applyAndTrack(i);
-        if (i < 6) window.setTimeout(step, 1400);
-      };
-      window.setTimeout(step, 900);
-      io.disconnect();
-    }
-  }, { threshold: 0.4 });
-  if (stage) io.observe(stage);
 </script>
 
 <style>
@@ -1438,6 +1430,7 @@
     align-items: center;
   }
   .ce-track-arrow {
+    position: relative;
     width: 32px;
     height: 32px;
     border-radius: 50%;
@@ -1459,6 +1452,40 @@
   .ce-track-arrow:focus-visible {
     outline: 2px solid var(--brand-orange);
     outline-offset: 2px;
+  }
+
+  /* Beacon: the next-arrow pulses a soft brand-orange ring until the
+     user interacts with the scrubber for the first time. The hint is
+     subtle (no copy, no labels) — just a "this is alive, drive me"
+     signal in the same family as the homepage's theme cycler. */
+  .ce-track-arrow[data-ce-beacon] {
+    color: var(--brand-orange);
+    border-color: rgba(255, 90, 60, 0.55);
+    background: rgba(255, 90, 60, 0.10);
+    animation: ce-beacon-tone 2.4s ease-in-out infinite;
+  }
+  .ce-track-arrow[data-ce-beacon]::after {
+    content: "";
+    position: absolute;
+    inset: -2px;
+    border-radius: 50%;
+    border: 1px solid var(--brand-orange);
+    opacity: 0;
+    animation: ce-beacon-ring 2.4s ease-out infinite;
+    pointer-events: none;
+  }
+  @keyframes ce-beacon-tone {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(255, 90, 60, 0); }
+    50% { box-shadow: 0 0 0 4px rgba(255, 90, 60, 0.12); }
+  }
+  @keyframes ce-beacon-ring {
+    0% { transform: scale(1); opacity: 0.55; }
+    80% { transform: scale(1.7); opacity: 0; }
+    100% { transform: scale(1.7); opacity: 0; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .ce-track-arrow[data-ce-beacon] { animation: none; }
+    .ce-track-arrow[data-ce-beacon]::after { display: none; }
   }
 
   .ce-track {
