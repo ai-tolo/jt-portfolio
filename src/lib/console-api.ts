@@ -702,3 +702,14 @@ export async function postMixJudgement(body: {
 }): Promise<ApiResult<MixJudgementResponse>> {
   return _post<MixJudgementResponse>("/mix/judgement", body);
 }
+
+/** Undo a recent judgement by hard-deleting the row. Surfaced as a
+ *  5-second Cmd/Ctrl+Z window in the Engineer UI. */
+export async function withdrawMixJudgement(
+  judgement_id: number,
+): Promise<ApiResult<{ ok: true; withdrawn_id: number }>> {
+  return _post<{ ok: true; withdrawn_id: number }>(
+    `/mix/judgement/${judgement_id}/withdraw`,
+    {},
+  );
+}

@@ -181,7 +181,11 @@ function stemSoloUrls(sf) {
     </div>
 
     <section class="pair-tinder">
-      <h2>Pair tinder <span class="hint">space play/pause · A/B switch · ← → seek · Enter pick current · 1/2 pick A/B · S skip</span></h2>
+      <h2>
+        Pair tinder
+        <span class="hint">tap A/B to switch · hold A/B to vote · hold × to skip · ← → seek · ⌘Z undo</span>
+        <span class="undo-toast" data-undo-toast aria-live="polite" hidden></span>
+      </h2>
       {pairs.length === 0 ? (
         <p class="empty">
           No pairs to judge. Send a track from <a href="/portal/buckets/tracks">Buckets</a> and come back when its job is "ready to judge".
@@ -218,8 +222,14 @@ function stemSoloUrls(sf) {
                 data-stem-urls-b={JSON.stringify(stemUrlsB)}
               >
                 <div class="pair-head">
-                  <span class="pair-source">{p.job_source_display}</span>
-                  <span class="pair-axis">{p.axis}</span>
+                  <h3 class="pair-source">{p.job_source_display}</h3>
+                  <button
+                    type="button"
+                    class="pair-skip-x"
+                    data-hold="skip"
+                    aria-label="Hold to skip this pair"
+                    title="Hold to skip"
+                  ><span class="hold-fill" aria-hidden="true"></span><span class="hold-glyph">×</span></button>
                 </div>
 
                 <div class="pair-stage">
@@ -236,12 +246,14 @@ function stemSoloUrls(sf) {
                     <button class="transport-btn transport-play" data-toggle-play aria-label="Play / pause">▶</button>
                     <button class="transport-btn" data-skip="10" aria-label="Forward 10 seconds">⏭</button>
                     <span class="pair-time" data-time>0:00 / —:—</span>
-                    <div class="ab-switch" role="group" aria-label="Switch between variant A and B">
-                      <button class="ab-side ab-side-active" data-side-btn="a">
+                    <div class="ab-switch" role="group" aria-label="Switch between variant A and B. Tap to switch playback. Hold to vote.">
+                      <button class="ab-side ab-side-active" data-side-btn="a" data-hold="a" title="Tap to switch · hold to vote A">
+                        <span class="hold-fill" aria-hidden="true"></span>
                         <span class="ab-key">A</span>
                         <span class="ab-label">{p.variant_a.pole.replace(/_/g, " ")}</span>
                       </button>
-                      <button class="ab-side" data-side-btn="b">
+                      <button class="ab-side" data-side-btn="b" data-hold="b" title="Tap to switch · hold to vote B">
+                        <span class="hold-fill" aria-hidden="true"></span>
                         <span class="ab-key">B</span>
                         <span class="ab-label">{p.variant_b.pole.replace(/_/g, " ")}</span>
                       </button>
@@ -443,12 +455,6 @@ function stemSoloUrls(sf) {
                   placeholder="Notes (optional). What worked, what didn't, what you'd change."
                 ></textarea>
 
-                <div class="pair-foot">
-                  <button class="skip-btn" data-pick="skip">SKIP</button>
-                  <span class="now-playing" data-now-playing></span>
-                  <button class="pick-btn pick-a" data-pick="a">PICK A</button>
-                  <button class="pick-btn pick-b" data-pick="b">PICK B</button>
-                </div>
                 <div class="pair-retry" data-retry-zone hidden>
                   <span class="retry-msg" data-retry-msg></span>
                   <div class="retry-actions">
@@ -581,6 +587,26 @@ function stemSoloUrls(sf) {
     opacity: 0.5;
     font-weight: 500;
   }
+  /* Ephemeral toast that appears for ~5s after each commit. Tells the
+     curator what was voted and reminds them of the ⌘Z undo affordance. */
+  .pair-tinder h2 .undo-toast {
+    font-size: 11px;
+    letter-spacing: 0.04em;
+    text-transform: none;
+    font-weight: 600;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    color: #ffd28a;
+    background: rgba(255, 184, 77, 0.12);
+    border: 1px solid rgba(255, 184, 77, 0.42);
+    padding: 4px 10px;
+    border-radius: 999px;
+    animation: undo-toast-pop 200ms ease-out;
+  }
+  .pair-tinder h2 .undo-toast[hidden] { display: none; }
+  @keyframes undo-toast-pop {
+    from { transform: translateY(-2px) scale(0.96); opacity: 0; }
+    to { transform: translateY(0) scale(1); opacity: 1; }
+  }
   .pair-list {
     list-style: none;
     padding: 0;
@@ -600,15 +626,83 @@ function stemSoloUrls(sf) {
   }
   .pair-head {
     display: flex;
-    justify-content: space-between;
-    font-size: 12px;
-    opacity: 0.75;
+    align-items: center;
+    gap: 12px;
     margin-bottom: 12px;
   }
-  .pair-head .pair-axis {
-    text-transform: uppercase;
-    letter-spacing: 0.1em;
-    font-weight: 700;
+  /* Title mirrors the Bucket card: italic monospace, ~17px, terminal-green
+     so the eye lands on the source name first. No editing affordance and
+     no border - this view is read-only. */
+  .pair-source {
+    margin: 0;
+    flex: 1;
+    min-width: 0;
+    font: 700 17px/1.1 ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-style: italic;
+    color: #00ff4d;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  /* .pair-axis removed in the May 22 refresh — the axis is already
+     conveyed by the A/B button labels (e.g. "FORWARD BRIGHT" vs
+     "RECESSED WARM" obviously implies the focal axis). Keeping the
+     selector definition out so an accidental re-add doesn't restyle. */
+
+  /* Hold-to-skip × — small square on the left of the pair head. Same
+     hold pattern as the buckets trash-hold: data-holding="true" triggers
+     a 0.45s CSS fill that visually fills the button as the curator commits
+     to skipping. Tapping (release before 450ms) is a no-op. */
+  .pair-skip-x {
+    position: relative;
+    width: 28px;
+    height: 28px;
+    flex-shrink: 0;
+    background: transparent;
+    color: rgba(245, 241, 232, 0.55);
+    border: 1px solid rgba(255, 110, 33, 0.32);
+    border-radius: 4px;
+    cursor: pointer;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font: 700 16px/1 ui-sans-serif, system-ui, sans-serif;
+    transition: color 160ms ease, border-color 160ms ease;
+    touch-action: none; /* keep hold gesture intact on touch screens */
+  }
+  .pair-skip-x:hover {
+    color: #ff6e21;
+    border-color: #ff6e21;
+  }
+  /* Same radial-fill pattern as buckets' trash-hold but tuned to the
+     smaller × button. The fill grows from the centre and reaches the
+     button edges at exactly 0.45s, matching the A/B power-up so all
+     three "hold to commit" actions share the same physical feel. */
+  .pair-skip-x .hold-fill {
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(circle at center, #ff2761 0%, #ff6e21 70%);
+    transform-origin: center;
+    transform: scale(0);
+    border-radius: 50%;
+    opacity: 0;
+    transition: none;
+    pointer-events: none;
+  }
+  .pair-skip-x[data-holding="true"] .hold-fill {
+    transform: scale(2.4);
+    opacity: 1;
+    transition: transform 0.45s ease-out, opacity 0.18s ease-out;
+  }
+  .pair-skip-x[data-holding="true"] {
+    color: #0e0c14;
+    border-color: #ff2761;
+    box-shadow: 0 0 14px rgba(255, 39, 97, 0.55);
+  }
+  .pair-skip-x .hold-glyph {
+    position: relative;
+    z-index: 1;
   }
   .pair-stage {
     display: flex;
@@ -707,6 +801,7 @@ function stemSoloUrls(sf) {
     gap: 6px;
   }
   .ab-side {
+    position: relative;
     flex: 1;
     display: flex;
     align-items: center;
@@ -722,11 +817,47 @@ function stemSoloUrls(sf) {
     letter-spacing: 0.06em;
     text-transform: uppercase;
     font-weight: 700;
+    overflow: hidden;
     transition: background 140ms ease, color 140ms ease,
                 border-color 140ms ease, transform 80ms ease;
+    touch-action: none; /* preserve hold gesture on touch devices */
+    user-select: none;
   }
   .ab-side:hover {
     transform: translateY(-1px);
+  }
+  /* Power-up bar — a glowing white strip along the top edge of the
+     button that sweeps left→right over 0.45s. White/bright so it stays
+     clearly visible whether the button is in inactive (transparent) or
+     active (solid color) state. The old full-button gradient fill was
+     invisible against an already-cyan/pink active background. */
+  .ab-side .hold-fill {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 6px;
+    background: linear-gradient(90deg, #ffffff 0%, #fff39a 100%);
+    box-shadow: 0 1px 18px rgba(255, 243, 154, 1),
+                0 0 6px rgba(255, 255, 255, 1);
+    transform-origin: left center;
+    transform: scaleX(0);
+    transition: none;
+    pointer-events: none;
+    z-index: 3;
+  }
+  .ab-side[data-holding="true"] .hold-fill {
+    transform: scaleX(1);
+    transition: transform 0.45s linear;
+  }
+  /* While holding: subtle inner glow so the button itself reads as
+     "charging up" alongside the progress bar. */
+  .ab-side[data-holding="true"] {
+    box-shadow: inset 0 0 18px rgba(255, 255, 255, 0.18);
+  }
+  .ab-side .ab-key, .ab-side .ab-label {
+    position: relative;
+    z-index: 1;
   }
   [data-side-btn="a"] {
     color: #0ec4fc;
@@ -1177,6 +1308,95 @@ function stemSoloUrls(sf) {
   let currentSolo: string | null = null;
   let playheadRaf: number | null = null;
 
+  // Undo state. Remembers the most recent commit for a 5-second window so
+  // ⌘Z / ⌃Z can withdraw the judgement and restore the pair we were on.
+  // Only one commit is undo-able at a time — a second commit replaces the
+  // window. Keeps the mental model simple.
+  type UndoEntry = {
+    judgementId: number;
+    originalPair: HTMLElement;
+    originalOpacity: string;
+    originalCommitted: string;
+    advancedTo: HTMLElement | null;
+    expiresAt: number;
+    timeoutId: number;
+  };
+  let pendingUndo: UndoEntry | null = null;
+  const UNDO_WINDOW_MS = 5000;
+
+  function showUndoToast(label: string, autoHideMs: number) {
+    const node = document.querySelector<HTMLElement>("[data-undo-toast]");
+    if (!node) return;
+    node.textContent = label;
+    node.hidden = false;
+    if ((node as any)._hideTimer) {
+      window.clearTimeout((node as any)._hideTimer);
+    }
+    (node as any)._hideTimer = window.setTimeout(() => {
+      node.hidden = true;
+      node.textContent = "";
+    }, autoHideMs);
+  }
+
+  function clearPendingUndo() {
+    if (pendingUndo) {
+      window.clearTimeout(pendingUndo.timeoutId);
+      pendingUndo = null;
+    }
+  }
+
+  function armUndo(entry: Omit<UndoEntry, "expiresAt" | "timeoutId">, choiceLabel: string) {
+    clearPendingUndo();
+    const timeoutId = window.setTimeout(() => {
+      pendingUndo = null;
+      const node = document.querySelector<HTMLElement>("[data-undo-toast]");
+      if (node) { node.hidden = true; node.textContent = ""; }
+    }, UNDO_WINDOW_MS);
+    pendingUndo = {
+      ...entry,
+      expiresAt: Date.now() + UNDO_WINDOW_MS,
+      timeoutId,
+    };
+    showUndoToast(`${choiceLabel} · ⌘Z to undo`, UNDO_WINDOW_MS);
+  }
+
+  async function undoLastCommit() {
+    const u = pendingUndo;
+    if (!u) return;
+    if (Date.now() > u.expiresAt) return;
+    pendingUndo = null;
+    window.clearTimeout(u.timeoutId);
+    showUndoToast("undoing…", 4000);
+    const res = await fetch("/api/console/mix-judgement-withdraw", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ judgement_id: u.judgementId }),
+    });
+    if (!res.ok) {
+      showUndoToast(`undo failed (HTTP ${res.status})`, 3000);
+      return;
+    }
+    // Restore the pair we just judged.
+    stopAll();
+    if (u.advancedTo) {
+      u.advancedTo.classList.remove("pair-active");
+    }
+    u.originalPair.style.opacity = u.originalOpacity;
+    if (u.originalCommitted) {
+      u.originalPair.dataset.committed = u.originalCommitted;
+    } else {
+      delete u.originalPair.dataset.committed;
+    }
+    // Always re-hide the retry zone on undo — if the curator wanted to
+    // retry, they'd recommit with the (still-typed) comment.
+    const zone = u.originalPair.querySelector<HTMLElement>("[data-retry-zone]");
+    if (zone) zone.hidden = true;
+    u.originalPair.classList.add("pair-active");
+    setActivePair(u.originalPair);
+    u.originalPair.scrollIntoView({ behavior: "smooth", block: "center" });
+    showUndoToast("vote undone", 2200);
+  }
+
   function urlForSide(pair: HTMLElement, side: "a" | "b"): string {
     if (!currentSolo) {
       return (side === "a" ? pair.dataset.urlA : pair.dataset.urlB) ?? "";
@@ -1250,9 +1470,11 @@ function stemSoloUrls(sf) {
     return `${m}:${String(r).padStart(2, "0")}`;
   }
 
-  function setNowPlaying(pair: HTMLElement, label: string) {
-    const node = pair.querySelector<HTMLElement>("[data-now-playing]");
-    if (node) node.textContent = label;
+  // No-op since the now-playing line was removed from the pair foot in
+  // the May 22 UI refresh. Kept as a defensive stub so older call sites
+  // don't throw. Diagnostic text we'd have shown now goes to console.
+  function setNowPlaying(_pair: HTMLElement, label: string) {
+    if (label) console.debug("[engineer]", label);
   }
 
   function updateTime(pair: HTMLElement) {
@@ -1297,8 +1519,17 @@ function stemSoloUrls(sf) {
     activePairEl = pair;
     currentSide = (pair.dataset.side as "a" | "b") || "a";
     currentSolo = null;
+    // Pause first so stale playback from the previous pair doesn't bleed
+    // through during the src swap. Then assign and explicitly call
+    // load() so the browser begins fetching immediately (without this
+    // some browsers wait for play() before kicking off the network
+    // request, which adds a ~200ms gap on the first tap).
+    audioA.pause();
+    audioB.pause();
     audioA.src = pair.dataset.urlA || "";
     audioB.src = pair.dataset.urlB || "";
+    audioA.load();
+    audioB.load();
     audioA.currentTime = 0;
     audioB.currentTime = 0;
     setPlayButton(pair, "paused");
@@ -1337,18 +1568,34 @@ function stemSoloUrls(sf) {
 
   function switchSide(side: "a" | "b") {
     const pair = activePairEl;
-    if (!pair || side === currentSide) return;
+    if (!pair) return;
+    // Tapping the already-active side toggles playback on it. That makes
+    // A/B do double-duty as side selectors AND a "start listening" gesture
+    // when the pair was paused (which is the default state after a pair
+    // change).
+    if (side === currentSide) {
+      const a = activeAudio();
+      if (a.paused) {
+        a.play().then(() => {
+          setPlayButton(pair, "playing");
+          startTicking();
+        }).catch(() => {});
+      }
+      return;
+    }
     const prev = activeAudio();
-    const wasPlaying = !prev.paused;
     const t = prev.currentTime;
     prev.pause();
     currentSide = side;
     const next = activeAudio();
     next.currentTime = t;
     reflectSide(pair, side);
-    if (wasPlaying) {
-      next.play().then(() => setPlayButton(pair, "playing")).catch(() => {});
-    }
+    // Always play after a side switch — tapping A or B is the natural
+    // "start playing this version" gesture in a tinder-style UI.
+    next.play().then(() => {
+      setPlayButton(pair, "playing");
+      startTicking();
+    }).catch(() => {});
   }
 
   function seekTo(seconds: number) {
@@ -1390,8 +1637,17 @@ function stemSoloUrls(sf) {
   }
 
   async function commit(pair: HTMLElement, choice: "a" | "b" | "skip") {
+    // Capture playback state BEFORE we stop both audios so advancePair
+    // can decide whether to keep the listening session going on the next
+    // pair (matches the tinder feel of "I'm in flow, keep me there").
+    const wasPlaying = !audioA.paused || !audioB.paused;
+    // Capture undo seed BEFORE we mutate anything so an undo can fully
+    // restore the state of this pair.
+    const originalOpacity = pair.style.opacity;
+    const originalCommitted = pair.dataset.committed ?? "";
     stopAll();
     setPlayButton(pair, "paused");
+    pair.dataset.continuePlayback = wasPlaying ? "true" : "false";
     const jobId = Number(pair.dataset.jobId);
     const axis = pair.dataset.axis ?? null;
     const aId = Number(pair.dataset.a);
@@ -1415,6 +1671,11 @@ function stemSoloUrls(sf) {
       setNowPlaying(pair, `judgement failed: HTTP ${res.status}`);
       return;
     }
+    const judgementBody = await res.json() as { judgement_id: number; ok: boolean };
+    const choiceLabel =
+      choice === "skip" ? "skipped" :
+      choice === "a" ? "voted A" : "voted B";
+
     // If the curator left a comment, surface the retry-this-axis CTA in
     // place; otherwise advance to the next pair immediately.
     if (comment) {
@@ -1424,12 +1685,31 @@ function stemSoloUrls(sf) {
       if (msg) msg.textContent = `recorded: "${comment.slice(0, 80)}${comment.length > 80 ? "…" : ""}"`;
       pair.dataset.committed = "true";
       setNowPlaying(pair, "");
+      armUndo({
+        judgementId: judgementBody.judgement_id,
+        originalPair: pair,
+        originalOpacity,
+        originalCommitted,
+        advancedTo: null,
+      }, choiceLabel);
       return;
     }
+    // Capture the about-to-be-active next pair reference for undo before
+    // advancePair fires.
+    const nextPair = pair.nextElementSibling as HTMLElement | null;
+    const advancedTo = nextPair?.matches?.(".pair") ? nextPair : null;
     advancePair(pair);
+    armUndo({
+      judgementId: judgementBody.judgement_id,
+      originalPair: pair,
+      originalOpacity,
+      originalCommitted,
+      advancedTo,
+    }, choiceLabel);
   }
 
   function advancePair(pair: HTMLElement) {
+    const continuePlayback = pair.dataset.continuePlayback === "true";
     stopAll();
     pair.classList.remove("pair-active");
     pair.style.opacity = "0.35";
@@ -1438,6 +1718,17 @@ function stemSoloUrls(sf) {
       next.classList.add("pair-active");
       setActivePair(next);
       next.scrollIntoView({ behavior: "smooth", block: "center" });
+      // If the curator was actively listening, keep them listening — start
+      // the next pair's A side automatically so flow isn't broken.
+      if (continuePlayback) {
+        audioA.play().then(() => {
+          setPlayButton(next, "playing");
+          startTicking();
+        }).catch(() => {
+          // Browser blocked autoplay (rare since this trace from a real
+          // user-gesture commit). Curator hits A or play to resume.
+        });
+      }
     } else {
       window.location.reload();
     }
@@ -1482,6 +1773,69 @@ function stemSoloUrls(sf) {
     setTimeout(() => advancePair(pair), 1600);
   }
 
+  // Hold-to-vote / hold-to-skip mechanics. Mirrors the buckets card
+  // trash-hold pattern: 450ms press fills a power-up bar; release before
+  // the bar finishes is a tap (passes through to the existing click
+  // handler for the side switch). Release after fills the bar fires
+  // commit and suppresses the trailing click so we don't double-trigger
+  // switchSide right after committing.
+  const HOLD_MS = 450;
+  const HOLD_CLICK_SUPPRESS_MS = 220;
+  let holdTimer: number | null = null;
+  let holdButton: HTMLElement | null = null;
+  let lastHoldCommitAt = 0;
+
+  function cancelHold() {
+    if (holdTimer !== null) {
+      window.clearTimeout(holdTimer);
+      holdTimer = null;
+    }
+    if (holdButton) {
+      holdButton.removeAttribute("data-holding");
+      holdButton = null;
+    }
+  }
+
+  function startHold(btn: HTMLElement, choice: "a" | "b" | "skip") {
+    if (holdTimer !== null) return;
+    const pair = btn.closest<HTMLElement>(".pair");
+    if (!pair) return;
+    if (pair.dataset.committed === "true" && choice !== "skip") return;
+    holdButton = btn;
+    btn.setAttribute("data-holding", "true");
+    holdTimer = window.setTimeout(() => {
+      holdTimer = null;
+      lastHoldCommitAt = Date.now();
+      btn.removeAttribute("data-holding");
+      holdButton = null;
+      commit(pair, choice);
+    }, HOLD_MS);
+  }
+
+  document.addEventListener("pointerdown", (e) => {
+    const target = e.target as HTMLElement;
+    const holdBtn = target.closest<HTMLElement>("[data-hold]");
+    if (!holdBtn) return;
+    const choice = holdBtn.dataset.hold;
+    if (choice !== "a" && choice !== "b" && choice !== "skip") return;
+    startHold(holdBtn, choice);
+  });
+
+  document.addEventListener("pointerup", () => cancelHold());
+  document.addEventListener("pointercancel", () => cancelHold());
+  document.addEventListener("pointerleave", () => cancelHold(), true);
+  // Cancel hold if the pointer leaves the specific button (delegated).
+  document.addEventListener("pointerout", (e) => {
+    const target = e.target as HTMLElement;
+    if (!holdButton) return;
+    if (target.closest("[data-hold]") === holdButton) {
+      const related = (e as PointerEvent).relatedTarget as HTMLElement | null;
+      if (!related || related.closest("[data-hold]") !== holdButton) {
+        cancelHold();
+      }
+    }
+  });
+
   document.addEventListener("click", (e) => {
     const target = e.target as HTMLElement;
     const ap = activePair();
@@ -1498,9 +1852,12 @@ function stemSoloUrls(sf) {
       return;
     }
 
-    // A/B switch
+    // A/B switch — tap behavior. Suppress when the click immediately
+    // follows a hold-commit so we don't switch playback to the variant
+    // the curator just voted on/off the queue.
     const sideBtn = target.closest<HTMLElement>("[data-side-btn]");
     if (sideBtn) {
+      if (Date.now() - lastHoldCommitAt < HOLD_CLICK_SUPPRESS_MS) return;
       switchSide(sideBtn.dataset.sideBtn as "a" | "b");
       return;
     }
@@ -1520,11 +1877,13 @@ function stemSoloUrls(sf) {
     const soloStem = target.closest<HTMLElement>("[data-solo-stem]");
     if (soloStem) {
       const next = soloStem.dataset.soloStem ?? null;
-      // Click the already-active stem to toggle off (restore full mix).
       setSolo(currentSolo === next ? null : next);
       return;
     }
 
+    // Retry zone: NEXT PAIR (data-pick="next") + retry CTA. The old
+    // SKIP / PICK A / PICK B buttons were removed in the May 22 UI
+    // refresh - hold A/B/× handles those now.
     const pickBtn = target.closest<HTMLElement>("[data-pick]");
     if (pickBtn) {
       const pair = pickBtn.closest<HTMLElement>(".pair");
@@ -1534,9 +1893,6 @@ function stemSoloUrls(sf) {
         advancePair(pair);
         return;
       }
-      if (pair.dataset.committed === "true") return;
-      commit(pair, choice as "a" | "b" | "skip");
-      return;
     }
     const retryBtn = target.closest<HTMLElement>("[data-retry]");
     if (retryBtn) {
@@ -1547,7 +1903,20 @@ function stemSoloUrls(sf) {
   });
 
   document.addEventListener("keydown", (e) => {
-    // Ignore when typing in inputs.
+    // ⌘Z / ⌃Z = undo last commit. Works even when focus is in the comment
+    // textarea so accidental commits can be retracted without losing your
+    // typed notes. Shift+⌘Z is reserved for the browser's redo so we
+    // explicitly don't claim it.
+    const isUndo =
+      (e.metaKey || e.ctrlKey) && !e.shiftKey && e.key.toLowerCase() === "z";
+    if (isUndo) {
+      if (pendingUndo) {
+        e.preventDefault();
+        undoLastCommit();
+      }
+      return;
+    }
+    // Ignore other shortcuts when typing in inputs.
     const tag = (document.activeElement?.tagName ?? "").toLowerCase();
     if (tag === "input" || tag === "textarea") return;
     const pair = activePair();
@@ -1557,18 +1926,16 @@ function stemSoloUrls(sf) {
       if (k === "n" || k === "enter") { e.preventDefault(); advancePair(pair); }
       return;
     }
-    // A/B switch (instant, doesn't commit). Space play/pause. Arrows seek
-    // ±10s. Enter picks the currently-playing side. 1/2 pick A/B directly.
-    // S/Esc skip the pair.
+    // A/B switch (instant, doesn't commit). Arrow keys seek ±10s.
+    // Enter commits the currently-playing side as the vote. Escape skips.
+    // Space play/pause + 1/2 pick + S skip were removed in the May 22
+    // refresh in favor of the visible hold-to-vote / hold-to-skip UI.
     if (k === "a") { e.preventDefault(); switchSide("a"); }
     else if (k === "b") { e.preventDefault(); switchSide("b"); }
-    else if (k === " ") { e.preventDefault(); togglePlay(); }
     else if (k === "arrowleft") { e.preventDefault(); skipBy(-10); }
     else if (k === "arrowright") { e.preventDefault(); skipBy(10); }
     else if (k === "enter") { e.preventDefault(); commit(pair, currentSide); }
-    else if (k === "1") { e.preventDefault(); commit(pair, "a"); }
-    else if (k === "2") { e.preventDefault(); commit(pair, "b"); }
-    else if (k === "s" || k === "escape") { e.preventDefault(); commit(pair, "skip"); }
+    else if (k === "escape") { e.preventDefault(); commit(pair, "skip"); }
   });
 
   for (const a of [audioA, audioB]) {
