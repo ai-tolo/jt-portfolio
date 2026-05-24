@@ -631,6 +631,10 @@ export interface MixPairItem {
   source_asset_id: number;
   source_waveform_sha1: string | null;
   source_duration_seconds: number | null;
+  /** Path of the source asset on disk. Lets the UI offer an ORIGINAL
+   *  solo pill that plays the unprocessed source for A/B-vs-original
+   *  comparison. */
+  source_audio_path: string | null;
   axis: MixAxis;
   variant_a: MixVariantSummary;
   variant_b: MixVariantSummary;

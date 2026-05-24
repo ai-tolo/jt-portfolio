@@ -183,7 +183,7 @@ function stemSoloUrls(sf) {
     <section class="pair-tinder">
       <h2>
         Pair tinder
-        <span class="hint">tap A/B to switch · hold A/B to vote · hold × to skip · ← → seek · ⌘Z undo</span>
+        <span class="hint">tap A/B to switch · hold A/B to vote · hold × to skip · space play/pause · ← → seek · ⌘Z undo</span>
         <span class="undo-toast" data-undo-toast aria-live="polite" hidden></span>
       </h2>
       {pairs.length === 0 ? (
@@ -220,6 +220,9 @@ function stemSoloUrls(sf) {
                 data-url-b={bUrl}
                 data-stem-urls-a={JSON.stringify(stemUrlsA)}
                 data-stem-urls-b={JSON.stringify(stemUrlsB)}
+                data-source-audio-url={p.source_audio_path
+                  ? `/api/console/asset?path=${encodeURIComponent(p.source_audio_path)}&variant=opus`
+                  : ""}
               >
                 <div class="pair-head">
                   <h3 class="pair-source">{p.job_source_display}</h3>
@@ -246,7 +249,8 @@ function stemSoloUrls(sf) {
                     <button class="transport-btn transport-play" data-toggle-play aria-label="Play / pause">▶</button>
                     <button class="transport-btn" data-skip="10" aria-label="Forward 10 seconds">⏭</button>
                     <span class="pair-time" data-time>0:00 / —:—</span>
-                    <div class="ab-switch" role="group" aria-label="Switch between variant A and B. Tap to switch playback. Hold to vote.">
+                    <span class="pair-now-side" data-now-side data-kind="original" aria-live="polite">ORIGINAL</span>
+                    <div class="ab-switch" role="group" aria-label="Switch between variant A and B. Tap to toggle (deselect returns to original). Hold to vote.">
                       <button class="ab-side ab-side-active" data-side-btn="a" data-hold="a" title="Tap to switch · hold to vote A">
                         <span class="hold-fill" aria-hidden="true"></span>
                         <span class="ab-key">A</span>
@@ -258,30 +262,6 @@ function stemSoloUrls(sf) {
                         <span class="ab-label">{p.variant_b.pole.replace(/_/g, " ")}</span>
                       </button>
                     </div>
-                  </div>
-
-                  <div class="pair-translation">
-                    {[
-                      { side: "a" as const, variant: p.variant_a },
-                      { side: "b" as const, variant: p.variant_b },
-                    ].map(({ side, variant }) => {
-                      const tr = variant.translation;
-                      const flags = tr?.summary_flags ?? [];
-                      return (
-                        <div class={`translation-strip translation-${side}`} title={flags.length > 0 ? `translation flags for variant ${side.toUpperCase()}` : "translation check clean"}>
-                          {flags.length === 0 ? (
-                            <span class="translation-clean">✓ translates clean</span>
-                          ) : (
-                            flags.slice(0, 4).map((f) => (
-                              <span class="translation-flag">⚠ {f}</span>
-                            ))
-                          )}
-                          {flags.length > 4 && (
-                            <span class="translation-more">+{flags.length - 4} more</span>
-                          )}
-                        </div>
-                      );
-                    })}
                   </div>
 
                   {(Object.keys(stemUrlsA).length > 0 || Object.keys(stemUrlsB).length > 0) && (
@@ -300,15 +280,28 @@ function stemSoloUrls(sf) {
                       { side: "b" as const, variant: p.variant_b },
                     ].map(({ side, variant }) => {
                       const plan = variant.plan;
+                      const flags = variant.translation?.summary_flags ?? [];
                       return (
                         <details class={`plan-card plan-${side}`} data-plan-side={side}>
                           <summary>
                             <span class="plan-side-tag">{side.toUpperCase()}</span>
                             <span class="plan-philosophy">
                               {plan?.philosophy_summary ?? "no plan recorded"}
+                              {flags.length > 0 && (
+                                <span class="plan-warnings" title={flags.join(" · ")}>
+                                  ⚠ {flags.length} translation {flags.length === 1 ? "concern" : "concerns"}
+                                </span>
+                              )}
                             </span>
                             <span class="plan-toggle">▾</span>
                           </summary>
+                          {flags.length > 0 && (
+                            <div class="plan-warnings-detail">
+                              {flags.map((f) => (
+                                <span class="plan-warning-chip">⚠ {f}</span>
+                              ))}
+                            </div>
+                          )}
                           {plan ? (
                             <div class="plan-body">
                               {Object.entries(plan.stems ?? {}).map(([name, stem]) => (
@@ -789,6 +782,32 @@ function stemSoloUrls(sf) {
     opacity: 0.7;
     min-width: 88px;
   }
+  /* Small "what's playing" tag. Makes the implicit-original convention
+     explicit: when neither A nor B is highlighted, the tag reads
+     ORIGINAL. When A or B is selected, it reads the variant pole. */
+  .pair-now-side {
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 10.5px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    padding: 4px 8px;
+    border-radius: 3px;
+    background: rgba(245, 241, 232, 0.06);
+    border: 1px solid rgba(245, 241, 232, 0.16);
+    color: rgba(245, 241, 232, 0.7);
+    flex-shrink: 0;
+  }
+  .pair-now-side[data-kind="a"] {
+    background: rgba(14, 196, 252, 0.10);
+    border-color: rgba(14, 196, 252, 0.35);
+    color: #6fdfff;
+  }
+  .pair-now-side[data-kind="b"] {
+    background: rgba(255, 59, 110, 0.10);
+    border-color: rgba(255, 59, 110, 0.35);
+    color: #ffb6c8;
+  }
   /* A/B switch fills the remaining row width so the buttons get big enough
      for the variant labels to read at a glance. A uses the M1 cyan, B uses
      the M3 pink (same tokens the StatusBar uses) so the two sides are
@@ -969,48 +988,60 @@ function stemSoloUrls(sf) {
     text-transform: uppercase;
     letter-spacing: 0.08em;
   }
-
-  /* Translation badges — small flags per side surfacing playback-target
-     concerns ("phone: vocal disappears", "club: stereo collapses"). The
-     curator sees them before listening so they go in with context. */
-  .pair-translation {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 8px;
-    margin-top: 4px;
+  /* ORIGINAL pill — distinct slate-blue tone so it reads as "neither A
+     nor B nor a stem" but rather as the source reference. */
+  .solo-btn-original {
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: rgba(245, 241, 232, 0.78);
+    border-color: rgba(245, 241, 232, 0.32);
   }
-  .translation-strip {
+  .solo-btn-original:hover {
+    color: var(--ink);
+    border-color: rgba(245, 241, 232, 0.55);
+  }
+  .solo-btn-original[data-active="true"] {
+    background: rgba(245, 241, 232, 0.14);
+    border-color: rgba(245, 241, 232, 0.72);
+    color: var(--ink);
+    box-shadow: 0 0 12px rgba(245, 241, 232, 0.18);
+  }
+
+  /* Translation flags now live inline inside each plan-card. A compact
+     "⚠ N concerns" badge sits next to the philosophy text; expanding the
+     plan card reveals the full list as orange chips. Keeps the per-side
+     context tight to the variant it describes instead of taking its own
+     row above the reasoning. */
+  .plan-warnings {
+    display: inline-block;
+    margin-left: 8px;
+    padding: 2px 8px;
+    border-radius: 999px;
+    background: rgba(255, 110, 33, 0.14);
+    color: #ff8a3d;
+    border: 1px solid rgba(255, 110, 33, 0.36);
+    font-size: 10.5px;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    white-space: nowrap;
+    vertical-align: middle;
+    cursor: help;
+  }
+  .plan-warnings-detail {
+    padding: 8px 12px 0;
     display: flex;
     flex-wrap: wrap;
-    gap: 4px;
-    padding: 4px 0;
-    align-items: center;
-    min-height: 22px;
+    gap: 6px;
   }
-  .translation-flag, .translation-clean, .translation-more {
+  .plan-warning-chip {
     font-size: 10.5px;
     line-height: 1;
     padding: 4px 8px;
     border-radius: 999px;
     font-weight: 600;
-    letter-spacing: 0.02em;
-  }
-  .translation-flag {
     background: rgba(255, 110, 33, 0.12);
     color: #ff8a3d;
     border: 1px solid rgba(255, 110, 33, 0.32);
-  }
-  .translation-clean {
-    background: rgba(0, 255, 77, 0.08);
-    color: #6fe49a;
-    border: 1px solid rgba(0, 255, 77, 0.24);
-  }
-  .translation-more {
-    color: rgba(245, 241, 232, 0.5);
-    font-style: italic;
-  }
-  @media (max-width: 720px) {
-    .pair-translation { grid-template-columns: 1fr; }
   }
 
   /* Reasoning panels — one collapsible disclosure per variant, themed to
@@ -1314,11 +1345,18 @@ function stemSoloUrls(sf) {
 
   const audioA = new Audio();
   const audioB = new Audio();
-  for (const a of [audioA, audioB]) {
+  // Third element for the source asset. The new model: neither A nor B
+  // selected means "play the original" — so audioOriginal is the implicit
+  // default. All three stay synced on currentTime; tapping A/B is a pure
+  // source-toggle (never affects play/pause). Space-bar is the sole play
+  // control.
+  const audioOriginal = new Audio();
+  for (const a of [audioA, audioB, audioOriginal]) {
     a.preload = "auto";
   }
   let activePairEl: HTMLElement | null = null;
-  let currentSide: "a" | "b" = "a";
+  // null = "original is playing"; "a" or "b" = that variant is playing.
+  let currentSide: "a" | "b" | null = null;
   let currentSolo: string | null = null;
   let playheadRaf: number | null = null;
 
@@ -1411,7 +1449,10 @@ function stemSoloUrls(sf) {
     showUndoToast("vote undone", 2200);
   }
 
-  function urlForSide(pair: HTMLElement, side: "a" | "b"): string {
+  function urlForSide(pair: HTMLElement, side: "a" | "b" | null): string {
+    // Original: source asset, never affected by solo (solo only varies
+    // the per-stem treatment of a variant — original has no stem chain).
+    if (side === null) return pair.dataset.sourceAudioUrl || "";
     if (!currentSolo) {
       return (side === "a" ? pair.dataset.urlA : pair.dataset.urlB) ?? "";
     }
@@ -1427,7 +1468,9 @@ function stemSoloUrls(sf) {
   }
 
   function refreshSoloBar(pair: HTMLElement) {
-    pair.querySelectorAll<HTMLElement>("[data-solo-stem], [data-solo-full]").forEach((btn) => {
+    pair.querySelectorAll<HTMLElement>(
+      "[data-solo-stem], [data-solo-full]"
+    ).forEach((btn) => {
       let active = false;
       if (btn.hasAttribute("data-solo-full")) active = currentSolo === null;
       else active = btn.dataset.soloStem === currentSolo;
@@ -1441,12 +1484,15 @@ function stemSoloUrls(sf) {
     const wasPlaying = !activeAudio().paused;
     audioA.src = urlForSide(pair, "a");
     audioB.src = urlForSide(pair, "b");
-    // Restore playhead position on both elements (they buffer-load
-    // asynchronously; setting currentTime before metadata loads is silently
-    // discarded, so set again after canplay).
+    // audioOriginal.src is reassigned to source on every pair change in
+    // setActivePair, but it might have been swapped to a stem for solo
+    // listening… actually no, solo never touches audioOriginal. So leave
+    // its src alone here; it always holds the source asset URL for the
+    // current pair.
     const restore = () => {
-      try { audioA.currentTime = t; } catch {}
-      try { audioB.currentTime = t; } catch {}
+      for (const a of allAudios()) {
+        try { a.currentTime = t; } catch {}
+      }
     };
     restore();
     audioA.addEventListener("loadedmetadata", restore, { once: true });
@@ -1470,11 +1516,13 @@ function stemSoloUrls(sf) {
   }
 
   function activeAudio(): HTMLAudioElement {
-    return currentSide === "a" ? audioA : audioB;
+    if (currentSide === "a") return audioA;
+    if (currentSide === "b") return audioB;
+    return audioOriginal;
   }
 
-  function inactiveAudio(): HTMLAudioElement {
-    return currentSide === "a" ? audioB : audioA;
+  function allAudios(): HTMLAudioElement[] {
+    return [audioA, audioB, audioOriginal];
   }
 
   function fmtTime(s: number): string {
@@ -1531,34 +1579,48 @@ function stemSoloUrls(sf) {
 
   function setActivePair(pair: HTMLElement) {
     activePairEl = pair;
-    currentSide = (pair.dataset.side as "a" | "b") || "a";
     currentSolo = null;
-    // Pause first so stale playback from the previous pair doesn't bleed
-    // through during the src swap. Then assign and explicitly call
-    // load() so the browser begins fetching immediately (without this
-    // some browsers wait for play() before kicking off the network
-    // request, which adds a ~200ms gap on the first tap).
-    audioA.pause();
-    audioB.pause();
+    // Default to original (null side) when a source URL is available;
+    // fall back to A if not (e.g. retry-only jobs missing source path —
+    // shouldn't happen in practice but better than no audio).
+    const hasOriginal = !!pair.dataset.sourceAudioUrl;
+    currentSide = hasOriginal ? null : "a";
+    // Pause everything first to stop bleed-through from the previous
+    // pair, then assign and eagerly load so the first tap has buffer
+    // ready.
+    for (const a of allAudios()) a.pause();
     audioA.src = pair.dataset.urlA || "";
     audioB.src = pair.dataset.urlB || "";
-    audioA.load();
-    audioB.load();
-    audioA.currentTime = 0;
-    audioB.currentTime = 0;
+    audioOriginal.src = pair.dataset.sourceAudioUrl || "";
+    for (const a of allAudios()) {
+      a.load();
+      a.currentTime = 0;
+    }
     setPlayButton(pair, "paused");
     updateTime(pair);
     reflectSide(pair, currentSide);
     refreshSoloBar(pair);
   }
 
-  function reflectSide(pair: HTMLElement, side: "a" | "b") {
-    pair.dataset.side = side;
+  function reflectSide(pair: HTMLElement, side: "a" | "b" | null) {
+    pair.dataset.side = side ?? "original";
     pair.querySelectorAll<HTMLElement>("[data-side-btn]").forEach((btn) => {
-      btn.classList.toggle("ab-side-active", btn.dataset.sideBtn === side);
+      btn.classList.toggle("ab-side-active", side !== null && btn.dataset.sideBtn === side);
     });
-    const label = pair.querySelector<HTMLElement>(`[data-side-btn="${side}"] .ab-label`);
-    setNowPlaying(pair, `now playing: ${side.toUpperCase()} · ${label?.textContent ?? ""}`);
+    // Indicator on the transport so "neither highlighted = original" is
+    // explicit rather than implicit. Updates whatever element the markup
+    // exposes as data-now-side.
+    const sideTag = pair.querySelector<HTMLElement>("[data-now-side]");
+    if (sideTag) {
+      if (side === null) {
+        sideTag.textContent = "ORIGINAL";
+        sideTag.dataset.kind = "original";
+      } else {
+        const label = pair.querySelector<HTMLElement>(`[data-side-btn="${side}"] .ab-label`);
+        sideTag.textContent = `${side.toUpperCase()} · ${label?.textContent ?? ""}`;
+        sideTag.dataset.kind = side;
+      }
+    }
   }
 
   async function togglePlay() {
@@ -1583,33 +1645,25 @@ function stemSoloUrls(sf) {
   function switchSide(side: "a" | "b") {
     const pair = activePairEl;
     if (!pair) return;
-    // Tapping the already-active side toggles playback on it. That makes
-    // A/B do double-duty as side selectors AND a "start listening" gesture
-    // when the pair was paused (which is the default state after a pair
-    // change).
-    if (side === currentSide) {
-      const a = activeAudio();
-      if (a.paused) {
-        a.play().then(() => {
-          setPlayButton(pair, "playing");
-          startTicking();
-        }).catch(() => {});
-      }
-      return;
-    }
+    // Pure source-toggle. Never affects play/pause (space-bar owns that).
+    // If the target side is already the active one, deselect → original.
+    // Otherwise switch to it. CurrentTime + play state are preserved
+    // across the swap so the curator never loses their place.
+    const target: "a" | "b" | null = side === currentSide ? null : side;
     const prev = activeAudio();
     const t = prev.currentTime;
+    const wasPlaying = !prev.paused;
     prev.pause();
-    currentSide = side;
+    currentSide = target;
     const next = activeAudio();
     next.currentTime = t;
-    reflectSide(pair, side);
-    // Always play after a side switch — tapping A or B is the natural
-    // "start playing this version" gesture in a tinder-style UI.
-    next.play().then(() => {
-      setPlayButton(pair, "playing");
-      startTicking();
-    }).catch(() => {});
+    reflectSide(pair, target);
+    if (wasPlaying) {
+      next.play().then(() => {
+        setPlayButton(pair, "playing");
+        startTicking();
+      }).catch(() => {});
+    }
   }
 
   function seekTo(seconds: number) {
@@ -1617,8 +1671,9 @@ function stemSoloUrls(sf) {
     if (!pair) return;
     const dur = Number(pair.dataset.duration || activeAudio().duration || 0);
     const t = Math.max(0, Math.min(dur || Infinity, seconds));
-    audioA.currentTime = t;
-    audioB.currentTime = t;
+    for (const a of allAudios()) {
+      try { a.currentTime = t; } catch {}
+    }
     updateTime(pair);
   }
 
@@ -1638,10 +1693,10 @@ function stemSoloUrls(sf) {
   }
 
   function stopAll() {
-    audioA.pause();
-    audioB.pause();
-    audioA.currentTime = 0;
-    audioB.currentTime = 0;
+    for (const a of allAudios()) {
+      a.pause();
+      a.currentTime = 0;
+    }
     stopTicking();
   }
 
@@ -1874,6 +1929,11 @@ function stemSoloUrls(sf) {
     if (sideBtn) {
       if (Date.now() - lastHoldCommitAt < HOLD_CLICK_SUPPRESS_MS) return;
       switchSide(sideBtn.dataset.sideBtn as "a" | "b");
+      // Drop focus from the side button so the browser's native space=
+      // click on it doesn't fight the document-level space=togglePlay
+      // handler. Without this, focus stays on the button and pressing
+      // space re-fires switchSide instead of cleanly toggling play.
+      sideBtn.blur();
       return;
     }
 
@@ -1883,10 +1943,15 @@ function stemSoloUrls(sf) {
       return;
     }
 
-    // Solo bar: stem-name pill or FULL MIX restore
+    // Solo bar: stem-name pill / FULL MIX / ORIGINAL source
     const soloFull = target.closest<HTMLElement>("[data-solo-full]");
     if (soloFull) {
       setSolo(null);
+      return;
+    }
+    const soloOriginal = target.closest<HTMLElement>("[data-solo-original]");
+    if (soloOriginal) {
+      setSolo(currentSolo === "_original" ? null : "_original");
       return;
     }
     const soloStem = target.closest<HTMLElement>("[data-solo-stem]");
@@ -1941,12 +2006,13 @@ function stemSoloUrls(sf) {
       if (k === "n" || k === "enter") { e.preventDefault(); advancePair(pair); }
       return;
     }
-    // A/B switch (instant, doesn't commit). Arrow keys seek ±10s.
-    // Enter commits the currently-playing side as the vote. Escape skips.
-    // Space play/pause + 1/2 pick + S skip were removed in the May 22
-    // refresh in favor of the visible hold-to-vote / hold-to-skip UI.
+    // A/B switch (instant, doesn't commit). Arrow keys seek ±10s. Space
+    // toggles play/pause on the active side regardless of which button
+    // has focus (and even if no button has focus). Enter commits the
+    // currently-playing side as the vote. Escape skips.
     if (k === "a") { e.preventDefault(); switchSide("a"); }
     else if (k === "b") { e.preventDefault(); switchSide("b"); }
+    else if (k === " ") { e.preventDefault(); togglePlay(); }
     else if (k === "arrowleft") { e.preventDefault(); skipBy(-10); }
     else if (k === "arrowright") { e.preventDefault(); skipBy(10); }
     else if (k === "enter") { e.preventDefault(); commit(pair, currentSide); }
