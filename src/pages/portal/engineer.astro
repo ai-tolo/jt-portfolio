@@ -676,9 +676,8 @@ function stemSoloUrls(sf) {
     border-color: #ff6e21;
   }
   /* Same radial-fill pattern as buckets' trash-hold but tuned to the
-     smaller × button. The fill grows from the centre and reaches the
-     button edges at exactly 0.45s, matching the A/B power-up so all
-     three "hold to commit" actions share the same physical feel. */
+     smaller × button. Matches the 0.65s A/B power-up so all three
+     "hold to commit" actions share the same physical feel. */
   .pair-skip-x .hold-fill {
     position: absolute;
     inset: 0;
@@ -693,7 +692,7 @@ function stemSoloUrls(sf) {
   .pair-skip-x[data-holding="true"] .hold-fill {
     transform: scale(2.4);
     opacity: 1;
-    transition: transform 0.45s ease-out, opacity 0.18s ease-out;
+    transition: transform 0.65s ease-out, opacity 0.22s ease-out;
   }
   .pair-skip-x[data-holding="true"] {
     color: #0e0c14;
@@ -826,38 +825,53 @@ function stemSoloUrls(sf) {
   .ab-side:hover {
     transform: translateY(-1px);
   }
-  /* Power-up bar — a glowing white strip along the top edge of the
-     button that sweeps left→right over 0.45s. White/bright so it stays
-     clearly visible whether the button is in inactive (transparent) or
-     active (solid color) state. The old full-button gradient fill was
-     invisible against an already-cyan/pink active background. */
+  /* Power-up fill — full-button width sweep in the button's own accent
+     color (cyan for A, pink for B) with a bright white leading edge.
+     Coheres with the button's identity instead of pasting a foreign
+     bar on top, and stays visible against both inactive (transparent)
+     and active (solid-color) states because the leading edge always
+     contrasts. Linear timing so the curator gets honest, predictable
+     progress feedback. Duration kept in lockstep with HOLD_MS below —
+     change both together. */
   .ab-side .hold-fill {
     position: absolute;
-    left: 0;
-    top: 0;
-    width: 100%;
-    height: 6px;
-    background: linear-gradient(90deg, #ffffff 0%, #fff39a 100%);
-    box-shadow: 0 1px 18px rgba(255, 243, 154, 1),
-                0 0 6px rgba(255, 255, 255, 1);
+    inset: 0;
+    border-radius: inherit;
     transform-origin: left center;
     transform: scaleX(0);
     transition: none;
     pointer-events: none;
-    z-index: 3;
+    z-index: 2;
+    overflow: hidden;
+  }
+  [data-side-btn="a"] .hold-fill {
+    background:
+      linear-gradient(90deg, transparent 0%, transparent 82%,
+                            rgba(255, 255, 255, 0.55) 96%,
+                            rgba(255, 255, 255, 0.9) 100%),
+      linear-gradient(90deg, rgba(14, 196, 252, 0.5) 0%, #6fdfff 100%);
+    box-shadow: inset 0 0 16px rgba(255, 255, 255, 0.22),
+                0 0 18px rgba(14, 196, 252, 0.55);
+  }
+  [data-side-btn="b"] .hold-fill {
+    background:
+      linear-gradient(90deg, transparent 0%, transparent 82%,
+                            rgba(255, 255, 255, 0.55) 96%,
+                            rgba(255, 255, 255, 0.9) 100%),
+      linear-gradient(90deg, rgba(255, 59, 110, 0.5) 0%, #ff8eaa 100%);
+    box-shadow: inset 0 0 16px rgba(255, 255, 255, 0.22),
+                0 0 18px rgba(255, 59, 110, 0.55);
   }
   .ab-side[data-holding="true"] .hold-fill {
     transform: scaleX(1);
-    transition: transform 0.45s linear;
+    transition: transform 0.65s linear;
   }
-  /* While holding: subtle inner glow so the button itself reads as
-     "charging up" alongside the progress bar. */
   .ab-side[data-holding="true"] {
     box-shadow: inset 0 0 18px rgba(255, 255, 255, 0.18);
   }
   .ab-side .ab-key, .ab-side .ab-label {
     position: relative;
-    z-index: 1;
+    z-index: 3;
   }
   [data-side-btn="a"] {
     color: #0ec4fc;
@@ -1774,12 +1788,13 @@ function stemSoloUrls(sf) {
   }
 
   // Hold-to-vote / hold-to-skip mechanics. Mirrors the buckets card
-  // trash-hold pattern: 450ms press fills a power-up bar; release before
+  // trash-hold pattern: 650ms press fills a power-up bar; release before
   // the bar finishes is a tap (passes through to the existing click
   // handler for the side switch). Release after fills the bar fires
   // commit and suppresses the trailing click so we don't double-trigger
-  // switchSide right after committing.
-  const HOLD_MS = 450;
+  // switchSide right after committing. Duration kept in lockstep with
+  // the CSS transition above — change both together.
+  const HOLD_MS = 650;
   const HOLD_CLICK_SUPPRESS_MS = 220;
   let holdTimer: number | null = null;
   let holdButton: HTMLElement | null = null;
