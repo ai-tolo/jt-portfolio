@@ -430,8 +430,23 @@ const BUCKET_TITLE: Record<BucketView, string> = {
 
     // ── Transcript reveal ────────────────────────────────────────────────
     // Lazy-fetches /api/console/transcript on first click. Subsequent
-    // clicks toggle the body open/closed without re-fetching. The aria-
-    // expanded attribute drives the CSS chevron flip on the toggle.
+    // clicks toggle the body open/closed without re-fetching. Body is
+    // rendered as one paragraph per whisper segment with a timestamp
+    // gutter on the left — far more scannable than a flat text wall.
+    // Adjacent segments separated by silence get extra top spacing as
+    // a "new thought" cue; very long silences (>4s) get a dashed rule.
+    const fmtTs = (sec: number): string => {
+      if (!Number.isFinite(sec) || sec < 0) return "0:00";
+      const h = Math.floor(sec / 3600);
+      const m = Math.floor((sec % 3600) / 60);
+      const s = Math.floor(sec % 60);
+      const ss = String(s).padStart(2, "0");
+      if (h > 0) return `${h}:${String(m).padStart(2, "0")}:${ss}`;
+      return `${m}:${ss}`;
+    };
+    const escapeHtml = (s: string): string =>
+      s.replace(/[<>&]/g, (c) => (c === "<" ? "&lt;" : c === ">" ? "&gt;" : "&amp;"));
+
     const revealTranscript = async (card: HTMLElement, btn: HTMLElement) => {
       const assetId = card.dataset.assetId;
       const target = card.querySelector<HTMLElement>("[data-transcript-target]");
@@ -465,12 +480,43 @@ const BUCKET_TITLE: Record<BucketView, string> = {
           `${data.char_count.toLocaleString()} chars` +
           (segCount > 0 ? ` · ${segCount.toLocaleString()} segments` : "") +
           ` · ${data.source}`;
-        // Escape user-derived text before injecting into innerHTML.
-        const safeText = (data.text || "").replace(/[<>&]/g, (c) =>
-          c === "<" ? "&lt;" : c === ">" ? "&gt;" : "&amp;",
-        );
+
+        let bodyHtml = `<span class="exp-transcript-meta">${meta}</span>`;
+        if (segCount > 0) {
+          // One paragraph per segment, with timestamp gutter.
+          // Gap > 2s = visual paragraph break; > 4s = dashed rule.
+          const parts: string[] = [];
+          let prevEnd = 0;
+          for (const seg of data.segments) {
+            const start = typeof seg.start === "number" ? seg.start : 0;
+            const end = typeof seg.end === "number" ? seg.end : start;
+            const text = (seg.text || "").trim();
+            if (!text) {
+              prevEnd = end;
+              continue;
+            }
+            const gap = start - prevEnd;
+            const gapClass =
+              prevEnd > 0 && gap > 4
+                ? " exp-transcript-gap-long"
+                : prevEnd > 0 && gap > 2
+                  ? " exp-transcript-gap"
+                  : "";
+            parts.push(
+              `<p class="exp-transcript-line${gapClass}">` +
+                `<span class="exp-transcript-ts">${fmtTs(start)}</span>` +
+                `<span class="exp-transcript-text">${escapeHtml(text)}</span>` +
+                `</p>`,
+            );
+            prevEnd = end;
+          }
+          bodyHtml += parts.join("");
+        } else {
+          // Legacy .txt fallback path: flat text in a single block.
+          bodyHtml += `<div class="exp-transcript-text" style="white-space:pre-wrap">${escapeHtml(data.text || "")}</div>`;
+        }
         target.removeAttribute("data-state");
-        target.innerHTML = `<span class="exp-transcript-meta">${meta}</span>${safeText}`;
+        target.innerHTML = bodyHtml;
         btn.dataset.loaded = "true";
       } catch {
         target.setAttribute("data-state", "error");
