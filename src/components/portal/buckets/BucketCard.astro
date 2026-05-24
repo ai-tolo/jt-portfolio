@@ -514,13 +514,6 @@ const hasExpanded = true;
             </dd>
           </>
         )}
-        {/* Visual separator between curator metadata (tags/tech/lineage)
-            and engine-generated content (summary/note). Spans both grid
-            columns so the eye knows the section below is a different
-            kind of information. */}
-        {(item.summary && !/^(insufficient|music or non-speech)/i.test(item.summary)) || (hasNoSummary && isLongJam) ? (
-          <div class="exp-divider" role="presentation"></div>
-        ) : null}
         {item.summary && !/^(insufficient|music or non-speech)/i.test(item.summary) && (
           <>
             <dt>Summary</dt>
@@ -536,28 +529,29 @@ const hasExpanded = true;
             <dd class="exp-note">Not auto-transcribed — Whisper hallucinates on long music sections. Browse the waveform / audition to find what's in here.</dd>
           </>
         )}
-        {currentBucket === "loops" && (
-          <>
-            <dt>Live</dt>
-            <dd>
-              {item.live_loop_path ? (
-                <span class="promoted-badge" title={`In Live's browser: ${item.live_loop_path}`}>✓ In Live</span>
-              ) : (
-                <button
-                  type="button"
-                  class="promote-btn"
-                  data-action="promote-to-live"
-                  data-asset-id={String(item.asset_id)}
-                  title="Copy + normalize to _Soundbending/loops/"
-                >→ Promote to Live</button>
-              )}
-            </dd>
-          </>
-        )}
-        {canSplitStems && (
-          <>
-            <dt>Stems</dt>
-            <dd class="exp-stems">
+      </dl>
+      {/* Action strip — Promote (when bucket=loops) · stem split · send
+          to Engineer. Collapses what used to be three labeled dt/dd rows
+          into one horizontal bar so the metadata block above breathes
+          and the action affordances read as a unit. Status spans for
+          stems/engineer push to the trailing edge. */}
+      {(currentBucket === "loops" || canSplitStems) && (
+        <div class="exp-actions" role="group" aria-label="Actions">
+          {currentBucket === "loops" && (
+            item.live_loop_path ? (
+              <span class="promoted-badge" title={`In Live's browser: ${item.live_loop_path}`}>✓ In Live</span>
+            ) : (
+              <button
+                type="button"
+                class="promote-btn"
+                data-action="promote-to-live"
+                data-asset-id={String(item.asset_id)}
+                title="Copy + normalize to _Soundbending/loops/"
+              >→ Promote to Live</button>
+            )
+          )}
+          {canSplitStems && (
+            <>
               <button
                 type="button"
                 class="stem-btn"
@@ -574,10 +568,6 @@ const hasExpanded = true;
                 data-asset-id={String(item.asset_id)}
                 title="Demucs split → drums + bass + vocals + other (~5-10 min on M1)"
               >4-stem<span class="stem-btn-sub">drm · bass · vox · oth</span></button>
-              <span class="stem-progress" data-stem-progress aria-live="polite"></span>
-            </dd>
-            <dt>Engineer</dt>
-            <dd class="exp-engineer">
               <button
                 type="button"
                 class="engineer-btn"
@@ -585,11 +575,14 @@ const hasExpanded = true;
                 data-asset-id={String(item.asset_id)}
                 title="Queue for the Engineer · auto-splits stems if needed, renders A/B variants"
               >→ Send to Engineer</button>
-              <span class="engineer-status" data-engineer-status aria-live="polite"></span>
-            </dd>
-          </>
-        )}
-      </dl>
+            </>
+          )}
+          <span class="action-status-pool">
+            <span class="action-status" data-stem-progress aria-live="polite"></span>
+            <span class="action-status" data-engineer-status aria-live="polite"></span>
+          </span>
+        </div>
+      )}
       <p class="status" data-status-line aria-live="polite"></p>
     </div>
   )}
@@ -927,26 +920,31 @@ const hasExpanded = true;
     font-feature-settings: "tnum";
     line-height: 1;
   }
+  /* BPM + key bump to neon green so high-value audio metadata jumps off
+     the panel when present. Matches the title's green family; the unit /
+     mode suffixes stay muted so the data reads first. */
   .exp-tech .bpm-num {
-    font-size: 13px;
+    font-size: 16px;
     font-weight: 700;
-    color: #0ec4fc;
+    color: #00ff4d;
+    text-shadow: 0 0 8px rgba(0, 255, 77, 0.32);
   }
   .exp-tech .bpm-unit {
     font-size: 13px;
     font-weight: 500;
     color: rgba(245, 241, 232, 0.55);
-    margin-left: 2px;
+    margin-left: 3px;
   }
   .exp-tech .tech-sep {
-    font-size: 13px;
+    font-size: 14px;
     color: rgba(245, 241, 232, 0.32);
-    margin: 0 4px;
+    margin: 0 6px;
   }
   .exp-tech .key {
-    font-size: 13px;
+    font-size: 16px;
     font-weight: 700;
-    color: #0ec4fc;
+    color: #00ff4d;
+    text-shadow: 0 0 8px rgba(0, 255, 77, 0.32);
   }
   .exp-tech .key-mode {
     font-size: 13px;
@@ -1273,8 +1271,8 @@ const hasExpanded = true;
   }
   .exp {
     display: grid;
-    grid-template-columns: 92px 1fr;
-    gap: 4px 14px;
+    grid-template-columns: 88px 1fr;
+    gap: 10px 14px;
     margin: 0;
     font-size: 12px;
     line-height: 1.45;
@@ -1292,16 +1290,15 @@ const hasExpanded = true;
     color: rgba(245, 241, 232, 0.82);
   }
   .exp-sep { color: rgba(245, 241, 232, 0.35); }
-  /* Divider between curator metadata and engine-generated content.
-     Spans both grid columns so it acts as a section break inside the dl. */
+  /* Divider sits between the metadata dl and the action strip — visual
+     break between "what is this thing" and "what can I do with it". */
   .exp-divider {
-    grid-column: 1 / -1;
     height: 1px;
     background: linear-gradient(90deg,
       rgba(14, 196, 252, 0) 0%,
       rgba(14, 196, 252, 0.24) 50%,
       rgba(14, 196, 252, 0) 100%);
-    margin: 6px 0 2px 0;
+    margin: 12px 0 10px 0;
   }
 
   .tag-list {
@@ -1943,12 +1940,39 @@ const hasExpanded = true;
      span that the page controller writes "Splitting… 42%" / "✓ 4 stems
      ready" into via setStatus. Compact + cyan to match other workbench
      actions. */
-  .exp-stems {
+  /* Action strip — single horizontal row holding Promote (when applicable),
+     2-stem, 4-stem, and Send to Engineer. Replaces the three labeled
+     dt/dd rows the actions used to occupy. Status spans push to the
+     trailing edge via margin-left:auto so live progress reads as a
+     trailing log line. */
+  .exp-actions {
     display: flex;
     flex-wrap: wrap;
-    gap: 6px 8px;
     align-items: center;
+    gap: 8px;
+    margin: 0;
+    padding-top: 10px;
+    border-top: 1px solid rgba(14, 196, 252, 0.14);
   }
+  /* Status pool is the trailing-edge slot for stem/engineer progress
+     readouts. Always present so its `margin-left: auto` reliably pushes
+     to the right; the inner spans hide themselves when empty. */
+  .action-status-pool {
+    margin-left: auto;
+    display: inline-flex;
+    gap: 8px;
+    align-items: baseline;
+  }
+  .action-status {
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 10.5px;
+    color: rgba(245, 241, 232, 0.65);
+    line-height: 1;
+  }
+  .action-status:empty { display: none; }
+  .action-status[data-tone="ok"] { color: #00ff4d; }
+  .action-status[data-tone="err"] { color: #ff6e21; }
+
   .stem-btn {
     display: inline-flex;
     flex-direction: column;
