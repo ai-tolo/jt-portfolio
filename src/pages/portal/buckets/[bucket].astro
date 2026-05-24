@@ -428,6 +428,56 @@ const BUCKET_TITLE: Record<BucketView, string> = {
       }
     };
 
+    // ── Transcript reveal ────────────────────────────────────────────────
+    // Lazy-fetches /api/console/transcript on first click. Subsequent
+    // clicks toggle the body open/closed without re-fetching. The aria-
+    // expanded attribute drives the CSS chevron flip on the toggle.
+    const revealTranscript = async (card: HTMLElement, btn: HTMLElement) => {
+      const assetId = card.dataset.assetId;
+      const target = card.querySelector<HTMLElement>("[data-transcript-target]");
+      if (!assetId || !target) return;
+      if (btn.dataset.loaded === "true") {
+        // Toggle without refetch.
+        const willOpen = target.hidden;
+        target.hidden = !willOpen;
+        btn.setAttribute("aria-expanded", willOpen ? "true" : "false");
+        return;
+      }
+      target.hidden = false;
+      target.setAttribute("data-state", "loading");
+      target.textContent = "Loading transcript…";
+      btn.setAttribute("aria-expanded", "true");
+      try {
+        const res = await fetch(`/api/console/transcript?asset_id=${assetId}`);
+        if (!res.ok) {
+          target.setAttribute("data-state", "error");
+          target.textContent = `Transcript unavailable (HTTP ${res.status})`;
+          return;
+        }
+        const data = (await res.json()) as {
+          text: string;
+          segments: { start: number | null; end: number | null; text: string }[];
+          char_count: number;
+          source: string;
+        };
+        const segCount = Array.isArray(data.segments) ? data.segments.length : 0;
+        const meta =
+          `${data.char_count.toLocaleString()} chars` +
+          (segCount > 0 ? ` · ${segCount.toLocaleString()} segments` : "") +
+          ` · ${data.source}`;
+        // Escape user-derived text before injecting into innerHTML.
+        const safeText = (data.text || "").replace(/[<>&]/g, (c) =>
+          c === "<" ? "&lt;" : c === ">" ? "&gt;" : "&amp;",
+        );
+        target.removeAttribute("data-state");
+        target.innerHTML = `<span class="exp-transcript-meta">${meta}</span>${safeText}`;
+        btn.dataset.loaded = "true";
+      } catch {
+        target.setAttribute("data-state", "error");
+        target.textContent = "Transcript fetch failed (network)";
+      }
+    };
+
     // ── Lineage reveal ───────────────────────────────────────────────────
     const revealLineage = async (card: HTMLElement, chip: HTMLElement) => {
       const assetId = card.dataset.assetId;
@@ -1097,6 +1147,20 @@ const BUCKET_TITLE: Record<BucketView, string> = {
       dismissCropHint(card);
     };
 
+    // Skip the active player's playhead by deltaSec, clamped to the full
+    // track duration. Used by ←/→ outside crop mode for scrubbing the
+    // currently playing card without leaving the keyboard. No-op when no
+    // card is actively bound to the audio singleton.
+    const TRACK_SKIP_SEC = 10;
+    const skipInTrack = (deltaSec: number) => {
+      if (!audio || !activeCard) return;
+      const dur = Number.isFinite(audio.duration) && audio.duration > 0
+        ? audio.duration : Number(activeCard.dataset.durationSeconds) || 0;
+      const newTime = Math.max(0, Math.min(dur, audio.currentTime + deltaSec));
+      audio.currentTime = newTime;
+      updatePlayhead();
+    };
+
     // Enter/exit crop mode: swaps the wave-row with the cropper-surface via
     // [data-crop-mode] on the card root. Crop mode owns audio playback for
     // its card — entering stops normal audition on this card, exiting stops
@@ -1632,6 +1696,9 @@ const BUCKET_TITLE: Record<BucketView, string> = {
         case "dup-group":
           revealDupGroup(card, btn);
           break;
+        case "show-transcript":
+          revealTranscript(card, btn);
+          break;
         case "tag-remove":
           removeTag(card, btn);
           break;
@@ -1730,24 +1797,20 @@ const BUCKET_TITLE: Record<BucketView, string> = {
         focusCard(prev);
         return;
       }
+      // ←/→ behavior depends on context:
+      //  - In crop mode: scrub ±1s within the loop bounds (existing).
+      //  - Otherwise: skip ±10s in the currently playing audio. No-op
+      //    when nothing is playing. Card navigation is up/down only.
       if (e.key === "ArrowRight") {
         e.preventDefault();
-        if (inCrop && currentEl) {
-          skipInLoop(currentEl, +1);
-        } else {
-          const next = currentIdx < 0 ? 0 : (currentIdx + 1) % all.length;
-          focusCard(next);
-        }
+        if (inCrop && currentEl) skipInLoop(currentEl, +1);
+        else skipInTrack(+TRACK_SKIP_SEC);
         return;
       }
       if (e.key === "ArrowLeft") {
         e.preventDefault();
-        if (inCrop && currentEl) {
-          skipInLoop(currentEl, -1);
-        } else {
-          const prev = currentIdx < 0 ? 0 : (currentIdx - 1 + all.length) % all.length;
-          focusCard(prev);
-        }
+        if (inCrop && currentEl) skipInLoop(currentEl, -1);
+        else skipInTrack(-TRACK_SKIP_SEC);
         return;
       }
 

@@ -593,6 +593,33 @@ export async function getSilenceBounds(
   );
 }
 
+export interface TranscriptSegment {
+  start: number | null;
+  end: number | null;
+  text: string;
+}
+
+export interface TranscriptResponse {
+  asset_id: number;
+  text: string;
+  segments: TranscriptSegment[];
+  char_count: number;
+  source: "json" | "txt";
+}
+
+/** Read the on-disk mlx-whisper transcript for an asset. Lazy-loaded
+ *  by the BucketCard's "show transcript" disclosure. 404 when the row
+ *  was never transcribed (or transcripts dir not mounted, e.g. T7
+ *  unplugged). */
+export async function getTranscript(
+  asset_id: number,
+): Promise<ApiResult<TranscriptResponse>> {
+  return call<TranscriptResponse>(
+    `/buckets/transcript?asset_id=${asset_id}`,
+    { timeoutMs: 15_000 },
+  );
+}
+
 export interface PromoteCropResponse {
   ok: boolean;
   crop_asset_id: number;
