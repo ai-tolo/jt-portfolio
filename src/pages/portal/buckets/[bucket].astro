@@ -17,7 +17,14 @@ import type {
 // for anyone bookmarking them.
 const VALID_BUCKETS: BucketView[] = ["all", "inbox", "jam", "loops", "field", "tracks", "trash"];
 const VALID_CATEGORIES: BucketCategory[] = ["all", "jam", "loops", "field", "tracks", "other", "cleanup"];
-const VALID_SORTS: BucketSort[] = ["recent", "oldest", "longest", "shortest", "most-used", "stars"];
+const VALID_SORTS: BucketSort[] = [
+  "recent", "oldest",
+  "longest", "shortest",
+  "most-used", "least-used",
+  "bpm-asc", "bpm-desc",
+  "silence-desc",
+  "kudos",
+];
 
 const bucketParam = Astro.params.bucket ?? "all";
 if (!VALID_BUCKETS.includes(bucketParam as BucketView)) {
@@ -27,7 +34,12 @@ const bucket = bucketParam as BucketView;
 
 const url = Astro.url;
 const categoryRaw = (url.searchParams.get("category") ?? "all").trim();
-const sortRaw = url.searchParams.get("sort") ?? "recent";
+// `sortRaw` is null when the user hasn't asserted a sort. The toggles in
+// BucketsFilters distinguish "no toggle active" (null) from "Date desc"
+// (explicit `?sort=recent`) — both produce the same ORDER BY but the
+// 3-state toggle relies on knowing which one the user intended.
+const sortParam = url.searchParams.get("sort");
+const sortRaw = sortParam ?? "recent";
 const q = (url.searchParams.get("q") ?? "").trim();
 const tagsRaw = (url.searchParams.get("tags") ?? "").trim();
 
@@ -37,6 +49,7 @@ const category: BucketCategory = VALID_CATEGORIES.includes(categoryRaw as Bucket
 const sort: BucketSort = VALID_SORTS.includes(sortRaw as BucketSort)
   ? (sortRaw as BucketSort)
   : "recent";
+const sortExplicit = sortParam !== null && VALID_SORTS.includes(sortParam as BucketSort);
 
 // Active tag tokens parsed from ?tags=. Each is lowercase + de-duped so
 // the query sent to the engine matches what's rendered as "active" in the
@@ -86,6 +99,7 @@ const BUCKET_TITLE: Record<BucketView, string> = {
       bucket={bucket}
       category={category}
       sort={sort}
+      sortExplicit={sortExplicit}
       q={q}
       activeTags={activeTags}
       topTags={topTags}
@@ -1181,17 +1195,159 @@ const BUCKET_TITLE: Record<BucketView, string> = {
           output_path: string;
           duration_sec: number;
         };
-        setStatus(
-          card,
-          `✓ Exported · ${data.duration_sec.toFixed(2)}s (asset ${data.new_asset_id})`,
-          "ok",
-        );
+        // Status line gets both the success readout AND a follow-up chip
+        // offering to promote the crop to canonical (trash the dead-air
+        // source). The chip only makes sense when the crop covers most of
+        // the source's non-silent content — if the curator is cherry-picking
+        // a tiny region, they probably want the source kept around for
+        // other crops. Threshold: crop length ≥ 0.5× source duration.
+        const sourceDur = Number(card.dataset.durationSeconds);
+        const cropLen = state.endSec - state.startSec;
+        const offerPromote =
+          Number.isFinite(sourceDur) && sourceDur > 0 && cropLen >= 0.5 * sourceDur;
+        const status = card.querySelector<HTMLElement>("[data-status-line]");
+        if (status) {
+          const escId = String(data.new_asset_id);
+          const lenStr = data.duration_sec.toFixed(2);
+          status.innerHTML = offerPromote
+            ? `✓ Exported · ${lenStr}s (asset ${escId}) <button type="button" class="undo-btn" data-action="promote-crop" data-crop-asset-id="${escId}">→ Make canonical, trash source</button>`
+            : `✓ Exported · ${lenStr}s (asset ${escId})`;
+          status.setAttribute("data-tone", "ok");
+        }
         if (exportBtn) exportBtn.dataset.busy = "";
         // Stay in crop mode after a successful export — the curator may
         // want to cut another loop from the same source without re-entering.
       } catch {
         setStatus(card, "Export failed (network)", "err");
         if (exportBtn) exportBtn.dataset.busy = "";
+      }
+    };
+
+    // ── Trim to content (Ask 1: silence-detect assist) ──────────────────
+    // Calls /api/console/silence-bounds → ffmpeg silencedetect on M1 →
+    // writes the inner non-silent range into the cropper state. UI then
+    // re-renders with handles snapped to the detected bounds. Curator can
+    // still drag from there before Export.
+    const trimToContent = async (card: HTMLElement) => {
+      const state = cropperStates.get(card);
+      if (!state) return;
+      const btn = card.querySelector<HTMLButtonElement>(
+        '[data-action="trim-to-content"]',
+      );
+      if (btn?.dataset.busy === "true") return;
+      if (btn) btn.dataset.busy = "true";
+      setStatus(card, "Detecting silence…");
+      try {
+        const res = await fetch(
+          `/api/console/silence-bounds?asset_id=${card.dataset.assetId}`,
+        );
+        if (!res.ok) {
+          setStatus(card, `Silence detect failed (HTTP ${res.status})`, "err");
+          if (btn) btn.dataset.busy = "";
+          return;
+        }
+        const data = (await res.json()) as {
+          start_sec: number;
+          end_sec: number;
+          source_duration: number;
+          silence_ratio: number;
+          detected: boolean;
+          reason?: string;
+        };
+        if (!data.detected || data.end_sec <= data.start_sec) {
+          setStatus(
+            card,
+            `No leading/trailing silence detected${data.reason ? ` (${data.reason})` : ""}`,
+            "ok",
+          );
+          if (btn) btn.dataset.busy = "";
+          return;
+        }
+        // Update cropper state and refresh the UI. syncCropBounds clamps
+        // any live playhead back inside the new bounds.
+        state.startSec = Math.max(0, data.start_sec);
+        state.endSec = Math.min(state.durationSec, data.end_sec);
+        updateCropperUI(state);
+        syncCropBounds(card, state);
+        const pct = Math.round((data.silence_ratio ?? 0) * 100);
+        setStatus(
+          card,
+          `Trimmed to content · ${(state.endSec - state.startSec).toFixed(2)}s (${pct}% silent in source)`,
+          "ok",
+        );
+        if (btn) btn.dataset.busy = "";
+      } catch {
+        setStatus(card, "Silence detect failed (network)", "err");
+        if (btn) btn.dataset.busy = "";
+      }
+    };
+
+    // ── Promote crop to canonical ────────────────────────────────────────
+    // Calls /api/console/promote-crop → engine sets source.dup_of=crop and
+    // moves source to trash. Engine returns HTTP 409 with project_count
+    // when source is referenced by .als projects; we surface that as a
+    // confirm prompt and retry with force=true.
+    const promoteCropToCanonical = async (
+      card: HTMLElement,
+      cropAssetId: number,
+      force: boolean = false,
+    ) => {
+      const status = card.querySelector<HTMLElement>("[data-status-line]");
+      if (status) {
+        status.textContent = "Promoting crop to canonical…";
+        status.removeAttribute("data-tone");
+      }
+      try {
+        const res = await fetch("/api/console/promote-crop", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ crop_asset_id: cropAssetId, force }),
+        });
+        if (res.status === 409 && !force) {
+          // Engine returned project_count — re-ask and retry.
+          let count = "?";
+          try {
+            const body = await res.json();
+            count = String(body?.error?.project_count ?? body?.project_count ?? "?");
+          } catch {}
+          const proceed = window.confirm(
+            `Source is referenced by ${count} .als project(s). Promote anyway?\n\nProjects will continue pointing at the trashed source until you re-link them.`,
+          );
+          if (proceed) {
+            return promoteCropToCanonical(card, cropAssetId, true);
+          }
+          if (status) {
+            status.textContent = "Promote cancelled.";
+            status.setAttribute("data-tone", "ok");
+          }
+          return;
+        }
+        if (!res.ok) {
+          let detail = `HTTP ${res.status}`;
+          try {
+            const body = await res.json();
+            if (body?.error?.message) detail = body.error.message;
+          } catch {}
+          if (status) {
+            status.textContent = `Promote failed: ${detail}`;
+            status.setAttribute("data-tone", "err");
+          }
+          return;
+        }
+        const data = (await res.json()) as { source_asset_id: number; project_refs: number };
+        if (status) {
+          status.innerHTML = `✓ Crop is canonical. Source (asset ${data.source_asset_id}) moved to Trash.`;
+          status.setAttribute("data-tone", "ok");
+        }
+        // The source row is now in Trash — exit crop mode and clear it
+        // from the page if it's the currently focused card.
+        exitCropMode(card);
+        card.dataset.bucket = "trash";
+      } catch {
+        if (status) {
+          status.textContent = "Promote failed (network)";
+          status.setAttribute("data-tone", "err");
+        }
       }
     };
 
@@ -1494,6 +1650,15 @@ const BUCKET_TITLE: Record<BucketView, string> = {
         case "export-crop":
           commitExportCrop(card);
           break;
+        case "trim-to-content":
+          trimToContent(card);
+          break;
+        case "promote-crop": {
+          const raw = btn.dataset.cropAssetId;
+          const cropId = raw ? Number(raw) : NaN;
+          if (Number.isFinite(cropId)) promoteCropToCanonical(card, cropId);
+          break;
+        }
         case "split-stems": {
           const mode = btn.dataset.mode === "2" || btn.dataset.mode === "4"
             ? btn.dataset.mode

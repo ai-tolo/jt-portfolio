@@ -300,6 +300,10 @@ export type BucketSort =
   | "longest"
   | "shortest"
   | "most-used"
+  | "least-used"
+  | "bpm-asc"
+  | "bpm-desc"
+  | "silence-desc"
   | "kudos";
 
 export interface BucketAsset {

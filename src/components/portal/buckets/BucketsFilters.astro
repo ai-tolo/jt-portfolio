@@ -10,12 +10,15 @@ interface Props {
   bucket: BucketView;
   category: BucketCategory;
   sort: BucketSort;
+  /** True when the URL carries an explicit ?sort=. Lets the 3-state
+   *  toggles distinguish "no toggle active" from "Date desc explicit". */
+  sortExplicit: boolean;
   q: string;
   activeTags: string[];
   topTags: TopTag[];
 }
 
-const { bucket, category, sort, q, activeTags, topTags } = Astro.props;
+const { bucket, category, sort, sortExplicit, q, activeTags, topTags } = Astro.props;
 const activeSet = new Set(activeTags);
 
 const CATEGORIES: { id: BucketCategory; label: string; hint: string }[] = [
@@ -28,20 +31,62 @@ const CATEGORIES: { id: BucketCategory; label: string; hint: string }[] = [
   { id: "cleanup", label: "Cleanup", hint: "Duplicates + orphans flagged for review" },
 ];
 
-const SORTS: { id: BucketSort; label: string }[] = [
-  { id: "recent", label: "Recent" },
-  { id: "oldest", label: "Oldest" },
-  { id: "longest", label: "Longest" },
-  { id: "shortest", label: "Shortest" },
-  { id: "most-used", label: "Most-used" },
-  { id: "kudos", label: "Most kudos" },
+// Sort toggles consolidate paired sort directions into a single 3-state
+// button per dimension: off → asc → desc → off. The "off" position falls
+// back to the engine default (`recent`), so toggling Date "off" produces
+// the same query as Date desc — that's fine: the toggle communicates the
+// curator's intent, not just the ORDER BY.
+//
+// `null` in the asc/desc slot means that direction is not exposed (e.g.
+// Kudos only sorts descending — ascending would just surface every 0-kudos
+// row, which is most of the catalog).
+type SortDim = {
+  key: string;
+  label: string;
+  asc: BucketSort | null;
+  desc: BucketSort | null;
+};
+const SORT_DIMS: SortDim[] = [
+  { key: "date",     label: "Date",     asc: "oldest",       desc: "recent" },
+  { key: "duration", label: "Duration", asc: "shortest",     desc: "longest" },
+  { key: "bpm",      label: "BPM",      asc: "bpm-asc",      desc: "bpm-desc" },
+  { key: "used",     label: "Used",     asc: "least-used",   desc: "most-used" },
+  { key: "kudos",    label: "Kudos",    asc: null,           desc: "kudos" },
+  { key: "silent",   label: "Silent",   asc: null,           desc: "silence-desc" },
 ];
+
+// State of a sort dimension given the active sort param. `"off"` means
+// no direction is asserted for this dimension; `"asc"` / `"desc"` means
+// the dim is currently driving the ORDER BY. When `sortExplicit` is
+// false (no ?sort= in URL), every dim is "off" — even the one whose
+// desc maps to the engine default ("recent"), since the user hasn't
+// explicitly asserted that direction.
+const sortStateFor = (dim, currentSort, explicit) => {
+  if (!explicit) return "off";
+  if (currentSort === dim.asc) return "asc";
+  if (currentSort === dim.desc) return "desc";
+  return "off";
+};
+
+// Next-state sort key for a click. Cycle is off → asc → desc → off.
+// When asc is null, skip directly to desc (and back). When desc is null,
+// the toggle just flips on/off via asc. Returns null to mean "remove sort
+// param" (engine falls back to `recent`).
+const nextSort = (dim, currentState) => {
+  if (currentState === "off") return dim.asc ?? dim.desc;
+  if (currentState === "asc") return dim.desc ?? null;
+  return null; // desc → off
+};
 
 const base = `/portal/buckets/${bucket}`;
 const tagsCsv = activeTags.join(",");
 const buildHref = (overrides: Record<string, string | null>): string => {
   const p = new URLSearchParams();
-  if (sort !== "recent") p.set("sort", sort);
+  // Inherit current sort only when it was set explicitly (i.e. user
+  // toggled something). If the page is in default-sort state, we want
+  // child links to stay clean (no sort param) until the user clicks a
+  // sort toggle themselves.
+  if (sortExplicit) p.set("sort", sort);
   if (category && category !== "all") p.set("category", category);
   if (q) p.set("q", q);
   if (tagsCsv) p.set("tags", tagsCsv);
@@ -49,7 +94,6 @@ const buildHref = (overrides: Record<string, string | null>): string => {
     if (v === null || v === "") p.delete(k);
     else p.set(k, v);
   }
-  if (p.get("sort") === "recent") p.delete("sort");
   if (p.get("category") === "all") p.delete("category");
   const qs = p.toString();
   return qs ? `${base}?${qs}` : base;
@@ -170,14 +214,31 @@ const activeCategory = CATEGORIES.find((c) => c.id === category) ?? CATEGORIES[0
   <div class="sort-row">
     <span class="sort-label">Sort</span>
     <ul class="sort-list" role="list">
-      {SORTS.map((s) => (
-        <li>
-          <a
-            href={buildHref({ sort: s.id })}
-            class:list={["sort-chip", { active: sort === s.id }]}
-          >{s.label}</a>
-        </li>
-      ))}
+      {SORT_DIMS.map((dim) => {
+        const state = sortStateFor(dim, sort, sortExplicit);
+        const next = nextSort(dim, state);
+        const href = buildHref({ sort: next });
+        const arrow = state === "asc" ? "↑" : state === "desc" ? "↓" : "";
+        const titleNext = state === "off"
+          ? `Sort by ${dim.label}, ${dim.asc ? "ascending" : "descending"}`
+          : state === "asc"
+            ? (dim.desc ? `Sort by ${dim.label}, descending` : `Clear ${dim.label} sort`)
+            : `Clear ${dim.label} sort`;
+        return (
+          <li>
+            <a
+              href={href}
+              class:list={["sort-toggle", { active: state !== "off" }]}
+              data-state={state}
+              aria-pressed={state !== "off" ? "true" : "false"}
+              title={titleNext}
+            >
+              <span class="sort-toggle-label">{dim.label}</span>
+              {arrow && <span class="sort-toggle-arrow" aria-hidden="true">{arrow}</span>}
+            </a>
+          </li>
+        );
+      })}
     </ul>
     {/* Archive link sits at the trailing edge of the sort row. Clicking
         opens the Trash bucket where archived items can be restored by
@@ -466,8 +527,13 @@ const activeCategory = CATEGORIES.find((c) => c.id === category) ?? CATEGORIES[0
     flex-wrap: wrap;
     gap: 6px;
   }
-  .sort-chip {
-    display: inline-block;
+  /* 3-state sort toggle. Off = label only, neutral border. Active (asc or
+     desc) = accent background with the arrow appended. Cycle is off → asc
+     → desc → off via the pre-computed href on each click — no JS state. */
+  .sort-toggle {
+    display: inline-flex;
+    align-items: baseline;
+    gap: 4px;
     font-size: 11px;
     font-weight: var(--fw-semibold);
     letter-spacing: 0.06em;
@@ -476,12 +542,25 @@ const activeCategory = CATEGORIES.find((c) => c.id === category) ?? CATEGORIES[0
     border: 1px solid var(--line);
     padding: 5px 9px;
     text-decoration: none;
-    transition: color 160ms ease, border-color 160ms ease;
+    transition: color 160ms ease, border-color 160ms ease,
+                background-color 160ms ease;
   }
-  .sort-chip:hover { color: var(--text); border-color: var(--text); }
-  .sort-chip.active {
+  .sort-toggle:hover,
+  .sort-toggle:focus-visible {
+    color: var(--text);
+    border-color: var(--text);
+    outline: none;
+  }
+  .sort-toggle.active {
     color: var(--bg);
     background: var(--accent);
     border-color: var(--accent);
+  }
+  .sort-toggle-arrow {
+    font-size: 12px;
+    font-weight: 700;
+    line-height: 1;
+    /* Tighten optical kerning so the arrow sits flush with the label. */
+    margin-left: -1px;
   }
 </style>

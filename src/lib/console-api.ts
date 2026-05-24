@@ -571,6 +571,49 @@ export async function extractLoop(
   });
 }
 
+export interface SilenceBoundsResponse {
+  asset_id: number;
+  start_sec: number;
+  end_sec: number;
+  source_duration: number;
+  silence_ratio: number;
+  detected: boolean;
+  ranges?: [number, number][];
+  reason?: string;
+}
+
+/** ffmpeg silencedetect on the source file; returns inner non-silent bounds.
+ *  Powers the "↹ Trim to content" button in the crop tab. ~1-3s call. */
+export async function getSilenceBounds(
+  asset_id: number,
+): Promise<ApiResult<SilenceBoundsResponse>> {
+  return call<SilenceBoundsResponse>(
+    `/buckets/silence-bounds?asset_id=${asset_id}`,
+    { timeoutMs: 95_000 },
+  );
+}
+
+export interface PromoteCropResponse {
+  ok: boolean;
+  crop_asset_id: number;
+  source_asset_id: number;
+  project_refs: number;
+}
+
+/** Promote an extracted-from-jam child to canonical: source moves to Trash,
+ *  source.dup_of = crop.rowid so the dup-group view stays queryable.
+ *  Engine refuses (409) when source is referenced by .als projects unless
+ *  force=true. */
+export async function promoteCrop(
+  crop_asset_id: number,
+  force: boolean = false,
+): Promise<ApiResult<PromoteCropResponse>> {
+  return _post<PromoteCropResponse>("/buckets/promote-crop", {
+    crop_asset_id,
+    force,
+  });
+}
+
 /** Kick off a Demucs stem-splitting job. Engine spawns the worker via
  *  subprocess.Popen and returns a job_id immediately; the UI then polls
  *  via getSplitStemsStatus() every 5s. */
