@@ -13,13 +13,29 @@ interface Props {
   name: string;
   subtitle: string;
   outcome: string;
+  role?: string;
+  timeline?: string;
+  tools?: string[];
   tags: string[];
   slug: string;
   cover?: string | null;
 }
 
-const { index, name, subtitle, outcome, tags, slug, cover } = Astro.props;
+const {
+  index,
+  name,
+  subtitle,
+  outcome,
+  role,
+  timeline,
+  tools = [],
+  tags,
+  slug,
+  cover,
+} = Astro.props;
 const num = String(index).padStart(2, "0");
+const stack = tools.slice(0, 3).join(" · ");
+const hasSpec = Boolean(role || timeline || stack);
 // Each entry rotates a 0-3 visual variant for the title-chunk padding so
 // the column reads as hand-cut rather than uniform.
 const variant = ((index - 1) % 4 + 4) % 4;
@@ -44,26 +60,53 @@ const variant = ((index - 1) % 4 + 4) % 4;
 
     <p class="we-outcome">{outcome}</p>
 
+    {hasSpec && (
+      <dl class="we-spec">
+        {role && (
+          <div>
+            <dt>Role</dt>
+            <dd>{role}</dd>
+          </div>
+        )}
+        {timeline && (
+          <div>
+            <dt>Timeline</dt>
+            <dd>{timeline}</dd>
+          </div>
+        )}
+        {stack && (
+          <div>
+            <dt>Stack</dt>
+            <dd>{stack}</dd>
+          </div>
+        )}
+      </dl>
+    )}
+
     {tags.length > 0 && (
       <ul class="we-tags">
         {tags.slice(0, 4).map((t) => <li>{t}</li>)}
       </ul>
     )}
 
-    <p class="we-read">
+    <span class="we-read">
       <span class="we-read-label">Read case study</span>
       <span class="we-read-arrow" aria-hidden="true">→</span>
-    </p>
+    </span>
   </div>
 
   <div class="we-cover" aria-hidden="true">
     {cover ? (
-      <div class="we-cover-frame" data-we-parallax>
-        <img src={cover} alt="" loading="lazy" />
+      <div class="we-cover-wrap">
+        <span class="we-cover-badge">Case Study · {num}</span>
+        <div class="we-cover-frame" data-we-parallax>
+          <img src={cover} alt="" loading="lazy" />
+        </div>
       </div>
     ) : (
       <div class="we-cover-empty">
-        <span>{num}</span>
+        <span class="we-cover-badge we-cover-badge-empty">Case Study · {num}</span>
+        <span class="we-cover-empty-num">{num}</span>
       </div>
     )}
   </div>
@@ -189,30 +232,75 @@ const variant = ((index - 1) % 4 + 4) % 4;
     margin: var(--space-3) 0 0;
   }
 
+  /* Spec strip. Editorial press-kit style. Pulls Role / Timeline / Stack
+     out of Notion so a hiring reader can scan the project facts before
+     deciding to read the case study. Hairline rules above and below so it
+     reads as its own panel, not just another paragraph. */
+  .we-spec {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, max-content));
+    gap: var(--space-3) var(--space-8);
+    margin: var(--space-6) 0 0;
+    padding: var(--space-4) 0;
+    border-top: 1px solid var(--line);
+    border-bottom: 1px solid var(--line);
+    max-width: 56ch;
+  }
+  .we-spec > div {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    min-width: 0;
+  }
+  .we-spec dt {
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: var(--fs-eyebrow);
+    font-weight: var(--fw-semibold);
+    letter-spacing: var(--ls-eyebrow);
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  .we-spec dd {
+    margin: 0;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 0.8125rem;
+    color: var(--text);
+    font-weight: var(--fw-medium);
+    font-feature-settings: "tnum";
+  }
+
+  /* Tags as bordered chips. Replaces the previous dot-separated text
+     list. Each chip a small architectural rectangle, not a pill. */
   .we-tags {
     list-style: none;
     padding: 0;
     margin: var(--space-4) 0 0;
     display: flex;
     flex-wrap: wrap;
-    gap: var(--space-3);
-    color: var(--muted);
-    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-    font-size: 0.8125rem;
-    letter-spacing: 0.02em;
+    gap: 8px;
   }
   .we-tags li {
-    padding: 4px 0;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 11px;
+    letter-spacing: 0.04em;
+    color: var(--muted);
+    padding: 5px 10px;
+    border: 1px solid var(--line);
+    border-radius: 2px;
+    background: transparent;
+    transition: color 220ms ease, border-color 220ms ease;
   }
-  .we-tags li::after {
-    content: "·";
-    margin-left: var(--space-3);
-    color: var(--line);
+  .we:hover .we-tags li,
+  .we:focus-visible .we-tags li {
+    color: var(--text);
+    border-color: var(--muted);
   }
-  .we-tags li:last-child::after { content: ""; margin: 0; }
 
+  /* CTA as a bordered button affordance, not a link. Inverts on entry
+     hover (the whole entry is the link, so the button gets the visual
+     hover whenever you're anywhere on the row). */
   .we-read {
-    margin: var(--space-4) 0 0;
+    margin: var(--space-6) 0 0;
     font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
     font-size: var(--fs-eyebrow);
     font-weight: var(--fw-bold);
@@ -221,11 +309,21 @@ const variant = ((index - 1) % 4 + 4) % 4;
     color: var(--accent);
     display: inline-flex;
     align-items: center;
-    gap: 8px;
+    gap: 10px;
+    padding: 10px 16px;
+    border: 1px solid var(--accent);
+    border-radius: 2px;
+    width: fit-content;
+    transition: color 220ms ease, background-color 220ms ease;
+  }
+  .we:hover .we-read,
+  .we:focus-visible .we-read {
+    color: var(--bg);
+    background: var(--accent);
   }
   .we-read-arrow {
     display: inline-block;
-    transition: transform 200ms cubic-bezier(0.2, 0, 0, 1);
+    transition: transform 220ms cubic-bezier(0.2, 0, 0, 1);
   }
 
   /* Cover */
@@ -233,12 +331,18 @@ const variant = ((index - 1) % 4 + 4) % 4;
     position: relative;
     align-self: start;
   }
+  /* Wrap holds the badge as an absolute overlay on the cover. */
+  .we-cover-wrap {
+    position: relative;
+  }
   .we-cover-frame {
     aspect-ratio: 16 / 10;
     overflow: hidden;
     background: var(--surface-1);
+    border: 1px solid var(--line);
     transition: transform 480ms cubic-bezier(0.2, 0, 0, 1),
-                box-shadow 480ms cubic-bezier(0.2, 0, 0, 1);
+                box-shadow 480ms cubic-bezier(0.2, 0, 0, 1),
+                border-color 280ms ease;
     will-change: transform;
   }
   .we-cover-frame img {
@@ -248,13 +352,43 @@ const variant = ((index - 1) % 4 + 4) % 4;
     display: block;
     transition: filter 480ms ease;
   }
+  .we:hover .we-cover-frame,
+  .we:focus-visible .we-cover-frame {
+    border-color: var(--muted);
+  }
+  /* Corner badge. Anchors the cover image to the entry's "Case Study NN"
+     identity. Sits on top of the image so the number reads even when the
+     cover art is busy. Uses the --ink / --ink-fg anchor pair (same
+     vocabulary as the chunk titles and number pad) so it reads as
+     architectural rather than blending into the page bg, in every
+     theme. */
+  .we-cover-badge {
+    position: absolute;
+    top: 14px;
+    left: 14px;
+    z-index: 2;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 10px;
+    font-weight: var(--fw-bold);
+    letter-spacing: var(--ls-eyebrow);
+    text-transform: uppercase;
+    color: var(--ink-fg);
+    background: var(--ink);
+    padding: 5px 10px;
+    pointer-events: none;
+    transition: background-color 280ms cubic-bezier(0.2, 0, 0, 1),
+                color 280ms cubic-bezier(0.2, 0, 0, 1);
+  }
+
   .we-cover-empty {
+    position: relative;
     aspect-ratio: 16 / 10;
     display: grid;
     place-items: center;
     background: var(--surface-1);
+    border: 1px solid var(--line);
   }
-  .we-cover-empty span {
+  .we-cover-empty-num {
     color: var(--line);
     font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
     font-size: clamp(4rem, 12vw, 8rem);
