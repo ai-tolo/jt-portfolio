@@ -539,3 +539,243 @@
   border-color: rgba(14, 196, 252, 0.65);
   color: #f5f1e8;
 }
+
+/* ── Unified action strip (interactive showcase) ──────────────────── */
+.bc-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+.bc-crop-btn {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-style: italic;
+  font-size: 11px;
+  font-weight: 600;
+  color: rgba(245, 241, 232, 0.85);
+  background: rgba(255, 179, 71, 0.06);
+  border: 1px solid rgba(255, 179, 71, 0.40);
+  border-radius: 3px;
+  padding: 6px 12px;
+  cursor: pointer;
+  transition: border-color 160ms ease, color 160ms ease, background 160ms ease;
+}
+.bc-crop-btn:hover {
+  border-color: rgba(255, 179, 71, 0.75);
+  color: #f5f1e8;
+}
+.bc-crop-btn[aria-pressed="true"] {
+  background: rgba(255, 179, 71, 0.18);
+  color: #ffb347;
+  border-color: rgba(255, 179, 71, 0.75);
+  box-shadow: 0 0 10px rgba(255, 179, 71, 0.22);
+}
+
+/* In-flight states for stem split + send-to-engineer buttons. The button
+   keeps its position in the action strip; only its text and accent shift
+   while the job runs. */
+.bc-stem-btn[data-state="running"],
+.bc-eng-btn[data-state="running"] {
+  color: var(--brand-cyan, #0ec4fc);
+  border-color: rgba(14, 196, 252, 0.75);
+  background: rgba(14, 196, 252, 0.12);
+  animation: bc-pulse-cyan 1.4s ease-in-out infinite;
+}
+.bc-stem-btn[data-state="done"],
+.bc-eng-btn[data-state="done"] {
+  color: #00ff4d;
+  border-color: rgba(0, 255, 77, 0.55);
+  background: rgba(0, 255, 77, 0.08);
+}
+@keyframes bc-pulse-cyan {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(14, 196, 252, 0.0); }
+  50% { box-shadow: 0 0 14px rgba(14, 196, 252, 0.35); }
+}
+.bc-action-status {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-style: italic;
+  font-size: 11px;
+  color: rgba(245, 241, 232, 0.62);
+  margin-left: auto;
+  white-space: nowrap;
+  font-feature-settings: "tnum";
+}
+
+/* ── Crop overlay on the waveform ─────────────────────────────────── */
+.bc-crop-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 4;
+  pointer-events: none;
+}
+.bc-card[data-crop="true"] .bc-crop-overlay {
+  pointer-events: auto;
+}
+.bc-card[data-crop="true"] .bc-fake-wave,
+.bc-card[data-crop="true"] .bc-playhead {
+  opacity: 0.65;
+}
+.bc-crop-overlay[hidden] { display: none; }
+.bc-crop-mask {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  background: rgba(7, 6, 12, 0.55);
+  pointer-events: none;
+}
+.bc-crop-mask-left {
+  left: 0;
+  width: var(--bc-crop-start, 22%);
+}
+.bc-crop-mask-right {
+  right: 0;
+  width: calc(100% - var(--bc-crop-end, 78%));
+}
+.bc-crop-ticks {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+.bc-crop-tick {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  background: rgba(245, 241, 232, 0.10);
+}
+.bc-crop-frame {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: var(--bc-crop-start, 22%);
+  width: calc(var(--bc-crop-end, 78%) - var(--bc-crop-start, 22%));
+  border: 1.5px solid var(--brand-cyan, #0ec4fc);
+  border-radius: 2px;
+  background: rgba(14, 196, 252, 0.06);
+  box-shadow: 0 0 10px rgba(14, 196, 252, 0.22);
+  cursor: grab;
+  container-type: inline-size;
+}
+.bc-crop-frame:active { cursor: grabbing; }
+.bc-crop-handle {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 10px;
+  border: 0;
+  padding: 0;
+  background: var(--brand-cyan, #0ec4fc);
+  cursor: ew-resize;
+}
+.bc-crop-handle-l { left: 0; }
+.bc-crop-handle-r { right: 0; }
+.bc-crop-readout {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--brand-cyan, #0ec4fc);
+  background: rgba(7, 6, 12, 0.78);
+  padding: 2px 6px;
+  border-radius: 2px;
+  pointer-events: none;
+  white-space: nowrap;
+  text-shadow: 0 0 6px rgba(14, 196, 252, 0.45);
+}
+@container (max-width: 110px) {
+  .bc-crop-readout { display: none; }
+}
+
+/* ── Child stem rows (revealed after split completes) ─────────────── */
+.bc-children[hidden] { display: none; }
+.bc-children {
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px dashed rgba(245, 241, 232, 0.12);
+}
+.bc-children-head {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  margin: 0 0 10px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+.bc-children-label {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: rgba(245, 241, 232, 0.62);
+}
+.bc-children-sub {
+  font-size: 11px;
+  color: rgba(245, 241, 232, 0.45);
+  font-style: italic;
+}
+.bc-stem-rows {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  gap: 6px;
+}
+.bc-stem-row {
+  display: grid;
+  grid-template-columns: 64px 1fr auto;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 12px;
+  background: rgba(245, 241, 232, 0.03);
+  border: 1px solid rgba(245, 241, 232, 0.08);
+  border-radius: 3px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+.bc-stem-row-name {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.bc-stem-row[data-stem="drums"] .bc-stem-row-name { color: #ff5a3c; }
+.bc-stem-row[data-stem="bass"] .bc-stem-row-name { color: #ffb347; }
+.bc-stem-row[data-stem="vocals"] .bc-stem-row-name { color: #00ff4d; }
+.bc-stem-row[data-stem="other"] .bc-stem-row-name { color: #0ec4fc; }
+.bc-stem-row-wave {
+  display: flex;
+  align-items: center;
+  gap: 1.5px;
+  height: 22px;
+}
+.bc-stem-row-bar {
+  flex: 1 1 0;
+  background: currentColor;
+  opacity: 0.55;
+  border-radius: 1px;
+  min-width: 1px;
+}
+.bc-stem-row[data-stem="drums"] .bc-stem-row-wave { color: #ff5a3c; }
+.bc-stem-row[data-stem="bass"] .bc-stem-row-wave { color: #ffb347; }
+.bc-stem-row[data-stem="vocals"] .bc-stem-row-wave { color: #00ff4d; }
+.bc-stem-row[data-stem="other"] .bc-stem-row-wave { color: #0ec4fc; }
+.bc-stem-row-play {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 11px;
+  background: transparent;
+  border: 1px solid rgba(245, 241, 232, 0.22);
+  color: rgba(245, 241, 232, 0.78);
+  border-radius: 3px;
+  padding: 4px 10px;
+  cursor: pointer;
+  transition: color 160ms ease, border-color 160ms ease;
+}
+.bc-stem-row-play:hover {
+  color: #f5f1e8;
+  border-color: rgba(245, 241, 232, 0.45);
+}
+.bc-stem-row[data-playing="true"] .bc-stem-row-play {
+  color: var(--brand-cyan, #0ec4fc);
+  border-color: rgba(14, 196, 252, 0.55);
+}
