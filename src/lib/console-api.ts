@@ -40,6 +40,10 @@ import type {
   MixJobSummary,
   WinnersResponse,
   ChampionResponse,
+  DismissResponse,
+  PublishKingResponse,
+  SoundsResponse,
+  SoundsUpdateResponse,
   MixJobsListResponse,
   MixPairsResponse,
   MixJudgementResponse,
@@ -800,10 +804,54 @@ export async function listMixWinners(
 
 /** Crown a winner as the cross-axis champion for a job. Pass
  *  variant_id=null to clear. The variant must already be a winner of
- *  one of the job's axes. */
+ *  one of the job's axes. Optional `comment` captures curator feedback
+ *  the planner can use on future "Make more mixes" jobs. */
 export async function setMixChampion(
   job_id: number,
   variant_id: number | null,
+  comment?: string | null,
 ): Promise<ApiResult<ChampionResponse>> {
-  return _post<ChampionResponse>("/mix/champion", { job_id, variant_id });
+  const body: Record<string, unknown> = { job_id, variant_id };
+  if (comment && comment.trim()) body.comment = comment.trim();
+  return _post<ChampionResponse>("/mix/champion", body);
+}
+
+/** Soft-hide a mix job from the Winners surface. Pass dismissed=false
+ *  to un-dismiss. Variants + judgements + king pick stay intact. */
+export async function dismissMixJob(
+  job_id: number,
+  dismissed = true,
+): Promise<ApiResult<DismissResponse>> {
+  return _post<DismissResponse>("/mix/dismiss", { job_id, dismissed });
+}
+
+/** Flip `public` on the king variant's asset for a job. Optional
+ *  `collection` sets the Sounds-grouping label on the same row. */
+export async function publishMixKing(
+  job_id: number,
+  publish: boolean,
+  collection?: string | null,
+): Promise<ApiResult<PublishKingResponse>> {
+  const body: Record<string, unknown> = { job_id, publish };
+  if (collection !== undefined) body.collection = collection;
+  return _post<PublishKingResponse>("/mix/publish-king", body);
+}
+
+// ── Sounds (curator staging surface) ─────────────────────────────────────
+/** Curator-side listing of all public-flagged assets, with lineage to
+ *  the king variant's source track + collection grouping. */
+export async function listSounds(): Promise<ApiResult<SoundsResponse>> {
+  return call<SoundsResponse>("/sounds/list");
+}
+
+/** Update collection label or flip public on a Sounds asset. Pass
+ *  collection="" to clear the grouping label. */
+export async function updateSoundsAsset(
+  asset_id: number,
+  opts: { public?: boolean; collection?: string | null } = {},
+): Promise<ApiResult<SoundsUpdateResponse>> {
+  const body: Record<string, unknown> = { asset_id };
+  if (opts.public !== undefined) body.public = opts.public;
+  if (opts.collection !== undefined) body.collection = opts.collection;
+  return _post<SoundsUpdateResponse>("/sounds/update", body);
 }

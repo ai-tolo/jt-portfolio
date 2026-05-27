@@ -660,6 +660,10 @@ export interface WinnerVariant {
   variant_id: number;
   axis: MixAxis;
   pole: string;
+  /** Stable color label per pole ("Mist", "Sienna", "Citrine", etc.).
+   *  Computed server-side from the pole string. Use this as the
+   *  user-facing label instead of the raw pole text. */
+  color: string;
   asset_id: number | null;
   asset_path: string | null;
   asset_filename: string | null;
@@ -684,6 +688,11 @@ export interface WinnersJob {
   winners: WinnerVariant[];
   /** The curator's cross-axis "this one's the strongest" pick, or null. */
   champion_variant_id: number | null;
+  /** Curator-typed feedback captured at the moment of crowning. */
+  champion_comment: string | null;
+  /** Whether the king variant's asset is flagged public=1 (visible on
+   *  the Sounds page). null until a king is crowned. */
+  king_is_public: boolean | null;
 }
 
 export interface WinnersResponse {
@@ -695,4 +704,46 @@ export interface ChampionResponse {
   ok: true;
   job_id: number;
   champion_variant_id: number | null;
+}
+
+export interface DismissResponse {
+  ok: true;
+  job_id: number;
+  dismissed_at: string | null;
+}
+
+export interface PublishKingResponse {
+  ok: true;
+  job_id: number;
+  asset_id: number | null;
+  public: number;
+  collection: string | null;
+}
+
+// ── Sounds (curator-side staging surface, 2026-05-27) ──────────────────────
+export interface SoundsItem {
+  asset_id: number;
+  path: string;
+  filename: string;
+  display_name: string | null;
+  duration_seconds: number | null;
+  collection: string | null;
+  waveform_sha1: string | null;
+  /** Lineage back to a mix job when this asset is a king variant. */
+  job_id: number | null;
+  source_display_name: string | null;
+}
+
+export interface SoundsResponse {
+  total: number;
+  /** Distinct collection labels in display order (group headers). */
+  collections: string[];
+  items: SoundsItem[];
+}
+
+export interface SoundsUpdateResponse {
+  ok: true;
+  asset_id: number;
+  public: number;
+  collection: string | null;
 }

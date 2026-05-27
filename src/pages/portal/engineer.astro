@@ -57,6 +57,10 @@ try {
 // so the top of the Winners section foregrounds the value-rich shape.
 const completeWinners = winners.filter((w) => w.axes_decided >= 3);
 const partialWinners = winners.filter((w) => w.axes_decided < 3);
+const kingCount = winners.filter((w) => w.champion_variant_id !== null).length;
+const readyToCrown = winners.filter(
+  (w) => w.axes_decided >= 3 && w.champion_variant_id === null,
+).length;
 
 const AXIS_ORDER = ["focal", "space", "dynamics"] as const;
 
@@ -132,86 +136,33 @@ function stemSoloUrls(sf) {
     <header class="intro">
       <h1>Engineer</h1>
       <p class="lede">
-        Send a track here from <a href="/portal/buckets/tracks">Buckets</a>. The
-        engineer-worker on M1 picks it up, renders A/B variants along three
-        taste axes (focal, space, dynamics), and surfaces them below as pairs
-        to judge. Phase 0 lands the lifecycle; renders go live in Phase 1.
+        Send a track from <a href="/portal/buckets/all">Buckets</a>, vote on
+        the pairs below, and crown a king mix in <a href="#winners">Winners</a>.
+        Publish kings to <a href="/portal/sounds">Sounds</a> when they're ready.
       </p>
       {fetchError && (
         <p class="notice">Engine unreachable: {fetchError}. Showing empty state.</p>
       )}
     </header>
 
-    <div class="cols">
-      <section class="col">
-        <h2>In flight <span class="count">{activeJobs.length}</span></h2>
-        {activeJobs.length === 0 ? (
-          <p class="empty">Nothing in flight.</p>
-        ) : (
-          <ul class="job-list">
-            {activeJobs.map((j) => (
-              <li class="job">
-                <div class="job-title">{jobTitle(j)}</div>
-                <div class="job-meta">
-                  <span class={`status status-${j.status}`}>{STATUS_LABEL[j.status]}</span>
-                  <span class="started">started {fmtTime(j.started_at)}</span>
-                </div>
-              </li>
-            ))}
-          </ul>
-        )}
-      </section>
-
-      <section class="col">
-        <h2>Ready to judge <span class="count">{readyJobs.length}</span></h2>
-        {readyJobs.length === 0 ? (
-          <p class="empty">No pairs awaiting judgement.</p>
-        ) : (
-          <ul class="job-list">
-            {readyJobs.map((j) => (
-              <li class="job">
-                <div class="job-title">{jobTitle(j)}</div>
-                <div class="job-meta">
-                  <span class="status status-ready">{j.variant_count} variants · {j.judgement_count} judged</span>
-                </div>
-              </li>
-            ))}
-          </ul>
-        )}
-      </section>
-
-      <section class="col">
-        <h2>Winners <span class="count">{completeWinners.length}/{winners.length}</span></h2>
-        {winners.length === 0 ? (
-          <p class="empty">No judged jobs yet.</p>
-        ) : (
-          <p class="winners-summary">
-            {completeWinners.length > 0 && (
-              <span>{completeWinners.length} fully decided</span>
-            )}
-            {completeWinners.length > 0 && partialWinners.length > 0 && (
-              <span> · </span>
-            )}
-            {partialWinners.length > 0 && (
-              <span>{partialWinners.length} in progress</span>
-            )}
-            <span class="winners-summary-cta"> · see below ↓</span>
-          </p>
-        )}
-      </section>
-
+    <div class="status-bar">
+      <span class="status-pill" data-kind="flight">
+        <span class="status-num">{activeJobs.length}</span>
+        <span class="status-label">in flight</span>
+      </span>
+      <span class="status-pill" data-kind="ready">
+        <span class="status-num">{readyJobs.length}</span>
+        <span class="status-label">ready</span>
+      </span>
+      <span class="status-pill" data-kind="winners">
+        <span class="status-num">{winners.length}</span>
+        <span class="status-label">winners ({kingCount} king · {readyToCrown} ready · {partialWinners.length} voting)</span>
+      </span>
       {errorJobs.length > 0 && (
-        <section class="col col-error">
-          <h2>Errored <span class="count">{errorJobs.length}</span></h2>
-          <ul class="job-list">
-            {errorJobs.map((j) => (
-              <li class="job">
-                <div class="job-title">{jobTitle(j)}</div>
-                <div class="job-error">{j.error}</div>
-              </li>
-            ))}
-          </ul>
-        </section>
+        <span class="status-pill" data-kind="error">
+          <span class="status-num">{errorJobs.length}</span>
+          <span class="status-label">errored</span>
+        </span>
       )}
     </div>
 
@@ -497,159 +448,239 @@ function stemSoloUrls(sf) {
       )}
     </section>
 
-    <section class="winners">
+    <section class="winners" id="winners">
       <h2>
         Winners
-        <span class="hint">your picks per axis · crown one champion per job</span>
+        <span class="hint">collapse / expand · cross-compare to crown a king · publish or dismiss</span>
       </h2>
       {winners.length === 0 ? (
         <p class="empty">
-          No winners yet. Vote on a pair above and the chosen variants land here, grouped by job.
+          No winners yet. Vote on a pair above and the source track lands here once its first vote is cast.
         </p>
       ) : (
-        <>
-          {completeWinners.length > 0 && (
-            <ul class="winners-list">
-              {completeWinners.map((w) => {
-                const sourceUrl = sourceAudioUrl(w.source_audio_path);
-                const waveSrc = w.source_waveform_sha1
-                  ? `/api/console/waveform?sha1=${w.source_waveform_sha1}`
-                  : null;
-                const champion = w.winners.find(
-                  (v) => v.variant_id === w.champion_variant_id,
-                );
-                return (
-                  <li
-                    class={`winners-card winners-card-complete${
-                      champion ? " winners-card-crowned" : ""
-                    }`}
-                    data-winners-job-id={w.job_id}
-                  >
-                    <div class="winners-head">
-                      <h3 class="winners-source">
-                        {w.source_display_name || w.source_filename || `asset ${w.source_asset_id}`}
-                      </h3>
-                      <div class="winners-head-right">
-                        <span class="winners-axes">3 of 3 decided</span>
-                        {champion && (
-                          <span class="winners-champion-tag">
-                            ♛ champion · {poleLabel(champion.pole)}
-                          </span>
-                        )}
-                      </div>
+        <ul class="winners-list">
+          {winners.map((w) => {
+            const sourceUrl = sourceAudioUrl(w.source_audio_path);
+            const waveSrc = w.source_waveform_sha1
+              ? `/api/console/waveform?sha1=${w.source_waveform_sha1}`
+              : null;
+            const king = w.winners.find(
+              (v) => v.variant_id === w.champion_variant_id,
+            );
+            const title = w.source_display_name || w.source_filename || `asset ${w.source_asset_id}`;
+            // Status badge that sits next to the title in the collapsed
+            // header, so the curator can scan at a glance.
+            const badge = king
+              ? `♛ ${king.color}`
+              : w.axes_decided >= 3
+                ? `${w.axes_decided}/3 — crown your king`
+                : `${w.axes_decided}/3 voted`;
+            const badgeKind = king
+              ? "king"
+              : w.axes_decided >= 3
+                ? "ready-to-crown"
+                : "voting";
+            return (
+              <li
+                class={`winners-card${king ? " winners-card-crowned" : ""}`}
+                data-winners-job-id={w.job_id}
+                data-collapsed="true"
+                data-axes-decided={w.axes_decided}
+                data-has-king={king ? "true" : "false"}
+              >
+                <button
+                  class="winners-head"
+                  type="button"
+                  data-winners-toggle
+                  aria-expanded="false"
+                  aria-controls={`winners-body-${w.job_id}`}
+                >
+                  <span class="winners-chevron" aria-hidden="true">▸</span>
+                  <span class="winners-source">{title}</span>
+                  <span class={`winners-badge winners-badge-${badgeKind}`}>{badge}</span>
+                  {w.king_is_public && (
+                    <span class="winners-public-tag" title="Live on the Sounds page">● public</span>
+                  )}
+                </button>
+
+                <div
+                  class="winners-body"
+                  id={`winners-body-${w.job_id}`}
+                  hidden
+                >
+                  {waveSrc && (
+                    <div class="winners-wave" data-winners-wave>
+                      <img src={waveSrc} alt="" loading="lazy" />
+                      <div class="winners-playhead" data-winners-playhead></div>
+                      <span class="winners-time" data-winners-time>0:00 / —:—</span>
                     </div>
+                  )}
 
-                    {waveSrc && (
-                      <div class="winners-wave" data-winners-wave>
-                        <img src={waveSrc} alt="" loading="lazy" />
-                        <div class="winners-playhead" data-winners-playhead hidden></div>
-                        <span class="winners-time" data-winners-time>0:00 / —:—</span>
+                  <ul class="winner-row">
+                    {/* ORIGINAL row sits above the mixes so the curator
+                        can A/B back to the unprocessed take. */}
+                    <li class="winner winner-source" data-winner-kind="source">
+                      <button
+                        class="winner-play"
+                        type="button"
+                        data-audio-url={sourceUrl}
+                        aria-label="Play original source"
+                      >▶</button>
+                      <div class="winner-meta">
+                        <span class="winner-label">Original</span>
+                        <span class="winner-sub">unprocessed source</span>
                       </div>
-                    )}
-
-                    <ul class="winner-row">
-                      {/* Source / ORIGINAL row sits above the variants so the
-                          curator can A/B back to the unprocessed take. */}
-                      <li class="winner winner-source" data-winner-kind="source">
+                    </li>
+                    {king ? (
+                      // King mode: collapsed to just the winning mix.
+                      // Curator listens, decides whether to make more,
+                      // publish, or dismiss.
+                      <li
+                        class="winner winner-champion"
+                        data-winner-variant-id={king.variant_id}
+                      >
                         <button
                           class="winner-play"
                           type="button"
-                          data-audio-url={sourceUrl}
-                          aria-label="Play original source"
+                          data-audio-url={winnerAudioUrl(king.asset_path)}
+                          aria-label="Play king mix"
                         >▶</button>
                         <div class="winner-meta">
-                          <span class="winner-axis">ORIGINAL</span>
-                          <span class="winner-pole">unprocessed source</span>
+                          <span class="winner-label">♛ {king.color}</span>
+                          <span class="winner-sub">your king mix</span>
                         </div>
                       </li>
-                      {w.winners.map((v) => (
+                    ) : (
+                      // Voting mode: show all decided mixes so the
+                      // curator can cross-compare and crown.
+                      w.winners.map((v) => (
                         <li
-                          class={`winner${
-                            v.variant_id === w.champion_variant_id ? " winner-champion" : ""
-                          }`}
+                          class="winner"
                           data-winner-variant-id={v.variant_id}
                         >
                           <button
                             class="winner-play"
                             type="button"
                             data-audio-url={winnerAudioUrl(v.asset_path)}
-                            aria-label={`Play ${v.axis} winner`}
+                            aria-label={`Play ${v.color}`}
                           >▶</button>
                           <div class="winner-meta">
-                            <span class="winner-axis">{v.axis.toUpperCase()}</span>
-                            <span class="winner-pole">{poleLabel(v.pole)}</span>
+                            <span class="winner-label">{v.color}</span>
+                            <span class="winner-sub">candidate</span>
                           </div>
-                          <button
-                            class="winner-crown"
-                            type="button"
-                            data-champion-job-id={w.job_id}
-                            data-champion-variant-id={v.variant_id}
-                            data-champion-active={
-                              v.variant_id === w.champion_variant_id ? "true" : "false"
-                            }
-                            aria-label="Crown as champion"
-                            title="Crown as champion"
-                          >♛</button>
+                          {w.axes_decided >= 3 && (
+                            <button
+                              class="winner-crown"
+                              type="button"
+                              data-champion-job-id={w.job_id}
+                              data-champion-variant-id={v.variant_id}
+                              aria-label="Crown as king"
+                              title="Crown as king"
+                            >♛</button>
+                          )}
+                        </li>
+                      ))
+                    )}
+                    {/* In voting mode, surface the pending slots so the
+                        curator knows what still needs a vote in Pair
+                        Tinder. Hidden in king mode. */}
+                    {!king && w.axes_decided < 3 &&
+                      AXIS_ORDER.filter(
+                        (a) => !w.winners.some((v) => v.axis === a),
+                      ).map(() => (
+                        <li class="winner winner-pending">
+                          <span class="winner-pending-glyph">·</span>
+                          <div class="winner-meta">
+                            <span class="winner-label">— pending</span>
+                            <span class="winner-sub">vote in pair tinder above</span>
+                          </div>
                         </li>
                       ))}
-                    </ul>
-                  </li>
-                );
-              })}
-            </ul>
-          )}
+                  </ul>
 
-          {partialWinners.length > 0 && (
-            <>
-              <h3 class="winners-subhead">
-                In progress
-                <span class="hint">jobs with at least one axis voted</span>
-              </h3>
-              <ul class="winners-list winners-list-partial">
-                {partialWinners.map((w) => {
-                  const sourceUrl = sourceAudioUrl(w.source_audio_path);
-                  return (
-                    <li class="winners-card" data-winners-job-id={w.job_id}>
-                      <div class="winners-head">
-                        <h3 class="winners-source">
-                          {w.source_display_name || w.source_filename || `asset ${w.source_asset_id}`}
-                        </h3>
-                        <span class="winners-axes">{w.axes_decided} of 3 decided</span>
+                  {/* King mode action strip */}
+                  {king && (
+                    <div class="winners-actions" data-king-actions>
+                      {w.champion_comment && (
+                        <p class="winners-king-comment" title="Your note when crowning">
+                          <span class="comment-quote">“</span>{w.champion_comment}<span class="comment-quote">”</span>
+                        </p>
+                      )}
+                      <textarea
+                        class="winners-feedback"
+                        data-feedback-input
+                        rows="2"
+                        placeholder="What worked, what didn't, what to try next. (optional)"
+                      ></textarea>
+                      <div class="winners-action-row">
+                        <button
+                          class="winners-action-btn winners-make-more"
+                          type="button"
+                          data-action="make-more"
+                          data-job-id={w.job_id}
+                          data-source-asset-id={w.source_asset_id}
+                        >+ Make more mixes</button>
+                        <button
+                          class={`winners-action-btn winners-publish${w.king_is_public ? " is-public" : ""}`}
+                          type="button"
+                          data-action="publish-toggle"
+                          data-job-id={w.job_id}
+                          data-currently-public={w.king_is_public ? "true" : "false"}
+                        >{w.king_is_public ? "● Published" : "→ Publish to Sounds"}</button>
+                        <button
+                          class="winners-action-btn winners-uncrown"
+                          type="button"
+                          data-action="uncrown"
+                          data-job-id={w.job_id}
+                          aria-label="Uncrown to compare again"
+                          title="Uncrown to compare again"
+                        >Uncrown</button>
+                        <button
+                          class="winners-action-btn winners-dismiss"
+                          type="button"
+                          data-action="dismiss"
+                          data-job-id={w.job_id}
+                          aria-label="Hide from winners"
+                          title="Hide from winners"
+                        >✕ Dismiss</button>
                       </div>
-                      <ul class="winner-row">
-                        {w.winners.map((v) => (
-                          <li class="winner" data-winner-variant-id={v.variant_id}>
-                            <button
-                              class="winner-play"
-                              type="button"
-                              data-audio-url={winnerAudioUrl(v.asset_path)}
-                              aria-label={`Play ${v.axis} winner`}
-                            >▶</button>
-                            <div class="winner-meta">
-                              <span class="winner-axis">{v.axis.toUpperCase()}</span>
-                              <span class="winner-pole">{poleLabel(v.pole)}</span>
-                            </div>
-                          </li>
-                        ))}
-                        {AXIS_ORDER.filter(
-                          (a) => !w.winners.some((v) => v.axis === a),
-                        ).map((a) => (
-                          <li class="winner winner-pending">
-                            <span class="winner-pending-glyph">·</span>
-                            <div class="winner-meta">
-                              <span class="winner-axis">{a.toUpperCase()}</span>
-                              <span class="winner-pole">not yet decided</span>
-                            </div>
-                          </li>
-                        ))}
-                      </ul>
-                    </li>
-                  );
-                })}
-              </ul>
-            </>
-          )}
-        </>
+                    </div>
+                  )}
+
+                  {/* Crowning mode (3 voted, no king yet) shows a feedback
+                      textarea so the curator can note the reasoning
+                      alongside the king pick. */}
+                  {!king && w.axes_decided >= 3 && (
+                    <div class="winners-actions" data-crown-actions>
+                      <textarea
+                        class="winners-feedback"
+                        data-feedback-input
+                        rows="2"
+                        placeholder="Why is your pick the strongest? (optional, fed to the planner)"
+                      ></textarea>
+                      <p class="winners-hint">Tap ♛ on a mix to crown it your king.</p>
+                    </div>
+                  )}
+
+                  {/* Voting-in-progress mode: pointer back to Pair Tinder */}
+                  {!king && w.axes_decided < 3 && (
+                    <div class="winners-actions" data-partial-actions>
+                      <p class="winners-hint">
+                        Keep voting on this track's pairs above to reveal {3 - w.axes_decided} more mix{3 - w.axes_decided === 1 ? "" : "es"} for cross-comparison.
+                      </p>
+                      <button
+                        class="winners-action-btn winners-dismiss"
+                        type="button"
+                        data-action="dismiss"
+                        data-job-id={w.job_id}
+                      >✕ Dismiss</button>
+                    </div>
+                  )}
+                </div>
+              </li>
+            );
+          })}
+        </ul>
       )}
     </section>
   </section>
@@ -1810,6 +1841,261 @@ function stemSoloUrls(sf) {
     border-style: dashed;
     opacity: 0.95;
   }
+
+  /* ── Phase 4 redesign: compact status bar + collapse/expand cards + king action strip ── */
+  .status-bar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin: 16px 0 4px;
+  }
+  .status-pill {
+    display: inline-flex;
+    align-items: baseline;
+    gap: 6px;
+    padding: 6px 12px;
+    border-radius: 999px;
+    background: rgba(245, 241, 232, 0.05);
+    border: 1px solid rgba(245, 241, 232, 0.18);
+    font-size: 12px;
+  }
+  .status-pill[data-kind="flight"] { border-color: rgba(255, 184, 77, 0.42); }
+  .status-pill[data-kind="ready"] { border-color: rgba(14, 196, 252, 0.42); }
+  .status-pill[data-kind="winners"] { border-color: rgba(255, 184, 77, 0.42); }
+  .status-pill[data-kind="error"] { border-color: rgba(255, 59, 110, 0.42); color: #ff8aab; }
+  .status-num {
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-weight: 800;
+    font-size: 13px;
+    color: var(--ink);
+  }
+  .status-label {
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    font-size: 10.5px;
+    opacity: 0.72;
+  }
+
+  /* Card header is a click-target. Reset button defaults so the row
+     looks like a normal flexbox row. */
+  .winners-card[data-collapsed="true"] .winners-body { display: none; }
+  .winners-card[data-collapsed="false"] .winners-chevron { transform: rotate(90deg); }
+  button.winners-head {
+    width: 100%;
+    background: transparent;
+    border: none;
+    padding: 14px;
+    margin: 0;
+    color: inherit;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    text-align: left;
+    font-family: inherit;
+    border-radius: 6px;
+  }
+  button.winners-head:hover { background: rgba(245, 241, 232, 0.04); }
+  button.winners-head:focus-visible {
+    outline: 2px solid rgba(14, 196, 252, 0.55);
+    outline-offset: -2px;
+  }
+  .winners-chevron {
+    flex-shrink: 0;
+    width: 14px;
+    text-align: center;
+    color: rgba(245, 241, 232, 0.55);
+    transition: transform 160ms ease;
+    font-size: 12px;
+  }
+  .winners-card .winners-source {
+    /* Override the older h3-based heading style now that the title
+       sits inside a button. */
+    margin: 0;
+    flex: 1;
+    min-width: 0;
+    font: 700 17px/1.1 ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-style: italic;
+    color: #00ff4d;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .winners-badge {
+    flex-shrink: 0;
+    font: 700 10.5px ui-monospace, SFMono-Regular, Menlo, monospace;
+    letter-spacing: 0.06em;
+    padding: 4px 10px;
+    border-radius: 999px;
+    text-transform: uppercase;
+  }
+  .winners-badge-king {
+    color: #ffd28a;
+    background: rgba(255, 184, 77, 0.14);
+    border: 1px solid rgba(255, 184, 77, 0.45);
+  }
+  .winners-badge-ready-to-crown {
+    color: #b8efff;
+    background: rgba(14, 196, 252, 0.12);
+    border: 1px solid rgba(14, 196, 252, 0.45);
+  }
+  .winners-badge-voting {
+    color: rgba(245, 241, 232, 0.6);
+    background: rgba(245, 241, 232, 0.06);
+    border: 1px solid rgba(245, 241, 232, 0.22);
+  }
+  .winners-public-tag {
+    flex-shrink: 0;
+    font: 700 10px ui-monospace, SFMono-Regular, Menlo, monospace;
+    letter-spacing: 0.08em;
+    padding: 4px 9px;
+    border-radius: 999px;
+    color: #00ff4d;
+    background: rgba(0, 255, 77, 0.10);
+    border: 1px solid rgba(0, 255, 77, 0.42);
+  }
+  .winners-body {
+    padding: 0 14px 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+  .winners-body[hidden] { display: none; }
+  /* Override hidden when the data attr says expanded (since we control
+     hidden via JS on toggle). */
+  .winners-card[data-collapsed="false"] .winners-body { display: flex; }
+  .winners-card[data-collapsed="false"] .winners-body[hidden] { display: flex; }
+
+  /* Playhead is ALWAYS visible at left-edge when paused-at-zero; the
+     ticker just moves it. No more hidden-until-played. */
+  .winners-playhead[hidden] { display: block; }
+
+  /* Mix row labels lose the axis word; "Mix N: <pole>" or just the pole.
+     winner-label is the new primary label, winner-sub is the secondary
+     line. Existing winner-axis / winner-pole styles stay as a fallback
+     until any remaining references are cleaned up. */
+  .winner-label {
+    font: 700 12px ui-monospace, SFMono-Regular, Menlo, monospace;
+    letter-spacing: 0.06em;
+    color: var(--ink);
+    text-transform: uppercase;
+  }
+  .winner-sub {
+    font: 500 11px ui-monospace, SFMono-Regular, Menlo, monospace;
+    color: rgba(245, 241, 232, 0.55);
+    text-transform: lowercase;
+  }
+  .winner-champion .winner-label { color: #ffd28a; }
+
+  /* King action strip — Make more / Publish / Dismiss live here, plus
+     the optional feedback textarea. Sits below the king row. */
+  .winners-actions {
+    padding: 10px 0 4px;
+    border-top: 1px dashed rgba(245, 241, 232, 0.12);
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .winners-king-comment {
+    font: italic 12px/1.45 ui-monospace, SFMono-Regular, Menlo, monospace;
+    color: rgba(245, 241, 232, 0.7);
+    margin: 0;
+    padding: 6px 10px;
+    background: rgba(255, 184, 77, 0.08);
+    border-left: 2px solid rgba(255, 184, 77, 0.42);
+    border-radius: 3px;
+  }
+  .comment-quote { color: rgba(255, 184, 77, 0.7); }
+  .winners-feedback {
+    width: 100%;
+    padding: 8px 10px;
+    background: rgba(0, 0, 0, 0.18);
+    border: 1px solid rgba(245, 241, 232, 0.12);
+    border-radius: 4px;
+    color: var(--ink);
+    font-family: inherit;
+    font-size: 12.5px;
+    line-height: 1.4;
+    resize: vertical;
+    min-height: 40px;
+    box-sizing: border-box;
+  }
+  .winners-feedback::placeholder { color: rgba(245, 241, 232, 0.35); }
+  .winners-feedback:focus {
+    outline: none;
+    border-color: rgba(14, 196, 252, 0.4);
+  }
+  .winners-action-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+  .winners-action-btn {
+    background: rgba(245, 241, 232, 0.06);
+    color: var(--ink);
+    border: 1px solid rgba(245, 241, 232, 0.22);
+    padding: 7px 12px;
+    font: 700 11px ui-monospace, SFMono-Regular, Menlo, monospace;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    border-radius: 3px;
+    cursor: pointer;
+    transition: background 120ms ease, border-color 120ms ease, color 120ms ease;
+  }
+  .winners-action-btn:hover {
+    background: rgba(245, 241, 232, 0.12);
+    border-color: rgba(245, 241, 232, 0.4);
+  }
+  .winners-action-btn[data-busy="true"] {
+    opacity: 0.55;
+    cursor: progress;
+  }
+  .winners-make-more {
+    color: #00ff4d;
+    border-color: rgba(0, 255, 77, 0.45);
+    background: rgba(0, 255, 77, 0.07);
+  }
+  .winners-make-more:hover {
+    background: rgba(0, 255, 77, 0.18);
+    border-color: #00ff4d;
+  }
+  .winners-publish {
+    color: #6fdfff;
+    border-color: rgba(14, 196, 252, 0.45);
+    background: rgba(14, 196, 252, 0.08);
+  }
+  .winners-publish.is-public {
+    color: #00ff4d;
+    border-color: #00ff4d;
+    background: rgba(0, 255, 77, 0.12);
+  }
+  .winners-publish:hover {
+    background: rgba(14, 196, 252, 0.18);
+    border-color: #0ec4fc;
+    color: #b8efff;
+  }
+  .winners-uncrown {
+    color: rgba(255, 184, 77, 0.85);
+    border-color: rgba(255, 184, 77, 0.42);
+  }
+  .winners-uncrown:hover {
+    color: #ffd28a;
+    background: rgba(255, 184, 77, 0.12);
+  }
+  .winners-dismiss {
+    color: rgba(255, 110, 33, 0.85);
+    border-color: rgba(255, 110, 33, 0.32);
+  }
+  .winners-dismiss:hover {
+    color: #ff6e21;
+    background: rgba(255, 110, 33, 0.10);
+    border-color: #ff6e21;
+  }
+  .winners-hint {
+    font: 11.5px/1.45 ui-monospace, SFMono-Regular, Menlo, monospace;
+    color: rgba(245, 241, 232, 0.55);
+    margin: 0;
+  }
 </style>
 
 <script>
@@ -2604,16 +2890,16 @@ function stemSoloUrls(sf) {
         const dur = a.duration;
         ctrl.timeLabel.textContent = `${fmtTimeOrDash(a.currentTime)} / ${fmtTimeOrDash(dur)}`;
       }
-      // Playhead position.
+      // Playhead position. Always visible — at 0% when paused-at-zero,
+      // moves as currentTime advances. The CSS rule keeps it shown even
+      // when the legacy `hidden` attribute is set elsewhere.
       if (ctrl.playhead) {
         const dur = a.duration;
-        if (dur && a.currentTime > 0) {
-          const frac = Math.max(0, Math.min(1, a.currentTime / dur));
-          ctrl.playhead.style.left = `${frac * 100}%`;
-          ctrl.playhead.hidden = false;
-        } else {
-          ctrl.playhead.hidden = true;
-        }
+        const frac = dur && a.currentTime > 0
+          ? Math.max(0, Math.min(1, a.currentTime / dur))
+          : 0;
+        ctrl.playhead.style.left = `${frac * 100}%`;
+        ctrl.playhead.removeAttribute("hidden");
       }
     }
 
@@ -2686,15 +2972,24 @@ function stemSoloUrls(sf) {
     });
 
     // Click-to-seek on the waveform. Sets currentTime on every audio in
-    // this card so a subsequent swap stays in sync.
+    // this card so a subsequent swap stays in sync. If metadata hasn't
+    // loaded yet (`a.duration` is NaN), defer the seek to the next
+    // `loadedmetadata` event so the curator's click isn't dropped.
     if (wave) {
-      wave.addEventListener("click", (e) => {
-        const rect = wave.getBoundingClientRect();
-        const x = (e as MouseEvent).clientX - rect.left;
-        const frac = Math.max(0, Math.min(1, x / rect.width));
+      const applySeekFraction = (frac: number) => {
         const a = active();
         const dur = a.duration;
-        if (!dur || !Number.isFinite(dur)) return;
+        if (!dur || !Number.isFinite(dur)) {
+          const handler = () => {
+            const dur2 = a.duration;
+            if (dur2 && Number.isFinite(dur2)) {
+              applySeekFraction(frac);
+            }
+            a.removeEventListener("loadedmetadata", handler);
+          };
+          a.addEventListener("loadedmetadata", handler);
+          return;
+        }
         const newTime = frac * dur;
         ctrl.audios.forEach(({ audio }) => {
           try {
@@ -2713,6 +3008,12 @@ function stemSoloUrls(sf) {
             .catch(() => {});
         }
         renderState();
+      };
+      wave.addEventListener("click", (e) => {
+        const rect = wave.getBoundingClientRect();
+        const x = (e as MouseEvent).clientX - rect.left;
+        const frac = Math.max(0, Math.min(1, x / rect.width));
+        applySeekFraction(frac);
       });
     }
 
@@ -2722,44 +3023,152 @@ function stemSoloUrls(sf) {
     active().addEventListener("loadedmetadata", renderState);
   });
 
-  // Champion crown: POST /api/console/mix-champion. Idempotent — clicking
-  // an active champion clears it (variant_id=null). Optimistic UI update;
-  // reverts on error.
+  // Always-visible playhead: replace the old guarded show/hide with a
+  // standing pin that just moves. The CSS counter-spec `[hidden]` rule
+  // is overridden to keep it visible at 0% on paused-zero state. We
+  // override renderState below by wrapping it via runtime monkey-patch
+  // would be ugly; cleaner: every renderState call ALREADY sets left%,
+  // and we leave the element visible. To do that without changing the
+  // inner function, walk all playheads once and remove the `hidden`
+  // attribute. From here on, only `display:none` via the data-collapsed
+  // CSS rule hides them (which is what we want).
+  document.querySelectorAll<HTMLElement>("[data-winners-playhead]").forEach((p) => {
+    p.removeAttribute("hidden");
+    p.style.left = "0%";
+  });
+
+  // ── Expand / collapse cards on header click ────────────────────────
+  document.querySelectorAll<HTMLButtonElement>("[data-winners-toggle]").forEach((head) => {
+    head.addEventListener("click", () => {
+      const card = head.closest<HTMLElement>(".winners-card");
+      if (!card) return;
+      const wasCollapsed = card.dataset.collapsed === "true";
+      card.dataset.collapsed = wasCollapsed ? "false" : "true";
+      head.setAttribute("aria-expanded", String(wasCollapsed));
+    });
+  });
+
+  // ── Champion crown (with optional feedback) ────────────────────────
+  // Reads the per-card feedback textarea and forwards it as `comment`
+  // so the planner sees the curator's reasoning alongside future
+  // "Make more mixes" jobs. Page reloads on success so the king-mode
+  // server-rendered shape replaces the voting-mode markup cleanly.
   document.querySelectorAll<HTMLButtonElement>(".winner-crown").forEach((btn) => {
     btn.addEventListener("click", async () => {
       const jobId = Number(btn.dataset.championJobId);
       const variantId = Number(btn.dataset.championVariantId);
-      const wasActive = btn.dataset.championActive === "true";
       const card = btn.closest<HTMLElement>(".winners-card");
-      const allCrowns = card?.querySelectorAll<HTMLButtonElement>(".winner-crown") ?? [];
-      const allWinnerLis = card?.querySelectorAll<HTMLElement>(".winner") ?? [];
-
-      // Optimistic UI: clear other crowns, toggle this one, restyle the
-      // sibling winner row, ditto for the card halo.
-      allCrowns.forEach((c) => (c.dataset.championActive = "false"));
-      allWinnerLis.forEach((li) => li.classList.remove("winner-champion"));
-      if (!wasActive) {
-        btn.dataset.championActive = "true";
-        btn.closest<HTMLElement>(".winner")?.classList.add("winner-champion");
-        card?.classList.add("winners-card-crowned");
-      } else {
-        card?.classList.remove("winners-card-crowned");
-      }
-
+      const feedback = card?.querySelector<HTMLTextAreaElement>("[data-feedback-input]");
+      const comment = feedback?.value?.trim() || null;
+      btn.dataset.busy = "true";
       const res = await fetch("/api/console/mix-champion", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({
-          job_id: jobId,
-          variant_id: wasActive ? null : variantId,
-        }),
+        body: JSON.stringify({ job_id: jobId, variant_id: variantId, comment }),
       });
+      btn.dataset.busy = "false";
       if (!res.ok) {
         console.warn("set champion failed", res.status);
-        // Revert: restore previous active state via the response data
-        // would be ideal, but a simple page-reload covers it.
-        location.reload();
+        return;
+      }
+      // Server-rendered re-render of the card (now in king mode) is
+      // simpler than rebuilding the DOM client-side.
+      location.reload();
+    });
+  });
+
+  // ── King action strip: Make more / Publish / Uncrown / Dismiss ────
+  document.querySelectorAll<HTMLButtonElement>(".winners-action-btn").forEach((btn) => {
+    btn.addEventListener("click", async () => {
+      const action = btn.dataset.action;
+      const jobId = Number(btn.dataset.jobId);
+      const card = btn.closest<HTMLElement>(".winners-card");
+      const feedback = card?.querySelector<HTMLTextAreaElement>("[data-feedback-input]");
+      const feedbackText = feedback?.value?.trim() || null;
+      btn.dataset.busy = "true";
+
+      try {
+        if (action === "make-more") {
+          const sourceAssetId = Number(btn.dataset.sourceAssetId);
+          const res = await fetch("/api/console/mix-jobs-create", {
+            method: "POST",
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify({
+              source_asset_id: sourceAssetId,
+              parent_job_id: jobId,
+              feedback_text: feedbackText || "(continue refining)",
+            }),
+          });
+          if (!res.ok) throw new Error(`HTTP ${res.status}`);
+          location.reload();
+        } else if (action === "publish-toggle") {
+          const currentlyPublic = btn.dataset.currentlyPublic === "true";
+          const res = await fetch("/api/console/mix-publish-king", {
+            method: "POST",
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify({
+              job_id: jobId,
+              publish: !currentlyPublic,
+            }),
+          });
+          if (!res.ok) throw new Error(`HTTP ${res.status}`);
+          location.reload();
+        } else if (action === "uncrown") {
+          const res = await fetch("/api/console/mix-champion", {
+            method: "POST",
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify({ job_id: jobId, variant_id: null }),
+          });
+          if (!res.ok) throw new Error(`HTTP ${res.status}`);
+          location.reload();
+        } else if (action === "dismiss") {
+          const res = await fetch("/api/console/mix-dismiss", {
+            method: "POST",
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify({ job_id: jobId, dismissed: true }),
+          });
+          if (!res.ok) throw new Error(`HTTP ${res.status}`);
+          location.reload();
+        }
+      } catch (e) {
+        console.warn("[winners action]", action, "failed:", e);
+        btn.dataset.busy = "false";
       }
     });
+  });
+
+  // ── Keyboard support for the focused winners card ─────────────────
+  // Space toggles play/pause, ←/→ seek ±10s. Only intercepts when the
+  // user isn't typing in an input/textarea AND a winners card is the
+  // most-recently-active audio source. Otherwise lets pair-tinder
+  // handlers above take their turn.
+  document.addEventListener("keydown", (e) => {
+    const target = e.target as HTMLElement | null;
+    if (target && (target.tagName === "TEXTAREA" || target.tagName === "INPUT")) return;
+    if (!activeCard) return;
+    const a = activeCard.audios[activeCard.activeIndex]?.audio;
+    if (!a) return;
+    if (e.key === " " || e.code === "Space") {
+      e.preventDefault();
+      if (a.paused) {
+        a.play().catch(() => {});
+      } else {
+        a.pause();
+      }
+    } else if (e.key === "ArrowLeft") {
+      e.preventDefault();
+      try { a.currentTime = Math.max(0, a.currentTime - 10); } catch {}
+      activeCard.audios.forEach(({ audio }) => {
+        try { audio.currentTime = a.currentTime; } catch {}
+      });
+    } else if (e.key === "ArrowRight") {
+      e.preventDefault();
+      const dur = a.duration;
+      const t = Math.min(dur || a.currentTime + 10, a.currentTime + 10);
+      try { a.currentTime = t; } catch {}
+      activeCard.audios.forEach(({ audio }) => {
+        try { audio.currentTime = a.currentTime; } catch {}
+      });
+    }
   });
 </script>
