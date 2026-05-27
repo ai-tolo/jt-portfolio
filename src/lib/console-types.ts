@@ -286,7 +286,7 @@ export type BucketView = BucketName | "all";
 
 /** User-facing filter taxonomy (replaced the prior Source + content_type
  *  + Stars chips on 2026-05-17 evening; see Notion: Console (Build)). */
-export type BucketCategory = "all" | "jam" | "loops" | "field" | "tracks" | "other" | "cleanup";
+export type BucketCategory = "all" | "jam" | "loops" | "field" | "tracks" | "other";
 
 /** Legacy SOURCE enum kept for type compat on BucketAsset.source_type;
  *  no longer a user-facing filter. */
@@ -652,4 +652,47 @@ export interface MixPairsResponse {
 export interface MixJudgementResponse {
   ok: true;
   judgement_id: number;
+}
+
+// ── Winners (Phase 3, 2026-05-27) ──────────────────────────────────────────
+/** A winning variant for a single axis on a given job. */
+export interface WinnerVariant {
+  variant_id: number;
+  axis: MixAxis;
+  pole: string;
+  asset_id: number | null;
+  asset_path: string | null;
+  asset_filename: string | null;
+  duration_seconds: number | null;
+  decided_at: string | null;
+}
+
+/** All winners for a single mix job, plus optional cross-axis champion. */
+export interface WinnersJob {
+  job_id: number;
+  source_asset_id: number;
+  source_filename: string | null;
+  source_display_name: string | null;
+  source_waveform_sha1: string | null;
+  source_duration_seconds: number | null;
+  source_audio_path: string | null;
+  started_at: string;
+  finished_at: string | null;
+  /** 1 through 3; how many axes have a recorded winner. */
+  axes_decided: number;
+  /** Always ordered focal → space → dynamics. Missing axes are absent. */
+  winners: WinnerVariant[];
+  /** The curator's cross-axis "this one's the strongest" pick, or null. */
+  champion_variant_id: number | null;
+}
+
+export interface WinnersResponse {
+  total: number;
+  items: WinnersJob[];
+}
+
+export interface ChampionResponse {
+  ok: true;
+  job_id: number;
+  champion_variant_id: number | null;
 }

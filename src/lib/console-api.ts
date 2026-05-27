@@ -38,6 +38,8 @@ import type {
   TopTagsResponse,
   CreateMixJobResponse,
   MixJobSummary,
+  WinnersResponse,
+  ChampionResponse,
   MixJobsListResponse,
   MixPairsResponse,
   MixJudgementResponse,
@@ -782,4 +784,26 @@ export async function withdrawMixJudgement(
     `/mix/judgement/${judgement_id}/withdraw`,
     {},
   );
+}
+
+/** Per-job winners surface. include_partial=true returns jobs with 1-2
+ *  decided axes alongside fully decided 3-of-3 jobs. */
+export async function listMixWinners(
+  opts: { include_partial?: boolean; limit?: number } = {},
+): Promise<ApiResult<WinnersResponse>> {
+  const params = new URLSearchParams({
+    include_partial: String(opts.include_partial ?? true),
+    limit: String(opts.limit ?? 50),
+  });
+  return call<WinnersResponse>(`/mix/winners?${params}`);
+}
+
+/** Crown a winner as the cross-axis champion for a job. Pass
+ *  variant_id=null to clear. The variant must already be a winner of
+ *  one of the job's axes. */
+export async function setMixChampion(
+  job_id: number,
+  variant_id: number | null,
+): Promise<ApiResult<ChampionResponse>> {
+  return _post<ChampionResponse>("/mix/champion", { job_id, variant_id });
 }

@@ -1,22 +1,31 @@
 ---
 import PortalLayout from "../../layouts/PortalLayout.astro";
-import { listMixJobs, listMixPairs } from "../../lib/console-api";
+import {
+  listMixJobs,
+  listMixPairs,
+  listMixWinners,
+} from "../../lib/console-api";
 import type {
   MixJobSummary,
   MixJobStatus,
   MixPairItem,
+  WinnersJob,
 } from "../../lib/console-types";
 
 // Engineer (Build 5) lobby page. Lists mix jobs by status and surfaces
 // A/B pairs awaiting judgement. Phase 0 lands the lifecycle plumbing
 // (queue, worker, status tracking); Phase 1 fills in real variant
 // rendering, at which point the "Pair Tinder" section becomes live.
+// Phase 3 (2026-05-27) replaces the Completed column with a Winners
+// section — per-job per-axis winners with inline playback and a
+// cross-axis champion pick.
 //
 // Graceful fallback when the engine is unreachable: page renders with
 // empty buckets + a small notice, mirroring rotation.astro's pattern.
 
 let jobs: MixJobSummary[] = [];
 let pairs: MixPairItem[] = [];
+let winners: WinnersJob[] = [];
 let usingMock = true;
 let fetchError: string | null = null;
 
@@ -36,8 +45,33 @@ try {
   // appear at the bottom of the page.
   const pairsRes = await listMixPairs(30);
   if (pairsRes.ok) pairs = pairsRes.data.items;
+  // include_partial defaults to true so the curator sees in-progress
+  // jobs alongside fully-decided ones.
+  const winnersRes = await listMixWinners({ limit: 50 });
+  if (winnersRes.ok) winners = winnersRes.data.items;
 } catch (e) {
   fetchError = e instanceof Error ? e.message : "unknown error";
+}
+
+// Split winners into "complete" (all 3 axes) and "in progress" (1-2)
+// so the top of the Winners section foregrounds the value-rich shape.
+const completeWinners = winners.filter((w) => w.axes_decided >= 3);
+const partialWinners = winners.filter((w) => w.axes_decided < 3);
+
+const AXIS_ORDER = ["focal", "space", "dynamics"] as const;
+
+function poleLabel(p: string): string {
+  return p.replace(/_/g, " ");
+}
+function winnerAudioUrl(asset_path: string | null): string {
+  return asset_path
+    ? `/api/console/asset?path=${encodeURIComponent(asset_path)}&variant=opus`
+    : "";
+}
+function sourceAudioUrl(asset_path: string | null): string {
+  return asset_path
+    ? `/api/console/asset?path=${encodeURIComponent(asset_path)}&variant=opus`
+    : "";
 }
 
 const ACTIVE: MixJobStatus[] = ["pending", "splitting_stems", "rendering"];
@@ -147,21 +181,22 @@ function stemSoloUrls(sf) {
       </section>
 
       <section class="col">
-        <h2>Completed <span class="count">{completedJobs.length}</span></h2>
-        {completedJobs.length === 0 ? (
-          <p class="empty">No completed jobs yet.</p>
+        <h2>Winners <span class="count">{completeWinners.length}/{winners.length}</span></h2>
+        {winners.length === 0 ? (
+          <p class="empty">No judged jobs yet.</p>
         ) : (
-          <ul class="job-list">
-            {completedJobs.slice(0, 10).map((j) => (
-              <li class="job">
-                <div class="job-title">{jobTitle(j)}</div>
-                <div class="job-meta">
-                  <span class={`status status-${j.status}`}>{STATUS_LABEL[j.status]}</span>
-                  <span class="finished">finished {fmtTime(j.finished_at)}</span>
-                </div>
-              </li>
-            ))}
-          </ul>
+          <p class="winners-summary">
+            {completeWinners.length > 0 && (
+              <span>{completeWinners.length} fully decided</span>
+            )}
+            {completeWinners.length > 0 && partialWinners.length > 0 && (
+              <span> · </span>
+            )}
+            {partialWinners.length > 0 && (
+              <span>{partialWinners.length} in progress</span>
+            )}
+            <span class="winners-summary-cta"> · see below ↓</span>
+          </p>
         )}
       </section>
 
@@ -459,6 +494,162 @@ function stemSoloUrls(sf) {
             );
           })}
         </ul>
+      )}
+    </section>
+
+    <section class="winners">
+      <h2>
+        Winners
+        <span class="hint">your picks per axis · crown one champion per job</span>
+      </h2>
+      {winners.length === 0 ? (
+        <p class="empty">
+          No winners yet. Vote on a pair above and the chosen variants land here, grouped by job.
+        </p>
+      ) : (
+        <>
+          {completeWinners.length > 0 && (
+            <ul class="winners-list">
+              {completeWinners.map((w) => {
+                const sourceUrl = sourceAudioUrl(w.source_audio_path);
+                const waveSrc = w.source_waveform_sha1
+                  ? `/api/console/waveform?sha1=${w.source_waveform_sha1}`
+                  : null;
+                const champion = w.winners.find(
+                  (v) => v.variant_id === w.champion_variant_id,
+                );
+                return (
+                  <li
+                    class={`winners-card winners-card-complete${
+                      champion ? " winners-card-crowned" : ""
+                    }`}
+                    data-winners-job-id={w.job_id}
+                  >
+                    <div class="winners-head">
+                      <h3 class="winners-source">
+                        {w.source_display_name || w.source_filename || `asset ${w.source_asset_id}`}
+                      </h3>
+                      <div class="winners-head-right">
+                        <span class="winners-axes">3 of 3 decided</span>
+                        {champion && (
+                          <span class="winners-champion-tag">
+                            ♛ champion · {poleLabel(champion.pole)}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+
+                    {waveSrc && (
+                      <div class="winners-wave" data-winners-wave>
+                        <img src={waveSrc} alt="" loading="lazy" />
+                        <div class="winners-playhead" data-winners-playhead hidden></div>
+                        <span class="winners-time" data-winners-time>0:00 / —:—</span>
+                      </div>
+                    )}
+
+                    <ul class="winner-row">
+                      {/* Source / ORIGINAL row sits above the variants so the
+                          curator can A/B back to the unprocessed take. */}
+                      <li class="winner winner-source" data-winner-kind="source">
+                        <button
+                          class="winner-play"
+                          type="button"
+                          data-audio-url={sourceUrl}
+                          aria-label="Play original source"
+                        >▶</button>
+                        <div class="winner-meta">
+                          <span class="winner-axis">ORIGINAL</span>
+                          <span class="winner-pole">unprocessed source</span>
+                        </div>
+                      </li>
+                      {w.winners.map((v) => (
+                        <li
+                          class={`winner${
+                            v.variant_id === w.champion_variant_id ? " winner-champion" : ""
+                          }`}
+                          data-winner-variant-id={v.variant_id}
+                        >
+                          <button
+                            class="winner-play"
+                            type="button"
+                            data-audio-url={winnerAudioUrl(v.asset_path)}
+                            aria-label={`Play ${v.axis} winner`}
+                          >▶</button>
+                          <div class="winner-meta">
+                            <span class="winner-axis">{v.axis.toUpperCase()}</span>
+                            <span class="winner-pole">{poleLabel(v.pole)}</span>
+                          </div>
+                          <button
+                            class="winner-crown"
+                            type="button"
+                            data-champion-job-id={w.job_id}
+                            data-champion-variant-id={v.variant_id}
+                            data-champion-active={
+                              v.variant_id === w.champion_variant_id ? "true" : "false"
+                            }
+                            aria-label="Crown as champion"
+                            title="Crown as champion"
+                          >♛</button>
+                        </li>
+                      ))}
+                    </ul>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+
+          {partialWinners.length > 0 && (
+            <>
+              <h3 class="winners-subhead">
+                In progress
+                <span class="hint">jobs with at least one axis voted</span>
+              </h3>
+              <ul class="winners-list winners-list-partial">
+                {partialWinners.map((w) => {
+                  const sourceUrl = sourceAudioUrl(w.source_audio_path);
+                  return (
+                    <li class="winners-card" data-winners-job-id={w.job_id}>
+                      <div class="winners-head">
+                        <h3 class="winners-source">
+                          {w.source_display_name || w.source_filename || `asset ${w.source_asset_id}`}
+                        </h3>
+                        <span class="winners-axes">{w.axes_decided} of 3 decided</span>
+                      </div>
+                      <ul class="winner-row">
+                        {w.winners.map((v) => (
+                          <li class="winner" data-winner-variant-id={v.variant_id}>
+                            <button
+                              class="winner-play"
+                              type="button"
+                              data-audio-url={winnerAudioUrl(v.asset_path)}
+                              aria-label={`Play ${v.axis} winner`}
+                            >▶</button>
+                            <div class="winner-meta">
+                              <span class="winner-axis">{v.axis.toUpperCase()}</span>
+                              <span class="winner-pole">{poleLabel(v.pole)}</span>
+                            </div>
+                          </li>
+                        ))}
+                        {AXIS_ORDER.filter(
+                          (a) => !w.winners.some((v) => v.axis === a),
+                        ).map((a) => (
+                          <li class="winner winner-pending">
+                            <span class="winner-pending-glyph">·</span>
+                            <div class="winner-meta">
+                              <span class="winner-axis">{a.toUpperCase()}</span>
+                              <span class="winner-pole">not yet decided</span>
+                            </div>
+                          </li>
+                        ))}
+                      </ul>
+                    </li>
+                  );
+                })}
+              </ul>
+            </>
+          )}
+        </>
       )}
     </section>
   </section>
@@ -1331,6 +1522,294 @@ function stemSoloUrls(sf) {
     color: var(--ink);
     border-color: rgba(245, 241, 232, 0.4);
   }
+
+  /* ── Winners (Phase 3, 2026-05-27) ───────────────────────────── */
+  /* Per-job per-axis winners. Source row up top so the curator can A/B
+     back to the original. Champion crown is a sticky cross-axis vote. */
+  .winners {
+    margin-top: 36px;
+    padding-top: 22px;
+    border-top: 1px solid rgba(0,0,0,0.08);
+  }
+  .winners h2 {
+    font-size: 14px;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    margin: 0 0 12px;
+    display: flex;
+    align-items: baseline;
+    gap: 12px;
+  }
+  .winners h2 .hint {
+    font-size: 10.5px;
+    letter-spacing: 0.08em;
+    opacity: 0.5;
+    font-weight: 500;
+    text-transform: none;
+  }
+  .winners-subhead {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.14em;
+    opacity: 0.55;
+    margin: 24px 0 10px;
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+  }
+  .winners-subhead .hint {
+    font-size: 10px;
+    letter-spacing: 0.06em;
+    opacity: 0.6;
+    text-transform: none;
+    font-weight: 500;
+  }
+  .winners-summary {
+    font-size: 12px;
+    opacity: 0.72;
+    margin: 0;
+  }
+  .winners-summary-cta {
+    opacity: 0.55;
+    margin-left: 4px;
+  }
+  .winners-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+  }
+  .winners-card {
+    background: rgba(0, 0, 0, 0.06);
+    border: 1px solid rgba(245, 241, 232, 0.12);
+    border-radius: 6px;
+    padding: 14px;
+  }
+  /* Crowned cards wear a faint gold halo so the champion job stands out. */
+  .winners-card-crowned {
+    border-color: rgba(255, 184, 77, 0.42);
+    box-shadow: 0 0 18px rgba(255, 184, 77, 0.10);
+  }
+  .winners-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 12px;
+    margin-bottom: 10px;
+    flex-wrap: wrap;
+  }
+  .winners-source {
+    margin: 0;
+    flex: 1;
+    min-width: 0;
+    font: 700 17px/1.1 ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-style: italic;
+    color: #00ff4d;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .winners-head-right {
+    display: flex;
+    gap: 10px;
+    align-items: baseline;
+    flex-shrink: 0;
+  }
+  .winners-axes {
+    font: 600 10.5px ui-monospace, SFMono-Regular, Menlo, monospace;
+    letter-spacing: 0.08em;
+    opacity: 0.6;
+    text-transform: uppercase;
+  }
+  .winners-champion-tag {
+    font: 700 10.5px ui-monospace, SFMono-Regular, Menlo, monospace;
+    letter-spacing: 0.06em;
+    color: #ffd28a;
+    background: rgba(255, 184, 77, 0.14);
+    border: 1px solid rgba(255, 184, 77, 0.45);
+    padding: 3px 9px;
+    border-radius: 999px;
+    text-transform: uppercase;
+  }
+  .winners-wave {
+    position: relative;
+    background: rgba(14, 196, 252, 0.04);
+    border: 1px solid rgba(14, 196, 252, 0.14);
+    border-radius: 4px;
+    height: 56px;
+    overflow: hidden;
+    margin-bottom: 10px;
+    cursor: pointer;
+  }
+  .winners-wave img {
+    width: 100%;
+    height: 100%;
+    object-fit: fill;
+    opacity: 0.58;
+    display: block;
+    pointer-events: none;
+  }
+  .winners-playhead {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: 2px;
+    background: #ff3b6e;
+    box-shadow: 0 0 6px rgba(255, 59, 110, 0.7);
+    pointer-events: none;
+    transition: left 80ms linear;
+    z-index: 1;
+  }
+  .winners-time {
+    position: absolute;
+    right: 8px;
+    bottom: 6px;
+    font: 600 10.5px ui-monospace, SFMono-Regular, Menlo, monospace;
+    color: rgba(245, 241, 232, 0.7);
+    background: rgba(0, 0, 0, 0.45);
+    padding: 2px 6px;
+    border-radius: 3px;
+    letter-spacing: 0.04em;
+    pointer-events: none;
+  }
+  /* The active audio source pulses faintly so the eye can find which
+     row is "the one playing right now" while toggling between them. */
+  .winner[data-active-source="true"] {
+    background: rgba(14, 196, 252, 0.12);
+    border-color: rgba(14, 196, 252, 0.5);
+    box-shadow: inset 0 0 12px rgba(14, 196, 252, 0.10);
+  }
+  .winner-source[data-active-source="true"] {
+    background: rgba(245, 241, 232, 0.12);
+    border-color: rgba(245, 241, 232, 0.5);
+    box-shadow: inset 0 0 12px rgba(245, 241, 232, 0.10);
+  }
+  .winner-row {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .winner {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 8px 10px;
+    background: rgba(245, 241, 232, 0.03);
+    border: 1px solid rgba(245, 241, 232, 0.08);
+    border-radius: 4px;
+    transition: background 120ms ease, border-color 120ms ease;
+  }
+  .winner-source {
+    background: rgba(245, 241, 232, 0.045);
+    border-style: dashed;
+  }
+  .winner-champion {
+    background: rgba(255, 184, 77, 0.08);
+    border-color: rgba(255, 184, 77, 0.45);
+    box-shadow: inset 0 0 12px rgba(255, 184, 77, 0.08);
+  }
+  .winner-pending {
+    opacity: 0.45;
+    background: transparent;
+    border-style: dotted;
+  }
+  .winner-pending-glyph {
+    display: inline-flex;
+    width: 30px;
+    height: 30px;
+    align-items: center;
+    justify-content: center;
+    font-size: 16px;
+    opacity: 0.55;
+  }
+  .winner-play {
+    width: 30px;
+    height: 30px;
+    flex-shrink: 0;
+    border-radius: 4px;
+    background: #0ec4fc;
+    color: #0d060f;
+    border: 1px solid #0ec4fc;
+    font-size: 12px;
+    line-height: 1;
+    cursor: pointer;
+    font-weight: 700;
+    transition: background 120ms ease, transform 80ms ease;
+    font-family: inherit;
+  }
+  .winner-source .winner-play {
+    background: rgba(245, 241, 232, 0.65);
+    color: #0d060f;
+    border-color: rgba(245, 241, 232, 0.65);
+  }
+  .winner-play:hover {
+    transform: translateY(-1px);
+  }
+  .winner-play[data-state="playing"] {
+    background: #ff3b6e;
+    border-color: #ff3b6e;
+    color: #fff;
+  }
+  .winner-play[data-state="playing"]::before { content: "■"; }
+  .winner-play[data-state="paused"]::before,
+  .winner-play:not([data-state])::before { content: "▶"; }
+  .winner-play {
+    font-size: 0;
+  }
+  .winner-play::before { font-size: 11px; }
+  .winner-meta {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+  }
+  .winner-axis {
+    font: 700 11px ui-monospace, SFMono-Regular, Menlo, monospace;
+    letter-spacing: 0.12em;
+    color: var(--ink);
+    text-transform: uppercase;
+  }
+  .winner-pole {
+    font: 500 12px ui-monospace, SFMono-Regular, Menlo, monospace;
+    color: rgba(245, 241, 232, 0.6);
+    text-transform: lowercase;
+  }
+  .winner-crown {
+    width: 32px;
+    height: 32px;
+    flex-shrink: 0;
+    border-radius: 4px;
+    background: transparent;
+    color: rgba(245, 241, 232, 0.35);
+    border: 1px solid rgba(245, 241, 232, 0.18);
+    font-size: 15px;
+    line-height: 1;
+    cursor: pointer;
+    transition: all 120ms ease;
+    font-family: inherit;
+  }
+  .winner-crown:hover {
+    color: #ffd28a;
+    border-color: rgba(255, 184, 77, 0.55);
+    background: rgba(255, 184, 77, 0.08);
+  }
+  .winner-crown[data-champion-active="true"] {
+    background: #ffb84d;
+    color: #0d060f;
+    border-color: #ffd28a;
+    box-shadow: 0 0 14px rgba(255, 184, 77, 0.45);
+  }
+  .winners-list-partial .winners-card {
+    background: rgba(0, 0, 0, 0.03);
+    border-style: dashed;
+    opacity: 0.95;
+  }
 </style>
 
 <script>
@@ -2034,4 +2513,253 @@ function stemSoloUrls(sf) {
   // Initialize: first .pair-active becomes the active pair.
   const initial = activePair();
   if (initial) setActivePair(initial);
+
+  // ── Winners controller (Phase 3 + Phase 4 sync) ──────────────────
+  // Per-card model: each card holds N audio elements (source + winners),
+  // all pre-loaded against the same source duration. Clicking ▶ on a row
+  // swaps which audio is active WITHOUT restarting — currentTime is
+  // carried over from the previously-active audio, so the curator hears
+  // "the same moment" in each version. Click the waveform to seek all
+  // audios together; the playhead overlay tracks the active audio.
+  //
+  // Only one card can play at a time. Clicking ▶ in a different card
+  // pauses the previous card.
+
+  type CardController = {
+    card: HTMLElement;
+    audios: Array<{ row: HTMLElement; btn: HTMLButtonElement; audio: HTMLAudioElement }>;
+    activeIndex: number;
+    wave: HTMLElement | null;
+    playhead: HTMLElement | null;
+    timeLabel: HTMLElement | null;
+    rafId: number | null;
+    pause: () => void;
+  };
+
+  const allControllers: CardController[] = [];
+  let activeCard: CardController | null = null;
+
+  // fmtTime is reused from the pair-tinder controller above.
+  function fmtTimeOrDash(s: number): string {
+    return Number.isFinite(s) && s > 0 ? fmtTime(s) : "—:—";
+  }
+
+  function pauseOtherCards(except: CardController) {
+    for (const c of allControllers) {
+      if (c !== except) c.pause();
+    }
+  }
+
+  document.querySelectorAll<HTMLElement>(".winners-card").forEach((card) => {
+    const wave = card.querySelector<HTMLElement>("[data-winners-wave]");
+    const playhead = card.querySelector<HTMLElement>("[data-winners-playhead]");
+    const timeLabel = card.querySelector<HTMLElement>("[data-winners-time]");
+    const rows = Array.from(card.querySelectorAll<HTMLElement>(".winner"));
+    const audios: CardController["audios"] = [];
+
+    rows.forEach((row) => {
+      const btn = row.querySelector<HTMLButtonElement>(".winner-play");
+      if (!btn) return;
+      const url = btn.dataset.audioUrl || "";
+      if (!url) return;
+      const audio = new Audio();
+      audio.preload = "auto";
+      audio.src = url;
+      audios.push({ row, btn, audio });
+    });
+
+    if (audios.length === 0) return;
+
+    const ctrl: CardController = {
+      card,
+      audios,
+      activeIndex: 0,
+      wave,
+      playhead,
+      timeLabel,
+      rafId: null,
+      pause: () => {
+        const a = ctrl.audios[ctrl.activeIndex]?.audio;
+        if (a && !a.paused) a.pause();
+        renderState();
+      },
+    };
+    allControllers.push(ctrl);
+
+    function active(): HTMLAudioElement {
+      return ctrl.audios[ctrl.activeIndex].audio;
+    }
+
+    function renderState() {
+      const a = active();
+      // Per-row button state + active-source halo.
+      ctrl.audios.forEach(({ row, btn }, i) => {
+        const isActive = i === ctrl.activeIndex;
+        const playing = isActive && !a.paused && a.currentTime > 0;
+        btn.dataset.state = isActive ? (a.paused ? "paused" : "playing") : "paused";
+        row.dataset.activeSource = isActive ? "true" : "false";
+      });
+      // Time label.
+      if (ctrl.timeLabel) {
+        const dur = a.duration;
+        ctrl.timeLabel.textContent = `${fmtTimeOrDash(a.currentTime)} / ${fmtTimeOrDash(dur)}`;
+      }
+      // Playhead position.
+      if (ctrl.playhead) {
+        const dur = a.duration;
+        if (dur && a.currentTime > 0) {
+          const frac = Math.max(0, Math.min(1, a.currentTime / dur));
+          ctrl.playhead.style.left = `${frac * 100}%`;
+          ctrl.playhead.hidden = false;
+        } else {
+          ctrl.playhead.hidden = true;
+        }
+      }
+    }
+
+    function tick() {
+      renderState();
+      const a = active();
+      if (a.paused) {
+        ctrl.rafId = null;
+        return;
+      }
+      ctrl.rafId = requestAnimationFrame(tick);
+    }
+
+    function swapTo(i: number, play = true) {
+      const prev = active();
+      const t = prev.currentTime;
+      if (!prev.paused) prev.pause();
+      ctrl.activeIndex = i;
+      const next = active();
+      try {
+        next.currentTime = t;
+      } catch {
+        // currentTime can throw if metadata isn't loaded yet; ignore.
+      }
+      if (play) {
+        next
+          .play()
+          .then(() => {
+            pauseOtherCards(ctrl);
+            activeCard = ctrl;
+            if (ctrl.rafId == null) ctrl.rafId = requestAnimationFrame(tick);
+          })
+          .catch((e) => {
+            console.warn("winners audio play failed", e);
+            renderState();
+          });
+      }
+      renderState();
+    }
+
+    function toggle() {
+      const a = active();
+      if (a.paused) {
+        a.play()
+          .then(() => {
+            pauseOtherCards(ctrl);
+            activeCard = ctrl;
+            if (ctrl.rafId == null) ctrl.rafId = requestAnimationFrame(tick);
+          })
+          .catch((e) => console.warn("winners audio play failed", e));
+      } else {
+        a.pause();
+      }
+      renderState();
+    }
+
+    ctrl.audios.forEach(({ btn, audio }, i) => {
+      btn.addEventListener("click", () => {
+        if (i === ctrl.activeIndex) {
+          toggle();
+        } else {
+          // Carry over the active position so the curator hears the SAME
+          // moment in the new variant — the whole point of sync'd compare.
+          swapTo(i, true);
+        }
+      });
+      audio.addEventListener("ended", () => {
+        renderState();
+      });
+    });
+
+    // Click-to-seek on the waveform. Sets currentTime on every audio in
+    // this card so a subsequent swap stays in sync.
+    if (wave) {
+      wave.addEventListener("click", (e) => {
+        const rect = wave.getBoundingClientRect();
+        const x = (e as MouseEvent).clientX - rect.left;
+        const frac = Math.max(0, Math.min(1, x / rect.width));
+        const a = active();
+        const dur = a.duration;
+        if (!dur || !Number.isFinite(dur)) return;
+        const newTime = frac * dur;
+        ctrl.audios.forEach(({ audio }) => {
+          try {
+            audio.currentTime = newTime;
+          } catch {
+            /* not yet loaded; ignore */
+          }
+        });
+        if (a.paused) {
+          a.play()
+            .then(() => {
+              pauseOtherCards(ctrl);
+              activeCard = ctrl;
+              if (ctrl.rafId == null) ctrl.rafId = requestAnimationFrame(tick);
+            })
+            .catch(() => {});
+        }
+        renderState();
+      });
+    }
+
+    // Initial render so the time label shows "0:00 / —:—" until metadata
+    // lands; loadedmetadata then re-renders with the real duration.
+    renderState();
+    active().addEventListener("loadedmetadata", renderState);
+  });
+
+  // Champion crown: POST /api/console/mix-champion. Idempotent — clicking
+  // an active champion clears it (variant_id=null). Optimistic UI update;
+  // reverts on error.
+  document.querySelectorAll<HTMLButtonElement>(".winner-crown").forEach((btn) => {
+    btn.addEventListener("click", async () => {
+      const jobId = Number(btn.dataset.championJobId);
+      const variantId = Number(btn.dataset.championVariantId);
+      const wasActive = btn.dataset.championActive === "true";
+      const card = btn.closest<HTMLElement>(".winners-card");
+      const allCrowns = card?.querySelectorAll<HTMLButtonElement>(".winner-crown") ?? [];
+      const allWinnerLis = card?.querySelectorAll<HTMLElement>(".winner") ?? [];
+
+      // Optimistic UI: clear other crowns, toggle this one, restyle the
+      // sibling winner row, ditto for the card halo.
+      allCrowns.forEach((c) => (c.dataset.championActive = "false"));
+      allWinnerLis.forEach((li) => li.classList.remove("winner-champion"));
+      if (!wasActive) {
+        btn.dataset.championActive = "true";
+        btn.closest<HTMLElement>(".winner")?.classList.add("winner-champion");
+        card?.classList.add("winners-card-crowned");
+      } else {
+        card?.classList.remove("winners-card-crowned");
+      }
+
+      const res = await fetch("/api/console/mix-champion", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          job_id: jobId,
+          variant_id: wasActive ? null : variantId,
+        }),
+      });
+      if (!res.ok) {
+        console.warn("set champion failed", res.status);
+        // Revert: restore previous active state via the response data
+        // would be ideal, but a simple page-reload covers it.
+        location.reload();
+      }
+    });
+  });
 </script>
