@@ -10,6 +10,7 @@ export const POST: APIRoute = async ({ request }) => {
     variant_a_id?: unknown;
     variant_b_id?: unknown;
     chosen_variant_id?: unknown;
+    chose_original?: unknown;
     axis?: unknown;
     comment?: unknown;
   };
@@ -40,6 +41,7 @@ export const POST: APIRoute = async ({ request }) => {
       : typeof payload.chosen_variant_id === "number"
         ? payload.chosen_variant_id
         : null;
+  const choseOriginal = payload.chose_original === true;
   const axis = typeof payload.axis === "string" ? payload.axis : null;
   const comment = typeof payload.comment === "string" ? payload.comment : null;
 
@@ -48,6 +50,7 @@ export const POST: APIRoute = async ({ request }) => {
     variant_a_id: aId,
     variant_b_id: bId,
     chosen_variant_id: chosen,
+    chose_original: choseOriginal,
     axis,
     comment,
   });

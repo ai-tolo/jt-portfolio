@@ -42,6 +42,10 @@ const sortParam = url.searchParams.get("sort");
 const sortRaw = sortParam ?? "recent";
 const q = (url.searchParams.get("q") ?? "").trim();
 const tagsRaw = (url.searchParams.get("tags") ?? "").trim();
+const focusParam = url.searchParams.get("focus");
+const focus: number | undefined = focusParam && /^\d+$/.test(focusParam)
+  ? Number(focusParam)
+  : undefined;
 
 const category: BucketCategory = VALID_CATEGORIES.includes(categoryRaw as BucketCategory)
   ? (categoryRaw as BucketCategory)
@@ -68,7 +72,7 @@ const tagsParam = activeTags.join(",");
 // Top-tags reflects what's available in the bucket+category view BEFORE
 // the active filter, so the strip stays stable as the curator AND-narrows.
 const [primary, topTagsRes] = await Promise.all([
-  getBucketsList(bucket, { sort, q, category, tags: tagsParam }),
+  getBucketsList(bucket, { sort, q, category, tags: tagsParam, focus }),
   getTopTags(bucket, category, 10),
 ]);
 

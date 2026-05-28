@@ -409,6 +409,11 @@ export interface BucketsListFilters {
   category?: BucketCategory;
   /** Comma-separated tag tokens; AND semantics (each must match). */
   tags?: string;
+  /** Pin this asset_id at the top of the inner sort so it's guaranteed
+   *  inside the LIMIT 200 window. Used when arriving via ↗ Open-in-Buckets
+   *  links from Winners cards / lineage chips so the scroll-target row
+   *  is always in the rendered DOM. */
+  focus?: number;
 }
 
 export interface TopTag {
@@ -655,20 +660,26 @@ export interface MixJudgementResponse {
 }
 
 // ── Winners (Phase 3, 2026-05-27) ──────────────────────────────────────────
-/** A winning variant for a single axis on a given job. */
+/** A winning variant for a single axis on a given job. When is_original=true,
+ *  the curator voted ORIGINAL over both variants for this axis; variant_id /
+ *  asset fields are null and color is the literal string "ORIGINAL". */
 export interface WinnerVariant {
-  variant_id: number;
+  variant_id: number | null;
   axis: MixAxis;
   pole: string;
   /** Stable color label per pole ("Mist", "Sienna", "Citrine", etc.).
    *  Computed server-side from the pole string. Use this as the
-   *  user-facing label instead of the raw pole text. */
+   *  user-facing label instead of the raw pole text. Equals "ORIGINAL"
+   *  when is_original is true. */
   color: string;
   asset_id: number | null;
   asset_path: string | null;
   asset_filename: string | null;
   duration_seconds: number | null;
   decided_at: string | null;
+  /** True when the curator voted ORIGINAL over both variants for this
+   *  axis. Phase 5, 2026-05-27. */
+  is_original: boolean;
 }
 
 /** All winners for a single mix job, plus optional cross-axis champion. */
@@ -688,6 +699,10 @@ export interface WinnersJob {
   winners: WinnerVariant[];
   /** The curator's cross-axis "this one's the strongest" pick, or null. */
   champion_variant_id: number | null;
+  /** True when the curator crowned ORIGINAL — declaring the unprocessed
+   *  source beats every variant. Mutually exclusive with
+   *  champion_variant_id. Phase 5, 2026-05-27. */
+  champion_is_original: boolean;
   /** Curator-typed feedback captured at the moment of crowning. */
   champion_comment: string | null;
   /** Whether the king variant's asset is flagged public=1 (visible on
@@ -711,6 +726,11 @@ export interface ChampionResponse {
   ok: true;
   job_id: number;
   champion_variant_id: number | null;
+  /** True when ORIGINAL was crowned. Phase 5, 2026-05-27. */
+  champion_is_original: boolean;
+  /** Set when crowning ORIGINAL auto-spawned a make-more job for the same
+   *  source. Null on variant-king crowns and on clears. */
+  spawned_job_id: number | null;
 }
 
 export interface DismissResponse {

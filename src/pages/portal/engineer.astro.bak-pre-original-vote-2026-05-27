@@ -187,7 +187,7 @@ function stemSoloUrls(sf) {
     <section class="pair-tinder">
       <h2>
         Mix Faceoff
-        <span class="hint">tap A/B to switch · hold A/B/ORIGINAL to vote · hold × to skip · space play/pause · ← → seek</span>
+        <span class="hint">tap A/B to switch · hold A/B to vote · hold × to skip · space play/pause · ← → seek</span>
       </h2>
       {pairs.length === 0 ? (
         <p class="empty">
@@ -252,16 +252,7 @@ function stemSoloUrls(sf) {
                     <button class="transport-btn transport-play" data-toggle-play aria-label="Play / pause">▶</button>
                     <button class="transport-btn" data-skip="10" aria-label="Forward 10 seconds">⏭</button>
                     <span class="pair-time" data-time>0:00 / —:—</span>
-                    <button
-                      type="button"
-                      class="pair-now-side"
-                      data-now-side
-                      data-kind="original"
-                      data-hold="original"
-                      aria-live="polite"
-                      aria-label="Hold to vote ORIGINAL (neither variant beat the source)"
-                      title="Hold to vote ORIGINAL"
-                    ><span class="hold-fill" aria-hidden="true"></span><span class="now-side-label">ORIGINAL</span></button>
+                    <span class="pair-now-side" data-now-side data-kind="original" aria-live="polite">ORIGINAL</span>
                     <div class="ab-switch" role="group" aria-label="Switch between variant A and B. Tap to toggle (deselect returns to original). Hold to vote.">
                       <button class="ab-side ab-side-active" data-side-btn="a" data-hold="a" title="Tap to switch · hold to vote A">
                         <span class="hold-fill" aria-hidden="true"></span>
@@ -483,45 +474,29 @@ function stemSoloUrls(sf) {
             const waveSrc = w.source_waveform_sha1
               ? `/api/console/waveform?sha1=${w.source_waveform_sha1}`
               : null;
-            // King detection. variantKing matches when a real variant
-            // has been crowned. isOriginalKing matches when the curator
-            // chose the unprocessed source over every variant (Phase 5).
-            // The two are mutually exclusive but downstream code only
-            // needs `hasKing` for branching.
-            const variantKing = w.winners.find(
-              (v) =>
-                !v.is_original && v.variant_id === w.champion_variant_id,
+            const king = w.winners.find(
+              (v) => v.variant_id === w.champion_variant_id,
             );
-            const isOriginalKing = w.champion_is_original;
-            const hasKing = !!variantKing || isOriginalKing;
-            // Filter the variant axis-winners list. Per-axis ORIGINAL
-            // votes count toward axes_decided but don't get their own
-            // row — the ORIGINAL row at the top of the card represents
-            // the source for all of them.
-            const variantWinners = w.winners.filter((v) => !v.is_original);
             const title = w.source_display_name || w.source_filename || `asset ${w.source_asset_id}`;
             // Status badge that sits next to the title in the collapsed
             // header, so the curator can scan at a glance.
-            const badge = isOriginalKing
-              ? "♛ ORIGINAL"
-              : variantKing
-                ? `♛ ${variantKing.color}`
-                : w.axes_decided >= 3
-                  ? `${w.axes_decided}/3 — crown your king`
-                  : `${w.axes_decided}/3 voted`;
-            const badgeKind = hasKing
+            const badge = king
+              ? `♛ ${king.color}`
+              : w.axes_decided >= 3
+                ? `${w.axes_decided}/3 — crown your king`
+                : `${w.axes_decided}/3 voted`;
+            const badgeKind = king
               ? "king"
               : w.axes_decided >= 3
                 ? "ready-to-crown"
                 : "voting";
             return (
               <li
-                class={`winners-card${hasKing ? " winners-card-crowned" : ""}`}
+                class={`winners-card${king ? " winners-card-crowned" : ""}`}
                 data-winners-job-id={w.job_id}
                 data-collapsed="true"
                 data-axes-decided={w.axes_decided}
-                data-has-king={hasKing ? "true" : "false"}
-                data-king-is-original={isOriginalKing ? "true" : "false"}
+                data-has-king={king ? "true" : "false"}
               >
                 <div class="winners-head">
                   <button
@@ -576,16 +551,8 @@ function stemSoloUrls(sf) {
 
                   <ul class="winner-row">
                     {/* ORIGINAL row sits above the mixes so the curator
-                        can A/B back to the unprocessed take. Three states:
-                          - default: read-only reference for comparison
-                          - ready-to-crown: ♛ button promotes ORIGINAL to king
-                          - king: gold halo + "♛ ORIGINAL" tag
-                        Per-axis ORIGINAL wins are folded into this single
-                        row (variantWinners filters them out below). */}
-                    <li
-                      class={`winner winner-source${isOriginalKing ? " winner-champion winner-source-king" : ""}`}
-                      data-winner-kind="source"
-                    >
+                        can A/B back to the unprocessed take. */}
+                    <li class="winner winner-source" data-winner-kind="source">
                       <button
                         class="winner-play"
                         type="button"
@@ -593,53 +560,33 @@ function stemSoloUrls(sf) {
                         aria-label="Play original source"
                       >▶</button>
                       <div class="winner-meta">
-                        <span class="winner-label">
-                          {isOriginalKing ? "♛ ORIGINAL" : "Original"}
-                        </span>
-                        <span class="winner-sub">
-                          {isOriginalKing ? "your king mix" : "unprocessed source"}
-                        </span>
+                        <span class="winner-label">Original</span>
+                        <span class="winner-sub">unprocessed source</span>
                       </div>
-                      {!hasKing && w.axes_decided >= 3 && (
-                        <button
-                          class="winner-crown"
-                          type="button"
-                          data-champion-job-id={w.job_id}
-                          data-champion-is-original="true"
-                          aria-label="Crown ORIGINAL as king (auto-spawns a fresh batch)"
-                          title="Crown ORIGINAL — neither variant beats the source. Spawns a fresh batch."
-                        >♛</button>
-                      )}
                     </li>
-                    {variantKing ? (
-                      // Variant-king mode: collapsed to just the winning
-                      // mix. Curator listens, decides whether to make
-                      // more, publish, or dismiss.
+                    {king ? (
+                      // King mode: collapsed to just the winning mix.
+                      // Curator listens, decides whether to make more,
+                      // publish, or dismiss.
                       <li
                         class="winner winner-champion"
-                        data-winner-variant-id={variantKing.variant_id}
+                        data-winner-variant-id={king.variant_id}
                       >
                         <button
                           class="winner-play"
                           type="button"
-                          data-audio-url={winnerAudioUrl(variantKing.asset_path)}
+                          data-audio-url={winnerAudioUrl(king.asset_path)}
                           aria-label="Play king mix"
                         >▶</button>
                         <div class="winner-meta">
-                          <span class="winner-label">♛ {variantKing.color}</span>
+                          <span class="winner-label">♛ {king.color}</span>
                           <span class="winner-sub">your king mix</span>
                         </div>
                       </li>
-                    ) : isOriginalKing ? (
-                      // ORIGINAL-king mode: variants list collapsed away.
-                      // The ORIGINAL row above is the king display.
-                      null
                     ) : (
-                      // Voting mode: show all decided variant mixes so
-                      // the curator can cross-compare and crown.
-                      // is_original axis-winners are filtered to the
-                      // ORIGINAL row at top (variantWinners).
-                      variantWinners.map((v) => (
+                      // Voting mode: show all decided mixes so the
+                      // curator can cross-compare and crown.
+                      w.winners.map((v) => (
                         <li
                           class="winner"
                           data-winner-variant-id={v.variant_id}
@@ -670,7 +617,7 @@ function stemSoloUrls(sf) {
                     {/* In voting mode, surface the pending slots so the
                         curator knows what still needs a vote in Pair
                         Tinder. Hidden in king mode. */}
-                    {!hasKing && w.axes_decided < 3 &&
+                    {!king && w.axes_decided < 3 &&
                       AXIS_ORDER.filter(
                         (a) => !w.winners.some((v) => v.axis === a),
                       ).map(() => (
@@ -690,15 +637,15 @@ function stemSoloUrls(sf) {
                       mixes" is always present; Publish / Uncrown only
                       surface when a king is crowned. */}
                   <div class="winners-actions">
-                    {hasKing && w.champion_comment && (
+                    {king && w.champion_comment && (
                       <p class="winners-king-comment" title="Your note when crowning">
                         <span class="comment-quote">“</span>{w.champion_comment}<span class="comment-quote">”</span>
                       </p>
                     )}
-                    {!hasKing && w.axes_decided >= 3 && (
-                      <p class="winners-hint">Tap ♛ on a mix above (or ORIGINAL) to crown your king, or render a fresh batch below.</p>
+                    {!king && w.axes_decided >= 3 && (
+                      <p class="winners-hint">Tap ♛ on a mix above to crown your king, or render a fresh batch below.</p>
                     )}
-                    {!hasKing && w.axes_decided < 3 && (
+                    {!king && w.axes_decided < 3 && (
                       <p class="winners-hint">
                         {3 - w.axes_decided} more mix{3 - w.axes_decided === 1 ? "" : "es"} left to vote on in the Mix Faceoff above. Or skip ahead with Make more mixes for a fresh batch.
                       </p>
@@ -717,7 +664,7 @@ function stemSoloUrls(sf) {
                         data-job-id={w.job_id}
                         data-source-asset-id={w.source_asset_id}
                       >+ Make more mixes</button>
-                      {hasKing && (
+                      {king && (
                         <button
                           class={`winners-action-btn winners-publish${w.king_is_public ? " is-public" : ""}`}
                           type="button"
@@ -726,7 +673,7 @@ function stemSoloUrls(sf) {
                           data-currently-public={w.king_is_public ? "true" : "false"}
                         >{w.king_is_public ? "● Published" : "→ Publish to Sounds"}</button>
                       )}
-                      {hasKing && (
+                      {king && (
                         <button
                           class="winners-action-btn winners-uncrown"
                           type="button"
@@ -1077,15 +1024,7 @@ function stemSoloUrls(sf) {
   /* Small "what's playing" tag. Makes the implicit-original convention
      explicit: when neither A nor B is highlighted, the tag reads
      ORIGINAL. When A or B is selected, it reads the variant pole. */
-  /* ORIGINAL pill — promoted from <span> to <button> in Phase 5
-     (2026-05-27). Hold-to-vote ORIGINAL using the same 650ms gesture
-     vocabulary as A/B/skip. When data-kind="original" the pill is also
-     the active playback indicator and gets amped scale + cream glow so
-     "ORIGINAL is selected" reads as a deliberate choice, not a default
-     fallback. data-kind="a"|"b" reflects what's playing (small/muted)
-     while keeping the pill always available as the ORIGINAL-vote target. */
   .pair-now-side {
-    position: relative;
     font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
     font-size: 10.5px;
     font-weight: 700;
@@ -1097,20 +1036,6 @@ function stemSoloUrls(sf) {
     border: 1px solid rgba(245, 241, 232, 0.16);
     color: rgba(245, 241, 232, 0.7);
     flex-shrink: 0;
-    cursor: pointer;
-    overflow: hidden;
-    touch-action: none;
-    user-select: none;
-    transition:
-      background 140ms ease,
-      color 140ms ease,
-      border-color 140ms ease,
-      box-shadow 140ms ease,
-      transform 140ms ease;
-  }
-  .pair-now-side:hover {
-    color: var(--ink);
-    border-color: rgba(245, 241, 232, 0.4);
   }
   .pair-now-side[data-kind="a"] {
     background: rgba(14, 196, 252, 0.10);
@@ -1121,52 +1046,6 @@ function stemSoloUrls(sf) {
     background: rgba(255, 59, 110, 0.10);
     border-color: rgba(255, 59, 110, 0.35);
     color: #ffb6c8;
-  }
-  /* Active state — ORIGINAL is the current playback. Cream/neutral
-     amping so it reads as a peer of the cyan-A / pink-B active states. */
-  .pair-now-side[data-kind="original"] {
-    background: rgba(245, 241, 232, 0.18);
-    border-color: rgba(245, 241, 232, 0.7);
-    color: var(--ink);
-    transform: scale(1.04);
-    box-shadow:
-      0 0 20px rgba(245, 241, 232, 0.28),
-      0 0 0 2px rgba(245, 241, 232, 0.4),
-      inset 0 0 10px rgba(255, 255, 255, 0.10);
-  }
-  /* Hold-to-vote power-up — same linear sweep as the A/B buttons but in
-     cream so it coheres with the ORIGINAL pill's identity. Duration kept
-     in lockstep with HOLD_MS in the controller below; change both
-     together. */
-  .pair-now-side .hold-fill {
-    position: absolute;
-    inset: 0;
-    border-radius: inherit;
-    background:
-      linear-gradient(90deg, transparent 0%, transparent 82%,
-                            rgba(255, 255, 255, 0.6) 96%,
-                            rgba(255, 255, 255, 0.95) 100%),
-      linear-gradient(90deg, rgba(245, 241, 232, 0.55) 0%, #fff8e6 100%);
-    box-shadow:
-      inset 0 0 16px rgba(255, 255, 255, 0.22),
-      0 0 18px rgba(245, 241, 232, 0.55);
-    transform-origin: left center;
-    transform: scaleX(0);
-    transition: none;
-    pointer-events: none;
-    z-index: 0;
-  }
-  .pair-now-side[data-holding="true"] .hold-fill {
-    transform: scaleX(1);
-    transition: transform 0.65s linear;
-  }
-  .pair-now-side[data-holding="true"] {
-    color: #0d060f;
-    border-color: rgba(245, 241, 232, 0.85);
-  }
-  .pair-now-side .now-side-label {
-    position: relative;
-    z-index: 1;
   }
   /* A/B switch fills the remaining row width so the buttons get big enough
      for the variant labels to read at a glance. A uses the M1 cyan, B uses
@@ -1926,15 +1805,6 @@ function stemSoloUrls(sf) {
     border-color: rgba(255, 184, 77, 0.45);
     box-shadow: inset 0 0 12px rgba(255, 184, 77, 0.08);
   }
-  /* ORIGINAL crowned as king: source row gets the gold halo too,
-     overriding the default dashed unprocessed-source treatment. */
-  .winner-source-king {
-    background: rgba(255, 184, 77, 0.08) !important;
-    border-color: rgba(255, 184, 77, 0.45) !important;
-    border-style: solid !important;
-    box-shadow: inset 0 0 12px rgba(255, 184, 77, 0.08);
-  }
-  .winner-source-king .winner-label { color: #ffd28a; }
   .winner-pending {
     opacity: 0.45;
     background: transparent;
@@ -2641,23 +2511,17 @@ function stemSoloUrls(sf) {
         btn.removeAttribute("data-dim");
       }
     });
-    // Now-side pill (Phase 5: also the ORIGINAL hold-vote button). Update
-    // only the .now-side-label child so the hold-fill overlay element is
-    // preserved across re-renders. data-kind drives the cosmetic state:
-    //   - "original": amped cream-glow active state (ORIGINAL is playing
-    //     AND is the current vote target)
-    //   - "a" / "b": muted tint showing what playback side is active
+    // Indicator on the transport so "neither highlighted = original" is
+    // explicit rather than implicit. Updates whatever element the markup
+    // exposes as data-now-side.
     const sideTag = pair.querySelector<HTMLElement>("[data-now-side]");
     if (sideTag) {
-      const labelEl = sideTag.querySelector<HTMLElement>(".now-side-label");
       if (side === null) {
-        if (labelEl) labelEl.textContent = "ORIGINAL";
+        sideTag.textContent = "ORIGINAL";
         sideTag.dataset.kind = "original";
       } else {
         const label = pair.querySelector<HTMLElement>(`[data-side-btn="${side}"] .ab-label`);
-        if (labelEl) {
-          labelEl.textContent = `${side.toUpperCase()} · ${label?.textContent ?? ""}`;
-        }
+        sideTag.textContent = `${side.toUpperCase()} · ${label?.textContent ?? ""}`;
         sideTag.dataset.kind = side;
       }
     }
@@ -2745,15 +2609,11 @@ function stemSoloUrls(sf) {
     return ta?.value.trim() ?? "";
   }
 
-  async function commit(
-    pair: HTMLElement,
-    choice: "a" | "b" | "skip" | "original",
-  ) {
+  async function commit(pair: HTMLElement, choice: "a" | "b" | "skip") {
     // Capture playback state BEFORE we stop both audios so advancePair
     // can decide whether to keep the listening session going on the next
     // pair (matches the tinder feel of "I'm in flow, keep me there").
-    const wasPlaying =
-      !audioA.paused || !audioB.paused || !audioOriginal.paused;
+    const wasPlaying = !audioA.paused || !audioB.paused;
     stopAll();
     setPlayButton(pair, "paused");
     pair.dataset.continuePlayback = wasPlaying ? "true" : "false";
@@ -2761,8 +2621,6 @@ function stemSoloUrls(sf) {
     const axis = pair.dataset.axis ?? null;
     const aId = Number(pair.dataset.a);
     const bId = Number(pair.dataset.b);
-    // ORIGINAL and skip both leave chosen_variant_id null; the engine
-    // differentiates via the chose_original flag.
     const chosen = choice === "a" ? aId : choice === "b" ? bId : null;
     const comment = getComment(pair);
     setNowPlaying(pair, "recording…");
@@ -2774,7 +2632,6 @@ function stemSoloUrls(sf) {
         variant_a_id: aId,
         variant_b_id: bId,
         chosen_variant_id: chosen,
-        chose_original: choice === "original",
         axis,
         comment: comment || null,
       }),
@@ -2859,10 +2716,7 @@ function stemSoloUrls(sf) {
     }
   }
 
-  function startHold(
-    btn: HTMLElement,
-    choice: "a" | "b" | "skip" | "original",
-  ) {
+  function startHold(btn: HTMLElement, choice: "a" | "b" | "skip") {
     if (holdTimer !== null) return;
     const pair = btn.closest<HTMLElement>(".pair");
     if (!pair) return;
@@ -2883,14 +2737,7 @@ function stemSoloUrls(sf) {
     const holdBtn = target.closest<HTMLElement>("[data-hold]");
     if (!holdBtn) return;
     const choice = holdBtn.dataset.hold;
-    if (
-      choice !== "a" &&
-      choice !== "b" &&
-      choice !== "skip" &&
-      choice !== "original"
-    ) {
-      return;
-    }
+    if (choice !== "a" && choice !== "b" && choice !== "skip") return;
     startHold(holdBtn, choice);
   });
 
@@ -2937,19 +2784,6 @@ function stemSoloUrls(sf) {
       // handler. Without this, focus stays on the button and pressing
       // space re-fires switchSide instead of cleanly toggling play.
       sideBtn.blur();
-      return;
-    }
-
-    // ORIGINAL pill tap — when A or B is the active playback, tapping
-    // the pill returns to ORIGINAL (mirrors tap-to-deselect on A/B).
-    // Tap on the pill when ORIGINAL is already active is a no-op.
-    // The hold gesture is handled separately by startHold() above; this
-    // click handler only fires on release-before-fill (a real tap).
-    const nowSideBtn = target.closest<HTMLElement>("[data-now-side]");
-    if (nowSideBtn) {
-      if (Date.now() - lastHoldCommitAt < HOLD_CLICK_SUPPRESS_MS) return;
-      if (currentSide !== null) switchSide(currentSide);
-      nowSideBtn.blur();
       return;
     }
 
@@ -3011,14 +2845,7 @@ function stemSoloUrls(sf) {
     else if (k === " ") { e.preventDefault(); togglePlay(); }
     else if (k === "arrowleft") { e.preventDefault(); skipBy(-10); }
     else if (k === "arrowright") { e.preventDefault(); skipBy(10); }
-    else if (k === "enter") {
-      e.preventDefault();
-      // Enter commits whatever's currently playing. When neither A nor B
-      // is selected (currentSide is null), ORIGINAL is playing — Enter
-      // commits ORIGINAL. Matches the gesture model where the user can
-      // just listen and press Enter to vote what they hear.
-      commit(pair, currentSide ?? "original");
-    }
+    else if (k === "enter") { e.preventDefault(); commit(pair, currentSide); }
     else if (k === "escape") { e.preventDefault(); commit(pair, "skip"); }
   });
 
@@ -3291,37 +3118,18 @@ function stemSoloUrls(sf) {
   // so the planner sees the curator's reasoning alongside future
   // "Make more mixes" jobs. Page reloads on success so the king-mode
   // server-rendered shape replaces the voting-mode markup cleanly.
-  //
-  // Two crown shapes share this handler:
-  //   - variant crown (data-champion-variant-id): standard king pick
-  //   - ORIGINAL crown (data-champion-is-original="true"): declares the
-  //     source beats every variant; the engine sets champion_is_original
-  //     AND synchronously spawns a fresh make-more job so the in-flight
-  //     badge appears on reload.
   document.querySelectorAll<HTMLButtonElement>(".winner-crown").forEach((btn) => {
     btn.addEventListener("click", async () => {
       const jobId = Number(btn.dataset.championJobId);
-      const isOriginal = btn.dataset.championIsOriginal === "true";
+      const variantId = Number(btn.dataset.championVariantId);
       const card = btn.closest<HTMLElement>(".winners-card");
       const feedback = card?.querySelector<HTMLTextAreaElement>("[data-feedback-input]");
       const comment = feedback?.value?.trim() || null;
       btn.dataset.busy = "true";
-      const body = isOriginal
-        ? {
-            job_id: jobId,
-            variant_id: null,
-            is_original: true,
-            comment,
-          }
-        : {
-            job_id: jobId,
-            variant_id: Number(btn.dataset.championVariantId),
-            comment,
-          };
       const res = await fetch("/api/console/mix-champion", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify(body),
+        body: JSON.stringify({ job_id: jobId, variant_id: variantId, comment }),
       });
       btn.dataset.busy = "false";
       if (!res.ok) {
@@ -3329,9 +3137,7 @@ function stemSoloUrls(sf) {
         return;
       }
       // Server-rendered re-render of the card (now in king mode) is
-      // simpler than rebuilding the DOM client-side. When ORIGINAL was
-      // crowned, the auto-spawned make-more job surfaces on the same
-      // card as the in-flight badge after the reload.
+      // simpler than rebuilding the DOM client-side.
       location.reload();
     });
   });

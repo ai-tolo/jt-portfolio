@@ -467,6 +467,7 @@ export async function getBucketsList(
   if (filters.q) params.set("q", filters.q);
   if (filters.category && filters.category !== "all") params.set("category", filters.category);
   if (filters.tags) params.set("tags", filters.tags);
+  if (filters.focus) params.set("focus", String(filters.focus));
   return call<BucketsListResponse>(`/buckets?${params}`);
 }
 
@@ -773,6 +774,9 @@ export async function postMixJudgement(body: {
   variant_a_id: number;
   variant_b_id: number;
   chosen_variant_id: number | null;
+  /** True when ORIGINAL beat both variants for this axis. chosen_variant_id
+   *  must be null in the same request. Phase 5, 2026-05-27. */
+  chose_original?: boolean;
   axis?: string | null;
   comment?: string | null;
 }): Promise<ApiResult<MixJudgementResponse>> {
@@ -812,6 +816,24 @@ export async function setMixChampion(
   comment?: string | null,
 ): Promise<ApiResult<ChampionResponse>> {
   const body: Record<string, unknown> = { job_id, variant_id };
+  if (comment && comment.trim()) body.comment = comment.trim();
+  return _post<ChampionResponse>("/mix/champion", body);
+}
+
+/** Crown ORIGINAL (the unprocessed source) as the king for a job —
+ *  declaring the source beats every variant. The engine sets
+ *  mix_jobs.champion_is_original=1 and synchronously spawns a fresh
+ *  make-more job for the same source, returning its job_id in
+ *  spawned_job_id. Phase 5, 2026-05-27. */
+export async function crownOriginal(
+  job_id: number,
+  comment?: string | null,
+): Promise<ApiResult<ChampionResponse>> {
+  const body: Record<string, unknown> = {
+    job_id,
+    variant_id: null,
+    is_original: true,
+  };
   if (comment && comment.trim()) body.comment = comment.trim();
   return _post<ChampionResponse>("/mix/champion", body);
 }

@@ -1,0 +1,370 @@
+---
+// "King mix crowned" surface — mirrors the production /portal/engineer
+// Winners card after a curator has voted all three taste-axis pairs and
+// crowned one variant as their cross-axis champion. Shows the king-mode
+// view: Original row + the single ♛ winning mix + the action strip
+// (Publish to Sounds / Make more mixes / Uncrown / Dismiss).
+//
+// Static visual mock. No real audio playback, no real publish call. The
+// payoff this carries is the END of the Mix Faceoff voting flow, so the
+// reader can see what crowning + publishing produces. Audio play buttons
+// flash on click and self-stop. The Engineer pair-card demo above this
+// component handles the live audio interaction.
+---
+
+<div class="wk-stage" data-wk-stage data-published="false">
+  <article class="wk-card">
+    <header class="wk-head">
+      <span class="wk-source">rainforest_post_karoke<span class="wk-source-ext">.wav</span></span>
+      <span class="wk-badge wk-badge-king">♛ Maroon</span>
+      <span class="wk-public-tag" data-wk-public-tag hidden>● public</span>
+    </header>
+
+    <div class="wk-body">
+      <div class="wk-wave" aria-hidden="true">
+        {Array.from({ length: 110 }).map((_, i) => {
+          const t = i / 110;
+          const env = (t < 0.08) ? 0.30 :
+                      (t < 0.32) ? 0.62 + 0.14 * Math.sin(i * 0.18) :
+                      (t < 0.55) ? 0.82 + 0.10 * Math.cos(i * 0.21) :
+                      (t < 0.75) ? 0.65 + 0.16 * Math.sin(i * 0.17) :
+                                   0.42;
+          const h = Math.max(8, Math.min(96, env * 96 + 4 * Math.sin(i * 0.7)));
+          return <span class="wk-wave-bar" style={`height:${h}%`}></span>;
+        })}
+      </div>
+
+      <ul class="wk-winner-row" role="list">
+        <li class="wk-winner wk-winner-source">
+          <button class="wk-play" type="button" data-wk-play aria-label="Play original">▶</button>
+          <div class="wk-meta">
+            <span class="wk-label">Original</span>
+            <span class="wk-sub">unprocessed source</span>
+          </div>
+        </li>
+        <li class="wk-winner wk-winner-champion">
+          <button class="wk-play wk-play-king" type="button" data-wk-play aria-label="Play king mix">▶</button>
+          <div class="wk-meta">
+            <span class="wk-label">♛ Maroon</span>
+            <span class="wk-sub">your king mix · recessed_warm</span>
+          </div>
+        </li>
+      </ul>
+
+      <p class="wk-comment">
+        <span class="wk-quote">&ldquo;</span>kick fits inside the bass now. low end finally feels like one instrument. needs a hair more air on the cymbals but i can live with that.<span class="wk-quote">&rdquo;</span>
+      </p>
+
+      <div class="wk-actions">
+        <button class="wk-action wk-action-publish" type="button" data-wk-publish>→ Publish to Sounds</button>
+        <button class="wk-action wk-action-more" type="button" data-wk-more>+ Make more mixes</button>
+        <button class="wk-action wk-action-uncrown" type="button" data-wk-uncrown>Uncrown</button>
+        <button class="wk-action wk-action-dismiss" type="button" data-wk-dismiss>✕ Dismiss</button>
+      </div>
+
+      <p class="wk-status" data-wk-status aria-live="polite"></p>
+    </div>
+  </article>
+</div>
+
+<script>
+  const stage = document.querySelector<HTMLElement>("[data-wk-stage]");
+  if (stage) {
+    const status = stage.querySelector<HTMLElement>("[data-wk-status]");
+    const publicTag = stage.querySelector<HTMLElement>("[data-wk-public-tag]");
+    const publishBtn = stage.querySelector<HTMLButtonElement>("[data-wk-publish]");
+    const moreBtn = stage.querySelector<HTMLButtonElement>("[data-wk-more]");
+    const uncrownBtn = stage.querySelector<HTMLButtonElement>("[data-wk-uncrown]");
+    const dismissBtn = stage.querySelector<HTMLButtonElement>("[data-wk-dismiss]");
+    const playBtns = stage.querySelectorAll<HTMLButtonElement>("[data-wk-play]");
+
+    const flash = (msg: string) => {
+      if (!status) return;
+      status.textContent = msg;
+      window.setTimeout(() => {
+        if (status.textContent === msg) status.textContent = "";
+      }, 1800);
+    };
+
+    playBtns.forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const wasPlaying = btn.dataset.playing === "true";
+        playBtns.forEach((b) => { b.dataset.playing = "false"; b.textContent = "▶"; });
+        if (!wasPlaying) {
+          btn.dataset.playing = "true";
+          btn.textContent = "❚❚";
+          flash("playing (demo only · no real audio)");
+          window.setTimeout(() => {
+            if (btn.dataset.playing === "true") {
+              btn.dataset.playing = "false";
+              btn.textContent = "▶";
+            }
+          }, 3200);
+        }
+      });
+    });
+
+    publishBtn?.addEventListener("click", () => {
+      const on = stage.dataset.published !== "true";
+      stage.dataset.published = on ? "true" : "false";
+      if (publishBtn) publishBtn.textContent = on ? "● Published" : "→ Publish to Sounds";
+      if (publicTag) {
+        if (on) publicTag.removeAttribute("hidden");
+        else publicTag.setAttribute("hidden", "");
+      }
+      flash(on ? "published to /sounds (demo)" : "unpublished (demo)");
+    });
+    moreBtn?.addEventListener("click", () => flash("queued · rendering 6 fresh variants across 3 taste axes"));
+    uncrownBtn?.addEventListener("click", () => flash("uncrowned · back to cross-compare"));
+    dismissBtn?.addEventListener("click", () => flash("dismissed from Winners (demo)"));
+  }
+</script>
+
+<style>
+  .wk-stage {
+    background: rgba(15, 10, 18, 0.94);
+    border: 1px solid rgba(245, 241, 232, 0.10);
+    border-radius: 8px;
+    color: #f5f1e8;
+    font-family: "Geist Variable", ui-sans-serif, system-ui, sans-serif;
+    overflow: hidden;
+  }
+
+  .wk-card {
+    /* Gold halo when crowned. Mirrors .winners-card-crowned on the prod page. */
+    box-shadow:
+      inset 0 0 0 1px rgba(255, 179, 71, 0.22),
+      0 0 32px -10px rgba(255, 179, 71, 0.32);
+    padding: 22px 24px 20px;
+  }
+
+  /* ── Head ── */
+  .wk-head {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin-bottom: 14px;
+  }
+  .wk-source {
+    flex: 1 1 auto;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-style: italic;
+    font-size: 16px;
+    font-weight: 700;
+    color: #00ff4d;
+    background: rgba(0, 255, 77, 0.04);
+    border: 1px solid rgba(0, 255, 77, 0.32);
+    border-radius: 4px;
+    padding: 5px 10px;
+    box-shadow: 0 0 12px rgba(0, 255, 77, 0.12);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    min-width: 0;
+  }
+  .wk-source-ext { opacity: 0.42; font-weight: 500; font-size: 0.7em; color: #f5f1e8; }
+  .wk-badge {
+    flex: 0 0 auto;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-style: italic;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    padding: 5px 11px;
+    border-radius: 3px;
+  }
+  .wk-badge-king {
+    color: #ffb347;
+    background: rgba(255, 179, 71, 0.10);
+    border: 1px solid rgba(255, 179, 71, 0.55);
+    box-shadow: 0 0 14px rgba(255, 179, 71, 0.28);
+  }
+  .wk-public-tag {
+    flex: 0 0 auto;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 10.5px;
+    letter-spacing: 0.10em;
+    color: #00ff4d;
+    background: rgba(0, 255, 77, 0.08);
+    border: 1px solid rgba(0, 255, 77, 0.45);
+    border-radius: 2px;
+    padding: 3px 8px;
+  }
+  .wk-public-tag[hidden] { display: none !important; }
+
+  /* ── Wave ── */
+  .wk-wave {
+    position: relative;
+    height: 54px;
+    background: #07060c;
+    border-radius: 3px;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    gap: 1px;
+    padding: 0 6px;
+    margin-bottom: 14px;
+  }
+  .wk-wave-bar {
+    flex: 1 1 0;
+    background: linear-gradient(180deg, rgba(255, 179, 71, 0.58) 0%, rgba(255, 179, 71, 0.22) 100%);
+    border-radius: 1px;
+  }
+
+  /* ── Winner rows ── */
+  .wk-winner-row {
+    list-style: none;
+    padding: 0;
+    margin: 0 0 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .wk-winner {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 12px;
+    border-radius: 4px;
+    background: rgba(245, 241, 232, 0.02);
+    border: 1px solid rgba(245, 241, 232, 0.10);
+  }
+  .wk-winner-champion {
+    border-color: rgba(255, 179, 71, 0.55);
+    background: rgba(255, 179, 71, 0.04);
+    box-shadow: inset 0 0 0 1px rgba(255, 179, 71, 0.18);
+  }
+  .wk-play {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    border: 1px solid rgba(245, 241, 232, 0.32);
+    background: rgba(245, 241, 232, 0.04);
+    color: #f5f1e8;
+    font-size: 12px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 160ms ease, border-color 160ms ease;
+    flex: 0 0 auto;
+  }
+  .wk-play[data-playing="true"] {
+    background: rgba(0, 255, 77, 0.08);
+    border-color: rgba(0, 255, 77, 0.55);
+    color: #00ff4d;
+  }
+  .wk-play-king {
+    border-color: rgba(255, 179, 71, 0.55);
+    color: #ffb347;
+  }
+  .wk-meta {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+  }
+  .wk-label {
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-style: italic;
+    font-size: 13px;
+    font-weight: 700;
+    color: #f5f1e8;
+  }
+  .wk-winner-champion .wk-label {
+    color: #ffb347;
+  }
+  .wk-sub {
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 10.5px;
+    color: rgba(245, 241, 232, 0.55);
+    letter-spacing: 0.04em;
+  }
+
+  /* ── King comment ── */
+  .wk-comment {
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-style: italic;
+    font-size: 12.5px;
+    line-height: 1.55;
+    color: rgba(245, 241, 232, 0.82);
+    background: rgba(255, 179, 71, 0.04);
+    border-left: 2px solid rgba(255, 179, 71, 0.45);
+    border-radius: 2px;
+    padding: 10px 12px;
+    margin: 0 0 14px;
+  }
+  .wk-quote {
+    color: rgba(255, 179, 71, 0.78);
+    font-weight: 700;
+  }
+
+  /* ── Actions ── */
+  .wk-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .wk-action {
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-style: italic;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    color: rgba(245, 241, 232, 0.88);
+    background: transparent;
+    border: 1px solid rgba(245, 241, 232, 0.32);
+    border-radius: 3px;
+    padding: 7px 12px;
+    cursor: pointer;
+    transition: color 160ms ease, border-color 160ms ease, background 160ms ease, transform 80ms ease, filter 160ms ease;
+  }
+  .wk-action:hover {
+    color: #f5f1e8;
+    border-color: rgba(245, 241, 232, 0.55);
+  }
+  .wk-action:active { transform: translateY(1px); }
+  .wk-action-publish {
+    flex: 1 1 auto;
+    color: #0e0c14;
+    background: linear-gradient(90deg, #ff2761 0%, #ff5a3c 50%, #ffb347 100%);
+    border-color: transparent;
+  }
+  .wk-action-publish:hover {
+    filter: brightness(1.08);
+    color: #0e0c14;
+  }
+  .wk-stage[data-published="true"] .wk-action-publish {
+    background: rgba(0, 255, 77, 0.10);
+    border: 1px solid rgba(0, 255, 77, 0.55);
+    color: #00ff4d;
+    filter: none;
+  }
+  .wk-action-more {
+    color: rgba(14, 196, 252, 0.85);
+    border-color: rgba(14, 196, 252, 0.45);
+  }
+  .wk-action-more:hover {
+    color: var(--brand-cyan);
+    border-color: var(--brand-cyan);
+  }
+  .wk-action-uncrown { color: rgba(245, 241, 232, 0.62); }
+  .wk-action-dismiss {
+    color: rgba(255, 39, 97, 0.78);
+    border-color: rgba(255, 39, 97, 0.32);
+  }
+  .wk-action-dismiss:hover {
+    color: var(--brand-pink);
+    border-color: var(--brand-pink);
+  }
+
+  .wk-status {
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 11.5px;
+    color: var(--brand-cyan);
+    margin-top: 10px;
+    min-height: 14px;
+    opacity: 0.85;
+  }
+</style>
