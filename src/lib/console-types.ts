@@ -693,6 +693,13 @@ export interface WinnersJob {
   /** Whether the king variant's asset is flagged public=1 (visible on
    *  the Sounds page). null until a king is crowned. */
   king_is_public: boolean | null;
+  /** In-flight successor job for the same source, if one is currently
+   *  rendering. Surfaces a "Rendering N/6" badge on the card so the
+   *  curator sees that "Make more mixes" is being worked on. */
+  in_flight_job_id: number | null;
+  in_flight_status: "pending" | "splitting_stems" | "rendering" | null;
+  in_flight_variants_done: number | null;
+  in_flight_variants_expected: number;
 }
 
 export interface WinnersResponse {
