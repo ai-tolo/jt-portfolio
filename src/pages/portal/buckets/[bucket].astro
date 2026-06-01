@@ -16,7 +16,8 @@ import type {
 // browsing. Named-bucket URLs (e.g. /portal/buckets/loop) still resolve
 // for anyone bookmarking them.
 const VALID_BUCKETS: BucketView[] = ["all", "inbox", "jam", "loops", "field", "tracks", "trash"];
-const VALID_CATEGORIES: BucketCategory[] = ["all", "jam", "loops", "field", "tracks", "other"];
+const VALID_CATEGORIES: BucketCategory[] = ["all", "jam", "loops", "oneshot", "field", "tracks", "other"];
+const PAGE_SIZE = 50;
 const VALID_SORTS: BucketSort[] = [
   "recent", "oldest",
   "longest", "shortest",
@@ -47,6 +48,20 @@ const focus: number | undefined = focusParam && /^\d+$/.test(focusParam)
   ? Number(focusParam)
   : undefined;
 
+// Duration range (seconds). Parsed leniently; non-numeric → undefined.
+const parseNum = (v: string | null): number | undefined => {
+  if (v === null || v.trim() === "") return undefined;
+  const n = Number(v);
+  return Number.isFinite(n) && n >= 0 ? n : undefined;
+};
+const durationMin = parseNum(url.searchParams.get("duration_min"));
+const durationMax = parseNum(url.searchParams.get("duration_max"));
+
+// Pagination. ?offset= drives the window; ?focus= forces page 1 server-side
+// so we zero it here too so the footer math agrees.
+const offsetParam = parseNum(url.searchParams.get("offset"));
+const offset = focus !== undefined ? 0 : Math.max(0, Math.floor(offsetParam ?? 0));
+
 const category: BucketCategory = VALID_CATEGORIES.includes(categoryRaw as BucketCategory)
   ? (categoryRaw as BucketCategory)
   : "all";
@@ -72,7 +87,11 @@ const tagsParam = activeTags.join(",");
 // Top-tags reflects what's available in the bucket+category view BEFORE
 // the active filter, so the strip stays stable as the curator AND-narrows.
 const [primary, topTagsRes] = await Promise.all([
-  getBucketsList(bucket, { sort, q, category, tags: tagsParam, focus }),
+  getBucketsList(bucket, {
+    sort, q, category, tags: tagsParam, focus,
+    duration_min: durationMin, duration_max: durationMax,
+    offset, limit: PAGE_SIZE,
+  }),
   getTopTags(bucket, category, 10),
 ]);
 
@@ -85,6 +104,33 @@ const fetchError = primary.ok
     : primary.error.kind;
 
 const topTags: TopTag[] = topTagsRes.ok ? topTagsRes.data.tags : [];
+
+// Pagination state for the footer. has_more comes from the engine; fall
+// back to offset+page<total when an older engine omits it.
+const pageStart = items.length > 0 ? offset + 1 : 0;
+const pageEnd = offset + items.length;
+const hasMore = primary.ok
+  ? (primary.data.has_more ?? pageEnd < total)
+  : false;
+const hasPrev = offset > 0;
+
+// Build a URL that preserves all active filters and swaps only ?offset=.
+// Used by Prev/Next. focus is intentionally dropped on page change (paging
+// past a pinned row is meaningless).
+const pageHref = (newOffset: number): string => {
+  const p = new URLSearchParams();
+  if (category !== "all") p.set("category", category);
+  if (sortExplicit) p.set("sort", sort);
+  if (q) p.set("q", q);
+  if (tagsParam) p.set("tags", tagsParam);
+  if (durationMin !== undefined) p.set("duration_min", String(durationMin));
+  if (durationMax !== undefined) p.set("duration_max", String(durationMax));
+  if (newOffset > 0) p.set("offset", String(newOffset));
+  const qs = p.toString();
+  return qs ? `/portal/buckets/${bucket}?${qs}` : `/portal/buckets/${bucket}`;
+};
+const prevHref = pageHref(Math.max(0, offset - PAGE_SIZE));
+const nextHref = pageHref(offset + PAGE_SIZE);
 
 const BUCKET_TITLE: Record<BucketView, string> = {
   all: "All",
@@ -107,6 +153,8 @@ const BUCKET_TITLE: Record<BucketView, string> = {
       q={q}
       activeTags={activeTags}
       topTags={topTags}
+      durationMin={durationMin}
+      durationMax={durationMax}
     />
 
     {fetchError ? (
@@ -118,13 +166,30 @@ const BUCKET_TITLE: Record<BucketView, string> = {
         <p class="count">
           <strong>{total.toLocaleString()}</strong>
           {bucket === "all" ? " items" : ` in ${BUCKET_TITLE[bucket]}`}
-          {items.length < total && ` (${items.length} loaded)`}
+          {total > items.length && ` · showing ${pageStart.toLocaleString()}–${pageEnd.toLocaleString()}`}
         </p>
         <ul class="cards" role="list">
           {items.map((item, idx) => (
             <li><BucketCard item={item} index={idx} /></li>
           ))}
         </ul>
+        {(hasPrev || hasMore) && (
+          <nav class="pager" aria-label="Pagination">
+            {hasPrev ? (
+              <a class="pager-btn" href={prevHref} rel="prev">← Prev</a>
+            ) : (
+              <span class="pager-btn is-disabled" aria-disabled="true">← Prev</span>
+            )}
+            <span class="pager-pos">
+              {pageStart.toLocaleString()}–{pageEnd.toLocaleString()} of {total.toLocaleString()}
+            </span>
+            {hasMore ? (
+              <a class="pager-btn" href={nextHref} rel="next">Next →</a>
+            ) : (
+              <span class="pager-btn is-disabled" aria-disabled="true">Next →</span>
+            )}
+          </nav>
+        )}
       </>
     )}
   </section>
@@ -161,6 +226,45 @@ const BUCKET_TITLE: Record<BucketView, string> = {
     display: grid;
     gap: 24px;
     grid-template-columns: 1fr;
+  }
+
+  /* Pagination footer. Anchor-based (server round-trip) so pages are
+     URL-shareable and back/forward works. Mirrors the count strip tone. */
+  .pager {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-4);
+    padding: var(--space-4) 0 var(--space-2);
+    font-size: var(--fs-small);
+  }
+  .pager-btn {
+    font-family: var(--font-mono, monospace);
+    font-size: var(--fs-small);
+    padding: 6px 14px;
+    border: 1px solid color-mix(in srgb, var(--accent) 32%, transparent);
+    border-radius: 8px;
+    color: var(--accent);
+    text-decoration: none;
+    background: color-mix(in srgb, var(--accent) 6%, transparent);
+    transition: background 120ms ease, border-color 120ms ease;
+  }
+  .pager-btn:hover {
+    background: color-mix(in srgb, var(--accent) 14%, transparent);
+    border-color: color-mix(in srgb, var(--accent) 52%, transparent);
+  }
+  .pager-btn.is-disabled {
+    color: var(--muted);
+    border-color: color-mix(in srgb, var(--muted) 24%, transparent);
+    background: transparent;
+    cursor: default;
+    opacity: 0.5;
+  }
+  .pager-pos {
+    color: var(--muted);
+    font-variant-numeric: tabular-nums;
+    min-width: 12ch;
+    text-align: center;
   }
 </style>
 

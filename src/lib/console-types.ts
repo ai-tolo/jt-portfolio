@@ -286,7 +286,7 @@ export type BucketView = BucketName | "all";
 
 /** User-facing filter taxonomy (replaced the prior Source + content_type
  *  + Stars chips on 2026-05-17 evening; see Notion: Console (Build)). */
-export type BucketCategory = "all" | "jam" | "loops" | "field" | "tracks" | "other";
+export type BucketCategory = "all" | "jam" | "loops" | "oneshot" | "field" | "tracks" | "other";
 
 /** Legacy SOURCE enum kept for type compat on BucketAsset.source_type;
  *  no longer a user-facing filter. */
@@ -414,6 +414,14 @@ export interface BucketsListFilters {
    *  links from Winners cards / lineage chips so the scroll-target row
    *  is always in the rendered DOM. */
   focus?: number;
+  /** Duration range in seconds (inclusive). Either bound optional.
+   *  Powers the "song candidates 45s–5min" workflow. NULL-duration rows
+   *  are excluded when either bound is set. */
+  duration_min?: number;
+  duration_max?: number;
+  /** Pagination. offset defaults to 0, limit to 50 (engine caps at 200). */
+  offset?: number;
+  limit?: number;
 }
 
 export interface TopTag {
@@ -432,6 +440,11 @@ export interface BucketsListResponse {
   bucket: BucketName;
   total: number;
   items: BucketAsset[];
+  /** Pagination echo from the engine. offset/limit may be absent on older
+   *  responses; treat undefined as offset=0 and limit=items.length. */
+  offset?: number;
+  limit?: number;
+  has_more?: boolean;
 }
 
 export interface PromoteCandidatesResponse {

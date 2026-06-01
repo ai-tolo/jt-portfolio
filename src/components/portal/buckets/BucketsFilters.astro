@@ -16,19 +16,37 @@ interface Props {
   q: string;
   activeTags: string[];
   topTags: TopTag[];
+  /** Active duration range (seconds), if any. Drives the preset chip
+   *  active-state and prefills the manual inputs. */
+  durationMin?: number;
+  durationMax?: number;
 }
 
-const { bucket, category, sort, sortExplicit, q, activeTags, topTags } = Astro.props;
+const { bucket, category, sort, sortExplicit, q, activeTags, topTags, durationMin, durationMax } = Astro.props;
 const activeSet = new Set(activeTags);
 
 const CATEGORIES: { id: BucketCategory; label: string; hint: string }[] = [
   { id: "all", label: "All", hint: "Everything in this bucket" },
   { id: "jam", label: "Jam", hint: "Long-form (>5min) musical captures (auto-classified)" },
   { id: "loops", label: "Loops", hint: "Loop-ready rows (curator-picked)" },
+  { id: "oneshot", label: "One-shot", hint: "Single hits — kicks, snares, stabs, vox chops (<10s). Includes your Splice library so you can grab a sample mid-build." },
   { id: "field", label: "Field", hint: "Voice memos + audio extracted from videos (auto-classified)" },
   { id: "tracks", label: "Tracks", hint: "Curator-picked tracks" },
   { id: "other", label: "Inbox", hint: "Unbucketed residual, awaiting auto-classification or curator pick" },
 ];
+
+// Duration preset chips for the most common range needs. Each maps to a
+// [min, max] pair (null = unbounded). The "Songs" preset is the headline
+// use-case: find song candidates in the 45s–5min band.
+type DurationPreset = { id: string; label: string; min: number | null; max: number | null; hint: string };
+const DURATION_PRESETS: DurationPreset[] = [
+  { id: "songs", label: "Songs 45s–5m", min: 45, max: 300, hint: "Song candidates: 45 seconds to 5 minutes" },
+  { id: "short", label: "Loops <45s", min: null, max: 45, hint: "Loop-length and shorter" },
+  { id: "long", label: "Long >5m", min: 300, max: null, hint: "Long-form: over 5 minutes" },
+];
+const durationActive = durationMin !== undefined || durationMax !== undefined;
+const presetIsActive = (p: DurationPreset): boolean =>
+  (p.min ?? undefined) === durationMin && (p.max ?? undefined) === durationMax;
 
 // Sort toggles consolidate paired sort directions into a single 3-state
 // button per dimension: off → asc → desc → off. The "off" position falls
@@ -88,14 +106,29 @@ const buildHref = (overrides: Record<string, string | null>): string => {
   if (category && category !== "all") p.set("category", category);
   if (q) p.set("q", q);
   if (tagsCsv) p.set("tags", tagsCsv);
+  if (durationMin !== undefined) p.set("duration_min", String(durationMin));
+  if (durationMax !== undefined) p.set("duration_max", String(durationMax));
   for (const [k, v] of Object.entries(overrides)) {
     if (v === null || v === "") p.delete(k);
     else p.set(k, v);
   }
   if (p.get("category") === "all") p.delete("category");
+  // Changing any filter resets pagination to page 1.
+  p.delete("offset");
   const qs = p.toString();
   return qs ? `${base}?${qs}` : base;
 };
+
+// Duration preset href: toggles the preset (click active → clear). Resets
+// to page 1 via buildHref's offset delete.
+const durationHref = (p: DurationPreset): string =>
+  presetIsActive(p)
+    ? buildHref({ duration_min: null, duration_max: null })
+    : buildHref({
+        duration_min: p.min === null ? null : String(p.min),
+        duration_max: p.max === null ? null : String(p.max),
+      });
+const clearDurationHref = buildHref({ duration_min: null, duration_max: null });
 
 // Each chip's href toggles its tag in/out of the active set. Active tags
 // AND together server-side, so clicking adds an extra constraint; clicking
@@ -179,6 +212,50 @@ const activeCategory = CATEGORIES.find((c) => c.id === category) ?? CATEGORIES[0
         </li>
       ))}
     </ul>
+  </nav>
+
+  {/*
+    Duration filter. Preset chips for the common ranges + a manual min/max
+    form for precise needs. The manual form is a native GET submit with
+    hidden inputs preserving the other active filters, so it works without
+    JS and produces a shareable URL. Empty inputs submit as "" → engine
+    treats as unbounded.
+  */}
+  <nav class="dur-row" aria-label="Filter by duration">
+    <span class="dur-label">Length</span>
+    <ul class="dur-presets" role="list">
+      {DURATION_PRESETS.map((p) => (
+        <li>
+          <a
+            href={durationHref(p)}
+            class:list={["dur-chip", { active: presetIsActive(p) }]}
+            aria-pressed={presetIsActive(p) ? "true" : "false"}
+            title={p.hint}
+          >{p.label}</a>
+        </li>
+      ))}
+    </ul>
+    <form class="dur-form" method="get" action={base}>
+      {sortExplicit && <input type="hidden" name="sort" value={sort} />}
+      {category !== "all" && <input type="hidden" name="category" value={category} />}
+      {q && <input type="hidden" name="q" value={q} />}
+      {tagsCsv && <input type="hidden" name="tags" value={tagsCsv} />}
+      <input
+        type="number" class="dur-input" name="duration_min"
+        min="0" step="1" placeholder="min s"
+        value={durationMin ?? ""} aria-label="Minimum duration in seconds"
+      />
+      <span class="dur-sep" aria-hidden="true">–</span>
+      <input
+        type="number" class="dur-input" name="duration_max"
+        min="0" step="1" placeholder="max s"
+        value={durationMax ?? ""} aria-label="Maximum duration in seconds"
+      />
+      <button type="submit" class="dur-apply">Apply</button>
+    </form>
+    {durationActive && (
+      <a href={clearDurationHref} class="dur-clear" title="Clear duration filter">Clear</a>
+    )}
   </nav>
 
   {/*
@@ -432,6 +509,100 @@ const activeCategory = CATEGORIES.find((c) => c.id === category) ?? CATEGORIES[0
     background: var(--accent);
     border-color: var(--accent);
   }
+
+  /* ── Duration filter row ──────────────────────────────────────────── */
+  .dur-row {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+    padding: 8px 0;
+  }
+  .dur-label {
+    padding: 0 14px 0 0;
+    font-size: 10px;
+    font-weight: var(--fw-semibold);
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--muted);
+    border-right: 1px solid var(--line);
+    margin-right: 4px;
+  }
+  .dur-presets {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    gap: 4px;
+    flex-wrap: wrap;
+  }
+  .dur-chip {
+    display: inline-flex;
+    align-items: center;
+    padding: 6px 12px;
+    font-size: 12px;
+    font-family: var(--font-mono, monospace);
+    color: var(--text);
+    background: transparent;
+    border: 1px solid var(--line);
+    border-radius: 7px;
+    text-decoration: none;
+    transition: color 140ms ease, border-color 140ms ease, background-color 140ms ease;
+  }
+  .dur-chip:hover,
+  .dur-chip:focus-visible {
+    color: var(--accent);
+    border-color: var(--accent);
+  }
+  .dur-chip.active {
+    color: var(--bg);
+    background: var(--accent);
+    border-color: var(--accent);
+  }
+  .dur-form {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    margin-left: 4px;
+  }
+  .dur-input {
+    width: 72px;
+    padding: 6px 8px;
+    font-size: 12px;
+    font-family: var(--font-mono, monospace);
+    color: var(--text);
+    background: color-mix(in srgb, var(--ink) 4%, transparent);
+    border: 1px solid var(--line);
+    border-radius: 7px;
+  }
+  .dur-input:focus-visible {
+    outline: none;
+    border-color: var(--accent);
+  }
+  .dur-sep { color: var(--muted); }
+  .dur-apply {
+    padding: 6px 12px;
+    font-size: 12px;
+    font-weight: var(--fw-semibold);
+    color: var(--accent);
+    background: color-mix(in srgb, var(--accent) 6%, transparent);
+    border: 1px solid color-mix(in srgb, var(--accent) 32%, transparent);
+    border-radius: 7px;
+    cursor: pointer;
+    transition: background-color 140ms ease, border-color 140ms ease;
+  }
+  .dur-apply:hover {
+    background: color-mix(in srgb, var(--accent) 14%, transparent);
+    border-color: var(--accent);
+  }
+  .dur-clear {
+    font-size: 11px;
+    color: var(--muted);
+    text-decoration: underline;
+    text-underline-offset: 2px;
+    margin-left: 2px;
+  }
+  .dur-clear:hover { color: var(--accent); }
 
   /* ── Search bar (scoped to selected category) ─────────────────────── */
   .searchbar {
