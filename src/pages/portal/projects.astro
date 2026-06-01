@@ -3,12 +3,33 @@ import PortalLayout from "../../layouts/PortalLayout.astro";
 import { projects as fetchProjects, getPendingPrints } from "../../lib/console-api";
 import type { AlsProject, PendingPrint } from "../../lib/console-types";
 
+const showArchived = Astro.url.searchParams.get("archived") === "1";
 const [res, pendingRes] = await Promise.all([
-  fetchProjects(),
+  fetchProjects({ includeArchived: showArchived }),
   getPendingPrints(),
 ]);
 const items: AlsProject[] = res.ok ? res.data.projects : [];
 const pending: PendingPrint[] = pendingRes.ok ? pendingRes.data.items : [];
+
+// Collection grouping (mirrors the Sounds page). Order: named collections
+// in engine first-seen order, then ungrouped last. Cards are tagged with a
+// `newGroup` flag so the render can emit a header row when the group flips.
+const collectionOrder: string[] = res.ok ? (res.data.collections ?? []) : [];
+const collRank = new Map(collectionOrder.map((c, i) => [c, i] as const));
+const groupedItems = [...items].sort((a, b) => {
+  const ra = a.collection ? (collRank.get(a.collection) ?? 998) : 999;
+  const rb = b.collection ? (collRank.get(b.collection) ?? 998) : 999;
+  return ra - rb; // stable within group: engine already sorts by recency
+});
+let _prevColl: string | null | undefined;
+let _first = true;
+const projectRows = groupedItems.map((p) => {
+  const coll = p.collection ?? null;
+  const newGroup = _first || coll !== _prevColl;
+  _first = false;
+  _prevColl = coll;
+  return { p, newGroup, coll };
+});
 
 // Cluster pending prints by group_id assigned server-side (5-min window).
 // Preserves the original noticed_at order — first occurrence of a group_id
@@ -82,6 +103,9 @@ function daysAgo(s?: string | null): string {
       <h1>Projects</h1>
       <p class="proj-sub">
         Every <code>.als</code> in the catalog. {items.length} total · <strong>{withBounce.length}</strong> with a bounced render auto-detected in the project folder.
+        <a class="proj-archived-toggle" href={showArchived ? "/portal/projects" : "/portal/projects?archived=1"}>
+          {showArchived ? "← Hide archived" : "Show archived"}
+        </a>
       </p>
     </header>
 
@@ -184,7 +208,7 @@ function daysAgo(s?: string | null): string {
       <p class="empty">No projects in the catalog yet.</p>
     ) : (
       <ul class="proj-list" role="list">
-        {items.map((p) => {
+        {projectRows.map(({ p, newGroup, coll }) => {
           const title = p.display_name ?? splitAls(p.filename).base;
           const ext = p.display_name ? "" : splitAls(p.filename).ext;
           const samplesShown = p.samples ?? [];
@@ -196,8 +220,14 @@ function daysAgo(s?: string | null): string {
           if (p.track_names && p.track_names.length > 0) tech.push(`${p.track_names.length} tracks`);
           tech.push(`${p.sample_count ?? samplesShown.length} samples`);
           return (
+            <>
+            {newGroup && (
+              <li class="proj-group-header" role="presentation">
+                {coll ?? "Ungrouped"}
+              </li>
+            )}
             <li
-              class="proj-card"
+              class={`proj-card${p.archived ? " is-archived" : ""}`}
               data-asset-id={String(p.asset_id)}
               data-bounced-path={p.bounced_track_path ?? ""}
             >
@@ -278,6 +308,31 @@ function daysAgo(s?: string | null): string {
                   </ul>
                 </details>
               )}
+              {(p.derived_tracks?.length ?? 0) > 0 && (
+                <details class="proj-derived" open>
+                  <summary>
+                    <strong>Engineered from this project ({p.derived_tracks!.length})</strong>
+                  </summary>
+                  <ul role="list" class="proj-derived-list">
+                    {p.derived_tracks!.map((d) => (
+                      <li class="proj-derived-row">
+                        <a
+                          class="proj-derived-link"
+                          href={`/portal/buckets/all?focus=${d.asset_id}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          title="Open this track in Buckets"
+                        >{(d.display_name ?? d.filename).replace(/\.(wav|aif|aiff|mp3|m4a|flac)$/i, "")}</a>
+                        {d.duration_seconds && (
+                          <span class="proj-derived-dur">
+                            {Math.floor(d.duration_seconds / 60)}:{String(Math.floor(d.duration_seconds % 60)).padStart(2, "0")}
+                          </span>
+                        )}
+                      </li>
+                    ))}
+                  </ul>
+                </details>
+              )}
               {p.bounced_track_path && (
                 <div class="proj-actions">
                   <button
@@ -288,7 +343,35 @@ function daysAgo(s?: string | null): string {
                   <span class="status-line" data-status-line aria-live="polite"></span>
                 </div>
               )}
+              {/* Phase B manage row: open in Ableton (M3), collection
+                  label (commit on blur), archive toggle. */}
+              <div class="proj-manage-row">
+                <button
+                  type="button"
+                  class="proj-open-btn"
+                  data-action="open-project"
+                  title="Open this project in Ableton on M3"
+                >⧉ Open in Ableton</button>
+                <input
+                  type="text"
+                  class="proj-collection-input"
+                  data-action="collection-input"
+                  value={p.collection ?? ""}
+                  placeholder="collection…"
+                  aria-label="Collection label"
+                  autocomplete="off"
+                />
+                <button
+                  type="button"
+                  class="proj-archive-btn"
+                  data-action="archive-project"
+                  data-archived={p.archived ? "true" : "false"}
+                  title={p.archived ? "Restore from archive" : "Archive this project"}
+                >{p.archived ? "Unarchive" : "Archive"}</button>
+                <span class="status-line" data-status-line aria-live="polite"></span>
+              </div>
             </li>
+            </>
           );
         })}
       </ul>
@@ -339,6 +422,102 @@ function daysAgo(s?: string | null): string {
     border: 1px solid var(--card-border, rgba(255,255,255,0.08));
     border-radius: 6px;
     padding: 12px 16px;
+  }
+  .proj-card.is-archived { opacity: 0.55; }
+
+  /* Phase B: collection group header + manage row + derived + toggle. */
+  .proj-group-header {
+    list-style: none;
+    margin: 18px 0 2px;
+    padding: 4px 2px;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--muted, rgba(245,241,232,0.5));
+    border-bottom: 1px solid var(--card-border, rgba(255,255,255,0.08));
+  }
+  .proj-archived-toggle {
+    margin-left: 10px;
+    font-size: 12px;
+    color: var(--muted, rgba(245,241,232,0.55));
+    text-decoration: underline;
+    text-underline-offset: 2px;
+  }
+  .proj-archived-toggle:hover { color: var(--accent, #0ec4fc); }
+  .proj-manage-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 10px;
+    padding-top: 10px;
+    border-top: 1px solid var(--card-border, rgba(255,255,255,0.06));
+    flex-wrap: wrap;
+  }
+  .proj-open-btn {
+    padding: 5px 11px;
+    font-size: 12px;
+    font-family: var(--font-mono, monospace);
+    color: #f5b94d;
+    background: rgba(245, 185, 77, 0.08);
+    border: 1px solid rgba(245, 185, 77, 0.45);
+    border-radius: 5px;
+    cursor: pointer;
+    transition: background 120ms ease, border-color 120ms ease, color 120ms ease;
+  }
+  .proj-open-btn:hover {
+    color: #ffce6e;
+    background: rgba(245, 185, 77, 0.16);
+    border-color: rgba(245, 185, 77, 0.7);
+  }
+  .proj-open-btn:disabled { opacity: 0.6; cursor: default; }
+  .proj-collection-input {
+    flex: 1;
+    min-width: 120px;
+    max-width: 220px;
+    padding: 5px 9px;
+    font-size: 12px;
+    color: var(--text, #f5f1e8);
+    background: rgba(255,255,255,0.03);
+    border: 1px solid var(--card-border, rgba(255,255,255,0.12));
+    border-radius: 5px;
+  }
+  .proj-collection-input:focus-visible {
+    outline: none;
+    border-color: var(--accent, #0ec4fc);
+  }
+  .proj-archive-btn {
+    padding: 5px 11px;
+    font-size: 12px;
+    color: var(--muted, rgba(245,241,232,0.6));
+    background: transparent;
+    border: 1px solid var(--card-border, rgba(255,255,255,0.14));
+    border-radius: 5px;
+    cursor: pointer;
+    transition: color 120ms ease, border-color 120ms ease;
+  }
+  .proj-archive-btn:hover {
+    color: var(--text, #f5f1e8);
+    border-color: rgba(255,255,255,0.4);
+  }
+  .proj-derived { margin-top: 8px; }
+  .proj-derived-list { list-style: none; padding: 0; margin: 4px 0 0; }
+  .proj-derived-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 2px 0;
+  }
+  .proj-derived-link {
+    color: var(--accent, #0ec4fc);
+    text-decoration: none;
+    font-size: 13px;
+  }
+  .proj-derived-link:hover { text-decoration: underline; }
+  .proj-derived-dur {
+    font-size: 11px;
+    color: var(--muted, rgba(245,241,232,0.5));
+    font-variant-numeric: tabular-nums;
   }
   .proj-head-row {
     display: flex;
@@ -744,6 +923,95 @@ function daysAgo(s?: string | null): string {
       }
       activeCard = null;
     };
+
+    // ── Phase B: open-in-Ableton + archive (delegated click) ──────────
+    const projPostJSON = async (url: string, body: unknown) =>
+      fetch(url, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify(body),
+      });
+
+    root.addEventListener("click", async (e) => {
+      const target = e.target as HTMLElement | null;
+      const card = target?.closest<HTMLElement>(".proj-card");
+      if (!card) return;
+      const assetId = Number(card.getAttribute("data-asset-id"));
+      if (!Number.isFinite(assetId)) return;
+
+      const openBtn = target?.closest<HTMLButtonElement>('[data-action="open-project"]');
+      if (openBtn) {
+        const orig = openBtn.textContent;
+        openBtn.disabled = true;
+        openBtn.textContent = "opening…";
+        setStatus(card, "");
+        try {
+          const res = await projPostJSON("/api/console/projects-open", { project_asset_id: assetId });
+          if (res.ok) {
+            openBtn.textContent = "✓ opened on M3";
+            setStatus(card, "Launched in Ableton", "ok");
+            setTimeout(() => { openBtn.textContent = orig; openBtn.disabled = false; }, 2500);
+          } else {
+            const er = await res.json().catch(() => ({}));
+            setStatus(card, "Open failed: " + JSON.stringify(er.error ?? er), "err");
+            openBtn.textContent = orig;
+            openBtn.disabled = false;
+          }
+        } catch (err) {
+          setStatus(card, "Open failed: " + String(err), "err");
+          openBtn.textContent = orig;
+          openBtn.disabled = false;
+        }
+        return;
+      }
+
+      const archiveBtn = target?.closest<HTMLButtonElement>('[data-action="archive-project"]');
+      if (archiveBtn) {
+        const currentlyArchived = archiveBtn.getAttribute("data-archived") === "true";
+        archiveBtn.disabled = true;
+        const res = await projPostJSON("/api/console/projects-archive", {
+          project_asset_id: assetId,
+          archived: !currentlyArchived,
+        });
+        if (res.ok) {
+          location.reload();
+        } else {
+          setStatus(card, "Archive failed", "err");
+          archiveBtn.disabled = false;
+        }
+        return;
+      }
+    });
+
+    // Collection label: commit on blur (focusout) or Enter. Mirrors the
+    // Sounds page commit-on-blur pattern.
+    const commitCollection = async (input: HTMLInputElement) => {
+      const card = input.closest<HTMLElement>(".proj-card");
+      if (!card) return;
+      const assetId = Number(card.getAttribute("data-asset-id"));
+      if (!Number.isFinite(assetId)) return;
+      const value = input.value.trim();
+      const res = await projPostJSON("/api/console/projects-update", {
+        project_asset_id: assetId,
+        collection: value || null,
+      });
+      setStatus(card, res.ok ? "Collection saved" : "Save failed", res.ok ? "ok" : "err");
+      if (res.ok) setTimeout(() => setStatus(card, ""), 1500);
+    };
+    root.addEventListener("focusout", (e) => {
+      const input = (e.target as HTMLElement | null)?.closest<HTMLInputElement>(
+        '[data-action="collection-input"]',
+      );
+      if (input) commitCollection(input);
+    });
+    root.addEventListener("keydown", (e) => {
+      const ke = e as KeyboardEvent;
+      if (ke.key !== "Enter") return;
+      const input = (ke.target as HTMLElement | null)?.closest<HTMLInputElement>(
+        '[data-action="collection-input"]',
+      );
+      if (input) { ke.preventDefault(); input.blur(); }
+    });
 
     root.addEventListener("click", async (e) => {
       const btn = (e.target as HTMLElement | null)?.closest<HTMLElement>(

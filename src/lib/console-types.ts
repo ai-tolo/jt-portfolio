@@ -113,6 +113,30 @@ export interface AlsProject {
    * Creates the "Built from: [print of X]" chain that powers
    * mastering-pass and remix lineage. */
   built_from_prints?: BuiltFromPrint[];
+  /** Phase B: curator grouping label (mirrors Sounds collections). */
+  collection?: string | null;
+  /** Phase B: true when soft-archived (als_projects.archived_at set). */
+  archived?: boolean;
+  /** Phase B: tracks/mixes the curator linked back to this project via
+   *  assets.als_project_id — the reverse of the Engineer "open source
+   *  project" link. Powers the "Engineered from this project" section. */
+  derived_tracks?: DerivedTrack[];
+}
+
+export interface DerivedTrack {
+  asset_id: number;
+  filename: string;
+  display_name?: string | null;
+  duration_seconds?: number | null;
+  waveform_path?: string | null;
+  bucket?: string | null;
+}
+
+export interface ProjectSearchHit {
+  asset_id: number;
+  filename: string;
+  display_name?: string | null;
+  last_modified?: string | null;
 }
 
 export interface LinkedPrint {
@@ -135,6 +159,8 @@ export interface BuiltFromPrint {
 
 export interface ProjectsResponse {
   projects: AlsProject[];
+  /** Distinct collection labels in first-seen order (for group headers). */
+  collections?: string[];
 }
 
 /** A .als project surfaced as a candidate parent for an unmatched print.
@@ -728,6 +754,13 @@ export interface WinnersJob {
   in_flight_status: "pending" | "splitting_stems" | "rendering" | null;
   in_flight_variants_done: number | null;
   in_flight_variants_expected: number;
+  /** Phase B: source .als project. 'linked' = curator-set; 'exact' /
+   *  'substring' = filename-similarity auto-suggestion. null when no match.
+   *  Powers the "Open source project in Ableton" affordance on the card. */
+  project_asset_id: number | null;
+  project_filename: string | null;
+  project_display_name: string | null;
+  project_match: "linked" | "exact" | "substring" | null;
 }
 
 export interface WinnersResponse {

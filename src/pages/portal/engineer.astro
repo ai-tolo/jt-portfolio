@@ -542,6 +542,34 @@ function stemSoloUrls(sf) {
                     title="Open this track in Buckets (new tab)"
                     aria-label="Open source track in Buckets"
                   >↗</a>
+                  {/* Phase B: source .als project. Open it in Ableton on M3
+                      to rescue a mix the engineer keeps mangling. The ⋯
+                      button links / changes / unlinks the project. */}
+                  <span class="winners-project" data-source-asset-id={w.source_asset_id}>
+                    {w.project_asset_id ? (
+                      <button
+                        type="button"
+                        class={`winners-open-project${w.project_match === "linked" ? " is-linked" : " is-auto"}`}
+                        data-open-project={w.project_asset_id}
+                        title={`Open "${w.project_display_name || w.project_filename}" in Ableton on M3${w.project_match === "linked" ? " (linked)" : ` (auto-matched: ${w.project_match})`}`}
+                      >⧉ {(w.project_display_name || w.project_filename || "").replace(/\.als$/i, "")}</button>
+                    ) : (
+                      <button
+                        type="button"
+                        class="winners-link-project"
+                        data-link-project={w.source_asset_id}
+                        title="Find and link the source .als project"
+                      >⧉ link project</button>
+                    )}
+                    <button
+                      type="button"
+                      class="winners-project-menu"
+                      data-project-menu={w.source_asset_id}
+                      data-current-project={w.project_asset_id ?? ""}
+                      title="Link / change / unlink project"
+                      aria-label="Project options"
+                    >⋯</button>
+                  </span>
                   <span class={`winners-badge winners-badge-${badgeKind}`}>{badge}</span>
                   {w.in_flight_job_id && (
                     <span
@@ -2166,6 +2194,70 @@ function stemSoloUrls(sf) {
     border-color: rgba(14, 196, 252, 0.55);
     background: rgba(14, 196, 252, 0.08);
   }
+
+  /* Phase B: source-project affordance. Open in Ableton (M3) + ⋯ menu. */
+  .winners-project {
+    flex-shrink: 1;
+    min-width: 0;
+    display: inline-flex;
+    align-items: center;
+    gap: 2px;
+  }
+  .winners-open-project,
+  .winners-link-project {
+    max-width: 220px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    padding: 4px 9px;
+    height: 28px;
+    border-radius: 4px;
+    font-size: 12px;
+    font-family: var(--font-mono, monospace);
+    cursor: pointer;
+    background: transparent;
+    transition: color 120ms ease, border-color 120ms ease, background 120ms ease;
+  }
+  /* Linked = curator-confirmed: solid amber. Auto = suggestion: faint. */
+  .winners-open-project.is-linked {
+    color: #f5b94d;
+    border: 1px solid rgba(245, 185, 77, 0.5);
+    background: rgba(245, 185, 77, 0.08);
+  }
+  .winners-open-project.is-auto {
+    color: rgba(245, 185, 77, 0.7);
+    border: 1px dashed rgba(245, 185, 77, 0.4);
+  }
+  .winners-open-project:hover {
+    color: #ffce6e;
+    border-color: rgba(245, 185, 77, 0.75);
+    background: rgba(245, 185, 77, 0.14);
+  }
+  .winners-link-project {
+    color: rgba(245, 241, 232, 0.45);
+    border: 1px dashed rgba(245, 241, 232, 0.2);
+  }
+  .winners-link-project:hover {
+    color: rgba(245, 241, 232, 0.8);
+    border-color: rgba(245, 241, 232, 0.4);
+  }
+  .winners-project-menu {
+    flex-shrink: 0;
+    width: 24px;
+    height: 28px;
+    border-radius: 4px;
+    background: transparent;
+    color: rgba(245, 241, 232, 0.45);
+    border: 1px solid rgba(245, 241, 232, 0.14);
+    font-size: 14px;
+    line-height: 1;
+    cursor: pointer;
+    transition: color 120ms ease, border-color 120ms ease;
+  }
+  .winners-project-menu:hover {
+    color: rgba(245, 241, 232, 0.85);
+    border-color: rgba(245, 241, 232, 0.4);
+  }
   .winners-chevron {
     flex-shrink: 0;
     width: 14px;
@@ -3430,4 +3522,105 @@ function stemSoloUrls(sf) {
       });
     }
   });
+</script>
+
+{/* Phase B: project ↔ track actions on Winners cards. Isolated IIFE so it
+    can't collide with the page's main module script (see System &
+    Automation Known limits: duplicate top-level decls abort an Astro
+    module silently). Event-delegated off document. */}
+<script>
+  (() => {
+    async function postJSON(url: string, body: unknown) {
+      const res = await fetch(url, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      return res;
+    }
+
+    async function openProject(projectId: number, btn: HTMLButtonElement) {
+      const orig = btn.textContent;
+      btn.disabled = true;
+      btn.textContent = "opening…";
+      try {
+        const res = await postJSON("/api/console/projects-open", { project_asset_id: projectId });
+        if (res.ok) {
+          btn.textContent = "✓ opened on M3";
+          setTimeout(() => { btn.textContent = orig; btn.disabled = false; }, 2500);
+        } else {
+          const e = await res.json().catch(() => ({}));
+          alert("Open failed: " + JSON.stringify(e.error ?? e));
+          btn.textContent = orig;
+          btn.disabled = false;
+        }
+      } catch (err) {
+        alert("Open failed: " + String(err));
+        btn.textContent = orig;
+        btn.disabled = false;
+      }
+    }
+
+    async function linkFlow(sourceId: number) {
+      const q = window.prompt(
+        "Link this track to a project — type part of the .als name.\n(Leave blank to UNLINK.)",
+      );
+      if (q === null) return; // cancelled
+      if (q.trim() === "") {
+        await postJSON("/api/console/assets-link-project", {
+          asset_id: sourceId,
+          project_asset_id: null,
+        });
+        location.reload();
+        return;
+      }
+      let hits: Array<{ asset_id: number; filename: string; display_name?: string | null }> = [];
+      try {
+        const res = await fetch(`/api/console/projects-search?q=${encodeURIComponent(q)}`);
+        const data = await res.json();
+        hits = data.projects ?? [];
+      } catch {
+        alert("Search failed.");
+        return;
+      }
+      if (!hits.length) {
+        alert("No projects matched “" + q + "”.");
+        return;
+      }
+      const top = hits.slice(0, 8);
+      const list = top
+        .map((p, i) => `${i + 1}) ${(p.display_name || p.filename).replace(/\.als$/i, "")}`)
+        .join("\n");
+      const pick = window.prompt(`Pick a project:\n${list}\n\nEnter a number 1–${top.length}:`);
+      if (pick === null) return;
+      const idx = parseInt(pick, 10) - 1;
+      if (!(idx >= 0 && idx < top.length)) {
+        alert("Invalid choice.");
+        return;
+      }
+      await postJSON("/api/console/assets-link-project", {
+        asset_id: sourceId,
+        project_asset_id: top[idx].asset_id,
+      });
+      location.reload();
+    }
+
+    document.addEventListener("click", (ev) => {
+      const t = (ev.target as HTMLElement)?.closest<HTMLElement>(
+        "[data-open-project],[data-link-project],[data-project-menu]",
+      );
+      if (!t) return;
+      ev.preventDefault();
+      const openId = t.getAttribute("data-open-project");
+      const linkId = t.getAttribute("data-link-project");
+      const menuId = t.getAttribute("data-project-menu");
+      if (openId) {
+        openProject(Number(openId), t as HTMLButtonElement);
+      } else if (linkId) {
+        linkFlow(Number(linkId));
+      } else if (menuId) {
+        linkFlow(Number(menuId));
+      }
+    });
+  })();
 </script>

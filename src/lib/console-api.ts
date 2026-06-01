@@ -9,6 +9,7 @@ import type {
   HealthResponse,
   InboxResponse,
   ProjectsResponse,
+  ProjectSearchHit,
   SearchResponse,
   StatsResponse,
   SurpriseResponse,
@@ -243,8 +244,51 @@ export function diaryCandidates(opts?: FetchOpts & { limit?: number; minScore?: 
   );
 }
 
-export function projects(opts?: FetchOpts) {
-  return call<ProjectsResponse>("/projects", opts);
+export function projects(opts?: FetchOpts & { includeArchived?: boolean }) {
+  const qs = opts?.includeArchived ? "?include_archived=true" : "";
+  return call<ProjectsResponse>(`/projects${qs}`, opts);
+}
+
+/** Open a .als project in Ableton on M3. Proxies to the engine, which
+ *  cross-user-rewrites the path and POSTs the M3 file-server's /open. */
+export async function openProjectInAbleton(
+  project_asset_id: number,
+): Promise<ApiResult<{ ok: boolean; opened: string }>> {
+  return _post("/projects/open-in-ableton", { project_asset_id }, { timeoutMs: 25000 });
+}
+
+/** Archive (soft-hide) or un-archive a project. */
+export async function archiveProject(
+  project_asset_id: number,
+  archived: boolean,
+): Promise<ApiResult<{ project_asset_id: number; archived: boolean }>> {
+  return _post("/projects/archive", { project_asset_id, archived });
+}
+
+/** Set/clear a project's collection grouping label (mirrors Sounds). */
+export async function updateProject(
+  project_asset_id: number,
+  collection: string | null,
+): Promise<ApiResult<{ project_asset_id: number; collection: string | null }>> {
+  return _post("/projects/update", { project_asset_id, collection });
+}
+
+/** Link (or unlink, with null) a source asset to its .als project. The
+ *  manual link overrides the filename-similarity auto-suggestion. */
+export async function linkAssetProject(
+  asset_id: number,
+  project_asset_id: number | null,
+): Promise<ApiResult<{ asset_id: number; project_asset_id: number | null }>> {
+  return _post("/assets/link-project", { asset_id, project_asset_id });
+}
+
+/** Search .als projects by name for the "change project" override picker. */
+export async function searchProjects(
+  q: string,
+  opts?: FetchOpts,
+): Promise<ApiResult<{ projects: ProjectSearchHit[] }>> {
+  const params = new URLSearchParams({ q });
+  return call<{ projects: ProjectSearchHit[] }>(`/projects/search?${params}`, opts);
 }
 
 /** Prints noticed by the M3 watcher (com.tolo.prints-watcher) that have
