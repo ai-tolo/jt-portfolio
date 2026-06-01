@@ -542,34 +542,22 @@ function stemSoloUrls(sf) {
                     title="Open this track in Buckets (new tab)"
                     aria-label="Open source track in Buckets"
                   >↗</a>
-                  {/* Phase B: source .als project. Open it in Ableton on M3
-                      to rescue a mix the engineer keeps mangling. The ⋯
-                      button links / changes / unlinks the project. */}
-                  <span class="winners-project" data-source-asset-id={w.source_asset_id}>
-                    {w.project_asset_id ? (
-                      <button
-                        type="button"
-                        class={`winners-open-project${w.project_match === "linked" ? " is-linked" : " is-auto"}`}
-                        data-open-project={w.project_asset_id}
-                        title={`Open "${w.project_display_name || w.project_filename}" in Ableton on M3${w.project_match === "linked" ? " (linked)" : ` (auto-matched: ${w.project_match})`}`}
-                      >⧉ {(w.project_display_name || w.project_filename || "").replace(/\.als$/i, "")}</button>
-                    ) : (
-                      <button
-                        type="button"
-                        class="winners-link-project"
-                        data-link-project={w.source_asset_id}
-                        title="Find and link the source .als project"
-                      >⧉ link project</button>
-                    )}
-                    <button
-                      type="button"
-                      class="winners-project-menu"
-                      data-project-menu={w.source_asset_id}
-                      data-current-project={w.project_asset_id ?? ""}
-                      title="Link / change / unlink project"
-                      aria-label="Project options"
-                    >⋯</button>
-                  </span>
+                  {/* Phase B: source .als project. Single icon mirroring the
+                      ↗ arrow; color = state. Linked = solid amber, auto-match
+                      = dashed amber, empty = faint grey. Click opens in
+                      Ableton (or links, when empty); shift-click changes /
+                      unlinks. */}
+                  <button
+                    type="button"
+                    class:list={["winners-project-icon", w.project_asset_id ? (w.project_match === "linked" ? "is-linked" : "is-auto") : "is-empty"]}
+                    data-project-icon
+                    data-source-asset-id={w.source_asset_id}
+                    data-project-asset-id={w.project_asset_id ?? ""}
+                    title={w.project_asset_id
+                      ? `Open "${(w.project_display_name || w.project_filename || "").replace(/\.als$/i, "")}" in Ableton (M3)${w.project_match === "linked" ? " — linked" : ` — auto-matched (${w.project_match})`}. Shift-click to change / unlink.`
+                      : "No project linked. Click to find + link the source .als."}
+                    aria-label={w.project_asset_id ? "Open source project in Ableton (shift-click to change)" : "Link source project"}
+                  >⧉</button>
                   <span class={`winners-badge winners-badge-${badgeKind}`}>{badge}</span>
                   {w.in_flight_job_id && (
                     <span
@@ -634,8 +622,8 @@ function stemSoloUrls(sf) {
                           type="button"
                           data-champion-job-id={w.job_id}
                           data-champion-is-original="true"
-                          aria-label="Crown ORIGINAL as king (auto-spawns a fresh batch)"
-                          title="Crown ORIGINAL — neither variant beats the source. Spawns a fresh batch."
+                          aria-label="Crown ORIGINAL as king (keeps the source, makes no new mixes)"
+                          title="Crown ORIGINAL — the source beats every variant. Stops here; no new mixes. (Use + Make more mixes if you do want another batch.)"
                         >♛</button>
                       )}
                     </li>
@@ -2195,67 +2183,46 @@ function stemSoloUrls(sf) {
     background: rgba(14, 196, 252, 0.08);
   }
 
-  /* Phase B: source-project affordance. Open in Ableton (M3) + ⋯ menu. */
-  .winners-project {
-    flex-shrink: 1;
-    min-width: 0;
+  /* Phase B: source-project affordance — single icon mirroring
+     .winners-open-source (28×28), color-coded by link state. */
+  .winners-project-icon {
+    flex-shrink: 0;
     display: inline-flex;
     align-items: center;
-    gap: 2px;
-  }
-  .winners-open-project,
-  .winners-link-project {
-    max-width: 220px;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-    padding: 4px 9px;
-    height: 28px;
-    border-radius: 4px;
-    font-size: 12px;
-    font-family: var(--font-mono, monospace);
-    cursor: pointer;
-    background: transparent;
-    transition: color 120ms ease, border-color 120ms ease, background 120ms ease;
-  }
-  /* Linked = curator-confirmed: solid amber. Auto = suggestion: faint. */
-  .winners-open-project.is-linked {
-    color: #f5b94d;
-    border: 1px solid rgba(245, 185, 77, 0.5);
-    background: rgba(245, 185, 77, 0.08);
-  }
-  .winners-open-project.is-auto {
-    color: rgba(245, 185, 77, 0.7);
-    border: 1px dashed rgba(245, 185, 77, 0.4);
-  }
-  .winners-open-project:hover {
-    color: #ffce6e;
-    border-color: rgba(245, 185, 77, 0.75);
-    background: rgba(245, 185, 77, 0.14);
-  }
-  .winners-link-project {
-    color: rgba(245, 241, 232, 0.45);
-    border: 1px dashed rgba(245, 241, 232, 0.2);
-  }
-  .winners-link-project:hover {
-    color: rgba(245, 241, 232, 0.8);
-    border-color: rgba(245, 241, 232, 0.4);
-  }
-  .winners-project-menu {
-    flex-shrink: 0;
-    width: 24px;
+    justify-content: center;
+    width: 28px;
     height: 28px;
     border-radius: 4px;
     background: transparent;
-    color: rgba(245, 241, 232, 0.45);
-    border: 1px solid rgba(245, 241, 232, 0.14);
-    font-size: 14px;
+    font-size: 13px;
     line-height: 1;
     cursor: pointer;
-    transition: color 120ms ease, border-color 120ms ease;
+    transition: color 120ms ease, border-color 120ms ease, background 120ms ease;
   }
-  .winners-project-menu:hover {
-    color: rgba(245, 241, 232, 0.85);
+  /* Linked = curator-confirmed: solid amber. */
+  .winners-project-icon.is-linked {
+    color: #f5b94d;
+    border: 1px solid rgba(245, 185, 77, 0.55);
+    background: rgba(245, 185, 77, 0.10);
+  }
+  /* Auto-matched: amber but dashed/faint to read as "suggested, unconfirmed". */
+  .winners-project-icon.is-auto {
+    color: rgba(245, 185, 77, 0.72);
+    border: 1px dashed rgba(245, 185, 77, 0.45);
+  }
+  /* Empty: faint grey, like a disabled affordance, until the curator links. */
+  .winners-project-icon.is-empty {
+    color: rgba(245, 241, 232, 0.35);
+    border: 1px solid rgba(245, 241, 232, 0.14);
+  }
+  .winners-project-icon.is-linked:hover,
+  .winners-project-icon.is-auto:hover {
+    color: #ffce6e;
+    border-color: rgba(245, 185, 77, 0.8);
+    background: rgba(245, 185, 77, 0.16);
+  }
+  .winners-project-icon.is-empty:hover {
+    color: rgba(245, 241, 232, 0.75);
     border-color: rgba(245, 241, 232, 0.4);
   }
   .winners-chevron {
@@ -3387,9 +3354,11 @@ function stemSoloUrls(sf) {
   // Two crown shapes share this handler:
   //   - variant crown (data-champion-variant-id): standard king pick
   //   - ORIGINAL crown (data-champion-is-original="true"): declares the
-  //     source beats every variant; the engine sets champion_is_original
-  //     AND synchronously spawns a fresh make-more job so the in-flight
-  //     badge appears on reload.
+  //     source beats every variant; the engine sets champion_is_original.
+  //     Terminal — no new mixes are generated (the curator crowns ORIGINAL
+  //     precisely because the variants are worse). spawn_more is omitted so
+  //     the engine default (false) applies. The "+ Make more mixes" action
+  //     remains available if they do want another batch.
   document.querySelectorAll<HTMLButtonElement>(".winner-crown").forEach((btn) => {
     btn.addEventListener("click", async () => {
       const jobId = Number(btn.dataset.championJobId);
@@ -3421,9 +3390,9 @@ function stemSoloUrls(sf) {
         return;
       }
       // Server-rendered re-render of the card (now in king mode) is
-      // simpler than rebuilding the DOM client-side. When ORIGINAL was
-      // crowned, the auto-spawned make-more job surfaces on the same
-      // card as the in-flight badge after the reload.
+      // simpler than rebuilding the DOM client-side. ORIGINAL crowns are
+      // terminal, so the reloaded card shows the ORIGINAL-king state with
+      // no in-flight badge.
       location.reload();
     });
   });
@@ -3606,20 +3575,21 @@ function stemSoloUrls(sf) {
     }
 
     document.addEventListener("click", (ev) => {
-      const t = (ev.target as HTMLElement)?.closest<HTMLElement>(
-        "[data-open-project],[data-link-project],[data-project-menu]",
+      const t = (ev.target as HTMLElement)?.closest<HTMLButtonElement>(
+        "[data-project-icon]",
       );
       if (!t) return;
       ev.preventDefault();
-      const openId = t.getAttribute("data-open-project");
-      const linkId = t.getAttribute("data-link-project");
-      const menuId = t.getAttribute("data-project-menu");
-      if (openId) {
-        openProject(Number(openId), t as HTMLButtonElement);
-      } else if (linkId) {
-        linkFlow(Number(linkId));
-      } else if (menuId) {
-        linkFlow(Number(menuId));
+      const sourceId = Number(t.getAttribute("data-source-asset-id"));
+      const projAttr = t.getAttribute("data-project-asset-id") || "";
+      const projectId = projAttr ? Number(projAttr) : null;
+      const shift = (ev as MouseEvent).shiftKey;
+      // Has a project + plain click → open in Ableton.
+      // No project, or shift-click → link / change / unlink flow.
+      if (projectId && !shift) {
+        openProject(projectId, t);
+      } else {
+        linkFlow(sourceId);
       }
     });
   })();

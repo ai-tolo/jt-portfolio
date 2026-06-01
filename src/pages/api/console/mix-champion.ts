@@ -1,8 +1,8 @@
 // Auth-gated proxy: crown a variant as the cross-axis champion for a
 // mix job, crown ORIGINAL (the source), or clear the current champion.
-// The engine validates that a variant champion already won an axis;
-// ORIGINAL crowns skip that and synchronously auto-spawn a make-more
-// job for the same source, returning the spawned_job_id.
+// The engine validates that a variant champion already won an axis.
+// ORIGINAL crowns are terminal by default (no new mixes); pass
+// spawn_more=true to also queue a fresh batch (returns spawned_job_id).
 
 import type { APIRoute } from "astro";
 import { setMixChampion, crownOriginal } from "../../../lib/console-api";
@@ -12,6 +12,7 @@ export const POST: APIRoute = async ({ request }) => {
     job_id?: unknown;
     variant_id?: unknown;
     is_original?: unknown;
+    spawn_more?: unknown;
     comment?: unknown;
   };
   try {
@@ -34,9 +35,10 @@ export const POST: APIRoute = async ({ request }) => {
     typeof payload.comment === "string" ? payload.comment : null;
 
   // ORIGINAL crown branch: variant_id is ignored, the engine sets
-  // champion_is_original=1 and spawns a make-more job.
+  // champion_is_original=1. Terminal unless spawn_more is explicitly true.
   if (isOriginal) {
-    const result = await crownOriginal(jobId, comment);
+    const spawnMore = payload.spawn_more === true;
+    const result = await crownOriginal(jobId, comment, spawnMore);
     if (!result.ok) {
       const status = result.error.kind === "http" ? result.error.status : 502;
       return new Response(JSON.stringify({ error: result.error }), {

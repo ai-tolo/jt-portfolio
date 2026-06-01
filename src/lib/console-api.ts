@@ -869,18 +869,21 @@ export async function setMixChampion(
 }
 
 /** Crown ORIGINAL (the unprocessed source) as the king for a job —
- *  declaring the source beats every variant. The engine sets
- *  mix_jobs.champion_is_original=1 and synchronously spawns a fresh
- *  make-more job for the same source, returning its job_id in
- *  spawned_job_id. Phase 5, 2026-05-27. */
+ *  declaring the source beats every variant. Sets
+ *  mix_jobs.champion_is_original=1. TERMINAL by default (no new mixes):
+ *  crowning ORIGINAL means the variants are worse than the source, so we
+ *  do NOT generate more. Pass spawnMore=true to also queue a fresh batch
+ *  (returns its id in spawned_job_id). Updated 2026-06-01. */
 export async function crownOriginal(
   job_id: number,
   comment?: string | null,
+  spawnMore = false,
 ): Promise<ApiResult<ChampionResponse>> {
   const body: Record<string, unknown> = {
     job_id,
     variant_id: null,
     is_original: true,
+    spawn_more: spawnMore,
   };
   if (comment && comment.trim()) body.comment = comment.trim();
   return _post<ChampionResponse>("/mix/champion", body);
