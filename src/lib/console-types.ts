@@ -671,6 +671,15 @@ export interface MixVariantSummary {
   /** Map of stem_name → absolute path of the soloed-stem wav. Lets the
    *  curator audition each processed stem alone for diagnostic listening. */
   stem_files: Record<string, string> | null;
+  /** Final-bus integrated LUFS of this variant. Drives loudness-matched
+   *  A/B playback so the louder clip no longer wins on level alone. */
+  output_lufs: number | null;
+  /** Inter-sample (true) peak in dBFS. */
+  true_peak_dbfs: number | null;
+  /** Crest factor (peak/RMS) in dB. A collapsed value flags over-squash. */
+  crest_db: number | null;
+  /** True when the render came out likely-distorted/over-squashed. */
+  qa_flag: boolean;
 }
 
 export interface MixPairItem {
@@ -683,6 +692,9 @@ export interface MixPairItem {
    *  solo pill that plays the unprocessed source for A/B-vs-original
    *  comparison. */
   source_audio_path: string | null;
+  /** Integrated LUFS of the unprocessed source, for loudness-matched
+   *  playback of ORIGINAL against the variants. Null on older jobs. */
+  source_lufs: number | null;
   axis: MixAxis;
   variant_a: MixVariantSummary;
   variant_b: MixVariantSummary;
