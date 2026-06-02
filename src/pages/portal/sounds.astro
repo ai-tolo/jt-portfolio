@@ -1,5 +1,6 @@
 ---
 import PortalLayout from "../../layouts/PortalLayout.astro";
+import WaveformPlayer from "../../components/portal/WaveformPlayer.astro";
 import { listSounds } from "../../lib/console-api";
 import type { SoundsItem } from "../../lib/console-types";
 
@@ -50,13 +51,6 @@ for (const item of items) {
 function trackTitle(item: SoundsItem): string {
   if (item.display_name) return item.display_name;
   return item.filename.replace(/\.[^.]+$/, "");
-}
-
-function fmtDuration(sec: number | null | undefined): string {
-  if (!sec || !Number.isFinite(sec)) return "—:—";
-  const m = Math.floor(sec / 60);
-  const s = Math.floor(sec % 60);
-  return `${m}:${String(s).padStart(2, "0")}`;
 }
 
 function audioUrl(path: string): string {
@@ -111,36 +105,35 @@ function audioUrl(path: string): string {
             <ul class="track-list">
               {groupItems.map((item) => (
                 <li class="track" data-asset-id={item.asset_id} data-track-row>
-                  <button
-                    class="track-play"
-                    type="button"
-                    data-audio-url={audioUrl(item.path)}
-                    aria-label={`Play ${trackTitle(item)}`}
-                  >▶</button>
-                  <div class="track-meta">
-                    <span class="track-title">{trackTitle(item)}</span>
-                    <span class="track-sub">
-                      {fmtDuration(item.duration_seconds)}
+                  <div class="track-head">
+                    <div class="track-meta">
+                      <span class="track-title">{trackTitle(item)}</span>
                       {item.source_display_name && (
-                        <> · from <span class="track-source">{item.source_display_name}</span></>
+                        <span class="track-sub">from <span class="track-source">{item.source_display_name}</span></span>
                       )}
-                    </span>
+                    </div>
+                    <input
+                      class="track-collection"
+                      type="text"
+                      data-collection-input
+                      value={item.collection || ""}
+                      placeholder="collection"
+                      aria-label="Collection label"
+                    />
+                    <button
+                      class="track-unpublish"
+                      type="button"
+                      data-unpublish
+                      aria-label="Unpublish this track"
+                      title="Unpublish"
+                    >✕</button>
                   </div>
-                  <input
-                    class="track-collection"
-                    type="text"
-                    data-collection-input
-                    value={item.collection || ""}
-                    placeholder="collection"
-                    aria-label="Collection label"
+                  <WaveformPlayer
+                    audioUrl={audioUrl(item.path)}
+                    waveformSha1={item.waveform_sha1}
+                    durationSeconds={item.duration_seconds}
+                    label={trackTitle(item)}
                   />
-                  <button
-                    class="track-unpublish"
-                    type="button"
-                    data-unpublish
-                    aria-label="Unpublish this track"
-                    title="Unpublish"
-                  >✕</button>
                 </li>
               ))}
             </ul>
@@ -156,36 +149,35 @@ function audioUrl(path: string): string {
             <ul class="track-list">
               {ungrouped.map((item) => (
                 <li class="track" data-asset-id={item.asset_id} data-track-row>
-                  <button
-                    class="track-play"
-                    type="button"
-                    data-audio-url={audioUrl(item.path)}
-                    aria-label={`Play ${trackTitle(item)}`}
-                  >▶</button>
-                  <div class="track-meta">
-                    <span class="track-title">{trackTitle(item)}</span>
-                    <span class="track-sub">
-                      {fmtDuration(item.duration_seconds)}
+                  <div class="track-head">
+                    <div class="track-meta">
+                      <span class="track-title">{trackTitle(item)}</span>
                       {item.source_display_name && (
-                        <> · from <span class="track-source">{item.source_display_name}</span></>
+                        <span class="track-sub">from <span class="track-source">{item.source_display_name}</span></span>
                       )}
-                    </span>
+                    </div>
+                    <input
+                      class="track-collection"
+                      type="text"
+                      data-collection-input
+                      value={item.collection || ""}
+                      placeholder="collection (e.g. Audio Amnesia EP)"
+                      aria-label="Collection label"
+                    />
+                    <button
+                      class="track-unpublish"
+                      type="button"
+                      data-unpublish
+                      aria-label="Unpublish this track"
+                      title="Unpublish"
+                    >✕</button>
                   </div>
-                  <input
-                    class="track-collection"
-                    type="text"
-                    data-collection-input
-                    value={item.collection || ""}
-                    placeholder="collection (e.g. Audio Amnesia EP)"
-                    aria-label="Collection label"
+                  <WaveformPlayer
+                    audioUrl={audioUrl(item.path)}
+                    waveformSha1={item.waveform_sha1}
+                    durationSeconds={item.duration_seconds}
+                    label={trackTitle(item)}
                   />
-                  <button
-                    class="track-unpublish"
-                    type="button"
-                    data-unpublish
-                    aria-label="Unpublish this track"
-                    title="Unpublish"
-                  >✕</button>
                 </li>
               ))}
             </ul>
@@ -290,31 +282,22 @@ function audioUrl(path: string): string {
     gap: 6px;
   }
   .track {
-    display: grid;
-    grid-template-columns: 36px 1fr 200px 32px;
-    gap: 10px;
-    align-items: center;
-    padding: 8px 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 10px 12px;
     background: rgba(245, 241, 232, 0.04);
     border: 1px solid rgba(245, 241, 232, 0.12);
     border-radius: 4px;
   }
-  .track-play {
-    width: 28px;
-    height: 28px;
-    border-radius: 4px;
-    background: #0ec4fc;
-    color: #0d060f;
-    border: 1px solid #0ec4fc;
-    font-size: 0;
-    cursor: pointer;
-    font-weight: 700;
-    transition: background 120ms ease, transform 80ms ease;
+  /* Top row: title + source on the left, collection input + unpublish on the
+     right. The WaveformPlayer (transport + waveform + scrub) sits below. */
+  .track-head {
+    display: grid;
+    grid-template-columns: 1fr 200px 32px;
+    gap: 10px;
+    align-items: center;
   }
-  .track-play::before { content: "▶"; font-size: 11px; }
-  .track-play[data-state="playing"] { background: #ff3b6e; border-color: #ff3b6e; color: #fff; }
-  .track-play[data-state="playing"]::before { content: "■"; }
-  .track-play:hover { transform: translateY(-1px); }
   .track-meta {
     display: flex;
     flex-direction: column;
@@ -365,9 +348,8 @@ function audioUrl(path: string): string {
     background: rgba(255, 110, 33, 0.10);
   }
   @media (max-width: 640px) {
-    .track {
-      grid-template-columns: 36px 1fr 32px;
-      grid-template-rows: auto auto;
+    .track-head {
+      grid-template-columns: 1fr 32px;
     }
     .track-collection {
       grid-column: 1 / -1;
@@ -377,51 +359,13 @@ function audioUrl(path: string): string {
 
 <script>
   // ── Sounds page controller ────────────────────────────────────────
-  // Singleton audio so only one track plays at a time. Click ▶ to play
-  // or stop. Collection input commits on blur or Enter. Unpublish (✕)
-  // POSTs sounds-update with public=false then drops the row from the
-  // DOM. Page reloads on collection commit so group memberships
-  // re-render correctly (cheap, server-side does the grouping).
-
-  const audio = new Audio();
-  audio.preload = "auto";
-  let activeBtn: HTMLButtonElement | null = null;
-
-  function setBtnState(btn: HTMLButtonElement | null, state: "playing" | "paused") {
-    if (btn) btn.dataset.state = state;
-  }
-
-  audio.addEventListener("ended", () => {
-    if (activeBtn) setBtnState(activeBtn, "paused");
-    activeBtn = null;
-  });
-
-  document.querySelectorAll<HTMLButtonElement>(".track-play").forEach((btn) => {
-    btn.addEventListener("click", () => {
-      const url = btn.dataset.audioUrl;
-      if (!url) return;
-      if (activeBtn === btn) {
-        if (audio.paused) {
-          audio.play().catch(() => {});
-          setBtnState(btn, "playing");
-        } else {
-          audio.pause();
-          setBtnState(btn, "paused");
-        }
-        return;
-      }
-      if (activeBtn) setBtnState(activeBtn, "paused");
-      activeBtn = btn;
-      audio.src = url;
-      audio.currentTime = 0;
-      audio.play()
-        .then(() => setBtnState(btn, "playing"))
-        .catch(() => {
-          setBtnState(btn, "paused");
-          activeBtn = null;
-        });
-    });
-  });
+  // Playback (transport + waveform + scrub + tracking playhead) is owned by
+  // the shared <WaveformPlayer> component, which keeps its own single <audio>
+  // so only one track plays at a time across the page. This controller only
+  // handles the curator edits: collection input commits on blur or Enter,
+  // and unpublish (✕) POSTs sounds-update with public=false then drops the
+  // row. Page reloads on collection commit so group memberships re-render
+  // correctly (cheap, server-side does the grouping).
 
   document.querySelectorAll<HTMLInputElement>("[data-collection-input]").forEach((input) => {
     const commit = async () => {

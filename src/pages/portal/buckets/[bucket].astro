@@ -735,6 +735,12 @@ const BUCKET_TITLE: Record<BucketView, string> = {
     // and a playhead line tracks currentTime / duration during playback.
     let audio: HTMLAudioElement | null = null;
     let activeCard: HTMLElement | null = null;
+    // Playhead is driven by a requestAnimationFrame loop, not `timeupdate`
+    // alone. `timeupdate` stops firing the moment the stream stalls/buffers
+    // (common over the Tailscale Funnel proxy) which froze the cursor; the
+    // rAF loop keeps reading currentTime so the cursor recovers the instant
+    // playback resumes. raf id is null whenever the loop isn't scheduled.
+    let playheadRaf: number | null = null;
 
     const fmtTime = (s: number): string => {
       if (!Number.isFinite(s) || s < 0) return "0:00";
@@ -765,7 +771,14 @@ const BUCKET_TITLE: Record<BucketView, string> = {
       const cropPlayhead = activeCard.querySelector<HTMLElement>(
         "[data-cropper-playhead]",
       );
-      const dur = audio.duration;
+      // Prefer the element's live duration; fall back to the server-known
+      // duration so the cursor still positions during a metadata stall
+      // (readyState < HAVE_METADATA leaves audio.duration NaN).
+      const liveDur = audio.duration;
+      const dur =
+        Number.isFinite(liveDur) && liveDur > 0
+          ? liveDur
+          : Number(activeCard.dataset.durationSeconds) || 0;
       if (Number.isFinite(dur) && dur > 0) {
         const pct = (audio.currentTime / dur) * 100;
         if (playhead) {
@@ -781,6 +794,30 @@ const BUCKET_TITLE: Record<BucketView, string> = {
         const durStr = Number.isFinite(dur) && dur > 0 ? fmtTime(dur) : "—";
         time.textContent = `${fmtTime(audio.currentTime)} / ${durStr}`;
         time.hidden = false;
+      }
+    };
+
+    // rAF playhead loop. Re-schedules itself every frame while audio is
+    // actively playing and self-stops the instant it is paused or ended, so
+    // a stall (paused stays false during buffering) keeps the loop alive and
+    // the cursor snaps back to currentTime the moment data resumes.
+    const playheadFrame = () => {
+      updatePlayhead();
+      if (audio && !audio.paused && !audio.ended) {
+        playheadRaf = requestAnimationFrame(playheadFrame);
+      } else {
+        playheadRaf = null;
+      }
+    };
+    const startPlayheadLoop = () => {
+      if (playheadRaf == null && audio && !audio.paused && !audio.ended) {
+        playheadRaf = requestAnimationFrame(playheadFrame);
+      }
+    };
+    const stopPlayheadLoop = () => {
+      if (playheadRaf != null) {
+        cancelAnimationFrame(playheadRaf);
+        playheadRaf = null;
       }
     };
 
@@ -827,10 +864,27 @@ const BUCKET_TITLE: Record<BucketView, string> = {
       // 3600 so the buffered ranges stick in the browser cache across
       // seeks — without it, every seek burned an RTT over Tailscale Funnel.
       audio.preload = "auto";
-      audio.addEventListener("timeupdate", updatePlayhead);
+      // The rAF loop is the primary driver (started on play/playing).
+      // timeupdate stays as a secondary driver: it keeps the cursor advancing
+      // in background tabs (where rAF is throttled to ~0) and revives the loop
+      // if it ever stopped while audio kept playing. play/playing/waiting/
+      // stalled are the recovery signals — when the stream resumes after a
+      // buffer underrun, `playing` fires and restarts the loop so the cursor
+      // catches back up. seeked repaints the new position immediately even
+      // while paused. (pause/ended self-stop the loop via its own guard.)
+      audio.addEventListener("timeupdate", () => {
+        updatePlayhead();
+        startPlayheadLoop();
+      });
+      audio.addEventListener("play", startPlayheadLoop);
+      audio.addEventListener("playing", startPlayheadLoop);
+      audio.addEventListener("waiting", startPlayheadLoop);
+      audio.addEventListener("stalled", startPlayheadLoop);
+      audio.addEventListener("seeked", updatePlayhead);
       audio.addEventListener("loadedmetadata", updatePlayhead);
       audio.addEventListener("durationchange", updatePlayhead);
       audio.addEventListener("ended", () => {
+        stopPlayheadLoop();
         if (activeCard) {
           setAuditionBtnState(activeCard, false);
           // Park playhead at end so the user sees where playback finished.
@@ -840,6 +894,7 @@ const BUCKET_TITLE: Record<BucketView, string> = {
         activeCard = null;
       });
       audio.addEventListener("error", () => {
+        stopPlayheadLoop();
         if (activeCard) setStatus(activeCard, "Audio failed to load", "err");
         stopActive();
       });

@@ -1,0 +1,468 @@
+---
+// Shared waveform player — a self-contained transport + waveform + scrub
+// surface, factored out so any portal list (Sounds today, more later) gets
+// the same rich playback the Buckets cards have. Visually mirrors the
+// Buckets `.wave-row`: a duration LCD + the waveform PNG (doubling as a
+// seek/scrub bar) with a tracking playhead, plus an explicit ▶/⏸ button.
+//
+// The client controller (one <script>, deduped by Astro across every
+// instance) keeps a single <audio> singleton so only one track plays at a
+// time, and drives the playhead from a requestAnimationFrame loop that
+// survives the `timeupdate` gaps a stalling/buffering stream produces over
+// the Tailscale Funnel proxy — the same hardening applied to the Buckets
+// playhead (A1).
+//
+// Audio is served by /api/console/asset; the caller passes the fully-built
+// audioUrl (so it can pick &variant=opus for long files). Waveform PNGs come
+// from /api/console/waveform?sha1=… and gracefully fall back to a placeholder
+// when the sweeper hasn't rendered one yet.
+
+interface Props {
+  /** Fully-built audio URL, e.g. /api/console/asset?path=…&variant=opus */
+  audioUrl: string;
+  /** 40-hex sha1 of the source path; null/invalid → "no waveform yet". */
+  waveformSha1?: string | null;
+  /** Known duration in seconds; lets the playhead position before metadata
+   *  loads and survives a metadata stall. */
+  durationSeconds?: number | null;
+  /** Accessible label for the transport button (e.g. the track title). */
+  label?: string;
+}
+
+const {
+  audioUrl,
+  waveformSha1 = null,
+  durationSeconds = null,
+  label = "track",
+} = Astro.props;
+
+const waveformSrc =
+  waveformSha1 && /^[a-f0-9]{40}$/.test(waveformSha1)
+    ? `/api/console/waveform?sha1=${waveformSha1}`
+    : null;
+
+function fmtDuration(sec: number | null | undefined): string {
+  if (sec == null || !Number.isFinite(sec) || sec < 0) return "—:—";
+  const m = Math.floor(sec / 60);
+  const s = Math.floor(sec % 60);
+  return `${m}:${String(s).padStart(2, "0")}`;
+}
+
+const durationLabel = fmtDuration(durationSeconds);
+---
+
+<div
+  class="wfp"
+  data-wfp
+  data-audio-url={audioUrl}
+  data-duration-seconds={durationSeconds ?? ""}
+>
+  <button
+    class="wfp-play"
+    type="button"
+    data-wfp-play
+    data-state="paused"
+    aria-pressed="false"
+    aria-label={`Play ${label}`}
+  ></button>
+  <span class="wfp-duration" data-wfp-duration aria-label="Duration"
+    >{durationLabel}</span
+  >
+  <div
+    class="wfp-wave"
+    data-wfp-wave
+    data-seekable={waveformSrc ? "true" : "false"}
+    title={waveformSrc ? "Click to play (click again to seek)" : undefined}
+  >
+    {
+      waveformSrc ? (
+        <img
+          src={waveformSrc}
+          alt=""
+          loading="lazy"
+          width="640"
+          height="48"
+          onerror="this.replaceWith(Object.assign(document.createElement('div'),{className:'wfp-wave-placeholder',textContent:'no waveform yet'}))"
+        />
+      ) : (
+        <div class="wfp-wave-placeholder">no waveform yet</div>
+      )
+    }
+    <div class="wfp-playhead" data-wfp-playhead hidden></div>
+    <div class="wfp-time" data-wfp-time hidden></div>
+  </div>
+</div>
+
+<style>
+  .wfp {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-width: 0;
+  }
+
+  /* Transport — cyan idle, pink while playing (matches the portal palette). */
+  .wfp-play {
+    flex: 0 0 auto;
+    width: 30px;
+    height: 30px;
+    border-radius: 4px;
+    background: #0ec4fc;
+    color: #0d060f;
+    border: 1px solid #0ec4fc;
+    cursor: pointer;
+    font-size: 0;
+    line-height: 1;
+    transition:
+      background 120ms ease,
+      border-color 120ms ease,
+      transform 80ms ease;
+  }
+  .wfp-play::before {
+    content: "▶";
+    font-size: 12px;
+  }
+  .wfp-play[data-state="playing"] {
+    background: #ff3b6e;
+    border-color: #ff3b6e;
+    color: #fff;
+  }
+  .wfp-play[data-state="playing"]::before {
+    content: "⏸";
+  }
+  .wfp-play:hover {
+    transform: translateY(-1px);
+  }
+
+  /* Duration LCD — borderless mono italic digits with a soft pink glow,
+     lifted from the Buckets wave-row so the two surfaces read identically. */
+  .wfp-duration {
+    flex: 0 0 auto;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-style: italic;
+    font-size: 15px;
+    font-weight: 700;
+    color: #ff3b6e;
+    font-feature-settings: "tnum";
+    line-height: 1;
+    letter-spacing: 0.04em;
+    min-width: 3.6em;
+    text-align: right;
+    text-shadow:
+      0 0 4px rgba(255, 59, 110, 0.65),
+      0 0 10px rgba(255, 59, 110, 0.35);
+  }
+
+  .wfp-wave {
+    position: relative;
+    flex: 1 1 auto;
+    height: 44px;
+    min-width: 0;
+    background: var(--surface-1, #07060c);
+    border-radius: 3px;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .wfp-wave[data-seekable="true"] {
+    cursor: pointer;
+  }
+  .wfp-wave[data-seekable="true"]:hover {
+    box-shadow: inset 0 0 0 1px rgba(14, 196, 252, 0.45);
+  }
+  .wfp-wave img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+    opacity: 0.92;
+  }
+  .wfp-wave-placeholder {
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: rgba(245, 241, 232, 0.32);
+  }
+  .wfp-playhead {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: 2px;
+    left: 0;
+    background: #ff3b6e;
+    pointer-events: none;
+    box-shadow: 0 0 6px rgba(255, 59, 110, 0.6);
+    z-index: 2;
+  }
+  .wfp-time {
+    position: absolute;
+    bottom: 3px;
+    right: 5px;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 10px;
+    font-feature-settings: "tnum";
+    line-height: 1;
+    color: #0e0c14;
+    background: rgba(245, 241, 232, 0.78);
+    padding: 2px 5px;
+    border-radius: 2px;
+    pointer-events: none;
+    z-index: 2;
+  }
+</style>
+
+<script>
+  // ── Shared waveform-player controller ──────────────────────────────────
+  // Astro bundles this module ONCE no matter how many <WaveformPlayer/> are
+  // on the page, so it wires up every [data-wfp] instance via event
+  // delegation against a single <audio> singleton. IIFE keeps the symbols
+  // off the module top level (duplicate top-level decls silently abort an
+  // Astro module — see System & Automation "Known limits").
+  (() => {
+    const players = Array.from(
+      document.querySelectorAll<HTMLElement>("[data-wfp]"),
+    );
+    if (players.length === 0) return;
+
+    let audio: HTMLAudioElement | null = null;
+    let active: HTMLElement | null = null;
+    // rAF playhead loop id (null when not scheduled). Same hardening as the
+    // Buckets playhead: drive the cursor from rAF, not `timeupdate` alone, so
+    // a buffering stall can't freeze it.
+    let raf: number | null = null;
+
+    const fmt = (s: number): string => {
+      if (!Number.isFinite(s) || s < 0) return "0:00";
+      const m = Math.floor(s / 60);
+      const r = Math.floor(s % 60);
+      return `${m}:${String(r).padStart(2, "0")}`;
+    };
+
+    const q = <T extends HTMLElement>(root: HTMLElement, sel: string) =>
+      root.querySelector<T>(sel);
+
+    const setPlaying = (root: HTMLElement, playing: boolean) => {
+      const btn = q<HTMLButtonElement>(root, "[data-wfp-play]");
+      if (btn) {
+        btn.dataset.state = playing ? "playing" : "paused";
+        btn.setAttribute("aria-pressed", playing ? "true" : "false");
+      }
+    };
+
+    // Prefer the element's live duration; fall back to the server-known
+    // duration (data-duration-seconds) so the cursor still positions during
+    // a metadata stall (audio.duration is NaN until HAVE_METADATA).
+    const durOf = (root: HTMLElement): number => {
+      if (audio && Number.isFinite(audio.duration) && audio.duration > 0) {
+        return audio.duration;
+      }
+      const d = Number(root.dataset.durationSeconds);
+      return Number.isFinite(d) && d > 0 ? d : 0;
+    };
+
+    const paint = () => {
+      if (!active || !audio) return;
+      const dur = durOf(active);
+      const ph = q(active, "[data-wfp-playhead]");
+      const tm = q(active, "[data-wfp-time]");
+      const lcd = q(active, "[data-wfp-duration]");
+      if (dur > 0) {
+        const pct = Math.max(0, Math.min(100, (audio.currentTime / dur) * 100));
+        if (ph) {
+          ph.style.left = `${pct}%`;
+          ph.hidden = false;
+        }
+        if (tm) {
+          tm.textContent = `${fmt(audio.currentTime)} / ${fmt(dur)}`;
+          tm.hidden = false;
+        }
+        // Backfill the LCD if the server didn't know the duration up front.
+        if (lcd && lcd.textContent === "—:—") lcd.textContent = fmt(dur);
+      } else if (tm) {
+        tm.textContent = `${fmt(audio.currentTime)} / —`;
+        tm.hidden = false;
+      }
+    };
+
+    const frame = () => {
+      paint();
+      if (audio && !audio.paused && !audio.ended) {
+        raf = requestAnimationFrame(frame);
+      } else {
+        raf = null;
+      }
+    };
+    const startLoop = () => {
+      if (raf == null && audio && !audio.paused && !audio.ended) {
+        raf = requestAnimationFrame(frame);
+      }
+    };
+    const stopLoop = () => {
+      if (raf != null) {
+        cancelAnimationFrame(raf);
+        raf = null;
+      }
+    };
+
+    const clearUI = (root: HTMLElement | null) => {
+      if (!root) return;
+      const ph = q(root, "[data-wfp-playhead]");
+      const tm = q(root, "[data-wfp-time]");
+      if (ph) {
+        ph.hidden = true;
+        ph.style.left = "0";
+      }
+      if (tm) {
+        tm.hidden = true;
+        tm.textContent = "";
+      }
+    };
+
+    const ensureAudio = (): HTMLAudioElement => {
+      if (audio) return audio;
+      audio = new Audio();
+      audio.preload = "auto";
+      // rAF loop is primary; timeupdate is the background-tab / revive driver.
+      // play/playing/waiting/stalled are the buffer-underrun recovery signals;
+      // seeked repaints the new position even while paused. pause/ended
+      // self-stop the loop via its own guard.
+      audio.addEventListener("timeupdate", () => {
+        paint();
+        startLoop();
+      });
+      audio.addEventListener("play", startLoop);
+      audio.addEventListener("playing", startLoop);
+      audio.addEventListener("waiting", startLoop);
+      audio.addEventListener("stalled", startLoop);
+      audio.addEventListener("seeked", paint);
+      audio.addEventListener("loadedmetadata", paint);
+      audio.addEventListener("durationchange", paint);
+      audio.addEventListener("ended", () => {
+        stopLoop();
+        if (active) {
+          setPlaying(active, false);
+          const ph = q(active, "[data-wfp-playhead]");
+          if (ph) ph.style.left = "100%";
+        }
+        active = null;
+      });
+      audio.addEventListener("error", () => {
+        stopLoop();
+        if (active) {
+          setPlaying(active, false);
+          clearUI(active);
+        }
+        active = null;
+      });
+      return audio;
+    };
+
+    const stopActive = () => {
+      if (audio) audio.pause();
+      if (active) {
+        setPlaying(active, false);
+        clearUI(active);
+      }
+      active = null;
+    };
+
+    const play = async (root: HTMLElement, seekFraction?: number) => {
+      const url = root.dataset.audioUrl;
+      if (!url) return;
+      const a = ensureAudio();
+
+      // Same player already loaded → toggle or seek.
+      if (active === root) {
+        if (seekFraction !== undefined) {
+          const dur = durOf(root);
+          if (dur > 0) {
+            a.currentTime = seekFraction * dur;
+            if (a.paused) {
+              try {
+                await a.play();
+              } catch {}
+            }
+            paint();
+            return;
+          }
+        }
+        if (a.paused) {
+          try {
+            await a.play();
+            setPlaying(root, true);
+          } catch {}
+        } else {
+          a.pause();
+          setPlaying(root, false);
+        }
+        return;
+      }
+
+      // Switch players. Wipe lingering playheads (e.g. an ended-state row).
+      stopActive();
+      players.forEach((p) => {
+        if (p !== root) clearUI(p);
+      });
+      active = root;
+      setPlaying(root, true);
+      a.src = url;
+
+      const startAtFraction = () => {
+        if (seekFraction === undefined) return;
+        if (Number.isFinite(a.duration) && a.duration > 0) {
+          a.currentTime = seekFraction * a.duration;
+        } else {
+          a.addEventListener(
+            "loadedmetadata",
+            () => {
+              a.currentTime = seekFraction * a.duration;
+            },
+            { once: true },
+          );
+        }
+      };
+
+      try {
+        await a.play();
+        startAtFraction();
+      } catch {
+        setPlaying(root, false);
+        active = null;
+      }
+    };
+
+    document.addEventListener("click", (e) => {
+      const t = e.target as HTMLElement | null;
+      if (!t) return;
+
+      // Transport button → toggle play/pause.
+      const playBtn = t.closest<HTMLElement>("[data-wfp-play]");
+      if (playBtn) {
+        const root = playBtn.closest<HTMLElement>("[data-wfp]");
+        if (root) play(root);
+        return;
+      }
+
+      // Waveform → first click on an inactive player plays from start;
+      // subsequent clicks on the active player seek to the click x (scrub).
+      const wave = t.closest<HTMLElement>('[data-wfp-wave][data-seekable="true"]');
+      if (wave) {
+        const root = wave.closest<HTMLElement>("[data-wfp]");
+        if (!root) return;
+        if (active !== root) {
+          play(root);
+          return;
+        }
+        const rect = wave.getBoundingClientRect();
+        const frac = Math.max(
+          0,
+          Math.min(1, ((e as MouseEvent).clientX - rect.left) / rect.width),
+        );
+        play(root, frac);
+        return;
+      }
+    });
+  })();
+</script>

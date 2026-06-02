@@ -2941,14 +2941,20 @@ function stemSoloUrls(sf) {
       setActivePair(next);
       next.scrollIntoView({ behavior: "smooth", block: "center" });
       // If the curator was actively listening, keep them listening — start
-      // the next pair's A side automatically so flow isn't broken.
+      // the next pair automatically so flow isn't broken. Play activeAudio()
+      // (NOT audioA): setActivePair just set currentSide to null = ORIGINAL
+      // (or "a" only when the pair has no source) and reflectSide labeled the
+      // pill to match. Hard-coding audioA here played Mix A while the pill
+      // still read ORIGINAL — the post-vote desync that forced an A→ORIGINAL
+      // re-tap to resync. activeAudio() keeps the element that actually plays
+      // in lockstep with currentSide + the reflected side. (fixed 2026-06-01)
       if (continuePlayback) {
-        audioA.play().then(() => {
+        activeAudio().play().then(() => {
           setPlayButton(next, "playing");
           startTicking();
         }).catch(() => {
           // Browser blocked autoplay (rare since this trace from a real
-          // user-gesture commit). Curator hits A or play to resume.
+          // user-gesture commit). Curator hits a side or space to resume.
         });
       }
     } else {
@@ -3150,7 +3156,12 @@ function stemSoloUrls(sf) {
     else if (k === "escape") { e.preventDefault(); commit(pair, "skip"); }
   });
 
-  for (const a of [audioA, audioB]) {
+  // All three elements (incl. audioOriginal, now the default side) need the
+  // end/metadata handlers: when ORIGINAL plays through, reset the play button
+  // and stop the playhead loop just like A/B. Omitting audioOriginal here
+  // left the button stuck "playing" and the rAF ticking after the source
+  // ended.
+  for (const a of allAudios()) {
     a.addEventListener("ended", () => {
       const pair = activePairEl;
       if (pair) setPlayButton(pair, "paused");
@@ -3334,6 +3345,23 @@ function stemSoloUrls(sf) {
       });
       audio.addEventListener("ended", () => {
         renderState();
+      });
+      // Playhead recovery net: the rAF `tick` loop self-stops on pause and is
+      // otherwise only re-armed by explicit play() calls (toggle/swap/seek).
+      // If playback resumes on its own after a buffer stall, `playing` fires
+      // and we restart the loop; timeupdate also keeps the cursor advancing in
+      // background tabs (where rAF is throttled) and revives a dead loop.
+      audio.addEventListener("playing", () => {
+        if (i === ctrl.activeIndex && ctrl.rafId == null) {
+          ctrl.rafId = requestAnimationFrame(tick);
+        }
+      });
+      audio.addEventListener("timeupdate", () => {
+        if (i !== ctrl.activeIndex) return;
+        renderState();
+        if (ctrl.rafId == null && !audio.paused) {
+          ctrl.rafId = requestAnimationFrame(tick);
+        }
       });
     });
 
