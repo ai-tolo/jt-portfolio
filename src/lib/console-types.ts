@@ -121,6 +121,61 @@ export interface AlsProject {
    *  assets.als_project_id — the reverse of the Engineer "open source
    *  project" link. Powers the "Engineered from this project" section. */
   derived_tracks?: DerivedTrack[];
+
+  // ── Projects-foundation fields (2026-06-02) ──────────────────────────
+  /** Filesystem birth time of the .als, captured at scan ("YYYY-MM-DD …"). */
+  created_at?: string | null;
+  /** Mirror of last_modified, normalized name for the UI. */
+  modified_at?: string | null;
+  /** Where the .als physically lives: icloud | music_userlib | t7 |
+   *  t7_archive | factory_packs | other. */
+  location?: string | null;
+  /** True when the path rewrites to an M3-reachable location, so the Finder
+   *  reveal can work. T7-resident projects are false until consolidation. */
+  revealable?: boolean;
+  /** Count / bytes / seconds of the recorded audio this set references
+   *  (matched to the catalog, with a filesystem fallback). */
+  recorded_count?: number;
+  recorded_bytes?: number;
+  recorded_seconds?: number;
+  /** Content-density breakdown (file size is a poor proxy). */
+  density?: ProjectDensity;
+  /** Matched stems / exported audio downstream of this project, each with a
+   *  catalog asset_id so cards can deep-link to Buckets / reveal the file. */
+  exported_audio?: ExportedAudio[];
+}
+
+/** Per-project density metric, precomputed by the scanner. */
+export interface ProjectDensity {
+  track_count?: number;
+  audio_tracks?: number;
+  midi_tracks?: number;
+  return_tracks?: number;
+  group_tracks?: number;
+  audio_clips?: number;
+  warped_clips?: number;
+  midi_clips?: number;
+  scene_count?: number;
+  sample_ref_count?: number;
+  recorded_refs?: number;
+  imported_refs?: number;
+  external_refs?: number;
+  recorded_count?: number;
+  recorded_bytes?: number;
+  recorded_seconds?: number;
+}
+
+/** A stem / bounce / linked track produced from a project. */
+export interface ExportedAudio {
+  asset_id: number;
+  filename?: string | null;
+  display_name?: string | null;
+  path?: string | null;
+  duration_seconds?: number | null;
+  bucket?: string | null;
+  /** linked = curator-tied via als_project_id; print = Print Capture;
+   *  bounce = auto-detected render in the project folder. */
+  kind: "linked" | "print" | "bounce";
 }
 
 export interface DerivedTrack {

@@ -102,7 +102,7 @@ function daysAgo(s?: string | null): string {
     <header class="proj-head">
       <h1>Projects</h1>
       <p class="proj-sub">
-        Every <code>.als</code> in the catalog. {items.length} total · <strong>{withBounce.length}</strong> with a bounced render auto-detected in the project folder.
+        Genuine Ableton projects — factory packs, templates &amp; duplicate copies filtered out. <strong>{items.length}</strong>{showArchived ? " (incl. archived)" : ""} · {withBounce.length} with an auto-detected bounce.
         <a class="proj-archived-toggle" href={showArchived ? "/portal/projects" : "/portal/projects?archived=1"}>
           {showArchived ? "← Hide archived" : "Show archived"}
         </a>
@@ -207,18 +207,51 @@ function daysAgo(s?: string | null): string {
     ) : items.length === 0 ? (
       <p class="empty">No projects in the catalog yet.</p>
     ) : (
+      <>
+      <div class="proj-toolbar" role="group" aria-label="Sort and filter projects">
+        <label class="proj-sort-label">
+          <span>Sort</span>
+          <select class="proj-sort" data-sort aria-label="Sort projects">
+            <option value="modified">Recently modified</option>
+            <option value="created">Recently created</option>
+            <option value="oldest">Oldest modified</option>
+            <option value="dense">Most dense (clips)</option>
+            <option value="recordings">Most recordings</option>
+            <option value="collection">By collection</option>
+          </select>
+        </label>
+        <div class="proj-filters" role="group" aria-label="Filter projects">
+          <button type="button" class="proj-filter is-active" data-filter="all">All</button>
+          <button type="button" class="proj-filter" data-filter="recordings">Has recordings</button>
+          <button type="button" class="proj-filter" data-filter="exports">Has stems</button>
+          <button type="button" class="proj-filter" data-filter="revealable" title="Projects whose files are on this Mac">On this Mac</button>
+        </div>
+        <span class="proj-count" data-proj-count></span>
+      </div>
       <ul class="proj-list" role="list">
         {projectRows.map(({ p, newGroup, coll }) => {
           const title = p.display_name ?? splitAls(p.filename).base;
           const ext = p.display_name ? "" : splitAls(p.filename).ext;
           const samplesShown = p.samples ?? [];
           const moreCount = (p.sample_count ?? samplesShown.length) - samplesShown.length;
+          // Density + sort keys (Projects-foundation fields).
+          const density = p.density ?? {};
+          const trackCount = density.track_count ?? p.track_names?.length ?? 0;
+          const clipCount = density.audio_clips ?? 0;
+          const recordedN = p.recorded_count ?? density.recorded_count ?? 0;
+          const modifiedTs = p.modified_at ?? p.modified ?? "";
+          const createdTs = p.created_at ?? "";
+          // Matched stems / exports for this project (prints have their own
+          // section with player + unlink, so exclude them here).
+          const exportsList = (p.exported_audio ?? []).filter((e) => e.kind !== "print");
           const tech: string[] = [];
           if (p.tempo) tech.push(`${Math.round(p.tempo)} BPM`);
           if (p.key_signature && p.key_signature !== "0 Major") tech.push(p.key_signature);
           if (p.time_signature) tech.push(p.time_signature);
-          if (p.track_names && p.track_names.length > 0) tech.push(`${p.track_names.length} tracks`);
+          if (trackCount > 0) tech.push(`${trackCount} tracks`);
+          if (clipCount > 0) tech.push(`${clipCount} clips`);
           tech.push(`${p.sample_count ?? samplesShown.length} samples`);
+          if (recordedN > 0) tech.push(`${recordedN} rec`);
           return (
             <>
             {newGroup && (
@@ -230,6 +263,12 @@ function daysAgo(s?: string | null): string {
               class={`proj-card${p.archived ? " is-archived" : ""}`}
               data-asset-id={String(p.asset_id)}
               data-bounced-path={p.bounced_track_path ?? ""}
+              data-modified={modifiedTs}
+              data-created={createdTs}
+              data-clips={String(clipCount)}
+              data-recorded={String(recordedN)}
+              data-revealable={p.revealable ? "1" : "0"}
+              data-has-exports={exportsList.length > 0 ? "1" : "0"}
             >
               <div class="proj-head-row">
                 <h3 class="proj-title">
@@ -244,6 +283,15 @@ function daysAgo(s?: string | null): string {
                 <span class="proj-modified" title={p.modified ?? ""}>
                   {daysAgo(p.modified)} <span class="proj-date">[{fmtDate(p.modified)}]</span>
                 </span>
+                {!p.archived && (
+                  <button
+                    type="button"
+                    class="proj-archive-x"
+                    data-hold="archive"
+                    aria-label="Hold to archive this project"
+                    title="Hold to archive"
+                  ><span class="hold-fill" aria-hidden="true"></span><span class="hold-glyph">×</span></button>
+                )}
               </div>
               {tech.length > 0 && <p class="proj-tech">{tech.join(" · ")}</p>}
               {(p.built_from_prints?.length ?? 0) > 0 && (
@@ -308,26 +356,35 @@ function daysAgo(s?: string | null): string {
                   </ul>
                 </details>
               )}
-              {(p.derived_tracks?.length ?? 0) > 0 && (
-                <details class="proj-derived" open>
+              {exportsList.length > 0 && (
+                <details class="proj-exports" open>
                   <summary>
-                    <strong>Engineered from this project ({p.derived_tracks!.length})</strong>
+                    <strong>Stems &amp; exports ({exportsList.length})</strong>
                   </summary>
-                  <ul role="list" class="proj-derived-list">
-                    {p.derived_tracks!.map((d) => (
-                      <li class="proj-derived-row">
+                  <ul role="list" class="proj-exports-list">
+                    {exportsList.map((e) => (
+                      <li class="proj-export-row">
+                        <span class={`proj-export-kind kind-${e.kind}`}>{e.kind === "linked" ? "stem" : e.kind}</span>
                         <a
-                          class="proj-derived-link"
-                          href={`/portal/buckets/all?focus=${d.asset_id}`}
+                          class="proj-export-link"
+                          href={`/portal/buckets/all?focus=${e.asset_id}`}
                           target="_blank"
                           rel="noopener noreferrer"
-                          title="Open this track in Buckets"
-                        >{(d.display_name ?? d.filename).replace(/\.(wav|aif|aiff|mp3|m4a|flac)$/i, "")}</a>
-                        {d.duration_seconds && (
-                          <span class="proj-derived-dur">
-                            {Math.floor(d.duration_seconds / 60)}:{String(Math.floor(d.duration_seconds % 60)).padStart(2, "0")}
+                          title="Open this track in Buckets (new tab)"
+                        >{(e.display_name ?? e.filename ?? "track").replace(/\.(wav|aif|aiff|mp3|m4a|flac)$/i, "")}</a>
+                        {e.duration_seconds && (
+                          <span class="proj-export-dur">
+                            {Math.floor(e.duration_seconds / 60)}:{String(Math.floor(e.duration_seconds % 60)).padStart(2, "0")}
                           </span>
                         )}
+                        <button
+                          type="button"
+                          class="proj-export-reveal"
+                          data-action="reveal-stem"
+                          data-stem-asset-id={String(e.asset_id)}
+                          title="Reveal this file in Finder on M3"
+                        >⤷ reveal</button>
+                        <span class="status-line" data-status-line aria-live="polite"></span>
                       </li>
                     ))}
                   </ul>
@@ -352,6 +409,15 @@ function daysAgo(s?: string | null): string {
                   data-action="open-project"
                   title="Open this project in Ableton on M3"
                 >⧉ Open in Ableton</button>
+                <button
+                  type="button"
+                  class="proj-reveal-btn"
+                  data-action="reveal-project"
+                  disabled={!p.revealable}
+                  title={p.revealable
+                    ? "Reveal the .als folder in Finder on M3 (does not launch Ableton)"
+                    : "On the T7 drive — not reachable from this Mac yet. Storage consolidation enables this."}
+                >⤷ Reveal in Finder</button>
                 <input
                   type="text"
                   class="proj-collection-input"
@@ -361,13 +427,14 @@ function daysAgo(s?: string | null): string {
                   aria-label="Collection label"
                   autocomplete="off"
                 />
-                <button
-                  type="button"
-                  class="proj-archive-btn"
-                  data-action="archive-project"
-                  data-archived={p.archived ? "true" : "false"}
-                  title={p.archived ? "Restore from archive" : "Archive this project"}
-                >{p.archived ? "Unarchive" : "Archive"}</button>
+                {p.archived && (
+                  <button
+                    type="button"
+                    class="proj-archive-btn"
+                    data-action="unarchive-project"
+                    title="Restore from archive"
+                  >Unarchive</button>
+                )}
                 <span class="status-line" data-status-line aria-live="polite"></span>
               </div>
             </li>
@@ -375,6 +442,7 @@ function daysAgo(s?: string | null): string {
           );
         })}
       </ul>
+      </>
     )}
   </section>
 </PortalLayout>
@@ -500,6 +568,197 @@ function daysAgo(s?: string | null): string {
     color: var(--text, #f5f1e8);
     border-color: rgba(255,255,255,0.4);
   }
+
+  /* ── Sort / filter toolbar ─────────────────────────────────────── */
+  .proj-toolbar {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    flex-wrap: wrap;
+    margin: 0 0 14px;
+    padding: 8px 0;
+    border-bottom: 1px solid var(--card-border, rgba(255,255,255,0.07));
+  }
+  .proj-sort-label {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--muted, rgba(245,241,232,0.55));
+  }
+  .proj-sort {
+    font-family: var(--font-mono, ui-monospace, monospace);
+    font-size: 12px;
+    color: var(--text, #f5f1e8);
+    background: rgba(255,255,255,0.04);
+    border: 1px solid var(--card-border, rgba(255,255,255,0.14));
+    border-radius: 5px;
+    padding: 5px 8px;
+    cursor: pointer;
+  }
+  .proj-sort:focus-visible { outline: none; border-color: var(--accent, #0ec4fc); }
+  .proj-filters { display: inline-flex; gap: 6px; flex-wrap: wrap; }
+  .proj-filter {
+    font-family: var(--font-mono, ui-monospace, monospace);
+    font-size: 11px;
+    color: var(--muted, rgba(245,241,232,0.6));
+    background: transparent;
+    border: 1px solid var(--card-border, rgba(255,255,255,0.14));
+    border-radius: 12px;
+    padding: 4px 11px;
+    cursor: pointer;
+    transition: color 120ms ease, border-color 120ms ease, background 120ms ease;
+  }
+  .proj-filter:hover { color: var(--text, #f5f1e8); border-color: rgba(255,255,255,0.35); }
+  .proj-filter.is-active {
+    color: #0d060f;
+    background: var(--accent, #0ec4fc);
+    border-color: var(--accent, #0ec4fc);
+    font-weight: 600;
+  }
+  .proj-count {
+    margin-left: auto;
+    font-family: var(--font-mono, ui-monospace, monospace);
+    font-size: 11px;
+    color: var(--muted, rgba(245,241,232,0.45));
+  }
+
+  /* ── Hold-to-archive × (mirrors engineer .pair-skip-x) ─────────────
+     650ms radial-fill hold to commit; a tap is a no-op. Top-right of the
+     card head. Duration kept in lockstep with ARCH_HOLD_MS below. */
+  .proj-archive-x {
+    position: relative;
+    width: 24px;
+    height: 24px;
+    flex-shrink: 0;
+    align-self: center;
+    background: transparent;
+    color: rgba(245, 241, 232, 0.45);
+    border: 1px solid rgba(255, 110, 33, 0.3);
+    border-radius: 4px;
+    cursor: pointer;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font: 700 14px/1 ui-sans-serif, system-ui, sans-serif;
+    transition: color 160ms ease, border-color 160ms ease;
+    touch-action: none;
+  }
+  .proj-archive-x:hover { color: #ff6e21; border-color: #ff6e21; }
+  .proj-archive-x .hold-fill {
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(circle at center, #ff2761 0%, #ff6e21 70%);
+    transform-origin: center;
+    transform: scale(0);
+    border-radius: 50%;
+    opacity: 0;
+    transition: none;
+    pointer-events: none;
+  }
+  .proj-archive-x[data-holding="true"] .hold-fill {
+    transform: scale(2.6);
+    opacity: 1;
+    transition: transform 0.65s ease-out, opacity 0.22s ease-out;
+  }
+  .proj-archive-x[data-holding="true"] {
+    color: #0e0c14;
+    border-color: #ff2761;
+    box-shadow: 0 0 14px rgba(255, 39, 97, 0.55);
+  }
+  .proj-archive-x .hold-glyph { position: relative; z-index: 1; }
+
+  /* ── Reveal-in-Finder button ───────────────────────────────────── */
+  .proj-reveal-btn {
+    padding: 5px 11px;
+    font-size: 12px;
+    font-family: var(--font-mono, monospace);
+    color: #0ec4fc;
+    background: rgba(14, 196, 252, 0.07);
+    border: 1px solid rgba(14, 196, 252, 0.4);
+    border-radius: 5px;
+    cursor: pointer;
+    transition: background 120ms ease, border-color 120ms ease, color 120ms ease;
+  }
+  .proj-reveal-btn:hover:not(:disabled) {
+    color: #7fe4ff;
+    background: rgba(14, 196, 252, 0.15);
+    border-color: rgba(14, 196, 252, 0.7);
+  }
+  .proj-reveal-btn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+    color: var(--muted, rgba(245,241,232,0.45));
+    border-color: var(--card-border, rgba(255,255,255,0.14));
+    background: transparent;
+  }
+
+  /* ── Stems & exports ───────────────────────────────────────────── */
+  .proj-exports { margin-top: 8px; font-size: 12px; }
+  .proj-exports summary {
+    cursor: pointer;
+    color: var(--ink-muted, #888);
+    font-family: "Geist Mono Variable", ui-monospace, monospace;
+    padding: 4px 0;
+  }
+  .proj-exports summary strong { color: var(--accent-soft, #7fd9b0); font-weight: 700; }
+  .proj-exports-list {
+    list-style: none;
+    padding: 6px 0 4px 12px;
+    margin: 0;
+    border-left: 1px solid rgba(127, 217, 176, 0.25);
+  }
+  .proj-export-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-family: "Geist Mono Variable", ui-monospace, monospace;
+    padding: 3px 0;
+    flex-wrap: wrap;
+  }
+  .proj-export-kind {
+    font-size: 9px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    padding: 1px 6px;
+    border-radius: 8px;
+    color: var(--muted, rgba(245,241,232,0.6));
+    border: 1px solid var(--card-border, rgba(255,255,255,0.14));
+    flex-shrink: 0;
+  }
+  .proj-export-kind.kind-bounce { color: #f5b94d; border-color: rgba(245,185,77,0.4); }
+  .proj-export-link {
+    color: var(--accent, #0ec4fc);
+    text-decoration: none;
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .proj-export-link:hover { text-decoration: underline; }
+  .proj-export-dur {
+    font-size: 11px;
+    color: var(--ink-muted, #888);
+    font-variant-numeric: tabular-nums;
+  }
+  .proj-export-reveal {
+    background: transparent;
+    color: var(--muted, rgba(245,241,232,0.55));
+    border: 1px solid var(--card-border, rgba(255,255,255,0.14));
+    border-radius: 4px;
+    font-size: 10px;
+    font-family: "Geist Mono Variable", ui-monospace, monospace;
+    padding: 2px 7px;
+    cursor: pointer;
+    flex-shrink: 0;
+  }
+  .proj-export-reveal:hover { color: #0ec4fc; border-color: rgba(14,196,252,0.5); }
+  .proj-export-row .status-line { flex-basis: 100%; font-size: 10px; padding-left: 4px; }
+
   .proj-derived { margin-top: 8px; }
   .proj-derived-list { list-style: none; padding: 0; margin: 4px 0 0; }
   .proj-derived-row {
@@ -532,6 +791,8 @@ function daysAgo(s?: string | null): string {
     font-weight: 600;
     margin: 0;
     color: var(--accent-soft, #7fd9b0);
+    flex: 1 1 auto;
+    min-width: 0;
   }
   .proj-title-ext {
     color: var(--ink-muted, #888);
@@ -903,7 +1164,12 @@ function daysAgo(s?: string | null): string {
     let activeCard: HTMLElement | null = null;
 
     const setStatus = (card: HTMLElement, text: string, tone: "" | "ok" | "err" = "") => {
-      const line = card.querySelector<HTMLElement>("[data-status-line]");
+      // Card-level actions (open/reveal/archive/collection) report in the
+      // manage row — cards with prints/stems have earlier status lines, so a
+      // bare "first [data-status-line]" would land in the wrong row.
+      const line =
+        card.querySelector<HTMLElement>(".proj-manage-row [data-status-line]") ??
+        card.querySelector<HTMLElement>("[data-status-line]");
       if (!line) return;
       line.textContent = text;
       if (tone) line.setAttribute("data-tone", tone);
@@ -965,20 +1231,71 @@ function daysAgo(s?: string | null): string {
         return;
       }
 
-      const archiveBtn = target?.closest<HTMLButtonElement>('[data-action="archive-project"]');
-      if (archiveBtn) {
-        const currentlyArchived = archiveBtn.getAttribute("data-archived") === "true";
-        archiveBtn.disabled = true;
+      const revealBtn = target?.closest<HTMLButtonElement>('[data-action="reveal-project"]');
+      if (revealBtn) {
+        if (revealBtn.disabled) return;
+        const orig = revealBtn.textContent;
+        revealBtn.disabled = true;
+        revealBtn.textContent = "revealing…";
+        setStatus(card, "");
+        try {
+          const res = await projPostJSON("/api/console/projects-reveal", { project_asset_id: assetId });
+          if (res.ok) {
+            revealBtn.textContent = "✓ revealed";
+            setStatus(card, "Revealed in Finder on M3", "ok");
+            setTimeout(() => { revealBtn.textContent = orig; revealBtn.disabled = false; setStatus(card, ""); }, 2000);
+          } else {
+            const msg = res.status === 404
+              ? "Not reachable from this Mac — connect the T7 (or it hasn't synced)"
+              : "Reveal failed";
+            setStatus(card, msg, "err");
+            revealBtn.textContent = orig;
+            revealBtn.disabled = false;
+          }
+        } catch (err) {
+          setStatus(card, "Reveal failed: " + String(err), "err");
+          revealBtn.textContent = orig;
+          revealBtn.disabled = false;
+        }
+        return;
+      }
+
+      const stemRevealBtn = target?.closest<HTMLButtonElement>('[data-action="reveal-stem"]');
+      if (stemRevealBtn) {
+        const sid = Number(stemRevealBtn.dataset.stemAssetId);
+        if (!Number.isFinite(sid)) return;
+        const row = stemRevealBtn.closest<HTMLElement>(".proj-export-row");
+        const setRow = (t: string, tone: "" | "ok" | "err" = "") => {
+          const line = row?.querySelector<HTMLElement>("[data-status-line]");
+          if (!line) return;
+          line.textContent = t;
+          if (tone) line.setAttribute("data-tone", tone);
+          else line.removeAttribute("data-tone");
+        };
+        const orig = stemRevealBtn.textContent;
+        stemRevealBtn.disabled = true;
+        stemRevealBtn.textContent = "…";
+        setRow("");
+        try {
+          const res = await projPostJSON("/api/console/projects-reveal", { project_asset_id: sid });
+          setRow(res.ok ? "revealed on M3" : (res.status === 404 ? "not on this Mac (connect T7?)" : "reveal failed"), res.ok ? "ok" : "err");
+        } catch {
+          setRow("reveal failed", "err");
+        }
+        stemRevealBtn.textContent = orig;
+        stemRevealBtn.disabled = false;
+        return;
+      }
+
+      const unarchiveBtn = target?.closest<HTMLButtonElement>('[data-action="unarchive-project"]');
+      if (unarchiveBtn) {
+        unarchiveBtn.disabled = true;
         const res = await projPostJSON("/api/console/projects-archive", {
           project_asset_id: assetId,
-          archived: !currentlyArchived,
+          archived: false,
         });
-        if (res.ok) {
-          location.reload();
-        } else {
-          setStatus(card, "Archive failed", "err");
-          archiveBtn.disabled = false;
-        }
+        if (res.ok) location.reload();
+        else { setStatus(card, "Unarchive failed", "err"); unarchiveBtn.disabled = false; }
         return;
       }
     });
@@ -1317,5 +1634,106 @@ function daysAgo(s?: string | null): string {
       if (!group || !Number.isFinite(id)) return;
       linkBatch(group, id);
     });
+
+    // ── Hold-to-archive × (mirrors engineer .pair-skip-x; 650ms commit;
+    //    a tap is a no-op). Kept in lockstep with the .proj-archive-x CSS. ──
+    const ARCH_HOLD_MS = 650;
+    let archTimer: number | null = null;
+    let archBtn: HTMLElement | null = null;
+    const cancelArch = () => {
+      if (archTimer !== null) { window.clearTimeout(archTimer); archTimer = null; }
+      if (archBtn) { archBtn.removeAttribute("data-holding"); archBtn = null; }
+    };
+    const startArch = (btn: HTMLElement) => {
+      if (archTimer !== null) return;
+      const card = btn.closest<HTMLElement>(".proj-card");
+      if (!card) return;
+      archBtn = btn;
+      btn.setAttribute("data-holding", "true");
+      archTimer = window.setTimeout(async () => {
+        archTimer = null;
+        btn.removeAttribute("data-holding");
+        archBtn = null;
+        const assetId = Number(card.getAttribute("data-asset-id"));
+        if (!Number.isFinite(assetId)) return;
+        setStatus(card, "Archiving…");
+        try {
+          const res = await projPostJSON("/api/console/projects-archive", { project_asset_id: assetId, archived: true });
+          if (res.ok) location.reload();
+          else setStatus(card, "Archive failed", "err");
+        } catch { setStatus(card, "Archive failed", "err"); }
+      }, ARCH_HOLD_MS);
+    };
+    document.addEventListener("pointerdown", (e) => {
+      const b = (e.target as HTMLElement | null)?.closest<HTMLElement>('[data-hold="archive"]');
+      if (b) startArch(b);
+    });
+    document.addEventListener("pointerup", cancelArch);
+    document.addEventListener("pointercancel", cancelArch);
+    document.addEventListener("pointerout", (e) => {
+      if (!archBtn) return;
+      const t = e.target as HTMLElement | null;
+      if (t?.closest('[data-hold="archive"]') === archBtn) {
+        const rel = (e as PointerEvent).relatedTarget as HTMLElement | null;
+        if (!rel || rel.closest('[data-hold="archive"]') !== archBtn) cancelArch();
+      }
+    });
+
+    // ── Sort + filter toolbar (client-side; default = recently modified) ──
+    const list = root.querySelector<HTMLElement>(".proj-list");
+    if (list) {
+      const sortSel = root.querySelector<HTMLSelectElement>("[data-sort]");
+      const filterBtns = Array.from(root.querySelectorAll<HTMLButtonElement>("[data-filter]"));
+      const countEl = root.querySelector<HTMLElement>("[data-proj-count]");
+      const cards = Array.from(list.querySelectorAll<HTMLElement>(".proj-card"));
+      const headers = Array.from(list.querySelectorAll<HTMLElement>(".proj-group-header"));
+      const originalOrder = Array.from(list.children) as HTMLElement[];
+      let curFilter = "all";
+      const numAttr = (el: HTMLElement, a: string) => Number(el.getAttribute(a)) || 0;
+      const tsAttr = (el: HTMLElement, a: string) => {
+        const v = el.getAttribute(a);
+        const t = v ? Date.parse(v) : NaN;
+        return Number.isFinite(t) ? t : 0;
+      };
+      const sorters: Record<string, (a: HTMLElement, b: HTMLElement) => number> = {
+        modified: (a, b) => tsAttr(b, "data-modified") - tsAttr(a, "data-modified"),
+        created: (a, b) => tsAttr(b, "data-created") - tsAttr(a, "data-created"),
+        oldest: (a, b) => tsAttr(a, "data-modified") - tsAttr(b, "data-modified"),
+        dense: (a, b) => numAttr(b, "data-clips") - numAttr(a, "data-clips"),
+        recordings: (a, b) => numAttr(b, "data-recorded") - numAttr(a, "data-recorded"),
+      };
+      const passes = (c: HTMLElement) => {
+        if (curFilter === "recordings") return numAttr(c, "data-recorded") > 0;
+        if (curFilter === "exports") return c.getAttribute("data-has-exports") === "1";
+        if (curFilter === "revealable") return c.getAttribute("data-revealable") === "1";
+        return true;
+      };
+      const apply = () => {
+        const sort = sortSel?.value || "modified";
+        if (sort === "collection" && curFilter === "all") {
+          originalOrder.forEach((n) => list.appendChild(n));
+          headers.forEach((h) => (h.style.display = ""));
+          cards.forEach((c) => (c.style.display = ""));
+          if (countEl) countEl.textContent = `${cards.length} projects`;
+          return;
+        }
+        headers.forEach((h) => (h.style.display = "none"));
+        const visible = cards.filter(passes);
+        const hidden = cards.filter((c) => !passes(c));
+        visible.sort(sorters[sort] || sorters.modified);
+        visible.forEach((c) => { c.style.display = ""; list.appendChild(c); });
+        hidden.forEach((c) => { c.style.display = "none"; });
+        if (countEl) countEl.textContent = `${visible.length} of ${cards.length}`;
+      };
+      sortSel?.addEventListener("change", apply);
+      filterBtns.forEach((b) =>
+        b.addEventListener("click", () => {
+          curFilter = b.getAttribute("data-filter") || "all";
+          filterBtns.forEach((x) => x.classList.toggle("is-active", x === b));
+          apply();
+        }),
+      );
+      apply();
+    }
   }
 </script>

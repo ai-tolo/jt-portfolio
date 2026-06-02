@@ -257,6 +257,17 @@ export async function openProjectInAbleton(
   return _post("/projects/open-in-ableton", { project_asset_id }, { timeoutMs: 25000 });
 }
 
+/** Reveal a project's .als (or any asset) in Finder on M3 — `open -R`, does
+ *  NOT launch Ableton. Works only when the rewritten path is present on M3;
+ *  a 404 flows back so the UI can show "not on this Mac yet". `project_asset_id`
+ *  is any catalog asset rowid (the engine reveals that row's path), so it also
+ *  serves stem/export reveal. */
+export async function revealProjectInFinder(
+  project_asset_id: number,
+): Promise<ApiResult<{ ok: boolean; revealed: string }>> {
+  return _post("/projects/reveal-in-finder", { project_asset_id }, { timeoutMs: 20000 });
+}
+
 /** Archive (soft-hide) or un-archive a project. */
 export async function archiveProject(
   project_asset_id: number,
