@@ -1381,6 +1381,38 @@ function daysAgo(s?: string | null): string {
       }
     });
 
+    // Keyboard scrub for the active audition (bounced render or print).
+    // ←/→ nudge ±5s on the shared <audio> singleton, matching the Buckets
+    // cards and the shared WaveformPlayer. Ignores typing + modifier combos.
+    document.addEventListener("keydown", (e) => {
+      if (e.key !== "ArrowLeft" && e.key !== "ArrowRight") return;
+      const tag = (e.target as HTMLElement | null)?.tagName?.toLowerCase();
+      if (
+        tag === "input" ||
+        tag === "textarea" ||
+        (e.target as HTMLElement | null)?.isContentEditable
+      )
+        return;
+      if (e.metaKey || e.ctrlKey || e.altKey) return;
+      const auditioning =
+        activeCard !== null ||
+        document.querySelector('.proj-print-row[data-playing="true"]') !== null;
+      if (!audio || !auditioning) return;
+      e.preventDefault();
+      const STEP = 5;
+      if (e.key === "ArrowLeft") {
+        try {
+          audio.currentTime = Math.max(0, audio.currentTime - STEP);
+        } catch {}
+      } else {
+        const dur = audio.duration;
+        const cap = Number.isFinite(dur) && dur > 0 ? dur : audio.currentTime + STEP;
+        try {
+          audio.currentTime = Math.min(cap, audio.currentTime + STEP);
+        } catch {}
+      }
+    });
+
     // ── Print linker ────────────────────────────────────────────────────
     // Click a suggestion chip OR pick from the fallback <select> to link
     // a pending print to a project. On success the row dims and the

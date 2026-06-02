@@ -464,5 +464,36 @@ const durationLabel = fmtDuration(durationSeconds);
         return;
       }
     });
+
+    // Keyboard scrub: ←/→ nudge the active player ±5s, like the Buckets
+    // cards. Works whether playing or paused (seeking a paused <audio>
+    // still repaints via the 'seeked' handler). Ignores typing + modifier
+    // combos so it never fights a focused input or a browser shortcut.
+    document.addEventListener("keydown", (e) => {
+      if (e.key !== "ArrowLeft" && e.key !== "ArrowRight") return;
+      const tag = (e.target as HTMLElement | null)?.tagName?.toLowerCase();
+      if (
+        tag === "input" ||
+        tag === "textarea" ||
+        (e.target as HTMLElement | null)?.isContentEditable
+      )
+        return;
+      if (e.metaKey || e.ctrlKey || e.altKey) return;
+      if (!audio || !active) return;
+      e.preventDefault();
+      const STEP = 5;
+      const dur = durOf(active);
+      if (e.key === "ArrowLeft") {
+        try {
+          audio.currentTime = Math.max(0, audio.currentTime - STEP);
+        } catch {}
+      } else {
+        const cap = dur > 0 ? dur : audio.currentTime + STEP;
+        try {
+          audio.currentTime = Math.min(cap, audio.currentTime + STEP);
+        } catch {}
+      }
+      paint();
+    });
   })();
 </script>
