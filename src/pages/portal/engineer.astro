@@ -3316,10 +3316,15 @@ function stemSoloUrls(sf) {
     timeLabel: HTMLElement | null;
     rafId: number | null;
     pause: () => void;
+    swapTo: (i: number, play?: boolean) => void;
   };
 
   const allControllers: CardController[] = [];
   let activeCard: CardController | null = null;
+  // The winners card the keyboard controls — set when a card is expanded or a
+  // take is played. Lets 1/2/3/4 + ↑/↓ switch takes hands-free, even before the
+  // first play, without needing the mouse on the per-row ▶ buttons. (toggle UX)
+  let focusedCard: CardController | null = null;
 
   // fmtTime is reused from the pair-tinder controller above.
   function fmtTimeOrDash(s: number): string {
@@ -3365,6 +3370,9 @@ function stemSoloUrls(sf) {
         if (a && !a.paused) a.pause();
         renderState();
       },
+      // Exposed so the document-level keyboard handler can drive take-switching
+      // (swapTo is a hoisted fn decl in this closure). (toggle UX)
+      swapTo: (i: number, play?: boolean) => swapTo(i, play),
     };
     allControllers.push(ctrl);
 
@@ -3472,6 +3480,7 @@ function stemSoloUrls(sf) {
 
     ctrl.audios.forEach(({ btn, audio }, i) => {
       btn.addEventListener("click", () => {
+        focusedCard = ctrl;
         if (i === ctrl.activeIndex) {
           toggle();
         } else {
@@ -3591,6 +3600,10 @@ function stemSoloUrls(sf) {
       const wasCollapsed = card.dataset.collapsed === "true";
       card.dataset.collapsed = wasCollapsed ? "false" : "true";
       head.setAttribute("aria-expanded", String(wasCollapsed));
+      // Expanding a card focuses it for keyboard take-switching (1/2/3/4 + ↑/↓).
+      if (wasCollapsed) {
+        focusedCard = allControllers.find((c) => c.card === card) ?? focusedCard;
+      }
     });
   });
 
@@ -3714,6 +3727,34 @@ function stemSoloUrls(sf) {
   document.addEventListener("keydown", (e) => {
     const target = e.target as HTMLElement | null;
     if (target && (target.tagName === "TEXTAREA" || target.tagName === "INPUT")) return;
+
+    // Toggle-style take switching on the focused (expanded) winners card:
+    // 1-9 jump straight to a take, ↑/↓ step between them. swapTo carries the
+    // playhead position and marks it the active card, so the Space/←/→ handling
+    // below then applies to it. We only claim these keys when a winners card is
+    // actually open, so arrow-key scrolling still works everywhere else. (toggle UX)
+    const kbCard = focusedCard ?? activeCard;
+    if (kbCard && kbCard.card.dataset.collapsed !== "true") {
+      if (/^[1-9]$/.test(e.key)) {
+        const idx = Number(e.key) - 1;
+        if (idx < kbCard.audios.length) {
+          e.preventDefault();
+          kbCard.swapTo(idx, true);
+        }
+        return;
+      }
+      if (e.key === "ArrowUp") {
+        e.preventDefault();
+        kbCard.swapTo(Math.max(0, kbCard.activeIndex - 1), true);
+        return;
+      }
+      if (e.key === "ArrowDown") {
+        e.preventDefault();
+        kbCard.swapTo(Math.min(kbCard.audios.length - 1, kbCard.activeIndex + 1), true);
+        return;
+      }
+    }
+
     if (!activeCard) return;
     const a = activeCard.audios[activeCard.activeIndex]?.audio;
     if (!a) return;
