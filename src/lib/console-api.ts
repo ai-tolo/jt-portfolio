@@ -33,6 +33,7 @@ import type {
   QualityStar,
   QualityStarResponse,
   RevealInFinderResponse,
+  PrewarmResponse,
   SplitStemsResponse,
   SplitStemsStatus,
   StemSplitMode,
@@ -608,6 +609,17 @@ export async function revealInFinder(
   asset_id: number,
 ): Promise<ApiResult<RevealInFinderResponse>> {
   return _post<RevealInFinderResponse>("/buckets/reveal-in-finder", { asset_id });
+}
+
+/** Warm the engine's opus disk cache for a (usually long) source ahead of
+ *  playback, so the first play hits a Range-seekable cached file instead of
+ *  paying the M3-fetch + transcode inline. Fire-and-forget on card expand /
+ *  hover; the engine returns immediately and transcodes in the background. */
+export async function prewarmOpus(
+  path: string,
+): Promise<ApiResult<PrewarmResponse>> {
+  const params = new URLSearchParams({ path });
+  return _post<PrewarmResponse>(`/file/prewarm?${params}`, {}, { timeoutMs: 8_000 });
 }
 
 /** Promote a bucket=loop row into Live's browser. Loudnorm pass plus a

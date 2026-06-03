@@ -608,6 +608,15 @@ export interface RevealInFinderResponse {
   /** Engine returns the absolute path it asked Finder to reveal, for
    *  display in the UI. */
   revealed_path: string | null;
+  /** Honest human-readable reason when ok=false — e.g. "not reachable on
+   *  this Mac (not synced from iCloud/T7 yet)". The card surfaces this
+   *  instead of a false "revealed". Absent on success. */
+  reason?: string | null;
+}
+
+/** Result of warming the opus disk cache ahead of playback. */
+export interface PrewarmResponse {
+  status: "cached" | "warming" | "busy";
 }
 
 // ── Engineer (Build 5) ────────────────────────────────────────────────────

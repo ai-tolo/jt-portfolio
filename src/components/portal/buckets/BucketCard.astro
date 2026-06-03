@@ -76,11 +76,13 @@ const BUCKET_LABEL: Record<BucketName, string> = {
 };
 const currentBucket: BucketName = item.bucket ?? "inbox";
 
-const CATEGORIES: { id: BucketName; label: string; kbd: string }[] = [
-  { id: "jam", label: "JAM", kbd: "J" },
-  { id: "loops", label: "LOOP", kbd: "L" },
-  { id: "field", label: "FIELD", kbd: "F" },
-  { id: "tracks", label: "TRACK", kbd: "T" },
+// Emoji glyphs mirror the filter-category icons in BucketsFilters.astro so
+// the per-card pill and the page-level filter read as the same vocabulary.
+const CATEGORIES: { id: BucketName; label: string; kbd: string; emoji: string }[] = [
+  { id: "jam", label: "JAM", kbd: "J", emoji: "🎹" },
+  { id: "loops", label: "LOOP", kbd: "L", emoji: "🔁" },
+  { id: "field", label: "FIELD", kbd: "F", emoji: "🎤" },
+  { id: "tracks", label: "TRACK", kbd: "T", emoji: "🎵" },
 ];
 
 // Split the title at the file extension so the .wav suffix can render
@@ -235,10 +237,10 @@ const hasExpanded = true;
             data-action="dup-group"
             data-asset-id={String(item.asset_id)}
             title={item.dup_count && item.dup_count > 1
-              ? `${item.dup_count} copies share this content. Click to see siblings (canonical highlighted) before trashing.`
-              : `Duplicate of asset_id ${item.dup_of}`}
+              ? `${item.dup_count} copies of this exact audio exist. Click to see them — the ★ kept one is the one the Console keeps.`
+              : "This is a copy of audio that already exists. Click to see the original."}
           >
-            DUP{item.dup_count && item.dup_count > 1 ? ` (${item.dup_count})` : ""}
+            {item.dup_count && item.dup_count > 1 ? `COPIES (${item.dup_count})` : "COPY"}
           </button>
         )}
         {/* Inline sibling list — populated lazily on DUP click. Scoped to
@@ -284,7 +286,7 @@ const hasExpanded = true;
             type="button"
             class="crop-btn"
             data-action="enter-crop"
-            title="Crop a loop from this — replaces the waveform with a large editor"
+            title="Crop a loop — saves a NEW file in Loops; your original is untouched"
             aria-label="Open crop tool"
           >✂</button>
         )}
@@ -343,7 +345,7 @@ const hasExpanded = true;
           {/* Playback is keyboard-driven in crop mode: spacebar toggles
               play/pause, ←/→ scrub ±1s within the loop. The hint shows
               when the cropper opens; fades when the curator first uses it. */}
-          <p class="cropper-hint" data-cropper-hint>space play/pause · ←/→ scrub · drag caps to trim · drag the frame to slide</p>
+          <p class="cropper-hint" data-cropper-hint>Crop a loop — saves a NEW file in Loops; your original is untouched. · space play/pause · ←/→ scrub · drag caps to trim · drag the frame to slide</p>
         </div>
       )}
 
@@ -390,6 +392,7 @@ const hasExpanded = true;
           title={`Assign to ${c.label} (${c.kbd})`}
         >
           <kbd>{c.kbd}</kbd>
+          <span class="category-emoji" aria-hidden="true">{c.emoji}</span>
           <span class="category-label">{c.label}</span>
         </button>
       ))}
@@ -584,7 +587,7 @@ const hasExpanded = true;
                 data-action="split-stems"
                 data-mode="2"
                 data-asset-id={String(item.asset_id)}
-                title="Demucs split → vocals + instrumental (~3-5 min on M1)"
+                title="Split into vocals + instrumental — saved as NEW files linked to this track; your original is untouched (~3-5 min on M1)"
               >2-stem<span class="stem-btn-sub">vox · inst</span></button>
               <button
                 type="button"
@@ -592,7 +595,7 @@ const hasExpanded = true;
                 data-action="split-stems"
                 data-mode="4"
                 data-asset-id={String(item.asset_id)}
-                title="Demucs split → drums + bass + vocals + other (~5-10 min on M1)"
+                title="Split into drums + bass + vocals + other — saved as NEW files linked to this track; your original is untouched (~5-10 min on M1)"
               >4-stem<span class="stem-btn-sub">drm · bass · vox · oth</span></button>
               <button
                 type="button"
@@ -651,6 +654,15 @@ const hasExpanded = true;
 </article>
 
 <style>
+  /* Shared loading/buffering animations (mirrors WaveformPlayer + the
+     audition player in [bucket].astro so all three read consistently).
+     The card has no play button, so only the waveform shimmer is used. */
+  @keyframes cnsl-spin { to { transform: rotate(360deg); } }
+  @keyframes cnsl-shimmer {
+    0% { transform: translateX(-120%); }
+    100% { transform: translateX(120%); }
+  }
+
   /* ── Card shell ─────────────────────────────────────────────────────
      The cassette treatment (border + glow) lives in PortalLayout's
      global style. This sheet defines the row's internal layout. Cards
@@ -1060,9 +1072,9 @@ const hasExpanded = true;
     white-space: nowrap;
   }
 
-  /* Inline dup-group panel rendered next to / below the title row. Renders
-     siblings as a tight list with the canonical marked. Never auto-shown —
-     opens only when the curator clicks the DUP badge. */
+  /* Inline copies-group panel rendered next to / below the title row. Renders
+     the group as a tight list with the kept (★) copy marked. Never auto-shown —
+     opens only when the curator clicks the COPIES badge. */
   .dup-detail {
     grid-column: 1;
     margin-top: 6px;
@@ -1101,6 +1113,24 @@ const hasExpanded = true;
   }
   .waveform[data-seekable="true"] { cursor: pointer; }
   .waveform[data-seekable="true"]:hover { box-shadow: inset 0 0 0 1px rgba(14, 196, 252, 0.45); }
+  /* Buffering shimmer — sweeping cyan highlight gated on data-buffering,
+     toggled by the audition player in [bucket].astro. The card's loading
+     signal (no play button to spin). */
+  .waveform[data-buffering="true"]::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    z-index: 4;
+    background: linear-gradient(
+      100deg,
+      transparent 35%,
+      rgba(14, 196, 252, 0.16) 50%,
+      transparent 65%
+    );
+    transform: translateX(-120%);
+    animation: cnsl-shimmer 1.15s ease-in-out infinite;
+  }
   .waveform img {
     width: 100%;
     height: 100%;
@@ -1174,11 +1204,21 @@ const hasExpanded = true;
     padding: 0 6px;
     cursor: pointer;
     display: flex;
+    flex-direction: column;
     align-items: center;
     justify-content: center;
+    gap: 2px;
     line-height: 1;
     transition: color 160ms ease, background-color 160ms ease,
                 transform 80ms ease;
+  }
+  /* Category emoji — sits above the word in the narrow tile, mirroring the
+     filter-category icon. Slight desaturation at rest so it doesn't shout;
+     active/hover states (below) bring it to full strength. */
+  .category-btn .category-emoji {
+    font-size: 13px;
+    line-height: 1;
+    filter: saturate(0.85);
   }
   .category-btn:first-child { border-top: 0; }
   .category-btn:hover,
@@ -2325,6 +2365,24 @@ const hasExpanded = true;
   // toggles, EXCEPT clicks on interactive descendants. The date subtitle
   // remains an explicit toggle target so keyboard + aria flow still works
   // (chevron rotates to indicate state).
+  // Opus prewarm: when a long file's card expands, fire-and-forget a warm of
+  // the engine's opus disk cache so the first play streams instantly (long
+  // files request &variant=opus in [bucket].astro's playCard). Uses the SAME
+  // catalog path playCard uses to build the asset URL (card.dataset.path).
+  // Deduped per card via data-prewarmed so re-expanding won't re-fire.
+  const PREWARM_THRESHOLD_SEC = 600;
+  const prewarmOpusIfLong = (card: HTMLElement) => {
+    if (card.dataset.prewarmed === "1") return;
+    const durSec = Number(card.dataset.durationSeconds);
+    if (!Number.isFinite(durSec) || durSec <= PREWARM_THRESHOLD_SEC) return;
+    const path = card.dataset.path;
+    if (!path) return;
+    card.dataset.prewarmed = "1";
+    fetch(`/api/console/file-prewarm?path=${encodeURIComponent(path)}`, {
+      method: "POST",
+    }).catch(() => {});
+  };
+
   const togglePanel = (card: HTMLElement) => {
     const panel = card.querySelector<HTMLElement>("[data-expanded]");
     const dateBtn = card.querySelector<HTMLButtonElement>('[data-action="expand"]');
@@ -2336,6 +2394,7 @@ const hasExpanded = true;
     } else {
       dateBtn?.setAttribute("aria-expanded", "true");
       panel.hidden = false;
+      prewarmOpusIfLong(card);
     }
   };
 
@@ -2388,6 +2447,10 @@ const hasExpanded = true;
     const setStatus = (m: string) => { if (statusEl) statusEl.textContent = m; };
     const isOpen = btn.dataset.action === "open-project-ableton";
     const projId = btn.dataset.projectAssetId ? Number(btn.dataset.projectAssetId) : null;
+    // The bare-file reveal (no linked project) hits buckets-reveal-in-finder,
+    // which now ALWAYS answers HTTP 200 with an inner { ok, reason } — the file
+    // may simply not be synced to this Mac yet. We must read `ok`, not status.
+    const isBareFileReveal = !isOpen && projId == null;
     btn.disabled = true;
     setStatus(isOpen ? "opening…" : "revealing…");
     try {
@@ -2411,7 +2474,25 @@ const hasExpanded = true;
             body: JSON.stringify({ asset_id: Number(btn.dataset.assetId) }),
           });
       if (!res.ok) {
-        setStatus(res.status === 404 ? "not reachable on M3" : `failed (${res.status})`);
+        // Network / HTTP-level failure (proxy down, engine unreachable).
+        setStatus(isBareFileReveal ? "Reveal failed" : res.status === 404 ? "not reachable on M3" : `failed (${res.status})`);
+      } else if (isBareFileReveal) {
+        // 200, but the file might not be on this Mac — trust the inner `ok`.
+        let ok = true;
+        let reason = "";
+        try {
+          const body = await res.json();
+          ok = body?.ok !== false;
+          reason = typeof body?.reason === "string" ? body.reason : "";
+        } catch {}
+        if (ok) {
+          setStatus("✓ Revealed in Finder");
+          window.setTimeout(() => setStatus(""), 4000);
+        } else {
+          // Non-alarming notice — the file just isn't reachable here yet.
+          setStatus(reason || "Not reachable on this Mac");
+          window.setTimeout(() => setStatus(""), 6000);
+        }
       } else {
         setStatus(isOpen ? "opened ✓" : "revealed ✓");
         window.setTimeout(() => setStatus(""), 4000);

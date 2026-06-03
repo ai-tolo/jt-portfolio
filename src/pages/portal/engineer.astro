@@ -83,8 +83,19 @@ const sortedWinners = [...winners].sort((a, b) => winnerRank(a) - winnerRank(b))
 
 const AXIS_ORDER = ["focal", "space", "dynamics"] as const;
 
-function poleLabel(p: string): string {
-  return p.replace(/_/g, " ");
+// Deterministic Fisher–Yates (seeded LCG) — stable per seed so a card's blind
+// order doesn't reshuffle on every render, yet varies card-to-card. Used to
+// shuffle the ORIGINAL in among the king candidates so the crown can't be
+// biased by which slot is the source. (#4 blind voting)
+function blindShuffle<T>(arr: T[], seed: number): T[] {
+  const a = arr.slice();
+  let s = ((seed % 2147483647) + 2147483647) % 2147483647 || 1;
+  for (let i = a.length - 1; i > 0; i--) {
+    s = (s * 48271) % 2147483647;
+    const j = s % (i + 1);
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
 }
 function winnerAudioUrl(asset_path: string | null): string {
   return asset_path
@@ -241,6 +252,24 @@ function stemSoloUrls(sf) {
             // Build a {stem_name: opus_url} map per side for solo playback.
             const stemUrlsA = stemSoloUrls(p.variant_a.stem_files);
             const stemUrlsB = stemSoloUrls(p.variant_b.stem_files);
+            // Blind voting: present the three takes (variant A / variant B /
+            // ORIGINAL) as identical, numbered chips in a per-pair-shuffled
+            // order, so neither the source nor any reference's reputation can
+            // bias the vote. The role wiring (data-side-btn / data-now-side /
+            // data-hold) is unchanged, so the server still records the true
+            // variant_a_id / variant_b_id / chose_original. Identities are
+            // revealed only in the opt-in "reveal" toggle and after a crown.
+            const BLIND_PERMS = [
+              ["a", "b", "o"], ["a", "o", "b"], ["b", "a", "o"],
+              ["b", "o", "a"], ["o", "a", "b"], ["o", "b", "a"],
+            ] as const;
+            const blindOrder = BLIND_PERMS[((p.job_id % 6) + 6) % 6];
+            const blindMeta = {
+              a: { role: "a", pole: p.variant_a.pole as string | null, ref: (p.variant_a.plan?.reference ?? null) as string | null },
+              b: { role: "b", pole: p.variant_b.pole as string | null, ref: (p.variant_b.plan?.reference ?? null) as string | null },
+              o: { role: "o", pole: null as string | null, ref: null as string | null },
+            };
+            const blindOpts = blindOrder.map((r, idx) => ({ ...blindMeta[r as "a" | "b" | "o"], n: idx + 1 }));
             return (
               <li
                 class={`pair${i === 0 ? " pair-active" : ""}`}
@@ -292,27 +321,20 @@ function stemSoloUrls(sf) {
                     <button class="transport-btn transport-play" data-toggle-play aria-label="Play / pause">▶</button>
                     <button class="transport-btn" data-skip="10" aria-label="Forward 10 seconds">⏭</button>
                     <span class="pair-time" data-time>0:00 / —:—</span>
-                    <button
-                      type="button"
-                      class="pair-now-side"
-                      data-now-side
-                      data-kind="original"
-                      data-hold="original"
-                      aria-live="polite"
-                      aria-label="Hold to vote ORIGINAL (neither variant beat the source)"
-                      title="Hold to vote ORIGINAL"
-                    ><span class="hold-fill" aria-hidden="true"></span><span class="now-side-label">ORIGINAL</span></button>
-                    <div class="ab-switch" role="group" aria-label="Switch between variant A and B. Tap to toggle (deselect returns to original). Hold to vote.">
-                      <button class="ab-side ab-side-active" data-side-btn="a" data-hold="a" title="Tap to switch · hold to vote A">
-                        <span class="hold-fill" aria-hidden="true"></span>
-                        <span class="ab-key">A</span>
-                        <span class="ab-label">{p.variant_a.pole.replace(/_/g, " ")}</span>
-                      </button>
-                      <button class="ab-side" data-side-btn="b" data-hold="b" title="Tap to switch · hold to vote B">
-                        <span class="hold-fill" aria-hidden="true"></span>
-                        <span class="ab-key">B</span>
-                        <span class="ab-label">{p.variant_b.pole.replace(/_/g, " ")}</span>
-                      </button>
+                    <div class="ab-switch" role="group" aria-label="Three blind takes — tap a number to audition, hold it to vote. Identities are hidden; use ‘reveal’ below to see them.">
+                      {blindOpts.map((o) => (
+                        o.role === "o" ? (
+                          <button class="ab-side ab-side-blind" data-now-side data-hold="original" title="Tap to audition · hold to vote this take">
+                            <span class="hold-fill" aria-hidden="true"></span>
+                            <span class="ab-key">{o.n}</span>
+                          </button>
+                        ) : (
+                          <button class="ab-side ab-side-blind" data-side-btn={o.role} data-hold={o.role} title="Tap to audition · hold to vote this take">
+                            <span class="hold-fill" aria-hidden="true"></span>
+                            <span class="ab-key">{o.n}</span>
+                          </button>
+                        )
+                      ))}
                     </div>
                   </div>
 
@@ -335,41 +357,42 @@ function stemSoloUrls(sf) {
                     <details class="pair-why" data-pair-why>
                       <summary>
                         <span class="pair-why-caret" aria-hidden="true">▾</span>
-                        <span class="pair-why-label">what am I hearing?</span>
+                        <span class="pair-why-label">🔍 reveal what each take is (spoils the blind)</span>
                       </summary>
                       <div class="pair-why-grid">
-                        {[
-                          { side: "a" as const, variant: p.variant_a },
-                          { side: "b" as const, variant: p.variant_b },
-                        ].map(({ side, variant }) => {
-                          const plan = variant.plan;
-                          const ref = plan?.reference;
+                        {blindOpts.map((o) => {
+                          const variant = o.role === "a" ? p.variant_a : o.role === "b" ? p.variant_b : null;
+                          const plan = variant?.plan;
                           // Master philosophy reads "Mastered toward X (pole) — why";
                           // drop the prefix so the why stands on its own.
                           const why =
                             plan?.philosophy_summary?.split(" — ").slice(1).join(" — ") ||
                             plan?.philosophy_summary ||
                             "";
-                          const flags = variant.translation?.summary_flags ?? [];
+                          const flags = variant?.translation?.summary_flags ?? [];
                           return (
-                            <div class={`pair-why-col plan-${side}`}>
+                            <div class="pair-why-col">
                               <div class="pair-why-head">
-                                <span class="pair-why-side">{side.toUpperCase()}</span>
-                                <span class="pair-why-pole">{variant.pole.replace(/_/g, " ")}</span>
+                                <span class="pair-why-side">#{o.n}</span>
+                                <span class="pair-why-pole">{o.role === "o" ? "ORIGINAL" : (o.pole ?? "").replace(/_/g, " ")}</span>
                               </div>
-                              {ref && (
-                                <div class="pair-why-ref">toward <strong>{ref}</strong></div>
-                              )}
+                              {o.role === "o" ? (
+                                <div class="pair-why-ref">your unprocessed source</div>
+                              ) : (o.ref && (
+                                <div class="pair-why-ref">toward <strong>{o.ref}</strong></div>
+                              ))}
                               {why && <div class="pair-why-text">{why}</div>}
-                              <div class="pair-why-qa">
-                                {typeof variant.output_lufs === "number" && (
-                                  <span>{variant.output_lufs.toFixed(1)} LUFS</span>
-                                )}
-                                {typeof variant.true_peak_dbfs === "number" && (
-                                  <span>{variant.true_peak_dbfs.toFixed(1)} dBTP</span>
-                                )}
-                                {variant.qa_flag && <span class="pair-why-qa-warn">⚠ check</span>}
-                              </div>
+                              {variant && (
+                                <div class="pair-why-qa">
+                                  {typeof variant.output_lufs === "number" && (
+                                    <span>{variant.output_lufs.toFixed(1)} LUFS</span>
+                                  )}
+                                  {typeof variant.true_peak_dbfs === "number" && (
+                                    <span>{variant.true_peak_dbfs.toFixed(1)} dBTP</span>
+                                  )}
+                                  {variant.qa_flag && <span class="pair-why-qa-warn">⚠ check</span>}
+                                </div>
+                              )}
                               {flags.length > 0 && (
                                 <div class="pair-why-flags">
                                   {flags.map((f) => (
@@ -530,137 +553,97 @@ function stemSoloUrls(sf) {
                   )}
 
                   <ul class="winner-row">
-                    {/* ORIGINAL row sits above the mixes so the curator
-                        can A/B back to the unprocessed take. Three states:
-                          - default: read-only reference for comparison
-                          - ready-to-crown: ♛ button promotes ORIGINAL to king
-                          - king: gold halo + "♛ ORIGINAL" tag
-                        Per-axis ORIGINAL wins are folded into this single
-                        row (variantWinners filters them out below). */}
-                    <li
-                      class={`winner winner-source${isOriginalKing ? " winner-champion winner-source-king" : ""}`}
-                      data-winner-kind="source"
-                    >
-                      <button
-                        class="winner-play"
-                        type="button"
-                        data-audio-url={sourceUrl}
-                        aria-label="Play original source"
-                      >▶</button>
-                      <div class="winner-meta">
-                        <span class="winner-label">
-                          {isOriginalKing ? "♛ ORIGINAL" : "Original"}
-                        </span>
-                        <span class="winner-sub">
-                          {isOriginalKing ? "your king mix" : "unprocessed source"}
-                        </span>
-                      </div>
-                      {!hasKing && w.axes_decided >= 3 && (
-                        <button
-                          class="winner-crown"
-                          type="button"
-                          data-champion-job-id={w.job_id}
-                          data-champion-is-original="true"
-                          aria-label="Crown ORIGINAL as king (keeps the source, makes no new mixes)"
-                          title="Crown ORIGINAL — the source beats every variant. Stops here; no new mixes. (Use + Make more mixes if you do want another batch.)"
-                        >♛</button>
-                      )}
-                      {isOriginalKing && (
-                        <button
-                          class="winners-action-btn winner-uncrown-x"
-                          type="button"
-                          data-action="uncrown"
-                          data-job-id={w.job_id}
-                          title="Uncrown — compare the mixes again"
-                          aria-label="Uncrown ORIGINAL"
-                        >✕</button>
-                      )}
-                    </li>
-                    {variantKing ? (
-                      // Variant-king mode: collapsed to just the winning
-                      // mix. Curator listens, decides whether to make
-                      // more, publish, or dismiss.
-                      <li
-                        class="winner winner-champion"
-                        data-winner-variant-id={variantKing.variant_id}
-                      >
-                        <button
-                          class="winner-play"
-                          type="button"
-                          data-audio-url={winnerAudioUrl(variantKing.asset_path)}
-                          aria-label="Play king mix"
-                        >▶</button>
-                        <div class="winner-meta">
-                          <span class="winner-label">♛ {variantKing.reference || variantKing.color}</span>
-                          <span class="winner-sub">{variantKing.reference ? `your king mix · ${variantKing.color}` : "your king mix"}</span>
-                        </div>
-                        <button
-                          class="winners-action-btn winner-uncrown-x"
-                          type="button"
-                          data-action="uncrown"
-                          data-job-id={w.job_id}
-                          title="Uncrown — compare the candidates again"
-                          aria-label="Uncrown"
-                        >✕</button>
-                      </li>
-                    ) : isOriginalKing ? (
-                      // ORIGINAL-king mode: variants list collapsed away.
-                      // The ORIGINAL row above is the king display.
-                      null
-                    ) : (
-                      // Voting mode: show all decided variant mixes so
-                      // the curator can cross-compare and crown.
-                      // is_original axis-winners are filtered to the
-                      // ORIGINAL row at top (variantWinners).
-                      variantWinners.map((v, vi) => (
+                    {hasKing ? (
+                      /* CROWNED (post-crown reveal): the decision is made, so the
+                         source + the king mix are shown by their real identity. */
+                      <Fragment>
                         <li
-                          class="winner"
-                          data-winner-variant-id={v.variant_id}
+                          class={`winner winner-source${isOriginalKing ? " winner-champion winner-source-king" : ""}`}
+                          data-winner-kind="source"
                         >
-                          <button
-                            class="winner-play"
-                            type="button"
-                            data-audio-url={winnerAudioUrl(v.asset_path)}
-                            aria-label={`Play ${v.reference || v.color}`}
-                          >▶</button>
+                          <button class="winner-play" type="button" data-audio-url={sourceUrl} aria-label="Play original source">▶</button>
                           <div class="winner-meta">
-                            <span class="winner-label">
-                              {isKingRound ? (v.reference || `Candidate ${vi + 1}`) : v.color}
-                            </span>
-                            <span class="winner-sub">
-                              {isKingRound
-                                ? (v.pole ? `king candidate · ${v.pole.replace(/_/g, " ")}` : "king candidate")
-                                : "candidate"}
-                            </span>
+                            <span class="winner-label">{isOriginalKing ? "♛ ORIGINAL" : "Original"}</span>
+                            <span class="winner-sub">{isOriginalKing ? "your king mix" : "unprocessed source"}</span>
                           </div>
-                          {(w.axes_decided >= 3 || isKingRound) && (
-                            <button
-                              class="winner-crown"
-                              type="button"
-                              data-champion-job-id={w.job_id}
-                              data-champion-variant-id={v.variant_id}
-                              aria-label="Crown as king"
-                              title="Crown as king"
-                            >♛</button>
+                          {isOriginalKing && (
+                            <button class="winners-action-btn winner-uncrown-x" type="button" data-action="uncrown" data-job-id={w.job_id} title="Uncrown — compare the mixes again" aria-label="Uncrown ORIGINAL">✕</button>
                           )}
                         </li>
-                      ))
-                    )}
-                    {/* In voting mode, surface the pending slots so the
-                        curator knows what still needs a vote in Pair
-                        Tinder. Hidden in king mode and king-round mode. */}
-                    {!hasKing && !isKingRound && w.axes_decided < 3 &&
-                      AXIS_ORDER.filter(
-                        (a) => !w.winners.some((v) => v.axis === a),
-                      ).map(() => (
-                        <li class="winner winner-pending">
-                          <span class="winner-pending-glyph">·</span>
+                        {variantKing && (
+                          <li class="winner winner-champion" data-winner-variant-id={variantKing.variant_id}>
+                            <button class="winner-play" type="button" data-audio-url={winnerAudioUrl(variantKing.asset_path)} aria-label="Play king mix">▶</button>
+                            <div class="winner-meta">
+                              <span class="winner-label">♛ {variantKing.reference || variantKing.color}</span>
+                              <span class="winner-sub">{variantKing.reference ? `your king mix · ${variantKing.color}` : "your king mix"}</span>
+                            </div>
+                            <button class="winners-action-btn winner-uncrown-x" type="button" data-action="uncrown" data-job-id={w.job_id} title="Uncrown — compare the candidates again" aria-label="Uncrown">✕</button>
+                          </li>
+                        )}
+                      </Fragment>
+                    ) : (isKingRound || w.axes_decided >= 3) ? (
+                      /* CROWNABLE + BLIND: the ORIGINAL is shuffled in among the
+                         candidate mixes, each shown only as an anonymous "Take N",
+                         so the crown follows sound — not reputation or "the
+                         original". Real identity is revealed after a crown (above)
+                         or via the faceoff's reveal toggle. (#4) */
+                      blindShuffle(
+                        [
+                          { kind: "source" as const, audioUrl: sourceUrl, variantId: null as number | null },
+                          ...variantWinners.map((v) => ({ kind: "variant" as const, audioUrl: winnerAudioUrl(v.asset_path), variantId: v.variant_id })),
+                        ],
+                        w.job_id,
+                      ).map((opt, idx) => (
+                        <li class="winner" data-winner-kind={opt.kind} data-winner-variant-id={opt.variantId ?? undefined}>
+                          <button class="winner-play" type="button" data-audio-url={opt.audioUrl} aria-label={`Play take ${idx + 1}`}>▶</button>
                           <div class="winner-meta">
-                            <span class="winner-label">— pending</span>
-                            <span class="winner-sub">vote in the faceoff above</span>
+                            <span class="winner-label">Take {idx + 1}</span>
+                            <span class="winner-sub">{isKingRound ? "king candidate" : "candidate"}</span>
+                          </div>
+                          <button
+                            class="winner-crown"
+                            type="button"
+                            data-champion-job-id={w.job_id}
+                            data-champion-is-original={opt.kind === "source" ? "true" : undefined}
+                            data-champion-variant-id={opt.kind === "variant" ? opt.variantId : undefined}
+                            aria-label="Crown this take as king"
+                            title="Crown this take as your king"
+                          >♛</button>
+                        </li>
+                      ))
+                    ) : (
+                      /* VOTING (still <3 axes decided, not a king round). No crown
+                         yet — picks happen in the blind faceoff above. The source
+                         is a read-only comparison anchor; axis winners so far are
+                         anonymised. */
+                      <Fragment>
+                        <li class="winner winner-source" data-winner-kind="source">
+                          <button class="winner-play" type="button" data-audio-url={sourceUrl} aria-label="Play original source">▶</button>
+                          <div class="winner-meta">
+                            <span class="winner-label">Original</span>
+                            <span class="winner-sub">unprocessed source — for comparison</span>
                           </div>
                         </li>
-                      ))}
+                        {variantWinners.map((v, vi) => (
+                          <li class="winner" data-winner-variant-id={v.variant_id}>
+                            <button class="winner-play" type="button" data-audio-url={winnerAudioUrl(v.asset_path)} aria-label={`Play take ${vi + 1}`}>▶</button>
+                            <div class="winner-meta">
+                              <span class="winner-label">Take {vi + 1}</span>
+                              <span class="winner-sub">won its axis in the faceoff</span>
+                            </div>
+                          </li>
+                        ))}
+                        {AXIS_ORDER.filter((a) => !w.winners.some((v) => v.axis === a)).map(() => (
+                          <li class="winner winner-pending">
+                            <span class="winner-pending-glyph">·</span>
+                            <div class="winner-meta">
+                              <span class="winner-label">— pending</span>
+                              <span class="winner-sub">vote in the faceoff above</span>
+                            </div>
+                          </li>
+                        ))}
+                      </Fragment>
+                    )}
                   </ul>
 
                   {/* Unified action strip — same shape across all three
@@ -1219,23 +1202,16 @@ function stemSoloUrls(sf) {
     z-index: 2;
     overflow: hidden;
   }
-  [data-side-btn="a"] .hold-fill {
+  /* Blind voting (#4): one neutral hold-fill for all three takes — no per-side
+     cyan/pink that would distinguish the chips. */
+  .ab-side-blind .hold-fill {
     background:
       linear-gradient(90deg, transparent 0%, transparent 82%,
                             rgba(255, 255, 255, 0.55) 96%,
                             rgba(255, 255, 255, 0.9) 100%),
-      linear-gradient(90deg, rgba(14, 196, 252, 0.5) 0%, #6fdfff 100%);
+      linear-gradient(90deg, rgba(255, 150, 80, 0.5) 0%, #ffd23d 100%);
     box-shadow: inset 0 0 16px rgba(255, 255, 255, 0.22),
-                0 0 18px rgba(14, 196, 252, 0.55);
-  }
-  [data-side-btn="b"] .hold-fill {
-    background:
-      linear-gradient(90deg, transparent 0%, transparent 82%,
-                            rgba(255, 255, 255, 0.55) 96%,
-                            rgba(255, 255, 255, 0.9) 100%),
-      linear-gradient(90deg, rgba(255, 59, 110, 0.5) 0%, #ff8eaa 100%);
-    box-shadow: inset 0 0 16px rgba(255, 255, 255, 0.22),
-                0 0 18px rgba(255, 59, 110, 0.55);
+                0 0 18px rgba(255, 150, 80, 0.55);
   }
   .ab-side[data-holding="true"] .hold-fill {
     transform: scaleX(1);
@@ -1248,71 +1224,30 @@ function stemSoloUrls(sf) {
     position: relative;
     z-index: 3;
   }
-  [data-side-btn="a"] {
-    color: #0ec4fc;
-    border-color: rgba(14, 196, 252, 0.45);
-    background: rgba(14, 196, 252, 0.07);
+  /* Blind voting (#4): the three take-chips are visually IDENTICAL regardless
+     of role, so neither position nor colour reveals which is the source or
+     which reference each is. One neutral inactive look + one neutral active
+     look (the active look is forced in the is:global block below, which also
+     beats the dev-mode scoping quirk). */
+  .ab-side-blind {
+    color: #ece3f2;
+    border-color: rgba(236, 227, 242, 0.30);
+    background: rgba(236, 227, 242, 0.05);
   }
-  [data-side-btn="a"]:hover {
-    border-color: #0ec4fc;
-    background: rgba(14, 196, 252, 0.16);
-    color: #b8efff;
+  .ab-side-blind:hover {
+    border-color: rgba(236, 227, 242, 0.7);
+    background: rgba(236, 227, 242, 0.13);
+    color: #ffffff;
   }
-  [data-side-btn="a"].ab-side-active {
-    background: #0ec4fc;
-    color: #0d060f;
-    border-color: #0ec4fc;
-    /* Stronger active state: thicker outer glow, slight scale, brighter
-       inset bloom. Hard to miss which mix is playing. */
-    box-shadow:
-      0 0 28px rgba(14, 196, 252, 0.55),
-      0 0 0 2px rgba(14, 196, 252, 0.7),
-      inset 0 0 14px rgba(255, 255, 255, 0.18);
-    transform: scale(1.04);
-    z-index: 2;
-  }
-  /* (Dim rules duplicated in is:global block below — transition was
-     queueing the opacity change and never firing in dev. Snapping in
-     via !important + transition:none there works around it.) */
-  [data-side-btn="b"] {
-    color: #ff3b6e;
-    border-color: rgba(255, 59, 110, 0.45);
-    background: rgba(255, 59, 110, 0.07);
-  }
-  [data-side-btn="b"]:hover {
-    border-color: #ff3b6e;
-    background: rgba(255, 59, 110, 0.16);
-    color: #ffb6c8;
-  }
-  [data-side-btn="b"].ab-side-active {
-    background: #ff3b6e;
-    color: #0d060f;
-    border-color: #ff3b6e;
-    box-shadow:
-      0 0 28px rgba(255, 59, 110, 0.55),
-      0 0 0 2px rgba(255, 59, 110, 0.7),
-      inset 0 0 14px rgba(255, 255, 255, 0.18);
-    transform: scale(1.04);
-    z-index: 2;
-  }
-  /* Card-wide ambient tint based on which side is playing. Same
-     :has() trick avoids the compound-class+attribute issue with
-     Astro's scoper. */
-  .pair:has([data-side-btn="a"].ab-side-active) {
+  /* Card-wide ambient wash — identical for ANY active take so "no tint =
+     original" can't leak. */
+  .pair:has(.ab-side-blind.ab-side-active) {
     background: linear-gradient(
       180deg,
-      rgba(14, 196, 252, 0.08),
+      rgba(255, 150, 80, 0.07),
       rgba(0, 0, 0, 0.04)
     );
-    border-color: rgba(14, 196, 252, 0.42);
-  }
-  .pair:has([data-side-btn="b"].ab-side-active) {
-    background: linear-gradient(
-      180deg,
-      rgba(255, 59, 110, 0.08),
-      rgba(0, 0, 0, 0.04)
-    );
-    border-color: rgba(255, 59, 110, 0.42);
+    border-color: rgba(255, 180, 90, 0.34);
   }
   .ab-side {
     transition:
@@ -2597,23 +2532,71 @@ function stemSoloUrls(sf) {
   /* Active side: thicker glow, slight scale, brighter outline.
      transition: none keeps the dev-stuck transition pipeline from
      freezing the new values — same workaround as the dim rules. */
-  .ab-side[data-side-btn="a"].ab-side-active {
+  /* Blind voting (#4): single neutral active look for all three take-chips,
+     forced here to beat both the per-side colours and the dev-mode scoping
+     quirk. */
+  .ab-side-blind.ab-side-active {
+    background: linear-gradient(135deg, #ff2d8b, #ff7a3d, #ffd23d) !important;
+    color: #0d060f !important;
+    border-color: transparent !important;
     transform: scale(1.04) !important;
     box-shadow:
-      0 0 28px rgba(14, 196, 252, 0.55),
-      0 0 0 2px rgba(14, 196, 252, 0.7),
-      inset 0 0 14px rgba(255, 255, 255, 0.18) !important;
+      0 0 26px rgba(255, 140, 80, 0.5),
+      0 0 0 2px rgba(255, 180, 90, 0.65),
+      inset 0 0 14px rgba(255, 255, 255, 0.2) !important;
     z-index: 2;
     transition: none !important;
   }
-  .ab-side[data-side-btn="b"].ab-side-active {
-    transform: scale(1.04) !important;
-    box-shadow:
-      0 0 28px rgba(255, 59, 110, 0.55),
-      0 0 0 2px rgba(255, 59, 110, 0.7),
-      inset 0 0 14px rgba(255, 255, 255, 0.18) !important;
-    z-index: 2;
-    transition: none !important;
+
+  /* Loading / buffering (#1): a spinner on the transport play button + a
+     shimmer sweep over the waveform while the first byte / a re-buffer is in
+     flight. In the is:global block so the compound selectors survive Astro's
+     scoper. */
+  @keyframes cnsl-spin { to { transform: rotate(360deg); } }
+  @keyframes cnsl-shimmer { 0% { transform: translateX(-120%); } 100% { transform: translateX(120%); } }
+  .transport-play[data-state="loading"]::before {
+    content: "" !important;
+    box-sizing: border-box;
+    display: inline-block;
+    width: 14px; height: 14px;
+    border: 2px solid currentColor;
+    border-top-color: transparent;
+    border-radius: 50%;
+    animation: cnsl-spin 0.7s linear infinite;
+    vertical-align: middle;
+  }
+  .pair-waveform[data-buffering="true"]::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    z-index: 4;
+    background: linear-gradient(100deg, transparent 35%, rgba(14, 196, 252, 0.16) 50%, transparent 65%);
+    transform: translateX(-120%);
+    animation: cnsl-shimmer 1.15s ease-in-out infinite;
+  }
+  /* Winners king-candidate players — same loading vocabulary (#1). */
+  .winner-play[data-state="loading"]::before {
+    content: "" !important;
+    box-sizing: border-box;
+    display: inline-block;
+    width: 12px; height: 12px;
+    border: 2px solid currentColor;
+    border-top-color: transparent;
+    border-radius: 50%;
+    animation: cnsl-spin 0.7s linear infinite;
+    vertical-align: middle;
+  }
+  .winners-wave { position: relative; overflow: hidden; }
+  .winners-wave[data-buffering="true"]::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    z-index: 4;
+    background: linear-gradient(100deg, transparent 35%, rgba(14, 196, 252, 0.16) 50%, transparent 65%);
+    transform: translateX(-120%);
+    animation: cnsl-shimmer 1.15s ease-in-out infinite;
   }
 
   /* Dim the side that isn't playing. data-dim is toggled by
@@ -2773,16 +2756,10 @@ function stemSoloUrls(sf) {
       el.textContent = "loudness match unavailable — re-render this track to enable";
       return;
     }
-    const f = (x: number | null, d = 1) => (x === null ? "—" : x.toFixed(d));
-    const aP = lufsNum(pair.dataset.aPeak);
-    const bP = lufsNum(pair.dataset.bPeak);
-    const aQa = pair.dataset.aQa === "1";
-    const bQa = pair.dataset.bQa === "1";
+    // Blind: don't print per-take LUFS / peak — that would leak which chip is
+    // which, and louder is not better. Just confirm all three are matched.
     el.textContent =
-      `🔊 matched to ${f(target)} LUFS · ` +
-      `A ${f(aL)}${aQa ? " ⚠" : ""} · ` +
-      `B ${f(bL)}${bQa ? " ⚠" : ""} · ` +
-      `orig ${f(sL)} · peak A ${f(aP)} / B ${f(bP)} dBTP`;
+      `🔊 all three takes level-matched to ${target.toFixed(1)} LUFS — vote on tone, not loudness`;
   }
 
   function fmtTime(s: number): string {
@@ -2832,9 +2809,21 @@ function stemSoloUrls(sf) {
     }
   }
 
-  function setPlayButton(pair: HTMLElement, state: "playing" | "paused") {
+  function setPlayButton(pair: HTMLElement, state: "playing" | "paused" | "loading") {
     const btn = pair.querySelector<HTMLElement>("[data-toggle-play]");
     if (btn) btn.dataset.state = state;
+  }
+
+  // Buffering visual (#1): toggle the shimmer sweep over the active pair's
+  // waveform. The play-button spinner (setPlayButton "loading") is the paired
+  // signal. Long uncached sources stall on first byte over the Funnel — these
+  // two make that visible instead of a frozen, silent UI.
+  function setBuffering(pair: HTMLElement | null, on: boolean) {
+    if (!pair) return;
+    const wave = pair.querySelector<HTMLElement>("[data-stage-waveform]");
+    if (!wave) return;
+    if (on) wave.setAttribute("data-buffering", "true");
+    else wave.removeAttribute("data-buffering");
   }
 
   function setActivePair(pair: HTMLElement) {
@@ -2865,38 +2854,18 @@ function stemSoloUrls(sf) {
 
   function reflectSide(pair: HTMLElement, side: "a" | "b" | null) {
     pair.dataset.side = side ?? "original";
-    pair.querySelectorAll<HTMLElement>("[data-side-btn]").forEach((btn) => {
-      const isActive = side !== null && btn.dataset.sideBtn === side;
+    // Highlight whichever of the three blind chips is the active source — the
+    // ORIGINAL chip carries data-now-side, the two variants data-side-btn — and
+    // dim the other two. Symmetric on purpose: the ORIGINAL is no longer
+    // singled out, and nothing here writes an identity label. (#4 blind voting)
+    pair.querySelectorAll<HTMLElement>("[data-side-btn], [data-now-side]").forEach((btn) => {
+      const isActive = btn.hasAttribute("data-now-side")
+        ? side === null
+        : btn.dataset.sideBtn === side;
       btn.classList.toggle("ab-side-active", isActive);
-      // Sibling dimming: when EITHER side is active, the inactive side
-      // gets data-dim so CSS can mute it. Set on inactive sides only
-      // when ANY side is active (not when ORIGINAL is playing).
-      if (side !== null && !isActive) {
-        btn.setAttribute("data-dim", "true");
-      } else {
-        btn.removeAttribute("data-dim");
-      }
+      if (isActive) btn.removeAttribute("data-dim");
+      else btn.setAttribute("data-dim", "true");
     });
-    // Now-side pill (Phase 5: also the ORIGINAL hold-vote button). Update
-    // only the .now-side-label child so the hold-fill overlay element is
-    // preserved across re-renders. data-kind drives the cosmetic state:
-    //   - "original": amped cream-glow active state (ORIGINAL is playing
-    //     AND is the current vote target)
-    //   - "a" / "b": muted tint showing what playback side is active
-    const sideTag = pair.querySelector<HTMLElement>("[data-now-side]");
-    if (sideTag) {
-      const labelEl = sideTag.querySelector<HTMLElement>(".now-side-label");
-      if (side === null) {
-        if (labelEl) labelEl.textContent = "ORIGINAL";
-        sideTag.dataset.kind = "original";
-      } else {
-        const label = pair.querySelector<HTMLElement>(`[data-side-btn="${side}"] .ab-label`);
-        if (labelEl) {
-          labelEl.textContent = `${side.toUpperCase()} · ${label?.textContent ?? ""}`;
-        }
-        sideTag.dataset.kind = side;
-      }
-    }
   }
 
   async function togglePlay() {
@@ -2904,11 +2873,17 @@ function stemSoloUrls(sf) {
     if (!pair) return;
     const a = activeAudio();
     if (a.paused) {
+      // Show the spinner + waveform shimmer while the first byte is in flight;
+      // the 'playing' listener clears them once audio actually starts. (#1)
+      setPlayButton(pair, "loading");
+      setBuffering(pair, true);
       try {
         await a.play();
         setPlayButton(pair, "playing");
         startTicking();
       } catch (e) {
+        setBuffering(pair, false);
+        setPlayButton(pair, "paused");
         setNowPlaying(pair, `play failed: ${(e as Error).message ?? e}`);
       }
     } else {
@@ -2935,10 +2910,12 @@ function stemSoloUrls(sf) {
     next.currentTime = t;
     reflectSide(pair, target);
     if (wasPlaying) {
+      setPlayButton(pair, "loading");
+      setBuffering(pair, true);
       next.play().then(() => {
         setPlayButton(pair, "playing");
         startTicking();
-      }).catch(() => {});
+      }).catch(() => { setBuffering(pair, false); });
     }
   }
 
@@ -3272,12 +3249,43 @@ function stemSoloUrls(sf) {
   for (const a of allAudios()) {
     a.addEventListener("ended", () => {
       const pair = activePairEl;
-      if (pair) setPlayButton(pair, "paused");
+      if (pair) { setPlayButton(pair, "paused"); setBuffering(pair, false); }
       stopTicking();
     });
     a.addEventListener("loadedmetadata", () => {
       const pair = activePairEl;
       if (pair) updateTime(pair);
+    });
+    // Loading / buffering visuals (#1). Only the active source actually plays,
+    // so guard on activeAudio() and drive the active pair's spinner + shimmer.
+    a.addEventListener("playing", () => {
+      if (a !== activeAudio()) return;
+      const pair = activePairEl;
+      if (!pair) return;
+      setBuffering(pair, false);
+      setPlayButton(pair, "playing");
+      startTicking();
+    });
+    a.addEventListener("canplay", () => {
+      if (a === activeAudio()) setBuffering(activePairEl, false);
+    });
+    a.addEventListener("waiting", () => {
+      if (a !== activeAudio()) return;
+      const pair = activePairEl;
+      if (!pair) return;
+      setBuffering(pair, true);
+      setPlayButton(pair, "loading");
+    });
+    a.addEventListener("stalled", () => {
+      if (a === activeAudio()) setBuffering(activePairEl, true);
+    });
+    a.addEventListener("seeked", () => {
+      if (a === activeAudio()) setBuffering(activePairEl, false);
+    });
+    a.addEventListener("error", () => {
+      const pair = activePairEl;
+      if (pair) { setBuffering(pair, false); setPlayButton(pair, "paused"); }
+      stopTicking();
     });
   }
 
@@ -3357,17 +3365,32 @@ function stemSoloUrls(sf) {
     };
     allControllers.push(ctrl);
 
+    // Buffering state for this card (#1): true while the active take's first
+    // byte / a re-buffer is in flight. Drives the play-button spinner (via
+    // renderState) + the waveform shimmer.
+    let buffering = false;
+    function setBuffering(on: boolean) {
+      buffering = on;
+      if (ctrl.wave) {
+        if (on) ctrl.wave.setAttribute("data-buffering", "true");
+        else ctrl.wave.removeAttribute("data-buffering");
+      }
+      renderState();
+    }
+
     function active(): HTMLAudioElement {
       return ctrl.audios[ctrl.activeIndex].audio;
     }
 
     function renderState() {
       const a = active();
-      // Per-row button state + active-source halo.
+      // Per-row button state + active-source halo. The active row shows a
+      // spinner while buffering (#1), otherwise play/pause.
       ctrl.audios.forEach(({ row, btn }, i) => {
         const isActive = i === ctrl.activeIndex;
-        const playing = isActive && !a.paused && a.currentTime > 0;
-        btn.dataset.state = isActive ? (a.paused ? "paused" : "playing") : "paused";
+        btn.dataset.state = isActive
+          ? (buffering ? "loading" : a.paused ? "paused" : "playing")
+          : "paused";
         row.dataset.activeSource = isActive ? "true" : "false";
       });
       // Time label.
@@ -3410,6 +3433,7 @@ function stemSoloUrls(sf) {
         // currentTime can throw if metadata isn't loaded yet; ignore.
       }
       if (play) {
+        setBuffering(true);
         next
           .play()
           .then(() => {
@@ -3419,6 +3443,7 @@ function stemSoloUrls(sf) {
           })
           .catch((e) => {
             console.warn("winners audio play failed", e);
+            setBuffering(false);
             renderState();
           });
       }
@@ -3428,13 +3453,14 @@ function stemSoloUrls(sf) {
     function toggle() {
       const a = active();
       if (a.paused) {
+        setBuffering(true);
         a.play()
           .then(() => {
             pauseOtherCards(ctrl);
             activeCard = ctrl;
             if (ctrl.rafId == null) ctrl.rafId = requestAnimationFrame(tick);
           })
-          .catch((e) => console.warn("winners audio play failed", e));
+          .catch((e) => { console.warn("winners audio play failed", e); setBuffering(false); });
       } else {
         a.pause();
       }
@@ -3452,6 +3478,7 @@ function stemSoloUrls(sf) {
         }
       });
       audio.addEventListener("ended", () => {
+        if (i === ctrl.activeIndex) setBuffering(false);
         renderState();
       });
       // Playhead recovery net: the rAF `tick` loop self-stops on pause and is
@@ -3460,9 +3487,23 @@ function stemSoloUrls(sf) {
       // and we restart the loop; timeupdate also keeps the cursor advancing in
       // background tabs (where rAF is throttled) and revives a dead loop.
       audio.addEventListener("playing", () => {
-        if (i === ctrl.activeIndex && ctrl.rafId == null) {
-          ctrl.rafId = requestAnimationFrame(tick);
-        }
+        if (i !== ctrl.activeIndex) return;
+        setBuffering(false); // first byte arrived / stall recovered (#1)
+        if (ctrl.rafId == null) ctrl.rafId = requestAnimationFrame(tick);
+      });
+      // Buffering visuals (#1): spinner + waveform shimmer while the active
+      // take's first byte / a re-buffer is in flight.
+      audio.addEventListener("canplay", () => {
+        if (i === ctrl.activeIndex) setBuffering(false);
+      });
+      audio.addEventListener("waiting", () => {
+        if (i === ctrl.activeIndex) setBuffering(true);
+      });
+      audio.addEventListener("stalled", () => {
+        if (i === ctrl.activeIndex) setBuffering(true);
+      });
+      audio.addEventListener("seeked", () => {
+        if (i === ctrl.activeIndex) setBuffering(false);
       });
       audio.addEventListener("timeupdate", () => {
         if (i !== ctrl.activeIndex) return;

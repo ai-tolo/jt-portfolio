@@ -94,6 +94,14 @@ const durationLabel = fmtDuration(durationSeconds);
 </div>
 
 <style>
+  /* Shared loading/buffering animations — the spinner for the transport
+     button, the shimmer sweep for the waveform-as-buffering signal. */
+  @keyframes cnsl-spin { to { transform: rotate(360deg); } }
+  @keyframes cnsl-shimmer {
+    0% { transform: translateX(-120%); }
+    100% { transform: translateX(120%); }
+  }
+
   .wfp {
     display: flex;
     align-items: center;
@@ -130,6 +138,20 @@ const durationLabel = fmtDuration(durationSeconds);
   .wfp-play[data-state="playing"]::before {
     content: "⏸";
   }
+  /* Loading state — a spinner replaces the glyph while the stream is
+     (re)buffering. Placed AFTER the playing/paused ::before rules so it
+     wins the cascade. */
+  .wfp-play[data-state="loading"]::before {
+    content: "";
+    box-sizing: border-box;
+    display: inline-block;
+    width: 0.8em;
+    height: 0.8em;
+    border: 2px solid currentColor;
+    border-top-color: transparent;
+    border-radius: 50%;
+    animation: cnsl-spin 0.7s linear infinite;
+  }
   .wfp-play:hover {
     transform: translateY(-1px);
   }
@@ -164,6 +186,24 @@ const durationLabel = fmtDuration(durationSeconds);
     display: flex;
     align-items: center;
     justify-content: center;
+  }
+  /* Buffering shimmer — a sweeping cyan highlight gated on
+     data-buffering="true" on the waveform container. The primary "we're
+     loading audio" signal; pairs with the button spinner + "loading…" text. */
+  .wfp-wave[data-buffering="true"]::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    z-index: 4;
+    background: linear-gradient(
+      100deg,
+      transparent 35%,
+      rgba(14, 196, 252, 0.16) 50%,
+      transparent 65%
+    );
+    transform: translateX(-120%);
+    animation: cnsl-shimmer 1.15s ease-in-out infinite;
   }
   .wfp-wave[data-seekable="true"] {
     cursor: pointer;
@@ -251,6 +291,35 @@ const durationLabel = fmtDuration(durationSeconds);
       }
     };
 
+    // ── Loading / buffering visuals ──────────────────────────────────────
+    // Mark the active player as buffering: shimmer the waveform, spin the
+    // button, and show "loading…" in the time pill. Cleared once the stream
+    // is producing frames again (canplay/playing) or on stop/error.
+    const setLoading = (root: HTMLElement | null, loading: boolean) => {
+      if (!root) return;
+      const wave = q(root, "[data-wfp-wave]");
+      const tm = q(root, "[data-wfp-time]");
+      const btn = q<HTMLButtonElement>(root, "[data-wfp-play]");
+      if (loading) {
+        if (wave) wave.dataset.buffering = "true";
+        if (btn) btn.dataset.state = "loading";
+        if (tm) {
+          tm.textContent = "loading…";
+          tm.hidden = false;
+        }
+      } else {
+        if (wave) delete wave.dataset.buffering;
+        // Restore the button to playing when we're the active, un-paused
+        // player; paint()/setPlaying own the paused/ended transitions.
+        if (btn && active === root && audio && !audio.paused && !audio.ended) {
+          btn.dataset.state = "playing";
+        }
+        // Drop the "loading…" placeholder so paint() can take over the time
+        // readout; if it isn't loading text, leave it alone.
+        if (tm && tm.textContent === "loading…") tm.textContent = "";
+      }
+    };
+
     // Prefer the element's live duration; fall back to the server-known
     // duration (data-duration-seconds) so the cursor still positions during
     // a metadata stall (audio.duration is NaN until HAVE_METADATA).
@@ -333,15 +402,35 @@ const durationLabel = fmtDuration(durationSeconds);
         startLoop();
       });
       audio.addEventListener("play", startLoop);
-      audio.addEventListener("playing", startLoop);
-      audio.addEventListener("waiting", startLoop);
-      audio.addEventListener("stalled", startLoop);
-      audio.addEventListener("seeked", paint);
+      // playing/canplay = the stream is producing frames → end the buffering
+      // signal and (re)assert the playing button state.
+      audio.addEventListener("playing", () => {
+        setLoading(active, false);
+        startLoop();
+      });
+      audio.addEventListener("canplay", () => setLoading(active, false));
+      // waiting/stalled = buffer underrun → re-arm the rAF loop AND raise the
+      // buffering signal so the curator sees we're waiting on data.
+      audio.addEventListener("waiting", () => {
+        setLoading(active, true);
+        startLoop();
+      });
+      audio.addEventListener("stalled", () => {
+        setLoading(active, true);
+        startLoop();
+      });
+      // A completed seek clears the shimmer; a genuine re-buffer will re-fire
+      // `waiting` and raise it again.
+      audio.addEventListener("seeked", () => {
+        setLoading(active, false);
+        paint();
+      });
       audio.addEventListener("loadedmetadata", paint);
       audio.addEventListener("durationchange", paint);
       audio.addEventListener("ended", () => {
         stopLoop();
         if (active) {
+          setLoading(active, false);
           setPlaying(active, false);
           const ph = q(active, "[data-wfp-playhead]");
           if (ph) ph.style.left = "100%";
@@ -351,6 +440,7 @@ const durationLabel = fmtDuration(durationSeconds);
       audio.addEventListener("error", () => {
         stopLoop();
         if (active) {
+          setLoading(active, false);
           setPlaying(active, false);
           clearUI(active);
         }
@@ -362,6 +452,7 @@ const durationLabel = fmtDuration(durationSeconds);
     const stopActive = () => {
       if (audio) audio.pause();
       if (active) {
+        setLoading(active, false);
         setPlaying(active, false);
         clearUI(active);
       }
@@ -408,6 +499,9 @@ const durationLabel = fmtDuration(durationSeconds);
       active = root;
       setPlaying(root, true);
       a.src = url;
+      // First-byte latency over the Funnel proxy is visible — raise the
+      // buffering signal the instant we (re)set src, before awaiting play().
+      setLoading(root, true);
 
       const startAtFraction = () => {
         if (seekFraction === undefined) return;
@@ -428,6 +522,7 @@ const durationLabel = fmtDuration(durationSeconds);
         await a.play();
         startAtFraction();
       } catch {
+        setLoading(root, false);
         setPlaying(root, false);
         active = null;
       }

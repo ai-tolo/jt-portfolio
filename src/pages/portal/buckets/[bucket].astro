@@ -505,10 +505,10 @@ const BUCKET_TITLE: Record<BucketView, string> = {
     };
 
     // ── Dup-group reveal ─────────────────────────────────────────────────
-    // Click the DUP badge to fetch all rows sharing this row's
-    // content_sha1. Renders an inline list with canonical highlighted plus
-    // a "go to" link per sibling. Lets the curator see the full group
-    // before trashing — never accidentally trash the canonical or last copy.
+    // Click the COPIES badge to fetch all rows sharing this row's
+    // content_sha1. Renders an inline list with the kept (★) copy highlighted
+    // plus a "go to" link per row. Lets the curator see the full group
+    // before trashing — never accidentally trash the kept one or last copy.
     const revealDupGroup = async (card: HTMLElement, chip: HTMLElement) => {
       const assetId = card.dataset.assetId;
       const target = card.querySelector<HTMLElement>("[data-dup-target]");
@@ -544,7 +544,7 @@ const BUCKET_TITLE: Record<BucketView, string> = {
             discarded_at?: string | null;
           }) => {
             const name = s.display_name || s.filename || s.path.split("/").pop();
-            const tag = s.is_canonical ? "<b>CANONICAL</b>" : "dup";
+            const tag = s.is_canonical ? "<b>★ kept</b>" : "copy";
             const bucket = s.bucket || "inbox";
             const trashed = s.discarded_at ? " <i>(trashed)</i>" : "";
             const here = String(s.asset_id) === assetId ? " ← <i>this row</i>" : "";
@@ -817,9 +817,17 @@ const BUCKET_TITLE: Record<BucketView, string> = {
         }
       }
       if (time) {
-        const durStr = Number.isFinite(dur) && dur > 0 ? fmtTime(dur) : "—";
-        time.textContent = `${fmtTime(audio.currentTime)} / ${durStr}`;
-        time.hidden = false;
+        // While buffering before the first frame (currentTime still 0), keep
+        // the "loading…" placeholder rather than flashing "0:00 / —". Once the
+        // clock advances OR duration is known, take over the readout.
+        const buffering = activeCard.querySelector<HTMLElement>(".waveform")?.dataset.buffering === "true";
+        if (buffering && audio.currentTime <= 0 && !(Number.isFinite(dur) && dur > 0)) {
+          // leave "loading…" in place
+        } else {
+          const durStr = Number.isFinite(dur) && dur > 0 ? fmtTime(dur) : "—";
+          time.textContent = `${fmtTime(audio.currentTime)} / ${durStr}`;
+          time.hidden = false;
+        }
       }
     };
 
@@ -852,6 +860,7 @@ const BUCKET_TITLE: Record<BucketView, string> = {
       const playhead = card.querySelector<HTMLElement>("[data-playhead]");
       const time = card.querySelector<HTMLElement>("[data-waveform-time]");
       const cropPlayhead = card.querySelector<HTMLElement>("[data-cropper-playhead]");
+      const wf = card.querySelector<HTMLElement>(".waveform");
       if (playhead) {
         playhead.hidden = true;
         playhead.style.left = "0";
@@ -864,6 +873,8 @@ const BUCKET_TITLE: Record<BucketView, string> = {
         time.hidden = true;
         time.textContent = "";
       }
+      // Drop any lingering buffering shimmer when we wipe a card's UI.
+      if (wf) delete wf.dataset.buffering;
     };
 
     const clearAllPlayheadsExcept = (keep: HTMLElement | null) => {
@@ -871,6 +882,38 @@ const BUCKET_TITLE: Record<BucketView, string> = {
         if (c === keep) return;
         clearPlayheadUI(c);
       });
+    };
+
+    // ── Loading / buffering visuals ──────────────────────────────────────
+    // The card has no play button, so its loading signal is the waveform
+    // shimmer (data-buffering on .waveform, styled in BucketCard.astro) plus
+    // "loading…" in the time pill until metadata/frames arrive. Mirrors the
+    // contract in WaveformPlayer.astro so all three players read the same.
+    const setCardBuffering = (card: HTMLElement | null, on: boolean) => {
+      if (!card) return;
+      const wf = card.querySelector<HTMLElement>(".waveform");
+      if (!wf) return;
+      if (on) wf.dataset.buffering = "true";
+      else delete wf.dataset.buffering;
+    };
+
+    const setCardLoadingText = (card: HTMLElement | null, on: boolean) => {
+      if (!card) return;
+      const time = card.querySelector<HTMLElement>("[data-waveform-time]");
+      if (!time) return;
+      if (on) {
+        time.textContent = "loading…";
+        time.hidden = false;
+      } else if (time.textContent === "loading…") {
+        // Let updatePlayhead take over the readout; only clear our placeholder.
+        time.textContent = "";
+      }
+    };
+
+    // Raise/lower the full loading signal (shimmer + text) for the active card.
+    const setCardLoading = (card: HTMLElement | null, on: boolean) => {
+      setCardBuffering(card, on);
+      setCardLoadingText(card, on);
     };
 
     const stopActive = () => {
@@ -903,15 +946,35 @@ const BUCKET_TITLE: Record<BucketView, string> = {
         startPlayheadLoop();
       });
       audio.addEventListener("play", startPlayheadLoop);
-      audio.addEventListener("playing", startPlayheadLoop);
-      audio.addEventListener("waiting", startPlayheadLoop);
-      audio.addEventListener("stalled", startPlayheadLoop);
-      audio.addEventListener("seeked", updatePlayhead);
+      // playing/canplay = frames are flowing → drop the buffering shimmer +
+      // "loading…" text and keep the rAF loop running.
+      audio.addEventListener("playing", () => {
+        setCardLoading(activeCard, false);
+        startPlayheadLoop();
+      });
+      audio.addEventListener("canplay", () => setCardLoading(activeCard, false));
+      // waiting/stalled = buffer underrun → re-arm the rAF loop (existing) AND
+      // raise the buffering signal so the curator sees we're waiting on data.
+      audio.addEventListener("waiting", () => {
+        setCardLoading(activeCard, true);
+        startPlayheadLoop();
+      });
+      audio.addEventListener("stalled", () => {
+        setCardLoading(activeCard, true);
+        startPlayheadLoop();
+      });
+      // A completed seek clears the shimmer; a genuine re-buffer re-fires
+      // `waiting` and raises it again.
+      audio.addEventListener("seeked", () => {
+        setCardBuffering(activeCard, false);
+        updatePlayhead();
+      });
       audio.addEventListener("loadedmetadata", updatePlayhead);
       audio.addEventListener("durationchange", updatePlayhead);
       audio.addEventListener("ended", () => {
         stopPlayheadLoop();
         if (activeCard) {
+          setCardLoading(activeCard, false);
           setAuditionBtnState(activeCard, false);
           // Park playhead at end so the user sees where playback finished.
           const ph = activeCard.querySelector<HTMLElement>("[data-playhead]");
@@ -921,7 +984,10 @@ const BUCKET_TITLE: Record<BucketView, string> = {
       });
       audio.addEventListener("error", () => {
         stopPlayheadLoop();
-        if (activeCard) setStatus(activeCard, "Audio failed to load", "err");
+        if (activeCard) {
+          setCardLoading(activeCard, false);
+          setStatus(activeCard, "Audio failed to load", "err");
+        }
         stopActive();
       });
       return audio;
@@ -962,6 +1028,9 @@ const BUCKET_TITLE: Record<BucketView, string> = {
       const durSec = Number(card.dataset.durationSeconds);
       const variant = Number.isFinite(durSec) && durSec > 600 ? "&variant=opus" : "";
       a.src = `/api/console/asset?path=${encodeURIComponent(path)}${variant}`;
+      // First-byte latency over the Funnel proxy is visible — raise the
+      // loading signal the instant we (re)set src, before awaiting play().
+      setCardLoading(card, true);
 
       const startAtFraction = () => {
         if (seekFraction === undefined) return;
@@ -1507,10 +1576,10 @@ const BUCKET_TITLE: Record<BucketView, string> = {
         const status = card.querySelector<HTMLElement>("[data-status-line]");
         if (status) {
           const escId = String(data.new_asset_id);
-          const lenStr = data.duration_sec.toFixed(2);
+          const created = `✓ New loop created in Loops — <a href="/portal/buckets/loops?focus=${escId}" class="undo-text" style="text-decoration:underline">open it →</a> · your original is untouched`;
           status.innerHTML = offerPromote
-            ? `✓ Exported · ${lenStr}s (asset ${escId}) <button type="button" class="undo-btn" data-action="promote-crop" data-crop-asset-id="${escId}">→ Make canonical, trash source</button>`
-            : `✓ Exported · ${lenStr}s (asset ${escId})`;
+            ? `${created} <button type="button" class="undo-btn" data-action="promote-crop" data-crop-asset-id="${escId}">↪ Replace original with this crop</button>`
+            : created;
           status.setAttribute("data-tone", "ok");
         }
         if (exportBtn) exportBtn.dataset.busy = "";
@@ -1581,19 +1650,34 @@ const BUCKET_TITLE: Record<BucketView, string> = {
       }
     };
 
-    // ── Promote crop to canonical ────────────────────────────────────────
+    // ── Replace original with this crop ──────────────────────────────────
     // Calls /api/console/promote-crop → engine sets source.dup_of=crop and
-    // moves source to trash. Engine returns HTTP 409 with project_count
-    // when source is referenced by .als projects; we surface that as a
-    // confirm prompt and retry with force=true.
+    // moves the original to Trash. Engine returns HTTP 409 with project_count
+    // when the original is referenced by .als projects; we surface that as a
+    // confirm prompt and retry with force=true. (Function keeps its historical
+    // name; user-facing copy is plain-language "replace original".)
     const promoteCropToCanonical = async (
       card: HTMLElement,
       cropAssetId: number,
       force: boolean = false,
     ) => {
       const status = card.querySelector<HTMLElement>("[data-status-line]");
+      // Plain-language confirm before the first request (the 409 path below
+      // re-confirms separately when projects reference the original).
+      if (!force) {
+        const proceed = window.confirm(
+          "Replace the original with this crop?\n\nThe original moves to Trash (recoverable for 30 days) and this crop takes its place. Crops and stems you make are always new files — your original is never modified, only optionally retired here.",
+        );
+        if (!proceed) {
+          if (status) {
+            status.textContent = "Replace cancelled.";
+            status.setAttribute("data-tone", "ok");
+          }
+          return;
+        }
+      }
       if (status) {
-        status.textContent = "Promoting crop to canonical…";
+        status.textContent = "Replacing original…";
         status.removeAttribute("data-tone");
       }
       try {
@@ -1610,13 +1694,13 @@ const BUCKET_TITLE: Record<BucketView, string> = {
             count = String(body?.error?.project_count ?? body?.project_count ?? "?");
           } catch {}
           const proceed = window.confirm(
-            `Source is referenced by ${count} .als project(s). Promote anyway?\n\nProjects will continue pointing at the trashed source until you re-link them.`,
+            `The original is referenced by ${count} Ableton project(s). Replace anyway?\n\nThose projects will keep pointing at the trashed original until you re-link them.`,
           );
           if (proceed) {
             return promoteCropToCanonical(card, cropAssetId, true);
           }
           if (status) {
-            status.textContent = "Promote cancelled.";
+            status.textContent = "Replace cancelled.";
             status.setAttribute("data-tone", "ok");
           }
           return;
@@ -1635,7 +1719,7 @@ const BUCKET_TITLE: Record<BucketView, string> = {
         }
         const data = (await res.json()) as { source_asset_id: number; project_refs: number };
         if (status) {
-          status.innerHTML = `✓ Crop is canonical. Source (asset ${data.source_asset_id}) moved to Trash.`;
+          status.innerHTML = `✓ This crop replaced the original. The original moved to Trash (recoverable for 30 days).`;
           status.setAttribute("data-tone", "ok");
         }
         // The source row is now in Trash — exit crop mode and clear it
@@ -1700,9 +1784,16 @@ const BUCKET_TITLE: Record<BucketView, string> = {
         } else if (data.status === "done") {
           stopStemPoll(card);
           const n = data.stem_asset_ids?.length ?? 0;
+          // Derive the split mode from the stem count (4-stem → drums/bass/vox/
+          // other; otherwise vox/inst). Communicate plainly: new files linked
+          // to this track, original untouched. No "reload" / "siblings" jargon.
+          const mode = n >= 4 ? "4" : "2";
+          const names = mode === "4" ? "drums · bass · vox · other" : "vox · inst";
           setStemProgress(
             card,
-            n > 0 ? `✓ ${n} stems ready — reload to see siblings` : "✓ Done",
+            n > 0
+              ? `✓ ${n} stems created (${names}) — saved as new files linked to this track. Your original is untouched.`
+              : "✓ Done",
             "ok",
           );
           card.querySelectorAll<HTMLButtonElement>('[data-action="split-stems"]')
