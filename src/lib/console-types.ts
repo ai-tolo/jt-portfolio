@@ -468,6 +468,9 @@ export interface BucketAsset {
    *  the parent name without a follow-up fetch. */
   print_of_filename?: string | null;
   print_of_display_name?: string | null;
+  /** Curator-linked source .als project's asset_id (assets.als_project_id).
+   *  When set, the card offers "Open project in Ableton" (M3). 2026-06-03. */
+  als_project_id?: number | null;
 }
 
 export interface PromoteToLiveResponse {

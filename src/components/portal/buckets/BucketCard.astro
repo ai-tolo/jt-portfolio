@@ -609,6 +609,30 @@ const hasExpanded = true;
           </span>
         </div>
       )}
+      {/* Locate: reveal the file in Finder, and (when a source project is
+          linked) open it in Ableton on the M3 — the project actions nested onto
+          the card so the Projects page isn't needed day-to-day. */}
+      <div class="exp-actions exp-locate" role="group" aria-label="Locate">
+        <button
+          type="button"
+          class="locate-btn"
+          data-action="reveal-in-finder"
+          data-asset-id={String(item.asset_id)}
+          title="Reveal this file in Finder on the M3 (must be reachable from M3)"
+        >⤷ Reveal</button>
+        {item.als_project_id != null && (
+          <button
+            type="button"
+            class="locate-btn"
+            data-action="open-project-ableton"
+            data-project-asset-id={String(item.als_project_id)}
+            title="Open the linked source project in Ableton (M3)"
+          >⧉ Open in Ableton</button>
+        )}
+        <span class="action-status-pool">
+          <span class="action-status" data-locate-status aria-live="polite"></span>
+        </span>
+      </div>
       <p class="status" data-status-line aria-live="polite"></p>
     </div>
   )}
@@ -2132,6 +2156,26 @@ const hasExpanded = true;
   .action-status[data-tone="ok"] { color: #00ff4d; }
   .action-status[data-tone="err"] { color: #ff6e21; }
 
+  /* Locate row — Reveal / Open in Ableton. Lighter top border so it reads as a
+     secondary group beneath the primary actions. */
+  .exp-locate { border-top-color: rgba(245, 241, 232, 0.10); }
+  .locate-btn {
+    font: 600 11.5px "Geist Variable", ui-sans-serif, system-ui, sans-serif;
+    color: rgba(245, 241, 232, 0.8);
+    background: rgba(245, 241, 232, 0.05);
+    border: 1px solid rgba(245, 241, 232, 0.18);
+    border-radius: 6px;
+    padding: 6px 11px;
+    cursor: pointer;
+    transition: background 140ms ease, border-color 140ms ease, color 140ms ease;
+  }
+  .locate-btn:hover {
+    color: #fff;
+    background: rgba(14, 196, 252, 0.12);
+    border-color: rgba(14, 196, 252, 0.45);
+  }
+  .locate-btn:disabled { opacity: 0.5; cursor: progress; }
+
   .stem-btn {
     display: inline-flex;
     flex-direction: column;
@@ -2305,5 +2349,45 @@ const hasExpanded = true;
     if (!card) return;
     if (target.closest(INTERACTIVE_SKIP)) return;
     togglePanel(card);
+  });
+
+  // Locate actions (2026-06-03): Reveal this file in Finder, or Open its linked
+  // source project in Ableton — both run on the M3 via the engine proxies. The
+  // Projects-page actions, nested onto the card. Self-contained delegated.
+  document.addEventListener("click", async (e) => {
+    const t = e.target as HTMLElement | null;
+    const btn = t?.closest<HTMLButtonElement>(
+      '[data-action="reveal-in-finder"],[data-action="open-project-ableton"]',
+    );
+    if (!btn) return;
+    const card = btn.closest<HTMLElement>(".bucket-card");
+    const statusEl = card?.querySelector<HTMLElement>("[data-locate-status]") ?? null;
+    const setStatus = (m: string) => { if (statusEl) statusEl.textContent = m; };
+    const isOpen = btn.dataset.action === "open-project-ableton";
+    btn.disabled = true;
+    setStatus(isOpen ? "opening…" : "revealing…");
+    try {
+      const res = isOpen
+        ? await fetch("/api/console/projects-open", {
+            method: "POST",
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify({ project_asset_id: Number(btn.dataset.projectAssetId) }),
+          })
+        : await fetch("/api/console/buckets-reveal-in-finder", {
+            method: "POST",
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify({ asset_id: Number(btn.dataset.assetId) }),
+          });
+      if (!res.ok) {
+        setStatus(res.status === 404 ? "not reachable on M3" : `failed (${res.status})`);
+      } else {
+        setStatus(isOpen ? "opened ✓" : "revealed ✓");
+        window.setTimeout(() => setStatus(""), 4000);
+      }
+    } catch {
+      setStatus("network error");
+    } finally {
+      btn.disabled = false;
+    }
   });
 </script>
