@@ -615,7 +615,7 @@ export type MixJobStatus =
   | "noop_complete"
   | "error";
 
-export type MixAxis = "focal" | "space" | "dynamics";
+export type MixAxis = "focal" | "space" | "dynamics" | "king";
 export type MixPole =
   | "forward_bright"
   | "recessed_warm"
@@ -786,6 +786,10 @@ export interface WinnerVariant {
   /** True when the curator voted ORIGINAL over both variants for this
    *  axis. Phase 5, 2026-05-27. */
   is_original: boolean;
+  /** Catalog reference this variant was mastered toward (master mode). Set on
+   *  king-round candidates so the UI can label them by reference (poles can
+   *  repeat across the 3 candidates); null on ordinary axis winners. */
+  reference?: string | null;
 }
 
 /** All winners for a single mix job, plus optional cross-axis champion. */
@@ -828,6 +832,15 @@ export interface WinnersJob {
   project_filename: string | null;
   project_display_name: string | null;
   project_match: "linked" | "exact" | "substring" | null;
+  /** King round (Stage 2, 2026-06-03). True when this card's `winners` are the
+   *  3 fresh feedback-synthesized candidates (a kind='king' job) rather than the
+   *  per-axis A/B winners — the UI relabels the card and crowns one of three. */
+  is_king_round?: boolean;
+  /** One-line note on what the synthesis combined (the winning poles). */
+  synthesis_summary?: string | null;
+  /** kind of the in-flight successor ('preference' | 'king') so the badge can
+   *  read "synthesizing king candidates" while the king job renders. */
+  in_flight_kind?: "preference" | "king" | null;
 }
 
 export interface WinnersResponse {

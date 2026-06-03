@@ -62,6 +62,13 @@ const readyToCrown = winners.filter(
   (w) => w.axes_decided >= 3 && w.champion_variant_id === null,
 ).length;
 
+// Group ORIGINAL-king cards apart (stable secondary sort): tracks where the
+// source still beats every mix cluster at the bottom, so they're obvious at a
+// glance and out of the way of the actionable cards above (#2).
+const sortedWinners = [...winners].sort(
+  (a, b) => Number(a.champion_is_original) - Number(b.champion_is_original),
+);
+
 const AXIS_ORDER = ["focal", "space", "dynamics"] as const;
 
 function poleLabel(p: string): string {
@@ -487,7 +494,7 @@ function stemSoloUrls(sf) {
         </p>
       ) : (
         <ul class="winners-list">
-          {winners.map((w) => {
+          {sortedWinners.map((w) => {
             const sourceUrl = sourceAudioUrl(w.source_audio_path);
             const waveSrc = w.source_waveform_sha1
               ? `/api/console/waveform?sha1=${w.source_waveform_sha1}`
@@ -509,20 +516,12 @@ function stemSoloUrls(sf) {
             // the source for all of them.
             const variantWinners = w.winners.filter((v) => !v.is_original);
             const title = w.source_display_name || w.source_filename || `asset ${w.source_asset_id}`;
-            // Status badge that sits next to the title in the collapsed
-            // header, so the curator can scan at a glance.
-            const badge = isOriginalKing
-              ? "♛ ORIGINAL"
-              : variantKing
-                ? `♛ ${variantKing.color}`
-                : w.axes_decided >= 3
-                  ? `${w.axes_decided}/3 — crown your king`
-                  : `${w.axes_decided}/3 voted`;
-            const badgeKind = hasKing
-              ? "king"
-              : w.axes_decided >= 3
-                ? "ready-to-crown"
-                : "voting";
+            const isKingRound = w.is_king_round === true;
+            const inFlightKing = w.in_flight_kind === "king";
+            // Collapsed card stays uniform: just the two left actions (↗ open in
+            // Buckets, ⧉ open project) + the title. Status is encoded visually,
+            // not as inline text (#2): green chevron = published; a distinct
+            // border + bottom-grouped sort = ORIGINAL still beats every mix.
             return (
               <li
                 class={`winners-card${hasKing ? " winners-card-crowned" : ""}`}
@@ -531,18 +530,10 @@ function stemSoloUrls(sf) {
                 data-axes-decided={w.axes_decided}
                 data-has-king={hasKing ? "true" : "false"}
                 data-king-is-original={isOriginalKing ? "true" : "false"}
+                data-king-public={w.king_is_public ? "true" : "false"}
+                data-is-king-round={isKingRound ? "true" : "false"}
               >
                 <div class="winners-head">
-                  <button
-                    class="winners-toggle"
-                    type="button"
-                    data-winners-toggle
-                    aria-expanded="false"
-                    aria-controls={`winners-body-${w.job_id}`}
-                  >
-                    <span class="winners-chevron" aria-hidden="true">▸</span>
-                    <span class="winners-source">{title}</span>
-                  </button>
                   <a
                     class="winners-open-source"
                     href={`/portal/buckets/all?focus=${w.source_asset_id}`}
@@ -551,11 +542,10 @@ function stemSoloUrls(sf) {
                     title="Open this track in Buckets (new tab)"
                     aria-label="Open source track in Buckets"
                   >↗</a>
-                  {/* Phase B: source .als project. Single icon mirroring the
-                      ↗ arrow; color = state. Linked = solid amber, auto-match
-                      = dashed amber, empty = faint grey. Click opens in
-                      Ableton (or links, when empty); shift-click changes /
-                      unlinks. */}
+                  {/* Phase B: source .als project. Color = state. Linked =
+                      solid amber, auto-match = dashed amber, empty = faint grey.
+                      Click opens in Ableton (or links, when empty); shift-click
+                      changes / unlinks. */}
                   <button
                     type="button"
                     class:list={["winners-project-icon", w.project_asset_id ? (w.project_match === "linked" ? "is-linked" : "is-auto") : "is-empty"]}
@@ -567,22 +557,35 @@ function stemSoloUrls(sf) {
                       : "No project linked. Click to find + link the source .als."}
                     aria-label={w.project_asset_id ? "Open source project in Ableton (shift-click to change)" : "Link source project"}
                   >⧉</button>
-                  <span class={`winners-badge winners-badge-${badgeKind}`}>{badge}</span>
+                  <button
+                    class="winners-toggle"
+                    type="button"
+                    data-winners-toggle
+                    aria-expanded="false"
+                    aria-controls={`winners-body-${w.job_id}`}
+                    title={isOriginalKing
+                      ? "ORIGINAL is king — the source beats every mix"
+                      : (w.king_is_public ? "Published to Sounds" : "Expand")}
+                  >
+                    <span class="winners-chevron" aria-hidden="true">▸</span>
+                    <span class="winners-source">{title}</span>
+                  </button>
                   {w.in_flight_job_id && (
                     <span
                       class="winners-inflight-tag"
-                      title={`Engineer-worker is ${w.in_flight_status === "splitting_stems" ? "splitting stems" : w.in_flight_status === "rendering" ? "rendering new mixes" : "preparing"}`}
+                      title={inFlightKing
+                        ? "Engineer-worker is synthesizing king candidates from your picks"
+                        : `Engineer-worker is ${w.in_flight_status === "splitting_stems" ? "splitting stems" : w.in_flight_status === "rendering" ? "rendering new mixes" : "preparing"}`}
                     >
                       <span class="winners-inflight-dot" aria-hidden="true"></span>
                       {w.in_flight_status === "splitting_stems"
                         ? "splitting stems"
-                        : w.in_flight_status === "rendering"
-                          ? `rendering ${w.in_flight_variants_done ?? 0}/${w.in_flight_variants_expected}`
-                          : "queued"}
+                        : inFlightKing
+                          ? `synthesizing king · ${w.in_flight_variants_done ?? 0}/${w.in_flight_variants_expected}`
+                          : w.in_flight_status === "rendering"
+                            ? `rendering ${w.in_flight_variants_done ?? 0}/${w.in_flight_variants_expected}`
+                            : "queued"}
                     </span>
-                  )}
-                  {w.king_is_public && (
-                    <span class="winners-public-tag" title="Live on the Sounds page">● public</span>
                   )}
                 </div>
 
@@ -651,8 +654,8 @@ function stemSoloUrls(sf) {
                           aria-label="Play king mix"
                         >▶</button>
                         <div class="winner-meta">
-                          <span class="winner-label">♛ {variantKing.color}</span>
-                          <span class="winner-sub">your king mix</span>
+                          <span class="winner-label">♛ {variantKing.reference || variantKing.color}</span>
+                          <span class="winner-sub">{variantKing.reference ? `your king mix · ${variantKing.color}` : "your king mix"}</span>
                         </div>
                       </li>
                     ) : isOriginalKing ? (
@@ -664,7 +667,7 @@ function stemSoloUrls(sf) {
                       // the curator can cross-compare and crown.
                       // is_original axis-winners are filtered to the
                       // ORIGINAL row at top (variantWinners).
-                      variantWinners.map((v) => (
+                      variantWinners.map((v, vi) => (
                         <li
                           class="winner"
                           data-winner-variant-id={v.variant_id}
@@ -673,13 +676,19 @@ function stemSoloUrls(sf) {
                             class="winner-play"
                             type="button"
                             data-audio-url={winnerAudioUrl(v.asset_path)}
-                            aria-label={`Play ${v.color}`}
+                            aria-label={`Play ${v.reference || v.color}`}
                           >▶</button>
                           <div class="winner-meta">
-                            <span class="winner-label">{v.color}</span>
-                            <span class="winner-sub">candidate</span>
+                            <span class="winner-label">
+                              {isKingRound ? (v.reference || `Candidate ${vi + 1}`) : v.color}
+                            </span>
+                            <span class="winner-sub">
+                              {isKingRound
+                                ? (v.pole ? `king candidate · ${v.pole.replace(/_/g, " ")}` : "king candidate")
+                                : "candidate"}
+                            </span>
                           </div>
-                          {w.axes_decided >= 3 && (
+                          {(w.axes_decided >= 3 || isKingRound) && (
                             <button
                               class="winner-crown"
                               type="button"
@@ -694,8 +703,8 @@ function stemSoloUrls(sf) {
                     )}
                     {/* In voting mode, surface the pending slots so the
                         curator knows what still needs a vote in Pair
-                        Tinder. Hidden in king mode. */}
-                    {!hasKing && w.axes_decided < 3 &&
+                        Tinder. Hidden in king mode and king-round mode. */}
+                    {!hasKing && !isKingRound && w.axes_decided < 3 &&
                       AXIS_ORDER.filter(
                         (a) => !w.winners.some((v) => v.axis === a),
                       ).map(() => (
@@ -720,10 +729,15 @@ function stemSoloUrls(sf) {
                         <span class="comment-quote">“</span>{w.champion_comment}<span class="comment-quote">”</span>
                       </p>
                     )}
-                    {!hasKing && w.axes_decided >= 3 && (
+                    {!hasKing && isKingRound && (
+                      <p class="winners-hint winners-hint-king">
+                        ♛ King candidates — {w.synthesis_summary || "3 fresh masters synthesized from your A/B picks"}. Crown the one you love (or ORIGINAL above).
+                      </p>
+                    )}
+                    {!hasKing && !isKingRound && w.axes_decided >= 3 && (
                       <p class="winners-hint">Tap ♛ on a mix above (or ORIGINAL) to crown your king, or render a fresh batch below.</p>
                     )}
-                    {!hasKing && w.axes_decided < 3 && (
+                    {!hasKing && !isKingRound && w.axes_decided < 3 && (
                       <p class="winners-hint">
                         {3 - w.axes_decided} more mix{3 - w.axes_decided === 1 ? "" : "es"} left to vote on in the Mix Faceoff above. Or skip ahead with Make more mixes for a fresh batch.
                       </p>
@@ -932,7 +946,21 @@ function stemSoloUrls(sf) {
     border: 1px solid transparent;
   }
   .pair-active {
-    border-color: rgba(14, 196, 252, 0.4);
+    border-color: rgba(14, 196, 252, 0.6);
+    background: rgba(14, 196, 252, 0.05);
+    box-shadow: 0 0 0 1px rgba(14, 196, 252, 0.18), 0 6px 22px rgba(0, 0, 0, 0.28);
+  }
+  /* Inactive (queued) faceoffs recede hard — darker, dimmer, desaturated — so
+     the active card is unmistakably the one in play (#3). Hover lifts them
+     part-way as an affordance that they're selectable. */
+  .pair:not(.pair-active) {
+    opacity: 0.5;
+    background: rgba(0, 0, 0, 0.22);
+    filter: saturate(0.65);
+  }
+  .pair:not(.pair-active):hover {
+    opacity: 0.82;
+    filter: saturate(0.9);
   }
   .pair-head {
     display: flex;
@@ -1843,6 +1871,28 @@ function stemSoloUrls(sf) {
   .winners-card-crowned {
     border-color: rgba(255, 184, 77, 0.42);
     box-shadow: 0 0 18px rgba(255, 184, 77, 0.10);
+  }
+  /* ORIGINAL is the king — the source beat every mix. A distinct cool/cream
+     border (vs the variant-king gold) so it reads differently at a glance;
+     these cards are also sorted to the bottom of the list (#2). */
+  .winners-card[data-king-is-original="true"] {
+    border-color: rgba(245, 241, 232, 0.5);
+    box-shadow: 0 0 16px rgba(245, 241, 232, 0.12),
+                inset 0 0 0 1px rgba(245, 241, 232, 0.06);
+  }
+  /* Published to Sounds → the expand chevron glows green (status as a visual
+     cue, no inline "public" text needed) (#2). */
+  .winners-card[data-king-public="true"] .winners-chevron {
+    color: #00ff4d;
+    text-shadow: 0 0 8px rgba(0, 255, 77, 0.7);
+  }
+  /* King-round candidates — subtle cyan edge so "3 fresh candidates to crown"
+     reads as its own actionable state (#4). */
+  .winners-card[data-is-king-round="true"] {
+    border-color: rgba(14, 196, 252, 0.4);
+  }
+  .winners-hint-king {
+    color: #ffd28a !important;
   }
   .winners-head {
     display: flex;
