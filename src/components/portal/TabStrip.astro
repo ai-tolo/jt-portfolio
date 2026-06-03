@@ -1,87 +1,70 @@
 ---
 interface Props {
+  // Union stays wide so orphaned/secondary pages (listen, rotation, stale,
+  // trash, library, promote, workbench, surprise, projects, sounds, diary)
+  // still typecheck when they pass their own `current` — only three render.
   current: "surprise" | "library" | "projects" | "workbench" | "diary" | "buckets" | "promote" | "engineer" | "sounds" | "desk";
 }
 
 const { current } = Astro.props;
 
-// Projects tab removed 2026-05-16: cross-reference info now lives on Cards
-// (in N projects badge) and the M4L device will own in-Ableton project
-// context.
-// Surprise + Library tabs removed 2026-05-17 evening: Buckets is the new
-// browse surface (search + sort + random + filter + triage) so Library is
-// redundant; Diary's Song Pitch generator replaces Surprise's role. Both
-// /portal and /portal/library now 307-redirect to /portal/buckets/inbox.
-// Promote + Workbench hidden from nav 2026-05-21: Engineer (Build 5) is the
-// new home for processing-and-feedback workflows. Page files retained so
-// existing routes keep responding; the union still allows their `current`
-// value so orphaned pages typecheck.
-// Sounds tab added 2026-05-27: curator-side staging surface for tracks
-// the engineer-pipeline has crowned + published. Live "what's currently
-// public" + collection grouping for EPs / album ideas. Public-facing
-// read-only view stays at /sounds (no auth).
+// Three primary tabs (2026-06-03). Sounds folded into Engineer, Projects into
+// a Buckets browse filter, Diary removed — see the Changelog.
 const tabs: { id: Props["current"]; label: string; href: string }[] = [
   { id: "desk", label: "Desk", href: "/portal/desk" },
   { id: "buckets", label: "Buckets", href: "/portal/buckets/all" },
-  { id: "projects", label: "Projects", href: "/portal/projects" },
   { id: "engineer", label: "Engineer", href: "/portal/engineer" },
-  { id: "sounds", label: "Sounds", href: "/portal/sounds" },
-  { id: "diary", label: "Diary", href: "/portal/diary" },
 ];
 ---
 
 <nav class="tabs" aria-label="Portal sections">
-  <ul role="list">
-    {tabs.map((t) => (
-      <li>
-        <a
-          href={t.href}
-          class:list={["tab", { active: t.id === current }]}
-          aria-current={t.id === current ? "page" : undefined}
-        >{t.label}</a>
-      </li>
-    ))}
-  </ul>
+  {tabs.map((t) => (
+    <a
+      href={t.href}
+      class:list={["tab", { active: t.id === current }]}
+      aria-current={t.id === current ? "page" : undefined}
+    >{t.label}</a>
+  ))}
 </nav>
 
 <style>
-  .tabs ul {
-    list-style: none;
-    padding: 0;
-    margin: 0;
+  .tabs {
     display: flex;
-    flex-wrap: wrap;
-    gap: 6px;
+    gap: 2px;
   }
-
-  /* Each tab borrows the public WorkCard "num" chunk vocabulary:
-     anchor-color background, inverted text, fit-content width. Tabs are
-     wider and the type is heavier than the rest of the header so the
-     primary-section choice reads as the next-most-important thing after
-     the brand. Inactive tabs sit at low opacity until hover. */
+  /* Clean text tabs — weight + an accent underline carry the active state,
+     no heavy inverted blocks. */
   .tab {
-    display: inline-block;
-    background: var(--ink);
-    color: var(--ink-fg);
-    font-size: 13px;
-    font-weight: 800;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-    line-height: 1;
-    padding: 11px 22px 10px;
-    opacity: 0.45;
-    transition: opacity 200ms ease, transform 200ms ease;
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    font-family: "Geist Variable", ui-sans-serif, system-ui, sans-serif;
+    font-size: 14px;
+    font-weight: 600;
+    letter-spacing: 0.01em;
+    color: rgba(245, 241, 232, 0.5);
+    text-decoration: none;
+    padding: 9px 14px 8px;
+    border-radius: 8px;
+    transition: color 160ms ease, background 160ms ease;
   }
-
   .tab:hover,
   .tab:focus-visible {
-    opacity: 0.85;
-    transform: translateY(-1px);
+    color: var(--ink);
+    background: rgba(245, 241, 232, 0.06);
   }
-
   .tab.active {
-    opacity: 1;
-    outline: 1px solid var(--accent);
-    outline-offset: 3px;
+    color: var(--ink);
+    font-weight: 700;
+  }
+  .tab.active::after {
+    content: "";
+    position: absolute;
+    left: 14px;
+    right: 14px;
+    bottom: 0;
+    height: 2px;
+    border-radius: 2px;
+    background: linear-gradient(90deg, #ff3b6e, #ff6e21);
   }
 </style>

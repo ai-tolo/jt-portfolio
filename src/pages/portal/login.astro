@@ -10,396 +10,116 @@ const hasError = Astro.url.searchParams.get("error") === "1";
 <html lang="en" data-theme="dark">
   <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
     <meta name="robots" content="noindex,nofollow" />
+    <meta name="theme-color" content="#070409" />
     <title>Tolo.Cloud</title>
-    {/* Tolo.Cloud is theme-locked. Pin dark so the public site's stored theme
-        never bleeds in here. */}
-    <script is:inline>
-      document.documentElement.dataset.theme = "dark";
-    </script>
-    {/* Preload the heaviest art tile so the entrance doesn't pop in late.
-        The file may not exist yet — the browser silently skips a 404 prefetch. */}
-    <link rel="preload" as="image" href="/portal/cloud/cloud-1.webp" />
   </head>
   <body>
     <main class="stage">
-      {/* Three-layer background: image (when present) + dual radial gradients
-          + a slow-drifting noise mask. The CSS layers stand alone and still
-          look good if no image file ships. */}
-      <div class="bg" aria-hidden="true">
-        <div class="bg-grad"></div>
-        <div class="bg-image bg-image-back"></div>
-        <div class="bg-image bg-image-front"></div>
-        <div class="bg-drift"></div>
-        <div class="bg-vignette"></div>
-      </div>
-
-      <header class="topbar">
-        <span class="brand-dot" aria-hidden="true"></span>
-        <span class="topbar-text">Tolo.Cloud</span>
-      </header>
-
-      <section class="card" aria-labelledby="wordmark">
-        <h1 id="wordmark" class="wordmark">
-          <span class="wordmark-line">Tolo</span><span class="wordmark-dot">.</span><span class="wordmark-line">Cloud</span>
-        </h1>
-
-        <form method="POST" action="/api/console/login" class="auth-form">
-          <label class="field">
-            <span class="field-label" aria-hidden="true">·· enter passphrase ··</span>
-            <input
-              type="password"
-              name="password"
-              required
-              autocomplete="current-password"
-              autofocus
-              spellcheck="false"
-              aria-label="Passphrase"
-            />
-          </label>
-          <input type="hidden" name="next" value={nextParam} />
-          <button type="submit" class="enter">
-            <span class="enter-text">Enter</span>
-            <svg class="enter-arrow" viewBox="0 0 24 24" aria-hidden="true">
-              <path d="M5 12h13M13 6l6 6-6 6" stroke="currentColor" stroke-width="1.8" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
-            </svg>
+      <form method="POST" action="/api/console/login" class="card" aria-label="Sign in to Tolo.Cloud">
+        <h1 class="wordmark">Tolo<span class="dot">.</span>Cloud</h1>
+        <div class="row">
+          <input
+            type="password"
+            name="password"
+            required
+            autocomplete="current-password"
+            autofocus
+            spellcheck="false"
+            placeholder="passphrase"
+            aria-label="Passphrase"
+            aria-invalid={hasError ? "true" : undefined}
+          />
+          <button type="submit" class="enter" aria-label="Enter">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h13M13 6l6 6-6 6" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
           </button>
-          {hasError && <p class="error" role="alert">Wrong passphrase.</p>}
-        </form>
-      </section>
+        </div>
+        <input type="hidden" name="next" value={nextParam} />
+        {hasError && <p class="error" role="alert">Wrong passphrase.</p>}
+      </form>
     </main>
 
-    <style is:global>
-      :root, html, body {
-        background: #000;
-        color: #d6dee9;
-        cursor: auto;
-      }
-      body { min-height: 100vh; margin: 0; }
-      a, button, [role="button"] { cursor: pointer; }
-      input { cursor: text; }
-    </style>
-
     <style>
+      :global(html), :global(body) { margin: 0; background: #070409; }
       .stage {
-        position: relative;
-        min-height: 100vh;
+        min-height: 100svh;
         display: grid;
         place-items: center;
-        padding: 6vmin;
-        font-family: "Geist Variable", ui-sans-serif, system-ui, -apple-system, "Helvetica Neue", Arial, sans-serif;
-        overflow: hidden;
-      }
-
-      /* ── Background stack ──────────────────────────────────────────────
-         Layer 0 (bottom): solid black on the body.
-         Layer 1: artwork (cloud-1) — drifts horizontally over ~38s.
-         Layer 2: artwork (cloud-3) — gentle parallax, blended overlay.
-         Layer 3: radial gradients sampling the user's palette.
-         Layer 4: drifting blob — slow ambient motion.
-         Layer 5: vignette + grain.
-         Everything is pointer-events: none so the form sits on top.
-      */
-      .bg {
-        position: absolute;
-        inset: 0;
-        pointer-events: none;
-        overflow: hidden;
-      }
-      .bg-image {
-        position: absolute;
-        inset: -8%;
-        background-position: center center;
-        background-size: cover;
-        background-repeat: no-repeat;
-        opacity: 0;
-        transition: opacity 1200ms ease;
-      }
-      .bg-image-back {
-        background-image: url("/portal/cloud/cloud-1.webp"), url("/portal/cloud/cloud-1.jpg"), url("/portal/cloud/cloud-1.png");
-        /* Marble drifts slowly. Mild blur + desaturation so it sits behind
-           the wordmark without competing. */
-        filter: saturate(0.9) blur(1.5px);
-        animation: drift-x 38s ease-in-out infinite alternate;
-      }
-      .bg-image-front {
-        background-image: url("/portal/cloud/cloud-3.webp"), url("/portal/cloud/cloud-3.jpg"), url("/portal/cloud/cloud-3.png");
-        /* Black-and-white smoke pattern. Screen-blend so the dark areas
-           drop entirely and only the bright wave edges glow through. */
-        mix-blend-mode: screen;
-        filter: contrast(1.1);
-        opacity: 0;
-        animation: drift-y 52s ease-in-out infinite alternate;
-      }
-      /* When images load, the onload handler bumps these to visible.
-         Until then, the gradient layer carries the whole look. */
-      .bg-image.is-loaded { opacity: 0.65; }
-      .bg-image-front.is-loaded { opacity: 0.5; }
-
-      /* Base color wash. Lives BENEATH the images so they show through.
-         Pure radial gradients (no opaque dark fill) — the body's solid
-         black handles the base layer. */
-      .bg-grad {
-        position: absolute;
-        inset: 0;
+        padding: 24px;
+        font-family: "Geist Variable", ui-sans-serif, system-ui, -apple-system, sans-serif;
+        color: #e8edf4;
+        cursor: auto;
+        /* Pure-CSS gradient room — no image fetch, instant paint. */
         background:
-          radial-gradient(60% 50% at 18% 22%,
-            rgba(255, 109, 196, 0.55) 0%, rgba(255, 109, 196, 0) 70%),
-          radial-gradient(55% 50% at 82% 30%,
-            rgba(116, 196, 255, 0.50) 0%, rgba(116, 196, 255, 0) 70%),
-          radial-gradient(70% 60% at 50% 90%,
-            rgba(166, 120, 255, 0.55) 0%, rgba(20, 8, 32, 0) 70%);
+          radial-gradient(125% 80% at 50% -10%, rgba(255, 59, 110, 0.18), transparent 60%),
+          radial-gradient(125% 90% at 50% 112%, rgba(14, 196, 252, 0.16), transparent 55%),
+          #070409;
       }
-      .bg-drift {
-        position: absolute;
-        inset: -25%;
-        background:
-          radial-gradient(36% 30% at 30% 60%,
-            rgba(255, 138, 222, 0.22) 0%, rgba(255, 138, 222, 0) 65%),
-          radial-gradient(28% 24% at 72% 38%,
-            rgba(118, 224, 255, 0.18) 0%, rgba(118, 224, 255, 0) 65%);
-        filter: blur(28px);
-        animation: drift-slow 24s ease-in-out infinite alternate;
-        will-change: transform;
-      }
-      /* Two-stop vignette: center spotlight (darkens behind the form so
-         the text stays readable on top of the busy marble) + edge falloff
-         (keeps focus inward). */
-      .bg-vignette {
-        position: absolute;
-        inset: 0;
-        background:
-          radial-gradient(ellipse 45% 38% at 50% 52%,
-            rgba(0,0,0,0.62) 0%, rgba(0,0,0,0.34) 45%, rgba(0,0,0,0) 80%),
-          radial-gradient(circle at 50% 50%,
-            rgba(0,0,0,0) 55%, rgba(0,0,0,0.55) 100%);
-      }
-      /* Subtle CSS-only grain — no extra request. Repeats a tiny
-         SVG noise tile sized so it doesn't visibly tile. */
-      .bg-vignette::after {
-        content: "";
-        position: absolute;
-        inset: 0;
-        background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 1   0 0 0 0 1   0 0 0 0 1   0 0 0 0.18 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
-        opacity: 0.45;
-        mix-blend-mode: overlay;
-      }
-
-      @keyframes drift-x {
-        from { transform: translate3d(-2%, 0, 0) scale(1.03); }
-        to   { transform: translate3d(2%, -1%, 0) scale(1.05); }
-      }
-      @keyframes drift-y {
-        from { transform: translate3d(0, -2%, 0) scale(1.02); }
-        to   { transform: translate3d(-1%, 2%, 0) scale(1.05); }
-      }
-      @keyframes drift-slow {
-        from { transform: translate3d(-4%, -2%, 0); }
-        to   { transform: translate3d(4%, 2%, 0); }
-      }
-      @media (prefers-reduced-motion: reduce) {
-        .bg-image-back, .bg-image-front, .bg-drift { animation: none; }
-      }
-
-      /* ── Topbar (mini brand) ────────────────────────────────────────── */
-      .topbar {
-        position: absolute;
-        top: 2.4vmin;
-        left: 3vmin;
-        display: inline-flex;
-        align-items: center;
-        gap: 8px;
-        z-index: 2;
-        font-family: ui-monospace, "SF Mono", SFMono-Regular, Menlo, monospace;
-        font-size: 11px;
-        letter-spacing: 0.12em;
-        text-transform: uppercase;
-        color: rgba(214, 222, 233, 0.7);
-      }
-      .brand-dot {
-        width: 7px;
-        height: 7px;
-        border-radius: 50%;
-        background: #ff6fcf;
-        box-shadow: 0 0 10px rgba(255, 111, 207, 0.8), 0 0 22px rgba(116, 196, 255, 0.4);
-        animation: pulse 2.4s ease-in-out infinite;
-      }
-      @keyframes pulse {
-        0%, 100% { opacity: 1; transform: scale(1); }
-        50% { opacity: 0.55; transform: scale(0.86); }
-      }
-
-      /* ── Card ───────────────────────────────────────────────────────── */
       .card {
-        position: relative;
-        z-index: 2;
-        display: grid;
-        gap: 6vmin;
-        justify-items: center;
-        max-width: min(720px, 90vw);
-        animation: card-in 700ms 60ms cubic-bezier(.22,.61,.36,1) backwards;
+        width: min(380px, 100%);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 22px;
+        text-align: center;
       }
-      @keyframes card-in {
-        from { opacity: 0; transform: translateY(14px); filter: blur(8px); }
-        to   { opacity: 1; transform: translateY(0); filter: blur(0); }
-      }
-
-      /* ── Wordmark ───────────────────────────────────────────────────── */
       .wordmark {
         margin: 0;
         font-family: ui-monospace, "SF Mono", SFMono-Regular, Menlo, monospace;
         font-weight: 700;
-        font-size: clamp(3rem, 10vw, 7.5rem);
-        line-height: 0.9;
+        font-size: clamp(28px, 7vw, 40px);
         letter-spacing: -0.02em;
-        text-align: center;
-        background:
-          linear-gradient(96deg,
-            #e7f1ff 0%,
-            #c7a8ff 28%,
-            #ff6fcf 58%,
-            #ffd76a 100%);
-        background-size: 220% 100%;
-        background-position: 0% 50%;
+        background: linear-gradient(96deg, #ff3b6e, #ff6e21);
         -webkit-background-clip: text;
         background-clip: text;
         color: transparent;
-        text-shadow: 0 0 60px rgba(199, 168, 255, 0.25);
-        animation: sweep 14s ease-in-out infinite alternate;
       }
-      .wordmark-dot {
-        background: linear-gradient(96deg, #ff6fcf, #ffd76a);
-        -webkit-background-clip: text;
-        background-clip: text;
-      }
-      @keyframes sweep {
-        from { background-position: 0% 50%; }
-        to   { background-position: 100% 50%; }
-      }
-
-      /* ── Form ───────────────────────────────────────────────────────── */
-      .auth-form {
-        display: grid;
-        gap: 3vmin;
-        justify-items: center;
-        width: min(420px, 88vw);
-      }
-      .field {
-        display: grid;
-        gap: 10px;
-        justify-items: center;
+      .dot { -webkit-text-fill-color: #0ec4fc; color: #0ec4fc; }
+      .row {
+        display: flex;
         width: 100%;
+        gap: 8px;
+        padding: 6px;
+        background: rgba(255, 255, 255, 0.05);
+        border: 1px solid rgba(255, 255, 255, 0.14);
+        border-radius: 12px;
+        transition: border-color 160ms ease, box-shadow 160ms ease;
       }
-      .field-label {
-        font-family: ui-monospace, "SF Mono", SFMono-Regular, Menlo, monospace;
-        font-size: 10px;
-        letter-spacing: 0.32em;
-        text-transform: uppercase;
-        color: rgba(214, 222, 233, 0.5);
+      .row:focus-within {
+        border-color: rgba(255, 59, 110, 0.55);
+        box-shadow: 0 0 0 3px rgba(255, 59, 110, 0.15);
       }
-      input[type="password"] {
-        width: 100%;
-        font: inherit;
-        font-size: clamp(1.1rem, 2.2vw, 1.5rem);
-        font-family: ui-monospace, "SF Mono", SFMono-Regular, Menlo, monospace;
-        letter-spacing: 0.4em;
-        text-align: center;
-        color: #f6f3ff;
-        background: rgba(20, 12, 28, 0.42);
-        border: 1px solid rgba(199, 168, 255, 0.22);
-        border-radius: 4px;
-        padding: 16px 20px;
+      .row input {
+        flex: 1;
+        min-width: 0;
+        background: transparent;
+        border: none;
         outline: none;
-        backdrop-filter: blur(10px);
-        -webkit-backdrop-filter: blur(10px);
-        transition: border-color 220ms ease, box-shadow 220ms ease, background 220ms ease;
+        color: #fff;
+        /* 16px keeps iOS from zooming the viewport on focus. */
+        font: 500 16px/1 "Geist Variable", ui-sans-serif, system-ui, sans-serif;
+        padding: 12px 14px;
       }
-      input[type="password"]::placeholder {
-        color: rgba(214, 222, 233, 0.25);
-      }
-      input[type="password"]:focus-visible {
-        border-color: rgba(255, 109, 196, 0.7);
-        box-shadow:
-          0 0 0 3px rgba(255, 109, 196, 0.12),
-          0 0 32px rgba(255, 109, 196, 0.22);
-        background: rgba(28, 14, 36, 0.6);
-      }
-
+      .row input::placeholder { color: rgba(232, 237, 244, 0.4); letter-spacing: 0.02em; }
       .enter {
-        position: relative;
+        flex-shrink: 0;
         display: inline-flex;
         align-items: center;
-        gap: 12px;
-        font: inherit;
-        font-family: ui-monospace, "SF Mono", SFMono-Regular, Menlo, monospace;
-        font-weight: 600;
-        font-size: clamp(1rem, 1.8vw, 1.2rem);
-        letter-spacing: 0.32em;
-        text-transform: uppercase;
-        color: #0a0612;
-        background: linear-gradient(96deg, #e7f1ff 0%, #c7a8ff 50%, #ff6fcf 100%);
-        background-size: 220% 100%;
-        background-position: 0% 50%;
-        border: 0;
-        padding: 18px 32px;
-        border-radius: 999px;
-        box-shadow:
-          0 0 0 1px rgba(255,255,255,0.08),
-          0 12px 40px rgba(255, 109, 196, 0.32),
-          0 0 60px rgba(199, 168, 255, 0.22);
-        transition: transform 180ms ease, box-shadow 220ms ease, background-position 480ms ease;
+        justify-content: center;
+        width: 44px;
+        height: 44px;
+        border: none;
+        border-radius: 9px;
+        cursor: pointer;
+        color: #fff;
+        background: linear-gradient(135deg, #ff3b6e, #ff6e21);
+        transition: filter 140ms ease, transform 80ms ease;
       }
-      .enter:hover, .enter:focus-visible {
-        transform: translateY(-1px) scale(1.015);
-        background-position: 100% 50%;
-        box-shadow:
-          0 0 0 1px rgba(255,255,255,0.14),
-          0 18px 60px rgba(255, 109, 196, 0.42),
-          0 0 80px rgba(199, 168, 255, 0.32);
-      }
-      .enter:active { transform: translateY(0) scale(0.99); }
-      .enter-arrow { width: 18px; height: 18px; }
-
-      .error {
-        margin: 0;
-        font-family: ui-monospace, "SF Mono", SFMono-Regular, Menlo, monospace;
-        font-size: 11px;
-        letter-spacing: 0.2em;
-        text-transform: uppercase;
-        color: #ff8a8a;
-        text-shadow: 0 0 12px rgba(255, 138, 138, 0.4);
-      }
-
-      @media (max-width: 540px) {
-        .wordmark { letter-spacing: -0.01em; }
-        .topbar { font-size: 10px; }
-      }
+      .enter:hover { filter: brightness(1.1); }
+      .enter:active { transform: scale(0.96); }
+      .enter svg { width: 20px; height: 20px; }
+      .error { margin: 0; color: #ff8aab; font-size: 13px; }
     </style>
-
-    <script>
-      // Promote the background image layers to visible once they actually
-      // decode. If the files aren't there yet (404), the gradient layer
-      // alone carries the look — no broken-image artifact.
-      const showWhenLoaded = (selector: string, urls: string[]) => {
-        const el = document.querySelector<HTMLElement>(selector);
-        if (!el) return;
-        for (const u of urls) {
-          const img = new Image();
-          img.onload = () => el.classList.add("is-loaded");
-          img.src = u;
-        }
-      };
-      showWhenLoaded(".bg-image-back", [
-        "/portal/cloud/cloud-1.webp",
-        "/portal/cloud/cloud-1.jpg",
-        "/portal/cloud/cloud-1.png",
-      ]);
-      showWhenLoaded(".bg-image-front", [
-        "/portal/cloud/cloud-3.webp",
-        "/portal/cloud/cloud-3.jpg",
-        "/portal/cloud/cloud-3.png",
-      ]);
-    </script>
   </body>
 </html>

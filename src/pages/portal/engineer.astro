@@ -62,12 +62,24 @@ const readyToCrown = winners.filter(
   (w) => w.axes_decided >= 3 && w.champion_variant_id === null,
 ).length;
 
-// Group ORIGINAL-king cards apart (stable secondary sort): tracks where the
-// source still beats every mix cluster at the bottom, so they're obvious at a
-// glance and out of the way of the actionable cards above (#2).
-const sortedWinners = [...winners].sort(
-  (a, b) => Number(a.champion_is_original) - Number(b.champion_is_original),
-);
+// Cluster Winners into stage groups so the list reads at a glance and
+// PUBLISHED tracks group together (the Sounds page folded in here, 2026-06-03):
+//   0 In progress (voting / ready-to-crown / king-round)
+//   1 Crowned (a variant king, not yet published)
+//   2 Published (live on the public /sounds route) — auto-grouped
+//   3 Original wins (the source still beats every mix)
+const winnerRank = (w: WinnersJob): number =>
+  w.king_is_public ? 2
+  : w.champion_is_original ? 3
+  : w.champion_variant_id !== null ? 1
+  : 0;
+const WINNER_GROUP_LABEL: Record<number, string> = {
+  0: "In progress",
+  1: "Crowned",
+  2: "Published",
+  3: "Original wins",
+};
+const sortedWinners = [...winners].sort((a, b) => winnerRank(a) - winnerRank(b));
 
 const AXIS_ORDER = ["focal", "space", "dynamics"] as const;
 
@@ -157,7 +169,7 @@ function stemSoloUrls(sf) {
       <p class="lede">
         Send a track from <a href="/portal/buckets/all">Buckets</a>, vote on
         the pairs below, and crown a king mix in <a href="#winners">Winners</a>.
-        Publish kings to <a href="/portal/sounds">Sounds</a> when they're ready.
+        Publish a king and it groups under <a href="#winners">Published in Winners</a>.
       </p>
       {fetchError && (
         <p class="notice">Engine unreachable: {fetchError}. Showing empty state.</p>
