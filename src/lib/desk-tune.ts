@@ -71,6 +71,7 @@ async function runClaude(prompt: string, model: string): Promise<string> {
     ["-p", prompt, "--model", model, "--strict-mcp-config"],
     { cwd: os.tmpdir(), maxBuffer: 8 * 1024 * 1024, timeout: 90_000 }
   );
+  if (/not logged in|please run \/login/i.test(stdout)) throw new Error("claude not logged in");
   return stdout;
 }
 
@@ -152,4 +153,35 @@ Now REWRITE the two-week plan to reflect what he actually wants. Keep the exact 
     weeks: sanitizeWeeks(parsed.weeks),
     summary: typeof parsed.summary === "string" ? parsed.summary.replace(/—/g, ", ") : null,
   };
+}
+
+// Draft a single post on request, in Jon's voice, shaped by its surface.
+export async function draftPost(
+  piece: { surface: string; lane: string; text: string },
+  ctx: { beat: string; when: string }
+): Promise<string> {
+  let guidance: string;
+  if (piece.surface === "Substack" && piece.lane === "Article") {
+    guidance = `Write the full Substack post for Diary of a Soundbender. Open on a specific, concrete moment or anecdote, then open it into the broader idea. Demonstrate, do not just describe. Put an audio cue at the very top as [AUDIO: what plays here]. Use a [VISUAL: ...] cue once, where a handwritten or physical image would land. At most one or two declarative aphorisms, each load-bearing. 450 to 800 words. Put the title on the first line.`;
+  } else if (piece.surface === "Substack") {
+    guidance = `Write a single Substack Note: 2 to 4 sentences, a distilled observation in his voice. No title.`;
+  } else if (piece.surface === "LinkedIn") {
+    guidance = `Write a first-person LinkedIn post, concrete and tactical, building technical credibility for a music-tech and design audience without sounding like a productivity influencer. End with a genuine question. 110 to 200 words.`;
+  } else if (piece.surface === "IG") {
+    guidance = `Write an Instagram carousel: a one-line hook, then 4 to 6 slides (each a single short line, labelled Slide 1, Slide 2, and so on), then a caption. Visual and craft-forward.`;
+  } else {
+    guidance = `Write the piece in his voice, ready to post.`;
+  }
+  const prompt = `${PERSONA}
+
+${VOICE}
+
+This piece sits in the week themed "${ctx.beat}" (${ctx.when}). The planned hook or title is:
+"${piece.text}"
+
+${guidance}
+
+Write it as if it is going out under his name. Output ONLY the draft itself: no preamble, no commentary, no surrounding quotes. No em dashes anywhere.`;
+  const out = await runClaude(prompt, REWRITE_MODEL);
+  return out.replace(/—/g, ", ").replace(/^```[a-z]*\n?/i, "").replace(/```$/i, "").trim();
 }

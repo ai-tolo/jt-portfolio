@@ -9,6 +9,7 @@
 //     beat outline. High-level, flexible, steerable.
 
 import { Client } from "@notionhq/client";
+import { readSavedState } from "./desk-state";
 
 // Arcs database (data source) under Content Inbox in the Claude KB.
 const ARCS_DATA_SOURCE = "8ca8c512-bb02-40d4-8afa-b88e08e8355d";
@@ -273,5 +274,27 @@ export async function getDeskPlan(): Promise<DeskPlan> {
     }
   }
 
-  return { spine, otherArcs, weeks, onTheDesk: pickOnTheDesk(weeks), beats, error: null };
+  let onTheDesk = pickOnTheDesk(weeks);
+  // Prefer a saved (tuned) plan for the current week if one exists; a stale
+  // save (week has since advanced) is ignored and the arc default is used.
+  try {
+    const saved = await readSavedState();
+    const currentKey = onTheDesk[0]?.range ?? null;
+    if (saved && saved.weeks?.length && saved.weekKey && currentKey && saved.weekKey === currentKey) {
+      onTheDesk = saved.weeks.map((w) => ({
+        label: w.when ?? "",
+        range: w.range ?? "",
+        beat: w.beat ?? "",
+        current: /this week/i.test(w.when ?? ""),
+        pieces: (w.pieces ?? []).map((p) => ({
+          surface: p.surface as Surface,
+          lane: p.lane as DeskPiece["lane"],
+          text: p.text,
+        })),
+      }));
+    }
+  } catch {
+    /* fall back to the arc-derived plan */
+  }
+  return { spine, otherArcs, weeks, onTheDesk, beats, error: null };
 }

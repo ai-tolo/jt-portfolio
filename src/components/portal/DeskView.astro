@@ -54,6 +54,20 @@ const weeksJson = JSON.stringify(weeksForClient).replace(/</g, "\\u003c");
     </button>
   </header>
 
+  <div class="capture-bar">
+    <input
+      class="capture-input"
+      data-capture-input
+      type="text"
+      maxlength="2000"
+      placeholder="Drop a thought, a fragment, a half-idea. It lands in your compost."
+      autocomplete="off"
+      spellcheck="false"
+    />
+    <button type="button" class="capture-btn" data-action="capture">Catch it</button>
+    <span class="capture-status" data-capture-status aria-live="polite"></span>
+  </div>
+
   {plan.error && <p class="error" role="alert">Couldn't load the plan from Notion: {plan.error}</p>}
 
   {plan.onTheDesk.length === 0 && !plan.error ? (
@@ -95,6 +109,7 @@ const weeksJson = JSON.stringify(weeksForClient).replace(/</g, "\\u003c");
                     </div>
                     <h3 class="sub-title">{stripQuotes(article.text)}</h3>
                     <p class="sub-byline"><span class="avatar">T</span>Tolo<span class="byline-sep">·</span>Substack</p>
+                    <button type="button" class="draft-btn" data-action="draft" data-wi={i} data-lane="Article">✍ Draft this post</button>
                   </article>
                 ) : (
                   <article class="post sub hero placeholder">
@@ -241,6 +256,23 @@ const weeksJson = JSON.stringify(weeksForClient).replace(/</g, "\\u003c");
     background: color-mix(in srgb, var(--accent) 8%, transparent); font-size: var(--fs-small);
   }
 
+  .capture-bar { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-top: calc(-1 * var(--space-6)); }
+  .capture-input {
+    flex: 1 1 22rem; min-width: 0; font: inherit; font-size: var(--fs-small); color: var(--text);
+    background: rgba(245,241,232,0.02); border: 1px solid var(--line); border-radius: 6px;
+    padding: 10px 13px; outline: none; transition: border-color 140ms ease;
+  }
+  .capture-input:focus-visible { border-color: #ff8c42; }
+  .capture-input::placeholder { color: var(--muted); }
+  .capture-btn {
+    font: inherit; font-size: 12px; font-weight: 700; letter-spacing: 0.04em; color: var(--text);
+    background: transparent; border: 1px solid var(--line); border-radius: 6px; padding: 10px 16px;
+    cursor: pointer; transition: border-color 140ms ease, color 140ms ease;
+  }
+  .capture-btn:hover, .capture-btn:focus-visible { border-color: #ff8c42; color: #ff8c42; outline: none; }
+  .capture-status { font-size: 12px; color: var(--muted); }
+  .capture-status[data-ok="1"] { color: #00ff4d; }
+
   .issues { display: grid; gap: var(--space-12); }
   .issue-spread { display: grid; gap: var(--space-4); }
   .dateline { display: flex; align-items: baseline; gap: var(--space-3); }
@@ -366,6 +398,13 @@ const weeksJson = JSON.stringify(weeksForClient).replace(/</g, "\\u003c");
   @keyframes tpulse { 0%,100% { opacity: 0.3; } 50% { opacity: 1; } }
   .tune-summary { font-size: var(--fs-small); line-height: 1.55; color: var(--text); border-left: 2px solid #ff8c42; padding-left: 12px; }
   .tune-err { font-size: var(--fs-small); color: #ff6b6b; line-height: 1.5; }
+  .draft-btn {
+    display: inline-block; margin: 2px 16px 16px; font: inherit; font-size: 11px; font-weight: 700;
+    letter-spacing: 0.04em; color: var(--muted); background: transparent; border: 1px solid var(--line);
+    border-radius: 5px; padding: 6px 11px; cursor: pointer; transition: color 140ms ease, border-color 140ms ease;
+  }
+  .draft-btn:hover, .draft-btn:focus-visible { color: #ff8c42; border-color: #ff8c42; outline: none; }
+  .draft-text { width: 100%; box-sizing: border-box; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12.5px; line-height: 1.5; min-height: 16rem; }
 
   @media (max-width: 640px) { .desk { gap: var(--space-8); } .issues { gap: var(--space-8); } }
 </style>
@@ -393,7 +432,7 @@ const weeksJson = JSON.stringify(weeksForClient).replace(/</g, "\\u003c");
     const headline = (s: string) => s.replace(/^\s*\d+\.\s*/, "").replace(/^Beat\s*\d+:\s*/i, "").trim();
     const find = (w: Week, lane: string) => w.pieces.find((p) => p.lane === lane);
 
-    const renderWeek = (w: Week): string => {
+    const renderWeek = (w: Week, wi: number): string => {
       const article = find(w, "Article");
       const notes = find(w, "Notes");
       const li = find(w, "Post");
@@ -405,6 +444,7 @@ const weeksJson = JSON.stringify(weeksForClient).replace(/</g, "\\u003c");
              <div class="sub-audio" data-action="play" role="button" tabindex="0"><span class="play-glyph"></span><span class="scrub"><span class="scrub-fill"></span></span><span class="sub-dur">0:00</span></div>
              <h3 class="sub-title">${esc(stripQ(article.text))}</h3>
              <p class="sub-byline"><span class="avatar">T</span>Tolo<span class="byline-sep">·</span>Substack</p>
+             <button type="button" class="draft-btn" data-action="draft" data-wi="${wi}" data-lane="Article">✍ Draft this post</button>
            </article>`
         : `<article class="post sub hero placeholder"><p class="ph-label">No Substack article yet</p><p class="ph-hint">This is the week's headline slot.</p></article>`;
       const notesHtml = notes
@@ -432,7 +472,7 @@ const weeksJson = JSON.stringify(weeksForClient).replace(/</g, "\\u003c");
       box.style.transition = "opacity 160ms ease";
       box.style.opacity = "0";
       window.setTimeout(() => {
-        box.innerHTML = weeks.map(renderWeek).join("");
+        box.innerHTML = weeks.map((w, i) => renderWeek(w, i)).join("");
         box.style.opacity = "1";
       }, 170);
     };
@@ -455,14 +495,15 @@ const weeksJson = JSON.stringify(weeksForClient).replace(/</g, "\\u003c");
        <div class="tune-actions"><button type="button" class="tune-ghost" data-action="tune-skip">Just rewrite it</button><button type="button" class="tune-go" data-action="tune-answer">Update the weeks</button></div>`;
 
     const doneView = (summary: string | null): string =>
-      `<p class="tune-lead">Done. The weeks are updated.</p>
+      `<p class="tune-lead">Done. The weeks are updated and saved.</p>
        ${summary ? `<p class="tune-summary">${esc(summary)}</p>` : ""}
-       <div class="tune-actions"><button type="button" class="tune-ghost" data-action="tune-again">Tune again</button><button type="button" class="tune-go" data-action="tune-close">Looks good</button></div>`;
+       <div class="tune-actions"><button type="button" class="tune-ghost" data-action="tune-reset">Reset to original</button><button type="button" class="tune-ghost" data-action="tune-again">Tune again</button><button type="button" class="tune-go" data-action="tune-close">Looks good</button></div>`;
 
     const errView = (kind: string): string => {
-      const msg = kind === "claude-not-logged-in"
-        ? "Claude is not logged in on this machine yet. Run <code>claude /login</code> in a terminal on M3, then try again."
-        : "Something went wrong reaching the model. " + esc(kind);
+      let msg: string;
+      if (kind === "claude-unavailable-here") msg = "The tune and draft loops run Claude on your Mac, so they do not run on the live site. Open the Desk on your machine (your local server) and they work there.";
+      else if (kind === "claude-not-logged-in") msg = "Claude is not logged in here yet. Run <code>claude /login</code> in a terminal, then try again.";
+      else msg = "Something went wrong reaching the model. " + esc(kind);
       return `<p class="tune-err">${msg}</p><div class="tune-actions"><button type="button" class="tune-go" data-action="tune-retry">Try again</button></div>`;
     };
 
@@ -481,6 +522,35 @@ const weeksJson = JSON.stringify(weeksForClient).replace(/</g, "\\u003c");
       return data as { questions: string[]; weeks: Week[] | null; summary: string | null };
     }
 
+    async function saveCurrent() {
+      try {
+        await fetch("/api/console/desk-save", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ weeks: currentWeeks }) });
+      } catch { /* in-session plan still works even if the save misses */ }
+    }
+    async function resetPlan() {
+      try { await fetch("/api/console/desk-save", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ reset: true }) }); } catch {}
+      location.reload();
+    }
+
+    const draftView = (text: string): string =>
+      `<p class="tune-lead">Draft, in your voice. Edit freely, nothing is posted.</p>
+       <textarea class="tune-input draft-text" data-draft-text rows="14">${esc(text)}</textarea>
+       <div class="tune-actions"><button type="button" class="tune-ghost" data-action="draft-copy">Copy</button><button type="button" class="tune-go" data-action="tune-close">Done</button></div>
+       <p class="tune-note">Drafted on request. Yours to take, not posted anywhere.</p>`;
+    async function draftPiece(wi: number, lane: string) {
+      const week = currentWeeks[wi];
+      const piece = week?.pieces.find((p) => p.lane === lane);
+      if (!week || !piece) return;
+      if (scrim) scrim.hidden = false;
+      setBody(thinking("Drafting in your voice..."));
+      try {
+        const res = await fetch("/api/console/desk-draft", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ piece, ctx: { beat: week.beat, when: week.when } }) });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(data?.error || "failed");
+        setBody(draftView(String(data.draft || "")));
+      } catch (e) { setBody(errView(e instanceof Error ? e.message : "error")); }
+    }
+
     async function react() {
       const ta = body?.querySelector<HTMLTextAreaElement>("[data-reaction]");
       const reaction = (ta?.value || "").trim();
@@ -489,7 +559,7 @@ const weeksJson = JSON.stringify(weeksForClient).replace(/</g, "\\u003c");
       setBody(thinking("Reading your reaction..."));
       try {
         const data = await callTune(reaction, []);
-        if (data.weeks && data.weeks.length) { currentWeeks = data.weeks; renderBoard(currentWeeks); setBody(doneView(data.summary)); return; }
+        if (data.weeks && data.weeks.length) { currentWeeks = data.weeks; renderBoard(currentWeeks); void saveCurrent(); setBody(doneView(data.summary)); return; }
         lastQuestions = data.questions || [];
         if (lastQuestions.length) setBody(questionsForm(lastQuestions));
         else await answer(true);
@@ -501,7 +571,7 @@ const weeksJson = JSON.stringify(weeksForClient).replace(/</g, "\\u003c");
       setBody(thinking("Rewriting the weeks..."));
       try {
         const data = await callTune(lastReaction, skip ? ["(just rewrite it based on my reaction)"] : answers.length ? answers : ["(no extra detail)"]);
-        if (data.weeks && data.weeks.length) { currentWeeks = data.weeks; renderBoard(currentWeeks); setBody(doneView(data.summary)); }
+        if (data.weeks && data.weeks.length) { currentWeeks = data.weeks; renderBoard(currentWeeks); void saveCurrent(); setBody(doneView(data.summary)); }
         else if (data.questions?.length) { lastQuestions = data.questions; setBody(questionsForm(lastQuestions)); }
         else setBody(doneView(null));
       } catch (e) { setBody(errView(e instanceof Error ? e.message : "error")); }
@@ -525,11 +595,41 @@ const weeksJson = JSON.stringify(weeksForClient).replace(/</g, "\\u003c");
     };
     const flashExpand = (card: HTMLElement) => card.animate([{ boxShadow: "0 0 0 0 rgba(14,196,252,0)" }, { boxShadow: "0 0 0 2px rgba(14,196,252,0.6)" }, { boxShadow: "0 0 0 0 rgba(14,196,252,0)" }], { duration: 520, easing: "ease-out" });
 
+    // ── capture ──
+    async function captureThought() {
+      const input = desk.querySelector<HTMLInputElement>("[data-capture-input]");
+      const status = desk.querySelector<HTMLElement>("[data-capture-status]");
+      const text = (input?.value || "").trim();
+      if (!text) { input?.focus(); return; }
+      if (status) { status.textContent = "catching..."; status.removeAttribute("data-ok"); }
+      try {
+        const res = await fetch("/api/console/desk-capture", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ text }) });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(data?.error || "failed");
+        if (input) input.value = "";
+        if (status) { status.textContent = "caught it, in your compost"; status.setAttribute("data-ok", "1"); }
+        window.setTimeout(() => { if (status) status.textContent = ""; }, 3000);
+      } catch { if (status) { status.textContent = "couldn't catch that, try again"; status.removeAttribute("data-ok"); } }
+    }
+    desk.querySelector<HTMLInputElement>("[data-capture-input]")?.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") { e.preventDefault(); void captureThought(); }
+    });
+
     desk.addEventListener("click", (e) => {
       const t = e.target as HTMLElement;
+      if (t.closest('[data-action="capture"]')) return void captureThought();
+      const draftBtn = t.closest<HTMLElement>('[data-action="draft"]');
+      if (draftBtn) return void draftPiece(parseInt(draftBtn.dataset.wi || "0", 10), draftBtn.dataset.lane || "Article");
+      if (t.closest('[data-action="draft-copy"]')) {
+        const ta = body?.querySelector<HTMLTextAreaElement>("[data-draft-text]");
+        const b = t.closest<HTMLElement>('[data-action="draft-copy"]');
+        if (ta && navigator.clipboard) { navigator.clipboard.writeText(ta.value).catch(() => {}); if (b) { b.textContent = "Copied"; window.setTimeout(() => { b.textContent = "Copy"; }, 1500); } }
+        return;
+      }
       if (t.closest('[data-action="tune-react"]')) return void react();
       if (t.closest('[data-action="tune-answer"]')) return void answer(false);
       if (t.closest('[data-action="tune-skip"]')) return void answer(true);
+      if (t.closest('[data-action="tune-reset"]')) return void resetPlan();
       if (t.closest('[data-action="tune-again"]') || t.closest('[data-action="tune-retry"]')) return void openTune();
       if (t.closest('[data-action="desk-tune"]')) return void openTune();
       if (t.closest('[data-action="tune-close"]') || t === scrim) return void closeTune();

@@ -34,8 +34,10 @@ export const POST: APIRoute = async ({ request }) => {
     return json(result, 200);
   } catch (e) {
     const msg = e instanceof Error ? e.message : "tune failed";
-    // Surface the not-logged-in case clearly so the UI can prompt a login.
-    const notLoggedIn = /not logged in|\/login/i.test(msg);
-    return json({ error: notLoggedIn ? "claude-not-logged-in" : msg }, notLoggedIn ? 503 : 500);
+    // The loop runs Claude on a Mac. On the deployed (Vercel) site there is no
+    // local binary, so explain that rather than throwing a raw error.
+    if (/binary not found|ENOENT/i.test(msg)) return json({ error: "claude-unavailable-here" }, 503);
+    if (/not logged in|\/login/i.test(msg)) return json({ error: "claude-not-logged-in" }, 503);
+    return json({ error: msg }, 500);
   }
 };
