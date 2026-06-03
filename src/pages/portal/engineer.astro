@@ -198,14 +198,36 @@ function stemSoloUrls(sf) {
       <span class="cur-thinking-dot" aria-hidden="true"></span>
       the Engineer is thinking about your last votes…
     </div>
-    <section class="curiosity" data-curiosity hidden aria-live="polite">
-      <div class="cur-card">
+    {/* Same card shell as a Mix Faceoff pair — a shared source waveform + one
+        transport + numbered take chips (1/2/3) that switch which mix plays,
+        carrying the playhead so you hear the same moment in each. The take
+        rows + chips are built client-side from the fetched refs. Playback is
+        coordinated with the faceoff + winners via the global Stage selector so
+        only one section ever plays at once. */}
+    <section class="curiosity" data-curiosity data-section="asks" hidden aria-live="polite">
+      <div class="cur-card pair-shell" data-cur-card>
         <div class="cur-head">
           <span class="cur-eyebrow">the Engineer asks</span>
           <span class="cur-finding" data-cur-finding hidden></span>
         </div>
         <p class="cur-question" data-cur-question></p>
-        <div class="cur-refs" data-cur-refs></div>
+
+        <div class="pair-stage">
+          <div class="pair-waveform" data-stage-waveform data-cur-wave>
+            <img data-cur-waveimg alt="" loading="lazy" hidden />
+            <div class="pair-waveform-fallback" data-cur-wavefallback hidden>listen below</div>
+            <div class="pair-playhead" data-cur-playhead hidden></div>
+          </div>
+          <div class="pair-transport">
+            <button class="transport-btn" data-cur-skip="-10" aria-label="Back 10 seconds">⏮</button>
+            <button class="transport-btn transport-play" data-cur-toggle data-state="paused" aria-label="Play / pause"></button>
+            <button class="transport-btn" data-cur-skip="10" aria-label="Forward 10 seconds">⏭</button>
+            <span class="pair-time" data-cur-time>0:00 / —:—</span>
+            <div class="ab-switch" data-cur-takes role="group" aria-label="Numbered takes — tap a number or press 1/2/3 to switch which mix plays"></div>
+          </div>
+          <div class="pair-loudness cur-takelegend" data-cur-legend aria-live="polite"></div>
+        </div>
+
         <div class="cur-respond" data-cur-respond>
           <textarea
             class="cur-answer"
@@ -215,12 +237,11 @@ function stemSoloUrls(sf) {
           ></textarea>
           <div class="cur-actions">
             <button type="button" class="cur-send" data-cur-send>Send →</button>
-            <button type="button" class="cur-skip" data-cur-skip>ask me something else</button>
+            <button type="button" class="cur-skip" data-cur-skip-q>ask me something else</button>
           </div>
         </div>
         <p class="cur-done" data-cur-done hidden></p>
       </div>
-      <audio data-cur-audio preload="none"></audio>
     </section>
 
     {/* The old in-flight / pairs / winners / errored status pills were
@@ -267,7 +288,7 @@ function stemSoloUrls(sf) {
     <section class="pair-tinder">
       <h2>
         Mix Faceoff
-        <span class="hint">tap A/B to switch · hold A/B/ORIGINAL to vote · hold × to skip · space play/pause · ← → seek</span>
+        <span class="hint">tap 1·2·3 (or press the key) to switch the mix · hold a take to vote it · hold × to skip · space play/pause · ← → seek</span>
       </h2>
       {pairs.length === 0 ? (
         <p class="empty">
@@ -849,76 +870,24 @@ function stemSoloUrls(sf) {
     text-wrap: pretty;
   }
 
-  .cur-refs {
-    display: flex;
-    flex-direction: column;
-    gap: 7px;
-    margin-bottom: 16px;
+  /* The curiosity card reuses the faceoff stage classes (.pair-stage /
+     .pair-waveform / .pair-transport / .ab-switch / .ab-side-blind) for a
+     1:1 look. Just the small extras the card needs on top: */
+  .cur-card .pair-stage { margin: 4px 0 16px; }
+  /* Take legend — names what the active numbered take is (source / a master),
+     mirroring the faceoff loudness line's placement. Reflective surface, so
+     unlike the blind faceoff it's fine to label the takes. */
+  .cur-takelegend {
+    min-height: 1.1em;
+    font-size: 12.5px;
+    color: rgba(255, 255, 255, 0.62);
   }
-  .cur-ref {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    padding: 8px 12px;
-    border-radius: 10px;
-    background: rgba(255, 255, 255, 0.03);
-    border: 1px solid rgba(255, 255, 255, 0.06);
-    transition: border-color 0.18s, background 0.18s;
-  }
-  .cur-ref[data-playing] {
-    border-color: rgba(14, 196, 252, 0.42);
-    background: rgba(14, 196, 252, 0.07);
-  }
-  .cur-ref[data-role="source"] .cur-ref-label { color: #ffe9b8; }
-  .cur-play {
-    flex: 0 0 auto;
-    width: 32px;
-    height: 32px;
-    border-radius: 50%;
-    border: 1px solid rgba(255, 255, 255, 0.18);
-    background: rgba(255, 255, 255, 0.06);
-    color: #fff;
-    font-size: 12px;
-    line-height: 1;
-    cursor: pointer;
-    display: grid;
-    place-items: center;
-    transition: background 0.15s, border-color 0.15s;
-  }
-  .cur-play:hover { background: rgba(14, 196, 252, 0.18); border-color: rgba(14, 196, 252, 0.5); }
-  .cur-ref-body { flex: 1 1 auto; min-width: 0; }
-  .cur-ref-label {
-    font-size: 13px;
-    font-weight: 500;
-    color: rgba(255, 255, 255, 0.82);
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-  }
-  .cur-ref-bar {
-    height: 5px;
-    margin-top: 7px;
-    border-radius: 3px;
-    background: rgba(255, 255, 255, 0.1);
-    cursor: pointer;
-    position: relative;
-    overflow: hidden;
-  }
-  .cur-ref-fill {
-    position: absolute;
-    inset: 0 auto 0 0;
-    width: 0%;
-    border-radius: 3px;
-    background: linear-gradient(90deg, #0ec4fc, #a06bff);
-  }
-  .cur-ref-time {
-    flex: 0 0 auto;
-    font: 500 11px ui-monospace, SFMono-Regular, Menlo, monospace;
-    color: rgba(255, 255, 255, 0.45);
-    min-width: 70px;
-    text-align: right;
+  .cur-takelegend .cur-legend-num {
+    color: #0ec4fc;
+    font-weight: 700;
     font-variant-numeric: tabular-nums;
   }
+  .cur-takelegend .cur-legend-ref { color: rgba(255, 255, 255, 0.45); }
 
   .cur-respond[hidden] { display: none; }
   .cur-answer {
@@ -2894,6 +2863,43 @@ function stemSoloUrls(sf) {
   for (const a of [audioA, audioB, audioOriginal]) {
     a.preload = "auto";
   }
+
+  // ── Stage: the cross-section playback + keyboard selector ──────────────────
+  // The asks (curiosity), faceoff, and winners sections all render the same
+  // numbered-take card. Only ONE may play at a time, and the keyboard
+  // (1-9 · space · ←/→) belongs to whichever section the curator last engaged.
+  // Each section registers a `silence()` (pause WITHOUT reset) under its name;
+  // `claim(name)` marks it active and silences the others. Lives on `window` so
+  // the curiosity card's separate <script> module joins the same selector — the
+  // single source of truth that keeps the similar cards from fighting over
+  // playback or stealing each other's keystrokes.
+  const Stage: {
+    active: string | null;
+    silencers: Record<string, () => void>;
+    register: (name: string, silence: () => void) => void;
+    claim: (name: string) => void;
+  } = (() => {
+    const w = window as unknown as { __engStage?: any };
+    if (w.__engStage) return w.__engStage;
+    const s = {
+      active: null as string | null,
+      silencers: {} as Record<string, () => void>,
+      register(name: string, silence: () => void) {
+        s.silencers[name] = silence;
+      },
+      claim(name: string) {
+        s.active = name;
+        for (const k in s.silencers) {
+          if (k !== name) {
+            try { s.silencers[k](); } catch {}
+          }
+        }
+      },
+    };
+    w.__engStage = s;
+    return s;
+  })();
+
   let activePairEl: HTMLElement | null = null;
   // null = "original is playing"; "a" or "b" = that variant is playing.
   let currentSide: "a" | "b" | null = null;
@@ -3152,21 +3158,23 @@ function stemSoloUrls(sf) {
     }
   }
 
-  function switchSide(side: "a" | "b") {
+  // Switch directly to a take (1·2·3 model — no tap-to-deselect). The three
+  // takes are the two variants + the source, blind-shuffled; `currentSide`
+  // null = source. Switching carries currentTime + play state so the curator
+  // hears the SAME moment in the new mix. Loudness-match is already applied
+  // per-take in setActivePair, so it survives the swap untouched.
+  function selectSide(target: "a" | "b" | null) {
     const pair = activePairEl;
     if (!pair) return;
-    // Pure source-toggle. Never affects play/pause (space-bar owns that).
-    // If the target side is already the active one, deselect → original.
-    // Otherwise switch to it. CurrentTime + play state are preserved
-    // across the swap so the curator never loses their place.
-    const target: "a" | "b" | null = side === currentSide ? null : side;
+    Stage.claim("faceoff");
+    if (target === currentSide) return; // already the active take — no deselect
     const prev = activeAudio();
     const t = prev.currentTime;
     const wasPlaying = !prev.paused;
     prev.pause();
     currentSide = target;
     const next = activeAudio();
-    next.currentTime = t;
+    try { next.currentTime = t; } catch {}
     reflectSide(pair, target);
     if (wasPlaying) {
       setPlayButton(pair, "loading");
@@ -3176,6 +3184,23 @@ function stemSoloUrls(sf) {
         startTicking();
       }).catch(() => { setBuffering(pair, false); });
     }
+  }
+
+  // Press / tap 1·2·3 → switch to the take at that visual position. The chips
+  // render in blind order, so position N maps to whatever role (a / b / source)
+  // sits in slot N — the vote wiring still records the true underlying variant.
+  function selectByPosition(n: number) {
+    const pair = activePairEl;
+    if (!pair) return;
+    const chips = Array.from(
+      pair.querySelectorAll<HTMLElement>("[data-side-btn], [data-now-side]"),
+    );
+    const chip = chips[n - 1];
+    if (!chip) return;
+    const role = chip.hasAttribute("data-now-side")
+      ? null
+      : (chip.dataset.sideBtn as "a" | "b");
+    selectSide(role);
   }
 
   function seekTo(seconds: number) {
@@ -3318,7 +3343,7 @@ function stemSoloUrls(sf) {
   // the bar finishes is a tap (passes through to the existing click
   // handler for the side switch). Release after fills the bar fires
   // commit and suppresses the trailing click so we don't double-trigger
-  // switchSide right after committing. Duration kept in lockstep with
+  // selectSide right after committing. Duration kept in lockstep with
   // the CSS transition above — change both together.
   const HOLD_MS = 650;
   const HOLD_CLICK_SUPPRESS_MS = 220;
@@ -3403,31 +3428,21 @@ function stemSoloUrls(sf) {
       return;
     }
 
-    // A/B switch — tap behavior. Suppress when the click immediately
-    // follows a hold-commit so we don't switch playback to the variant
-    // the curator just voted on/off the queue.
-    const sideBtn = target.closest<HTMLElement>("[data-side-btn]");
-    if (sideBtn) {
+    // Numbered-take tap — switch directly to whichever mix this chip is.
+    // Suppress when the click immediately follows a hold-commit so we don't
+    // switch playback to the take the curator just voted on/off the queue.
+    // Both the variant chips (data-side-btn) and the source chip (data-now-side)
+    // route through selectSide now — there's no special tap-to-deselect.
+    const takeChip = target.closest<HTMLElement>("[data-side-btn], [data-now-side]");
+    if (takeChip) {
       if (Date.now() - lastHoldCommitAt < HOLD_CLICK_SUPPRESS_MS) return;
-      switchSide(sideBtn.dataset.sideBtn as "a" | "b");
-      // Drop focus from the side button so the browser's native space=
-      // click on it doesn't fight the document-level space=togglePlay
-      // handler. Without this, focus stays on the button and pressing
-      // space re-fires switchSide instead of cleanly toggling play.
-      sideBtn.blur();
-      return;
-    }
-
-    // ORIGINAL pill tap — when A or B is the active playback, tapping
-    // the pill returns to ORIGINAL (mirrors tap-to-deselect on A/B).
-    // Tap on the pill when ORIGINAL is already active is a no-op.
-    // The hold gesture is handled separately by startHold() above; this
-    // click handler only fires on release-before-fill (a real tap).
-    const nowSideBtn = target.closest<HTMLElement>("[data-now-side]");
-    if (nowSideBtn) {
-      if (Date.now() - lastHoldCommitAt < HOLD_CLICK_SUPPRESS_MS) return;
-      if (currentSide !== null) switchSide(currentSide);
-      nowSideBtn.blur();
+      const role = takeChip.hasAttribute("data-now-side")
+        ? null
+        : (takeChip.dataset.sideBtn as "a" | "b");
+      selectSide(role);
+      // Drop focus from the chip so the browser's native space=click on it
+      // doesn't fight the document-level space=togglePlay handler.
+      takeChip.blur();
       return;
     }
 
@@ -3473,6 +3488,10 @@ function stemSoloUrls(sf) {
     // Ignore other shortcuts when typing in inputs.
     const tag = (document.activeElement?.tagName ?? "").toLowerCase();
     if (tag === "input" || tag === "textarea") return;
+    // The faceoff only owns the keyboard when it's the engaged section — the
+    // asks + winners cards claim it when the curator plays/opens them, so the
+    // similar cards never fight over the same keystroke. (Stage selector)
+    if (Stage.active && Stage.active !== "faceoff") return;
     const pair = activePair();
     if (!pair) return;
     const k = e.key.toLowerCase();
@@ -3480,12 +3499,11 @@ function stemSoloUrls(sf) {
       if (k === "n" || k === "enter") { e.preventDefault(); advancePair(pair); }
       return;
     }
-    // A/B switch (instant, doesn't commit). Arrow keys seek ±10s. Space
-    // toggles play/pause on the active side regardless of which button
+    // 1·2·3 switch the mix (instant, doesn't commit). Arrow keys seek ±10s.
+    // Space toggles play/pause on the active take regardless of which button
     // has focus (and even if no button has focus). Enter commits the
-    // currently-playing side as the vote. Escape skips.
-    if (k === "a") { e.preventDefault(); switchSide("a"); }
-    else if (k === "b") { e.preventDefault(); switchSide("b"); }
+    // currently-playing take as the vote. Escape skips.
+    if (/^[1-9]$/.test(k)) { e.preventDefault(); selectByPosition(Number(k)); }
     else if (k === " ") { e.preventDefault(); togglePlay(); }
     else if (k === "arrowleft") { e.preventDefault(); skipBy(-10); }
     else if (k === "arrowright") { e.preventDefault(); skipBy(10); }
@@ -3521,6 +3539,7 @@ function stemSoloUrls(sf) {
       if (a !== activeAudio()) return;
       const pair = activePairEl;
       if (!pair) return;
+      Stage.claim("faceoff"); // playing the faceoff silences asks + winners
       setBuffering(pair, false);
       setPlayButton(pair, "playing");
       startTicking();
@@ -3548,9 +3567,19 @@ function stemSoloUrls(sf) {
     });
   }
 
+  // Faceoff joins the Stage selector. Silencing it pauses all three audios
+  // WITHOUT resetting position (so switching to another section and back keeps
+  // your place). It claims the keyboard by default when a pair is present —
+  // keyboard-first voting is the established faceoff flow.
+  Stage.register("faceoff", () => {
+    for (const a of allAudios()) { if (!a.paused) a.pause(); }
+    stopTicking();
+    if (activePairEl) setPlayButton(activePairEl, "paused");
+  });
+
   // Initialize: first .pair-active becomes the active pair.
   const initial = activePair();
-  if (initial) setActivePair(initial);
+  if (initial) { setActivePair(initial); Stage.claim("faceoff"); }
 
   // ── Winners controller (Phase 3 + Phase 4 sync) ──────────────────
   // Per-card model: each card holds N audio elements (source + winners),
@@ -3588,10 +3617,17 @@ function stemSoloUrls(sf) {
   }
 
   function pauseOtherCards(except: CardController) {
+    // A winners take is starting — it owns the keyboard now, and the faceoff +
+    // asks sections go quiet. (Stage selector)
+    Stage.claim("winners");
     for (const c of allControllers) {
       if (c !== except) c.pause();
     }
   }
+  // Silencing the winners section = pause every winners card (no reset).
+  Stage.register("winners", () => {
+    for (const c of allControllers) c.pause();
+  });
 
   document.querySelectorAll<HTMLElement>(".winners-card").forEach((card) => {
     const wave = card.querySelector<HTMLElement>("[data-winners-wave]");
@@ -3856,9 +3892,11 @@ function stemSoloUrls(sf) {
       const wasCollapsed = card.dataset.collapsed === "true";
       card.dataset.collapsed = wasCollapsed ? "false" : "true";
       head.setAttribute("aria-expanded", String(wasCollapsed));
-      // Expanding a card focuses it for keyboard take-switching (1/2/3/4 + ↑/↓).
+      // Expanding a card focuses it for keyboard take-switching (1/2/3/4 + ↑/↓)
+      // and claims the keyboard for the winners section. (Stage selector)
       if (wasCollapsed) {
         focusedCard = allControllers.find((c) => c.card === card) ?? focusedCard;
+        Stage.claim("winners");
       }
     });
   });
@@ -3983,6 +4021,9 @@ function stemSoloUrls(sf) {
   document.addEventListener("keydown", (e) => {
     const target = e.target as HTMLElement | null;
     if (target && (target.tagName === "TEXTAREA" || target.tagName === "INPUT")) return;
+    // Winners only owns the keyboard once the curator engages it (opens/plays a
+    // card). Otherwise the faceoff/asks handlers take the keystroke. (Stage)
+    if (Stage.active !== "winners") return;
 
     // Toggle-style take switching on the focused (expanded) winners card:
     // 1-9 jump straight to a take, ↑/↓ step between them. swapTo carries the
@@ -4142,28 +4183,42 @@ function stemSoloUrls(sf) {
 </script>
 
 <script>
-  /* ── The Engineer's curiosity surface controller ──────────────────────────
-     Self-contained module (own scope — no collisions with the faceoff/winners
-     scripts). Fetches the one open question from /api/console/curiosity (the
-     synthesis runs claude -p on M1, so we poll while status=synthesizing),
-     renders it + its 1–3 inline audio players, and posts Jon's freeform answer
-     back. One <audio>, one-at-a-time playback. */
+  /* ── The Engineer's curiosity (asks) card controller ──────────────────────
+     Same numbered-take model as the Mix Faceoff + Winners cards: one shared
+     source waveform + transport + chips 1·2·3 that switch which mix plays,
+     carrying the playhead so the curator hears the same moment in each. Joins
+     the global Stage selector (window.__engStage) so it never plays over — or
+     steals keystrokes from — the faceoff/winners sections. Own <script> module
+     (separate scope); the per-take <audio> elements are created here. */
   (() => {
     const root = document.querySelector("[data-curiosity]");
     const thinking = document.querySelector("[data-cur-thinking]");
     if (!root) return;
     const qEl = root.querySelector("[data-cur-question]");
     const findingEl = root.querySelector("[data-cur-finding]");
-    const refsEl = root.querySelector("[data-cur-refs]");
     const respondEl = root.querySelector("[data-cur-respond]");
     const answerEl = root.querySelector("[data-cur-answer]");
     const sendBtn = root.querySelector("[data-cur-send]");
-    const skipBtn = root.querySelector("[data-cur-skip]");
+    const skipBtn = root.querySelector("[data-cur-skip-q]");
     const doneEl = root.querySelector("[data-cur-done]");
-    const audio = root.querySelector("[data-cur-audio]");
+    const stageEl = root.querySelector(".pair-stage");
+    const waveEl = root.querySelector("[data-cur-wave]");
+    const waveImg = root.querySelector("[data-cur-waveimg]");
+    const waveFallback = root.querySelector("[data-cur-wavefallback]");
+    const playhead = root.querySelector("[data-cur-playhead]");
+    const timeEl = root.querySelector("[data-cur-time]");
+    const takesEl = root.querySelector("[data-cur-takes]");
+    const legendEl = root.querySelector("[data-cur-legend]");
+    const toggleBtn = root.querySelector("[data-cur-toggle]");
 
+    const SECTION = "asks";
+    const Stage = window.__engStage; // shared selector defined by the faceoff module
+    const claim = () => { if (Stage) Stage.claim(SECTION); };
+
+    let takes = [];        // [{ audio, label, ref, n, chip }]
+    let activeIndex = 0;
+    let rafId = null;
     let current = null;
-    let playingRow = null;
     let pollTimer = null;
 
     const fmt = (s) => {
@@ -4171,62 +4226,155 @@ function stemSoloUrls(sf) {
       const m = Math.floor(s / 60), ss = Math.floor(s % 60);
       return m + ":" + (ss < 10 ? "0" : "") + ss;
     };
-    const assetUrl = (p) =>
-      p ? "/api/console/asset?path=" + encodeURIComponent(p) + "&variant=opus" : "";
     const esc = (s) =>
       String(s == null ? "" : s).replace(/[&<>"]/g, (c) =>
         ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+    const assetUrl = (p) =>
+      p ? "/api/console/asset?path=" + encodeURIComponent(p) + "&variant=opus" : "";
+    const active = () => (takes[activeIndex] ? takes[activeIndex].audio : null);
 
-    function setGlyph(row, g) {
-      const b = row && row.querySelector(".cur-play");
-      if (b) b.textContent = g;
+    // Stage silencer: pause the active take WITHOUT resetting position.
+    function silence() {
+      const a = active();
+      if (a && !a.paused) a.pause();
+      renderState();
     }
-    function stopAudio() {
-      try { audio.pause(); } catch (e) {}
-      audio.removeAttribute("src");
-      try { audio.load(); } catch (e) {}
-      if (playingRow) {
-        playingRow.removeAttribute("data-playing");
-        setGlyph(playingRow, "▶");
-        const f = playingRow.querySelector(".cur-ref-fill");
-        if (f) f.style.width = "0%";
-        playingRow = null;
+    if (Stage) Stage.register(SECTION, silence);
+
+    function renderState() {
+      const a = active();
+      takes.forEach((t, i) => {
+        const on = i === activeIndex;
+        t.chip.classList.toggle("ab-side-active", on);
+        if (on) t.chip.removeAttribute("data-dim");
+        else t.chip.setAttribute("data-dim", "true");
+      });
+      // The glyph is rendered by CSS ::before from data-state — don't set text.
+      if (toggleBtn) toggleBtn.dataset.state = !!a && !a.paused ? "playing" : "paused";
+      if (timeEl) {
+        const dur = a ? a.duration : 0;
+        timeEl.textContent = fmt(a ? a.currentTime : 0) + " / " + (dur && isFinite(dur) ? fmt(dur) : "—:—");
+      }
+      if (playhead && a) {
+        const dur = a.duration;
+        const frac = dur && a.currentTime > 0 ? Math.max(0, Math.min(1, a.currentTime / dur)) : 0;
+        playhead.style.left = frac * 100 + "%";
+        playhead.removeAttribute("hidden");
+      }
+      const t = takes[activeIndex];
+      if (legendEl && t) {
+        legendEl.innerHTML =
+          '<span class="cur-legend-num">' + t.n + "</span> " + esc(t.label) +
+          (t.ref ? ' <span class="cur-legend-ref">· toward ' + esc(t.ref) + "</span>" : "");
       }
     }
-    function playRow(row) {
-      const url = row.getAttribute("data-url");
-      if (!url) return;
-      if (playingRow === row) {
-        if (audio.paused) { audio.play().then(() => setGlyph(row, "❚❚")).catch(() => {}); }
-        else { audio.pause(); setGlyph(row, "▶"); }
-        return;
-      }
-      if (playingRow) {
-        playingRow.removeAttribute("data-playing");
-        setGlyph(playingRow, "▶");
-        const pf = playingRow.querySelector(".cur-ref-fill");
-        if (pf) pf.style.width = "0%";
-      }
-      playingRow = row;
-      row.setAttribute("data-playing", "");
-      audio.src = url;
-      try { audio.currentTime = 0; } catch (e) {}
-      audio.play().then(() => setGlyph(row, "❚❚")).catch(() => setGlyph(row, "▶"));
+
+    function tick() {
+      renderState();
+      const a = active();
+      if (!a || a.paused) { rafId = null; return; }
+      rafId = requestAnimationFrame(tick);
     }
-    audio.addEventListener("timeupdate", () => {
-      if (!playingRow) return;
-      const d = audio.duration || Number(playingRow.getAttribute("data-dur")) || 0;
-      const fill = playingRow.querySelector(".cur-ref-fill");
-      const time = playingRow.querySelector(".cur-ref-time");
-      if (fill) fill.style.width = (d ? (audio.currentTime / d) * 100 : 0) + "%";
-      if (time) time.textContent = fmt(audio.currentTime) + " / " + fmt(d);
-    });
-    audio.addEventListener("ended", () => {
-      if (!playingRow) return;
-      setGlyph(playingRow, "▶");
-      const f = playingRow.querySelector(".cur-ref-fill");
-      if (f) f.style.width = "0%";
-    });
+    function startTick() { if (rafId == null) rafId = requestAnimationFrame(tick); }
+
+    // Switch to take i, carrying the playhead — the sync'd-compare swap.
+    function swapTo(i, play = true) {
+      if (i < 0 || i >= takes.length) return;
+      const prev = active();
+      const t = prev ? prev.currentTime : 0;
+      if (prev && !prev.paused) prev.pause();
+      activeIndex = i;
+      const next = active();
+      if (next) { try { next.currentTime = t; } catch (e) {} }
+      if (play && next) {
+        claim();
+        next.play().then(startTick).catch(() => {});
+      }
+      renderState();
+    }
+    function toggle() {
+      const a = active();
+      if (!a) return;
+      if (a.paused) { claim(); a.play().then(startTick).catch(() => {}); }
+      else a.pause();
+      renderState();
+    }
+    function seekFrac(frac) {
+      const a = active();
+      if (!a) return;
+      const dur = a.duration;
+      if (!dur || !isFinite(dur)) return;
+      const nt = frac * dur;
+      takes.forEach((t) => { try { t.audio.currentTime = nt; } catch (e) {} });
+      renderState();
+    }
+    function skip(delta) {
+      const a = active();
+      if (!a) return;
+      const nt = Math.max(0, a.currentTime + delta);
+      takes.forEach((t) => { try { t.audio.currentTime = nt; } catch (e) {} });
+      renderState();
+    }
+
+    function teardownTakes() {
+      takes.forEach((t) => {
+        try { t.audio.pause(); t.audio.removeAttribute("src"); t.audio.load(); } catch (e) {}
+      });
+      takes = [];
+      activeIndex = 0;
+      if (takesEl) takesEl.innerHTML = "";
+      if (rafId != null) { cancelAnimationFrame(rafId); rafId = null; }
+    }
+
+    function buildTakes(refs) {
+      teardownTakes();
+      (refs || []).forEach((ref) => {
+        const url = assetUrl(ref.asset_path);
+        if (!url) return;
+        const n = takes.length + 1;
+        const audio = new Audio();
+        audio.preload = "auto";
+        audio.src = url;
+        const chip = document.createElement("button");
+        chip.type = "button";
+        chip.className = "ab-side ab-side-blind";
+        chip.title = (ref.label || "take " + n) + (ref.reference ? " · toward " + ref.reference : "");
+        chip.innerHTML = '<span class="ab-key">' + n + "</span>";
+        takesEl.appendChild(chip);
+        const idx = takes.length;
+        takes.push({ audio, label: ref.label || "take " + n, ref: ref.reference || null, n, chip });
+        chip.addEventListener("click", () => {
+          claim();
+          if (idx === activeIndex) toggle();
+          else swapTo(idx, true);
+        });
+        audio.addEventListener("timeupdate", () => {
+          if (takes[activeIndex] && takes[activeIndex].audio === audio) {
+            renderState();
+            if (rafId == null && !audio.paused) startTick();
+          }
+        });
+        audio.addEventListener("playing", () => {
+          if (takes[activeIndex] && takes[activeIndex].audio === audio) startTick();
+        });
+        audio.addEventListener("ended", () => {
+          if (takes[activeIndex] && takes[activeIndex].audio === audio) renderState();
+        });
+      });
+      renderState();
+    }
+
+    function setWave(refs) {
+      const wf = (refs || []).find((r) => r.waveform_sha1);
+      if (wf && wf.waveform_sha1 && waveImg) {
+        waveImg.src = "/api/console/waveform?sha1=" + wf.waveform_sha1;
+        waveImg.hidden = false;
+        if (waveFallback) waveFallback.hidden = true;
+      } else {
+        if (waveImg) waveImg.hidden = true;
+        if (waveFallback) waveFallback.hidden = false;
+      }
+    }
 
     function findingText(ins) {
       const f = ins.facts || {};
@@ -4245,27 +4393,15 @@ function stemSoloUrls(sf) {
           return "";
       }
     }
-    function refHtml(ref) {
-      const tag = ref.reference ? " · toward " + ref.reference : "";
-      const dur = ref.duration_seconds || 0;
-      return (
-        '<div class="cur-ref" data-role="' + esc(ref.role) + '" data-url="' +
-        esc(assetUrl(ref.asset_path)) + '" data-dur="' + dur + '">' +
-        '<button type="button" class="cur-play" aria-label="Play">▶</button>' +
-        '<div class="cur-ref-body"><div class="cur-ref-label">' +
-        esc((ref.label || "") + tag) +
-        '</div><div class="cur-ref-bar"><div class="cur-ref-fill"></div></div></div>' +
-        '<span class="cur-ref-time">0:00 / ' + fmt(dur) + "</span></div>"
-      );
-    }
+
     function render(ins) {
       current = ins;
-      stopAudio();
       qEl.textContent = ins.question;
       const ft = findingText(ins);
       if (ft) { findingEl.textContent = ft; findingEl.hidden = false; }
       else findingEl.hidden = true;
-      refsEl.innerHTML = (ins.refs || []).map(refHtml).join("");
+      setWave(ins.refs || []);
+      buildTakes(ins.refs || []);
       answerEl.value = "";
       respondEl.hidden = false;
       doneEl.hidden = true;
@@ -4275,18 +4411,36 @@ function stemSoloUrls(sf) {
       root.hidden = false;
     }
 
-    refsEl.addEventListener("click", (e) => {
-      const btn = e.target.closest(".cur-play");
-      if (btn) { playRow(btn.closest(".cur-ref")); return; }
-      const bar = e.target.closest(".cur-ref-bar");
-      if (bar) {
-        const row = bar.closest(".cur-ref");
-        if (playingRow !== row) playRow(row);
-        const rect = bar.getBoundingClientRect();
-        const frac = Math.min(1, Math.max(0, (e.clientX - rect.left) / rect.width));
-        const d = audio.duration || Number(row.getAttribute("data-dur")) || 0;
-        if (d) audio.currentTime = frac * d;
-      }
+    // Transport + waveform wiring.
+    if (toggleBtn) toggleBtn.addEventListener("click", () => { claim(); toggle(); });
+    root.querySelectorAll("[data-cur-skip]").forEach((b) =>
+      b.addEventListener("click", () => { claim(); skip(Number(b.getAttribute("data-cur-skip"))); }));
+    if (waveEl) waveEl.addEventListener("click", (e) => {
+      const rect = waveEl.getBoundingClientRect();
+      const frac = Math.min(1, Math.max(0, (e.clientX - rect.left) / rect.width));
+      claim();
+      seekFrac(frac);
+    });
+    // Touching the stage claims the keyboard for the asks section (so 1·2·3 etc.
+    // route here) — but clicking the answer box does NOT, so typing never stops
+    // a faceoff/winners playback you left running.
+    if (stageEl) stageEl.addEventListener("pointerdown", claim);
+
+    // Keyboard — only when the asks card owns the Stage + is visible.
+    document.addEventListener("keydown", (e) => {
+      const tag = (document.activeElement?.tagName ?? "").toLowerCase();
+      if (tag === "input" || tag === "textarea") return;
+      if (!Stage || Stage.active !== SECTION) return;
+      if (root.hidden) return;
+      const k = e.key;
+      if (/^[1-9]$/.test(k)) {
+        const i = Number(k) - 1;
+        if (i < takes.length) { e.preventDefault(); swapTo(i, true); }
+      } else if (k === " ") { e.preventDefault(); toggle(); }
+      else if (k === "ArrowLeft") { e.preventDefault(); skip(-10); }
+      else if (k === "ArrowRight") { e.preventDefault(); skip(10); }
+      else if (k === "ArrowUp") { e.preventDefault(); swapTo(Math.max(0, activeIndex - 1), true); }
+      else if (k === "ArrowDown") { e.preventDefault(); swapTo(Math.min(takes.length - 1, activeIndex + 1), true); }
     });
 
     async function fetchOnce() {
@@ -4299,8 +4453,8 @@ function stemSoloUrls(sf) {
     async function load() {
       const data = await fetchOnce();
       if (data.status === "ready" && data.insight) { stopPoll(); render(data.insight); }
-      else if (data.status === "synthesizing") { root.hidden = true; thinking.hidden = false; startPoll(); }
-      else { stopPoll(); thinking.hidden = true; root.hidden = true; }
+      else if (data.status === "synthesizing") { teardownTakes(); root.hidden = true; thinking.hidden = false; startPoll(); }
+      else { stopPoll(); teardownTakes(); thinking.hidden = true; root.hidden = true; }
     }
     function startPoll() { if (!pollTimer) pollTimer = setInterval(load, 3500); }
     function stopPoll() { if (pollTimer) { clearInterval(pollTimer); pollTimer = null; } }
@@ -4316,9 +4470,8 @@ function stemSoloUrls(sf) {
           body: JSON.stringify({ insight_id: current.id, answer: ans }),
         });
         if (!r.ok) throw new Error("failed");
-        stopAudio();
+        teardownTakes();
         respondEl.hidden = true;
-        refsEl.innerHTML = "";
         findingEl.hidden = true;
         doneEl.style.color = "";
         doneEl.textContent = "Got it — folding that into how I hear you.";
@@ -4339,7 +4492,7 @@ function stemSoloUrls(sf) {
       if (!current) return;
       const id = current.id;
       skipBtn.disabled = true;
-      stopAudio();
+      teardownTakes();
       root.hidden = true;
       thinking.hidden = false;
       current = null;
