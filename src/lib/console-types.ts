@@ -725,6 +725,21 @@ export interface MixPlan {
   reference_score?: number;
   /** True on king-round candidate masters. */
   king_round?: boolean;
+  /** Master+layer mode (2026-06-03): the surgical layers the decision brain
+   *  blended low under the clean master, plus its one-line reasoning. */
+  layer_tools?: MixLayerTool[];
+  layer_reasoning?: string;
+}
+
+/** A surgical layer the decision brain blended low under a master (e.g. a
+ *  chorus-only vocal-presence push, a synthesized sub, a parallel air band). */
+export interface MixLayerTool {
+  kind: string;
+  source: string;
+  stem?: string;
+  gain_db?: number;
+  scope?: string;
+  why?: string;
 }
 
 export interface TranslationTargetReport {
