@@ -108,6 +108,18 @@ const buildHref = (overrides: Record<string, string | null>): string => {
   return qs ? `${base}?${qs}` : base;
 };
 
+// Category chips are the library's content selector (Jam/Loops/Field/Tracks/
+// One-shot) — they always operate on the ALL view, never a tab like Inbox or
+// Trash (where a bucket-naming category would read as the wrong tab and, before
+// the engine fix, return zero). Other active facets (tags/bpm/sort/q) carry over.
+const categoryHref = (catId: string): string => {
+  const p = new URLSearchParams(preserveExcept("category"));
+  if (catId && catId !== "all") p.set("category", catId);
+  p.delete("offset");
+  const qs = p.toString();
+  return qs ? `/portal/buckets/all?${qs}` : "/portal/buckets/all";
+};
+
 const durationHref = (p: DurationPreset): string =>
   presetIsActive(p)
     ? buildHref({ duration_min: null, duration_max: null })
@@ -186,7 +198,7 @@ const facetsOpen = facetCount > 0;
   <nav class="cats" aria-label="Category">
     {CATEGORIES.map((c) => (
       <a
-        href={buildHref({ category: c.id })}
+        href={categoryHref(c.id)}
         class:list={["cat", `cat-${c.id}`, { active: category === c.id || (!category && c.id === "all") }]}
       ><span class="cat-icon" aria-hidden="true">{c.icon}</span><span class="cat-text">{c.label}</span></a>
     ))}
