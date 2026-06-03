@@ -94,6 +94,18 @@ const completedJobs = jobs.filter((j) =>
   ["complete", "noop_complete"].includes(j.status),
 );
 const errorJobs = jobs.filter((j) => j.status === "error");
+// Only surface an error when it's ACTIONABLE: the source has no successful
+// (ready/complete) job. A stale failure a later render already succeeded for is
+// just noise (e.g. the pre-_ensure_wav .m4a "Format not recognised" jobs, since
+// superseded) — hide it entirely so the count is never misleading. (#6)
+const succeededSources = new Set(
+  jobs
+    .filter((j) => ["ready", "complete", "noop_complete"].includes(j.status))
+    .map((j) => j.source_asset_id),
+);
+const actionableErrors = errorJobs.filter(
+  (j) => !succeededSources.has(j.source_asset_id),
+);
 
 const STATUS_LABEL: Record<MixJobStatus, string> = {
   pending: "queued",
@@ -152,43 +164,45 @@ function stemSoloUrls(sf) {
       )}
     </header>
 
-    <div class="status-bar">
-      <span class="status-pill" data-kind="flight">
-        <span class="status-num">{activeJobs.length}</span>
-        <span class="status-label">in flight</span>
-      </span>
-      <span class="status-pill" data-kind="ready">
-        <span class="status-num">{pairs.length}</span>
-        <span class="status-label">pairs to judge</span>
-      </span>
-      <span class="status-pill" data-kind="winners">
-        <span class="status-num">{winners.length}</span>
-        <span class="status-label">winners ({kingCount} king · {readyToCrown} ready · {partialWinners.length} voting)</span>
-      </span>
-      {errorJobs.length > 0 && (
-        <span class="status-pill" data-kind="error">
-          <span class="status-num">{errorJobs.length}</span>
-          <span class="status-label">errored</span>
-        </span>
-      )}
-    </div>
-
-    {activeJobs.length > 0 && (
-      <ul class="status-detail">
-        {activeJobs.map((j) => (
-          <li class="status-detail-row" data-job-id={j.id}>
-            <span class="status-detail-dot" aria-hidden="true"></span>
-            <span class="status-detail-title">{jobTitle(j)}</span>
-            <span class="status-detail-stage">
-              {j.status === "splitting_stems"
-                ? "splitting stems"
-                : j.status === "rendering"
-                  ? `rendering ${j.variant_count}/6`
-                  : "queued"}
-            </span>
-          </li>
-        ))}
-      </ul>
+    {/* The old in-flight / pairs / winners / errored status pills were
+        removed — they duplicated the sections below and the counts read as
+        misleading. Errors now surface ONLY when actionable: an unsuperseded
+        failure, with a way to fix it (retry / dismiss). (#6) */}
+    {actionableErrors.length > 0 && (
+      <div class="engineer-errors" role="alert">
+        <p class="engineer-errors-head">
+          {actionableErrors.length} {actionableErrors.length === 1 ? "mix" : "mixes"} failed to render — retry or dismiss.
+        </p>
+        <ul class="engineer-errors-list">
+          {actionableErrors.map((j) => (
+            <li class="engineer-error-row" data-job-id={j.id}>
+              <div class="engineer-error-meta">
+                <span class="engineer-error-title">{jobTitle(j)}</span>
+                <span class="engineer-error-reason" title={j.error ?? ""}>
+                  {(j.error ?? "render failed").split("\n")[0].slice(0, 140)}
+                </span>
+              </div>
+              <div class="engineer-error-actions">
+                <button
+                  class="winners-action-btn err-action"
+                  type="button"
+                  data-action="make-more"
+                  data-job-id={j.id}
+                  data-source-asset-id={j.source_asset_id}
+                  title="Re-render this track from scratch (the .m4a transcode + master pipeline are fixed now)"
+                >↻ Retry render</button>
+                <button
+                  class="winners-action-btn err-action err-dismiss"
+                  type="button"
+                  data-action="dismiss"
+                  data-job-id={j.id}
+                  title="Hide this failed job"
+                >✕ Dismiss</button>
+              </div>
+            </li>
+          ))}
+        </ul>
+      </div>
     )}
 
     <section class="pair-tinder">
@@ -303,169 +317,59 @@ function stemSoloUrls(sf) {
                   )}
 
                   <div class="pair-reasoning">
-                    {[
-                      { side: "a" as const, variant: p.variant_a },
-                      { side: "b" as const, variant: p.variant_b },
-                    ].map(({ side, variant }) => {
-                      const plan = variant.plan;
-                      const flags = variant.translation?.summary_flags ?? [];
-                      return (
-                        <details class={`plan-card plan-${side}`} data-plan-side={side}>
-                          <summary>
-                            <span class="plan-side-tag">{side.toUpperCase()}</span>
-                            <span class="plan-philosophy">
-                              {plan?.philosophy_summary ?? "no plan recorded"}
+                    {/* One shared toggle expands BOTH descriptions together —
+                        master mode has no per-stem moves to expand into, so the
+                        old per-card details opened onto nothing. (#5) */}
+                    <details class="pair-why" data-pair-why>
+                      <summary>
+                        <span class="pair-why-caret" aria-hidden="true">▾</span>
+                        <span class="pair-why-label">what am I hearing?</span>
+                      </summary>
+                      <div class="pair-why-grid">
+                        {[
+                          { side: "a" as const, variant: p.variant_a },
+                          { side: "b" as const, variant: p.variant_b },
+                        ].map(({ side, variant }) => {
+                          const plan = variant.plan;
+                          const ref = plan?.reference;
+                          // Master philosophy reads "Mastered toward X (pole) — why";
+                          // drop the prefix so the why stands on its own.
+                          const why =
+                            plan?.philosophy_summary?.split(" — ").slice(1).join(" — ") ||
+                            plan?.philosophy_summary ||
+                            "";
+                          const flags = variant.translation?.summary_flags ?? [];
+                          return (
+                            <div class={`pair-why-col plan-${side}`}>
+                              <div class="pair-why-head">
+                                <span class="pair-why-side">{side.toUpperCase()}</span>
+                                <span class="pair-why-pole">{variant.pole.replace(/_/g, " ")}</span>
+                              </div>
+                              {ref && (
+                                <div class="pair-why-ref">toward <strong>{ref}</strong></div>
+                              )}
+                              {why && <div class="pair-why-text">{why}</div>}
+                              <div class="pair-why-qa">
+                                {typeof variant.output_lufs === "number" && (
+                                  <span>{variant.output_lufs.toFixed(1)} LUFS</span>
+                                )}
+                                {typeof variant.true_peak_dbfs === "number" && (
+                                  <span>{variant.true_peak_dbfs.toFixed(1)} dBTP</span>
+                                )}
+                                {variant.qa_flag && <span class="pair-why-qa-warn">⚠ check</span>}
+                              </div>
                               {flags.length > 0 && (
-                                <span class="plan-warnings" title={flags.join(" · ")}>
-                                  ⚠ {flags.length} translation {flags.length === 1 ? "concern" : "concerns"}
-                                </span>
-                              )}
-                            </span>
-                            <span class="plan-toggle">▾</span>
-                          </summary>
-                          {flags.length > 0 && (
-                            <div class="plan-warnings-detail">
-                              {flags.map((f) => (
-                                <span class="plan-warning-chip">⚠ {f}</span>
-                              ))}
-                            </div>
-                          )}
-                          {plan ? (
-                            <div class="plan-body">
-                              {Object.entries(plan.stems ?? {}).map(([name, stem]) => (
-                                <div class="plan-stem">
-                                  <div class="plan-stem-head">
-                                    <span class="plan-stem-name">{name}</span>
-                                    <span class="plan-stem-role">{stem.role}</span>
-                                    {typeof stem.level_offset_db === "number" && stem.level_offset_db !== 0 && (
-                                      <span class="plan-stem-level">
-                                        {stem.level_offset_db > 0 ? "+" : ""}{stem.level_offset_db.toFixed(1)} dB
-                                      </span>
-                                    )}
-                                  </div>
-                                  {(stem.moves ?? []).length === 0 ? (
-                                    <div class="plan-move plan-move-noop">left alone</div>
-                                  ) : (
-                                    <ul class="plan-moves">
-                                      {stem.moves.map((m) => {
-                                        const params: string[] = [];
-                                        if (typeof m.freq_hz === "number") params.push(`${Math.round(m.freq_hz)}Hz`);
-                                        if (typeof m.gain_db === "number") params.push(`${m.gain_db > 0 ? "+" : ""}${m.gain_db.toFixed(1)}dB`);
-                                        if (typeof m.q === "number" && m.type !== "compressor") params.push(`Q${m.q.toFixed(2)}`);
-                                        if (typeof m.threshold_db === "number") params.push(`thr ${m.threshold_db.toFixed(1)}dB`);
-                                        if (typeof m.ratio === "number") params.push(`${m.ratio}:1`);
-                                        if (typeof m.attack_ms === "number") params.push(`atk ${m.attack_ms}ms`);
-                                        if (typeof m.release_ms === "number") params.push(`rel ${m.release_ms}ms`);
-                                        if (typeof m.wet_level === "number") params.push(`wet ${m.wet_level.toFixed(2)}`);
-                                        if (typeof m.room_size === "number") params.push(`room ${m.room_size.toFixed(2)}`);
-                                        if (typeof m.drive_db === "number") params.push(`drive ${m.drive_db.toFixed(1)}dB`);
-                                        if (typeof m.position === "number") params.push(`pan ${m.position.toFixed(2)}`);
-                                        if (typeof m.width === "number") params.push(`width ${m.width.toFixed(2)}`);
-                                        return (
-                                          <li>
-                                            <span class="plan-move-head">
-                                              <span class="plan-move-type">{m.type.replace(/_/g, " ")}</span>
-                                              {params.length > 0 && <span class="plan-move-params">{params.join(" · ")}</span>}
-                                            </span>
-                                            {m.reasoning && <span class="plan-move-why">{m.reasoning}</span>}
-                                          </li>
-                                        );
-                                      })}
-                                    </ul>
-                                  )}
-                                </div>
-                              ))}
-                              {(plan.relationships ?? []).length > 0 && (
-                                <div class="plan-relationships">
-                                  <div class="plan-stem-head">
-                                    <span class="plan-stem-name">relationships</span>
-                                  </div>
-                                  <ul class="plan-moves">
-                                    {plan.relationships.map((r) => (
-                                      <li>
-                                        <span class="plan-move-head">
-                                          <span class="plan-move-type">{r.type.replace(/_/g, " ")}</span>
-                                          <span class="plan-move-params">
-                                            {r.trigger_stem ?? "?"} → {r.target_stem ?? "?"}
-                                            {typeof r.amount_db === "number" && ` · ${r.amount_db.toFixed(1)}dB`}
-                                          </span>
-                                        </span>
-                                        {r.reasoning && <span class="plan-move-why">{r.reasoning}</span>}
-                                      </li>
-                                    ))}
-                                  </ul>
-                                </div>
-                              )}
-                              {(plan.bus?.moves ?? []).length > 0 && (
-                                <div class="plan-stem">
-                                  <div class="plan-stem-head">
-                                    <span class="plan-stem-name">bus</span>
-                                    <span class="plan-stem-role">target {plan.bus.target_lufs} LUFS</span>
-                                  </div>
-                                  <ul class="plan-moves">
-                                    {plan.bus.moves.map((m) => {
-                                      const params: string[] = [];
-                                      if (typeof m.freq_hz === "number") params.push(`${Math.round(m.freq_hz)}Hz`);
-                                      if (typeof m.gain_db === "number") params.push(`${m.gain_db > 0 ? "+" : ""}${m.gain_db.toFixed(1)}dB`);
-                                      if (typeof m.threshold_db === "number") params.push(`thr ${m.threshold_db.toFixed(1)}dB`);
-                                      if (typeof m.ratio === "number") params.push(`${m.ratio}:1`);
-                                      if (typeof m.drive_db === "number") params.push(`drive ${m.drive_db.toFixed(1)}dB`);
-                                      return (
-                                        <li>
-                                          <span class="plan-move-head">
-                                            <span class="plan-move-type">{m.type.replace(/_/g, " ")}</span>
-                                            {params.length > 0 && <span class="plan-move-params">{params.join(" · ")}</span>}
-                                          </span>
-                                          {m.reasoning && <span class="plan-move-why">{m.reasoning}</span>}
-                                        </li>
-                                      );
-                                    })}
-                                  </ul>
-                                </div>
-                              )}
-                              {((plan as any).sections ?? []).length > 0 && (
-                                <div class="plan-stem">
-                                  <div class="plan-stem-head">
-                                    <span class="plan-stem-name">sections</span>
-                                    <span class="plan-stem-role">{(plan as any).sections.length} per-section overrides</span>
-                                  </div>
-                                  <ul class="plan-moves">
-                                    {(plan as any).sections.map((s: any) => {
-                                      const stemOverrides = s.stems ? Object.entries(s.stems) : [];
-                                      return (
-                                        <li>
-                                          <span class="plan-move-head">
-                                            <span class="plan-move-type">{s.label ?? "section"}</span>
-                                            <span class="plan-move-params">
-                                              {typeof s.start_s === "number" ? `${s.start_s.toFixed(1)}-${s.end_s.toFixed(1)}s` : ""}
-                                            </span>
-                                          </span>
-                                          {s.reasoning && <span class="plan-move-why">{s.reasoning}</span>}
-                                          {stemOverrides.length > 0 && (
-                                            <span class="plan-section-detail">
-                                              {stemOverrides.map(([name, ov]: any) => {
-                                                const d = ov.level_offset_delta_db;
-                                                const ex = (ov.extra_moves ?? []).length;
-                                                const parts: string[] = [];
-                                                if (typeof d === "number" && d !== 0) parts.push(`${d > 0 ? "+" : ""}${d.toFixed(1)}dB`);
-                                                if (ex > 0) parts.push(`+${ex} move${ex > 1 ? "s" : ""}`);
-                                                return parts.length > 0
-                                                  ? `${name}: ${parts.join(" · ")}`
-                                                  : null;
-                                              }).filter(Boolean).join("  ·  ")}
-                                            </span>
-                                          )}
-                                        </li>
-                                      );
-                                    })}
-                                  </ul>
+                                <div class="pair-why-flags">
+                                  {flags.map((f) => (
+                                    <span class="plan-warning-chip">⚠ {f}</span>
+                                  ))}
                                 </div>
                               )}
                             </div>
-                          ) : null}
-                        </details>
-                      );
-                    })}
+                          );
+                        })}
+                      </div>
+                    </details>
                   </div>
                 </div>
 
@@ -534,29 +438,6 @@ function stemSoloUrls(sf) {
                 data-is-king-round={isKingRound ? "true" : "false"}
               >
                 <div class="winners-head">
-                  <a
-                    class="winners-open-source"
-                    href={`/portal/buckets/all?focus=${w.source_asset_id}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    title="Open this track in Buckets (new tab)"
-                    aria-label="Open source track in Buckets"
-                  >↗</a>
-                  {/* Phase B: source .als project. Color = state. Linked =
-                      solid amber, auto-match = dashed amber, empty = faint grey.
-                      Click opens in Ableton (or links, when empty); shift-click
-                      changes / unlinks. */}
-                  <button
-                    type="button"
-                    class:list={["winners-project-icon", w.project_asset_id ? (w.project_match === "linked" ? "is-linked" : "is-auto") : "is-empty"]}
-                    data-project-icon
-                    data-source-asset-id={w.source_asset_id}
-                    data-project-asset-id={w.project_asset_id ?? ""}
-                    title={w.project_asset_id
-                      ? `Open "${(w.project_display_name || w.project_filename || "").replace(/\.als$/i, "")}" in Ableton (M3)${w.project_match === "linked" ? " — linked" : ` — auto-matched (${w.project_match})`}. Shift-click to change / unlink.`
-                      : "No project linked. Click to find + link the source .als."}
-                    aria-label={w.project_asset_id ? "Open source project in Ableton (shift-click to change)" : "Link source project"}
-                  >⧉</button>
                   <button
                     class="winners-toggle"
                     type="button"
@@ -587,6 +468,40 @@ function stemSoloUrls(sf) {
                             : "queued"}
                     </span>
                   )}
+                  {/* Action cluster on the far RIGHT: open-in-Buckets, open
+                      project, dismiss. (#2 link buttons right · #4 dismiss = X) */}
+                  <div class="winners-head-actions">
+                    <a
+                      class="winners-open-source"
+                      href={`/portal/buckets/all?focus=${w.source_asset_id}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      title="Open this track in Buckets (new tab)"
+                      aria-label="Open source track in Buckets"
+                    >↗</a>
+                    {/* Phase B: source .als project. Linked = solid amber,
+                        auto-match = dashed amber, empty = faint grey. Click opens
+                        in Ableton (or links, when empty); shift-click changes. */}
+                    <button
+                      type="button"
+                      class:list={["winners-project-icon", w.project_asset_id ? (w.project_match === "linked" ? "is-linked" : "is-auto") : "is-empty"]}
+                      data-project-icon
+                      data-source-asset-id={w.source_asset_id}
+                      data-project-asset-id={w.project_asset_id ?? ""}
+                      title={w.project_asset_id
+                        ? `Open "${(w.project_display_name || w.project_filename || "").replace(/\.als$/i, "")}" in Ableton (M3)${w.project_match === "linked" ? " — linked" : ` — auto-matched (${w.project_match})`}. Shift-click to change / unlink.`
+                        : "No project linked. Click to find + link the source .als."}
+                      aria-label={w.project_asset_id ? "Open source project in Ableton (shift-click to change)" : "Link source project"}
+                    >⧉</button>
+                    <button
+                      class="winners-action-btn winners-dismiss-x"
+                      type="button"
+                      data-action="dismiss"
+                      data-job-id={w.job_id}
+                      title="Dismiss — hide this track from Winners"
+                      aria-label="Dismiss this track from Winners"
+                    >✕</button>
+                  </div>
                 </div>
 
                 <div
@@ -638,6 +553,16 @@ function stemSoloUrls(sf) {
                           title="Crown ORIGINAL — the source beats every variant. Stops here; no new mixes. (Use + Make more mixes if you do want another batch.)"
                         >♛</button>
                       )}
+                      {isOriginalKing && (
+                        <button
+                          class="winners-action-btn winner-uncrown-x"
+                          type="button"
+                          data-action="uncrown"
+                          data-job-id={w.job_id}
+                          title="Uncrown — compare the mixes again"
+                          aria-label="Uncrown ORIGINAL"
+                        >✕</button>
+                      )}
                     </li>
                     {variantKing ? (
                       // Variant-king mode: collapsed to just the winning
@@ -657,6 +582,14 @@ function stemSoloUrls(sf) {
                           <span class="winner-label">♛ {variantKing.reference || variantKing.color}</span>
                           <span class="winner-sub">{variantKing.reference ? `your king mix · ${variantKing.color}` : "your king mix"}</span>
                         </div>
+                        <button
+                          class="winners-action-btn winner-uncrown-x"
+                          type="button"
+                          data-action="uncrown"
+                          data-job-id={w.job_id}
+                          title="Uncrown — compare the candidates again"
+                          aria-label="Uncrown"
+                        >✕</button>
                       </li>
                     ) : isOriginalKing ? (
                       // ORIGINAL-king mode: variants list collapsed away.
@@ -765,24 +698,8 @@ function stemSoloUrls(sf) {
                           data-currently-public={w.king_is_public ? "true" : "false"}
                         >{w.king_is_public ? "● Published" : "→ Publish to Sounds"}</button>
                       )}
-                      {hasKing && (
-                        <button
-                          class="winners-action-btn winners-uncrown"
-                          type="button"
-                          data-action="uncrown"
-                          data-job-id={w.job_id}
-                          aria-label="Uncrown to compare again"
-                          title="Uncrown to compare again"
-                        >Uncrown</button>
-                      )}
-                      <button
-                        class="winners-action-btn winners-dismiss"
-                        type="button"
-                        data-action="dismiss"
-                        data-job-id={w.job_id}
-                        aria-label="Hide from winners"
-                        title="Hide from winners"
-                      >✕ Dismiss</button>
+                      {/* Uncrown moved to a ✕ on the king row; Dismiss moved to
+                          a ✕ in the card header (#4). */}
                     </div>
                   </div>
                 </div>
@@ -1519,11 +1436,64 @@ function stemSoloUrls(sf) {
      match the A/B switch (cyan for A, pink for B) so the curator's eye
      associates the plan text with the audio they just heard. */
   .pair-reasoning {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 8px;
     margin-top: 4px;
   }
+  /* Master-mode description: one shared toggle, both A+B expand together. (#5) */
+  .pair-why {
+    border: 1px solid rgba(245, 241, 232, 0.12);
+    border-radius: 4px;
+    background: rgba(0, 0, 0, 0.16);
+    overflow: hidden;
+  }
+  .pair-why > summary {
+    list-style: none;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 7px 10px;
+    color: rgba(245, 241, 232, 0.6);
+    font: 600 10.5px ui-monospace, SFMono-Regular, Menlo, monospace;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }
+  .pair-why > summary::-webkit-details-marker { display: none; }
+  .pair-why[open] > summary {
+    color: var(--ink);
+    border-bottom: 1px solid rgba(245, 241, 232, 0.1);
+  }
+  .pair-why-caret { transition: transform 140ms ease; }
+  .pair-why[open] .pair-why-caret { transform: rotate(180deg); }
+  .pair-why-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1px;
+    background: rgba(245, 241, 232, 0.08);
+  }
+  .pair-why-col {
+    background: #130d18;
+    padding: 9px 11px;
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+  }
+  .pair-why-col.plan-a { box-shadow: inset 3px 0 0 rgba(14, 196, 252, 0.5); }
+  .pair-why-col.plan-b { box-shadow: inset 3px 0 0 rgba(255, 59, 110, 0.5); }
+  .pair-why-head { display: flex; align-items: baseline; gap: 8px; }
+  .pair-why-side { font: 800 12px ui-monospace, SFMono-Regular, Menlo, monospace; }
+  .plan-a .pair-why-side { color: #6fdfff; }
+  .plan-b .pair-why-side { color: #ffb6c8; }
+  .pair-why-pole { font-size: 11px; color: rgba(245, 241, 232, 0.7); text-transform: capitalize; }
+  .pair-why-ref { font-size: 12px; color: rgba(245, 241, 232, 0.85); }
+  .pair-why-ref strong { color: #00ff4d; font-style: italic; }
+  .pair-why-text { font-size: 11.5px; color: rgba(245, 241, 232, 0.6); line-height: 1.4; }
+  .pair-why-qa {
+    display: flex; flex-wrap: wrap; gap: 8px;
+    font: 600 10px ui-monospace, SFMono-Regular, Menlo, monospace;
+    color: rgba(245, 241, 232, 0.5); letter-spacing: 0.04em;
+  }
+  .pair-why-qa-warn { color: #ffb84d; }
+  .pair-why-flags { display: flex; flex-wrap: wrap; gap: 4px; }
   .plan-card {
     background: rgba(0, 0, 0, 0.16);
     border: 1px solid;
@@ -1670,7 +1640,7 @@ function stemSoloUrls(sf) {
   }
   /* Collapse to single column on narrower viewports. */
   @media (max-width: 720px) {
-    .pair-reasoning { grid-template-columns: 1fr; }
+    .pair-why-grid { grid-template-columns: 1fr; }
   }
   /* Active-side panel gets a subtle ring so the eye is drawn to it. */
   .pair-active[data-side="a"] .plan-a {
@@ -1890,6 +1860,21 @@ function stemSoloUrls(sf) {
      reads as its own actionable state (#4). */
   .winners-card[data-is-king-round="true"] {
     border-color: rgba(14, 196, 252, 0.4);
+  }
+  /* Published is the loudest state — the whole card glows green (the chevron
+     alone was too subtle), so "live on Sounds" is obvious at a glance. Placed
+     last so it wins over the crowned-gold / original-cream borders. (#3) */
+  .winners-card[data-king-public="true"] {
+    border-color: rgba(0, 255, 77, 0.55);
+    box-shadow: 0 0 22px rgba(0, 255, 77, 0.18),
+                inset 0 0 0 1px rgba(0, 255, 77, 0.12);
+  }
+  /* Far-right action cluster in the card header: ↗ ⧉ ✕. (#2 · #4) */
+  .winners-head-actions {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-shrink: 0;
   }
   .winners-hint-king {
     color: #ffd28a !important;
@@ -2478,6 +2463,67 @@ function stemSoloUrls(sf) {
   .winners-action-btn[data-busy="true"] {
     opacity: 0.55;
     cursor: progress;
+  }
+  /* Compact icon variants: dismiss (✕) in the card header, uncrown (✕) on the
+     king row. Override the text-button base into a small square. (#4) */
+  .winners-dismiss-x,
+  .winner-uncrown-x {
+    padding: 0;
+    width: 26px;
+    height: 26px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 13px;
+    text-transform: none;
+    letter-spacing: 0;
+    flex-shrink: 0;
+    background: transparent;
+    color: rgba(245, 241, 232, 0.42);
+    border-color: rgba(245, 241, 232, 0.16);
+  }
+  .winners-dismiss-x:hover,
+  .winner-uncrown-x:hover {
+    color: #ff8aab;
+    border-color: rgba(255, 59, 110, 0.5);
+    background: rgba(255, 59, 110, 0.10);
+  }
+  .winner-uncrown-x { margin-left: auto; }
+  /* Actionable error notice — replaces the misleading status pills. Only shown
+     when an unsuperseded render failed; retry re-renders, dismiss hides. (#6) */
+  .engineer-errors {
+    border: 1px solid rgba(255, 59, 110, 0.4);
+    background: rgba(255, 59, 110, 0.06);
+    border-radius: 6px;
+    padding: 12px 14px;
+    margin-bottom: 16px;
+  }
+  .engineer-errors-head {
+    margin: 0 0 8px;
+    font: 700 12px ui-monospace, SFMono-Regular, Menlo, monospace;
+    color: #ff8aab;
+    letter-spacing: 0.04em;
+  }
+  .engineer-errors-list {
+    list-style: none; margin: 0; padding: 0;
+    display: flex; flex-direction: column; gap: 8px;
+  }
+  .engineer-error-row { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+  .engineer-error-meta { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+  .engineer-error-title {
+    font: 700 13px ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-style: italic; color: #00ff4d;
+  }
+  .engineer-error-reason {
+    font-size: 11px; color: rgba(245, 241, 232, 0.55);
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 560px;
+  }
+  .engineer-error-actions { display: flex; gap: 6px; flex-shrink: 0; }
+  .err-action { text-transform: none !important; }
+  .err-dismiss:hover {
+    color: #ff8aab;
+    border-color: rgba(255, 59, 110, 0.5);
+    background: rgba(255, 59, 110, 0.10);
   }
   .winners-make-more {
     color: #00ff4d;

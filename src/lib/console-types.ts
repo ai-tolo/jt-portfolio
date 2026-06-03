@@ -693,9 +693,17 @@ export interface MixBusPlan {
 
 export interface MixPlan {
   philosophy_summary: string;
-  stems: Record<string, MixStemPlan>;
-  relationships: MixRelationship[];
-  bus: MixBusPlan;
+  // ── Stem-remix era (optional now that master mode is the default) ──
+  stems?: Record<string, MixStemPlan>;
+  relationships?: MixRelationship[];
+  bus?: MixBusPlan;
+  // ── Master mode (2026-06-03): each variant = source mastered toward a
+  //    catalog reference. ──
+  reference?: string;
+  reference_tags?: string[];
+  reference_score?: number;
+  /** True on king-round candidate masters. */
+  king_round?: boolean;
 }
 
 export interface TranslationTargetReport {
