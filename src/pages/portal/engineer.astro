@@ -263,7 +263,10 @@ function stemSoloUrls(sf) {
               ["a", "b", "o"], ["a", "o", "b"], ["b", "a", "o"],
               ["b", "o", "a"], ["o", "a", "b"], ["o", "b", "a"],
             ] as const;
-            const blindOrder = BLIND_PERMS[((p.job_id % 6) + 6) % 6];
+            // Seed per (job, axis) so the ORIGINAL's slot also varies across a
+            // job's three axis-pairs — not just job-to-job.
+            const _axisIdx = Math.max(0, ["focal", "space", "dynamics"].indexOf(p.axis));
+            const blindOrder = BLIND_PERMS[(((p.job_id * 3 + _axisIdx) % 6) + 6) % 6];
             const blindMeta = {
               a: { role: "a", pole: p.variant_a.pole as string | null, ref: (p.variant_a.plan?.reference ?? null) as string | null },
               b: { role: "b", pole: p.variant_b.pole as string | null, ref: (p.variant_b.plan?.reference ?? null) as string | null },
