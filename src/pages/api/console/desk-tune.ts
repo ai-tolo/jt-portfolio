@@ -1,5 +1,6 @@
 import type { APIRoute } from "astro";
-import { tune, type DeskWeek } from "../../../lib/desk-tune";
+import { buildTunePrompt, type DeskWeek } from "../../../lib/desk-tune";
+import { deskStartJob } from "../../../lib/console-api";
 
 export const prerender = false;
 
@@ -10,9 +11,11 @@ function json(body: unknown, status = 200): Response {
   });
 }
 
-// POST { weeks, reaction, answers? } -> { questions, weeks, summary }
-// Gated by the portal middleware (lives under /api/console/). Runs Claude
-// locally via the Max login; only functional where the claude binary exists.
+// POST { weeks, reaction, answers? } -> { job_id, kind }
+// Auth-gated by the portal middleware. Builds the Tune prompt and starts a
+// streamed `claude` run on the M1 engine (Jon's Max login under launchd). The
+// browser then polls /api/console/desk-job. If the M1 is asleep / offline the
+// engine is unreachable and we say so plainly rather than looking broken.
 export const POST: APIRoute = async ({ request }) => {
   let body: any;
   try {
@@ -29,15 +32,12 @@ export const POST: APIRoute = async ({ request }) => {
     return json({ error: "say what is off about the week first" }, 400);
   }
 
-  try {
-    const result = await tune(weeks, reaction, answers);
-    return json(result, 200);
-  } catch (e) {
-    const msg = e instanceof Error ? e.message : "tune failed";
-    // The loop runs Claude on a Mac. On the deployed (Vercel) site there is no
-    // local binary, so explain that rather than throwing a raw error.
-    if (/binary not found|ENOENT/i.test(msg)) return json({ error: "claude-unavailable-here" }, 503);
-    if (/not logged in|\/login/i.test(msg)) return json({ error: "claude-not-logged-in" }, 503);
-    return json({ error: msg }, 500);
-  }
+  const { prompt, model, kind } = buildTunePrompt(weeks, reaction, answers);
+  const res = await deskStartJob(prompt, model, kind);
+  if (res.ok) return json({ job_id: res.data.job_id, kind: res.data.kind }, 200);
+
+  // Graceful: distinguish "M1 not reachable" from "engine has no claude".
+  if (res.error.kind === "unreachable") return json({ error: "m1-unreachable" }, 503);
+  if (res.error.kind === "http" && res.error.status === 503) return json({ error: "claude-unavailable-here" }, 503);
+  return json({ error: res.error.message || "tune failed to start" }, 502);
 };

@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  Keeps the Console engine's `claude` runtime warm for The Desk's Tune/Draft
+  loops. Every 240s it pokes the engine's localhost /desk/warm, which runs a
+  minimal haiku call so the OS page cache + Max OAuth stay hot. Result: the
+  first Tune/Draft after an idle stretch is the ~3-7s warm path, not the
+  30-75s cold path. Tiny cost (one 1-token haiku per poke). Before installing,
+  replace __CONSOLE_API_KEY__ with the real CONSOLE_API_KEY (same value as the
+  com.jont.console-api plist; never commit the real key to the repo). The copy
+  installed on M1 holds the real key; this repo mirror stays redacted. Install:
+    cp tasks/com.jont.desk-warm.plist ~/Library/LaunchAgents/   # then edit in the real key
+    launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/com.jont.desk-warm.plist
+-->
+<plist version="1.0">
+<dict>
+	<key>Label</key>
+	<string>com.jont.desk-warm</string>
+	<key>ProgramArguments</key>
+	<array>
+		<string>/bin/sh</string>
+		<string>-c</string>
+		<string>echo "[$(date '+%Y-%m-%d %H:%M:%S')] $(/usr/bin/curl -s -m 90 -H "Authorization: Bearer __CONSOLE_API_KEY__" http://127.0.0.1:8765/desk/warm)"</string>
+	</array>
+	<key>StartInterval</key>
+	<integer>240</integer>
+	<key>RunAtLoad</key>
+	<true/>
+	<key>StandardOutPath</key>
+	<string>/Users/jontollefson/automation/logs/desk-warm.log</string>
+	<key>StandardErrorPath</key>
+	<string>/Users/jontollefson/automation/logs/desk-warm.log</string>
+</dict>
+</plist>

@@ -405,6 +405,12 @@ const weeksJson = JSON.stringify(weeksForClient).replace(/</g, "\\u003c");
   }
   .draft-btn:hover, .draft-btn:focus-visible { color: #ff8c42; border-color: #ff8c42; outline: none; }
   .draft-text { width: 100%; box-sizing: border-box; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12.5px; line-height: 1.5; min-height: 16rem; }
+  .draft-stream {
+    max-height: 22rem; overflow-y: auto; white-space: pre-wrap; word-break: break-word; margin: 0;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12.5px; line-height: 1.55; color: var(--text);
+    background: #16110f; border: 1px solid #342d28; border-radius: 6px; padding: 12px;
+  }
+  .draft-stream::after { content: "▍"; color: #ff8c42; animation: tpulse 900ms ease-in-out infinite; }
 
   @media (max-width: 640px) { .desk { gap: var(--space-8); } .issues { gap: var(--space-8); } }
 </style>
@@ -424,6 +430,9 @@ const weeksJson = JSON.stringify(weeksForClient).replace(/</g, "\\u003c");
     let currentWeeks: Week[] = readWeeks();
     let lastReaction = "";
     let lastQuestions: string[] = [];
+    // The last Tune/Draft action, so the error "Try again" button repeats the
+    // right one (re-tune vs re-draft) instead of always reopening the tuner.
+    let lastAction: (() => void) | null = null;
 
     // ── helpers mirroring the server render ──
     const esc = (s: string) => s.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]!));
@@ -501,26 +510,65 @@ const weeksJson = JSON.stringify(weeksForClient).replace(/</g, "\\u003c");
 
     const errView = (kind: string): string => {
       let msg: string;
-      if (kind === "claude-unavailable-here") msg = "The tune and draft loops run Claude on your Mac, so they do not run on the live site. Open the Desk on your machine (your local server) and they work there.";
-      else if (kind === "claude-not-logged-in") msg = "Claude is not logged in here yet. Run <code>claude /login</code> in a terminal, then try again.";
+      if (kind === "m1-unreachable")
+        msg = "Your M1 is asleep or offline, so Tune and Draft cannot run this moment. Everything else on the Desk still works. It usually wakes within a minute, give it another try.";
+      else if (kind === "claude-unavailable-here")
+        msg = "The engine cannot find Claude right now. Everything else on the Desk still works.";
+      else if (kind === "claude-not-logged-in")
+        msg = "Claude on the M1 needs a fresh login. Run <code>claude</code> then <code>/login</code> on the M1 once, then try again.";
+      else if (kind === "claude-timeout")
+        msg = "That one took too long and timed out. Try again, it is usually quick.";
+      else if (kind === "job-expired")
+        msg = "That run expired before it finished. Try it again.";
+      else if (kind === "parse" || kind === "empty-rewrite")
+        msg = "The rewrite came back in a shape I could not use. Try again, maybe with a clearer steer.";
       else msg = "Something went wrong reaching the model. " + esc(kind);
       return `<p class="tune-err">${msg}</p><div class="tune-actions"><button type="button" class="tune-go" data-action="tune-retry">Try again</button></div>`;
     };
 
     const setBody = (html: string) => { if (body) body.innerHTML = html; };
-    const openTune = () => { if (scrim && body) { setBody(reactForm()); scrim.hidden = false; (body.querySelector("[data-reaction]") as HTMLElement)?.focus(); } };
+    const openTune = () => { if (scrim && body) { lastAction = () => openTune(); warm(); setBody(reactForm()); scrim.hidden = false; (body.querySelector("[data-reaction]") as HTMLElement)?.focus(); } };
     const closeTune = () => { if (scrim) scrim.hidden = true; };
 
-    async function callTune(reaction: string, answers: string[]) {
-      const res = await fetch("/api/console/desk-tune", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ weeks: currentWeeks, reaction, answers }),
-      });
-      const data = await res.json().catch(() => ({ error: "bad response" }));
-      if (!res.ok) throw new Error(data?.error || "request failed");
-      return data as { questions: string[]; weeks: Week[] | null; summary: string | null };
+    // ── Job runner ──
+    // Tune/Draft run the model as `claude` on the M1 engine. The route starts
+    // a streamed job and returns a job_id; we poll it so the draft/rewrite can
+    // appear as it is written and every request stays short. onText fires on
+    // each running poll. Errors throw a stable code the error view maps.
+    const POLL_MS = 450;
+    const wait = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
+    async function startJob(url: string, payload: unknown): Promise<{ job_id: string; kind: string }> {
+      const res = await fetch(url, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(payload) });
+      const data = await res.json().catch(() => ({} as any));
+      if (!res.ok || !data?.job_id) throw new Error(data?.error || "failed-to-start");
+      return data;
     }
+
+    async function runJob(url: string, payload: unknown, onText?: (text: string, elapsed: number) => void): Promise<any> {
+      const { job_id } = await startJob(url, payload);
+      let fails = 0;
+      const t0 = Date.now();
+      for (;;) {
+        if (Date.now() - t0 > 200_000) throw new Error("claude-timeout");
+        await wait(POLL_MS);
+        let data: any;
+        try {
+          const res = await fetch(`/api/console/desk-job?id=${encodeURIComponent(job_id)}`);
+          data = await res.json();
+          fails = 0;
+        } catch {
+          if (++fails > 12) throw new Error("m1-unreachable");
+          continue;
+        }
+        if (data.status === "running") { onText?.(data.text || "", data.elapsed || 0); continue; }
+        if (data.status === "error") throw new Error(data.error || "error");
+        return data; // done
+      }
+    }
+
+    // Best-effort pre-warm so the first Tune/Draft is the fast warm path.
+    const warm = () => { void fetch("/api/console/desk-warm", { method: "POST" }).catch(() => {}); };
 
     async function saveCurrent() {
       try {
@@ -537,19 +585,34 @@ const weeksJson = JSON.stringify(weeksForClient).replace(/</g, "\\u003c");
        <textarea class="tune-input draft-text" data-draft-text rows="14">${esc(text)}</textarea>
        <div class="tune-actions"><button type="button" class="tune-ghost" data-action="draft-copy">Copy</button><button type="button" class="tune-go" data-action="tune-close">Done</button></div>
        <p class="tune-note">Drafted on request. Yours to take, not posted anywhere.</p>`;
+    const draftStreamingView = (text: string): string =>
+      `<p class="tune-status"><span class="dot"></span>Writing in your voice...</p>
+       <pre class="draft-stream" data-draft-stream>${esc(text.replace(/—/g, ", "))}</pre>
+       <p class="tune-note">Watching it appear. Nothing is posted.</p>`;
     async function draftPiece(wi: number, lane: string) {
       const week = currentWeeks[wi];
       const piece = week?.pieces.find((p) => p.lane === lane);
       if (!week || !piece) return;
+      lastAction = () => void draftPiece(wi, lane);
       if (scrim) scrim.hidden = false;
-      setBody(thinking("Drafting in your voice..."));
+      warm();
+      setBody(draftStreamingView(""));
       try {
-        const res = await fetch("/api/console/desk-draft", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ piece, ctx: { beat: week.beat, when: week.when } }) });
-        const data = await res.json().catch(() => ({}));
-        if (!res.ok) throw new Error(data?.error || "failed");
+        const data = await runJob(
+          "/api/console/desk-draft",
+          { piece, ctx: { beat: week.beat, when: week.when } },
+          (text) => {
+            const pre = body?.querySelector<HTMLElement>("[data-draft-stream]");
+            if (pre) { pre.textContent = text.replace(/—/g, ", "); pre.scrollTop = pre.scrollHeight; }
+          },
+        );
         setBody(draftView(String(data.draft || "")));
       } catch (e) { setBody(errView(e instanceof Error ? e.message : "error")); }
     }
+
+    const rewritingView = (): string =>
+      `<p class="tune-status"><span class="dot"></span>Rewriting the weeks<span data-relapsed></span></p>
+       <p class="tune-note">Reshaping your two weeks in your voice. A few seconds.</p>`;
 
     async function react() {
       const ta = body?.querySelector<HTMLTextAreaElement>("[data-reaction]");
@@ -558,8 +621,7 @@ const weeksJson = JSON.stringify(weeksForClient).replace(/</g, "\\u003c");
       lastReaction = reaction;
       setBody(thinking("Reading your reaction..."));
       try {
-        const data = await callTune(reaction, []);
-        if (data.weeks && data.weeks.length) { currentWeeks = data.weeks; renderBoard(currentWeeks); void saveCurrent(); setBody(doneView(data.summary)); return; }
+        const data = await runJob("/api/console/desk-tune", { weeks: currentWeeks, reaction, answers: [] });
         lastQuestions = data.questions || [];
         if (lastQuestions.length) setBody(questionsForm(lastQuestions));
         else await answer(true);
@@ -567,13 +629,22 @@ const weeksJson = JSON.stringify(weeksForClient).replace(/</g, "\\u003c");
     }
 
     async function answer(skip: boolean) {
-      const answers = skip ? [] : lastQuestions.map((_, i) => (body?.querySelector<HTMLTextAreaElement>(`[data-answer="${i}"]`)?.value || "").trim());
-      setBody(thinking("Rewriting the weeks..."));
+      const collected = skip ? [] : lastQuestions.map((_, i) => (body?.querySelector<HTMLTextAreaElement>(`[data-answer="${i}"]`)?.value || "").trim());
+      const answers = skip
+        ? ["(just rewrite it based on my reaction)"]
+        : collected.some((a) => a) ? collected : ["(no extra detail)"];
+      setBody(rewritingView());
       try {
-        const data = await callTune(lastReaction, skip ? ["(just rewrite it based on my reaction)"] : answers.length ? answers : ["(no extra detail)"]);
+        const data = await runJob(
+          "/api/console/desk-tune",
+          { weeks: currentWeeks, reaction: lastReaction, answers },
+          (_t, elapsed) => {
+            const el = body?.querySelector<HTMLElement>("[data-relapsed]");
+            if (el && elapsed) el.textContent = ` ${Math.round(elapsed)}s`;
+          },
+        );
         if (data.weeks && data.weeks.length) { currentWeeks = data.weeks; renderBoard(currentWeeks); void saveCurrent(); setBody(doneView(data.summary)); }
-        else if (data.questions?.length) { lastQuestions = data.questions; setBody(questionsForm(lastQuestions)); }
-        else setBody(doneView(null));
+        else setBody(errView("empty-rewrite"));
       } catch (e) { setBody(errView(e instanceof Error ? e.message : "error")); }
     }
 
@@ -630,7 +701,8 @@ const weeksJson = JSON.stringify(weeksForClient).replace(/</g, "\\u003c");
       if (t.closest('[data-action="tune-answer"]')) return void answer(false);
       if (t.closest('[data-action="tune-skip"]')) return void answer(true);
       if (t.closest('[data-action="tune-reset"]')) return void resetPlan();
-      if (t.closest('[data-action="tune-again"]') || t.closest('[data-action="tune-retry"]')) return void openTune();
+      if (t.closest('[data-action="tune-again"]')) return void openTune();
+      if (t.closest('[data-action="tune-retry"]')) return void (lastAction ? lastAction() : openTune());
       if (t.closest('[data-action="desk-tune"]')) return void openTune();
       if (t.closest('[data-action="tune-close"]') || t === scrim) return void closeTune();
       const audio = t.closest<HTMLElement>(".sub-audio"); if (audio) return void togglePlay(audio);
@@ -638,5 +710,9 @@ const weeksJson = JSON.stringify(weeksForClient).replace(/</g, "\\u003c");
       const post = t.closest<HTMLElement>('.post[data-action="expand-post"]'); if (post) return void flashExpand(post);
     });
     document.addEventListener("keydown", (e) => { if (e.key === "Escape") closeTune(); });
+
+    // Pre-warm the engine's claude runtime on load so the first Tune/Draft is
+    // the fast warm path. Best effort, never blocks anything.
+    warm();
   })();
 </script>

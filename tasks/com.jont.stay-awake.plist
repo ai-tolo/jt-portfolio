@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  Keeps the M1 (Jon's persistent automation node) awake and reachable so the
+  Tailscale Funnel and the Console engine stay up for The Desk + the rest of
+  the Console. `caffeinate -i -s` prevents idle and system sleep on AC power;
+  KeepAlive means it always runs and survives reboots/crashes (an upgrade over
+  a manual `caffeinate &` that dies on logout). The display is allowed to
+  sleep (no -d). Note: clamshell (lid-closed, off external power) sleep is NOT
+  covered by caffeinate; that needs `sudo pmset -c disablesleep 1` IRL if the
+  M1 ever runs lid-closed on battery. Install:
+    cp tasks/com.jont.stay-awake.plist ~/Library/LaunchAgents/
+    launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/com.jont.stay-awake.plist
+-->
+<plist version="1.0">
+<dict>
+	<key>Label</key>
+	<string>com.jont.stay-awake</string>
+	<key>ProgramArguments</key>
+	<array>
+		<string>/usr/bin/caffeinate</string>
+		<string>-i</string>
+		<string>-s</string>
+	</array>
+	<key>KeepAlive</key>
+	<true/>
+	<key>RunAtLoad</key>
+	<true/>
+	<key>StandardOutPath</key>
+	<string>/Users/jontollefson/automation/logs/stay-awake.log</string>
+	<key>StandardErrorPath</key>
+	<string>/Users/jontollefson/automation/logs/stay-awake.log</string>
+</dict>
+</plist>
