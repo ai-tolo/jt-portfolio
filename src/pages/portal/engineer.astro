@@ -81,6 +81,28 @@ const WINNER_GROUP_LABEL: Record<number, string> = {
 };
 const sortedWinners = [...winners].sort((a, b) => winnerRank(a) - winnerRank(b));
 
+// Workshop grouping (inherited from the folded-in Sounds page): group the
+// Winners by the curator's collection label on the source track so EP ideas /
+// track groups visualize. Named collections first (first-seen order), then an
+// "Unsorted" bucket. Within each group the stage sort (sortedWinners) holds.
+// Headers only render once at least one collection exists, so the default view
+// stays a flat list until the curator starts pinning tracks to lists.
+const _winnerGroupMap = new Map<string, WinnersJob[]>();
+for (const w of sortedWinners) {
+  const key = (w.source_collection || "").trim();
+  if (!_winnerGroupMap.has(key)) _winnerGroupMap.set(key, []);
+  _winnerGroupMap.get(key)!.push(w);
+}
+const _namedCollections = [..._winnerGroupMap.keys()].filter((k) => k !== "");
+const winnerGroups: { label: string | null; items: WinnersJob[] }[] = [
+  ..._namedCollections.map((k) => ({ label: k, items: _winnerGroupMap.get(k)! })),
+  ...(_winnerGroupMap.has("") ? [{ label: null, items: _winnerGroupMap.get("")! }] : []),
+];
+const hasCollections = _namedCollections.length > 0;
+// Distinct collection names for the per-card datalist (quick re-use of an
+// existing EP name when pinning another track).
+const collectionNames = _namedCollections;
+
 const AXIS_ORDER = ["focal", "space", "dynamics"] as const;
 
 // Deterministic Fisher–Yates (seeded LCG) — stable per seed so a card's blind
@@ -194,26 +216,32 @@ function stemSoloUrls(sf) {
         on it. Jon listens to the referenced audio inline + answers freeform;
         the answer folds back into taste.py (bounded per-pole nudge) + every
         future question. See engineer/curiosity.py + api/curiosity_endpoints.py. */}
-    <div class="cur-thinking" data-cur-thinking hidden>
-      <span class="cur-thinking-dot" aria-hidden="true"></span>
-      the Engineer is thinking about your last votes…
-    </div>
-    {/* Same card shell as a Mix Faceoff pair — a shared source waveform + one
-        transport + numbered take chips (1/2/3) that switch which mix plays,
-        carrying the playhead so you hear the same moment in each. The take
-        rows + chips are built client-side from the fetched refs. Playback is
-        coordinated with the faceoff + winners via the global Stage selector so
-        only one section ever plays at once. */}
-    <section class="curiosity" data-curiosity data-section="asks" hidden aria-live="polite">
+    {/* Engineer asks — a section peer to Mix Faceoff + Winners, with its own
+        <h2>. The card itself is a Mix Faceoff pair: a shared source waveform +
+        one transport + numbered take chips (1/2/3) that switch which mix plays,
+        carrying the playhead. Built client-side from the fetched refs;
+        coordinated with faceoff + winners via the global Stage selector so only
+        one section plays at once. The whole block (h2 + card) shows/hides as a
+        unit via data-cur-wrap. */}
+    <section class="asks-section" data-cur-wrap hidden>
+      <h2>
+        Engineer asks
+        <span class="hint">listen to the takes · tap 1·2·3 (or press the key) to switch the mix · answer to sharpen my ear</span>
+      </h2>
+      <div class="cur-thinking" data-cur-thinking hidden>
+        <span class="cur-thinking-dot" aria-hidden="true"></span>
+        the Engineer is thinking about your last votes…
+      </div>
+      <div class="curiosity" data-curiosity data-section="asks" aria-live="polite" hidden>
       <div class="cur-card pair-shell" data-cur-card>
         <div class="cur-head">
-          <span class="cur-eyebrow">the Engineer asks</span>
+          <h3 class="pair-source cur-track" data-cur-title></h3>
           <span class="cur-finding" data-cur-finding hidden></span>
         </div>
         <p class="cur-question" data-cur-question></p>
 
         <div class="pair-stage">
-          <div class="pair-waveform" data-stage-waveform data-cur-wave>
+          <div class="pair-waveform" data-cur-wave>
             <img data-cur-waveimg alt="" loading="lazy" hidden />
             <div class="pair-waveform-fallback" data-cur-wavefallback hidden>listen below</div>
             <div class="pair-playhead" data-cur-playhead hidden></div>
@@ -241,6 +269,7 @@ function stemSoloUrls(sf) {
           </div>
         </div>
         <p class="cur-done" data-cur-done hidden></p>
+      </div>
       </div>
     </section>
 
@@ -287,7 +316,7 @@ function stemSoloUrls(sf) {
 
     <section class="pair-tinder">
       <h2>
-        Mix Faceoff
+        Mix Faceoff<span class="queue-count" data-queue-count hidden></span>
         <span class="hint">tap 1·2·3 (or press the key) to switch the mix · hold a take to vote it · hold × to skip · space play/pause · ← → seek</span>
       </h2>
       {pairs.length === 0 ? (
@@ -502,8 +531,16 @@ function stemSoloUrls(sf) {
           No winners yet. Vote on a pair above and the source track lands here once its first vote is cast.
         </p>
       ) : (
+        <datalist id="winners-collection-names">
+          {collectionNames.map((c) => (<option value={c}></option>))}
+        </datalist>
         <ul class="winners-list">
-          {sortedWinners.map((w) => {
+          {winnerGroups.map((group) => (
+            <Fragment>
+              {hasCollections && (
+                <li class="winners-group-header" role="presentation">{group.label ?? "Unsorted"}</li>
+              )}
+              {group.items.map((w) => {
             const sourceUrl = sourceAudioUrl(w.source_audio_path);
             const waveSrc = w.source_waveform_sha1
               ? `/api/console/waveform?sha1=${w.source_waveform_sha1}`
@@ -573,6 +610,21 @@ function stemSoloUrls(sf) {
                             : "queued"}
                     </span>
                   )}
+                  {/* Pin-to-list / EP grouping (inherited from Sounds): type a
+                      collection name to group this track. Commits on Enter/blur
+                      → sounds-update on the source asset → reload re-groups. */}
+                  <input
+                    class="winners-collection"
+                    type="text"
+                    value={w.source_collection ?? ""}
+                    placeholder="+ list"
+                    list="winners-collection-names"
+                    data-collection-input
+                    data-source-asset-id={w.source_asset_id}
+                    data-original={w.source_collection ?? ""}
+                    title="Pin this track to a list / EP idea — type a name and press Enter"
+                    aria-label="Collection or list name"
+                  />
                   {/* Action cluster on the far RIGHT: open-in-Buckets, open
                       project, dismiss. (#2 link buttons right · #4 dismiss = X) */}
                   <div class="winners-head-actions">
@@ -770,7 +822,9 @@ function stemSoloUrls(sf) {
                 </div>
               </li>
             );
-          })}
+              })}
+            </Fragment>
+          ))}
         </ul>
       )}
     </section>
@@ -821,7 +875,9 @@ function stemSoloUrls(sf) {
     50% { opacity: 1; transform: scale(1.15); }
   }
 
-  .curiosity { margin: 2px 0 30px; }
+  .asks-section { margin: 2px 0 30px; }
+  .asks-section[hidden] { display: none; }
+  .curiosity { margin: 0; }
   .curiosity[hidden] { display: none; }
   .cur-card {
     position: relative;
@@ -839,19 +895,10 @@ function stemSoloUrls(sf) {
     gap: 12px;
     flex-wrap: wrap;
   }
-  .cur-eyebrow {
-    font-size: 11px;
-    font-weight: 700;
-    letter-spacing: 0.16em;
-    text-transform: uppercase;
-    color: #0ec4fc;
-  }
-  .cur-eyebrow::before {
-    content: "◆";
-    margin-right: 7px;
-    font-size: 9px;
-    vertical-align: 1px;
-    opacity: 0.8;
+  /* The card title is now the track in question (reuses the faceoff .pair-source
+     look so the asks card reads identically to a faceoff card). */
+  .cur-track {
+    margin: 0;
   }
   .cur-finding {
     font-size: 11.5px;
@@ -1083,18 +1130,29 @@ function stemSoloUrls(sf) {
     background: rgba(14, 196, 252, 0.05);
     box-shadow: 0 0 0 1px rgba(14, 196, 252, 0.18), 0 6px 22px rgba(0, 0, 0, 0.28);
   }
-  /* Inactive (queued) faceoffs recede hard — darker, dimmer, desaturated — so
-     the active card is unmistakably the one in play (#3). Hover lifts them
-     part-way as an affordance that they're selectable. */
+  /* Only ONE faceoff card is shown at a time — you can't interact with a queued
+     card anyway, so the others are hidden entirely (the queue COUNT in the
+     heading communicates how many remain). Voting drops the active card and the
+     next one takes its place. */
   .pair:not(.pair-active) {
-    opacity: 0.5;
-    background: rgba(0, 0, 0, 0.22);
-    filter: saturate(0.65);
+    display: none;
   }
-  .pair:not(.pair-active):hover {
-    opacity: 0.82;
-    filter: saturate(0.9);
+  /* Queue count chip in the Mix Faceoff heading. */
+  .queue-count {
+    display: inline-block;
+    margin-left: 10px;
+    padding: 2px 9px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    color: #0ec4fc;
+    background: rgba(14, 196, 252, 0.12);
+    border: 1px solid rgba(14, 196, 252, 0.3);
+    vertical-align: 2px;
+    font-variant-numeric: tabular-nums;
   }
+  .queue-count[hidden] { display: none; }
   .pair-head {
     display: flex;
     align-items: center;
@@ -1450,15 +1508,34 @@ function stemSoloUrls(sf) {
      which reference each is. One neutral inactive look + one neutral active
      look (the active look is forced in the is:global block below, which also
      beats the dev-mode scoping quirk). */
+  /* 3D keycap — the 1·2·3 chips read as physical keyboard keys: a lit top
+     bevel, a darker base, and a solid bottom edge + drop shadow so they sit
+     proud of the transport. Pressed-in look comes on .ab-side-active below.
+     Shared by the Faceoff + the Engineer-asks card so they match exactly. */
   .ab-side-blind {
     color: #ece3f2;
-    border-color: rgba(236, 227, 242, 0.30);
-    background: rgba(236, 227, 242, 0.05);
+    border: 1px solid rgba(236, 227, 242, 0.22);
+    border-bottom-color: rgba(0, 0, 0, 0.55);
+    border-radius: 8px;
+    background: linear-gradient(180deg,
+      rgba(255, 255, 255, 0.12) 0%,
+      rgba(236, 227, 242, 0.05) 46%,
+      rgba(0, 0, 0, 0.12) 100%);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.24),
+      inset 0 -2px 4px rgba(0, 0, 0, 0.30),
+      0 2px 0 rgba(0, 0, 0, 0.5),
+      0 4px 7px rgba(0, 0, 0, 0.42);
   }
   .ab-side-blind:hover {
-    border-color: rgba(236, 227, 242, 0.7);
-    background: rgba(236, 227, 242, 0.13);
+    border-color: rgba(236, 227, 242, 0.5);
     color: #ffffff;
+    transform: translateY(-1px);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.32),
+      inset 0 -2px 4px rgba(0, 0, 0, 0.30),
+      0 3px 0 rgba(0, 0, 0, 0.5),
+      0 6px 12px rgba(0, 0, 0, 0.48);
   }
   /* Card-wide ambient wash — identical for ANY active take so "no tint =
      original" can't leak. */
@@ -2005,6 +2082,45 @@ function stemSoloUrls(sf) {
     display: flex;
     flex-direction: column;
     gap: 14px;
+  }
+  /* EP / list group header within the Winners workshop. */
+  .winners-group-header {
+    list-style: none;
+    margin: 12px 0 -2px;
+    padding: 0 2px 6px;
+    font-size: 12px;
+    font-weight: 800;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: #ffb96a;
+    border-bottom: 1px solid rgba(255, 185, 106, 0.22);
+  }
+  .winners-group-header:first-child { margin-top: 0; }
+  /* Pin-to-list input on each card head — compact, unobtrusive until hovered/
+     focused, then it reads as an editable field. */
+  .winners-collection {
+    flex: 0 0 auto;
+    width: 88px;
+    min-width: 0;
+    margin-right: 4px;
+    padding: 4px 8px;
+    font: inherit;
+    font-size: 12px;
+    color: #ffd9a8;
+    background: rgba(255, 185, 106, 0.06);
+    border: 1px dashed rgba(255, 185, 106, 0.28);
+    border-radius: 6px;
+    transition: width 0.15s ease, background 0.15s, border-color 0.15s;
+  }
+  .winners-collection::placeholder { color: rgba(255, 185, 106, 0.45); }
+  .winners-collection:hover { border-color: rgba(255, 185, 106, 0.5); }
+  .winners-collection:focus {
+    width: 150px;
+    outline: none;
+    background: rgba(255, 185, 106, 0.10);
+    border-style: solid;
+    border-color: rgba(255, 185, 106, 0.6);
+    color: #fff;
   }
   .winners-card {
     background: rgba(0, 0, 0, 0.06);
@@ -2763,15 +2879,20 @@ function stemSoloUrls(sf) {
   /* Blind voting (#4): single neutral active look for all three take-chips,
      forced here to beat both the per-side colours and the dev-mode scoping
      quirk. */
+  /* Active take = a keycap PRESSED IN and lit: it drops to the base (translateY
+     down, the raised drop-shadow collapses) and glows the brand gradient with
+     an inner press shadow. Reads as "this key is held down." */
   .ab-side-blind.ab-side-active {
     background: linear-gradient(135deg, #ff2d8b, #ff7a3d, #ffd23d) !important;
     color: #0d060f !important;
-    border-color: transparent !important;
-    transform: scale(1.04) !important;
+    border-color: rgba(255, 180, 90, 0.55) !important;
+    border-bottom-color: rgba(120, 45, 10, 0.7) !important;
+    transform: translateY(2px) !important;
     box-shadow:
-      0 0 26px rgba(255, 140, 80, 0.5),
-      0 0 0 2px rgba(255, 180, 90, 0.65),
-      inset 0 0 14px rgba(255, 255, 255, 0.2) !important;
+      0 0 24px rgba(255, 140, 80, 0.5),
+      0 1px 0 rgba(0, 0, 0, 0.35),
+      inset 0 2px 3px rgba(255, 255, 255, 0.45),
+      inset 0 -3px 6px rgba(150, 55, 10, 0.5) !important;
     z-index: 2;
     transition: none !important;
   }
@@ -3091,6 +3212,21 @@ function stemSoloUrls(sf) {
     else wave.removeAttribute("data-buffering");
   }
 
+  // Queue count in the heading — how many faceoff cards still await a vote.
+  // Only the active card is shown; this tells the curator how many remain
+  // behind it. Recomputed at init + after every vote (advancePair removes one).
+  function updateQueueCount() {
+    const badge = document.querySelector<HTMLElement>("[data-queue-count]");
+    if (!badge) return;
+    const n = document.querySelectorAll(".pair").length;
+    if (n > 0) {
+      badge.textContent = n === 1 ? "last one" : `${n} left`;
+      badge.hidden = false;
+    } else {
+      badge.hidden = true;
+    }
+  }
+
   function setActivePair(pair: HTMLElement) {
     activePairEl = pair;
     currentSolo = null;
@@ -3304,6 +3440,7 @@ function stemSoloUrls(sf) {
     const next = pair.nextElementSibling as HTMLElement | null;
     pair.classList.remove("pair-active");
     pair.remove(); // drop the voted pair entirely so it can't impact next playback
+    updateQueueCount();
 
     if (next?.matches?.(".pair")) {
       next.classList.add("pair-active");
@@ -3580,6 +3717,7 @@ function stemSoloUrls(sf) {
   // Initialize: first .pair-active becomes the active pair.
   const initial = activePair();
   if (initial) { setActivePair(initial); Stage.claim("faceoff"); }
+  updateQueueCount();
 
   // ── Winners controller (Phase 3 + Phase 4 sync) ──────────────────
   // Per-card model: each card holds N audio elements (source + winners),
@@ -3901,6 +4039,44 @@ function stemSoloUrls(sf) {
     });
   });
 
+  // ── Pin-to-list / collection (Sounds-inherited workshop grouping) ──
+  // Commit a track's collection label on Enter or blur → /sounds/update on the
+  // SOURCE asset → reload so the Winners section re-groups by collection. Esc
+  // reverts. The typing itself is shielded from the section keyboard handlers
+  // by their input/textarea guards.
+  document.querySelectorAll<HTMLInputElement>("[data-collection-input]").forEach((input) => {
+    let committing = false;
+    const commit = async () => {
+      if (committing) return;
+      const assetId = Number(input.dataset.sourceAssetId);
+      const val = input.value.trim();
+      const orig = (input.dataset.original ?? "").trim();
+      if (val === orig || !Number.isFinite(assetId)) return; // nothing changed
+      committing = true;
+      input.disabled = true;
+      try {
+        const res = await fetch("/api/console/sounds-update", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ asset_id: assetId, collection: val }),
+        });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        location.reload(); // server re-groups by collection
+      } catch (e) {
+        console.warn("[winners collection] save failed:", e);
+        input.disabled = false;
+        committing = false;
+      }
+    };
+    input.addEventListener("keydown", (e) => {
+      e.stopPropagation(); // never let take-switch keys fire while naming a list
+      if (e.key === "Enter") { e.preventDefault(); input.blur(); }
+      else if (e.key === "Escape") { input.value = input.dataset.original ?? ""; input.blur(); }
+    });
+    input.addEventListener("blur", commit);
+    input.addEventListener("click", (e) => e.stopPropagation());
+  });
+
   // ── Champion crown (with optional feedback) ────────────────────────
   // Reads the per-card feedback textarea and forwards it as `comment`
   // so the planner sees the curator's reasoning alongside future
@@ -4191,9 +4367,11 @@ function stemSoloUrls(sf) {
      steals keystrokes from — the faceoff/winners sections. Own <script> module
      (separate scope); the per-take <audio> elements are created here. */
   (() => {
+    const wrap = document.querySelector("[data-cur-wrap]");      // h2 + card (shows/hides as a unit)
     const root = document.querySelector("[data-curiosity]");
     const thinking = document.querySelector("[data-cur-thinking]");
-    if (!root) return;
+    if (!root || !wrap) return;
+    const titleEl = root.querySelector("[data-cur-title]");
     const qEl = root.querySelector("[data-cur-question]");
     const findingEl = root.querySelector("[data-cur-finding]");
     const respondEl = root.querySelector("[data-cur-respond]");
@@ -4396,17 +4574,26 @@ function stemSoloUrls(sf) {
 
     function render(ins) {
       current = ins;
+      // The card title is the TRACK in question (source ref display name, else
+      // the finding's title) — "Engineer asks" is the section <h2> now.
+      const refs = ins.refs || [];
+      const src = refs.find((r) => r.role === "source");
+      if (titleEl) {
+        titleEl.textContent =
+          (src && src.display_name) || (ins.facts && ins.facts.title) || "this track";
+      }
       qEl.textContent = ins.question;
       const ft = findingText(ins);
       if (ft) { findingEl.textContent = ft; findingEl.hidden = false; }
       else findingEl.hidden = true;
-      setWave(ins.refs || []);
-      buildTakes(ins.refs || []);
+      setWave(refs);
+      buildTakes(refs);
       answerEl.value = "";
       respondEl.hidden = false;
       doneEl.hidden = true;
       doneEl.style.color = "";
       sendBtn.disabled = false;
+      wrap.hidden = false;
       thinking.hidden = true;
       root.hidden = false;
     }
@@ -4453,8 +4640,8 @@ function stemSoloUrls(sf) {
     async function load() {
       const data = await fetchOnce();
       if (data.status === "ready" && data.insight) { stopPoll(); render(data.insight); }
-      else if (data.status === "synthesizing") { teardownTakes(); root.hidden = true; thinking.hidden = false; startPoll(); }
-      else { stopPoll(); teardownTakes(); thinking.hidden = true; root.hidden = true; }
+      else if (data.status === "synthesizing") { teardownTakes(); wrap.hidden = false; root.hidden = true; thinking.hidden = false; startPoll(); }
+      else { stopPoll(); teardownTakes(); wrap.hidden = true; thinking.hidden = true; root.hidden = true; }
     }
     function startPoll() { if (!pollTimer) pollTimer = setInterval(load, 3500); }
     function stopPoll() { if (pollTimer) { clearInterval(pollTimer); pollTimer = null; } }

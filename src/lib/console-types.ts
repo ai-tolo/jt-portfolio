@@ -842,6 +842,10 @@ export interface WinnersJob {
   source_asset_id: number;
   source_filename: string | null;
   source_display_name: string | null;
+  /** Curator-set grouping label on the SOURCE track (assets.collection) — the
+   *  Winners workshop's "pin to a list / EP idea" grouping, inherited from the
+   *  folded-in Sounds page. Set via /sounds/update on source_asset_id. */
+  source_collection?: string | null;
   source_waveform_sha1: string | null;
   source_duration_seconds: number | null;
   source_audio_path: string | null;
