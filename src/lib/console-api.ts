@@ -525,6 +525,11 @@ export async function getBucketsList(
   if (filters.focus) params.set("focus", String(filters.focus));
   if (filters.duration_min !== undefined) params.set("duration_min", String(filters.duration_min));
   if (filters.duration_max !== undefined) params.set("duration_max", String(filters.duration_max));
+  if (filters.bpm_min !== undefined) params.set("bpm_min", String(filters.bpm_min));
+  if (filters.bpm_max !== undefined) params.set("bpm_max", String(filters.bpm_max));
+  if (filters.key) params.set("key", filters.key);
+  if (filters.quality_min !== undefined) params.set("quality_min", String(filters.quality_min));
+  if (filters.has_project) params.set("has_project", "1");
   if (filters.offset) params.set("offset", String(filters.offset));
   if (filters.limit !== undefined) params.set("limit", String(filters.limit));
   return call<BucketsListResponse>(`/buckets?${params}`);

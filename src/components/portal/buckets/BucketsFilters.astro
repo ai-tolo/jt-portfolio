@@ -10,117 +10,99 @@ interface Props {
   bucket: BucketView;
   category: BucketCategory;
   sort: BucketSort;
-  /** True when the URL carries an explicit ?sort=. Lets the 3-state
-   *  toggles distinguish "no toggle active" from "Date desc explicit". */
   sortExplicit: boolean;
   q: string;
   activeTags: string[];
   topTags: TopTag[];
-  /** Active duration range (seconds), if any. Drives the preset chip
-   *  active-state and prefills the manual inputs. */
   durationMin?: number;
   durationMax?: number;
+  bpmMin?: number;
+  bpmMax?: number;
+  keyFilter?: string;
+  qualityMin?: number;
+  hasProject?: boolean;
 }
 
-const { bucket, category, sort, sortExplicit, q, activeTags, topTags, durationMin, durationMax } = Astro.props;
+const {
+  bucket, category, sort, sortExplicit, q, activeTags, topTags,
+  durationMin, durationMax, bpmMin, bpmMax, keyFilter = "", qualityMin, hasProject = false,
+} = Astro.props;
+
 const activeSet = new Set(activeTags);
 
-const CATEGORIES: { id: BucketCategory; label: string; hint: string }[] = [
-  { id: "all", label: "All", hint: "Everything in this bucket" },
-  { id: "jam", label: "Jam", hint: "Long-form (>5min) musical captures (auto-classified)" },
-  { id: "loops", label: "Loops", hint: "Loop-ready rows (curator-picked)" },
-  { id: "oneshot", label: "One-shot", hint: "Single hits — kicks, snares, stabs, vox chops (<10s). Includes your Splice library so you can grab a sample mid-build." },
-  { id: "field", label: "Field", hint: "Voice memos + audio extracted from videos (auto-classified)" },
-  { id: "tracks", label: "Tracks", hint: "Curator-picked tracks" },
-  { id: "other", label: "Inbox", hint: "Unbucketed residual, awaiting auto-classification or curator pick" },
+const CATEGORIES: { id: BucketCategory; label: string }[] = [
+  { id: "all", label: "All" },
+  { id: "jam", label: "Jam" },
+  { id: "loops", label: "Loops" },
+  { id: "oneshot", label: "One-shot" },
+  { id: "field", label: "Field" },
+  { id: "tracks", label: "Tracks" },
+  { id: "other", label: "Inbox" },
 ];
+const activeCategory = CATEGORIES.find((c) => c.id === category) ?? CATEGORIES[0];
 
-// Duration preset chips for the most common range needs. Each maps to a
-// [min, max] pair (null = unbounded). The "Songs" preset is the headline
-// use-case: find song candidates in the 45s–5min band.
-type DurationPreset = { id: string; label: string; min: number | null; max: number | null; hint: string };
-const DURATION_PRESETS: DurationPreset[] = [
-  { id: "songs", label: "Songs 45s–5m", min: 45, max: 300, hint: "Song candidates: 45 seconds to 5 minutes" },
-  { id: "short", label: "Loops <45s", min: null, max: 45, hint: "Loop-length and shorter" },
-  { id: "long", label: "Long >5m", min: 300, max: null, hint: "Long-form: over 5 minutes" },
+// One labeled control replaces the five 3-state sort toggles.
+const SORT_OPTIONS: { key: BucketSort; label: string }[] = [
+  { key: "recent", label: "Newest" },
+  { key: "oldest", label: "Oldest" },
+  { key: "longest", label: "Longest" },
+  { key: "shortest", label: "Shortest" },
+  { key: "bpm-desc", label: "BPM high → low" },
+  { key: "bpm-asc", label: "BPM low → high" },
+  { key: "most-used", label: "Most used in projects" },
+  { key: "least-used", label: "Least used" },
+  { key: "silence-desc", label: "Most silent" },
 ];
-const durationActive = durationMin !== undefined || durationMax !== undefined;
+const currentSort = sortExplicit ? sort : "recent";
+
+const NOTES = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
+const KEYS: string[] = NOTES.flatMap((n) => [`${n} major`, `${n} minor`]);
+
+type DurationPreset = { label: string; min: number | null; max: number | null };
+const DURATION_PRESETS: DurationPreset[] = [
+  { label: "Songs 45s–5m", min: 45, max: 300 },
+  { label: "Loops <45s", min: null, max: 45 },
+  { label: "Long >5m", min: 300, max: null },
+];
 const presetIsActive = (p: DurationPreset): boolean =>
   (p.min ?? undefined) === durationMin && (p.max ?? undefined) === durationMax;
 
-// Sort toggles consolidate paired sort directions into a single 3-state
-// button per dimension: off → asc → desc → off. The "off" position falls
-// back to the engine default (`recent`), so toggling Date "off" produces
-// the same query as Date desc — that's fine: the toggle communicates the
-// curator's intent, not just the ORDER BY.
-//
-// `null` in the asc/desc slot means that direction is not exposed (e.g.
-// Kudos only sorts descending — ascending would just surface every 0-kudos
-// row, which is most of the catalog).
-type SortDim = {
-  key: string;
-  label: string;
-  asc: BucketSort | null;
-  desc: BucketSort | null;
-};
-const SORT_DIMS: SortDim[] = [
-  { key: "date",     label: "Date",     asc: "oldest",       desc: "recent" },
-  { key: "duration", label: "Duration", asc: "shortest",     desc: "longest" },
-  { key: "bpm",      label: "BPM",      asc: "bpm-asc",      desc: "bpm-desc" },
-  { key: "used",     label: "Used",     asc: "least-used",   desc: "most-used" },
-  { key: "silent",   label: "Silent",   asc: null,           desc: "silence-desc" },
-];
-
-// State of a sort dimension given the active sort param. `"off"` means
-// no direction is asserted for this dimension; `"asc"` / `"desc"` means
-// the dim is currently driving the ORDER BY. When `sortExplicit` is
-// false (no ?sort= in URL), every dim is "off" — even the one whose
-// desc maps to the engine default ("recent"), since the user hasn't
-// explicitly asserted that direction.
-const sortStateFor = (dim, currentSort, explicit) => {
-  if (!explicit) return "off";
-  if (currentSort === dim.asc) return "asc";
-  if (currentSort === dim.desc) return "desc";
-  return "off";
-};
-
-// Next-state sort key for a click. Cycle is off → asc → desc → off.
-// When asc is null, skip directly to desc (and back). When desc is null,
-// the toggle just flips on/off via asc. Returns null to mean "remove sort
-// param" (engine falls back to `recent`).
-const nextSort = (dim, currentState) => {
-  if (currentState === "off") return dim.asc ?? dim.desc;
-  if (currentState === "asc") return dim.desc ?? null;
-  return null; // desc → off
-};
-
 const base = `/portal/buckets/${bucket}`;
 const tagsCsv = activeTags.join(",");
+
+// Every active filter as [name, value]. The single source of truth for
+// link-building and for the hidden inputs that keep GET forms from dropping
+// the other facets.
+const activeParams = (): [string, string][] => {
+  const out: [string, string][] = [];
+  if (sortExplicit) out.push(["sort", sort]);
+  if (category && category !== "all") out.push(["category", category]);
+  if (q) out.push(["q", q]);
+  if (tagsCsv) out.push(["tags", tagsCsv]);
+  if (durationMin !== undefined) out.push(["duration_min", String(durationMin)]);
+  if (durationMax !== undefined) out.push(["duration_max", String(durationMax)]);
+  if (bpmMin !== undefined) out.push(["bpm_min", String(bpmMin)]);
+  if (bpmMax !== undefined) out.push(["bpm_max", String(bpmMax)]);
+  if (keyFilter) out.push(["key", keyFilter]);
+  if (qualityMin !== undefined) out.push(["quality_min", String(qualityMin)]);
+  if (hasProject) out.push(["has_project", "1"]);
+  return out;
+};
+const preserveExcept = (...keys: string[]): [string, string][] =>
+  activeParams().filter(([k]) => !keys.includes(k));
+
 const buildHref = (overrides: Record<string, string | null>): string => {
-  const p = new URLSearchParams();
-  // Inherit current sort only when it was set explicitly (i.e. user
-  // toggled something). If the page is in default-sort state, we want
-  // child links to stay clean (no sort param) until the user clicks a
-  // sort toggle themselves.
-  if (sortExplicit) p.set("sort", sort);
-  if (category && category !== "all") p.set("category", category);
-  if (q) p.set("q", q);
-  if (tagsCsv) p.set("tags", tagsCsv);
-  if (durationMin !== undefined) p.set("duration_min", String(durationMin));
-  if (durationMax !== undefined) p.set("duration_max", String(durationMax));
+  const p = new URLSearchParams(activeParams());
   for (const [k, v] of Object.entries(overrides)) {
     if (v === null || v === "") p.delete(k);
     else p.set(k, v);
   }
   if (p.get("category") === "all") p.delete("category");
-  // Changing any filter resets pagination to page 1.
-  p.delete("offset");
+  p.delete("offset"); // any filter change resets to page 1
   const qs = p.toString();
   return qs ? `${base}?${qs}` : base;
 };
 
-// Duration preset href: toggles the preset (click active → clear). Resets
-// to page 1 via buildHref's offset delete.
 const durationHref = (p: DurationPreset): string =>
   presetIsActive(p)
     ? buildHref({ duration_min: null, duration_max: null })
@@ -128,11 +110,7 @@ const durationHref = (p: DurationPreset): string =>
         duration_min: p.min === null ? null : String(p.min),
         duration_max: p.max === null ? null : String(p.max),
       });
-const clearDurationHref = buildHref({ duration_min: null, duration_max: null });
 
-// Each chip's href toggles its tag in/out of the active set. Active tags
-// AND together server-side, so clicking adds an extra constraint; clicking
-// an already-active chip removes it.
 const buildTagsHref = (tag: string): string => {
   const next = activeSet.has(tag)
     ? activeTags.filter((t) => t !== tag)
@@ -140,629 +118,422 @@ const buildTagsHref = (tag: string): string => {
   return buildHref({ tags: next.join(",") });
 };
 
-const clearTagsHref = buildHref({ tags: "" });
+// Active-filter summary chips — each removes its own facet; clear-all wipes them.
+const chips: { label: string; href: string }[] = [];
+if (category && category !== "all")
+  chips.push({ label: activeCategory.label, href: buildHref({ category: null }) });
+if (q) chips.push({ label: `“${q}”`, href: buildHref({ q: null }) });
+for (const t of activeTags) chips.push({ label: `#${t}`, href: buildTagsHref(t) });
+if (durationMin !== undefined || durationMax !== undefined)
+  chips.push({
+    label: `${durationMin ?? 0}–${durationMax ?? "∞"}s`,
+    href: buildHref({ duration_min: null, duration_max: null }),
+  });
+if (bpmMin !== undefined || bpmMax !== undefined)
+  chips.push({
+    label: `${bpmMin ?? 0}–${bpmMax ?? "∞"} BPM`,
+    href: buildHref({ bpm_min: null, bpm_max: null }),
+  });
+if (keyFilter) chips.push({ label: keyFilter, href: buildHref({ key: null }) });
+if (qualityMin !== undefined)
+  chips.push({ label: `★ ${qualityMin}+`, href: buildHref({ quality_min: null }) });
+if (hasProject) chips.push({ label: "has project", href: buildHref({ has_project: null }) });
 
-const activeCategory = CATEGORIES.find((c) => c.id === category) ?? CATEGORIES[0];
+const facetCount =
+  (durationMin !== undefined || durationMax !== undefined ? 1 : 0) +
+  (bpmMin !== undefined || bpmMax !== undefined ? 1 : 0) +
+  (keyFilter ? 1 : 0) +
+  (qualityMin !== undefined ? 1 : 0) +
+  (hasProject ? 1 : 0) +
+  activeTags.length;
+const facetsOpen = facetCount > 0;
 ---
 
 <section class="filters" aria-label="Bucket filters">
-  {/*
-    Tags chip strip — top 10 tags by frequency in the current
-    bucket+category view. Clicking a chip toggles its tag in the active
-    set (AND semantics across multiple chips). The strip itself is
-    computed BEFORE the active filter is applied so it stays stable as
-    the curator narrows. Hidden when there's nothing taggable to show.
-  */}
-  {(topTags.length > 0 || activeTags.length > 0) && (
-    <nav class="tags-strip" aria-label="Filter by tag">
-      <span class="tags-label">Tags</span>
-      <ul class="tags-list" role="list">
-        {topTags.map((t) => (
-          <li>
-            <a
-              href={buildTagsHref(t.tag)}
-              class:list={["tag-chip", { active: activeSet.has(t.tag) }]}
-              aria-pressed={activeSet.has(t.tag) ? "true" : "false"}
-              title={activeSet.has(t.tag) ? `Remove ${t.tag} filter` : `Filter by ${t.tag}`}
-            >
-              <span class="tag-name">{t.tag}</span>
-              <span class="tag-count">{t.count.toLocaleString()}</span>
-            </a>
-          </li>
+  {/* ── Primary bar: search · sort · random ───────────────────────── */}
+  <div class="bar">
+    <form class="search" method="get" action={base} role="search">
+      {preserveExcept("q").map(([k, v]) => <input type="hidden" name={k} value={v} />)}
+      <span class="search-icon" aria-hidden="true">⌕</span>
+      <input
+        type="search"
+        name="q"
+        class="search-input"
+        value={q}
+        placeholder={`Search ${activeCategory.label.toLowerCase()}…`}
+        aria-label="Search"
+        autocomplete="off"
+        data-search-input
+      />
+    </form>
+    <label class="sort">
+      <span class="sort-label">Sort</span>
+      <select class="sort-select" data-nav-param="sort" data-default="recent" aria-label="Sort">
+        {SORT_OPTIONS.map((o) => (
+          <option value={o.key} selected={o.key === currentSort}>{o.label}</option>
         ))}
-        {/* If the user has tags active that aren't in the top 10 (e.g.
-            they navigated in via URL or the counts shifted), still render
-            them as active chips so they can be toggled off. */}
-        {activeTags
-          .filter((t) => !topTags.some((tt) => tt.tag === t))
-          .map((t) => (
-            <li>
-              <a
-                href={buildTagsHref(t)}
-                class:list={["tag-chip", "active"]}
-                aria-pressed="true"
-                title={`Remove ${t} filter`}
-              >
-                <span class="tag-name">{t}</span>
-              </a>
-            </li>
-          ))}
+      </select>
+    </label>
+    <button type="button" class="random-btn" data-action="random" title="Jump to a random card in this view">↻ Random</button>
+  </div>
+
+  {/* ── Category pills + Projects browse ──────────────────────────── */}
+  <nav class="cats" aria-label="Category">
+    {CATEGORIES.map((c) => (
+      <a
+        href={buildHref({ category: c.id })}
+        class:list={["cat", { active: category === c.id || (!category && c.id === "all") }]}
+      >{c.label}</a>
+    ))}
+    <a class="cat cat-projects" href="/portal/projects" title="Browse Ableton projects (reveal in Finder · open in Ableton)">⧉ Projects</a>
+    <a
+      class:list={["cat cat-archive", { active: bucket === "trash" }]}
+      href={bucket === "trash" ? "/portal/buckets/all" : "/portal/buckets/trash"}
+      title={bucket === "trash" ? "Back to All" : "Browse archived / trashed items"}
+    >{bucket === "trash" ? "← Back" : "Archive"}</a>
+  </nav>
+
+  {/* ── Active-filter summary ─────────────────────────────────────── */}
+  {chips.length > 0 && (
+    <div class="active" aria-label="Active filters">
+      <span class="active-label">Filtering</span>
+      <ul class="active-list" role="list">
+        {chips.map((c) => (
+          <li><a class="active-chip" href={c.href} title={`Remove ${c.label}`}>{c.label} <span class="x" aria-hidden="true">×</span></a></li>
+        ))}
       </ul>
-      {activeTags.length > 0 && (
-        <a href={clearTagsHref} class="tags-clear" title="Clear all tag filters">Clear</a>
-      )}
-    </nav>
+      <a class="active-clear" href={base} title="Clear all filters">Clear all</a>
+    </div>
   )}
 
-  {/*
-    Primary navigation: Category. Each chip is a top-level slice of the
-    catalog. The strip lives at the top of every Buckets page; Search +
-    Sort below act on the selected category.
-  */}
-  <nav class="cats" aria-label="Category">
-    <span class="cats-label">Browse</span>
-    <ul class="cats-list" role="list">
-      {CATEGORIES.map((c) => (
-        <li>
-          <a
-            href={buildHref({ category: c.id })}
-            class:list={["cat", { active: category === c.id || (!category && c.id === "all") }]}
-            title={c.hint}
-          >{c.label}</a>
-        </li>
-      ))}
-    </ul>
-    {/* Projects browse lives in Buckets now (no longer a top tab). The
-        per-project Reveal/Open actions stay on the projects view. */}
-    <a class="cat cat-projects" href="/portal/projects" title="Browse Ableton projects (reveal in Finder · open in Ableton)">⧉ Projects</a>
-  </nav>
+  {/* ── Facet panel (auto-opens when a facet is active) ───────────── */}
+  <details class="facets" open={facetsOpen}>
+    <summary class="facets-summary">
+      <span class="facets-caret" aria-hidden="true">▸</span>
+      Filters{facetCount > 0 ? ` · ${facetCount}` : ""}
+    </summary>
+    <div class="facets-grid">
+      {/* BPM range */}
+      <form class="facet" method="get" action={base}>
+        {preserveExcept("bpm_min", "bpm_max").map(([k, v]) => <input type="hidden" name={k} value={v} />)}
+        <span class="facet-label">BPM</span>
+        <span class="range">
+          <input type="number" name="bpm_min" min="0" step="1" placeholder="min" value={bpmMin ?? ""} aria-label="Min BPM" />
+          <span class="range-sep">–</span>
+          <input type="number" name="bpm_max" min="0" step="1" placeholder="max" value={bpmMax ?? ""} aria-label="Max BPM" />
+        </span>
+        <button type="submit" class="facet-apply">Go</button>
+      </form>
 
-  {/*
-    Duration filter. Preset chips for the common ranges + a manual min/max
-    form for precise needs. The manual form is a native GET submit with
-    hidden inputs preserving the other active filters, so it works without
-    JS and produces a shareable URL. Empty inputs submit as "" → engine
-    treats as unbounded.
-  */}
-  <details class="filters-adv">
-    <summary class="filters-adv-summary"><span class="adv-caret" aria-hidden="true">▸</span> Length &amp; precise filters</summary>
-  <nav class="dur-row" aria-label="Filter by duration">
-    <span class="dur-label">Length</span>
-    <ul class="dur-presets" role="list">
-      {DURATION_PRESETS.map((p) => (
-        <li>
-          <a
-            href={durationHref(p)}
-            class:list={["dur-chip", { active: presetIsActive(p) }]}
-            aria-pressed={presetIsActive(p) ? "true" : "false"}
-            title={p.hint}
-          >{p.label}</a>
-        </li>
-      ))}
-    </ul>
-    <form class="dur-form" method="get" action={base}>
-      {sortExplicit && <input type="hidden" name="sort" value={sort} />}
-      {category !== "all" && <input type="hidden" name="category" value={category} />}
-      {q && <input type="hidden" name="q" value={q} />}
-      {tagsCsv && <input type="hidden" name="tags" value={tagsCsv} />}
-      <input
-        type="number" class="dur-input" name="duration_min"
-        min="0" step="1" placeholder="min s"
-        value={durationMin ?? ""} aria-label="Minimum duration in seconds"
-      />
-      <span class="dur-sep" aria-hidden="true">–</span>
-      <input
-        type="number" class="dur-input" name="duration_max"
-        min="0" step="1" placeholder="max s"
-        value={durationMax ?? ""} aria-label="Maximum duration in seconds"
-      />
-      <button type="submit" class="dur-apply">Apply</button>
-    </form>
-    {durationActive && (
-      <a href={clearDurationHref} class="dur-clear" title="Clear duration filter">Clear</a>
-    )}
-  </nav>
-  </details>
+      {/* Key */}
+      <label class="facet">
+        <span class="facet-label">Key</span>
+        <select class="key-select" data-nav-param="key" data-default="" aria-label="Musical key">
+          <option value="" selected={!keyFilter}>Any key</option>
+          {KEYS.map((k) => (
+            <option value={k} selected={k.toLowerCase() === keyFilter.toLowerCase()}>{k}</option>
+          ))}
+        </select>
+      </label>
 
-  {/*
-    Search + Random sit visually nested inside the Category context:
-    a thin shared border + inset padding makes it clear you're searching
-    *within* the active category.
-  */}
-  <div class="searchbar" data-active-cat={category}>
-    <span class="searchbar-context">
-      <span class="ctx-arrow" aria-hidden="true">↳</span>
-      <span class="ctx-label">in</span>
-      <span class="ctx-name">{activeCategory.label}</span>
-    </span>
-    <input
-      type="search"
-      class="search-input"
-      placeholder={`Search ${activeCategory.label.toLowerCase()}…`}
-      value={q}
-      data-search-input
-      aria-label={`Search ${activeCategory.label}`}
-      autocomplete="off"
-    />
-    <button
-      type="button"
-      class="random-btn"
-      data-action="random"
-      title="Pick a random card in the current view"
-    >↻ Random</button>
-  </div>
+      {/* Length presets + range */}
+      <form class="facet facet-wide" method="get" action={base}>
+        {preserveExcept("duration_min", "duration_max").map(([k, v]) => <input type="hidden" name={k} value={v} />)}
+        <span class="facet-label">Length</span>
+        <span class="presets">
+          {DURATION_PRESETS.map((p) => (
+            <a href={durationHref(p)} class:list={["preset", { active: presetIsActive(p) }]} aria-pressed={presetIsActive(p) ? "true" : "false"}>{p.label}</a>
+          ))}
+        </span>
+        <span class="range">
+          <input type="number" name="duration_min" min="0" step="1" placeholder="min s" value={durationMin ?? ""} aria-label="Min seconds" />
+          <span class="range-sep">–</span>
+          <input type="number" name="duration_max" min="0" step="1" placeholder="max s" value={durationMax ?? ""} aria-label="Max seconds" />
+        </span>
+        <button type="submit" class="facet-apply">Go</button>
+      </form>
 
-  <div class="sort-row">
-    <span class="sort-label">Sort</span>
-    <ul class="sort-list" role="list">
-      {SORT_DIMS.map((dim) => {
-        const state = sortStateFor(dim, sort, sortExplicit);
-        const next = nextSort(dim, state);
-        const href = buildHref({ sort: next });
-        const arrow = state === "asc" ? "↑" : state === "desc" ? "↓" : "";
-        const titleNext = state === "off"
-          ? `Sort by ${dim.label}, ${dim.asc ? "ascending" : "descending"}`
-          : state === "asc"
-            ? (dim.desc ? `Sort by ${dim.label}, descending` : `Clear ${dim.label} sort`)
-            : `Clear ${dim.label} sort`;
-        return (
-          <li>
+      {/* Quality */}
+      <div class="facet">
+        <span class="facet-label">Quality</span>
+        <span class="quality">
+          {[
+            { v: null as number | null, label: "Any" },
+            { v: 1, label: "★ 1+" },
+            { v: 2, label: "★ 2+" },
+            { v: 3, label: "★ 3" },
+          ].map((opt) => (
             <a
-              href={href}
-              class:list={["sort-toggle", { active: state !== "off" }]}
-              data-state={state}
-              aria-pressed={state !== "off" ? "true" : "false"}
-              title={titleNext}
-            >
-              <span class="sort-toggle-label">{dim.label}</span>
-              {arrow && <span class="sort-toggle-arrow" aria-hidden="true">{arrow}</span>}
-            </a>
-          </li>
-        );
-      })}
-    </ul>
-    {/* Archive link sits at the trailing edge of the sort row. Clicking
-        opens the Trash bucket where archived items can be restored by
-        re-assigning them to any J/L/F/T category. */}
-    <a
-      class:list={["archive-link", { active: bucket === "trash" }]}
-      href={bucket === "trash" ? "/portal/buckets/all" : "/portal/buckets/trash"}
-      title={bucket === "trash" ? "Back to All" : "Browse archived items"}
-    >{bucket === "trash" ? "← Back to All" : "Archive →"}</a>
-  </div>
+              href={buildHref({ quality_min: opt.v === null ? null : String(opt.v) })}
+              class:list={["q-chip", { active: (qualityMin ?? null) === opt.v }]}
+            >{opt.label}</a>
+          ))}
+        </span>
+      </div>
+
+      {/* Has project */}
+      <div class="facet">
+        <span class="facet-label">Project</span>
+        <a
+          href={buildHref({ has_project: hasProject ? null : "1" })}
+          class:list={["toggle-chip", { active: hasProject }]}
+          aria-pressed={hasProject ? "true" : "false"}
+          title="Only tracks linked to a source .als project"
+        >⧉ Has linked project</a>
+      </div>
+
+      {/* Tags */}
+      {(topTags.length > 0 || activeTags.length > 0) && (
+        <div class="facet facet-wide">
+          <span class="facet-label">Tags</span>
+          <span class="tags">
+            {topTags.map((t) => (
+              <a href={buildTagsHref(t.tag)} class:list={["tag-chip", { active: activeSet.has(t.tag) }]} aria-pressed={activeSet.has(t.tag) ? "true" : "false"}>
+                <span class="tag-name">{t.tag}</span><span class="tag-count">{t.count.toLocaleString()}</span>
+              </a>
+            ))}
+            {activeTags.filter((t) => !topTags.some((tt) => tt.tag === t)).map((t) => (
+              <a href={buildTagsHref(t)} class="tag-chip active" aria-pressed="true"><span class="tag-name">{t}</span></a>
+            ))}
+          </span>
+        </div>
+      )}
+    </div>
+  </details>
 </section>
+
+<script>
+  // Selects (sort, key) navigate on change, preserving every other filter and
+  // resetting pagination. `data-default` is the value that means "no param".
+  document.querySelectorAll<HTMLSelectElement>("select[data-nav-param]").forEach((el) => {
+    el.addEventListener("change", () => {
+      const url = new URL(window.location.href);
+      const param = el.dataset.navParam!;
+      const def = el.dataset.default ?? "";
+      if (el.value && el.value !== def) url.searchParams.set(param, el.value);
+      else url.searchParams.delete(param);
+      url.searchParams.delete("offset");
+      window.location.href = url.toString();
+    });
+  });
+</script>
 
 <style>
   .filters {
-    display: grid;
-    gap: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-bottom: 18px;
   }
 
-  /* Archive link — quiet trailing chip in the sort row that opens the
-     Trash bucket. When already in Trash, it flips to "Back to All" so
-     you can navigate out without using the URL bar. */
-  .archive-link {
-    margin-left: auto;
-    font-family: "Geist Variable", ui-sans-serif, system-ui, sans-serif;
-    font-size: 11px;
-    font-weight: 700;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-    text-decoration: none;
-    color: rgba(245, 241, 232, 0.55);
-    border: 1px dashed rgba(245, 241, 232, 0.20);
-    border-radius: 3px;
-    padding: 5px 10px;
-    transition: color 160ms ease, border-color 160ms ease, background 160ms ease;
-  }
-  .archive-link:hover,
-  .archive-link:focus-visible {
-    color: #ff2761;
-    border-color: rgba(255, 39, 97, 0.55);
-    outline: none;
-  }
-  .archive-link.active {
-    color: #ff2761;
-    border-color: rgba(255, 39, 97, 0.55);
-    border-style: solid;
-    background: rgba(255, 39, 97, 0.06);
-  }
-
-  /* ── Tags chip strip (sits above Category) ────────────────────────── */
-  .tags-strip {
+  /* ── Primary bar ── */
+  .bar {
     display: flex;
     align-items: center;
-    gap: var(--space-3);
-    padding: 8px 14px;
-    background: color-mix(in srgb, var(--ink) 4%, transparent);
-    border: 1px solid var(--line);
-    border-bottom: none;
+    gap: 10px;
     flex-wrap: wrap;
   }
-  .tags-label {
-    font-size: 10px;
-    font-weight: var(--fw-semibold);
-    letter-spacing: 0.14em;
-    text-transform: uppercase;
-    color: var(--muted);
-    flex: 0 0 auto;
-  }
-  .tags-list {
-    list-style: none;
-    padding: 0;
-    margin: 0;
-    display: flex;
-    flex-wrap: wrap;
-    gap: 6px;
-    flex: 1;
-  }
-  .tag-chip {
-    display: inline-flex;
-    align-items: baseline;
-    gap: 6px;
-    font-size: 12px;
-    font-weight: var(--fw-semibold);
-    letter-spacing: 0.04em;
-    color: var(--text);
-    border: 1px solid var(--line);
-    padding: 5px 10px;
-    text-decoration: none;
-    transition: color 160ms ease, border-color 160ms ease,
-                background-color 160ms ease;
-  }
-  .tag-chip:hover,
-  .tag-chip:focus-visible {
-    color: var(--accent);
-    border-color: var(--accent);
-    outline: none;
-  }
-  .tag-chip.active {
-    color: var(--bg);
-    background: var(--accent);
-    border-color: var(--accent);
-  }
-  .tag-chip .tag-name {
-    text-transform: lowercase;
-  }
-  .tag-chip .tag-count {
-    font-size: 10px;
-    font-weight: var(--fw-regular);
-    color: var(--muted);
-    letter-spacing: 0;
-  }
-  .tag-chip.active .tag-count {
-    color: color-mix(in srgb, var(--bg) 70%, transparent);
-  }
-  .tags-clear {
-    margin-left: auto;
-    font-family: "Geist Variable", ui-sans-serif, system-ui, sans-serif;
-    font-size: 11px;
-    font-weight: var(--fw-semibold);
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-    text-decoration: none;
-    color: rgba(245, 241, 232, 0.55);
-    border: 1px dashed rgba(245, 241, 232, 0.20);
-    padding: 5px 10px;
-    transition: color 160ms ease, border-color 160ms ease;
-  }
-  .tags-clear:hover,
-  .tags-clear:focus-visible {
-    color: #ff2761;
-    border-color: rgba(255, 39, 97, 0.55);
-    outline: none;
-  }
-
-  /* ── Category strip (primary nav) ─────────────────────────────────── */
-  .cats {
-    display: flex;
-    align-items: stretch;
-    gap: 0;
-    flex-wrap: wrap;
-    background: color-mix(in srgb, var(--ink) 4%, transparent);
-    border: 1px solid var(--line);
-    border-bottom: none;
-    padding: 4px;
-  }
-  .cat-projects {
-    margin-left: auto;
-    align-self: center;
-    border: 1px dashed var(--line);
-    opacity: 0.82;
-  }
-  .cat-projects:hover { opacity: 1; }
-  .cats-label {
-    padding: 12px 14px;
-    font-size: 10px;
-    font-weight: var(--fw-semibold);
-    letter-spacing: 0.14em;
-    text-transform: uppercase;
-    color: var(--muted);
-    align-self: center;
-    border-right: 1px solid var(--line);
-    margin-right: 4px;
-  }
-  .cats-list {
-    list-style: none;
-    padding: 0;
-    margin: 0;
-    display: flex;
-    flex: 1;
-    flex-wrap: wrap;
-    gap: 4px;
-  }
-  .cats-list li { flex: 1; min-width: 0; }
-  .cat {
+  .search {
+    flex: 1 1 280px;
     display: flex;
     align-items: center;
-    justify-content: center;
-    text-align: center;
-    height: 100%;
-    min-height: 42px;
-    padding: 12px 18px;
-    font-size: 14px;
-    font-weight: var(--fw-semibold);
-    letter-spacing: 0.05em;
-    text-transform: uppercase;
-    color: var(--text);
-    background: transparent;
-    border: 1.5px solid var(--line);
-    text-decoration: none;
-    transition: color 160ms ease, border-color 160ms ease,
-                background-color 160ms ease, transform 80ms ease;
-  }
-  .cat:hover,
-  .cat:focus-visible {
-    color: var(--accent);
-    border-color: var(--accent);
-  }
-  .cat:active { transform: translateY(1px); }
-  .cat.active {
-    color: var(--bg);
-    background: var(--accent);
-    border-color: var(--accent);
-  }
-
-  /* ── Duration filter row ──────────────────────────────────────────── */
-  /* Length + precise filters are tucked into a collapsed disclosure so the
-     default filter view stays clean (search · categories · sort). */
-  .filters-adv { padding-top: 2px; }
-  .filters-adv-summary {
-    list-style: none;
-    cursor: pointer;
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    padding: 8px 4px;
-    font: 600 11px ui-monospace, SFMono-Regular, Menlo, monospace;
-    letter-spacing: 0.06em;
-    text-transform: uppercase;
-    color: rgba(245, 241, 232, 0.5);
-    user-select: none;
-  }
-  .filters-adv-summary::-webkit-details-marker { display: none; }
-  .filters-adv-summary:hover { color: var(--ink); }
-  .adv-caret { display: inline-block; font-size: 10px; transition: transform 140ms ease; }
-  .filters-adv[open] .adv-caret { transform: rotate(90deg); }
-  .dur-row {
-    display: flex;
-    align-items: center;
-    flex-wrap: wrap;
     gap: 8px;
-    padding: 8px 0;
-  }
-  .dur-label {
-    padding: 0 14px 0 0;
-    font-size: 10px;
-    font-weight: var(--fw-semibold);
-    letter-spacing: 0.14em;
-    text-transform: uppercase;
-    color: var(--muted);
-    border-right: 1px solid var(--line);
-    margin-right: 4px;
-  }
-  .dur-presets {
-    list-style: none;
-    padding: 0;
-    margin: 0;
-    display: flex;
-    gap: 4px;
-    flex-wrap: wrap;
-  }
-  .dur-chip {
-    display: inline-flex;
-    align-items: center;
-    padding: 6px 12px;
-    font-size: 12px;
-    font-family: var(--font-mono, monospace);
-    color: var(--text);
-    background: transparent;
+    background: color-mix(in srgb, var(--ink) 5%, transparent);
     border: 1px solid var(--line);
-    border-radius: 7px;
-    text-decoration: none;
-    transition: color 140ms ease, border-color 140ms ease, background-color 140ms ease;
+    border-radius: 10px;
+    padding: 0 12px;
+    transition: border-color 140ms ease, box-shadow 140ms ease;
   }
-  .dur-chip:hover,
-  .dur-chip:focus-visible {
-    color: var(--accent);
-    border-color: var(--accent);
+  .search:focus-within {
+    border-color: color-mix(in srgb, var(--accent-2) 55%, transparent);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent-2) 14%, transparent);
   }
-  .dur-chip.active {
-    color: var(--bg);
-    background: var(--accent);
-    border-color: var(--accent);
-  }
-  .dur-form {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    margin-left: 4px;
-  }
-  .dur-input {
-    width: 72px;
-    padding: 6px 8px;
-    font-size: 12px;
-    font-family: var(--font-mono, monospace);
-    color: var(--text);
-    background: color-mix(in srgb, var(--ink) 4%, transparent);
-    border: 1px solid var(--line);
-    border-radius: 7px;
-  }
-  .dur-input:focus-visible {
-    outline: none;
-    border-color: var(--accent);
-  }
-  .dur-sep { color: var(--muted); }
-  .dur-apply {
-    padding: 6px 12px;
-    font-size: 12px;
-    font-weight: var(--fw-semibold);
-    color: var(--accent);
-    background: color-mix(in srgb, var(--accent) 6%, transparent);
-    border: 1px solid color-mix(in srgb, var(--accent) 32%, transparent);
-    border-radius: 7px;
-    cursor: pointer;
-    transition: background-color 140ms ease, border-color 140ms ease;
-  }
-  .dur-apply:hover {
-    background: color-mix(in srgb, var(--accent) 14%, transparent);
-    border-color: var(--accent);
-  }
-  .dur-clear {
-    font-size: 11px;
-    color: var(--muted);
-    text-decoration: underline;
-    text-underline-offset: 2px;
-    margin-left: 2px;
-  }
-  .dur-clear:hover { color: var(--accent); }
-
-  /* ── Search bar (scoped to selected category) ─────────────────────── */
-  .searchbar {
-    display: flex;
-    align-items: center;
-    gap: var(--space-2);
-    padding: 10px 14px;
-    background: color-mix(in srgb, var(--ink) 4%, transparent);
-    border: 1px solid var(--line);
-    border-top: 1px dashed var(--line);
-    flex-wrap: wrap;
-  }
-  .searchbar-context {
-    display: inline-flex;
-    align-items: baseline;
-    gap: 6px;
-    color: var(--muted);
-    font-size: 12px;
-    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-    letter-spacing: 0;
-    flex: 0 0 auto;
-  }
-  .ctx-arrow { color: var(--accent); font-weight: var(--fw-semibold); }
-  .ctx-name {
-    color: var(--text);
-    font-weight: var(--fw-semibold);
-    letter-spacing: 0.04em;
-    text-transform: uppercase;
-  }
+  .search-icon { opacity: 0.5; font-size: 16px; }
   .search-input {
     flex: 1;
-    min-width: 14rem;
-    font: inherit;
-    font-size: 15px;
-    color: var(--text);
-    background: var(--surface-1);
-    border: 1px solid var(--line);
-    padding: 9px 12px;
-    transition: border-color 160ms ease;
-  }
-  .search-input:focus {
+    min-width: 0;
+    background: transparent;
+    border: none;
     outline: none;
-    border-color: var(--accent);
+    color: var(--ink);
+    font: 500 14px/1 "Geist Variable", ui-sans-serif, system-ui, sans-serif;
+    padding: 12px 2px;
   }
-  .search-input::-webkit-search-cancel-button { cursor: pointer; }
-  .random-btn {
-    flex: 0 0 auto;
-    font: inherit;
-    font-size: 12px;
-    font-weight: var(--fw-semibold);
-    letter-spacing: 0.06em;
-    text-transform: uppercase;
-    color: var(--bg);
-    background: var(--accent);
-    border: 1px solid var(--accent);
-    padding: 9px 14px;
-    cursor: pointer;
-    transition: background-color 160ms ease, color 160ms ease;
-  }
-  .random-btn:hover,
-  .random-btn:focus-visible {
-    background: var(--ink);
-    color: var(--ink-fg);
-    border-color: var(--ink);
-    outline: none;
-  }
+  .search-input::placeholder { color: color-mix(in srgb, var(--ink) 40%, transparent); }
 
-  /* ── Sort row (secondary, light visual weight) ────────────────────── */
-  .sort-row {
-    display: flex;
+  .sort {
+    display: inline-flex;
     align-items: center;
-    gap: var(--space-3);
-    padding: 8px 14px;
-    border: 1px solid var(--line);
-    border-top: none;
-    flex-wrap: wrap;
+    gap: 6px;
+    flex-shrink: 0;
   }
   .sort-label {
-    font-size: 10px;
-    font-weight: var(--fw-semibold);
-    letter-spacing: 0.14em;
+    font: 600 10.5px ui-monospace, SFMono-Regular, Menlo, monospace;
+    letter-spacing: 0.08em;
     text-transform: uppercase;
-    color: var(--muted);
-    flex: 0 0 auto;
+    opacity: 0.6;
   }
-  .sort-list {
-    list-style: none;
-    padding: 0;
-    margin: 0;
+  .sort-select {
+    font: 500 13px "Geist Variable", ui-sans-serif, system-ui, sans-serif;
+    color: var(--ink);
+    background: color-mix(in srgb, var(--ink) 5%, transparent);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 9px 10px;
+    cursor: pointer;
+  }
+  .random-btn {
+    flex-shrink: 0;
+    font: 600 12px "Geist Variable", ui-sans-serif, system-ui, sans-serif;
+    color: var(--ink);
+    background: color-mix(in srgb, var(--ink) 5%, transparent);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 10px 14px;
+    cursor: pointer;
+  }
+
+  /* ── Category pills ── */
+  .cats { display: flex; flex-wrap: wrap; gap: 4px; align-items: center; }
+  .cat {
+    font: 600 12.5px "Geist Variable", ui-sans-serif, system-ui, sans-serif;
+    color: color-mix(in srgb, var(--ink) 60%, transparent);
+    background: color-mix(in srgb, var(--ink) 4%, transparent);
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    padding: 7px 14px;
+    text-decoration: none;
+    transition: color 140ms ease, background 140ms ease, border-color 140ms ease;
+  }
+  .cat:hover { color: var(--ink); border-color: color-mix(in srgb, var(--ink) 28%, transparent); }
+  /* .cat.active picks up the brand gradient from PortalLayout's global rule. */
+  .cat-projects, .cat-archive { margin-left: auto; opacity: 0.85; }
+  .cat-archive { margin-left: 0; }
+
+  /* ── Active-filter summary ── */
+  .active {
     display: flex;
+    align-items: center;
+    gap: 10px;
     flex-wrap: wrap;
+    padding: 8px 12px;
+    background: color-mix(in srgb, var(--accent-2) 6%, transparent);
+    border: 1px solid color-mix(in srgb, var(--accent-2) 22%, transparent);
+    border-radius: 10px;
+  }
+  .active-label {
+    font: 600 10px ui-monospace, SFMono-Regular, Menlo, monospace;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    opacity: 0.65;
+  }
+  .active-list { display: flex; flex-wrap: wrap; gap: 6px; list-style: none; margin: 0; padding: 0; }
+  .active-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font: 600 12px "Geist Variable", ui-sans-serif, system-ui, sans-serif;
+    color: var(--ink);
+    background: color-mix(in srgb, var(--ink) 8%, transparent);
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    padding: 4px 10px;
+    text-decoration: none;
+  }
+  .active-chip .x { opacity: 0.55; font-size: 14px; }
+  .active-chip:hover { border-color: color-mix(in srgb, var(--accent) 50%, transparent); }
+  .active-chip:hover .x { opacity: 1; color: var(--accent); }
+  .active-clear {
+    margin-left: auto;
+    font: 600 11px ui-monospace, SFMono-Regular, Menlo, monospace;
+    letter-spacing: 0.04em;
+    color: color-mix(in srgb, var(--accent) 90%, white);
+    text-decoration: none;
+  }
+  .active-clear:hover { text-decoration: underline; }
+
+  /* ── Facet panel ── */
+  .facets {
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    background: color-mix(in srgb, var(--ink) 3%, transparent);
+  }
+  .facets-summary {
+    list-style: none;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 11px 14px;
+    font: 600 11px ui-monospace, SFMono-Regular, Menlo, monospace;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: color-mix(in srgb, var(--ink) 60%, transparent);
+    user-select: none;
+  }
+  .facets-summary::-webkit-details-marker { display: none; }
+  .facets-summary:hover { color: var(--ink); }
+  .facets-caret { transition: transform 140ms ease; }
+  .facets[open] .facets-caret { transform: rotate(90deg); }
+  .facets-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+    gap: 12px 18px;
+    padding: 4px 14px 16px;
+  }
+  .facet { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; }
+  .facet-wide { grid-column: 1 / -1; }
+  .facet-label {
+    font: 600 10px ui-monospace, SFMono-Regular, Menlo, monospace;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    opacity: 0.55;
+    min-width: 48px;
+  }
+  .range { display: inline-flex; align-items: center; gap: 6px; }
+  .range input, .key-select {
+    background: color-mix(in srgb, var(--ink) 5%, transparent);
+    border: 1px solid var(--line);
+    border-radius: 7px;
+    color: var(--ink);
+    font: 500 13px "Geist Variable", ui-sans-serif, system-ui, sans-serif;
+    padding: 7px 9px;
+  }
+  .range input { width: 68px; }
+  .range-sep { opacity: 0.5; }
+  .facet-apply {
+    font: 600 11px ui-monospace, SFMono-Regular, Menlo, monospace;
+    color: var(--ink);
+    background: color-mix(in srgb, var(--ink) 7%, transparent);
+    border: 1px solid var(--line);
+    border-radius: 7px;
+    padding: 7px 11px;
+    cursor: pointer;
+  }
+  .presets, .quality, .tags { display: inline-flex; flex-wrap: wrap; gap: 6px; }
+  .preset, .q-chip, .toggle-chip, .tag-chip {
+    font: 600 12px "Geist Variable", ui-sans-serif, system-ui, sans-serif;
+    color: color-mix(in srgb, var(--ink) 62%, transparent);
+    background: color-mix(in srgb, var(--ink) 5%, transparent);
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    padding: 6px 12px;
+    text-decoration: none;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
     gap: 6px;
   }
-  /* 3-state sort toggle. Off = label only, neutral border. Active (asc or
-     desc) = accent background with the arrow appended. Cycle is off → asc
-     → desc → off via the pre-computed href on each click — no JS state. */
-  .sort-toggle {
-    display: inline-flex;
-    align-items: baseline;
-    gap: 4px;
-    font-size: 11px;
-    font-weight: var(--fw-semibold);
-    letter-spacing: 0.06em;
-    text-transform: uppercase;
-    color: var(--muted);
-    border: 1px solid var(--line);
-    padding: 5px 9px;
-    text-decoration: none;
-    transition: color 160ms ease, border-color 160ms ease,
-                background-color 160ms ease;
+  .preset:hover, .q-chip:hover, .toggle-chip:hover, .tag-chip:hover { color: var(--ink); }
+  .preset.active, .q-chip.active, .toggle-chip.active, .tag-chip.active {
+    color: #fff;
+    background: color-mix(in srgb, var(--accent) 80%, transparent);
+    border-color: color-mix(in srgb, var(--accent) 60%, transparent);
   }
-  .sort-toggle:hover,
-  .sort-toggle:focus-visible {
-    color: var(--text);
-    border-color: var(--text);
-    outline: none;
-  }
-  .sort-toggle.active {
-    color: var(--bg);
-    background: var(--accent);
-    border-color: var(--accent);
-  }
-  .sort-toggle-arrow {
-    font-size: 12px;
-    font-weight: 700;
-    line-height: 1;
-    /* Tighten optical kerning so the arrow sits flush with the label. */
-    margin-left: -1px;
+  .tag-count { opacity: 0.55; font-family: ui-monospace, Menlo, monospace; font-size: 10.5px; }
+
+  @media (max-width: 560px) {
+    .facets-grid { grid-template-columns: 1fr; }
+    .cat-projects, .cat-archive { margin-left: 0; }
   }
 </style>

@@ -57,6 +57,16 @@ const parseNum = (v: string | null): number | undefined => {
 const durationMin = parseNum(url.searchParams.get("duration_min"));
 const durationMax = parseNum(url.searchParams.get("duration_max"));
 
+// Musical + curation facets (2026-06-03).
+const bpmMin = parseNum(url.searchParams.get("bpm_min"));
+const bpmMax = parseNum(url.searchParams.get("bpm_max"));
+const keyFilter = (url.searchParams.get("key") ?? "").trim();
+const qualityMinRaw = parseNum(url.searchParams.get("quality_min"));
+const qualityMin = qualityMinRaw !== undefined
+  ? Math.min(3, Math.max(1, Math.floor(qualityMinRaw)))
+  : undefined;
+const hasProject = url.searchParams.get("has_project") === "1";
+
 // Pagination. ?offset= drives the window; ?focus= forces page 1 server-side
 // so we zero it here too so the footer math agrees.
 const offsetParam = parseNum(url.searchParams.get("offset"));
@@ -90,6 +100,8 @@ const [primary, topTagsRes] = await Promise.all([
   getBucketsList(bucket, {
     sort, q, category, tags: tagsParam, focus,
     duration_min: durationMin, duration_max: durationMax,
+    bpm_min: bpmMin, bpm_max: bpmMax, key: keyFilter || undefined,
+    quality_min: qualityMin, has_project: hasProject || undefined,
     offset, limit: PAGE_SIZE,
   }),
   getTopTags(bucket, category, 10),
@@ -125,6 +137,11 @@ const pageHref = (newOffset: number): string => {
   if (tagsParam) p.set("tags", tagsParam);
   if (durationMin !== undefined) p.set("duration_min", String(durationMin));
   if (durationMax !== undefined) p.set("duration_max", String(durationMax));
+  if (bpmMin !== undefined) p.set("bpm_min", String(bpmMin));
+  if (bpmMax !== undefined) p.set("bpm_max", String(bpmMax));
+  if (keyFilter) p.set("key", keyFilter);
+  if (qualityMin !== undefined) p.set("quality_min", String(qualityMin));
+  if (hasProject) p.set("has_project", "1");
   if (newOffset > 0) p.set("offset", String(newOffset));
   const qs = p.toString();
   return qs ? `/portal/buckets/${bucket}?${qs}` : `/portal/buckets/${bucket}`;
@@ -155,6 +172,11 @@ const BUCKET_TITLE: Record<BucketView, string> = {
       topTags={topTags}
       durationMin={durationMin}
       durationMax={durationMax}
+      bpmMin={bpmMin}
+      bpmMax={bpmMax}
+      keyFilter={keyFilter}
+      qualityMin={qualityMin}
+      hasProject={hasProject}
     />
 
     {fetchError ? (

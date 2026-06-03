@@ -613,21 +613,33 @@ const hasExpanded = true;
           linked) open it in Ableton on the M3 — the project actions nested onto
           the card so the Projects page isn't needed day-to-day. */}
       <div class="exp-actions exp-locate" role="group" aria-label="Locate">
-        <button
-          type="button"
-          class="locate-btn"
-          data-action="reveal-in-finder"
-          data-asset-id={String(item.asset_id)}
-          title="Reveal this file in Finder on the M3 (must be reachable from M3)"
-        >⤷ Reveal</button>
-        {item.als_project_id != null && (
+        {item.als_project_id != null ? (
+          <>
+            {/* Linked source project — reveal + open both work from M3 for every
+                active (iCloud) and archive (T7-over-SMB) project. */}
+            <button
+              type="button"
+              class="locate-btn"
+              data-action="reveal-in-finder"
+              data-project-asset-id={String(item.als_project_id)}
+              title="Reveal the source project in Finder on the M3"
+            >⤷ Reveal project</button>
+            <button
+              type="button"
+              class="locate-btn"
+              data-action="open-project-ableton"
+              data-project-asset-id={String(item.als_project_id)}
+              title="Open the source project in Ableton (M3)"
+            >⧉ Open in Ableton</button>
+          </>
+        ) : (
           <button
             type="button"
             class="locate-btn"
-            data-action="open-project-ableton"
-            data-project-asset-id={String(item.als_project_id)}
-            title="Open the linked source project in Ableton (M3)"
-          >⧉ Open in Ableton</button>
+            data-action="reveal-in-finder"
+            data-asset-id={String(item.asset_id)}
+            title="Reveal this file in Finder on the M3"
+          >⤷ Reveal file</button>
         )}
         <span class="action-status-pool">
           <span class="action-status" data-locate-status aria-live="polite"></span>
@@ -2364,14 +2376,23 @@ const hasExpanded = true;
     const statusEl = card?.querySelector<HTMLElement>("[data-locate-status]") ?? null;
     const setStatus = (m: string) => { if (statusEl) statusEl.textContent = m; };
     const isOpen = btn.dataset.action === "open-project-ableton";
+    const projId = btn.dataset.projectAssetId ? Number(btn.dataset.projectAssetId) : null;
     btn.disabled = true;
     setStatus(isOpen ? "opening…" : "revealing…");
     try {
+      // Open + project-reveal go through the projects proxies (reliable for
+      // iCloud + T7 projects); a bare file reveal uses the buckets proxy.
       const res = isOpen
         ? await fetch("/api/console/projects-open", {
             method: "POST",
             headers: { "content-type": "application/json" },
-            body: JSON.stringify({ project_asset_id: Number(btn.dataset.projectAssetId) }),
+            body: JSON.stringify({ project_asset_id: projId }),
+          })
+        : projId != null
+        ? await fetch("/api/console/projects-reveal", {
+            method: "POST",
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify({ project_asset_id: projId }),
           })
         : await fetch("/api/console/buckets-reveal-in-finder", {
             method: "POST",

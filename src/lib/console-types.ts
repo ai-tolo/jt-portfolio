@@ -503,6 +503,15 @@ export interface BucketsListFilters {
    *  are excluded when either bound is set. */
   duration_min?: number;
   duration_max?: number;
+  /** BPM range (inclusive). NULL/0-bpm rows drop out when either bound set. */
+  bpm_min?: number;
+  bpm_max?: number;
+  /** Exact musical key, e.g. "C major" / "F# minor" (case-insensitive). */
+  key?: string;
+  /** Minimum quality stars (1–3). */
+  quality_min?: number;
+  /** When true, only rows linked to a source .als project (als_project_id set). */
+  has_project?: boolean;
   /** Pagination. offset defaults to 0, limit to 50 (engine caps at 200). */
   offset?: number;
   limit?: number;
