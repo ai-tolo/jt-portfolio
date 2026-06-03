@@ -96,7 +96,7 @@ const tagsParam = activeTags.join(",");
 // Grid + top-tags fire in parallel — both are server-side and independent.
 // Top-tags reflects what's available in the bucket+category view BEFORE
 // the active filter, so the strip stays stable as the curator AND-narrows.
-const [primary, topTagsRes] = await Promise.all([
+const [primary, topTagsRes, inboxCountRes] = await Promise.all([
   getBucketsList(bucket, {
     sort, q, category, tags: tagsParam, focus,
     duration_min: durationMin, duration_max: durationMax,
@@ -105,7 +105,10 @@ const [primary, topTagsRes] = await Promise.all([
     offset, limit: PAGE_SIZE,
   }),
   getTopTags(bucket, category, 10),
+  // Untriaged-queue depth for the Inbox badge (cheap — limit 1, reads total).
+  getBucketsList("inbox", { limit: 1 }),
 ]);
+const inboxCount = inboxCountRes.ok ? inboxCountRes.data.total : 0;
 
 const items = primary.ok ? primary.data.items : [];
 const total = primary.ok ? primary.data.total : 0;
@@ -177,6 +180,7 @@ const BUCKET_TITLE: Record<BucketView, string> = {
       keyFilter={keyFilter}
       qualityMin={qualityMin}
       hasProject={hasProject}
+      inboxCount={inboxCount}
     />
 
     {fetchError ? (

@@ -40,9 +40,10 @@
      backdrop. */
   .status-bar {
     display: inline-block;
-    padding: 7px 14px 6px;
+    min-width: 340px;
+    padding: 8px 18px 7px;
     font-family: "Geist Variable", ui-sans-serif, system-ui, -apple-system, sans-serif;
-    font-size: 12px;
+    font-size: 12.5px;
     font-weight: 500;
     line-height: 1.2;
     color: rgba(245, 241, 232, 0.88);
@@ -71,17 +72,24 @@
   .cells {
     display: flex;
     align-items: stretch;
-    gap: 12px;
+    gap: 16px;
   }
   .cell {
     display: flex;
     flex-direction: column;
     justify-content: space-between;
     gap: 4px;
-    padding-right: 12px;
+    padding-right: 16px;
     border-right: 1px solid rgba(245, 241, 232, 0.08);
     min-width: 0;
   }
+  .cell-m1, .cell-m3 { flex: 1 1 96px; }
+  .cell-sys { flex: 1 1 132px; }
+  /* "to sort" links to the inbox; the count itself reads amber so the eye
+     lands on the one actionable number. */
+  .status-bar :global(.sys-link) { text-decoration: none; color: inherit; }
+  .status-bar :global(.sys-link:hover) { text-decoration: underline; }
+  .status-bar :global(.sys-link .tok-num) { color: #ffb84d; }
   .cell:last-child { border-right: 0; padding-right: 0; }
 
   .cell-label {
@@ -205,7 +213,7 @@
       const busy = jobs.filter((j) => j.running && !HIDDEN_JOBS.has(j.name));
       const j = busy.find((x) => x.progress) || busy[0] || null;
       if (!j) {
-        cellM1.innerHTML = tok("tok-dim", "idle");
+        cellM1.innerHTML = tok("tok-dim", "ready");
         barM1.style.width = "0%";
         return false;
       }
@@ -244,12 +252,19 @@
 
     const renderSys = (cat, disk) => {
       const parts = [];
-      parts.push(
-        tok("tok-key", "cat") + " " +
-        tok("tok-num", n(cat.transcribed)) + slash + tok("tok-dim", n(cat.total_user))
-      );
+      // Lead with the one actionable number: how many rows are waiting in the
+      // Inbox to be sorted. Links straight to the triage queue.
+      const toSort = cat.inbox_count;
+      if (typeof toSort === "number" && toSort > 0) {
+        parts.push(
+          '<a class="sys-link" href="/portal/buckets/inbox" title="Triage the inbox">' +
+          tok("tok-num", n(toSort)) + " " + tok("tok-key", "to sort") + "</a>"
+        );
+      } else {
+        parts.push(tok("tok-key", "inbox") + " " + tok("tok-keyword", "clear"));
+      }
       const diskPct = disk && disk.internal_pct_used;
-      const diskWarn = diskPct !== null && diskPct !== undefined && diskPct >= 90;
+      const diskWarn = diskPct !== null && diskPct !== undefined && diskPct >= 85;
       if (diskPct !== null && diskPct !== undefined) {
         parts.push(
           tok("tok-key", "disk") + " " +
@@ -257,7 +272,11 @@
         );
       }
       cellSys.innerHTML = parts.join(" " + sep + " ");
-      barSys.style.width = pct(cat.transcribed, cat.total_user).toFixed(2) + "%";
+      // Bar = catalog triaged fraction (how much has left the inbox).
+      const sorted = typeof toSort === "number" && cat.total_user
+        ? Math.max(0, cat.total_user - toSort)
+        : 0;
+      barSys.style.width = pct(sorted, cat.total_user || 0).toFixed(2) + "%";
       return diskWarn;
     };
 
