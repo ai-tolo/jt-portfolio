@@ -367,7 +367,7 @@ export type BucketView = BucketName | "all";
 
 /** User-facing filter taxonomy (replaced the prior Source + content_type
  *  + Stars chips on 2026-05-17 evening; see Notion: Console (Build)). */
-export type BucketCategory = "all" | "jam" | "loops" | "oneshot" | "field" | "tracks" | "other";
+export type BucketCategory = "all" | "jam" | "loops" | "oneshot" | "field" | "tracks" | "engineer" | "other";
 
 /** Legacy SOURCE enum kept for type compat on BucketAsset.source_type;
  *  no longer a user-facing filter. */
