@@ -5,7 +5,7 @@ Two halves: (1) the M1 side (Tailscale Funnel + auth key gate), (2) the Vercel s
 The shared API key for this session is:
 
 ```
-7db87e361a129e5587a7b407ddf6fdac24d8e3c6a9dddd8c6754efcb7714698f
+__CONSOLE_API_KEY_REDACTED__
 ```
 
 The same value must end up in three places: the M1 launchd plist, Vercel env vars, and the local `.env` (already added).
@@ -26,7 +26,7 @@ Open Terminal on the M1 and paste this single block. It:
 set -e
 cd /Users/jontollefson/automation/api
 
-API_KEY="7db87e361a129e5587a7b407ddf6fdac24d8e3c6a9dddd8c6754efcb7714698f"
+API_KEY="__CONSOLE_API_KEY_REDACTED__"
 
 # 1. Write the auth middleware
 cat > auth_middleware.py <<'PYTHON_EOF'
@@ -151,7 +151,7 @@ Add these four, checked for **Production**, **Preview**, and **Development**:
 | `CONSOLE_API_BASE` | the Funnel URL from part A (e.g. `https://macbook-pro-tolo.tailXXXXX.ts.net`) |
 | `CONSOLE_PASSWORD` | whatever password you want for the Portal (not `dev`) |
 | `CONSOLE_SESSION_SECRET` | a fresh value: run `openssl rand -hex 32` once and paste |
-| `CONSOLE_API_KEY` | `7db87e361a129e5587a7b407ddf6fdac24d8e3c6a9dddd8c6754efcb7714698f` |
+| `CONSOLE_API_KEY` | `__CONSOLE_API_KEY_REDACTED__` |
 
 ---
 
