@@ -187,6 +187,42 @@ function stemSoloUrls(sf) {
       )}
     </header>
 
+    {/* The Engineer's curiosity surface — ONE question it's genuinely unsure
+        about (where its renders lost in a way it didn't expect, a QA-flagged
+        take you crowned anyway, a dead-split contest). Populated client-side:
+        synthesis runs claude -p on M1 and can take 10–60s, so SSR never blocks
+        on it. Jon listens to the referenced audio inline + answers freeform;
+        the answer folds back into taste.py (bounded per-pole nudge) + every
+        future question. See engineer/curiosity.py + api/curiosity_endpoints.py. */}
+    <div class="cur-thinking" data-cur-thinking hidden>
+      <span class="cur-thinking-dot" aria-hidden="true"></span>
+      the Engineer is thinking about your last votes…
+    </div>
+    <section class="curiosity" data-curiosity hidden aria-live="polite">
+      <div class="cur-card">
+        <div class="cur-head">
+          <span class="cur-eyebrow">the Engineer asks</span>
+          <span class="cur-finding" data-cur-finding hidden></span>
+        </div>
+        <p class="cur-question" data-cur-question></p>
+        <div class="cur-refs" data-cur-refs></div>
+        <div class="cur-respond" data-cur-respond>
+          <textarea
+            class="cur-answer"
+            data-cur-answer
+            rows="3"
+            placeholder="Tell me what you hear — as much or as little as you want."
+          ></textarea>
+          <div class="cur-actions">
+            <button type="button" class="cur-send" data-cur-send>Send →</button>
+            <button type="button" class="cur-skip" data-cur-skip>ask me something else</button>
+          </div>
+        </div>
+        <p class="cur-done" data-cur-done hidden></p>
+      </div>
+      <audio data-cur-audio preload="none"></audio>
+    </section>
+
     {/* The old in-flight / pairs / winners / errored status pills were
         removed — they duplicated the sections below and the counts read as
         misleading. Errors now surface ONLY when actionable: an unsuperseded
@@ -729,6 +765,209 @@ function stemSoloUrls(sf) {
     max-width: 640px;
   }
   .lede a { color: var(--accent, currentColor); }
+
+  /* ── The Engineer's curiosity surface ──────────────────────────────── */
+  .cur-thinking {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin: 2px 0 26px;
+    font-size: 14px;
+    font-style: italic;
+    color: rgba(255, 255, 255, 0.42);
+  }
+  .cur-thinking[hidden] { display: none; }
+  .cur-thinking-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #0ec4fc;
+    box-shadow: 0 0 10px rgba(14, 196, 252, 0.6);
+    animation: cur-pulse 1.25s ease-in-out infinite;
+  }
+  @keyframes cur-pulse {
+    0%, 100% { opacity: 0.3; transform: scale(0.8); }
+    50% { opacity: 1; transform: scale(1.15); }
+  }
+
+  .curiosity { margin: 2px 0 30px; }
+  .curiosity[hidden] { display: none; }
+  .cur-card {
+    position: relative;
+    border-radius: 16px;
+    padding: 18px 22px 16px;
+    background: linear-gradient(180deg, rgba(18, 16, 28, 0.96), rgba(11, 9, 17, 0.97));
+    border: 1px solid rgba(14, 196, 252, 0.26);
+    box-shadow:
+      0 10px 40px rgba(0, 0, 0, 0.4),
+      0 0 55px rgba(14, 196, 252, 0.06);
+  }
+  .cur-head {
+    display: flex;
+    align-items: baseline;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+  .cur-eyebrow {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: #0ec4fc;
+  }
+  .cur-eyebrow::before {
+    content: "◆";
+    margin-right: 7px;
+    font-size: 9px;
+    vertical-align: 1px;
+    opacity: 0.8;
+  }
+  .cur-finding {
+    font-size: 11.5px;
+    font-weight: 600;
+    letter-spacing: 0.01em;
+    color: rgba(255, 255, 255, 0.5);
+    font-variant-numeric: tabular-nums;
+  }
+  .cur-finding[hidden] { display: none; }
+  .cur-question {
+    margin: 11px 0 15px;
+    font-size: 1.13rem;
+    line-height: 1.55;
+    font-weight: 450;
+    color: #efe7dc;
+    text-wrap: pretty;
+  }
+
+  .cur-refs {
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+    margin-bottom: 16px;
+  }
+  .cur-ref {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 8px 12px;
+    border-radius: 10px;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    transition: border-color 0.18s, background 0.18s;
+  }
+  .cur-ref[data-playing] {
+    border-color: rgba(14, 196, 252, 0.42);
+    background: rgba(14, 196, 252, 0.07);
+  }
+  .cur-ref[data-role="source"] .cur-ref-label { color: #ffe9b8; }
+  .cur-play {
+    flex: 0 0 auto;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    background: rgba(255, 255, 255, 0.06);
+    color: #fff;
+    font-size: 12px;
+    line-height: 1;
+    cursor: pointer;
+    display: grid;
+    place-items: center;
+    transition: background 0.15s, border-color 0.15s;
+  }
+  .cur-play:hover { background: rgba(14, 196, 252, 0.18); border-color: rgba(14, 196, 252, 0.5); }
+  .cur-ref-body { flex: 1 1 auto; min-width: 0; }
+  .cur-ref-label {
+    font-size: 13px;
+    font-weight: 500;
+    color: rgba(255, 255, 255, 0.82);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .cur-ref-bar {
+    height: 5px;
+    margin-top: 7px;
+    border-radius: 3px;
+    background: rgba(255, 255, 255, 0.1);
+    cursor: pointer;
+    position: relative;
+    overflow: hidden;
+  }
+  .cur-ref-fill {
+    position: absolute;
+    inset: 0 auto 0 0;
+    width: 0%;
+    border-radius: 3px;
+    background: linear-gradient(90deg, #0ec4fc, #a06bff);
+  }
+  .cur-ref-time {
+    flex: 0 0 auto;
+    font: 500 11px ui-monospace, SFMono-Regular, Menlo, monospace;
+    color: rgba(255, 255, 255, 0.45);
+    min-width: 70px;
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .cur-respond[hidden] { display: none; }
+  .cur-answer {
+    width: 100%;
+    box-sizing: border-box;
+    background: rgba(0, 0, 0, 0.32);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 10px;
+    color: #eee;
+    padding: 10px 12px;
+    font-family: inherit;
+    font-size: 14px;
+    line-height: 1.5;
+    resize: vertical;
+    min-height: 62px;
+  }
+  .cur-answer:focus {
+    outline: none;
+    border-color: rgba(14, 196, 252, 0.5);
+    box-shadow: 0 0 0 3px rgba(14, 196, 252, 0.12);
+  }
+  .cur-actions {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin-top: 10px;
+  }
+  .cur-send {
+    padding: 8px 20px;
+    border-radius: 999px;
+    border: none;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    color: #1a1014;
+    background: linear-gradient(120deg, #ff2761, #ff8a3d, #ffd84d);
+    transition: opacity 0.15s, transform 0.1s;
+  }
+  .cur-send:hover { transform: translateY(-1px); }
+  .cur-send[disabled] { opacity: 0.45; cursor: default; transform: none; }
+  .cur-skip {
+    background: none;
+    border: none;
+    padding: 0;
+    color: rgba(255, 255, 255, 0.4);
+    font-size: 13px;
+    cursor: pointer;
+    text-decoration: underline;
+    text-underline-offset: 3px;
+  }
+  .cur-skip:hover { color: rgba(255, 255, 255, 0.7); }
+  .cur-done {
+    margin: 6px 0 2px;
+    font-size: 14px;
+    font-weight: 500;
+    color: #00ff4d;
+  }
+  .cur-done[hidden] { display: none; }
+
   .notice {
     font-size: 13px;
     color: #b54;
@@ -3882,5 +4121,222 @@ function stemSoloUrls(sf) {
         linkFlow(sourceId);
       }
     });
+  })();
+</script>
+
+<script>
+  /* ── The Engineer's curiosity surface controller ──────────────────────────
+     Self-contained module (own scope — no collisions with the faceoff/winners
+     scripts). Fetches the one open question from /api/console/curiosity (the
+     synthesis runs claude -p on M1, so we poll while status=synthesizing),
+     renders it + its 1–3 inline audio players, and posts Jon's freeform answer
+     back. One <audio>, one-at-a-time playback. */
+  (() => {
+    const root = document.querySelector("[data-curiosity]");
+    const thinking = document.querySelector("[data-cur-thinking]");
+    if (!root) return;
+    const qEl = root.querySelector("[data-cur-question]");
+    const findingEl = root.querySelector("[data-cur-finding]");
+    const refsEl = root.querySelector("[data-cur-refs]");
+    const respondEl = root.querySelector("[data-cur-respond]");
+    const answerEl = root.querySelector("[data-cur-answer]");
+    const sendBtn = root.querySelector("[data-cur-send]");
+    const skipBtn = root.querySelector("[data-cur-skip]");
+    const doneEl = root.querySelector("[data-cur-done]");
+    const audio = root.querySelector("[data-cur-audio]");
+
+    let current = null;
+    let playingRow = null;
+    let pollTimer = null;
+
+    const fmt = (s) => {
+      if (!isFinite(s) || s < 0) s = 0;
+      const m = Math.floor(s / 60), ss = Math.floor(s % 60);
+      return m + ":" + (ss < 10 ? "0" : "") + ss;
+    };
+    const assetUrl = (p) =>
+      p ? "/api/console/asset?path=" + encodeURIComponent(p) + "&variant=opus" : "";
+    const esc = (s) =>
+      String(s == null ? "" : s).replace(/[&<>"]/g, (c) =>
+        ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+
+    function setGlyph(row, g) {
+      const b = row && row.querySelector(".cur-play");
+      if (b) b.textContent = g;
+    }
+    function stopAudio() {
+      try { audio.pause(); } catch (e) {}
+      audio.removeAttribute("src");
+      try { audio.load(); } catch (e) {}
+      if (playingRow) {
+        playingRow.removeAttribute("data-playing");
+        setGlyph(playingRow, "▶");
+        const f = playingRow.querySelector(".cur-ref-fill");
+        if (f) f.style.width = "0%";
+        playingRow = null;
+      }
+    }
+    function playRow(row) {
+      const url = row.getAttribute("data-url");
+      if (!url) return;
+      if (playingRow === row) {
+        if (audio.paused) { audio.play().then(() => setGlyph(row, "❚❚")).catch(() => {}); }
+        else { audio.pause(); setGlyph(row, "▶"); }
+        return;
+      }
+      if (playingRow) {
+        playingRow.removeAttribute("data-playing");
+        setGlyph(playingRow, "▶");
+        const pf = playingRow.querySelector(".cur-ref-fill");
+        if (pf) pf.style.width = "0%";
+      }
+      playingRow = row;
+      row.setAttribute("data-playing", "");
+      audio.src = url;
+      try { audio.currentTime = 0; } catch (e) {}
+      audio.play().then(() => setGlyph(row, "❚❚")).catch(() => setGlyph(row, "▶"));
+    }
+    audio.addEventListener("timeupdate", () => {
+      if (!playingRow) return;
+      const d = audio.duration || Number(playingRow.getAttribute("data-dur")) || 0;
+      const fill = playingRow.querySelector(".cur-ref-fill");
+      const time = playingRow.querySelector(".cur-ref-time");
+      if (fill) fill.style.width = (d ? (audio.currentTime / d) * 100 : 0) + "%";
+      if (time) time.textContent = fmt(audio.currentTime) + " / " + fmt(d);
+    });
+    audio.addEventListener("ended", () => {
+      if (!playingRow) return;
+      setGlyph(playingRow, "▶");
+      const f = playingRow.querySelector(".cur-ref-fill");
+      if (f) f.style.width = "0%";
+    });
+
+    function findingText(ins) {
+      const f = ins.facts || {};
+      switch (ins.finding_type) {
+        case "original_dominates":
+          return f.original_wins != null ? f.original_wins + "/" + f.decided + " to your source" : "";
+        case "contested_split":
+          return f.decided != null ? "split " + (f.variant_wins ?? "?") + "–" + (f.original_wins ?? "?") + " · your call" : "";
+        case "qa_crowned":
+          return "you crowned a take I flagged";
+        case "distortion_cluster":
+          return f.distortion_comment_count ? f.distortion_comment_count + " distortion notes" : "";
+        case "variant_sweep":
+          return f.decided != null ? "my masters swept " + f.variant_wins + "/" + f.decided : "";
+        default:
+          return "";
+      }
+    }
+    function refHtml(ref) {
+      const tag = ref.reference ? " · toward " + ref.reference : "";
+      const dur = ref.duration_seconds || 0;
+      return (
+        '<div class="cur-ref" data-role="' + esc(ref.role) + '" data-url="' +
+        esc(assetUrl(ref.asset_path)) + '" data-dur="' + dur + '">' +
+        '<button type="button" class="cur-play" aria-label="Play">▶</button>' +
+        '<div class="cur-ref-body"><div class="cur-ref-label">' +
+        esc((ref.label || "") + tag) +
+        '</div><div class="cur-ref-bar"><div class="cur-ref-fill"></div></div></div>' +
+        '<span class="cur-ref-time">0:00 / ' + fmt(dur) + "</span></div>"
+      );
+    }
+    function render(ins) {
+      current = ins;
+      stopAudio();
+      qEl.textContent = ins.question;
+      const ft = findingText(ins);
+      if (ft) { findingEl.textContent = ft; findingEl.hidden = false; }
+      else findingEl.hidden = true;
+      refsEl.innerHTML = (ins.refs || []).map(refHtml).join("");
+      answerEl.value = "";
+      respondEl.hidden = false;
+      doneEl.hidden = true;
+      doneEl.style.color = "";
+      sendBtn.disabled = false;
+      thinking.hidden = true;
+      root.hidden = false;
+    }
+
+    refsEl.addEventListener("click", (e) => {
+      const btn = e.target.closest(".cur-play");
+      if (btn) { playRow(btn.closest(".cur-ref")); return; }
+      const bar = e.target.closest(".cur-ref-bar");
+      if (bar) {
+        const row = bar.closest(".cur-ref");
+        if (playingRow !== row) playRow(row);
+        const rect = bar.getBoundingClientRect();
+        const frac = Math.min(1, Math.max(0, (e.clientX - rect.left) / rect.width));
+        const d = audio.duration || Number(row.getAttribute("data-dur")) || 0;
+        if (d) audio.currentTime = frac * d;
+      }
+    });
+
+    async function fetchOnce() {
+      try {
+        const r = await fetch("/api/console/curiosity", { headers: { accept: "application/json" } });
+        if (!r.ok) return { status: "none" };
+        return await r.json();
+      } catch (e) { return { status: "none" }; }
+    }
+    async function load() {
+      const data = await fetchOnce();
+      if (data.status === "ready" && data.insight) { stopPoll(); render(data.insight); }
+      else if (data.status === "synthesizing") { root.hidden = true; thinking.hidden = false; startPoll(); }
+      else { stopPoll(); thinking.hidden = true; root.hidden = true; }
+    }
+    function startPoll() { if (!pollTimer) pollTimer = setInterval(load, 3500); }
+    function stopPoll() { if (pollTimer) { clearInterval(pollTimer); pollTimer = null; } }
+
+    sendBtn.addEventListener("click", async () => {
+      const ans = answerEl.value.trim();
+      if (!ans || !current) return;
+      sendBtn.disabled = true;
+      try {
+        const r = await fetch("/api/console/curiosity-answer", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ insight_id: current.id, answer: ans }),
+        });
+        if (!r.ok) throw new Error("failed");
+        stopAudio();
+        respondEl.hidden = true;
+        refsEl.innerHTML = "";
+        findingEl.hidden = true;
+        doneEl.style.color = "";
+        doneEl.textContent = "Got it — folding that into how I hear you.";
+        doneEl.hidden = false;
+        current = null;
+        setTimeout(() => { doneEl.hidden = true; root.hidden = true; load(); }, 2600);
+      } catch (e) {
+        sendBtn.disabled = false;
+        doneEl.style.color = "#ff6b6b";
+        doneEl.textContent = "Couldn't reach the Engineer — try again.";
+        doneEl.hidden = false;
+      }
+    });
+    answerEl.addEventListener("keydown", (e) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === "Enter") { e.preventDefault(); sendBtn.click(); }
+    });
+    skipBtn.addEventListener("click", async () => {
+      if (!current) return;
+      const id = current.id;
+      skipBtn.disabled = true;
+      stopAudio();
+      root.hidden = true;
+      thinking.hidden = false;
+      current = null;
+      try {
+        await fetch("/api/console/curiosity-skip", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ insight_id: id }),
+        });
+      } catch (e) {}
+      skipBtn.disabled = false;
+      setTimeout(load, 700);
+    });
+
+    load();
   })();
 </script>

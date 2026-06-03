@@ -929,3 +929,70 @@ export interface SoundsUpdateResponse {
   public: number;
   collection: string | null;
 }
+
+// ── Engineer curiosity loop (2026-06-03) ──────────────────────────────────
+// The Engineer surfaces ONE question it's genuinely uncertain about at the top
+// of /portal/engineer — a place its renders lost in a way it didn't expect, a
+// QA-flagged take crowned anyway, a dead-split contest. Jon listens to the
+// referenced audio inline and answers freeform; a claude -p distill on M1 folds
+// the answer back into the taste model (bounded per-pole nudge) + future
+// questions. Synthesis runs on M1; GET polls until the question is ready.
+
+/** One playable audio item a curiosity question is about. */
+export interface CuriosityRef {
+  /** source | master | crowned — what this take is, in the loop's terms. */
+  role: string;
+  /** Human label, e.g. "your source" / "my master · Sienna". */
+  label: string;
+  asset_id: number | null;
+  asset_path: string | null;
+  display_name: string | null;
+  duration_seconds: number | null;
+  waveform_sha1: string | null;
+  /** Pole + reference for master/crowned refs (null on the source). */
+  pole: string | null;
+  reference: string | null;
+}
+
+export interface CuriosityInsight {
+  id: number;
+  /** original_dominates | contested_split | qa_crowned | distortion_cluster |
+   *  variant_sweep — the kind of surprise this question is about. */
+  finding_type: string;
+  source_asset_id: number | null;
+  /** The synthesized question, in the Engineer's first-person voice. */
+  question: string;
+  /** 1–3 audio items to audition inline beneath the question. */
+  refs: CuriosityRef[];
+  /** The hard facts the finding was built from (tally, poles, etc.). */
+  facts: Record<string, unknown> | null;
+  created_at: string;
+}
+
+export interface CuriosityResponse {
+  /** ready = a question is waiting · synthesizing = poll again shortly ·
+   *  none = nothing worth asking right now · error = synth failed. */
+  status: "ready" | "synthesizing" | "none" | "error";
+  insight: CuriosityInsight | null;
+  detail: string | null;
+}
+
+export interface CuriosityAnswerResponse {
+  ok: boolean;
+  insight_id: number;
+}
+
+export interface CuriosityHistoryItem {
+  id: number;
+  finding_type: string;
+  question: string;
+  answer: string | null;
+  /** The distilled durable takeaway the taste model keeps. */
+  summary: string | null;
+  answered_at: string | null;
+}
+
+export interface CuriosityHistoryResponse {
+  total: number;
+  items: CuriosityHistoryItem[];
+}

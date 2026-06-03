@@ -49,6 +49,9 @@ import type {
   MixJobsListResponse,
   MixPairsResponse,
   MixJudgementResponse,
+  CuriosityResponse,
+  CuriosityAnswerResponse,
+  CuriosityHistoryResponse,
 } from "./console-types";
 
 // process.env is checked first so Vercel's runtime env vars always win in
@@ -955,6 +958,37 @@ export async function updateSoundsAsset(
   if (opts.public !== undefined) body.public = opts.public;
   if (opts.collection !== undefined) body.collection = opts.collection;
   return _post<SoundsUpdateResponse>("/sounds/update", body);
+}
+
+// ── Engineer curiosity loop ───────────────────────────────────────────────
+/** The current open question the Engineer wants Jon to answer, or a
+ *  synthesizing/none status. Poll until status is "ready" or "none". The
+ *  synthesis runs claude -p on M1, so allow a generous timeout on the engine
+ *  side; the GET itself returns immediately. */
+export function getCuriosity(opts?: FetchOpts) {
+  return call<CuriosityResponse>("/mix/curiosity", { timeoutMs: 8_000, ...opts });
+}
+
+/** Record Jon's freeform answer to a curiosity question. Folds back into the
+ *  taste model via a background distill on M1 (learn-only; no mix is spawned). */
+export function answerCuriosity(insight_id: number, answer: string) {
+  return _post<CuriosityAnswerResponse>("/mix/curiosity/answer", {
+    insight_id,
+    answer,
+  });
+}
+
+/** Dismiss the current question without answering; suppresses that finding for
+ *  its window and lets the next GET surface a different one. */
+export function skipCuriosity(insight_id: number) {
+  return _post<CuriosityAnswerResponse>("/mix/curiosity/skip", { insight_id });
+}
+
+/** Past answered questions + the distilled takeaway the Engineer kept. */
+export function curiosityHistory(limit = 20) {
+  return call<CuriosityHistoryResponse>(
+    `/mix/curiosity/history?limit=${limit}`,
+  );
 }
 
 // ── The Desk (content planning) — streamed `claude` runs on the M1 engine ──
