@@ -5,6 +5,7 @@
 import type { ResumeAST } from "../lib/resumes";
 import type { RichTextItemResponse } from "@notionhq/client/build/src/api-endpoints";
 import RichText from "./RichText.astro";
+import ResumeTab from "./resume/ResumeTab.astro";
 import ResumeTimeline from "./resume/ResumeTimeline.astro";
 import SkillsConstellation from "./resume/SkillsConstellation.astro";
 import ProofDbtPipeline from "./resume/ProofDbtPipeline.astro";
@@ -29,25 +30,64 @@ const companySlug = (s: string) =>
 // small wording changes: if nothing matches, the bullet renders as plain text.
 // Faithful-content rule: the bullet text is always rendered verbatim; a proof
 // only ADORNS the claim it can demonstrate, and never replaces the words.
-type Proof = { id: string; cta: string };
+// `label` is the handwritten shorthand on the Post-it flag (short + a little
+// cryptic, to invite a click); `color` is the fun flag color, `ink` its label
+// color (picked for contrast), `side` the edge it hangs off, `rot` its tilt.
+type Proof = {
+  id: string; label: string; color: string; ink: string;
+  side: "left" | "right"; rot: number; aria: string;
+};
 function proofFor(company: string, text: string): Proof | null {
   const c = company.toLowerCase();
   const t = text.toLowerCase();
   if (c.includes("chs")) {
-    if (t.includes("dbt")) return { id: "dbt", cta: "Run the parser" };
+    if (t.includes("dbt"))
+      return { id: "dbt", label: "run parser", color: "#54C842", ink: "#123a0e", side: "right", rot: -3, aria: "Run the dbt documentation parser" };
   }
   if (c.includes("raylu")) {
-    if (t.includes("component set")) return { id: "designsystem", cta: "Open the system" };
+    if (t.includes("component set"))
+      return { id: "designsystem", label: "open sys", color: "#9A77F0", ink: "#ffffff", side: "left", rot: 2.5, aria: "Open the live design system" };
   }
   if (c.includes("crediverso")) {
-    if (t.includes("bounce") || t.includes("usability")) return { id: "usability", cta: "See the test" };
-    if (t.includes("follower") || t.includes("125") || t.includes("growth")) return { id: "growth", cta: "Watch it grow" };
+    if (t.includes("bounce") || t.includes("usability"))
+      return { id: "usability", label: "see test", color: "#FF8A38", ink: "#3a1e05", side: "right", rot: -2, aria: "See the usability test result" };
+    if (t.includes("follower") || t.includes("125") || t.includes("growth"))
+      return { id: "growth", label: "grow", color: "#F45D9B", ink: "#ffffff", side: "left", rot: 3, aria: "Watch the follower growth" };
   }
   return null;
+}
+
+// Precompute the flag set (rendered in one layer so they can hang off either
+// edge and be positioned against their target rows by script). The timeline
+// flag leads; the rest follow their bullets.
+type TabDef = {
+  panelId: string; targetId: string; label: string; color: string;
+  ink: string; side: "left" | "right"; rot: number; aria: string;
+};
+const tabDefs: TabDef[] = [];
+const expSection = sections.find((s) => s.kind === "experience");
+if (expSection && expSection.kind === "experience") {
+  tabDefs.push({
+    panelId: "panel-timeline", targetId: "exp-head", label: "timeline",
+    color: "#15C2E6", ink: "#06323a", side: "left", rot: -3, aria: "Show the experience timeline",
+  });
+  for (const r of expSection.roles) {
+    for (const b of r.bullets) {
+      const proof = proofFor(r.company, plainText(b));
+      if (proof) {
+        tabDefs.push({
+          panelId: `panel-${proof.id}`, targetId: `bullet-${proof.id}`,
+          label: proof.label, color: proof.color, ink: proof.ink,
+          side: proof.side, rot: proof.rot, aria: proof.aria,
+        });
+      }
+    }
+  }
 }
 ---
 
 <article class="resume" lang="en">
+  <div class="rz-scrim r-live" data-scrim aria-hidden="true"></div>
   {tailoredFor && (
     <p class="tailored" aria-label="Tailored for">
       <span class="tailored-label">Tailored for</span> {tailoredFor}
@@ -86,8 +126,10 @@ function proofFor(company: string, text: string): Proof | null {
     if (s.kind === "experience") {
       return (
         <section class="section section-experience">
-          <h2 class="section-title">{s.title}</h2>
-          <ResumeTimeline roles={s.roles} />
+          <h2 class="section-title" id="exp-head">{s.title}</h2>
+          <div class="proof-wrap r-live" id="panel-timeline" data-proof-wrap data-open="false">
+            <div class="proof-inner"><ResumeTimeline roles={s.roles} /></div>
+          </div>
           <div class="section-body">
             {s.roles.map((r) => (
               <div class="role" data-company={companySlug(r.company)}>
@@ -103,24 +145,15 @@ function proofFor(company: string, text: string): Proof | null {
                   <ul class="role-bullets">
                     {r.bullets.map((b) => {
                       const proof = proofFor(r.company, plainText(b));
+                      const panelId = proof ? `panel-${proof.id}` : undefined;
                       return (
-                        <li class:list={["role-bullet", { "has-proof": !!proof }]}>
-                          <span class="bullet-line">
-                            <RichText rich={b} />
-                            {proof && (
-                              <button
-                                type="button"
-                                class="proof-toggle r-live"
-                                aria-expanded="false"
-                                data-proof-toggle
-                              >
-                                {proof.cta}
-                                <svg class="proof-chev" viewBox="0 0 10 7" width="9" height="7" aria-hidden="true"><path d="M1 1l4 4 4-4" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
-                              </button>
-                            )}
-                          </span>
-                          {proof && (
-                            <div class="proof-wrap r-live" data-proof-wrap data-open="false">
+                        <li
+                          class:list={["role-bullet", { "has-proof": !!proof }]}
+                          id={proof ? `bullet-${proof.id}` : undefined}
+                        >
+                          <span class="bullet-line"><RichText rich={b} /></span>
+                          {proof && panelId && (
+                            <div class="proof-wrap r-live" id={panelId} data-proof-wrap data-open="false">
                               <div class="proof-inner">
                                 {proof.id === "dbt" && <ProofDbtPipeline />}
                                 {proof.id === "designsystem" && <ProofDesignSystem />}
@@ -200,6 +233,21 @@ function proofFor(company: string, text: string): Proof | null {
       </section>
     );
   })}
+
+  <div class="rtab-layer r-live" data-tab-layer>
+    {tabDefs.map((t) => (
+      <ResumeTab
+        label={t.label}
+        color={t.color}
+        ink={t.ink}
+        side={t.side}
+        rot={t.rot}
+        controls={t.panelId}
+        target={t.targetId}
+        ariaLabel={t.aria}
+      />
+    ))}
+  </div>
 </article>
 
 <style>
@@ -418,58 +466,55 @@ function proofFor(company: string, text: string): Proof | null {
     font-weight: var(--fw-medium);
   }
 
-  /* ──── Live proof affordances (screen only; all carry .r-live) ──── */
+  /* ──── Live proof affordances: Post-it flags + focus dim (screen only) ──── */
+  @media screen {
+    .resume {
+      position: relative;
+      max-width: none;
+      /* how far a flag hangs off the sheet edge; shrinks with the viewport so
+         it never overflows the gutter, tucking flush on small screens */
+      --rtab-hang: clamp(0px, calc((100vw - 59rem) / 2), 52px);
+    }
+  }
   .bullet-line { display: inline; }
-  .role-bullet.has-proof { border-radius: 6px; transition: background 200ms ease; }
-  .role-bullet.has-proof:hover {
-    background: color-mix(in srgb, var(--accent) 6%, transparent);
-  }
-  .role-bullet.has-proof .bullet-line { cursor: pointer; }
 
-  .proof-toggle {
-    display: inline-flex;
-    align-items: center;
-    gap: 4px;
-    margin-left: 8px;
-    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-    font-size: 0.6875rem;
-    font-weight: var(--fw-semibold);
-    letter-spacing: 0.02em;
-    line-height: 1;
-    color: var(--accent);
-    background: color-mix(in srgb, var(--accent) 9%, transparent);
-    border: 1px solid color-mix(in srgb, var(--accent) 38%, transparent);
-    border-radius: 999px;
-    padding: 3px 9px;
-    cursor: pointer;
-    white-space: nowrap;
-    vertical-align: 1px;
-    transition: background 160ms ease, border-color 160ms ease, transform 140ms ease;
+  /* the spotlight scrim: dims the whole page; the active claim, its panel, and
+     the open flag are raised above it (the case-study focus pattern) */
+  .rz-scrim {
+    position: absolute;
+    inset: 0;
+    z-index: 20;
+    background: var(--surface-1);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 420ms ease;
   }
-  .proof-toggle:hover {
-    background: color-mix(in srgb, var(--accent) 18%, transparent);
-    border-color: var(--accent);
-  }
-  .proof-toggle:active { transform: scale(0.97); }
-  .proof-chev { transition: transform 260ms cubic-bezier(0.22, 1, 0.36, 1); }
-  .role-bullet.is-open .proof-chev { transform: rotate(180deg); }
-  .role-bullet.is-open .proof-toggle {
-    background: var(--accent);
-    border-color: var(--accent);
-    color: #fff;
-  }
+  .resume[data-focus] .rz-scrim { opacity: 0.84; pointer-events: auto; }
+  .rz-lit { position: relative; z-index: 30; }
+
+  .rtab-layer { position: absolute; inset: 0; z-index: 25; pointer-events: none; }
+  .rtab-layer :global(.rtab) { pointer-events: auto; }
+  .rtab-layer :global(.rtab.rz-lit) { z-index: 31; }
+  .resume[data-focus] .rtab-layer :global(.rtab:not(.rz-lit)) { opacity: 0.12; }
 
   .proof-wrap {
     display: grid;
     grid-template-rows: 0fr;
-    transition: grid-template-rows 400ms cubic-bezier(0.22, 1, 0.36, 1);
+    transition: grid-template-rows 420ms cubic-bezier(0.22, 1, 0.36, 1);
   }
-  .proof-wrap[data-open="true"] { grid-template-rows: 1fr; }
+  .proof-wrap[data-open="true"] { grid-template-rows: 1fr; margin: var(--space-3) 0 var(--space-2); }
   .proof-inner { overflow: hidden; min-height: 0; }
 
+  /* Mobile: skip the hanging flags + focus dim entirely. People don't dig into
+     the interactive proofs on a phone, and the narrow gutters leave no room to
+     hang flags cleanly. The résumé just reads as a clean page; the skills field
+     below still breathes. */
+  @media screen and (max-width: 48rem) {
+    .rtab-layer, .rz-scrim { display: none !important; }
+    .proof-wrap { display: none !important; }
+  }
   @media (prefers-reduced-motion: reduce) {
-    .proof-wrap { transition: none; }
-    .proof-chev { transition: none; }
+    .proof-wrap, .rz-scrim { transition: none; }
   }
 
   /* ──── Print styles ────
@@ -650,34 +695,76 @@ function proofFor(company: string, text: string): Proof | null {
 </style>
 
 <script>
-  // Per-bullet proof disclosure. Opening a panel plays its proof (the proof
-  // components also self-play on scroll, but the explicit dispatch is the
-  // reliable path when the panel was collapsed). Clicking the bullet text
-  // toggles too — except on links and the toggle button itself.
-  document.querySelectorAll<HTMLElement>(".role-bullet.has-proof").forEach((li) => {
-    const btn = li.querySelector<HTMLButtonElement>("[data-proof-toggle]");
-    const wrap = li.querySelector<HTMLElement>("[data-proof-wrap]");
-    const line = li.querySelector<HTMLElement>(".bullet-line");
-    if (!btn || !wrap) return;
-    const proofRoot = wrap.querySelector<HTMLElement>("[data-proof]");
+  // Post-it flags live in one layer and hang off either edge. The script: (1)
+  // aligns each flag vertically to its target row; (2) accordions open/close on
+  // click (one at a time); (3) runs focus mode — opening a flag dims the page
+  // and spotlights just that claim, its panel, and the flag.
+  document.querySelectorAll<HTMLElement>(".resume").forEach((resume) => {
+    const scrim = resume.querySelector<HTMLElement>("[data-scrim]");
+    const tabs = Array.from(resume.querySelectorAll<HTMLElement>("[data-proof-tab]"));
+    if (!tabs.length) return;
+    const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    let openTab: HTMLElement | null = null;
 
-    const toggle = () => {
-      const next = wrap.dataset.open !== "true";
-      wrap.dataset.open = String(next);
-      btn.setAttribute("aria-expanded", String(next));
-      li.classList.toggle("is-open", next);
-      if (next && proofRoot) proofRoot.dispatchEvent(new CustomEvent("play"));
+    const wrapOf = (tab: HTMLElement) =>
+      document.getElementById(tab.getAttribute("aria-controls") || "");
+
+    const place = () => {
+      const base = resume.getBoundingClientRect();
+      for (const tab of tabs) {
+        const target = tab.dataset.target ? document.getElementById(tab.dataset.target) : null;
+        if (!target) continue;
+        const r = target.getBoundingClientRect();
+        tab.style.setProperty("--rtab-top", `${Math.round(r.top - base.top + r.height / 2)}px`);
+      }
     };
 
-    btn.addEventListener("click", (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-      toggle();
-    });
-    line?.addEventListener("click", (e) => {
-      const tgt = e.target as HTMLElement;
-      if (tgt.closest("a") || tgt.closest("[data-proof-toggle]")) return;
-      toggle();
-    });
+    const clearLit = () => resume.querySelectorAll(".rz-lit").forEach((e) => e.classList.remove("rz-lit"));
+
+    const collapse = (tab: HTMLElement) => {
+      const wrap = wrapOf(tab);
+      if (wrap) wrap.dataset.open = "false";
+      tab.setAttribute("aria-expanded", "false");
+    };
+
+    const closeAll = () => {
+      tabs.forEach(collapse);
+      clearLit();
+      resume.removeAttribute("data-focus");
+      openTab = null;
+      place();
+      window.setTimeout(place, 460);
+    };
+
+    const open = (tab: HTMLElement) => {
+      tabs.forEach((t) => { if (t !== tab) collapse(t); });
+      clearLit();
+      const wrap = wrapOf(tab);
+      if (!wrap) return;
+      wrap.dataset.open = "true";
+      tab.setAttribute("aria-expanded", "true");
+      tab.classList.add("rz-lit");
+      wrap.classList.add("rz-lit");
+      if (tab.dataset.target) document.getElementById(tab.dataset.target)?.classList.add("rz-lit");
+      resume.setAttribute("data-focus", "");
+      openTab = tab;
+
+      const playable = wrap.querySelector<HTMLElement>("[data-proof], [data-timeline]");
+      if (playable) playable.dispatchEvent(new CustomEvent("play"));
+
+      place();
+      window.setTimeout(place, 460);
+    };
+
+    tabs.forEach((tab) =>
+      tab.addEventListener("click", () => (openTab === tab ? closeAll() : open(tab)))
+    );
+    scrim?.addEventListener("click", closeAll);
+    document.addEventListener("keydown", (e) => { if (e.key === "Escape" && openTab) closeAll(); });
+
+    place();
+    window.addEventListener("resize", place);
+    window.setTimeout(place, 120);
+    window.setTimeout(place, 650);
   });
 </script>
