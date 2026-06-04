@@ -1,17 +1,21 @@
 ---
 /**
  * EngineerTurtle — the Engineer's avatar: "Terrapin", a cute futuristic-hippie
- * robot turtle engineer. Grateful Dead's Terrapin Station banjo turtle ×
- * Daft Punk's glowing visor × a little hippie tie-dye/flower + sci-fi antenna.
+ * robot turtle mastering engineer. Grateful Dead's Terrapin Station banjo turtle ×
+ * a Daft-Punk cyan glow × hippie tie-dye/flower, rendered as an adorable chibi friend.
  *
- * Self-contained SVG component (no deps) so its art can be refined in isolation
- * without touching the Engineer page. Idle animation makes it feel alive — a
- * gentle bob, a visor shimmer, and a pulsing antenna — so the question reads as
- * the character speaking. Pass `speaking` to amp the visor while a question is up.
+ * Front-facing bust: a big open personable face (the emotional anchor) over a domed
+ * tie-dye shell. The futuristic/engineer signal lives off the face:
+ *   - an Iron-Man-style OSCILLOSCOPE CHEST REACTOR — a glowing waveform set into the
+ *     plastron. It's the standout accessory AND it carries the speaking state: a calm
+ *     low trace at idle, amped/brighter/faster when `speaking` is true.
+ *   - aftermarket "future ears" — cyber ear-pods on the head (doubles as the
+ *     audio-engineer / headphone cue).
+ *   - a flower-tipped sci-fi antenna + a peace flower on the shell — the hippie vibe.
  *
- * NOTE: this is a solid first pass. The character art is meant to be iterated on
- * here (and only here). Keep it a single self-contained <svg> with the same
- * outer .eng-turtle wrapper + dimensions so the page layout stays stable.
+ * Self-contained SVG (no deps) so the art can be refined in isolation without touching
+ * the Engineer page. Keep the outer .eng-turtle wrapper + props + ~square dimensions so
+ * the page layout stays stable. Tuned to read at 66px (its production size).
  */
 interface Props {
   size?: number;
@@ -29,66 +33,143 @@ const { size = 72, speaking = false, class: className = "" } = Astro.props;
 >
   <svg viewBox="0 0 100 100" width={size} height={size} role="img" aria-label="Terrapin, the engineer">
     <defs>
-      <radialGradient id="tShell" cx="42%" cy="34%" r="78%">
-        <stop offset="0%" stop-color="#3df0d0" />
-        <stop offset="42%" stop-color="#13a7c9" />
-        <stop offset="78%" stop-color="#5b46d6" />
-        <stop offset="100%" stop-color="#3a2a86" />
+      <linearGradient id="tHead" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%" stop-color="#8ff0b6" />
+        <stop offset="100%" stop-color="#43bd86" />
+      </linearGradient>
+      <!-- tie-dye carapace: brand gradient as a sunburst (yellow → orange → pink) -->
+      <radialGradient id="tCara" cx="42%" cy="28%" r="84%">
+        <stop offset="0%" stop-color="#ffe07a" />
+        <stop offset="34%" stop-color="#ff8a3d" />
+        <stop offset="72%" stop-color="#ff2d8b" />
+        <stop offset="100%" stop-color="#cc1c6e" />
       </radialGradient>
+      <!-- brand gradient (reactor ring, antenna petals) -->
       <linearGradient id="tDye" x1="0" y1="0" x2="1" y2="1">
         <stop offset="0%" stop-color="#ff2d8b" />
         <stop offset="50%" stop-color="#ff8a3d" />
         <stop offset="100%" stop-color="#ffd23d" />
       </linearGradient>
-      <linearGradient id="tHead" x1="0" y1="0" x2="0" y2="1">
-        <stop offset="0%" stop-color="#7fe3a8" />
-        <stop offset="100%" stop-color="#3f9e73" />
-      </linearGradient>
       <radialGradient id="tGlow" cx="50%" cy="50%" r="50%">
         <stop offset="0%" stop-color="#9af4ff" />
         <stop offset="100%" stop-color="#0ec4fc" stop-opacity="0" />
       </radialGradient>
+      <clipPath id="tScopeClip"><circle cx="50" cy="81" r="7.9" /></clipPath>
     </defs>
 
-    <!-- antenna -->
-    <line x1="50" y1="30" x2="50" y2="15" stroke="#0ec4fc" stroke-width="2.4" stroke-linecap="round" />
-    <circle class="t-antenna" cx="50" cy="13" r="4.6" fill="#0ec4fc" />
-    <circle cx="50" cy="13" r="9" fill="url(#tGlow)" />
+    <!-- antenna stem (behind head) -->
+    <line x1="50" y1="16" x2="50" y2="8" stroke="#0ec4fc" stroke-width="2.2" stroke-linecap="round" />
 
-    <!-- flippers -->
-    <ellipse cx="22" cy="74" rx="11" ry="8" fill="url(#tHead)" transform="rotate(-22 22 74)" />
-    <ellipse cx="78" cy="74" rx="11" ry="8" fill="url(#tHead)" transform="rotate(22 78 74)" />
+    <!-- little feet peeking under the shell -->
+    <ellipse cx="41" cy="96" rx="6" ry="4" fill="url(#tHead)" stroke="#2c8a60" stroke-width="1.1" />
+    <ellipse cx="59" cy="96" rx="6" ry="4" fill="url(#tHead)" stroke="#2c8a60" stroke-width="1.1" />
+
+    <!-- flipper-hands tucked at the sides -->
+    <ellipse cx="14" cy="77" rx="7.5" ry="5" fill="url(#tHead)" stroke="#2c8a60" stroke-width="1.1" transform="rotate(-20 14 77)" />
+    <ellipse cx="86" cy="77" rx="7.5" ry="5" fill="url(#tHead)" stroke="#2c8a60" stroke-width="1.1" transform="rotate(20 86 77)" />
+
+    <!-- domed tie-dye shell -->
+    <g class="t-shell">
+      <ellipse cx="50" cy="76" rx="31" ry="22" fill="url(#tCara)" stroke="#7a1f54" stroke-width="1.6" />
+      <!-- cream plastron belly -->
+      <ellipse cx="50" cy="81" rx="17.5" ry="14" fill="#ffdf97" opacity="0.5" />
+      <!-- tie-dye swirl + shine on the dome -->
+      <ellipse cx="50" cy="74" rx="24" ry="15" fill="none" stroke="#ffffff" stroke-width="1.6" opacity="0.12" />
+      <ellipse cx="41" cy="66" rx="8" ry="3" fill="#ffffff" opacity="0.16" transform="rotate(-18 41 66)" />
+      <!-- shell scute panels (upper dome, above the reactor) -->
+      <g fill="none" stroke="#fff3fb" stroke-width="1" opacity="0.3">
+        <polygon points="50,61 53.5,63 53.5,67 50,69 46.5,67 46.5,63" />
+        <polygon points="37,65 39.8,66.6 39.8,69.8 37,71.4 34.2,69.8 34.2,66.6" />
+        <polygon points="63,65 65.8,66.6 65.8,69.8 63,71.4 60.2,69.8 60.2,66.6" />
+      </g>
+      <!-- plastron seams radiating from the reactor -->
+      <g stroke="#b5713f" stroke-width="1" opacity="0.5" stroke-linecap="round">
+        <line x1="33" y1="81" x2="28" y2="81" />
+        <line x1="67" y1="81" x2="72" y2="81" />
+        <line x1="50" y1="93" x2="50" y2="97" />
+      </g>
+      <!-- hippie peace flower on the shoulder of the shell -->
+      <g transform="translate(27 64)">
+        <g fill="#ff8ec2">
+          <ellipse cx="0" cy="-3.3" rx="1.4" ry="2.3" />
+          <ellipse cx="3.1" cy="-1" rx="1.4" ry="2.3" transform="rotate(72 3.1 -1)" />
+          <ellipse cx="1.9" cy="2.7" rx="1.4" ry="2.3" transform="rotate(144 1.9 2.7)" />
+          <ellipse cx="-1.9" cy="2.7" rx="1.4" ry="2.3" transform="rotate(216 -1.9 2.7)" />
+          <ellipse cx="-3.1" cy="-1" rx="1.4" ry="2.3" transform="rotate(288 -3.1 -1)" />
+        </g>
+        <circle r="1.6" fill="#ffd23d" />
+      </g>
+    </g>
 
     <!-- head -->
-    <ellipse cx="50" cy="73" rx="19" ry="17" fill="url(#tHead)" />
-    <!-- Daft-Punk visor -->
-    <rect x="33" y="66" width="34" height="15" rx="7.5" fill="#0a0a14" />
-    <rect x="33" y="66" width="34" height="15" rx="7.5" fill="none" stroke="#2a2a3e" stroke-width="1" />
-    <rect class="t-visor" x="37" y="71.5" width="26" height="3.6" rx="1.8" fill="#19e0ff" />
-    <!-- little smile -->
-    <path d="M44 84 q6 4 12 0" fill="none" stroke="#2c6b4f" stroke-width="1.6" stroke-linecap="round" />
+    <ellipse cx="50" cy="38" rx="24" ry="22" fill="url(#tHead)" stroke="#2c8a60" stroke-width="1.5" />
+    <!-- forehead shine -->
+    <ellipse cx="43" cy="26" rx="8.5" ry="4.6" fill="#ffffff" opacity="0.2" transform="rotate(-20 43 26)" />
 
-    <!-- shell -->
-    <g class="t-shell">
-      <ellipse cx="50" cy="50" rx="40" ry="31" fill="url(#tShell)" />
-      <ellipse cx="50" cy="50" rx="40" ry="31" fill="url(#tDye)" opacity="0.16" />
-      <!-- shell rim -->
-      <path d="M11 54 a39 31 0 0 0 78 0" fill="none" stroke="#241a52" stroke-width="3" opacity="0.5" />
-      <!-- scutes (hexagonal panels) -->
-      <polygon points="50,33 60,39 60,51 50,57 40,51 40,39" fill="none" stroke="#cfeaff" stroke-width="1.5" opacity="0.55" />
-      <polygon points="30,40 38,44 38,52 30,56 23,52 23,44" fill="none" stroke="#cfeaff" stroke-width="1.2" opacity="0.4" />
-      <polygon points="70,40 77,44 77,52 70,56 62,52 62,44" fill="none" stroke="#cfeaff" stroke-width="1.2" opacity="0.4" />
-      <!-- hippie flower sticker -->
-      <g transform="translate(50 45)" class="t-flower">
-        <circle r="2.4" fill="#ffd23d" />
-        <g fill="#ff7ab8">
-          <ellipse cx="0" cy="-5.2" rx="2.1" ry="3.4" />
-          <ellipse cx="5" cy="-1.6" rx="2.1" ry="3.4" transform="rotate(72 5 -1.6)" />
-          <ellipse cx="3.1" cy="4.2" rx="2.1" ry="3.4" transform="rotate(144 3.1 4.2)" />
-          <ellipse cx="-3.1" cy="4.2" rx="2.1" ry="3.4" transform="rotate(216 -3.1 4.2)" />
-          <ellipse cx="-5" cy="-1.6" rx="2.1" ry="3.4" transform="rotate(288 -5 -1.6)" />
+    <!-- cyber "future ears" -->
+    <g class="t-ear">
+      <ellipse cx="23" cy="39" rx="9" ry="9" fill="url(#tGlow)" opacity="0.5" />
+      <ellipse cx="23" cy="39" rx="5.4" ry="8" fill="#14182a" stroke="#0ec4fc" stroke-width="1.2" />
+      <ellipse cx="23" cy="39" rx="2.4" ry="5" fill="#0ec4fc" opacity="0.85" />
+      <circle class="t-ear-led" cx="23" cy="33.5" r="1.1" fill="#d6fbff" />
+    </g>
+    <g class="t-ear">
+      <ellipse cx="77" cy="39" rx="9" ry="9" fill="url(#tGlow)" opacity="0.5" />
+      <ellipse cx="77" cy="39" rx="5.4" ry="8" fill="#14182a" stroke="#0ec4fc" stroke-width="1.2" />
+      <ellipse cx="77" cy="39" rx="2.4" ry="5" fill="#0ec4fc" opacity="0.85" />
+      <circle class="t-ear-led" cx="77" cy="33.5" r="1.1" fill="#d6fbff" />
+    </g>
+
+    <!-- face -->
+    <!-- Daft-Punk brow glow (does not cover the eyes) -->
+    <path d="M37 30 Q50 27 63 30" fill="none" stroke="#19e0ff" stroke-width="1.5" stroke-linecap="round" opacity="0.5" />
+    <!-- blush -->
+    <ellipse cx="32.5" cy="46" rx="3.7" ry="2.3" fill="#ff7ab8" opacity="0.45" />
+    <ellipse cx="67.5" cy="46" rx="3.7" ry="2.3" fill="#ff7ab8" opacity="0.45" />
+    <!-- big personable eyes -->
+    <g class="t-eyes">
+      <ellipse cx="40" cy="39" rx="5.2" ry="6.7" fill="#141a36" />
+      <ellipse cx="40" cy="39" rx="5.2" ry="6.7" fill="none" stroke="#0ec4fc" stroke-width="0.6" opacity="0.45" />
+      <circle cx="38.2" cy="36.4" r="1.9" fill="#ffffff" />
+      <circle cx="41.7" cy="41" r="0.95" fill="#ffffff" opacity="0.8" />
+      <ellipse cx="60" cy="39" rx="5.2" ry="6.7" fill="#141a36" />
+      <ellipse cx="60" cy="39" rx="5.2" ry="6.7" fill="none" stroke="#0ec4fc" stroke-width="0.6" opacity="0.45" />
+      <circle cx="58.2" cy="36.4" r="1.9" fill="#ffffff" />
+      <circle cx="61.7" cy="41" r="0.95" fill="#ffffff" opacity="0.8" />
+    </g>
+    <!-- nostrils + friendly smile -->
+    <circle cx="48" cy="46.5" r="0.55" fill="#2c6b4f" opacity="0.7" />
+    <circle cx="52" cy="46.5" r="0.55" fill="#2c6b4f" opacity="0.7" />
+    <path d="M45 49.5 Q50 53.5 55 49.5" fill="none" stroke="#2c6b4f" stroke-width="1.7" stroke-linecap="round" />
+
+    <!-- oscilloscope chest reactor (the standout; carries the speaking state) -->
+    <g class="t-reactor">
+      <circle class="t-scope-glow" cx="50" cy="81" r="14" fill="url(#tGlow)" opacity="0.55" />
+      <circle cx="50" cy="81" r="9.8" fill="#0a0e1f" stroke="#1a2142" stroke-width="1" />
+      <g clip-path="url(#tScopeClip)">
+        <line x1="42.5" y1="81" x2="57.5" y2="81" stroke="#0ec4fc" stroke-width="0.6" opacity="0.3" />
+        <g class="t-wave">
+          <path class="t-wave-line"
+            d="M26,81 Q28,74 30,81 Q32,88 34,81 Q36,74 38,81 Q40,88 42,81 Q44,74 46,81 Q48,88 50,81 Q52,74 54,81 Q56,88 58,81 Q60,74 62,81 Q64,88 66,81 Q68,74 70,81 Q72,88 74,81"
+            fill="none" stroke="#34ecff" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" />
         </g>
       </g>
+      <circle cx="50" cy="81" r="10.8" fill="none" stroke="url(#tDye)" stroke-width="2.4" />
+      <circle cx="50" cy="81" r="8.1" fill="none" stroke="#0ec4fc" stroke-width="0.7" opacity="0.55" />
+    </g>
+
+    <!-- antenna tip: hippie flower + glow -->
+    <circle cx="50" cy="7" r="6" fill="url(#tGlow)" />
+    <g class="t-antenna" transform="translate(50 7)">
+      <g fill="#ff79b0">
+        <circle cx="0" cy="-2.9" r="2.2" />
+        <circle cx="2.76" cy="-0.9" r="2.2" />
+        <circle cx="1.7" cy="2.35" r="2.2" />
+        <circle cx="-1.7" cy="2.35" r="2.2" />
+        <circle cx="-2.76" cy="-0.9" r="2.2" />
+      </g>
+      <circle r="1.9" fill="#ffd23d" />
+      <circle r="0.7" fill="#fff3b0" />
     </g>
   </svg>
 </span>
@@ -100,26 +181,54 @@ const { size = 72, speaking = false, class: className = "" } = Astro.props;
     height: var(--turtle-size, 72px);
     line-height: 0;
     filter: drop-shadow(0 6px 14px rgba(14, 196, 252, 0.28));
-    animation: t-bob 3.4s ease-in-out infinite;
+    animation: t-bob 3.6s ease-in-out infinite;
   }
   .eng-turtle svg { overflow: visible; }
-  .t-visor { animation: t-visor 2.6s ease-in-out infinite; }
-  .t-antenna { animation: t-antenna 1.9s ease-in-out infinite; transform-origin: 50px 13px; }
-  .eng-turtle[data-speaking="true"] .t-visor { animation-duration: 0.9s; }
+
+  .t-antenna { animation: t-antenna 1.9s ease-in-out infinite; transform-origin: 50px 7px; }
+  .t-eyes { transform-box: fill-box; transform-origin: center; animation: t-blink 5.4s ease-in-out infinite; }
+  .t-ear-led { animation: t-led 2.2s ease-in-out infinite; }
+  .t-wave { animation: t-scroll 2.6s linear infinite; }
+  .t-wave-line { transform-box: fill-box; transform-origin: center; }
+  .t-scope-glow { transform-box: fill-box; transform-origin: center; animation: t-scope 3s ease-in-out infinite; }
+
+  /* speaking amps the oscilloscope */
+  .eng-turtle[data-speaking="true"] .t-wave { animation-duration: 0.85s; }
+  .eng-turtle[data-speaking="true"] .t-wave-line {
+    stroke: #c8f6ff;
+    transform: scaleY(1.5);
+    filter: drop-shadow(0 0 2px rgba(25, 224, 255, 0.9));
+  }
+  .eng-turtle[data-speaking="true"] .t-scope-glow { animation-duration: 0.85s; opacity: 0.95; }
+  .eng-turtle[data-speaking="true"] .t-antenna { animation-duration: 1.1s; }
 
   @keyframes t-bob {
-    0%, 100% { transform: translateY(0) rotate(-1.2deg); }
-    50% { transform: translateY(-3px) rotate(1.2deg); }
-  }
-  @keyframes t-visor {
-    0%, 100% { fill: #19e0ff; filter: drop-shadow(0 0 3px rgba(25, 224, 255, 0.8)); }
-    50% { fill: #aef4ff; filter: drop-shadow(0 0 6px rgba(25, 224, 255, 1)); }
+    0%, 100% { transform: translateY(0) rotate(-1deg); }
+    50% { transform: translateY(-2.5px) rotate(1deg); }
   }
   @keyframes t-antenna {
-    0%, 100% { opacity: 0.7; transform: scale(0.9); }
+    0%, 100% { opacity: 0.75; transform: scale(0.92); }
     50% { opacity: 1; transform: scale(1.12); }
   }
+  @keyframes t-blink {
+    0%, 93%, 100% { transform: scaleY(1); }
+    96% { transform: scaleY(0.1); }
+  }
+  @keyframes t-scroll {
+    from { transform: translateX(0); }
+    to { transform: translateX(-8px); }
+  }
+  @keyframes t-scope {
+    0%, 100% { opacity: 0.5; }
+    50% { opacity: 0.8; }
+  }
+  @keyframes t-led {
+    0%, 100% { opacity: 0.5; }
+    50% { opacity: 1; }
+  }
   @media (prefers-reduced-motion: reduce) {
-    .eng-turtle, .t-visor, .t-antenna { animation: none; }
+    .eng-turtle, .t-antenna, .t-eyes, .t-ear-led, .t-wave, .t-wave-line, .t-scope-glow {
+      animation: none;
+    }
   }
 </style>
