@@ -76,8 +76,8 @@ const works = await getCaseStudies();
         </header>
 
         <ol class="list" data-work-list>
-          {works.map((w) => (
-            <li>
+          {works.map((w, i) => (
+            <li class:list={["work-item", { "work-item-featured": i === 0 }]}>
               <WorkEntry
                 index={w.order}
                 name={w.name}
@@ -89,6 +89,7 @@ const works = await getCaseStudies();
                 tags={w.tags.slice(0, 4)}
                 slug={w.slug}
                 cover={w.cover}
+                featured={i === 0}
               />
             </li>
           ))}
@@ -449,11 +450,21 @@ const works = await getCaseStudies();
     line-height: 1;
   }
 
-  /* Work list */
+  /* Work list — a cinematic gallery grid. First entry features full-width;
+     the rest fall into a two-up grid. Collapses to one column on small
+     screens. */
   .work .list {
     list-style: none;
     padding: 0;
     margin: 0;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--space-8);
+  }
+  .work-item { min-width: 0; }
+  .work-item-featured { grid-column: 1 / -1; }
+  @media (max-width: 55.99rem) {
+    .work .list { grid-template-columns: 1fr; gap: var(--space-6); }
   }
 
   .work-foot {

@@ -1,12 +1,13 @@
 ---
-// Editorial work entry. Replaces the WorkCard for the homepage's
-// /#work list. Each entry is its own near-fullscreen unit with a
-// chunk-clipped title (extending the hero's hand-cut vocabulary at a
-// smaller scale), a magazine-deck subtitle, an outcome paragraph, a
-// chip strip of tags, and a large cover image with subtle scroll-linked
-// parallax. The whole entry is one large link to the case study.
+// Cinematic work card for the homepage /#work gallery. The cover is the hero:
+// a large image behind a bottom-up scrim, with the title, a one-line pitch, a
+// giant ghost index number, and (on the featured card) a thin meta line + tags
+// overlaid. The whole card is one link with a strong hover (cover zooms, card
+// lifts, the accent underline draws, the arrow slides).
 //
-// Keyboard navigation (arrow up / down) cycles entries; see index.astro.
+// Because the card is its own dark cinematic object (cover + scrim + light
+// type), it reads identically across all four public-site themes. Keyboard
+// arrow-nav + reveal-on-scroll are wired in index.astro and key off `.we`.
 
 interface Props {
   index: number;
@@ -19,410 +20,335 @@ interface Props {
   tags: string[];
   slug: string;
   cover?: string | null;
+  featured?: boolean;
 }
 
 const {
   index,
   name,
   subtitle,
-  outcome,
   role,
   timeline,
   tools = [],
   tags,
   slug,
   cover,
+  featured = false,
 } = Astro.props;
 const num = String(index).padStart(2, "0");
 const stack = tools.slice(0, 3).join(" · ");
-const hasSpec = Boolean(role || timeline || stack);
-// Each entry rotates a 0-3 visual variant for the title-chunk padding so
-// the column reads as hand-cut rather than uniform.
-const variant = ((index - 1) % 4 + 4) % 4;
+const meta = [role, timeline, stack].filter(Boolean);
 ---
 
 <a
-  class="we"
+  class:list={["we", { "we-featured": featured }]}
   href={`/case-studies/${slug}`}
   data-we-entry={num}
   aria-label={`Read case study: ${name} — ${subtitle}`}
 >
-  <div class="we-meta">
-    <p class="we-num">
-      <span class="we-num-pad">{num}</span>
-      <span class="we-num-slash">/</span>
-      <span class="we-num-of">selected work</span>
-    </p>
-
-    <h2 class={`we-name we-v${variant}`}>{name}</h2>
-
-    <p class="we-subtitle">{subtitle}</p>
-
-    <p class="we-outcome">{outcome}</p>
-
-    {hasSpec && (
-      <dl class="we-spec">
-        {role && (
-          <div>
-            <dt>Role</dt>
-            <dd>{role}</dd>
-          </div>
-        )}
-        {timeline && (
-          <div>
-            <dt>Timeline</dt>
-            <dd>{timeline}</dd>
-          </div>
-        )}
-        {stack && (
-          <div>
-            <dt>Stack</dt>
-            <dd>{stack}</dd>
-          </div>
-        )}
-      </dl>
-    )}
-
-    {tags.length > 0 && (
-      <ul class="we-tags">
-        {tags.slice(0, 4).map((t) => <li>{t}</li>)}
-      </ul>
-    )}
-
-    <span class="we-read">
-      <span class="we-read-label">Read case study</span>
-      <span class="we-read-arrow" aria-hidden="true">→</span>
-    </span>
-  </div>
-
-  <div class="we-cover" aria-hidden="true">
+  <article class="we-card">
     {cover ? (
-      <div class="we-cover-wrap">
-        <span class="we-cover-badge">Case Study · {num}</span>
-        <div class="we-cover-frame" data-we-parallax>
-          <img src={cover} alt="" loading="lazy" />
-        </div>
-      </div>
+      <img class="we-cover" src={cover} alt="" loading="lazy" />
     ) : (
-      <div class="we-cover-empty">
-        <span class="we-cover-badge we-cover-badge-empty">Case Study · {num}</span>
-        <span class="we-cover-empty-num">{num}</span>
-      </div>
+      <div class="we-cover we-cover-empty"></div>
     )}
-  </div>
+    <div class="we-scrim" aria-hidden="true"></div>
+    <span class="we-ghost" aria-hidden="true">{num}</span>
+
+    <header class="we-top">
+      <span class="we-badge"><span class="we-badge-dot" aria-hidden="true"></span>Case Study {num}</span>
+    </header>
+
+    <div class="we-body">
+      <h2 class="we-name">{name}</h2>
+      <p class="we-subtitle">{subtitle}</p>
+
+      {featured && meta.length > 0 && (
+        <dl class="we-meta">
+          {role && <div><dt>Role</dt><dd>{role}</dd></div>}
+          {timeline && <div><dt>Timeline</dt><dd>{timeline}</dd></div>}
+          {stack && <div><dt>Stack</dt><dd>{stack}</dd></div>}
+        </dl>
+      )}
+
+      <div class="we-foot">
+        {featured && tags.length > 0 ? (
+          <ul class="we-tags">{tags.slice(0, 4).map((t) => <li>{t}</li>)}</ul>
+        ) : (
+          <span class="we-foot-meta">{meta.join("  ·  ")}</span>
+        )}
+        <span class="we-read">
+          <span class="we-read-label">Read case study</span>
+          <span class="we-read-arrow" aria-hidden="true">→</span>
+        </span>
+      </div>
+    </div>
+  </article>
 </a>
 
 <style>
-  /* Entry sits as a generous block; ~80vh on desktop, naturally
-     stacked on mobile. The hover state lifts the whole entry. */
   .we {
-    display: grid;
-    grid-template-columns: 1fr;
-    gap: var(--space-8);
-    padding: var(--space-16) 0;
-    border-top: 1px solid var(--line);
-    position: relative;
-    color: var(--text);
-    isolation: isolate;
-  }
-
-  /* Hover affordances. The cover tilts a fraction; the chunk title
-     nudges; the read-link underline animates. Subtle on purpose. */
-  .we:hover .we-cover-frame,
-  .we:focus-visible .we-cover-frame {
-    transform: translate3d(0, var(--we-parallax, 0), 0) scale(1.018);
-    box-shadow: 0 24px 60px -30px rgba(0, 0, 0, 0.32);
-  }
-  .we:hover .we-name,
-  .we:focus-visible .we-name {
-    transform: translateX(2px);
-  }
-  .we:hover .we-read-arrow,
-  .we:focus-visible .we-read-arrow {
-    transform: translateX(3px);
-  }
-
-  /* Meta column */
-  .we-meta {
-    display: grid;
-    grid-template-rows: auto auto auto auto auto auto;
-    gap: var(--space-3);
-    align-content: start;
-    min-width: 0;
-  }
-
-  .we-num {
-    display: inline-flex;
-    align-items: baseline;
-    gap: 6px;
-    margin: 0;
-    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-    font-size: var(--fs-eyebrow);
-    letter-spacing: var(--ls-eyebrow);
-    text-transform: uppercase;
-    color: var(--muted);
-  }
-  .we-num-pad {
-    display: inline-block;
-    background: var(--ink);
-    color: var(--ink-fg);
-    padding: 0.34em 0.62em 0.20em;
-    font-weight: var(--fw-bold);
-    transition: background-color 280ms cubic-bezier(0.2, 0, 0, 1),
-                color 280ms cubic-bezier(0.2, 0, 0, 1);
-  }
-  .we-num-slash { color: var(--line); }
-  .we-num-of { color: var(--muted); }
-
-  /* Chunk-clipped name. Borrows the hero's hand-cut vocabulary
-     scaled down. Four variants cycle by entry index. */
-  .we-name {
-    display: inline-block;
-    width: fit-content;
-    max-width: 100%;
-    background: var(--ink);
-    color: var(--ink-fg);
-    font-size: clamp(2.25rem, 5.2vw, 4rem);
-    font-weight: var(--fw-bold);
-    letter-spacing: var(--ls-display);
-    line-height: 0.92;
-    text-transform: uppercase;
-    margin: 0;
-    transition: background-color 280ms cubic-bezier(0.2, 0, 0, 1),
-                color 280ms cubic-bezier(0.2, 0, 0, 1),
-                transform 220ms cubic-bezier(0.2, 0, 0, 1);
-    /* Allow break only at natural boundaries (the period in "Tolo.Cloud");
-       never split a word mid-character. */
-    word-break: normal;
-    overflow-wrap: normal;
-  }
-  .we-v0 { padding: 0.22em 0.40em 0.10em 0.28em; }
-  .we-v1 {
-    padding: 0.10em 0.52em 0.20em 0.16em;
-    margin-left: 0.06em;
-  }
-  .we-v2 {
-    padding: 0.10em 0.30em 0.06em 0.46em;
-    margin-left: -0.04em;
-  }
-  .we-v3 {
-    padding: 0.06em 0.50em 0.26em 0.20em;
-    margin-left: 0.04em;
-  }
-
-  .we-subtitle {
-    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-    font-style: italic;
-    font-size: clamp(1.0625rem, 1.65vw, 1.375rem);
-    line-height: 1.35;
-    color: var(--text);
-    padding-left: 1rem;
-    border-left: 2px solid var(--accent);
-    max-width: 32ch;
-    margin: var(--space-2) 0 0;
-    transition: border-color 280ms cubic-bezier(0.2, 0, 0, 1);
-  }
-
-  .we-outcome {
-    color: var(--muted);
-    font-size: 1.0625rem;
-    font-weight: var(--fw-medium);
-    line-height: 1.55;
-    max-width: 52ch;
-    margin: var(--space-3) 0 0;
-  }
-
-  /* Spec strip. Editorial press-kit style. Pulls Role / Timeline / Stack
-     out of Notion so a hiring reader can scan the project facts before
-     deciding to read the case study. Hairline rules above and below so it
-     reads as its own panel, not just another paragraph. */
-  .we-spec {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(140px, max-content));
-    gap: var(--space-3) var(--space-8);
-    margin: var(--space-6) 0 0;
-    padding: var(--space-4) 0;
-    border-top: 1px solid var(--line);
-    border-bottom: 1px solid var(--line);
-    max-width: 56ch;
-  }
-  .we-spec > div {
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
-    min-width: 0;
-  }
-  .we-spec dt {
-    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-    font-size: var(--fs-eyebrow);
-    font-weight: var(--fw-semibold);
-    letter-spacing: var(--ls-eyebrow);
-    text-transform: uppercase;
-    color: var(--muted);
-  }
-  .we-spec dd {
-    margin: 0;
-    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-    font-size: 0.8125rem;
-    color: var(--text);
-    font-weight: var(--fw-medium);
-    font-feature-settings: "tnum";
-  }
-
-  /* Tags as bordered chips. Replaces the previous dot-separated text
-     list. Each chip a small architectural rectangle, not a pill. */
-  .we-tags {
-    list-style: none;
-    padding: 0;
-    margin: var(--space-4) 0 0;
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
-  }
-  .we-tags li {
-    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-    font-size: 11px;
-    letter-spacing: 0.04em;
-    color: var(--muted);
-    padding: 5px 10px;
-    border: 1px solid var(--line);
-    border-radius: 2px;
-    background: transparent;
-    transition: color 220ms ease, border-color 220ms ease;
-  }
-  .we:hover .we-tags li,
-  .we:focus-visible .we-tags li {
-    color: var(--text);
-    border-color: var(--muted);
-  }
-
-  /* CTA as a bordered button affordance, not a link. Inverts on entry
-     hover (the whole entry is the link, so the button gets the visual
-     hover whenever you're anywhere on the row). */
-  .we-read {
-    margin: var(--space-6) 0 0;
-    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-    font-size: var(--fs-eyebrow);
-    font-weight: var(--fw-bold);
-    letter-spacing: var(--ls-eyebrow);
-    text-transform: uppercase;
-    color: var(--accent);
-    display: inline-flex;
-    align-items: center;
-    gap: 10px;
-    padding: 10px 16px;
-    border: 1px solid var(--accent);
-    border-radius: 2px;
-    width: fit-content;
-    transition: color 220ms ease, background-color 220ms ease;
-  }
-  .we:hover .we-read,
-  .we:focus-visible .we-read {
-    color: var(--bg);
-    background: var(--accent);
-  }
-  .we-read-arrow {
-    display: inline-block;
-    transition: transform 220ms cubic-bezier(0.2, 0, 0, 1);
-  }
-
-  /* Cover */
-  .we-cover {
-    position: relative;
-    align-self: start;
-  }
-  /* Wrap holds the badge as an absolute overlay on the cover. */
-  .we-cover-wrap {
-    position: relative;
-  }
-  .we-cover-frame {
-    aspect-ratio: 16 / 10;
-    overflow: hidden;
-    background: var(--surface-1);
-    border: 1px solid var(--line);
-    transition: transform 480ms cubic-bezier(0.2, 0, 0, 1),
-                box-shadow 480ms cubic-bezier(0.2, 0, 0, 1),
-                border-color 280ms ease;
-    will-change: transform;
-  }
-  .we-cover-frame img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
     display: block;
-    transition: filter 480ms ease;
+    text-decoration: none;
+    color: #f5f1e8;
+    /* reveal-on-scroll initial state (index.astro toggles .we-in) */
+    opacity: 0;
+    transform: translateY(22px);
   }
-  .we:hover .we-cover-frame,
-  .we:focus-visible .we-cover-frame {
-    border-color: var(--muted);
-  }
-  /* Corner badge. Anchors the cover image to the entry's "Case Study NN"
-     identity. Sits on top of the image so the number reads even when the
-     cover art is busy. Uses the --ink / --ink-fg anchor pair (same
-     vocabulary as the chunk titles and number pad) so it reads as
-     architectural rather than blending into the page bg, in every
-     theme. */
-  .we-cover-badge {
-    position: absolute;
-    top: 14px;
-    left: 14px;
-    z-index: 2;
-    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-    font-size: 10px;
-    font-weight: var(--fw-bold);
-    letter-spacing: var(--ls-eyebrow);
-    text-transform: uppercase;
-    color: var(--ink-fg);
-    background: var(--ink);
-    padding: 5px 10px;
-    pointer-events: none;
-    transition: background-color 280ms cubic-bezier(0.2, 0, 0, 1),
-                color 280ms cubic-bezier(0.2, 0, 0, 1);
-  }
-
-  .we-cover-empty {
-    position: relative;
-    aspect-ratio: 16 / 10;
-    display: grid;
-    place-items: center;
-    background: var(--surface-1);
-    border: 1px solid var(--line);
-  }
-  .we-cover-empty-num {
-    color: var(--line);
-    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-    font-size: clamp(4rem, 12vw, 8rem);
-    font-weight: var(--fw-bold);
-    letter-spacing: var(--ls-display);
-    line-height: 1;
-  }
-
-  @media (min-width: 56rem) {
-    .we {
-      grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr);
-      gap: var(--space-16);
-      align-items: center;
-      padding: var(--space-24) 0;
-      min-height: 64vh;
-    }
-  }
-
-  @media (prefers-reduced-motion: reduce) {
-    .we-cover-frame { transition: none; }
-    .we-name { transition: background-color 280ms, color 280ms; }
-    .we-read-arrow { transition: none; }
-  }
-
-  /* Scroll-linked reveal. Each entry fades-up the first time it
-     intersects the viewport. */
-  .we { opacity: 0; transform: translateY(18px); }
   .we.we-in {
     opacity: 1;
     transform: translateY(0);
-    transition: opacity 700ms cubic-bezier(0.2, 0, 0, 1), transform 700ms cubic-bezier(0.2, 0, 0, 1);
+    transition: opacity 760ms cubic-bezier(0.2, 0, 0, 1), transform 760ms cubic-bezier(0.2, 0, 0, 1);
   }
+
+  .we-card {
+    position: relative;
+    overflow: hidden;
+    border-radius: 6px;
+    aspect-ratio: 4 / 3;
+    background: #0b0a0f;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    box-shadow: 0 20px 50px -34px rgba(0, 0, 0, 0.7);
+    isolation: isolate;
+    transition: transform 420ms cubic-bezier(0.2, 0, 0, 1),
+                box-shadow 420ms cubic-bezier(0.2, 0, 0, 1),
+                border-color 320ms ease;
+  }
+  .we-featured .we-card { aspect-ratio: 2 / 1; }
+
+  .we:hover .we-card,
+  .we:focus-visible .we-card {
+    transform: translateY(-5px);
+    box-shadow: 0 36px 70px -34px rgba(0, 0, 0, 0.78);
+    border-color: color-mix(in srgb, var(--accent) 55%, transparent);
+  }
+  .we:focus-visible { outline: none; }
+  .we:focus-visible .we-card { outline: 2px solid var(--accent); outline-offset: 3px; }
+
+  /* Cover image — fills the card, zooms on hover. */
+  .we-cover {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: center;
+    z-index: 0;
+    transition: transform 760ms cubic-bezier(0.2, 0, 0, 1), filter 420ms ease;
+    filter: saturate(1.02);
+  }
+  .we:hover .we-cover,
+  .we:focus-visible .we-cover { transform: scale(1.06); }
+  .we-cover-empty {
+    background:
+      radial-gradient(120% 100% at 80% 0%, rgba(255, 90, 60, 0.16), transparent 60%),
+      linear-gradient(160deg, #15121b, #0a0810);
+  }
+
+  /* Scrim — strong at the bottom so the type reads over any cover, in any theme. */
+  .we-scrim {
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    background: linear-gradient(
+      to top,
+      rgba(6, 5, 10, 0.92) 0%,
+      rgba(6, 5, 10, 0.72) 24%,
+      rgba(6, 5, 10, 0.28) 48%,
+      rgba(6, 5, 10, 0.04) 70%,
+      transparent 100%
+    );
+  }
+
+  /* Giant ghost index number, top-right. */
+  .we-ghost {
+    position: absolute;
+    top: -0.18em;
+    right: 0.12em;
+    z-index: 2;
+    font-family: "Space Grotesk Variable", "Space Grotesk", ui-sans-serif, system-ui, sans-serif;
+    font-weight: 700;
+    font-size: clamp(5rem, 14vw, 11rem);
+    line-height: 1;
+    letter-spacing: -0.04em;
+    color: rgba(255, 255, 255, 0.07);
+    pointer-events: none;
+  }
+  .we-featured .we-ghost { font-size: clamp(6rem, 13vw, 13rem); }
+
+  /* Top badge. */
+  .we-top {
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    z-index: 3;
+    padding: 18px 20px;
+    display: flex;
+    justify-content: space-between;
+  }
+  .we-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: rgba(245, 241, 232, 0.82);
+    background: rgba(8, 6, 12, 0.5);
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+    padding: 5px 11px;
+    border-radius: 3px;
+  }
+  .we-badge-dot {
+    width: 5px; height: 5px; border-radius: 50%;
+    background: var(--accent);
+    box-shadow: 0 0 8px var(--accent);
+  }
+
+  /* Body — bottom-left, over the scrim. */
+  .we-body {
+    position: absolute;
+    left: 0; right: 0; bottom: 0;
+    z-index: 3;
+    padding: clamp(20px, 3.2vw, 44px);
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .we-name {
+    margin: 0;
+    font-family: "Space Grotesk Variable", "Space Grotesk", ui-sans-serif, system-ui, sans-serif;
+    font-weight: 700;
+    font-size: clamp(2rem, 4.6vw, 3.5rem);
+    line-height: 0.98;
+    letter-spacing: -0.03em;
+    color: #fbf8f1;
+    text-shadow: 0 2px 28px rgba(0, 0, 0, 0.55);
+    /* accent underline grows on hover */
+    width: fit-content;
+    max-width: 100%;
+    background-image: linear-gradient(var(--accent), var(--accent));
+    background-repeat: no-repeat;
+    background-position: 0 100%;
+    background-size: 0% 3px;
+    padding-bottom: 4px;
+    transition: background-size 420ms cubic-bezier(0.2, 0, 0, 1);
+  }
+  .we-featured .we-name { font-size: clamp(2.4rem, 5.4vw, 4.5rem); }
+  .we:hover .we-name,
+  .we:focus-visible .we-name { background-size: 100% 3px; }
+
+  .we-subtitle {
+    margin: 0;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-style: italic;
+    font-size: clamp(0.95rem, 1.5vw, 1.3rem);
+    line-height: 1.35;
+    color: rgba(245, 241, 232, 0.86);
+    max-width: 40ch;
+    text-shadow: 0 1px 16px rgba(0, 0, 0, 0.5);
+  }
+
+  /* Featured meta strip. */
+  .we-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px 28px;
+    margin: 6px 0 0;
+  }
+  .we-meta > div { display: flex; flex-direction: column; gap: 2px; }
+  .we-meta dt {
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 9px;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: rgba(245, 241, 232, 0.5);
+  }
+  .we-meta dd {
+    margin: 0;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 12px;
+    color: rgba(245, 241, 232, 0.88);
+  }
+
+  .we-foot {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    flex-wrap: wrap;
+    margin-top: 4px;
+  }
+  .we-tags {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 7px;
+  }
+  .we-tags li {
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 10.5px;
+    letter-spacing: 0.04em;
+    color: rgba(245, 241, 232, 0.78);
+    padding: 4px 10px;
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    border-radius: 2px;
+  }
+  .we-foot-meta {
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 11.5px;
+    color: rgba(245, 241, 232, 0.58);
+  }
+
+  .we-read {
+    display: inline-flex;
+    align-items: center;
+    gap: 9px;
+    flex: 0 0 auto;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: #fbf8f1;
+    padding: 9px 15px;
+    border: 1px solid rgba(255, 255, 255, 0.28);
+    border-radius: 3px;
+    background: rgba(8, 6, 12, 0.35);
+    transition: background 240ms ease, border-color 240ms ease, color 240ms ease;
+  }
+  .we:hover .we-read,
+  .we:focus-visible .we-read {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: var(--ink-fg, #0a0a0a);
+  }
+  .we-read-arrow {
+    display: inline-block;
+    transition: transform 280ms cubic-bezier(0.2, 0, 0, 1);
+  }
+  .we:hover .we-read-arrow,
+  .we:focus-visible .we-read-arrow { transform: translateX(4px); }
+
+  @media (max-width: 55.99rem) {
+    .we-card,
+    .we-featured .we-card { aspect-ratio: 4 / 5; }
+    .we-subtitle { max-width: none; }
+    .we-read-label { display: none; }
+    .we-read { padding: 9px 12px; }
+  }
+
   @media (prefers-reduced-motion: reduce) {
     .we { opacity: 1; transform: none; }
     .we.we-in { transition: none; }
+    .we-card, .we-cover, .we-name, .we-read, .we-read-arrow { transition: none; }
+    .we:hover .we-cover, .we:focus-visible .we-cover { transform: none; }
+    .we:hover .we-card, .we:focus-visible .we-card { transform: none; }
   }
 </style>
