@@ -50,7 +50,8 @@ const { label, color, ink, side, rot = -2, controls, target, ariaLabel } = Astro
     cursor: pointer;
     transform: translateY(-50%) rotate(var(--tab-rot, -2deg));
     transform-origin: center;
-    transition: transform 240ms cubic-bezier(0.22, 1, 0.36, 1), top 360ms cubic-bezier(0.22, 1, 0.36, 1), filter 220ms ease, opacity 300ms ease;
+    /* no positional transition: flags stay put, only the panel expands */
+    transition: filter 200ms ease, opacity 280ms ease;
     -webkit-tap-highlight-color: transparent;
   }
   .rtab[data-side="right"] { right: calc(-1 * var(--rtab-hang, 30px)); }
@@ -85,34 +86,23 @@ const { label, color, ink, side, rot = -2, controls, target, ariaLabel } = Astro
   .rtab-ink {
     font-family: "Bradley Hand", "Bradley Hand ITC", "Segoe Print", "Chalkboard SE", "Comic Sans MS", cursive;
     font-size: 0.9375rem;
-    font-weight: 700;
+    font-weight: 800;
     letter-spacing: 0.01em;
     color: var(--tab-ink);
+    -webkit-text-stroke: 0.6px var(--tab-ink);
     line-height: 1;
     white-space: nowrap;
     transform: rotate(-1.1deg);
     text-shadow: 0 1px 0 rgba(0, 0, 0, 0.08);
   }
 
-  /* hover: lift + pull a touch further off the page */
-  .rtab:hover, .rtab:focus-visible { outline: none; filter: brightness(1.05); }
-  .rtab[data-side="right"]:hover, .rtab[data-side="right"]:focus-visible {
-    transform: translateY(-50%) rotate(var(--tab-rot)) translateX(5px) scale(1.04);
-  }
-  .rtab[data-side="left"]:hover, .rtab[data-side="left"]:focus-visible {
-    transform: translateY(-50%) rotate(var(--tab-rot)) translateX(-5px) scale(1.04);
-  }
+  /* hover/focus: brighten in place, no movement */
+  .rtab:hover, .rtab:focus-visible { outline: none; filter: brightness(1.07); }
   .rtab:focus-visible .rtab-flag { box-shadow: 0 0 0 2px var(--tab-color), 0 6px 14px -6px color-mix(in srgb, var(--tab-color) 60%, transparent); }
 
-  /* open: pressed into the page */
-  .rtab[aria-expanded="true"][data-side="right"] {
-    transform: translateY(-50%) rotate(calc(var(--tab-rot) * 0.4)) translateX(-6px);
-  }
-  .rtab[aria-expanded="true"][data-side="left"] {
-    transform: translateY(-50%) rotate(calc(var(--tab-rot) * 0.4)) translateX(6px);
-  }
+  /* open: a quiet active ring, no movement */
   .rtab[aria-expanded="true"] .rtab-flag {
-    box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--tab-ink) 22%, transparent), 0 2px 5px rgba(0,0,0,0.2);
+    box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--tab-ink) 30%, transparent), 0 2px 5px rgba(0, 0, 0, 0.2);
   }
 
   @media (max-width: 48rem) {
@@ -123,8 +113,6 @@ const { label, color, ink, side, rot = -2, controls, target, ariaLabel } = Astro
   }
 
   @media (prefers-reduced-motion: reduce) {
-    .rtab { transition: opacity 300ms ease; }
-    .rtab:hover, .rtab:focus-visible,
-    .rtab[aria-expanded="true"] { transform: translateY(-50%) rotate(var(--tab-rot)); }
+    .rtab { transition: none; }
   }
 </style>
