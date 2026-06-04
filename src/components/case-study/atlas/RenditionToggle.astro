@@ -435,6 +435,15 @@ const BARS = Array.from({ length: 128 }, (_, i) => {
       get playing() { return playing; },
       get gains() { return chainGains.map((g) => Math.round(g.gain.value * 100) / 100); },
       get ctxState() { return ctx?.state ?? "none"; },
+      get bufferPeak() {
+        if (!buffer) return null;
+        let peak = 0, sum = 0, n = 0;
+        for (let c = 0; c < buffer.numberOfChannels; c++) {
+          const d = buffer.getChannelData(c);
+          for (let i = 0; i < d.length; i += 32) { const a = Math.abs(d[i]); if (a > peak) peak = a; sum += a * a; n++; }
+        }
+        return { peak: Math.round(peak * 1000) / 1000, rms: Math.round(Math.sqrt(sum / n) * 1000) / 1000 };
+      },
     };
   });
 </script>
