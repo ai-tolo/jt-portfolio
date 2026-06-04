@@ -1,0 +1,126 @@
+---
+// A quiet, theme-aware echo of the Soundbender's Atlas terrain — a waveform
+// ridge with topographic contour echoes — used as ambient texture behind the
+// landing hero (and, smaller, above the footer). Everything is stroked with
+// the live theme tokens (--line / --accent / --text), so it sits correctly on
+// carbon / powder / field / honey. Motion is a slow horizontal sway, gated by
+// prefers-reduced-motion and an IntersectionObserver toggle in index.astro.
+interface Props {
+  variant?: "hero" | "footer";
+  class?: string;
+}
+const { variant = "hero", class: className = "" } = Astro.props;
+
+const W = 1200;
+const H = variant === "footer" ? 240 : 620;
+const BASE = variant === "footer" ? 150 : 430;     // ridge baseline
+const AMP = variant === "footer" ? 26 : 64;
+const CONTOURS = variant === "footer" ? 3 : 5;
+
+// deterministic waveform-terrain profile (sum of sines + a soft massif), drawn
+// wider than the viewBox so the sway never reveals an edge.
+function ridge(dy: number) {
+  const x0 = -160, x1 = W + 160, step = 10;
+  const pts: string[] = [];
+  for (let x = x0; x <= x1; x += step) {
+    const t = (x + 160) / (x1 - x0);
+    const massif = Math.exp(-((t - 0.46) ** 2) / (2 * 0.22 ** 2));
+    const y =
+      BASE + dy -
+      AMP * (
+        0.62 * massif +
+        0.26 * (0.5 + 0.5 * Math.sin(t * Math.PI * 5.0 + 0.6)) +
+        0.16 * Math.sin(t * Math.PI * 9.0 + 1.7) +
+        0.10 * Math.sin(t * Math.PI * 17.0)
+      );
+    pts.push(`${x},${y.toFixed(1)}`);
+  }
+  return "M" + pts.join(" L");
+}
+
+const ridgePath = ridge(0);
+const contourPaths = Array.from({ length: CONTOURS }, (_, i) => ridge((i + 1) * (variant === "footer" ? 22 : 40)));
+---
+
+<div class:list={["sf", `sf-${variant}`, className]} data-sound-field aria-hidden="true">
+  <svg viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="xMidYMid slice" role="presentation">
+    {/* contour echoes (farther = fainter), each sways a little less than the ridge */}
+    {contourPaths.map((d, i) => (
+      <g class="sf-layer" style={`--i:${i + 1}`}>
+        <path class="sf-contour" d={d} style={`opacity:${(0.16 - i * 0.025).toFixed(3)}`} />
+      </g>
+    ))}
+    {/* the lead ridge, in the theme accent */}
+    <g class="sf-layer sf-layer-lead" style="--i:0">
+      <path class="sf-ridge" d={ridgePath} />
+    </g>
+  </svg>
+</div>
+
+<style>
+  .sf {
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    pointer-events: none;
+    overflow: hidden;
+  }
+  .sf svg { width: 100%; height: 100%; display: block; }
+
+  .sf-contour {
+    fill: none;
+    stroke: var(--text);
+    stroke-width: 1.2;
+    vector-effect: non-scaling-stroke;
+  }
+  .sf-ridge {
+    fill: none;
+    stroke: var(--accent);
+    stroke-width: 1.8;
+    opacity: 0.5;
+    vector-effect: non-scaling-stroke;
+    filter: drop-shadow(0 0 6px color-mix(in srgb, var(--accent) 45%, transparent));
+  }
+
+  /* Hero placement: terrain sits in the lower-right field, fading up and to the
+     left so it never fights the name blocks (which are opaque and sit above). */
+  .sf-hero {
+    -webkit-mask-image: radial-gradient(120% 120% at 78% 86%, #000 18%, transparent 72%);
+    mask-image: radial-gradient(120% 120% at 78% 86%, #000 18%, transparent 72%);
+    opacity: 0.9;
+  }
+  .sf-footer {
+    -webkit-mask-image: linear-gradient(180deg, transparent 0%, #000 55%);
+    mask-image: linear-gradient(180deg, transparent 0%, #000 55%);
+    opacity: 0.7;
+  }
+
+  /* Slow horizontal sway — parallax by layer index. Paused until the hero
+     scrolls into view (index.astro adds .is-live), and off under reduced motion. */
+  .sf-layer { transform: translateX(0); }
+  [data-sound-field].is-live .sf-layer {
+    animation: sf-sway calc(20s + var(--i) * 4s) ease-in-out infinite alternate;
+    will-change: transform;
+  }
+  [data-sound-field].is-live .sf-layer-lead { animation-duration: 16s; }
+  @keyframes sf-sway {
+    from { transform: translateX(calc(-14px - var(--i) * 4px)); }
+    to   { transform: translateX(calc(14px + var(--i) * 4px)); }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    [data-sound-field].is-live .sf-layer { animation: none; }
+  }
+</style>
+
+<script>
+  /* Self-contained motion gate: each sound-field only sways while it's on
+     screen. Runs once per page; finds every instance (hero + footer). */
+  const fields = document.querySelectorAll<HTMLElement>("[data-sound-field]");
+  if (fields.length) {
+    const io = new IntersectionObserver((records) => {
+      for (const r of records) r.target.classList.toggle("is-live", r.isIntersecting);
+    }, { threshold: 0.02 });
+    fields.forEach((f) => io.observe(f));
+  }
+</script>

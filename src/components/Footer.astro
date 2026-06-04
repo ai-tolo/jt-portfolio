@@ -1,6 +1,11 @@
 ---
+import SoundField from "./SoundField.astro";
+
 const path = Astro.url.pathname;
 const isColophon = path === "/colophon" || path === "/colophon/";
+// The shared footer also renders on the dark case-study route (via CSLayout).
+// Keep the ambient terrain off those pages so they stay exactly as designed.
+const isCaseStudy = path.startsWith("/case-studies/");
 
 const externals = [
   { label: "LinkedIn", href: "https://www.linkedin.com/in/jtollefson123/" },
@@ -11,41 +16,74 @@ const year = new Date().getFullYear();
 ---
 
 <footer class="footer">
-  <div class="inner footer-inner">
-    {/* The `·` is the mobile/touch entrance to Tolo.Cloud. To public visitors
-        it reads as ordinary punctuation. Long-press (800ms) triggers the same
-        cloud-overlay flow as the desktop `cloud` keystroke. The hit zone is
-        44×44pt via padding + negative margin — the layout stays unchanged. */}
-    <p class="name">Jonathan Tollefson <span
-      data-cloud-trigger
-      class="cloud-dot"
-      aria-hidden="true"
-    >·</span> {year}</p>
-    <ul class="links">
-      <li>
-        <a
-          href="/colophon"
-          class="colophon"
-          aria-current={isColophon ? "page" : undefined}
-        >Colophon</a>
-      </li>
-      {externals.map((l) => (
+  {!isCaseStudy && <SoundField variant="footer" class="footer-field" />}
+  <div class="inner footer-content">
+    <p class="footer-credo">
+      Building intentional worlds<br /> out of structured attention.
+    </p>
+
+    <div class="footer-inner">
+      {/* The `·` is the mobile/touch entrance to Tolo.Cloud. To public visitors
+          it reads as ordinary punctuation. Long-press (800ms) triggers the same
+          cloud-overlay flow as the desktop `cloud` keystroke. The hit zone is
+          44×44pt via padding + negative margin — the layout stays unchanged. */}
+      <p class="name">Jonathan Tollefson <span
+        data-cloud-trigger
+        class="cloud-dot"
+        aria-hidden="true"
+      >·</span> {year}</p>
+      <ul class="links">
         <li>
-          <a href={l.href} target="_blank" rel="noopener noreferrer">
-            {l.label}<span class="ext" aria-hidden="true"> ↗</span>
-          </a>
+          <a
+            href="/colophon"
+            class="colophon"
+            aria-current={isColophon ? "page" : undefined}
+          >Colophon</a>
         </li>
-      ))}
-    </ul>
+        {externals.map((l) => (
+          <li>
+            <a href={l.href} target="_blank" rel="noopener noreferrer">
+              {l.label}<span class="ext" aria-hidden="true"> ↗</span>
+            </a>
+          </li>
+        ))}
+        <li>
+          <button type="button" class="to-top" data-to-top>
+            Top<span class="ext" aria-hidden="true"> ↑</span>
+          </button>
+        </li>
+      </ul>
+    </div>
   </div>
 </footer>
 
 <style>
   .footer {
+    position: relative;
+    isolation: isolate;
+    overflow: clip;
     border-top: 1px solid var(--line);
     margin-top: var(--space-24);
-    padding: var(--space-12) 0;
+    padding: var(--space-16) 0 var(--space-12);
   }
+  .footer-content {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-12);
+  }
+
+  .footer-credo {
+    max-width: 18ch;
+    font-family: "Space Grotesk Variable", "Space Grotesk", ui-sans-serif, system-ui, sans-serif;
+    font-size: clamp(1.5rem, 3.4vw, 2.5rem);
+    font-weight: var(--fw-semibold);
+    line-height: 1.08;
+    letter-spacing: -0.02em;
+    color: var(--text);
+  }
+
   .footer-inner {
     display: flex;
     flex-direction: column;
@@ -66,9 +104,6 @@ const year = new Date().getFullYear();
   .cloud-dot {
     display: inline-block;
     position: relative;
-    /* Horizontal padding compensates for the narrow `·` glyph (~5px) so the
-       hit box clears the 44pt minimum on both axes. Negative margin equals
-       the padding so the visible layout doesn't shift. */
     padding: 14px 20px;
     margin: -14px -20px;
     cursor: pointer;
@@ -83,14 +118,19 @@ const year = new Date().getFullYear();
       0 0 6px rgba(199, 168, 255, 0.55),
       0 0 14px rgba(255, 109, 196, 0.35);
   }
+
   .links {
     list-style: none;
     padding: 0;
+    margin: 0;
     display: flex;
     flex-wrap: wrap;
+    align-items: center;
     gap: var(--space-6);
   }
-  .links a {
+  .links a,
+  .to-top {
+    font-family: inherit;
     font-size: var(--fs-eyebrow);
     font-weight: var(--fw-semibold);
     letter-spacing: var(--ls-eyebrow);
@@ -104,11 +144,22 @@ const year = new Date().getFullYear();
                 text-decoration-color 160ms ease,
                 text-decoration-thickness 160ms ease;
   }
+  .to-top {
+    -webkit-appearance: none;
+    appearance: none;
+    background: none;
+    border: none;
+    padding: 0;
+    cursor: pointer;
+  }
   .links a:hover,
-  .links a:focus-visible {
+  .links a:focus-visible,
+  .to-top:hover,
+  .to-top:focus-visible {
     color: var(--text);
     text-decoration-color: var(--accent);
     text-decoration-thickness: 2px;
+    outline: none;
   }
   .links a.colophon[aria-current="page"] {
     color: var(--text);
@@ -131,3 +182,13 @@ const year = new Date().getFullYear();
     }
   }
 </style>
+
+<script>
+  /* Back-to-top — smooth unless the user prefers reduced motion. */
+  document.querySelectorAll<HTMLElement>("[data-to-top]").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+      window.scrollTo({ top: 0, behavior: reduce ? "auto" : "smooth" });
+    });
+  });
+</script>

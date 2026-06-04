@@ -3186,6 +3186,49 @@ function stemSoloUrls(sf) {
     return s;
   })();
 
+  // ── Drafts: never lose typed text to a reload ──────────────────────────────
+  // The dev server hot-reloads the page whenever ANY file in the project is
+  // saved (e.g. a parallel session editing other pages), and a few actions
+  // here call location.reload(). Either way, every text field autosaves to
+  // sessionStorage on input and restores on load, so in-progress answers /
+  // feedback / list names survive any refresh. On `window` so the separate
+  // curiosity <script> module shares the same store. Cleared on successful submit.
+  const Drafts: {
+    get: (k: string) => string;
+    set: (k: string, v: string) => void;
+    clear: (k: string) => void;
+    bind: (el: HTMLInputElement | HTMLTextAreaElement | null, k: string) => void;
+  } = (() => {
+    const w = window as unknown as { __engDrafts?: any };
+    if (w.__engDrafts) return w.__engDrafts;
+    const KEY = "engineer-drafts";
+    const read = (): Record<string, string> => {
+      try { return JSON.parse(sessionStorage.getItem(KEY) || "{}"); } catch { return {}; }
+    };
+    const write = (o: Record<string, string>) => {
+      try { sessionStorage.setItem(KEY, JSON.stringify(o)); } catch {}
+    };
+    const api = {
+      get(k: string) { return read()[k] || ""; },
+      set(k: string, v: string) {
+        const o = read();
+        if (v && v.trim()) o[k] = v; else delete o[k];
+        write(o);
+      },
+      clear(k: string) { const o = read(); delete o[k]; write(o); },
+      // Restore a field's saved value + autosave on every keystroke. Idempotent.
+      bind(el: HTMLInputElement | HTMLTextAreaElement | null, k: string) {
+        if (!el || (el as HTMLElement).dataset.draftBound) return;
+        (el as HTMLElement).dataset.draftBound = "1";
+        const saved = api.get(k);
+        if (saved && !el.value) el.value = saved;
+        el.addEventListener("input", () => api.set(k, el.value));
+      },
+    };
+    w.__engDrafts = api;
+    return api;
+  })();
+
   let activePairEl: HTMLElement | null = null;
   // null = "original is playing"; "a" or "b" = that variant is playing.
   let currentSide: "a" | "b" | null = null;
@@ -4210,6 +4253,8 @@ function stemSoloUrls(sf) {
   // reverts. The typing itself is shielded from the section keyboard handlers
   // by their input/textarea guards.
   document.querySelectorAll<HTMLInputElement>("[data-collection-input]").forEach((input) => {
+    const draftKey = "collection:" + (input.dataset.sourceAssetId ?? "");
+    Drafts.bind(input, draftKey);
     let committing = false;
     const commit = async () => {
       if (committing) return;
@@ -4226,9 +4271,15 @@ function stemSoloUrls(sf) {
           body: JSON.stringify({ asset_id: assetId, collection: val }),
         });
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        location.reload(); // server re-groups by collection
+        // Commit IN PLACE — no page reload (which used to wipe other fields +
+        // felt jumpy). The label is saved; the Winners list re-groups on the
+        // next natural load. Mark it pinned + drop the draft.
+        input.dataset.original = val;
+        Drafts.clear(draftKey);
+        input.dataset.pinned = val ? "true" : "false";
       } catch (e) {
         console.warn("[winners collection] save failed:", e);
+      } finally {
         input.disabled = false;
         committing = false;
       }
@@ -4240,6 +4291,13 @@ function stemSoloUrls(sf) {
     });
     input.addEventListener("blur", commit);
     input.addEventListener("click", (e) => e.stopPropagation());
+  });
+
+  // Autosave the per-card feedback textareas (crown / make-more reasoning) so a
+  // reload never eats them.
+  document.querySelectorAll<HTMLTextAreaElement>("[data-feedback-input]").forEach((ta) => {
+    const card = ta.closest<HTMLElement>(".winners-card");
+    if (card) Drafts.bind(ta, "feedback:" + (card.dataset.winnersJobId ?? ""));
   });
 
   // ── Champion crown (with optional feedback) ────────────────────────
@@ -4290,6 +4348,7 @@ function stemSoloUrls(sf) {
       // simpler than rebuilding the DOM client-side. ORIGINAL crowns are
       // terminal, so the reloaded card shows the ORIGINAL-king state with
       // no in-flight badge.
+      if (Number.isFinite(jobId)) Drafts.clear("feedback:" + jobId); // consumed
       location.reload();
     });
   });
@@ -4317,6 +4376,7 @@ function stemSoloUrls(sf) {
             }),
           });
           if (!res.ok) throw new Error(`HTTP ${res.status}`);
+          if (Number.isFinite(jobId)) Drafts.clear("feedback:" + jobId); // consumed
           location.reload();
         } else if (action === "publish-toggle") {
           const currentlyPublic = btn.dataset.currentlyPublic === "true";
@@ -4556,6 +4616,7 @@ function stemSoloUrls(sf) {
 
     const SECTION = "asks";
     const Stage = window.__engStage; // shared selector defined by the faceoff module
+    const Drafts = window.__engDrafts; // shared draft autosave (survives reloads)
     const claim = () => { if (Stage) Stage.claim(SECTION); };
 
     let takes = [];        // [{ audio, label, ref, n, chip }]
@@ -4753,7 +4814,9 @@ function stemSoloUrls(sf) {
       else findingEl.hidden = true;
       setWave(refs);
       buildTakes(refs);
-      answerEl.value = "";
+      // Restore any in-progress answer for THIS question (survives reloads);
+      // a fresh question starts empty.
+      answerEl.value = (Drafts ? Drafts.get("ask:" + ins.id) : "") || "";
       respondEl.hidden = false;
       doneEl.hidden = true;
       doneEl.style.color = "";
@@ -4822,6 +4885,7 @@ function stemSoloUrls(sf) {
           body: JSON.stringify({ insight_id: current.id, answer: ans }),
         });
         if (!r.ok) throw new Error("failed");
+        if (Drafts) Drafts.clear("ask:" + current.id); // answered — drop the draft
         teardownTakes();
         respondEl.hidden = true;
         findingEl.hidden = true;
@@ -4839,6 +4903,10 @@ function stemSoloUrls(sf) {
     });
     answerEl.addEventListener("keydown", (e) => {
       if ((e.metaKey || e.ctrlKey) && e.key === "Enter") { e.preventDefault(); sendBtn.click(); }
+    });
+    // Autosave the in-progress answer per question so a reload never loses it.
+    answerEl.addEventListener("input", () => {
+      if (current && Drafts) Drafts.set("ask:" + current.id, answerEl.value);
     });
     skipBtn.addEventListener("click", async () => {
       if (!current) return;
