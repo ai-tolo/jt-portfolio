@@ -6,14 +6,17 @@ import { getCaseStudies } from "../lib/notion";
 
 export const prerender = true;
 
-// Feature The Soundbender's Atlas in the big slot (its long title + pitch need
-// the room, and it's the flagship). Pull it to the front; the rest keep order.
-const FEATURED_SLUG = "the-console";
+// Order the case studies by strength (Jon's call 2026-06-03), overriding the
+// Notion Order field. The first slug is featured full-width; the rest fall into
+// the grid in this order. The "Case study NN" badge = this strength rank.
+const RANK = ["the-console", "chs", "raylu", "crediverso", "momence"];
+const FEATURED_SLUG = RANK[0];
+const rankOf = (slug: string) => {
+  const i = RANK.indexOf(slug);
+  return i === -1 ? RANK.length : i;
+};
 const allWorks = await getCaseStudies();
-const featuredWork = allWorks.find((w) => w.slug === FEATURED_SLUG);
-const works = featuredWork
-  ? [featuredWork, ...allWorks.filter((w) => w.slug !== FEATURED_SLUG)]
-  : allWorks;
+const works = [...allWorks].sort((a, b) => rankOf(a.slug) - rankOf(b.slug));
 ---
 
 <Layout title="Jonathan Tollefson — User Experience Architect">
@@ -86,7 +89,7 @@ const works = featuredWork
           {works.map((w) => (
             <li class:list={["work-item", { "work-item-featured": w.slug === FEATURED_SLUG }]}>
               <WorkEntry
-                index={w.order}
+                index={rankOf(w.slug) + 1}
                 name={w.name}
                 subtitle={w.subtitle}
                 outcome={w.outcome}

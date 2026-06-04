@@ -59,6 +59,9 @@ function readRichText(prop: unknown): string {
 // check inside scripts/sync-notion-images.mjs.
 const COVER_OVERRIDE: Record<string, string> = {
   "the-console": "/case-studies/the-console/cover.svg",
+  // Momence's Notion cover carries a "momence" wordmark that collides with the
+  // card's overlaid title; this hand-built SVG (the reshuffling profile) is clean.
+  "momence": "/case-studies/momence/cover.svg",
 };
 
 function normalizePage(page: PageObjectResponse): CaseStudyMeta {

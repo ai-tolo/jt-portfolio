@@ -38,7 +38,7 @@ export const prerender = true;
   ogImage="/case-studies/raylu/cover.png"
 >
   <CSHero
-    eyebrow="Case study 04 · April — October 2023"
+    eyebrow="Case study 03 · April — October 2023"
     title="Raylu"
     subtitle="Can a Figma file close a $4M round?"
     cover="/case-studies/raylu/cover.png"
@@ -136,29 +136,13 @@ export const prerender = true;
             </svg>
           </span>
         </div>
-        <span class="ba-hint" data-ba-hint>drag</span>
+        <span class="ba-hint" data-ba-hint>‹ drag to compare ›</span>
       </div>
     </CSLiveDemo>
-
-    <CSFigure
-      src="/case-studies/raylu/notion-35fed8d4704f80d780aaf0ab65e049a7.png"
-      alt="Strategy slide. Header: raylu. Headline: Goal — provide necessary tools to make ML safe, with the word safe circled. Below: Machine Learning splits into Deterministic (defined scopes of inputs and outputs, simple linear regression) and Unbounded (no limitations of inputs, large language models, recommenders — targeting this second type). Right rail: observability — how the model was used, what it did, how it was received. We give companies the ability to wrap their in-production models in order to receive detailed context data linked with model performance."
-      caption="The strategy slide that anchored every screen downstream. Pipelines, not single models. Human-inserted rules over the chain. Once that thesis was in the file, every later mockup had something to be loyal to."
-      width="wide"
-      framed
-    />
   </CSSection>
 
   {/* ─────── 05 · THE PIPELINE UI ─────── */}
-  <CSSection num="05" title="ML primitives a product manager could read" deck="The core surface was a workflow builder for ML pipelines — Pipelines, Deployments, Analytics, then detail screens for creation, data connection, config, and scheduling. The trick was making real ML primitives legible to a non-engineer in a demo.">
-    <CSFigure
-      src="/case-studies/raylu/notion-35fed8d4704f8005968fd121bdbfc1d8.png"
-      alt="Raylu hi-fi UMAP slicing UI. Left rail: 'raylu' wordmark and three nav icons. Main area: '500 data row(s)' count and a search-query field, plus Display and Sort By buttons. A sidebar with controls for Point size, Opacity, Thumbnail size, a Reduction algorithm selector set to UMAP, and an Annotation selector set to 'vehicle.' To the right: a 2D scatterplot with a green cluster boxed in dashed lines, a smaller green cluster, and a large orange cluster. A 'Model Integration' button sits top-right."
-      caption="UMAP slicing was the moment investors stopped asking “is this for real engineers?” Real ML primitives — point clouds, annotation overlays, reduction algorithms — in a UI a product manager could read."
-      width="wide"
-      framed
-    />
-
+  <CSSection num="05" title="ML primitives a product manager could read" deck="The hi-fi was a clickable pipeline builder. The hard part was never the ML — it was making real ML primitives legible to a non-engineer mid-demo. (The UMAP slice surface lives in the file above; here's where that legibility paid off.)">
     <CSFigure
       src="/case-studies/raylu/notion-35fed8d4704f802581d3cfb7be04a5c8.png"
       alt="Raylu label-errors workflow. Filters at the top: All data / Slices / Splits, then Slice name search, and a Label errors section with Roads, Non-RGB images, Water, Fields options. Active filters: false positive count between Min 0 and Max 28, Metadata is 'data_split', plus a confidence threshold (0.5) and IOU threshold (0.5). Below: a grid of 16 thumbnails with bounding boxes overlaid, each checkbox-selected, showing detected objects. '14 selected' button top right."
@@ -188,15 +172,11 @@ export const prerender = true;
   </CSSection>
 
   {/* ─────── 07 · WHAT GENERALIZES ─────── */}
-  <CSSection num="07" title="What generalizes" deck="Two moves I'd repeat on any early-stage engagement.">
+  <CSSection num="07" title="What generalizes" deck="What I'd carry into any early-stage engagement — one principle, and one number.">
     <ul class="generalize">
       <li>
         <strong>The workspace is the highest-leverage deliverable.</strong>
         Sketches and Zoom calls produce ideas, not shared context. A navigable file lets founders self-serve pitch updates and keeps the designer off the critical path for every external conversation. The artifact <em>is</em> the alignment.
-      </li>
-      <li>
-        <strong>Pre-PMF has a different success metric than shipped product.</strong>
-        The brief is “readable enough to fund and build,” not “polished system.” The parts that need to scale — the component patterns engineering inherits — get the polish budget. Everything else is sketch-rate, on purpose.
       </li>
     </ul>
 
@@ -289,21 +269,23 @@ export const prerender = true;
     let pct = 50;
     let touched = false;
 
-    const apply = (p: number) => {
+    const apply = (p: number, user = false) => {
       pct = Math.max(0, Math.min(100, p));
       // clip the BEFORE layer from the right; handle rides the seam.
       before.style.clipPath = `inset(0 ${100 - pct}% 0 0)`;
       handle.style.left = pct + "%";
       ba.setAttribute("aria-valuenow", String(Math.round(pct)));
-      if (!touched && hint) {
+      // Only retire the "drag" hint on a real user gesture — not the initial
+      // apply(50) or the auto-nudge, which would hide it before it's ever seen.
+      if (user && !touched && hint) {
         touched = true;
         hint.classList.add("ba-hint-gone");
       }
     };
 
-    const fromClientX = (clientX: number) => {
+    const fromClientX = (clientX: number, user = false) => {
       const r = ba.getBoundingClientRect();
-      apply(((clientX - r.left) / r.width) * 100);
+      apply(((clientX - r.left) / r.width) * 100, user);
     };
 
     let dragging = false;
@@ -311,12 +293,12 @@ export const prerender = true;
       dragging = true;
       ba.setPointerCapture?.(e.pointerId);
       ba.classList.add("ba-dragging");
-      fromClientX(e.clientX);
+      fromClientX(e.clientX, true);
       e.preventDefault();
     };
     const move = (e: PointerEvent) => {
       if (!dragging) return;
-      fromClientX(e.clientX);
+      fromClientX(e.clientX, true);
     };
     const up = (e: PointerEvent) => {
       dragging = false;
@@ -331,10 +313,10 @@ export const prerender = true;
 
     // keyboard a11y
     ba.addEventListener("keydown", (e) => {
-      if (e.key === "ArrowLeft") { apply(pct - 4); e.preventDefault(); }
-      else if (e.key === "ArrowRight") { apply(pct + 4); e.preventDefault(); }
-      else if (e.key === "Home") { apply(0); e.preventDefault(); }
-      else if (e.key === "End") { apply(100); e.preventDefault(); }
+      if (e.key === "ArrowLeft") { apply(pct - 4, true); e.preventDefault(); }
+      else if (e.key === "ArrowRight") { apply(pct + 4, true); e.preventDefault(); }
+      else if (e.key === "Home") { apply(0, true); e.preventDefault(); }
+      else if (e.key === "End") { apply(100, true); e.preventDefault(); }
     });
 
     // a one-time nudge animation the first time it's seen, so the affordance
@@ -505,21 +487,28 @@ export const prerender = true;
 
   .ba-hint {
     position: absolute;
-    top: 12px; left: 50%;
+    top: 14px; left: 50%;
     transform: translateX(-50%);
     z-index: 6;
     font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-    font-size: 9.5px;
-    letter-spacing: 0.22em;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.1em;
     text-transform: uppercase;
     color: #0c0a12;
-    background: rgba(245, 241, 232, 0.92);
+    background: rgba(245, 241, 232, 0.95);
     border-radius: 20px;
-    padding: 4px 11px;
+    padding: 6px 14px;
     pointer-events: none;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.45);
     transition: opacity 280ms ease, transform 280ms ease;
+    animation: ba-hint-pulse 2.2s ease-in-out infinite;
   }
-  .ba-hint-gone { opacity: 0; transform: translateX(-50%) translateY(-6px); }
+  @keyframes ba-hint-pulse {
+    0%, 100% { transform: translateX(-50%) translateY(0); }
+    50% { transform: translateX(-50%) translateY(-3px); }
+  }
+  .ba-hint-gone { opacity: 0; transform: translateX(-50%) translateY(-8px); animation: none; }
 
   /* ── §07 · the earned zero ────────────────────────────────────────── */
   .ry-zero {
@@ -626,7 +615,7 @@ export const prerender = true;
   @media (prefers-reduced-motion: reduce) {
     .ry-bignum-fig::after { transition: none; transform: scaleX(1); }
     .ry-zero-n span { transition: none; opacity: 1; transform: none; }
-    .ba-hint { transition: none; }
+    .ba-hint { transition: none; animation: none; }
     .ba-grip { transition: none; }
   }
 </style>
