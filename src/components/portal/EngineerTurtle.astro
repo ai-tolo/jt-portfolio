@@ -1,0 +1,125 @@
+---
+/**
+ * EngineerTurtle — the Engineer's avatar: "Terrapin", a cute futuristic-hippie
+ * robot turtle engineer. Grateful Dead's Terrapin Station banjo turtle ×
+ * Daft Punk's glowing visor × a little hippie tie-dye/flower + sci-fi antenna.
+ *
+ * Self-contained SVG component (no deps) so its art can be refined in isolation
+ * without touching the Engineer page. Idle animation makes it feel alive — a
+ * gentle bob, a visor shimmer, and a pulsing antenna — so the question reads as
+ * the character speaking. Pass `speaking` to amp the visor while a question is up.
+ *
+ * NOTE: this is a solid first pass. The character art is meant to be iterated on
+ * here (and only here). Keep it a single self-contained <svg> with the same
+ * outer .eng-turtle wrapper + dimensions so the page layout stays stable.
+ */
+interface Props {
+  size?: number;
+  speaking?: boolean;
+  class?: string;
+}
+const { size = 72, speaking = false, class: className = "" } = Astro.props;
+---
+
+<span
+  class:list={["eng-turtle", className]}
+  data-speaking={speaking ? "true" : "false"}
+  style={`--turtle-size:${size}px`}
+  aria-hidden="true"
+>
+  <svg viewBox="0 0 100 100" width={size} height={size} role="img" aria-label="Terrapin, the engineer">
+    <defs>
+      <radialGradient id="tShell" cx="42%" cy="34%" r="78%">
+        <stop offset="0%" stop-color="#3df0d0" />
+        <stop offset="42%" stop-color="#13a7c9" />
+        <stop offset="78%" stop-color="#5b46d6" />
+        <stop offset="100%" stop-color="#3a2a86" />
+      </radialGradient>
+      <linearGradient id="tDye" x1="0" y1="0" x2="1" y2="1">
+        <stop offset="0%" stop-color="#ff2d8b" />
+        <stop offset="50%" stop-color="#ff8a3d" />
+        <stop offset="100%" stop-color="#ffd23d" />
+      </linearGradient>
+      <linearGradient id="tHead" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%" stop-color="#7fe3a8" />
+        <stop offset="100%" stop-color="#3f9e73" />
+      </linearGradient>
+      <radialGradient id="tGlow" cx="50%" cy="50%" r="50%">
+        <stop offset="0%" stop-color="#9af4ff" />
+        <stop offset="100%" stop-color="#0ec4fc" stop-opacity="0" />
+      </radialGradient>
+    </defs>
+
+    <!-- antenna -->
+    <line x1="50" y1="30" x2="50" y2="15" stroke="#0ec4fc" stroke-width="2.4" stroke-linecap="round" />
+    <circle class="t-antenna" cx="50" cy="13" r="4.6" fill="#0ec4fc" />
+    <circle cx="50" cy="13" r="9" fill="url(#tGlow)" />
+
+    <!-- flippers -->
+    <ellipse cx="22" cy="74" rx="11" ry="8" fill="url(#tHead)" transform="rotate(-22 22 74)" />
+    <ellipse cx="78" cy="74" rx="11" ry="8" fill="url(#tHead)" transform="rotate(22 78 74)" />
+
+    <!-- head -->
+    <ellipse cx="50" cy="73" rx="19" ry="17" fill="url(#tHead)" />
+    <!-- Daft-Punk visor -->
+    <rect x="33" y="66" width="34" height="15" rx="7.5" fill="#0a0a14" />
+    <rect x="33" y="66" width="34" height="15" rx="7.5" fill="none" stroke="#2a2a3e" stroke-width="1" />
+    <rect class="t-visor" x="37" y="71.5" width="26" height="3.6" rx="1.8" fill="#19e0ff" />
+    <!-- little smile -->
+    <path d="M44 84 q6 4 12 0" fill="none" stroke="#2c6b4f" stroke-width="1.6" stroke-linecap="round" />
+
+    <!-- shell -->
+    <g class="t-shell">
+      <ellipse cx="50" cy="50" rx="40" ry="31" fill="url(#tShell)" />
+      <ellipse cx="50" cy="50" rx="40" ry="31" fill="url(#tDye)" opacity="0.16" />
+      <!-- shell rim -->
+      <path d="M11 54 a39 31 0 0 0 78 0" fill="none" stroke="#241a52" stroke-width="3" opacity="0.5" />
+      <!-- scutes (hexagonal panels) -->
+      <polygon points="50,33 60,39 60,51 50,57 40,51 40,39" fill="none" stroke="#cfeaff" stroke-width="1.5" opacity="0.55" />
+      <polygon points="30,40 38,44 38,52 30,56 23,52 23,44" fill="none" stroke="#cfeaff" stroke-width="1.2" opacity="0.4" />
+      <polygon points="70,40 77,44 77,52 70,56 62,52 62,44" fill="none" stroke="#cfeaff" stroke-width="1.2" opacity="0.4" />
+      <!-- hippie flower sticker -->
+      <g transform="translate(50 45)" class="t-flower">
+        <circle r="2.4" fill="#ffd23d" />
+        <g fill="#ff7ab8">
+          <ellipse cx="0" cy="-5.2" rx="2.1" ry="3.4" />
+          <ellipse cx="5" cy="-1.6" rx="2.1" ry="3.4" transform="rotate(72 5 -1.6)" />
+          <ellipse cx="3.1" cy="4.2" rx="2.1" ry="3.4" transform="rotate(144 3.1 4.2)" />
+          <ellipse cx="-3.1" cy="4.2" rx="2.1" ry="3.4" transform="rotate(216 -3.1 4.2)" />
+          <ellipse cx="-5" cy="-1.6" rx="2.1" ry="3.4" transform="rotate(288 -5 -1.6)" />
+        </g>
+      </g>
+    </g>
+  </svg>
+</span>
+
+<style>
+  .eng-turtle {
+    display: inline-flex;
+    width: var(--turtle-size, 72px);
+    height: var(--turtle-size, 72px);
+    line-height: 0;
+    filter: drop-shadow(0 6px 14px rgba(14, 196, 252, 0.28));
+    animation: t-bob 3.4s ease-in-out infinite;
+  }
+  .eng-turtle svg { overflow: visible; }
+  .t-visor { animation: t-visor 2.6s ease-in-out infinite; }
+  .t-antenna { animation: t-antenna 1.9s ease-in-out infinite; transform-origin: 50px 13px; }
+  .eng-turtle[data-speaking="true"] .t-visor { animation-duration: 0.9s; }
+
+  @keyframes t-bob {
+    0%, 100% { transform: translateY(0) rotate(-1.2deg); }
+    50% { transform: translateY(-3px) rotate(1.2deg); }
+  }
+  @keyframes t-visor {
+    0%, 100% { fill: #19e0ff; filter: drop-shadow(0 0 3px rgba(25, 224, 255, 0.8)); }
+    50% { fill: #aef4ff; filter: drop-shadow(0 0 6px rgba(25, 224, 255, 1)); }
+  }
+  @keyframes t-antenna {
+    0%, 100% { opacity: 0.7; transform: scale(0.9); }
+    50% { opacity: 1; transform: scale(1.12); }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .eng-turtle, .t-visor, .t-antenna { animation: none; }
+  }
+</style>
