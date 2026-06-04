@@ -1,13 +1,22 @@
 ---
-// The Figma file as alignment artifact. A horizontal scroller of the
-// linear workspace timeline the team used during the engagement. Each
-// section is a stop founders could navigate to without designer
-// intervention — brand, competitor analysis, low-fi, hi-fi, prototype.
-// Click an index dot or use the prev/next chevrons to advance.
+// ─────────────────────────────────────────────────────────────────────────
+// "YOU JUST GOT THE LINK" — the Figma file as alignment artifact.
 //
-// The mock here approximates the actual Figma layout: vertically
-// expanding sections, each one date-stamped, with a representative
-// summary chip and a thumbnail strip.
+// Not a carousel. This IS the investor opening the Figma link and scrolling
+// it top to bottom for the first time. Five sections stack vertically the
+// way real Figma pages do — Brand → Competitive analysis → Strategy →
+// Wireframes → Hi-fi. As each section crosses into the viewport it EXPANDS
+// into being: the date-stamp blinks in first, then the section name, then
+// the content (note → chips → frame → caption) cascades up behind it.
+//
+// Motion is IntersectionObserver-gated and staged via per-element delays.
+// A faux Figma chrome (filename tab, share pill, live cursor) sells the
+// "this is the actual file" read without claiming to embed it.
+//
+// prefers-reduced-motion → every section starts fully revealed, no motion.
+// Headless preview throttles transitions, so a scroll/timeout fallback
+// force-reveals anything still hidden after a beat.
+// ─────────────────────────────────────────────────────────────────────────
 
 const SECTIONS = [
   {
@@ -19,347 +28,560 @@ const SECTIONS = [
     accent: "cyan",
     asset: "/case-studies/raylu/cover.png",
     assetAlt: "Raylu pixel-art whale mascot on teal.",
-    assetCaption: "The whale mascot, picked because it reads as friendly at any scale.",
+    assetCaption: "The whale mascot — picked because it reads friendly at any scale.",
   },
   {
     id: "02",
     name: "Competitive analysis",
     date: "Apr 2023",
-    note: "Five sibling ML-tooling products mapped on a 2x2 of fidelity vs scope, with takeaways pinned per quadrant.",
+    note: "Five sibling ML-tooling products mapped on a 2×2 of fidelity vs scope, takeaways pinned per quadrant.",
     chips: ["Snorkel", "Weights & Biases", "Roboflow", "DataRobot", "Galileo"],
     accent: "pink",
     asset: null,
-    assetCaption: "Competitive read kept the work honest — no surface that someone else already shipped.",
+    assetCaption: "Kept the work honest — no surface someone else already shipped.",
   },
   {
     id: "03",
     name: "Strategy / thesis",
     date: "May 2023",
-    note: "Goal: provide necessary tools to make ML safe. Deterministic vs unbounded — we built for the unbounded case.",
+    note: "Goal: provide the tools to make ML safe. Deterministic vs unbounded — we built for the unbounded case.",
     chips: ["observability", "pipelines, not models", "human-rules over"],
     accent: "yellow",
     asset: "/case-studies/raylu/notion-35fed8d4704f80d780aaf0ab65e049a7.png",
     assetAlt: "Strategy slide: Raylu's goal is to provide tools that make ML safe. ML splits into Deterministic and Unbounded; we work in the unbounded case via pipelines.",
-    assetCaption: "Pipelines, not single models. Human-inserted rules over the chain. That positioning carried into every screen.",
+    assetCaption: "Pipelines, not single models. Human rules over the chain. That positioning carried into every screen.",
   },
   {
     id: "04",
     name: "Wireframes",
     date: "Jun 2023",
-    note: "Founder sketches translated into low-fi Figma frames. Two starting paths: talk to a chat bot, or boot a premade system.",
+    note: "Founder sketches translated into low-fi frames. Two starting paths: talk to a chat bot, or boot a premade system.",
     chips: ["chat-first", "premade systems", "two-path entry"],
     accent: "white",
     asset: "/case-studies/raylu/notion-35fed8d4704f808d9ca0f53a5b38a89d.png",
     assetAlt: "Founder sketch for the model-prototype starting page. Sidebar icons, a chat-style interface, and an All systems grid of recommendation-system cards. Annotated: 'either talk to chat bot or boot up premade system.'",
-    assetCaption: "Founder sketch (mid-Zoom call, then traced in Figma the same afternoon). The annotation under it became the V0 nav model.",
+    assetCaption: "Founder sketch (mid-Zoom call, then traced in Figma the same afternoon). The annotation became the V0 nav model.",
   },
   {
     id: "05",
     name: "Hi-fi prototype",
     date: "Jul 2023",
-    note: "Pipeline builder hi-fi, with model-integration nav, label-errors workflow, and UMAP slicing. Clickable for investor demos.",
+    note: "Pipeline builder hi-fi — model-integration nav, label-errors workflow, UMAP slicing. Clickable for investor demos.",
     chips: ["pipeline UI", "UMAP slicing", "label errors"],
     accent: "green",
     asset: "/case-studies/raylu/notion-35fed8d4704f8005968fd121bdbfc1d8.png",
     assetAlt: "Raylu hi-fi UMAP slicing UI. A scatterplot with orange and green clusters, a left rail of sliders (point size, opacity, thumbnail size), and a UMAP reduction-algorithm selector. Model Integration button top right.",
-    assetCaption: "The pipeline builder's UMAP slice surface. Investor demos clicked into this screen to feel \"this is real.\"",
+    assetCaption: "The UMAP slice surface. Investor demos clicked into this screen to feel \"this is real.\"",
   },
 ];
 ---
 
-<div class="ry-tl" data-ry-tl>
-  <div class="ry-tl-controls">
-    <button type="button" class="ry-tl-nav" data-ry-tl-nav="prev" aria-label="Previous section">←</button>
-    <div class="ry-tl-dots" role="tablist" aria-label="Workspace sections">
-      {SECTIONS.map((s, i) => (
-        <button
-          type="button"
-          class:list={["ry-tl-dot", { active: i === 0 }]}
-          role="tab"
-          aria-selected={i === 0 ? "true" : "false"}
-          data-ry-tl-dot={i}
-        >
-          <span class="ry-tl-dot-id">{s.id}</span>
-          <span class="ry-tl-dot-name">{s.name}</span>
-        </button>
-      ))}
-    </div>
-    <button type="button" class="ry-tl-nav" data-ry-tl-nav="next" aria-label="Next section">→</button>
+<div class="ry-fig" data-ry-fig>
+  {/* faux Figma chrome — sells "you opened the actual link" */}
+  <div class="ry-fig-bar">
+    <span class="ry-fig-dots" aria-hidden="true"><i></i><i></i><i></i></span>
+    <span class="ry-fig-file">
+      <span class="ry-fig-file-icon" aria-hidden="true">◢</span>
+      raylu — workspace
+      <span class="ry-fig-file-ext">.fig</span>
+    </span>
+    <span class="ry-fig-share" aria-hidden="true">
+      <span class="ry-fig-share-cur"></span>
+      <span class="ry-fig-cursors"><i class="ry-c1"></i><i class="ry-c2"></i></span>
+      Anyone with the link
+    </span>
   </div>
 
-  <div class="ry-tl-scroller" data-ry-tl-scroller>
+  {/* scroll progress through the file */}
+  <div class="ry-fig-rail" aria-hidden="true">
+    <div class="ry-fig-rail-fill" data-ry-fill></div>
+  </div>
+
+  <div class="ry-fig-pages">
     {SECTIONS.map((s, i) => (
-      <div class:list={["ry-tl-section", `ry-tl-accent-${s.accent}`]} data-ry-tl-section={i}>
-        <div class="ry-tl-section-head">
-          <span class="ry-tl-section-id">{s.id} / 05</span>
-          <span class="ry-tl-section-date">{s.date}</span>
+      <section
+        class:list={["ry-pg", `ry-acc-${s.accent}`]}
+        data-ry-pg={i}
+      >
+        {/* the spine number + the connector dot that "draws" the file together */}
+        <div class="ry-pg-spine" aria-hidden="true">
+          <span class="ry-pg-node"></span>
+          {i < SECTIONS.length - 1 && <span class="ry-pg-thread"></span>}
         </div>
-        <h4 class="ry-tl-section-name">{s.name}</h4>
-        <p class="ry-tl-section-note">{s.note}</p>
-        <ul class="ry-tl-section-chips">
-          {s.chips.map((c) => <li>{c}</li>)}
-        </ul>
-        <div class:list={["ry-tl-section-art", { "ry-tl-section-empty": !s.asset }]}>
-          {s.asset ? (
-            <img src={s.asset} alt={s.assetAlt} loading="lazy" />
-          ) : (
-            <div class="ry-tl-empty-grid">
-              <span>Snorkel</span><span>W&B</span><span>Roboflow</span>
-              <span>DataRobot</span><span>Galileo</span><span>+</span>
-            </div>
-          )}
+
+        <div class="ry-pg-body">
+          <div class="ry-pg-head">
+            <span class="ry-pg-stamp" data-ry-el="0">
+              <span class="ry-pg-stamp-dot"></span>{s.date} · added by Jon
+            </span>
+            <h4 class="ry-pg-name" data-ry-el="1">
+              <span class="ry-pg-num">{s.id}</span>{s.name}
+            </h4>
+          </div>
+
+          <p class="ry-pg-note" data-ry-el="2">{s.note}</p>
+
+          <ul class="ry-pg-chips" data-ry-el="3">
+            {s.chips.map((c) => <li>{c}</li>)}
+          </ul>
+
+          <div
+            class:list={["ry-pg-frame", { "ry-pg-frame-empty": !s.asset }]}
+            data-ry-el="4"
+          >
+            {s.asset ? (
+              <img src={s.asset} alt={s.assetAlt} loading="lazy" />
+            ) : (
+              <div class="ry-pg-matrix">
+                <span class="ry-pg-axis ry-pg-axis-y">fidelity →</span>
+                <span class="ry-pg-axis ry-pg-axis-x">scope →</span>
+                <span class="ry-pg-q" style="--qx:0;--qy:0">Snorkel</span>
+                <span class="ry-pg-q" style="--qx:1;--qy:0">W&amp;B</span>
+                <span class="ry-pg-q" style="--qx:0;--qy:1">Roboflow</span>
+                <span class="ry-pg-q" style="--qx:1;--qy:1">DataRobot</span>
+                <span class="ry-pg-q ry-pg-q-us" style="--qx:0.5;--qy:0.5">raylu</span>
+              </div>
+            )}
+          </div>
+
+          <p class="ry-pg-cap" data-ry-el="5">{s.assetCaption}</p>
         </div>
-        <p class="ry-tl-section-cap">{s.assetCaption}</p>
-      </div>
+      </section>
     ))}
+  </div>
+
+  <div class="ry-fig-end" data-ry-el="0" data-ry-pg="end">
+    <span class="ry-fig-end-line">end of file — you now know the product</span>
   </div>
 </div>
 
 <script>
-  const root = document.querySelector<HTMLElement>("[data-ry-tl]");
+  const root = document.querySelector<HTMLElement>("[data-ry-fig]");
   if (root) {
-    const scroller = root.querySelector<HTMLElement>("[data-ry-tl-scroller]");
-    const sections = root.querySelectorAll<HTMLElement>("[data-ry-tl-section]");
-    const dots = root.querySelectorAll<HTMLButtonElement>("[data-ry-tl-dot]");
-    const navs = root.querySelectorAll<HTMLButtonElement>("[data-ry-tl-nav]");
-    let active = 0;
-    let programmatic = 0;
+    const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const pages = Array.from(
+      root.querySelectorAll<HTMLElement>("[data-ry-pg]")
+    );
+    const fill = root.querySelector<HTMLElement>("[data-ry-fill]");
 
-    const setActive = (i: number) => {
-      active = i;
-      dots.forEach((d, j) => {
-        d.classList.toggle("active", j === active);
-        d.setAttribute("aria-selected", j === active ? "true" : "false");
-      });
-    };
+    const revealAll = () => pages.forEach((p) => p.classList.add("ry-in"));
 
-    const goto = (i: number) => {
-      const next = Math.max(0, Math.min(sections.length - 1, i));
-      const target = sections[next];
-      setActive(next);
-      if (target && scroller) {
-        programmatic = Date.now() + 600;
-        scroller.scrollTo({ left: target.offsetLeft - scroller.offsetLeft, behavior: "smooth" });
-      }
-    };
+    if (reduce) {
+      revealAll();
+    } else {
+      const io = new IntersectionObserver(
+        (entries) => {
+          for (const e of entries) {
+            if (e.isIntersecting) {
+              (e.target as HTMLElement).classList.add("ry-in");
+              io.unobserve(e.target);
+            }
+          }
+        },
+        // fire a touch before fully on-screen so the cascade reads as the
+        // section "arriving" rather than already sitting there.
+        { threshold: 0.22, rootMargin: "0px 0px -12% 0px" }
+      );
+      pages.forEach((p) => io.observe(p));
 
-    dots.forEach((d, i) => d.addEventListener("click", () => goto(i)));
-    navs.forEach((n) => {
-      n.addEventListener("click", () => {
-        if (n.dataset.ryTlNav === "prev") goto(active - 1);
-        else goto(active + 1);
-      });
-    });
+      // Headless/preview tabs throttle IO + transitions; guarantee anything
+      // still hidden after a beat gets shown. Real browsers have already
+      // revealed on scroll, so this is a no-op there.
+      window.setTimeout(() => {
+        pages.forEach((p) => {
+          const r = p.getBoundingClientRect();
+          if (r.top < window.innerHeight && r.bottom > 0)
+            p.classList.add("ry-in");
+        });
+      }, 1400);
+    }
 
-    // Update active dot when user scrolls manually, but ignore the
-    // smooth-scroll cascade that follows a programmatic goto().
-    scroller?.addEventListener("scroll", () => {
-      if (Date.now() < programmatic) return;
-      const center = scroller.scrollLeft + scroller.clientWidth / 2;
-      let nearest = 0;
-      let nearestDist = Infinity;
-      sections.forEach((s, i) => {
-        const sCenter = s.offsetLeft - scroller.offsetLeft + s.clientWidth / 2;
-        const d = Math.abs(sCenter - center);
-        if (d < nearestDist) { nearestDist = d; nearest = i; }
-      });
-      if (nearest !== active) setActive(nearest);
-    });
+    // file-scroll progress on the left rail — purely decorative, cheap.
+    if (fill) {
+      const pagesWrap =
+        root.querySelector<HTMLElement>(".ry-fig-pages") ?? root;
+      const onScroll = () => {
+        const r = pagesWrap.getBoundingClientRect();
+        const total = r.height - window.innerHeight * 0.5;
+        const seen = Math.min(
+          1,
+          Math.max(0, (window.innerHeight * 0.5 - r.top) / Math.max(1, total))
+        );
+        fill.style.transform = `scaleY(${seen})`;
+      };
+      window.addEventListener("scroll", onScroll, { passive: true });
+      onScroll();
+    }
   }
 </script>
 
 <style>
-  .ry-tl { display: grid; gap: 16px; }
+  /* ── the file shell ────────────────────────────────────────────────── */
+  .ry-fig {
+    position: relative;
+    border: 1px solid var(--cs-line-strong);
+    border-radius: 8px;
+    overflow: hidden;
+    background:
+      radial-gradient(140% 60% at 50% -10%, rgba(14, 196, 252, 0.05), transparent 55%),
+      linear-gradient(180deg, #0c0a12 0%, #08070d 100%);
+    box-shadow: 0 30px 80px -44px rgba(0, 0, 0, 0.85);
+  }
 
-  .ry-tl-controls {
+  /* faux Figma title bar */
+  .ry-fig-bar {
+    position: sticky;
+    top: 0;
+    z-index: 8;
     display: flex;
     align-items: center;
-    gap: 10px;
+    gap: 14px;
+    padding: 10px 16px;
+    background: rgba(8, 7, 13, 0.86);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border-bottom: 1px solid var(--cs-line);
   }
-  .ry-tl-nav {
-    flex: 0 0 36px;
-    height: 36px;
-    border-radius: 4px;
-    border: 1px solid var(--cs-line);
-    background: rgba(245, 241, 232, 0.02);
-    color: var(--cs-text);
-    cursor: pointer;
-    font-size: 16px;
-    transition: border-color 160ms ease, background 160ms ease;
-  }
-  .ry-tl-nav:hover {
-    border-color: var(--cs-line-strong);
-    background: rgba(245, 241, 232, 0.04);
-  }
-  .ry-tl-dots {
-    flex: 1;
-    display: grid;
-    grid-template-columns: repeat(5, 1fr);
-    gap: 4px;
-    overflow-x: auto;
-  }
-  @media (max-width: 720px) {
-    .ry-tl-dots { grid-template-columns: repeat(5, minmax(120px, 1fr)); }
-  }
-  .ry-tl-dot {
-    display: grid;
-    gap: 2px;
-    text-align: left;
-    background: rgba(245, 241, 232, 0.02);
-    border: 1px solid var(--cs-line);
-    border-radius: 3px;
-    padding: 6px 8px;
-    cursor: pointer;
-    transition: border-color 160ms ease, background 160ms ease;
-  }
-  .ry-tl-dot:hover {
-    border-color: var(--cs-line-strong);
-    background: rgba(245, 241, 232, 0.04);
-  }
-  .ry-tl-dot.active {
-    border-color: var(--brand-orange);
-    background: rgba(255, 90, 60, 0.07);
-  }
-  .ry-tl-dot-id {
-    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-    font-size: 9.5px;
-    letter-spacing: 0.22em;
-    color: rgba(245, 241, 232, 0.45);
-  }
-  .ry-tl-dot.active .ry-tl-dot-id { color: var(--brand-orange); }
-  .ry-tl-dot-name {
-    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-    font-style: italic;
-    font-weight: 700;
-    font-size: 12px;
-    color: var(--cs-text);
-  }
-
-  .ry-tl-scroller {
-    display: flex;
-    gap: 18px;
-    overflow-x: auto;
-    overflow-y: hidden;
-    padding: 8px 4px 18px;
-    scroll-snap-type: x mandatory;
-    -webkit-overflow-scrolling: touch;
-  }
-  .ry-tl-scroller::-webkit-scrollbar {
-    height: 6px;
-  }
-  .ry-tl-scroller::-webkit-scrollbar-thumb {
+  .ry-fig-dots { display: inline-flex; gap: 6px; flex: 0 0 auto; }
+  .ry-fig-dots i {
+    width: 10px; height: 10px; border-radius: 50%;
     background: rgba(245, 241, 232, 0.16);
-    border-radius: 3px;
+  }
+  .ry-fig-file {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 12px;
+    color: rgba(245, 241, 232, 0.86);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .ry-fig-file-icon { color: var(--brand-cyan); font-size: 11px; transform: rotate(0deg); }
+  .ry-fig-file-ext { color: rgba(245, 241, 232, 0.4); }
+  .ry-fig-share {
+    margin-left: auto;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    flex: 0 0 auto;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 10.5px;
+    letter-spacing: 0.02em;
+    color: var(--brand-green);
+    background: rgba(0, 255, 77, 0.06);
+    border: 1px solid rgba(0, 255, 77, 0.32);
+    border-radius: 20px;
+    padding: 4px 11px;
+  }
+  .ry-fig-share-cur {
+    width: 6px; height: 6px; border-radius: 50%;
+    background: var(--brand-green);
+    box-shadow: 0 0 6px var(--brand-green);
+  }
+  /* two faux collaborator cursors blinking on the share pill */
+  .ry-fig-cursors { display: inline-flex; gap: 4px; }
+  .ry-fig-cursors i { width: 5px; height: 5px; border-radius: 50%; }
+  .ry-c1 { background: var(--brand-pink); animation: ry-blink 2.4s ease-in-out infinite; }
+  .ry-c2 { background: var(--brand-yellow); animation: ry-blink 2.4s ease-in-out 0.8s infinite; }
+  @keyframes ry-blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.25; } }
+
+  /* left scroll-progress rail */
+  .ry-fig-rail {
+    position: absolute;
+    top: 41px; bottom: 0; left: 0;
+    width: 2px;
+    background: rgba(245, 241, 232, 0.06);
+    z-index: 2;
+  }
+  .ry-fig-rail-fill {
+    position: absolute;
+    inset: 0;
+    background: var(--brand-grad);
+    transform: scaleY(0);
+    transform-origin: top;
   }
 
-  .ry-tl-section {
-    flex: 0 0 min(720px, 88%);
-    scroll-snap-align: start;
-    background: rgba(245, 241, 232, 0.025);
-    border: 1px solid var(--cs-line);
-    border-top: 3px solid var(--brand-orange);
-    border-radius: 4px;
-    padding: 20px 22px;
+  /* ── pages ─────────────────────────────────────────────────────────── */
+  .ry-fig-pages { padding: 8px 0 0; }
+
+  .ry-pg {
+    position: relative;
     display: grid;
-    gap: 12px;
+    grid-template-columns: 44px 1fr;
+    padding: 30px 26px 30px 0;
   }
-  .ry-tl-accent-cyan { border-top-color: var(--brand-cyan); }
-  .ry-tl-accent-pink { border-top-color: var(--brand-pink); }
-  .ry-tl-accent-yellow { border-top-color: var(--brand-yellow); }
-  .ry-tl-accent-white { border-top-color: rgba(245, 241, 232, 0.62); }
-  .ry-tl-accent-green { border-top-color: var(--brand-green); }
+  .ry-pg + .ry-pg { border-top: 1px solid rgba(245, 241, 232, 0.05); }
 
-  .ry-tl-section-head {
+  /* the spine: a node dot + a thread connecting sections, "drawing" the
+     single-file story. The node lights to the section accent on reveal. */
+  .ry-pg-spine {
+    position: relative;
     display: flex;
-    justify-content: space-between;
-    align-items: baseline;
+    justify-content: center;
   }
-  .ry-tl-section-id, .ry-tl-section-date {
+  .ry-pg-node {
+    position: relative;
+    z-index: 2;
+    width: 11px; height: 11px;
+    margin-top: 4px;
+    border-radius: 50%;
+    background: #0c0a12;
+    border: 2px solid rgba(245, 241, 232, 0.22);
+    transition: border-color 460ms ease, box-shadow 460ms ease, transform 460ms ease;
+  }
+  .ry-pg-thread {
+    position: absolute;
+    top: 15px; bottom: -30px;
+    left: 50%;
+    width: 2px;
+    transform: translateX(-50%) scaleY(0);
+    transform-origin: top;
+    background: linear-gradient(180deg, currentColor, transparent);
+    transition: transform 700ms ease 120ms;
+  }
+  /* Per-accent palette. Explicit rgba (no color-mix) to match the house
+     style and avoid a no-fallback dependency. --ry-a is the solid accent;
+     --ry-soft is a cream-leaning text tint; --ry-08/--ry-28 are translucent
+     fills; --ry-ring is the node halo. */
+  .ry-acc-cyan {
+    color: var(--brand-cyan);
+    --ry-a: var(--brand-cyan);
+    --ry-soft: #9fe6fd; --ry-08: rgba(14,196,252,0.08);
+    --ry-28: rgba(14,196,252,0.32); --ry-ring: rgba(14,196,252,0.16);
+  }
+  .ry-acc-pink {
+    color: var(--brand-pink);
+    --ry-a: var(--brand-pink);
+    --ry-soft: #ff9bb6; --ry-08: rgba(255,39,97,0.08);
+    --ry-28: rgba(255,39,97,0.32); --ry-ring: rgba(255,39,97,0.16);
+  }
+  .ry-acc-yellow {
+    color: var(--brand-yellow);
+    --ry-a: var(--brand-yellow);
+    --ry-soft: #ffd79c; --ry-08: rgba(255,179,71,0.08);
+    --ry-28: rgba(255,179,71,0.34); --ry-ring: rgba(255,179,71,0.18);
+  }
+  .ry-acc-white {
+    color: rgba(245, 241, 232, 0.7);
+    --ry-a: rgba(245, 241, 232, 0.7);
+    --ry-soft: rgba(245,241,232,0.9); --ry-08: rgba(245,241,232,0.06);
+    --ry-28: rgba(245,241,232,0.28); --ry-ring: rgba(245,241,232,0.14);
+  }
+  .ry-acc-green {
+    color: var(--brand-green);
+    --ry-a: var(--brand-green);
+    --ry-soft: #8dffb0; --ry-08: rgba(0,255,77,0.08);
+    --ry-28: rgba(0,255,77,0.32); --ry-ring: rgba(0,255,77,0.16);
+  }
+  .ry-in .ry-pg-node {
+    border-color: var(--ry-a);
+    box-shadow: 0 0 0 4px var(--ry-ring);
+    transform: scale(1.08);
+  }
+  .ry-in .ry-pg-thread { transform: translateX(-50%) scaleY(1); }
+
+  .ry-pg-body { min-width: 0; }
+
+  .ry-pg-head { margin-bottom: 12px; }
+  .ry-pg-stamp {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
     font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
     font-size: 10px;
-    letter-spacing: 0.22em;
+    letter-spacing: 0.2em;
     text-transform: uppercase;
-    color: rgba(245, 241, 232, 0.55);
+    color: var(--ry-soft);
   }
-  .ry-tl-section-name {
+  .ry-pg-stamp-dot {
+    width: 5px; height: 5px; border-radius: 50%;
+    background: currentColor;
+    box-shadow: 0 0 7px currentColor;
+  }
+  .ry-pg-name {
+    display: flex;
+    align-items: baseline;
+    gap: 12px;
+    margin: 8px 0 0;
     font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
     font-style: italic;
     font-weight: 700;
-    font-size: 22px;
+    font-size: clamp(21px, 3.4vw, 30px);
+    letter-spacing: -0.01em;
+    line-height: 1.05;
     color: var(--cs-text);
-    margin: 0;
   }
-  .ry-tl-section-note {
-    font-size: 14px;
+  .ry-pg-num {
+    font-style: normal;
+    font-size: 11px;
+    letter-spacing: 0.22em;
+    color: var(--ry-soft);
+    opacity: 0.85;
+  }
+  .ry-pg-note {
+    font-size: 14.5px;
     line-height: 1.55;
-    color: rgba(245, 241, 232, 0.78);
-    margin: 0 !important;
-    max-width: none !important;
+    color: rgba(245, 241, 232, 0.8);
+    margin: 0 0 14px;
+    max-width: 56ch;
   }
-  .ry-tl-section-chips {
+  .ry-pg-chips {
     list-style: none;
     padding: 0;
-    margin: 0;
+    margin: 0 0 16px;
     display: flex;
     flex-wrap: wrap;
     gap: 6px;
   }
-  .ry-tl-section-chips li {
+  .ry-pg-chips li {
     font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
     font-size: 10.5px;
-    letter-spacing: 0.06em;
-    color: rgba(245, 241, 232, 0.72);
-    padding: 3px 8px;
-    background: rgba(245, 241, 232, 0.04);
-    border: 1px solid var(--cs-line);
+    letter-spacing: 0.04em;
+    color: var(--ry-soft);
+    padding: 3px 9px;
+    background: var(--ry-08);
+    border: 1px solid var(--ry-28);
     border-radius: 2px;
   }
-  .ry-tl-section-art {
+
+  /* the frame: a real Figma frame label sits above the artwork */
+  .ry-pg-frame {
+    position: relative;
     border: 1px solid var(--cs-line);
-    border-radius: 4px;
+    border-top: 2px solid var(--ry-a);
+    border-radius: 5px;
     overflow: hidden;
     background: #07060c;
-    min-height: 180px;
+    margin-bottom: 12px;
   }
-  .ry-tl-section-art img {
-    display: block;
-    width: 100%;
-    height: auto;
-  }
-  .ry-tl-section-empty {
-    padding: 14px;
-    min-height: 200px;
-  }
-  .ry-tl-empty-grid {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 10px;
-    height: 100%;
-  }
-  .ry-tl-empty-grid span {
+  .ry-pg-frame::before {
+    content: "▸ frame";
+    position: absolute;
+    top: 7px; left: 9px;
+    z-index: 2;
     font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-    font-style: italic;
-    font-size: 13px;
-    color: rgba(245, 241, 232, 0.72);
-    padding: 18px 12px;
-    text-align: center;
-    background: rgba(245, 241, 232, 0.02);
-    border: 1px dashed rgba(245, 241, 232, 0.18);
+    font-size: 8.5px;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--ry-soft);
+    background: rgba(7, 6, 12, 0.7);
+    padding: 2px 6px;
     border-radius: 3px;
-    display: grid;
-    place-items: center;
+    pointer-events: none;
   }
-  .ry-tl-empty-grid span:last-child {
-    color: var(--brand-orange);
-    border-color: rgba(255, 90, 60, 0.45);
+  .ry-pg-frame img { display: block; width: 100%; height: auto; }
+
+  /* competitive 2×2 — built, not screenshotted */
+  .ry-pg-frame-empty { min-height: 230px; background: #08070d; }
+  .ry-pg-matrix {
+    position: relative;
+    height: 100%;
+    min-height: 230px;
+    margin: 0;
+    background-image:
+      linear-gradient(rgba(245, 241, 232, 0.07) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(245, 241, 232, 0.07) 1px, transparent 1px);
+    background-size: 50% 50%;
+    background-position: center;
   }
-  .ry-tl-section-cap {
+  .ry-pg-axis {
+    position: absolute;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 9px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: rgba(245, 241, 232, 0.4);
+  }
+  .ry-pg-axis-y { top: 12px; left: 12px; transform: rotate(0deg); }
+  .ry-pg-axis-x { bottom: 12px; right: 12px; }
+  .ry-pg-q {
+    position: absolute;
+    left: calc(14% + var(--qx) * 60%);
+    top: calc(18% + var(--qy) * 56%);
+    transform: translate(-50%, -50%);
     font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
     font-style: italic;
     font-size: 12px;
-    color: rgba(245, 241, 232, 0.55);
-    margin: 0 !important;
+    color: rgba(245, 241, 232, 0.72);
+    padding: 5px 11px;
+    background: rgba(245, 241, 232, 0.03);
+    border: 1px dashed rgba(245, 241, 232, 0.2);
+    border-radius: 3px;
+    white-space: nowrap;
+  }
+  .ry-pg-q-us {
+    color: var(--brand-pink);
+    border-style: solid;
+    border-color: rgba(255, 39, 97, 0.5);
+    background: rgba(255, 39, 97, 0.06);
+  }
+
+  .ry-pg-cap {
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-style: italic;
+    font-size: 12px;
     line-height: 1.5;
-    max-width: none !important;
+    color: rgba(245, 241, 232, 0.52);
+    margin: 0;
+    max-width: 70ch;
+  }
+
+  /* end-of-file marker */
+  .ry-fig-end {
+    display: flex;
+    justify-content: center;
+    padding: 22px 26px 26px 44px;
+    border-top: 1px solid rgba(245, 241, 232, 0.05);
+  }
+  .ry-fig-end-line {
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 10.5px;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: rgba(245, 241, 232, 0.4);
+  }
+
+  /* ── the reveal cascade ────────────────────────────────────────────── */
+  /* every staged element starts dropped + faded; .ry-in releases them with
+     per-element delays so the section "expands into view" stamp-first. */
+  [data-ry-el] {
+    opacity: 0;
+    transform: translateY(16px);
+    transition: opacity 560ms cubic-bezier(0.22, 1, 0.36, 1),
+                transform 560ms cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  .ry-in [data-ry-el] { opacity: 1; transform: none; }
+  .ry-in [data-ry-el="0"] { transition-delay: 40ms; }
+  .ry-in [data-ry-el="1"] { transition-delay: 150ms; }
+  .ry-in [data-ry-el="2"] { transition-delay: 300ms; }
+  .ry-in [data-ry-el="3"] { transition-delay: 400ms; }
+  .ry-in [data-ry-el="4"] { transition-delay: 500ms; }
+  .ry-in [data-ry-el="5"] { transition-delay: 640ms; }
+
+  /* ── responsive ────────────────────────────────────────────────────── */
+  @media (max-width: 720px) {
+    .ry-pg { grid-template-columns: 30px 1fr; padding: 24px 16px 24px 0; }
+    .ry-pg-node { width: 9px; height: 9px; }
+    .ry-fig-rail { top: 39px; }
+    .ry-fig-share { font-size: 9.5px; padding: 4px 9px; }
+    .ry-fig-share { gap: 6px; }
+    .ry-pg-q { font-size: 10.5px; padding: 4px 8px; }
+    .ry-fig-end { padding-left: 30px; }
+  }
+  @media (max-width: 460px) {
+    /* the "Anyone with the link" label is the first thing to drop on tiny
+       screens — keep the live dot + cursors as the affordance. */
+    .ry-fig-share { font-size: 0; gap: 5px; padding: 5px 9px; }
+    .ry-fig-share-cur, .ry-fig-cursors i { font-size: 0; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .ry-pg-node, .ry-pg-thread, [data-ry-el] { transition: none !important; }
+    [data-ry-el] { opacity: 1; transform: none; }
+    .ry-pg-thread { transform: translateX(-50%) scaleY(1); }
+    .ry-fig-rail-fill { transform: scaleY(1); opacity: 0.4; }
+    .ry-c1, .ry-c2 { animation: none; }
   }
 </style>

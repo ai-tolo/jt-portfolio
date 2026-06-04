@@ -1,12 +1,15 @@
 ---
-// The V1 nav-bar SWOT, interactive. Two defensible options: Split (a
-// dedicated Family tab) and Combined (a single Accounts surface). Click
-// either to see its mock home screen, its SWOT, and the tap-count for the
+// The V1 nav-bar SWOT, as a participatory decision. Two defensible options:
+// Split (a dedicated Family tab) and Combined (one Accounts surface). Tap
+// either to see its mock home screen, its SWOT, and the tap-cost for the
 // Garcia Family use case (Juan sends $200 to his cousin).
 //
-// The "what tipped it" panel reveals after either is selected. The
-// resolution is not "best UX" — it's "which option reinforces the
-// product's identity." That tiebreaker is the case study's whole spine.
+// The decision is GATED. The reader has to look at BOTH options before the
+// product gets to break the tie — the "what tipped it" panel stays sealed
+// until Split AND Combined have been viewed, then arrives with weight.
+// The tiebreaker isn't the matrix or even the tap-count. It's the thesis:
+// family-first identity. That gate is the case study's whole spine, made
+// into a thing the reader does instead of reads.
 
 const SCENARIO_TAPS = {
   split: [
@@ -52,6 +55,7 @@ const SWOT = {
       </span>
       <span class="cv-swot-opt-name">Split</span>
       <span class="cv-swot-opt-blurb">Dedicated Family tab, single-user home.</span>
+      <span class="cv-swot-opt-seen" data-cv-seen-badge="split" aria-hidden="true">seen ✓</span>
     </button>
     <button type="button" class="cv-swot-opt" role="tab" data-cv-swot-opt="combined" aria-selected="false">
       <span class="cv-swot-opt-glyph" aria-hidden="true">
@@ -59,6 +63,7 @@ const SWOT = {
       </span>
       <span class="cv-swot-opt-name">Combined</span>
       <span class="cv-swot-opt-blurb">One Accounts surface, family on the home screen.</span>
+      <span class="cv-swot-opt-seen" data-cv-seen-badge="combined" aria-hidden="true">seen ✓</span>
     </button>
   </div>
 
@@ -164,24 +169,55 @@ const SWOT = {
     </div>
   </div>
 
-  <div class="cv-swot-foot">
-    <div class="cv-swot-foot-row">
-      <span class="cv-swot-foot-lbl">Garcia scenario · send $200 to a cousin</span>
-      <span class="cv-swot-foot-taps" data-cv-swot-taps>
-        {SCENARIO_TAPS.split.length} taps
-      </span>
+  {/* THE TAP-COST — the hero number. Always visible; the active option is lit. */}
+  <div class="cv-swot-cost" data-cv-swot-cost>
+    <div class="cv-swot-cost-head">
+      <span class="cv-swot-cost-scenario">Garcia scenario · send a cousin $200</span>
+      <span class="cv-swot-cost-delta" data-cv-cost-delta>2 fewer taps on Combined</span>
     </div>
-    <ol class="cv-swot-foot-flow" data-cv-swot-flow>
+    <div class="cv-swot-cost-pair">
+      <div class="cv-swot-cost-cell" data-cv-cost-cell="split">
+        <span class="cv-swot-cost-name">Split</span>
+        <span class="cv-swot-cost-n">7</span>
+        <span class="cv-swot-cost-unit">taps</span>
+      </div>
+      <span class="cv-swot-cost-vs" aria-hidden="true">vs</span>
+      <div class="cv-swot-cost-cell" data-cv-cost-cell="combined">
+        <span class="cv-swot-cost-name">Combined</span>
+        <span class="cv-swot-cost-n">5</span>
+        <span class="cv-swot-cost-unit">taps</span>
+      </div>
+    </div>
+    <ol class="cv-swot-cost-flow" data-cv-swot-flow aria-label="Tap-by-tap flow for the selected option">
       {SCENARIO_TAPS.split.map((step) => <li>{step}</li>)}
     </ol>
-    <div class="cv-swot-tip">
-      <span class="cv-swot-tip-tag">WHAT TIPPED IT</span>
+  </div>
+
+  {/* THE GATE — locked until both options have been viewed. */}
+  <div class="cv-swot-gate" data-cv-swot-gate data-state="locked">
+    <div class="cv-swot-gate-locked" data-cv-gate-locked>
+      <span class="cv-swot-gate-lock" aria-hidden="true">⌧</span>
+      <p class="cv-swot-gate-prompt">
+        The matrix runs even and the tap-count favors Combined — but the tap-count
+        isn't what decided it. <strong>Look at both options</strong> to see what did.
+      </p>
+      <div class="cv-swot-gate-progress" aria-hidden="true">
+        <span class="cv-swot-gate-pip" data-cv-gate-pip="split">Split</span>
+        <span class="cv-swot-gate-pip" data-cv-gate-pip="combined">Combined</span>
+      </div>
+    </div>
+
+    <div class="cv-swot-tip" data-cv-gate-reveal hidden>
+      <span class="cv-swot-tip-tag">What tipped it</span>
+      <p class="cv-swot-tip-lead">
+        Combined ships — and <em>not</em> because it saved two taps.
+      </p>
       <p>
-        Both SWOTs are defensible. Tap-counts favor Combined, but Split has its own strengths.
-        The tiebreaker isn't the matrix — it's the thesis: <em>family-first identity.</em>
-        Splitting the household behind a tab would dilute the entire product premise.
-        Combined ships. The Move Money tab becomes its own dedicated action surface
-        inside it.
+        Both SWOTs are defensible. Split is genuinely cleaner for a single user.
+        But splitting the household behind a tab would bury the family thesis the
+        whole product is built on. The tiebreaker isn't the matrix and it isn't
+        the tap-count — it's the identity: <em>family-first.</em> Move Money becomes
+        its own dedicated action surface inside the combined home.
       </p>
     </div>
   </div>
@@ -190,6 +226,8 @@ const SWOT = {
 <script>
   const root = document.querySelector<HTMLElement>("[data-cv-swot]");
   if (root) {
+    const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
     const SCENARIO_TAPS_MAP: Record<string, string[]> = {
       split: [
         "Open app · 1",
@@ -211,8 +249,45 @@ const SWOT = {
 
     const opts = root.querySelectorAll<HTMLButtonElement>("[data-cv-swot-opt]");
     const panes = root.querySelectorAll<HTMLElement>("[data-cv-swot-pane]");
-    const taps = root.querySelector<HTMLElement>("[data-cv-swot-taps]");
     const flow = root.querySelector<HTMLOListElement>("[data-cv-swot-flow]");
+    const cost = root.querySelector<HTMLElement>("[data-cv-swot-cost]");
+    const costCells = root.querySelectorAll<HTMLElement>("[data-cv-cost-cell]");
+    const seenBadges = root.querySelectorAll<HTMLElement>("[data-cv-seen-badge]");
+    const gate = root.querySelector<HTMLElement>("[data-cv-swot-gate]");
+    const gatePips = root.querySelectorAll<HTMLElement>("[data-cv-gate-pip]");
+    const reveal = root.querySelector<HTMLElement>("[data-cv-gate-reveal]");
+
+    // Track which options the reader has actually looked at. Split is shown
+    // on load, so it counts as seen immediately.
+    const seen = new Set<string>(["split"]);
+
+    const markSeen = (id: string) => {
+      seen.add(id);
+      seenBadges.forEach((b) => {
+        if (seen.has(b.dataset.cvSeenBadge || "")) b.classList.add("on");
+      });
+      gatePips.forEach((p) => {
+        if (seen.has(p.dataset.cvGatePip || "")) p.classList.add("on");
+      });
+      if (seen.has("split") && seen.has("combined")) unlock();
+    };
+
+    let unlocked = false;
+    const unlock = () => {
+      if (unlocked || !gate || !reveal) return;
+      unlocked = true;
+      gate.dataset.state = "unlocked";
+      reveal.removeAttribute("hidden");
+      if (reduce) {
+        reveal.classList.add("in");
+      } else {
+        // Two rAFs so the [hidden]→visible flip paints before the .in
+        // transition starts; setTimeout guarantees the end-state even where
+        // a headless/throttled tab never advances rAF.
+        requestAnimationFrame(() => requestAnimationFrame(() => reveal.classList.add("in")));
+        window.setTimeout(() => reveal.classList.add("in"), 80);
+      }
+    };
 
     const activate = (id: string) => {
       opts.forEach((o) => {
@@ -221,14 +296,18 @@ const SWOT = {
         o.setAttribute("aria-selected", on ? "true" : "false");
       });
       panes.forEach((p) => p.classList.toggle("active", p.dataset.cvSwotPane === id));
+      costCells.forEach((c) => c.classList.toggle("on", c.dataset.cvCostCell === id));
       const steps = SCENARIO_TAPS_MAP[id] || [];
-      if (taps) taps.textContent = `${steps.length} taps`;
       if (flow) flow.innerHTML = steps.map((s) => `<li>${s}</li>`).join("");
+      markSeen(id);
     };
 
     opts.forEach((o) => {
       o.addEventListener("click", () => activate(o.dataset.cvSwotOpt || "split"));
     });
+
+    // Prime the initial state (Split is active on load).
+    activate("split");
   }
 </script>
 
@@ -237,6 +316,7 @@ const SWOT = {
     display: grid;
     gap: 24px;
   }
+  .cv-swot [hidden] { display: none !important; }
 
   /* Picker */
   .cv-swot-picker {
@@ -248,6 +328,7 @@ const SWOT = {
     .cv-swot-picker { grid-template-columns: 1fr; }
   }
   .cv-swot-opt {
+    position: relative;
     display: grid;
     grid-template-columns: 36px 1fr;
     grid-template-rows: auto auto;
@@ -302,7 +383,24 @@ const SWOT = {
     font-size: 12.5px;
     color: rgba(245, 241, 232, 0.55);
     line-height: 1.4;
+    padding-right: 52px;
   }
+  /* "seen ✓" badge — a quiet receipt that the option's been viewed, feeding
+     the gate. Hidden until seen. */
+  .cv-swot-opt-seen {
+    position: absolute;
+    top: 12px;
+    right: 14px;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 9px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--brand-green);
+    opacity: 0;
+    transform: translateY(-2px);
+    transition: opacity 240ms ease, transform 240ms ease;
+  }
+  .cv-swot-opt-seen.on { opacity: 0.85; transform: none; }
 
   /* Stage */
   .cv-swot-stage { position: relative; }
@@ -450,7 +548,6 @@ const SWOT = {
     border-radius: 4px;
     padding: 12px 14px;
   }
-  .cv-swot-block.cv-swot-half { /* half-width default in 2-col grid */ }
   .cv-swot-block-lbl {
     display: block;
     font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
@@ -486,42 +583,109 @@ const SWOT = {
     font-weight: 700;
   }
 
-  /* Footer scenario */
-  .cv-swot-foot {
-    margin-top: 4px;
-    padding: 18px 20px;
-    background: rgba(255, 90, 60, 0.04);
-    border: 1px solid rgba(255, 90, 60, 0.18);
-    border-radius: 4px;
+  /* ── THE TAP-COST · the hero number ── */
+  .cv-swot-cost {
+    padding: 20px 22px 18px;
+    background:
+      radial-gradient(120% 140% at 0% 0%, rgba(255, 90, 60, 0.07), transparent 60%),
+      rgba(245, 241, 232, 0.02);
+    border: 1px solid var(--cs-line-strong);
+    border-radius: 6px;
   }
-  .cv-swot-foot-row {
+  .cv-swot-cost-head {
     display: flex;
-    align-items: center;
+    align-items: baseline;
     justify-content: space-between;
-    gap: 12px;
-    margin-bottom: 10px;
+    gap: 14px;
+    flex-wrap: wrap;
+    margin-bottom: 14px;
   }
-  .cv-swot-foot-lbl {
+  .cv-swot-cost-scenario {
     font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-    font-size: 12px;
-    color: rgba(245, 241, 232, 0.72);
+    font-size: 11px;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: rgba(245, 241, 232, 0.62);
   }
-  .cv-swot-foot-taps {
+  .cv-swot-cost-delta {
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-style: italic;
+    font-size: 12px;
+    color: var(--brand-orange);
+  }
+  .cv-swot-cost-pair {
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    align-items: stretch;
+    gap: 10px;
+    margin-bottom: 16px;
+  }
+  .cv-swot-cost-cell {
+    display: grid;
+    grid-template-columns: auto auto;
+    grid-template-rows: auto auto;
+    align-items: baseline;
+    column-gap: 8px;
+    row-gap: 0;
+    padding: 14px 16px;
+    border: 1px solid var(--cs-line);
+    border-radius: 5px;
+    background: rgba(245, 241, 232, 0.015);
+    transition: border-color 200ms ease, background 200ms ease, box-shadow 200ms ease;
+  }
+  .cv-swot-cost-cell.on {
+    border-color: var(--brand-orange);
+    background: rgba(255, 90, 60, 0.06);
+    box-shadow: 0 0 0 1px rgba(255, 90, 60, 0.18) inset;
+  }
+  .cv-swot-cost-name {
+    grid-column: 1 / span 2;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 10px;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: rgba(245, 241, 232, 0.55);
+    margin-bottom: 4px;
+  }
+  .cv-swot-cost-cell.on .cv-swot-cost-name { color: var(--brand-orange); }
+  .cv-swot-cost-n {
     font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
     font-style: italic;
     font-weight: 700;
-    font-size: 14px;
-    color: var(--brand-orange);
+    font-size: clamp(40px, 8vw, 56px);
+    line-height: 0.9;
+    color: rgba(245, 241, 232, 0.5);
+    font-feature-settings: "tnum";
+    transition: color 200ms ease;
   }
-  .cv-swot-foot-flow {
+  .cv-swot-cost-cell.on .cv-swot-cost-n { color: #f5f1e8; }
+  .cv-swot-cost-unit {
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 12px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: rgba(245, 241, 232, 0.42);
+  }
+  .cv-swot-cost-vs {
+    align-self: center;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-style: italic;
+    font-size: 13px;
+    color: rgba(245, 241, 232, 0.4);
+  }
+  @media (max-width: 520px) {
+    .cv-swot-cost-pair { grid-template-columns: 1fr; }
+    .cv-swot-cost-vs { display: none; }
+  }
+  .cv-swot-cost-flow {
     list-style: none;
     padding: 0;
-    margin: 0 0 14px;
+    margin: 0;
     display: flex;
     flex-wrap: wrap;
     gap: 6px;
   }
-  .cv-swot-foot-flow li {
+  .cv-swot-cost-flow li {
     font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
     font-size: 11px;
     color: rgba(245, 241, 232, 0.62);
@@ -531,12 +695,77 @@ const SWOT = {
     background: rgba(245, 241, 232, 0.02);
   }
 
-  .cv-swot-tip {
-    padding: 14px 16px;
-    border-left: 2px solid var(--brand-orange);
-    background: rgba(255, 90, 60, 0.06);
-    border-radius: 0 4px 4px 0;
+  /* ── THE GATE ── */
+  .cv-swot-gate { position: relative; }
+
+  .cv-swot-gate-locked {
+    text-align: center;
+    padding: 22px 22px 20px;
+    border: 1px dashed rgba(245, 241, 232, 0.16);
+    border-radius: 6px;
+    background: rgba(245, 241, 232, 0.015);
+    transition: opacity 300ms ease, transform 300ms ease;
   }
+  .cv-swot-gate[data-state="unlocked"] .cv-swot-gate-locked {
+    display: none;
+  }
+  .cv-swot-gate-lock {
+    display: block;
+    font-size: 20px;
+    color: rgba(245, 241, 232, 0.34);
+    margin-bottom: 8px;
+  }
+  .cv-swot-gate-prompt {
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 13px;
+    line-height: 1.55;
+    color: rgba(245, 241, 232, 0.66);
+    margin: 0 auto 14px;
+    max-width: 52ch;
+  }
+  .cv-swot-gate-prompt strong { color: var(--cs-text); font-weight: 700; }
+  .cv-swot-gate-progress {
+    display: inline-flex;
+    gap: 8px;
+  }
+  .cv-swot-gate-pip {
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 10px;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: rgba(245, 241, 232, 0.42);
+    padding: 4px 10px 4px 22px;
+    border: 1px solid rgba(245, 241, 232, 0.12);
+    border-radius: 20px;
+    position: relative;
+    transition: color 200ms ease, border-color 200ms ease;
+  }
+  .cv-swot-gate-pip::before {
+    content: "○";
+    position: absolute;
+    left: 9px;
+    color: rgba(245, 241, 232, 0.3);
+  }
+  .cv-swot-gate-pip.on {
+    color: var(--brand-green);
+    border-color: rgba(0, 255, 77, 0.4);
+  }
+  .cv-swot-gate-pip.on::before { content: "●"; color: var(--brand-green); }
+
+  /* the reveal — fades + rises in with weight once unlocked */
+  .cv-swot-tip {
+    padding: 18px 20px;
+    border-left: 2px solid var(--brand-orange);
+    background:
+      radial-gradient(140% 120% at 0% 0%, rgba(255, 90, 60, 0.10), transparent 55%),
+      rgba(255, 90, 60, 0.05);
+    border-radius: 0 6px 6px 0;
+    opacity: 0;
+    transform: translateY(16px);
+    transition: opacity 620ms cubic-bezier(0.22, 1, 0.36, 1),
+                transform 620ms cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  .cv-swot-tip.in { opacity: 1; transform: none; }
   .cv-swot-tip-tag {
     display: inline-block;
     font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
@@ -545,7 +774,16 @@ const SWOT = {
     text-transform: uppercase;
     color: var(--brand-orange);
     font-weight: 700;
-    margin-bottom: 6px;
+    margin-bottom: 8px;
+  }
+  .cv-swot-tip-lead {
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-style: italic;
+    font-size: 17px;
+    line-height: 1.4;
+    color: #f5f1e8;
+    margin: 0 0 8px;
+    max-width: none !important;
   }
   .cv-swot-tip p {
     font-size: 14px;
@@ -558,5 +796,17 @@ const SWOT = {
     font-style: italic;
     color: var(--brand-orange);
     font-weight: 700;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .cv-swot-tip {
+      transition: none;
+      opacity: 1;
+      transform: none;
+    }
+    .cv-swot-opt-seen,
+    .cv-swot-cost-cell,
+    .cv-swot-cost-n,
+    .cv-swot-gate-pip { transition: none; }
   }
 </style>

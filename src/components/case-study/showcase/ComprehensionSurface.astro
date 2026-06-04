@@ -1,12 +1,19 @@
 ---
-// Inline replacement for the comprehension-surface PNG.
+// Inline replacement for the comprehension-surface PNG — rebuilt as a
+// staged, scroll-triggered reveal so the GAP is felt before it's named.
 //
-// Two columns (Tool capability ↔ Audience reach) with a small dot at
-// the foot of each. Three dotted feeders descend into a brand-gradient
-// "Comprehension surface" box that names the four interaction patterns
-// the design work produced.
+// Sequence (fired once, when scrolled into view):
+//   1. The left "capability" terms snap in fast and confident — the platform
+//      can do all of this.
+//   2. The right "audience questions" arrive one-by-one, slower, each one
+//      visibly NOT answered by anything on the left. The mismatch registers.
+//   3. A thin "the gap" seam glows down the middle.
+//   4. THEN the brand-gradient "comprehension surface" bridge box drops in
+//      and names the four interaction patterns that close it.
 //
-// No arrows, no signed PNG — pure HTML/CSS, themes with the page.
+// Motion is driven by setTimeout (NOT rAF — headless preview throttles rAF)
+// and gated by IntersectionObserver. prefers-reduced-motion → final state
+// instantly, no stagger. Pure HTML/CSS, themes with the page.
 
 const CAPABILITY = [
   "vector embeddings",
@@ -34,7 +41,7 @@ const SURFACE_ITEMS = [
 ];
 ---
 
-<figure class="comp-surface" aria-labelledby="comp-surface-title">
+<figure class="comp-surface" data-comp-surface data-phase="idle" aria-labelledby="comp-surface-title">
   <header class="comp-surface-head">
     <p class="comp-surface-eyebrow">THE DESIGN PROBLEM IN ONE PICTURE</p>
     <h3 id="comp-surface-title" class="comp-surface-title">The comprehension surface</h3>
@@ -45,19 +52,28 @@ const SURFACE_ITEMS = [
       <span class="comp-surface-col-lbl">TOOL CAPABILITY</span>
       <p class="comp-surface-col-sub">what the platform can do</p>
       <ul class="comp-surface-list">
-        {CAPABILITY.map((c) => <li>{c}</li>)}
+        {CAPABILITY.map((c, i) => (
+          <li class="comp-surface-item" data-comp-cap style={`--i:${i}`}>{c}</li>
+        ))}
       </ul>
+    </div>
+
+    <!-- the seam between the two columns: where the gap lives -->
+    <div class="comp-surface-seam" aria-hidden="true">
+      <span class="comp-surface-seam-lbl">the gap</span>
     </div>
 
     <div class="comp-surface-col comp-surface-aud">
       <span class="comp-surface-col-lbl">AUDIENCE REACH</span>
-      <p class="comp-surface-col-sub">what a non-technical user can grasp</p>
+      <p class="comp-surface-col-sub">what a non-technical user actually asks</p>
       <ul class="comp-surface-list">
-        {REACH.map((q) => <li>{q}</li>)}
+        {REACH.map((q, i) => (
+          <li class="comp-surface-item" data-comp-aud style={`--i:${i}`}>{q}</li>
+        ))}
       </ul>
     </div>
 
-    <div class="comp-surface-box">
+    <div class="comp-surface-box" data-comp-box>
       <span class="comp-surface-box-lbl">COMPREHENSION SURFACE</span>
       <ul class="comp-surface-box-items">
         {SURFACE_ITEMS.map((s) => <li>{s}</li>)}
@@ -65,8 +81,66 @@ const SURFACE_ITEMS = [
     </div>
   </div>
 
-  <figcaption class="comp-surface-foot">Where senior UX earns its keep</figcaption>
+  <figcaption class="comp-surface-foot" data-comp-foot>Where senior UX earns its keep</figcaption>
 </figure>
+
+<script>
+  document.querySelectorAll<HTMLElement>("[data-comp-surface]").forEach((root) => {
+    const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const caps = [...root.querySelectorAll<HTMLElement>("[data-comp-cap]")];
+    const auds = [...root.querySelectorAll<HTMLElement>("[data-comp-aud]")];
+    let fired = false;
+
+    const showAll = () => {
+      root.dataset.phase = "done";
+      [...caps, ...auds].forEach((el) => el.classList.add("in"));
+    };
+
+    const run = () => {
+      if (fired) return;
+      fired = true;
+
+      if (reduce) { showAll(); return; }
+
+      // Phase 1 — capability terms snap in fast + confident (~60ms apart).
+      root.dataset.phase = "cap";
+      caps.forEach((el, i) => {
+        window.setTimeout(() => el.classList.add("in"), 60 + i * 60);
+      });
+      const capDone = 60 + caps.length * 60;
+
+      // Phase 2 — the seam wakes up, then audience questions arrive one by
+      // one, slower (~160ms apart) so each mismatch lands before the next.
+      window.setTimeout(() => { root.dataset.phase = "seam"; }, capDone + 120);
+      const audStart = capDone + 320;
+      auds.forEach((el, i) => {
+        window.setTimeout(() => el.classList.add("in"), audStart + i * 160);
+      });
+      const audDone = audStart + auds.length * 160;
+
+      // Phase 3 — let the mismatch sit a beat, THEN drop the bridge box.
+      window.setTimeout(() => { root.dataset.phase = "bridge"; }, audDone + 320);
+
+      // Belt-and-suspenders: guarantee final visible state even if a timer
+      // is dropped (headless tabs). No-op once everything's already shown.
+      window.setTimeout(showAll, audDone + 1400);
+    };
+
+    const io = new IntersectionObserver(
+      (entries, obs) => {
+        entries.forEach((e) => {
+          if (e.isIntersecting) { run(); obs.disconnect(); }
+        });
+      },
+      { threshold: 0.35 }
+    );
+    io.observe(root);
+
+    // If it's already in view on load (above the fold), kick it off.
+    const r = root.getBoundingClientRect();
+    if (r.top < window.innerHeight * 0.8 && r.bottom > 0) run();
+  });
+</script>
 
 <style>
   .comp-surface {
@@ -101,21 +175,35 @@ const SURFACE_ITEMS = [
     display: inline-block;
   }
 
+  /* Two columns with a thin seam lane between them. The seam is its own
+     grid track so the columns never collide with it. */
   .comp-surface-grid {
     position: relative;
     display: grid;
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: 1fr 64px 1fr;
     grid-template-rows: auto auto;
-    gap: 36px 32px;
+    gap: 36px 0;
     align-items: start;
   }
   @media (max-width: 720px) {
-    .comp-surface-grid { grid-template-columns: 1fr; gap: 28px; }
+    .comp-surface-grid {
+      grid-template-columns: 1fr;
+      grid-template-rows: none;
+      gap: 24px;
+    }
+    /* collapse to a single auto-flow column: cap → seam → aud → box */
+    .comp-surface-grid > * {
+      grid-column: 1 !important;
+      grid-row: auto !important;
+    }
   }
 
   .comp-surface-col {
     position: relative;
+    grid-row: 1;
   }
+  .comp-surface-cap { grid-column: 1; }
+  .comp-surface-aud { grid-column: 3; }
   .comp-surface-col-lbl {
     display: block;
     font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
@@ -140,26 +228,103 @@ const SURFACE_ITEMS = [
     display: grid;
     gap: 6px;
   }
-  .comp-surface-list li {
+  .comp-surface-item {
     font-size: 14.5px;
     line-height: 1.5;
     color: rgba(245, 241, 232, 0.85);
     padding-left: 16px;
     position: relative;
+    /* hidden until revealed; staggered in by JS adding .in */
+    opacity: 0;
+    transform: translateY(6px);
+    transition: opacity 380ms ease, transform 380ms ease;
   }
-  .comp-surface-list li::before {
+  .comp-surface-item.in { opacity: 1; transform: none; }
+  .comp-surface-item::before {
     content: "·";
     position: absolute;
     left: 0;
     color: rgba(245, 241, 232, 0.45);
     font-weight: 700;
   }
-  .comp-surface-aud .comp-surface-list li {
+  /* capability terms read confident: brighter bullet, tight */
+  .comp-surface-cap .comp-surface-item.in::before { color: var(--brand-cyan); }
+  .comp-surface-aud .comp-surface-item {
     font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
     font-size: 13.5px;
+    /* audience questions arrive from the right — drift the opposite way so
+       the eye reads them as a separate, mismatched stream */
+    transform: translateX(8px);
+  }
+  .comp-surface-aud .comp-surface-item.in { transform: none; }
+  .comp-surface-aud .comp-surface-item.in::before { color: var(--brand-orange); }
+
+  /* ── the seam: a faint line down the middle that glows once the mismatch
+     is on screen, labelled "the gap" ── */
+  .comp-surface-seam {
+    grid-row: 1;
+    grid-column: 2;
+    position: relative;
+    align-self: stretch;
+    min-height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .comp-surface-seam::before {
+    content: "";
+    position: absolute;
+    top: 4px;
+    bottom: 4px;
+    left: 50%;
+    width: 1px;
+    transform: translateX(-50%);
+    background: linear-gradient(180deg, transparent, rgba(245, 241, 232, 0.14), transparent);
+    opacity: 0;
+    transition: opacity 500ms ease;
+  }
+  .comp-surface[data-phase="seam"] .comp-surface-seam::before,
+  .comp-surface[data-phase="bridge"] .comp-surface-seam::before,
+  .comp-surface[data-phase="done"] .comp-surface-seam::before {
+    opacity: 1;
+    background: linear-gradient(180deg, transparent, rgba(255, 90, 60, 0.5), transparent);
+  }
+  .comp-surface-seam-lbl {
+    position: relative;
+    z-index: 2;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 9px;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: rgba(255, 90, 60, 0.85);
+    background: #07060c;
+    padding: 5px 2px;
+    writing-mode: vertical-rl;
+    text-orientation: mixed;
+    opacity: 0;
+    transition: opacity 500ms ease 120ms;
+  }
+  .comp-surface[data-phase="seam"] .comp-surface-seam-lbl,
+  .comp-surface[data-phase="bridge"] .comp-surface-seam-lbl,
+  .comp-surface[data-phase="done"] .comp-surface-seam-lbl { opacity: 1; }
+  @media (max-width: 720px) {
+    /* on mobile the columns stack; turn the seam into a slim horizontal
+       divider between them so it doesn't reserve a dead column */
+    .comp-surface-seam { grid-column: 1; min-height: 0; padding: 2px 0; }
+    .comp-surface-seam::before {
+      top: 50%; bottom: auto; left: 0; right: 0; width: auto; height: 1px;
+      transform: translateY(-50%);
+      background: linear-gradient(90deg, transparent, rgba(245, 241, 232, 0.14), transparent);
+    }
+    .comp-surface[data-phase="seam"] .comp-surface-seam::before,
+    .comp-surface[data-phase="bridge"] .comp-surface-seam::before,
+    .comp-surface[data-phase="done"] .comp-surface-seam::before {
+      background: linear-gradient(90deg, transparent, rgba(255, 90, 60, 0.5), transparent);
+    }
+    .comp-surface-seam-lbl { writing-mode: horizontal-tb; padding: 2px 6px; }
   }
 
-  /* Surface box */
+  /* Surface box — the bridge. Drops in last, after the mismatch has landed. */
   .comp-surface-box {
     grid-column: 1 / -1;
     position: relative;
@@ -168,7 +333,28 @@ const SURFACE_ITEMS = [
     border: 1px solid rgba(255, 90, 60, 0.42);
     border-radius: 4px;
     padding: 18px 24px;
+    opacity: 0;
+    transform: translateY(14px) scale(0.985);
+    transition: opacity 520ms ease, transform 520ms cubic-bezier(0.22, 1, 0.36, 1);
   }
+  .comp-surface-box::before {
+    /* a hairline brand-gradient lip along the top edge — the "bridge" reads
+       as something laid across the gap */
+    content: "";
+    position: absolute;
+    top: -1px; left: 12%; right: 12%; height: 2px;
+    background: var(--brand-grad);
+    border-radius: 2px;
+    opacity: 0;
+    transition: opacity 520ms ease 120ms;
+  }
+  .comp-surface[data-phase="bridge"] .comp-surface-box,
+  .comp-surface[data-phase="done"] .comp-surface-box {
+    opacity: 1;
+    transform: none;
+  }
+  .comp-surface[data-phase="bridge"] .comp-surface-box::before,
+  .comp-surface[data-phase="done"] .comp-surface-box::before { opacity: 1; }
   .comp-surface-box-lbl {
     display: block;
     font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
@@ -208,5 +394,18 @@ const SURFACE_ITEMS = [
     letter-spacing: 0.18em;
     color: rgba(245, 241, 232, 0.45);
     text-transform: uppercase;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .comp-surface-item,
+    .comp-surface-box,
+    .comp-surface-box::before,
+    .comp-surface-seam::before,
+    .comp-surface-seam-lbl {
+      transition: none;
+    }
+    /* final state is forced by JS (.in + data-phase="done"); make sure the
+       box + seam are visible even if phase never advances */
+    .comp-surface[data-phase="done"] .comp-surface-item { opacity: 1; transform: none; }
   }
 </style>

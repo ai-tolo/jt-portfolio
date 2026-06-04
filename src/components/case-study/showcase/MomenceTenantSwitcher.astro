@@ -1,16 +1,30 @@
 ---
-// Tenant switcher. The four-category schema stays constant on the left.
-// On the right, a customer-detail card reshuffles its priority order
-// and its flex-field labels based on which tenant is active. Same
-// schema, different business — that is the modularity argument.
+// Tenant switcher — the star of the Momence case study.
+//
+// The four-category schema stays constant on the left rail. On the right,
+// ONE persistent customer-detail card physically reshuffles when the tenant
+// changes: the lead-KPI card slides into the lead slot, its value COUNTS UP
+// from the old number to the new, flex-field chips crossfade, subscription
+// labels swap, activity rewrites. Same bones, different priority order.
+//
+// Before the reader touches anything the card AUTO-CYCLES through the four
+// tenants on a slow ambient loop (~2.6s each) so the concept proves itself
+// before it's named. Any interaction (or focus) pauses the loop for good.
+//
+// The card is a single live DOM tree updated in place — NOT a display:none
+// swap — so the transforms actually read as motion. All discrete state is
+// driven by direct handlers; the count-up + cycle guarantee final values via
+// setTimeout, because headless preview tabs throttle rAF / setInterval / CSS
+// transitions. prefers-reduced-motion: no cycle, no count-up motion, final
+// states only.
 
 const TENANTS = [
   {
     id: "yoga",
     name: "Yoga studio",
     tag: "LoHi Studio · Denver",
-    leadKpi: { label: "Sessions attended", n: "44", trend: "+11%" },
-    secondaryKpi: { label: "Total spend", n: "$863", trend: "+17%" },
+    leadKpi: { label: "Sessions attended", n: 44, display: "44", trend: "+11%" },
+    secondaryKpi: { label: "Total spend", n: 863, display: "$863", trend: "+17%" },
     subs: ["Barre Fit Advanced · 1st renewal", "Vinyasa Pro"],
     flexFields: ["Mat preference", "Instructor pref", "Injury notes"],
     tags: ["Yoga", "Pilates", "Core Series", "Concession"],
@@ -20,8 +34,8 @@ const TENANTS = [
     id: "coaching",
     name: "B2B coaching",
     tag: "Lattice for Coaches · Remote",
-    leadKpi: { label: "Hours coached", n: "112", trend: "+24%" },
-    secondaryKpi: { label: "Contract", n: "$12,400", trend: "renews 90d" },
+    leadKpi: { label: "Hours coached", n: 112, display: "112", trend: "+24%" },
+    secondaryKpi: { label: "Contract", n: 12400, display: "$12,400", trend: "renews 90d" },
     subs: ["Enterprise team coaching · Q2 cohort", "Executive 1:1 · Q3"],
     flexFields: ["Engagement type", "Renewal owner", "Success metric"],
     tags: ["Mid-market", "Executive", "Active", "Renewal"],
@@ -31,8 +45,8 @@ const TENANTS = [
     id: "pilates",
     name: "Pilates / reformer",
     tag: "RebelReformer · Brooklyn",
-    leadKpi: { label: "Reformer sessions", n: "27", trend: "+8%" },
-    secondaryKpi: { label: "Total spend", n: "$1,420", trend: "+22%" },
+    leadKpi: { label: "Reformer sessions", n: 27, display: "27", trend: "+8%" },
+    secondaryKpi: { label: "Total spend", n: 1420, display: "$1,420", trend: "+22%" },
     subs: ["Reformer Founder · monthly", "Tower Add-on"],
     flexFields: ["Apparatus pref", "Spring strength", "Body comp goal"],
     tags: ["Reformer", "Tower", "Founder", "Beginner"],
@@ -42,8 +56,8 @@ const TENANTS = [
     id: "wellness",
     name: "Massage / wellness",
     tag: "GoodPress Wellness · Austin",
-    leadKpi: { label: "Treatments YTD", n: "9", trend: "+50%" },
-    secondaryKpi: { label: "Total spend", n: "$1,140", trend: "+30%" },
+    leadKpi: { label: "Treatments YTD", n: 9, display: "9", trend: "+50%" },
+    secondaryKpi: { label: "Total spend", n: 1140, display: "$1,140", trend: "+30%" },
     subs: ["Monthly Member · auto-renew", "Add-on: Cupping"],
     flexFields: ["Allergy notes", "Therapist pref", "Pressure preference"],
     tags: ["Deep tissue", "Member", "Sensitive skin", "Returning"],
@@ -57,9 +71,18 @@ const CATEGORIES = [
   { id: "flex", name: "Flex Fields", desc: "Per-tenant custom configuration." },
   { id: "activity", name: "User Interactions", desc: "Activity, messages, notes." },
 ];
+
+// First tenant renders server-side so the card is fully present (and correct)
+// with JS off. JS takes over to drive the reshuffle + auto-cycle.
+const t0 = TENANTS[0];
 ---
 
 <div class="mo-tn" data-mo-tn>
+  {/* The tenant data island. {JSON.stringify} does NOT interpolate inside a
+      <script> body in Astro, so hand it to JS via a typed JSON script tag and
+      set:html. */}
+  <script type="application/json" data-mo-tn-data set:html={JSON.stringify(TENANTS)}></script>
+
   <div class="mo-tn-picker" role="tablist" aria-label="Pick a tenant">
     {TENANTS.map((t, i) => (
       <button
@@ -71,6 +94,7 @@ const CATEGORIES = [
       >
         <span class="mo-tn-opt-name">{t.name}</span>
         <span class="mo-tn-opt-tag">{t.tag}</span>
+        <span class="mo-tn-opt-bar" aria-hidden="true"></span>
       </button>
     ))}
   </div>
@@ -89,83 +113,234 @@ const CATEGORIES = [
       <p class="mo-tn-rail-foot">Same four primitives. What changes per tenant is priority, density, and flex.</p>
     </div>
 
-    {TENANTS.map((t, i) => (
-      <div class:list={["mo-tn-card", { active: i === 0 }]} data-mo-tn-card={t.id}>
-        <div class="mo-tn-card-head">
-          <div class="mo-tn-avatar"><span>YK</span></div>
-          <div>
-            <p class="mo-tn-card-name">Yaz Kahrouf</p>
-            <p class="mo-tn-card-meta">Joined Aug 2022 · <span class="mo-tn-on">attended today</span></p>
-            <p class="mo-tn-card-tenant"><strong>{t.name}</strong> · {t.tag}</p>
-          </div>
-        </div>
-
-        <div class="mo-tn-kpis">
-          <div class="mo-tn-kpi mo-tn-kpi-lead">
-            <span class="mo-tn-kpi-lbl">{t.leadKpi.label}</span>
-            <span class="mo-tn-kpi-n">{t.leadKpi.n}</span>
-            <span class="mo-tn-kpi-trend">↗ {t.leadKpi.trend}</span>
-          </div>
-          <div class="mo-tn-kpi">
-            <span class="mo-tn-kpi-lbl">{t.secondaryKpi.label}</span>
-            <span class="mo-tn-kpi-n">{t.secondaryKpi.n}</span>
-            <span class="mo-tn-kpi-trend">↗ {t.secondaryKpi.trend}</span>
-          </div>
-        </div>
-
-        <div class="mo-tn-row">
-          <span class="mo-tn-row-lbl">Subscriptions</span>
-          <ul class="mo-tn-subs">
-            {t.subs.map((s) => <li>{s}</li>)}
-          </ul>
-        </div>
-
-        <div class="mo-tn-row">
-          <span class="mo-tn-row-lbl">Flex fields</span>
-          <ul class="mo-tn-flex">
-            {t.flexFields.map((f) => <li>{f}</li>)}
-          </ul>
-        </div>
-
-        <div class="mo-tn-row">
-          <span class="mo-tn-row-lbl">Tags</span>
-          <ul class="mo-tn-tags">
-            {t.tags.map((tag) => <li>{tag}</li>)}
-          </ul>
-        </div>
-
-        <div class="mo-tn-row mo-tn-row-activity">
-          <span class="mo-tn-row-lbl">Recent activity</span>
-          <ul class="mo-tn-activity">
-            {t.activity.map((a) => <li>· {a}</li>)}
-          </ul>
+    {/* ONE persistent card. Its contents are rewritten on switch; the lead KPI
+        slides, its number counts up, chips crossfade. data-mo-tn-card carries
+        the active tenant id for styling hooks. */}
+    <div class="mo-tn-card" data-mo-tn-card={t0.id} aria-live="polite">
+      <div class="mo-tn-card-head">
+        <div class="mo-tn-avatar"><span>YK</span></div>
+        <div>
+          <p class="mo-tn-card-name">Yaz Kahrouf</p>
+          <p class="mo-tn-card-meta">Joined Aug 2022 · <span class="mo-tn-on">attended today</span></p>
+          <p class="mo-tn-card-tenant"><strong data-mo-tn-tname>{t0.name}</strong> · <span data-mo-tn-ttag>{t0.tag}</span></p>
         </div>
       </div>
-    ))}
+
+      <div class="mo-tn-kpis">
+        <div class="mo-tn-kpi mo-tn-kpi-lead" data-mo-tn-lead>
+          <span class="mo-tn-kpi-lbl" data-mo-tn-lead-lbl>{t0.leadKpi.label}</span>
+          <span class="mo-tn-kpi-n" data-mo-tn-lead-n data-mo-tn-n={t0.leadKpi.n}>{t0.leadKpi.display}</span>
+          <span class="mo-tn-kpi-trend" data-mo-tn-lead-trend>↗ {t0.leadKpi.trend}</span>
+        </div>
+        <div class="mo-tn-kpi" data-mo-tn-sec>
+          <span class="mo-tn-kpi-lbl" data-mo-tn-sec-lbl>{t0.secondaryKpi.label}</span>
+          <span class="mo-tn-kpi-n" data-mo-tn-sec-n>{t0.secondaryKpi.display}</span>
+          <span class="mo-tn-kpi-trend" data-mo-tn-sec-trend>↗ {t0.secondaryKpi.trend}</span>
+        </div>
+      </div>
+
+      <div class="mo-tn-row">
+        <span class="mo-tn-row-lbl">Subscriptions</span>
+        <ul class="mo-tn-subs" data-mo-tn-subs>
+          {t0.subs.map((s) => <li>{s}</li>)}
+        </ul>
+      </div>
+
+      <div class="mo-tn-row">
+        <span class="mo-tn-row-lbl">Flex fields</span>
+        <ul class="mo-tn-flex" data-mo-tn-flex>
+          {t0.flexFields.map((f) => <li>{f}</li>)}
+        </ul>
+      </div>
+
+      <div class="mo-tn-row">
+        <span class="mo-tn-row-lbl">Tags</span>
+        <ul class="mo-tn-tags" data-mo-tn-tags>
+          {t0.tags.map((tag) => <li>{tag}</li>)}
+        </ul>
+      </div>
+
+      <div class="mo-tn-row mo-tn-row-activity">
+        <span class="mo-tn-row-lbl">Recent activity</span>
+        <ul class="mo-tn-activity" data-mo-tn-activity>
+          {t0.activity.map((a) => <li>· {a}</li>)}
+        </ul>
+      </div>
+    </div>
   </div>
+
+  <p class="mo-tn-hint" data-mo-tn-hint aria-hidden="true">auto-cycling — touch any tenant to take over</p>
 </div>
 
 <script>
-  const root = document.querySelector<HTMLElement>("[data-mo-tn]");
-  if (root) {
-    const opts = root.querySelectorAll<HTMLButtonElement>("[data-mo-tn-opt]");
-    const cards = root.querySelectorAll<HTMLElement>("[data-mo-tn-card]");
-    opts.forEach((o) => {
-      o.addEventListener("click", () => {
-        opts.forEach((b) => {
-          const on = b === o;
-          b.classList.toggle("active", on);
-          b.setAttribute("aria-selected", on ? "true" : "false");
-        });
-        cards.forEach((c) => c.classList.toggle("active", c.dataset.moTnCard === o.dataset.moTnOpt));
+  type KPI = { label: string; n: number; display: string; trend: string };
+  type Tenant = {
+    id: string; name: string; tag: string;
+    leadKpi: KPI; secondaryKpi: KPI;
+    subs: string[]; flexFields: string[]; tags: string[]; activity: string[];
+  };
+
+  const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  document.querySelectorAll<HTMLElement>("[data-mo-tn]").forEach((root) => {
+    const dataEl = root.querySelector<HTMLScriptElement>("[data-mo-tn-data]");
+    if (!dataEl?.textContent) return;
+    let TENANTS: Tenant[];
+    try { TENANTS = JSON.parse(dataEl.textContent); } catch { return; }
+    if (!TENANTS.length) return;
+
+    const opts = Array.from(root.querySelectorAll<HTMLButtonElement>("[data-mo-tn-opt]"));
+    const card = root.querySelector<HTMLElement>("[data-mo-tn-card]");
+    const hint = root.querySelector<HTMLElement>("[data-mo-tn-hint]");
+    if (!card) return;
+
+    const $ = <T extends HTMLElement>(sel: string) => card.querySelector<T>(sel)!;
+    const tName = $("[data-mo-tn-tname]");
+    const tTag = $("[data-mo-tn-ttag]");
+    const lead = $("[data-mo-tn-lead]");
+    const leadLbl = $("[data-mo-tn-lead-lbl]");
+    const leadN = $("[data-mo-tn-lead-n]");
+    const leadTrend = $("[data-mo-tn-lead-trend]");
+    const secLbl = $("[data-mo-tn-sec-lbl]");
+    const secN = $("[data-mo-tn-sec-n]");
+    const secTrend = $("[data-mo-tn-sec-trend]");
+    const subsUl = $("[data-mo-tn-subs]");
+    const flexUl = $("[data-mo-tn-flex]");
+    const tagsUl = $("[data-mo-tn-tags]");
+    const actUl = $("[data-mo-tn-activity]");
+
+    let current = 0;
+    let countRaf = 0;
+    let countDone = 0;
+
+    // Count the lead KPI up (or down) from its current value to the next.
+    // Preserves a "$" prefix and integer formatting. A setTimeout guarantees
+    // the final string lands even if rAF is throttled (headless preview).
+    const countUp = (from: number, to: number, display: string, ms: number) => {
+      window.cancelAnimationFrame(countRaf);
+      window.clearTimeout(countDone);
+      const dollar = display.trim().startsWith("$");
+      const fmt = (v: number) => (dollar ? "$" : "") + Math.round(v).toLocaleString("en-US");
+      if (reduce || from === to) { leadN.textContent = display; return; }
+      const start = performance.now();
+      const tick = (now: number) => {
+        const t = Math.min(1, (now - start) / ms);
+        const eased = 1 - Math.pow(1 - t, 3);
+        leadN.textContent = fmt(from + (to - from) * eased);
+        if (t < 1) countRaf = window.requestAnimationFrame(tick);
+      };
+      countRaf = window.requestAnimationFrame(tick);
+      // Guarantee the exact final display string (commas, $, etc.).
+      countDone = window.setTimeout(() => { leadN.textContent = display; }, ms + 140) as unknown as number;
+    };
+
+    const chips = (ul: HTMLElement, items: string[], prefix = "") => {
+      ul.innerHTML = items.map((x) => `<li>${prefix}${x}</li>`).join("");
+    };
+
+    const render = (next: number, animate: boolean) => {
+      const t = TENANTS[next];
+      const prev = TENANTS[current];
+      current = next;
+
+      // picker state
+      opts.forEach((b) => {
+        const on = b.dataset.moTnOpt === t.id;
+        b.classList.toggle("active", on);
+        b.setAttribute("aria-selected", on ? "true" : "false");
       });
+
+      // tenant id hook for accenting
+      card.dataset.moTnCard = t.id;
+
+      // The reshuffle pulse: a quick fade/lift on the body so the swap reads
+      // as a physical re-deal rather than a flicker. Re-trigger by toggling.
+      if (animate && !reduce) {
+        card.classList.remove("mo-tn-shuffle");
+        // force reflow so the animation restarts
+        void card.offsetWidth;
+        card.classList.add("mo-tn-shuffle");
+      }
+
+      // text / labels
+      tName.textContent = t.name;
+      tTag.textContent = t.tag;
+      leadLbl.textContent = t.leadKpi.label;
+      leadTrend.textContent = "↗ " + t.leadKpi.trend;
+      secLbl.textContent = t.secondaryKpi.label;
+      secN.textContent = t.secondaryKpi.display;
+      secTrend.textContent = "↗ " + t.secondaryKpi.trend;
+
+      // chips crossfade (CSS handles the fade-in via the shuffle keyframe)
+      chips(subsUl, t.subs);
+      chips(flexUl, t.flexFields);
+      chips(tagsUl, t.tags);
+      chips(actUl, t.activity, "· ");
+
+      // lead KPI counts from old to new
+      const from = animate ? prev.leadKpi.n : t.leadKpi.n;
+      leadN.dataset.moTnN = String(t.leadKpi.n);
+      countUp(from, t.leadKpi.n, t.leadKpi.display, 720);
+    };
+
+    // ── auto-cycle ──────────────────────────────────────────────────────
+    // Ambient loop that proves the concept before the reader names it. Driven
+    // by setTimeout (NOT setInterval) so each step is independent and the
+    // final value always lands; pauses permanently on first interaction.
+    let cycleTimer = 0;
+    let cycling = !reduce;
+
+    const stopCycle = (userInitiated: boolean) => {
+      if (!cycling && !userInitiated) return;
+      cycling = false;
+      window.clearTimeout(cycleTimer);
+      root.classList.add("mo-tn-took-over");
+      if (hint) hint.textContent = "you're driving — pick any tenant";
+    };
+
+    const step = () => {
+      if (!cycling) return;
+      const next = (current + 1) % TENANTS.length;
+      render(next, true);
+      cycleTimer = window.setTimeout(step, 2600) as unknown as number;
+    };
+
+    // user interaction → switch + kill the loop. Re-clicking the shown tenant
+    // still re-pulses (render always animates on a direct handler).
+    opts.forEach((o, i) => {
+      o.addEventListener("click", () => { stopCycle(true); render(i, true); });
+      o.addEventListener("focus", () => { if (cycling) stopCycle(true); });
     });
-  }
+
+    // Pause the cycle if the reader hovers the card itself (intent to read).
+    card.addEventListener("mouseenter", () => stopCycle(true));
+
+    // Kick the loop off only when the demo scrolls into view, and only the
+    // first time. Gate via IntersectionObserver so it doesn't burn cycles
+    // off-screen.
+    if (cycling && "IntersectionObserver" in window) {
+      const io = new IntersectionObserver((entries) => {
+        for (const e of entries) {
+          if (e.isIntersecting) {
+            io.disconnect();
+            if (cycling) cycleTimer = window.setTimeout(step, 2200) as unknown as number;
+          }
+        }
+      }, { threshold: 0.4 });
+      io.observe(root);
+    } else if (cycling) {
+      // No IO support — just start.
+      cycleTimer = window.setTimeout(step, 2200) as unknown as number;
+    }
+
+    if (reduce && hint) hint.textContent = "pick a tenant to reshuffle the profile";
+  });
 </script>
 
 <style>
   .mo-tn { display: grid; gap: 22px; }
 
+  /* picker ─────────────────────────────────────────────────────────────── */
   .mo-tn-picker {
     display: grid;
     grid-template-columns: repeat(4, 1fr);
@@ -175,15 +350,17 @@ const CATEGORIES = [
     .mo-tn-picker { grid-template-columns: 1fr 1fr; }
   }
   .mo-tn-opt {
+    position: relative;
     text-align: left;
     background: rgba(245, 241, 232, 0.02);
     border: 1px solid var(--cs-line);
     border-radius: 4px;
-    padding: 12px 14px;
+    padding: 12px 14px 14px;
     cursor: pointer;
     transition: border-color 160ms ease, background 160ms ease;
     display: grid;
     gap: 4px;
+    overflow: hidden;
   }
   .mo-tn-opt:hover {
     border-color: var(--cs-line-strong);
@@ -206,7 +383,28 @@ const CATEGORIES = [
     color: rgba(245, 241, 232, 0.55);
     line-height: 1.3;
   }
+  /* the under-bar fills while a tenant is the active auto-cycle slot, like a
+     slideshow timer. Only animates during the ambient loop. */
+  .mo-tn-opt-bar {
+    position: absolute;
+    left: 0; bottom: 0;
+    height: 2px;
+    width: 100%;
+    transform: scaleX(0);
+    transform-origin: left;
+    background: var(--brand-grad);
+    opacity: 0;
+  }
+  .mo-tn:not(.mo-tn-took-over) .mo-tn-opt.active .mo-tn-opt-bar {
+    opacity: 1;
+    animation: mo-tn-bar 2600ms linear forwards;
+  }
+  @keyframes mo-tn-bar {
+    from { transform: scaleX(0); }
+    to   { transform: scaleX(1); }
+  }
 
+  /* stage ──────────────────────────────────────────────────────────────── */
   .mo-tn-stage {
     display: grid;
     grid-template-columns: minmax(220px, 280px) minmax(0, 1fr);
@@ -218,7 +416,7 @@ const CATEGORIES = [
     .mo-tn-stage { grid-template-columns: 1fr; }
   }
 
-  /* Schema rail */
+  /* schema rail */
   .mo-tn-schema {
     background: rgba(14, 196, 252, 0.03);
     border: 1px dashed rgba(14, 196, 252, 0.30);
@@ -261,9 +459,8 @@ const CATEGORIES = [
     max-width: none !important;
   }
 
-  /* Customer card */
+  /* customer card ──────────────────────────────────────────────────────── */
   .mo-tn-card {
-    display: none;
     background: #fff;
     color: #1c1c1e;
     border-radius: 12px;
@@ -271,7 +468,6 @@ const CATEGORIES = [
     box-shadow: 0 24px 60px -30px rgba(0,0,0,0.7), 0 0 0 1px rgba(245, 241, 232, 0.06);
     font-family: "Geist Variable", ui-sans-serif, system-ui, sans-serif;
   }
-  .mo-tn-card.active { display: block; }
 
   .mo-tn-card-head {
     background: #2e2e35;
@@ -291,6 +487,7 @@ const CATEGORIES = [
     font-weight: 700;
     color: #fff;
     font-size: 18px;
+    flex: 0 0 auto;
   }
   .mo-tn-card-name {
     font-size: 22px;
@@ -309,7 +506,10 @@ const CATEGORIES = [
     margin: 0;
     font-style: italic;
   }
-  .mo-tn-card-tenant strong { color: #fbbf24; font-style: normal; font-weight: 700; }
+  .mo-tn-card-tenant strong {
+    color: #fbbf24; font-style: normal; font-weight: 700;
+    transition: color 200ms ease;
+  }
 
   .mo-tn-kpis {
     display: grid;
@@ -325,10 +525,19 @@ const CATEGORIES = [
     box-shadow: 0 1px 0 rgba(0,0,0,0.04), 0 4px 18px -10px rgba(0,0,0,0.10);
     display: grid;
     gap: 2px;
+    /* the lead-card promotion reads as a settle; border + shadow ease too */
+    transition: border-color 280ms ease, box-shadow 280ms ease;
   }
-  .mo-tn-kpi-lead { border: 1.5px solid #7c3aed; box-shadow: 0 1px 0 rgba(0,0,0,0.04), 0 8px 20px -10px rgba(124, 58, 237, 0.32); }
+  .mo-tn-kpi-lead {
+    border: 1.5px solid #7c3aed;
+    box-shadow: 0 1px 0 rgba(0,0,0,0.04), 0 8px 20px -10px rgba(124, 58, 237, 0.32);
+  }
   .mo-tn-kpi-lbl { font-size: 11px; color: #555; }
-  .mo-tn-kpi-n { font-size: 22px; font-weight: 800; color: #1c1c1e; }
+  .mo-tn-kpi-n {
+    font-size: 22px; font-weight: 800; color: #1c1c1e;
+    font-variant-numeric: tabular-nums;
+    font-feature-settings: "tnum";
+  }
   .mo-tn-kpi-trend { font-size: 11px; color: #7c3aed; font-weight: 700; }
 
   .mo-tn-row {
@@ -387,4 +596,88 @@ const CATEGORIES = [
     line-height: 1.5;
   }
   .mo-tn-row-activity { padding-bottom: 18px; }
+
+  /* the reshuffle pulse ────────────────────────────────────────────────── */
+  /* On switch we add .mo-tn-shuffle for one run. The KPI band lifts/settles
+     and the freshly written chip rows fade up — same bones being re-dealt.
+     Staggered so the eye reads the lead KPI moving first, then the chips. */
+  .mo-tn-shuffle .mo-tn-kpis { animation: mo-tn-deal 320ms cubic-bezier(0.22, 1, 0.36, 1); }
+  .mo-tn-shuffle .mo-tn-kpi-lead { animation: mo-tn-lead-promote 360ms cubic-bezier(0.22, 1, 0.36, 1); }
+  .mo-tn-shuffle .mo-tn-card-tenant strong { animation: mo-tn-flash 520ms ease; }
+  .mo-tn-shuffle .mo-tn-subs li,
+  .mo-tn-shuffle .mo-tn-flex li,
+  .mo-tn-shuffle .mo-tn-tags li { animation: mo-tn-chip-in 300ms ease backwards; }
+  .mo-tn-shuffle .mo-tn-activity li { animation: mo-tn-row-in 320ms ease backwards; }
+  /* stagger the flex chips a touch behind subs, tags behind flex */
+  .mo-tn-shuffle .mo-tn-flex li { animation-delay: 40ms; }
+  .mo-tn-shuffle .mo-tn-tags li { animation-delay: 80ms; }
+  .mo-tn-shuffle .mo-tn-activity li:nth-child(2) { animation-delay: 60ms; }
+  .mo-tn-shuffle .mo-tn-activity li:nth-child(3) { animation-delay: 120ms; }
+
+  @keyframes mo-tn-deal {
+    0%   { transform: translateY(4px); opacity: 0.55; }
+    100% { transform: translateY(0);   opacity: 1; }
+  }
+  @keyframes mo-tn-lead-promote {
+    0%   { transform: scale(0.965); box-shadow: 0 1px 0 rgba(0,0,0,0.04), 0 4px 14px -10px rgba(124, 58, 237, 0.2); }
+    55%  { transform: scale(1.02); }
+    100% { transform: scale(1); box-shadow: 0 1px 0 rgba(0,0,0,0.04), 0 8px 20px -10px rgba(124, 58, 237, 0.32); }
+  }
+  @keyframes mo-tn-flash {
+    0%   { color: #fbbf24; }
+    35%  { color: #fff; }
+    100% { color: #fbbf24; }
+  }
+  @keyframes mo-tn-chip-in {
+    0%   { opacity: 0; transform: translateY(5px); }
+    100% { opacity: 1; transform: translateY(0); }
+  }
+  @keyframes mo-tn-row-in {
+    0%   { opacity: 0; transform: translateX(-6px); }
+    100% { opacity: 1; transform: translateX(0); }
+  }
+
+  /* hint line ──────────────────────────────────────────────────────────── */
+  .mo-tn-hint {
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-style: italic;
+    font-size: 11.5px;
+    letter-spacing: 0.04em;
+    color: rgba(245, 241, 232, 0.42);
+    margin: -4px 0 0;
+    text-align: center;
+    transition: color 200ms ease;
+  }
+  .mo-tn-hint::before {
+    content: "";
+    display: inline-block;
+    width: 6px; height: 6px;
+    margin-right: 7px;
+    border-radius: 50%;
+    background: var(--brand-green);
+    box-shadow: 0 0 6px var(--brand-green);
+    vertical-align: middle;
+    animation: mo-tn-hint-pulse 1.6s ease-in-out infinite;
+  }
+  .mo-tn.mo-tn-took-over .mo-tn-hint::before {
+    background: rgba(245, 241, 232, 0.4);
+    box-shadow: none;
+    animation: none;
+  }
+  @keyframes mo-tn-hint-pulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.4; transform: scale(0.8); }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .mo-tn-opt-bar { display: none; }
+    .mo-tn-shuffle .mo-tn-kpis,
+    .mo-tn-shuffle .mo-tn-kpi-lead,
+    .mo-tn-shuffle .mo-tn-card-tenant strong,
+    .mo-tn-shuffle .mo-tn-subs li,
+    .mo-tn-shuffle .mo-tn-flex li,
+    .mo-tn-shuffle .mo-tn-tags li,
+    .mo-tn-shuffle .mo-tn-activity li { animation: none; }
+    .mo-tn-hint::before { animation: none; }
+  }
 </style>

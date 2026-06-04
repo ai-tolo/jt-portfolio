@@ -1,13 +1,22 @@
 ---
-// Role-aware docs-chat. Pick a role (Sales / GTM / Finance / Ops). The
-// docs-chat panel below swaps its starter prompts to that role's actual
-// jobs. Click a starter — the chat shows a faux response that uses the
-// same UI patterns the docs-chat itself ships with (template chips,
-// embedded-resource pills, quick prompts).
+// Role-aware docs-chat — rebuilt to behave like a real AI assistant.
 //
-// This is the design pattern the real CHS docs-chat ships with: each role
-// lands in a chat whose starter prompts are already framed in their own
-// language. The mock data here is plausible without revealing internals.
+// Pick a role (Sales / GTM / Finance / Ops). The docs-chat panel swaps its
+// starter prompts to that role's actual jobs (subtle crossfade). Click a
+// starter and it doesn't just *show* a canned answer — it USES the assistant:
+//
+//   1. The starter echoes up as a sent user message.
+//   2. A "thinking" indicator (3 pulsing dots) holds for ~350ms.
+//   3. The response body STREAMS in line-by-line over ~600ms.
+//   4. The tail metadata fades in last.
+//
+// All sequencing is setTimeout-driven (NOT rAF — headless preview throttles
+// rAF) and every step force-completes so the final text always lands. Honors
+// prefers-reduced-motion (instant final state, no thinking/stream).
+//
+// This mirrors the design pattern the real CHS docs-chat ships with: each
+// role lands in a chat whose starters are already in their own language, and
+// the chat teaches by being the tool. Mock data is plausible, no internals.
 
 const ROLES = [
   {
@@ -123,6 +132,17 @@ const ROLES = [
     ],
   },
 ];
+
+// Split each response body into stream "lines" so the assistant can type it
+// out a clause at a time. We break on the double-space the copy already uses
+// as a soft beat, falling back to sentence boundaries — keeps it deterministic
+// at build time (no client-side parsing).
+const splitLines = (body: string): string[] => {
+  const parts = body.includes("  ")
+    ? body.split(/\s{2,}/)
+    : body.split(/(?<=[.!?])\s+/);
+  return parts.map((p) => p.trim()).filter(Boolean);
+};
 ---
 
 <div class="chs-rp" data-chs-rp>
@@ -141,52 +161,66 @@ const ROLES = [
     ))}
   </div>
 
-  <div class="chs-rp-chat" aria-live="polite">
+  <div class="chs-rp-chat">
     <div class="chs-rp-chat-head">
       <span class="chs-rp-dot" aria-hidden="true"></span>
       <span class="chs-rp-chat-title">CHS · Docs assistant</span>
       <span class="chs-rp-chat-role" data-chs-rp-chat-role>You · Sales</span>
     </div>
 
-    {ROLES.map((r, i) => (
-      <div class:list={["chs-rp-pane", { active: i === 0 }]} data-chs-rp-pane={r.id}>
-        <p class="chs-rp-prompt">Hi, I'm new here. Where do I start as someone in <em>{r.name}</em>?</p>
-        <p class="chs-rp-reply">Three starting flows match your role. Pick one to see what comes back.</p>
-        <ul class="chs-rp-starters">
-          {r.starters.map((s, j) => (
-            <li>
-              <button
-                type="button"
-                class:list={["chs-rp-starter", { active: j === 0 }]}
-                data-chs-rp-starter={`${r.id}-${j}`}
-              >
-                <span class="chs-rp-starter-arrow">→</span>
-                <span class="chs-rp-starter-label">{s.label}</span>
-                <span class="chs-rp-starter-kind">{s.kind}</span>
-              </button>
-            </li>
-          ))}
-        </ul>
+    <div class="chs-rp-panes">
+      {ROLES.map((r, i) => (
+        <div class:list={["chs-rp-pane", { active: i === 0 }]} data-chs-rp-pane={r.id}>
+          <p class="chs-rp-prompt">Hi, I'm new here. Where do I start as someone in <em>{r.name}</em>?</p>
+          <p class="chs-rp-reply">Three starting flows match your role. Tap one — I'll run it.</p>
+          <ul class="chs-rp-starters">
+            {r.starters.map((s, j) => (
+              <li>
+                <button
+                  type="button"
+                  class="chs-rp-starter"
+                  data-chs-rp-starter={`${r.id}-${j}`}
+                >
+                  <span class="chs-rp-starter-arrow">→</span>
+                  <span class="chs-rp-starter-label">{s.label}</span>
+                  <span class="chs-rp-starter-kind">{s.kind}</span>
+                </button>
+              </li>
+            ))}
+          </ul>
 
-        {r.starters.map((s, j) => (
-          <div class:list={["chs-rp-response", { active: j === 0 }]} data-chs-rp-response={`${r.id}-${j}`}>
-            <span class="chs-rp-chip">{s.chip}</span>
-            <p class="chs-rp-response-body">{s.body}</p>
-            <p class="chs-rp-response-tail">{s.tail}</p>
+          {/* The live transcript region. Sent prompt + streamed answer get
+              written here on starter click. Empty until the reader acts. */}
+          <div class="chs-rp-thread" data-chs-rp-thread aria-live="polite">
+            {r.starters.map((s, j) => (
+              <template data-chs-rp-tpl={`${r.id}-${j}`}>
+                <div class="chs-rp-sent" data-label={s.label}></div>
+                <div class="chs-rp-response">
+                  <span class="chs-rp-chip">{s.chip}</span>
+                  <div class="chs-rp-response-body" data-tail={s.tail}>
+                    {splitLines(s.body).map((line) => (
+                      <span class="chs-rp-line" data-line>{line}</span>
+                    ))}
+                  </div>
+                  <p class="chs-rp-response-tail">{s.tail}</p>
+                </div>
+              </template>
+            ))}
           </div>
-        ))}
-      </div>
-    ))}
+        </div>
+      ))}
+    </div>
   </div>
 </div>
 
 <script>
-  const root = document.querySelector<HTMLElement>("[data-chs-rp]");
-  if (root) {
+  document.querySelectorAll<HTMLElement>("[data-chs-rp]").forEach((root) => {
+    const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     const roleBtns = root.querySelectorAll<HTMLButtonElement>("[data-chs-rp-role]");
     const panes = root.querySelectorAll<HTMLElement>("[data-chs-rp-pane]");
     const chatRoleLbl = root.querySelector<HTMLElement>("[data-chs-rp-chat-role]");
 
+    // ── role switch (subtle crossfade handled in CSS via .active) ──
     const activateRole = (id: string) => {
       roleBtns.forEach((b) => {
         const on = b.dataset.chsRpRole === id;
@@ -197,26 +231,100 @@ const ROLES = [
       const label = root.querySelector<HTMLElement>(`[data-chs-rp-role="${id}"] .chs-rp-role-name`);
       if (chatRoleLbl && label) chatRoleLbl.textContent = `You · ${label.textContent}`;
     };
-
     roleBtns.forEach((b) => {
       b.addEventListener("click", () => activateRole(b.dataset.chsRpRole || ""));
     });
 
+    // ── the assistant run: thinking → stream → tail ──
     const starterBtns = root.querySelectorAll<HTMLButtonElement>("[data-chs-rp-starter]");
     starterBtns.forEach((b) => {
       b.addEventListener("click", () => {
         const id = b.dataset.chsRpStarter || "";
         const pane = b.closest<HTMLElement>("[data-chs-rp-pane]");
-        if (!pane) return;
+        const thread = pane?.querySelector<HTMLElement>("[data-chs-rp-thread]");
+        const tpl = pane?.querySelector<HTMLTemplateElement>(`[data-chs-rp-tpl="${id}"]`);
+        if (!pane || !thread || !tpl) return;
+
+        // mark the chosen starter
         pane.querySelectorAll<HTMLButtonElement>("[data-chs-rp-starter]").forEach((s) =>
           s.classList.toggle("active", s === b)
         );
-        pane.querySelectorAll<HTMLElement>("[data-chs-rp-response]").forEach((r) =>
-          r.classList.toggle("active", r.dataset.chsRpResponse === id)
-        );
+
+        // Cancel any in-flight run from a previous click so its delayed
+        // timers don't write into the node we're about to replace.
+        const prevTimers: number[] = (thread as any).__timers || [];
+        prevTimers.forEach((t) => window.clearTimeout(t));
+        const timers: number[] = [];
+        (thread as any).__timers = timers;
+        const after = (fn: () => void, ms: number) => {
+          const t = window.setTimeout(fn, ms);
+          timers.push(t);
+          return t;
+        };
+
+        // Remove only the previously-rendered live transcript (keep the
+        // inert <template> sources so re-clicks still work), then mount a
+        // fresh clone of this starter's template.
+        thread.querySelectorAll<HTMLElement>("[data-chs-rp-live]").forEach((n) => n.remove());
+        const live = document.createElement("div");
+        live.dataset.chsRpLive = "true";
+        live.appendChild(tpl.content.cloneNode(true));
+        thread.appendChild(live);
+
+        const sent = live.querySelector<HTMLElement>(".chs-rp-sent");
+        const response = live.querySelector<HTMLElement>(".chs-rp-response");
+        const bodyEl = live.querySelector<HTMLElement>(".chs-rp-response-body");
+        const lines = [...live.querySelectorAll<HTMLElement>("[data-line]")];
+        const tail = live.querySelector<HTMLElement>(".chs-rp-response-tail");
+        if (!sent || !response || !bodyEl || !tail) return;
+
+        // 1) echo the starter as a sent user bubble. Drive the fade via a
+        // tiny setTimeout (not rAF — headless tabs throttle rAF) so the
+        // bubble always becomes visible.
+        sent.textContent = sent.dataset.label || "";
+        after(() => sent.classList.add("in"), 20);
+
+        // reduced motion → everything visible at once, no theatre
+        if (reduce) {
+          response.classList.add("in");
+          bodyEl.dataset.state = "done";
+          lines.forEach((l) => l.classList.add("in"));
+          tail.classList.add("in");
+          return;
+        }
+
+        // 2) thinking dots
+        response.classList.add("in");
+        bodyEl.dataset.state = "thinking";
+
+        const THINK = 350;
+        const STREAM = 600;
+        const perLine = lines.length ? STREAM / lines.length : STREAM;
+
+        // 3) stream the body line-by-line, then 4) fade the tail
+        after(() => {
+          bodyEl.dataset.state = "streaming";
+          lines.forEach((l, i) => {
+            after(() => l.classList.add("in"), i * perLine);
+          });
+          after(() => {
+            bodyEl.dataset.state = "done";
+            tail.classList.add("in");
+          }, lines.length * perLine + 80);
+        }, THINK);
+
+        // belt-and-suspenders: if any timer is dropped (headless tabs),
+        // force the final state so the answer always lands fully.
+        const finalAt = THINK + lines.length * perLine + 260;
+        after(() => {
+          sent.classList.add("in");
+          bodyEl.dataset.state = "done";
+          lines.forEach((l) => l.classList.add("in"));
+          tail.classList.add("in");
+        }, finalAt);
       });
     });
-  }
+  });
 </script>
 
 <style>
@@ -303,8 +411,25 @@ const ROLES = [
     font-style: italic;
   }
 
-  .chs-rp-pane { display: none; padding: 22px 22px 20px; }
-  .chs-rp-pane.active { display: block; }
+  /* Panes crossfade on role switch. Stack them so the swap doesn't jump
+     the frame height around. */
+  .chs-rp-panes { position: relative; }
+  .chs-rp-pane {
+    padding: 22px 22px 20px;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 220ms ease;
+  }
+  .chs-rp-pane:not(.active) {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+  }
+  .chs-rp-pane.active {
+    position: relative;
+    opacity: 1;
+    visibility: visible;
+  }
 
   .chs-rp-prompt {
     display: inline-block;
@@ -317,7 +442,6 @@ const ROLES = [
     line-height: 1.5;
     margin: 0 0 14px;
     max-width: 80%;
-    align-self: flex-end;
   }
   .chs-rp-prompt em {
     font-style: italic;
@@ -380,13 +504,37 @@ const ROLES = [
     color: rgba(245, 241, 232, 0.45);
   }
 
+  /* ── live transcript ── */
+  .chs-rp-thread { display: block; }
+  .chs-rp-thread:empty { display: none; }
+
+  /* the starter echoed back as a sent user message */
+  .chs-rp-sent {
+    margin: 4px 0 12px auto;
+    max-width: 80%;
+    width: fit-content;
+    text-align: right;
+    background: rgba(255, 90, 60, 0.10);
+    border: 1px solid rgba(255, 90, 60, 0.32);
+    color: var(--cs-text);
+    border-radius: 12px 12px 4px 12px;
+    padding: 8px 13px;
+    font-size: 13.5px;
+    line-height: 1.45;
+    opacity: 0;
+    transform: translateY(4px);
+    transition: opacity 220ms ease, transform 220ms ease;
+  }
+  .chs-rp-sent.in { opacity: 1; transform: none; }
+
   .chs-rp-response {
-    display: none;
     border-top: 1px solid var(--cs-line);
     padding-top: 16px;
     margin-top: 6px;
+    opacity: 0;
+    transition: opacity 200ms ease;
   }
-  .chs-rp-response.active { display: block; }
+  .chs-rp-response.in { opacity: 1; }
   .chs-rp-chip {
     display: inline-block;
     font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
@@ -400,20 +548,79 @@ const ROLES = [
     padding: 3px 7px;
     margin-bottom: 10px;
   }
+
+  /* response body: a streamed answer block. Lines reveal one at a time. */
   .chs-rp-response-body {
+    position: relative;
     font-size: 14.5px;
     line-height: 1.55;
     color: var(--cs-text);
     margin: 0 0 8px;
     padding: 10px 14px;
+    min-height: 40px;
     background: rgba(0, 255, 77, 0.04);
     border-left: 2px solid rgba(0, 255, 77, 0.45);
     border-radius: 2px;
   }
+  .chs-rp-line {
+    display: inline;
+    opacity: 0;
+    transition: opacity 180ms ease;
+  }
+  .chs-rp-line.in { opacity: 1; }
+  /* keep clauses on the same visual line where the source used soft beats:
+     a hair of trailing space so streamed clauses read as one paragraph */
+  .chs-rp-line::after { content: " "; }
+
+  /* thinking dots — shown while data-state="thinking", hidden otherwise */
+  .chs-rp-response-body::before {
+    content: "";
+    position: absolute;
+    left: 14px; top: 14px;
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    color: var(--brand-green);
+    background: currentColor;
+    box-shadow: 12px 0 0 currentColor, 24px 0 0 currentColor;
+    opacity: 0;
+  }
+  .chs-rp-response-body[data-state="thinking"]::before {
+    opacity: 0.85;
+    animation: chs-rp-think 1s ease-in-out infinite;
+  }
+  @keyframes chs-rp-think {
+    0%, 100% { box-shadow: 12px 0 0 currentColor, 24px 0 0 currentColor; opacity: 0.35; }
+    33% { box-shadow: 12px 0 0 currentColor, 24px 0 0 currentColor; opacity: 1; }
+  }
+  /* a blinking caret at the end of the stream while streaming */
+  .chs-rp-response-body[data-state="streaming"]::after {
+    content: "▍";
+    color: var(--brand-green);
+    opacity: 0.7;
+    animation: chs-rp-caret 0.8s step-end infinite;
+  }
+  @keyframes chs-rp-caret { 50% { opacity: 0; } }
+
   .chs-rp-response-tail {
     font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
     font-size: 11.5px;
     color: rgba(245, 241, 232, 0.45);
     margin: 0;
+    opacity: 0;
+    transform: translateY(3px);
+    transition: opacity 240ms ease, transform 240ms ease;
+  }
+  .chs-rp-response-tail.in { opacity: 1; transform: none; }
+
+  @media (prefers-reduced-motion: reduce) {
+    .chs-rp-pane,
+    .chs-rp-sent,
+    .chs-rp-response,
+    .chs-rp-line,
+    .chs-rp-response-tail {
+      transition: none;
+    }
+    .chs-rp-response-body[data-state="thinking"]::before { animation: none; opacity: 0; }
+    .chs-rp-response-body[data-state="streaming"]::after { content: none; }
   }
 </style>
