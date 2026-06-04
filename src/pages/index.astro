@@ -6,7 +6,14 @@ import { getCaseStudies } from "../lib/notion";
 
 export const prerender = true;
 
-const works = await getCaseStudies();
+// Feature The Soundbender's Atlas in the big slot (its long title + pitch need
+// the room, and it's the flagship). Pull it to the front; the rest keep order.
+const FEATURED_SLUG = "the-console";
+const allWorks = await getCaseStudies();
+const featuredWork = allWorks.find((w) => w.slug === FEATURED_SLUG);
+const works = featuredWork
+  ? [featuredWork, ...allWorks.filter((w) => w.slug !== FEATURED_SLUG)]
+  : allWorks;
 ---
 
 <Layout title="Jonathan Tollefson — User Experience Architect">
@@ -76,8 +83,8 @@ const works = await getCaseStudies();
         </header>
 
         <ol class="list" data-work-list>
-          {works.map((w, i) => (
-            <li class:list={["work-item", { "work-item-featured": i === 0 }]}>
+          {works.map((w) => (
+            <li class:list={["work-item", { "work-item-featured": w.slug === FEATURED_SLUG }]}>
               <WorkEntry
                 index={w.order}
                 name={w.name}
@@ -89,7 +96,7 @@ const works = await getCaseStudies();
                 tags={w.tags.slice(0, 4)}
                 slug={w.slug}
                 cover={w.cover}
-                featured={i === 0}
+                featured={w.slug === FEATURED_SLUG}
               />
             </li>
           ))}
