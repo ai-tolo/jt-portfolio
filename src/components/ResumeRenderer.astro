@@ -3,7 +3,14 @@
 // Theme-aware on screen, forced to print conventions on @media print.
 
 import type { ResumeAST } from "../lib/resumes";
+import type { RichTextItemResponse } from "@notionhq/client/build/src/api-endpoints";
 import RichText from "./RichText.astro";
+import ResumeTimeline from "./resume/ResumeTimeline.astro";
+import SkillsConstellation from "./resume/SkillsConstellation.astro";
+import ProofDbtPipeline from "./resume/ProofDbtPipeline.astro";
+import ProofDesignSystem from "./resume/ProofDesignSystem.astro";
+import ProofGrowth from "./resume/ProofGrowth.astro";
+import ProofUsability from "./resume/ProofUsability.astro";
 
 interface Props {
   resume: ResumeAST;
@@ -11,6 +18,33 @@ interface Props {
 
 const { resume } = Astro.props;
 const { header, preamble, sections, tailoredFor } = resume;
+
+const plainText = (rt: RichTextItemResponse[]) => rt.map((t) => t.plain_text).join("");
+// Keep in lockstep with the slug used inside ResumeTimeline + SkillsConstellation
+// so the timeline bars and skill chips can find their role cards.
+const companySlug = (s: string) =>
+  s.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+
+// Match a bullet to an interactive proof by company + keyword. Resilient to
+// small wording changes: if nothing matches, the bullet renders as plain text.
+// Faithful-content rule: the bullet text is always rendered verbatim; a proof
+// only ADORNS the claim it can demonstrate, and never replaces the words.
+type Proof = { id: string; cta: string };
+function proofFor(company: string, text: string): Proof | null {
+  const c = company.toLowerCase();
+  const t = text.toLowerCase();
+  if (c.includes("chs")) {
+    if (t.includes("dbt")) return { id: "dbt", cta: "Run the parser" };
+  }
+  if (c.includes("raylu")) {
+    if (t.includes("component set")) return { id: "designsystem", cta: "Open the system" };
+  }
+  if (c.includes("crediverso")) {
+    if (t.includes("bounce") || t.includes("usability")) return { id: "usability", cta: "See the test" };
+    if (t.includes("follower") || t.includes("125") || t.includes("growth")) return { id: "growth", cta: "Watch it grow" };
+  }
+  return null;
+}
 ---
 
 <article class="resume" lang="en">
@@ -53,9 +87,10 @@ const { header, preamble, sections, tailoredFor } = resume;
       return (
         <section class="section section-experience">
           <h2 class="section-title">{s.title}</h2>
+          <ResumeTimeline roles={s.roles} />
           <div class="section-body">
             {s.roles.map((r) => (
-              <div class="role">
+              <div class="role" data-company={companySlug(r.company)}>
                 <div class="role-head">
                   <h3 class="role-company">
                     {r.company}
@@ -66,9 +101,37 @@ const { header, preamble, sections, tailoredFor } = resume;
                 {r.title && <p class="role-title">{r.title}</p>}
                 {r.bullets.length > 0 && (
                   <ul class="role-bullets">
-                    {r.bullets.map((b) => (
-                      <li><RichText rich={b} /></li>
-                    ))}
+                    {r.bullets.map((b) => {
+                      const proof = proofFor(r.company, plainText(b));
+                      return (
+                        <li class:list={["role-bullet", { "has-proof": !!proof }]}>
+                          <span class="bullet-line">
+                            <RichText rich={b} />
+                            {proof && (
+                              <button
+                                type="button"
+                                class="proof-toggle r-live"
+                                aria-expanded="false"
+                                data-proof-toggle
+                              >
+                                {proof.cta}
+                                <svg class="proof-chev" viewBox="0 0 10 7" width="9" height="7" aria-hidden="true"><path d="M1 1l4 4 4-4" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                              </button>
+                            )}
+                          </span>
+                          {proof && (
+                            <div class="proof-wrap r-live" data-proof-wrap data-open="false">
+                              <div class="proof-inner">
+                                {proof.id === "dbt" && <ProofDbtPipeline />}
+                                {proof.id === "designsystem" && <ProofDesignSystem />}
+                                {proof.id === "usability" && <ProofUsability />}
+                                {proof.id === "growth" && <ProofGrowth />}
+                              </div>
+                            </div>
+                          )}
+                        </li>
+                      );
+                    })}
                   </ul>
                 )}
               </div>
@@ -105,7 +168,7 @@ const { header, preamble, sections, tailoredFor } = resume;
       return (
         <section class="section section-tools">
           <h2 class="section-title">{s.title}</h2>
-          <dl class="tools-grid">
+          <dl class="tools-grid r-doc">
             {s.groups.map((g) => (
               <>
                 <dt>{g.category}</dt>
@@ -113,6 +176,7 @@ const { header, preamble, sections, tailoredFor } = resume;
               </>
             ))}
           </dl>
+          <SkillsConstellation groups={s.groups} />
         </section>
       );
     }
@@ -354,6 +418,60 @@ const { header, preamble, sections, tailoredFor } = resume;
     font-weight: var(--fw-medium);
   }
 
+  /* ──── Live proof affordances (screen only; all carry .r-live) ──── */
+  .bullet-line { display: inline; }
+  .role-bullet.has-proof { border-radius: 6px; transition: background 200ms ease; }
+  .role-bullet.has-proof:hover {
+    background: color-mix(in srgb, var(--accent) 6%, transparent);
+  }
+  .role-bullet.has-proof .bullet-line { cursor: pointer; }
+
+  .proof-toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    margin-left: 8px;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 0.6875rem;
+    font-weight: var(--fw-semibold);
+    letter-spacing: 0.02em;
+    line-height: 1;
+    color: var(--accent);
+    background: color-mix(in srgb, var(--accent) 9%, transparent);
+    border: 1px solid color-mix(in srgb, var(--accent) 38%, transparent);
+    border-radius: 999px;
+    padding: 3px 9px;
+    cursor: pointer;
+    white-space: nowrap;
+    vertical-align: 1px;
+    transition: background 160ms ease, border-color 160ms ease, transform 140ms ease;
+  }
+  .proof-toggle:hover {
+    background: color-mix(in srgb, var(--accent) 18%, transparent);
+    border-color: var(--accent);
+  }
+  .proof-toggle:active { transform: scale(0.97); }
+  .proof-chev { transition: transform 260ms cubic-bezier(0.22, 1, 0.36, 1); }
+  .role-bullet.is-open .proof-chev { transform: rotate(180deg); }
+  .role-bullet.is-open .proof-toggle {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: #fff;
+  }
+
+  .proof-wrap {
+    display: grid;
+    grid-template-rows: 0fr;
+    transition: grid-template-rows 400ms cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  .proof-wrap[data-open="true"] { grid-template-rows: 1fr; }
+  .proof-inner { overflow: hidden; min-height: 0; }
+
+  @media (prefers-reduced-motion: reduce) {
+    .proof-wrap { transition: none; }
+    .proof-chev { transition: none; }
+  }
+
   /* ──── Print styles ────
      Goal: one page, letter size, professional typography. Forces high contrast
      (no theme colors in print), tight spacing, and hides all chrome (theme
@@ -530,3 +648,36 @@ const { header, preamble, sections, tailoredFor } = resume;
     }
   }
 </style>
+
+<script>
+  // Per-bullet proof disclosure. Opening a panel plays its proof (the proof
+  // components also self-play on scroll, but the explicit dispatch is the
+  // reliable path when the panel was collapsed). Clicking the bullet text
+  // toggles too — except on links and the toggle button itself.
+  document.querySelectorAll<HTMLElement>(".role-bullet.has-proof").forEach((li) => {
+    const btn = li.querySelector<HTMLButtonElement>("[data-proof-toggle]");
+    const wrap = li.querySelector<HTMLElement>("[data-proof-wrap]");
+    const line = li.querySelector<HTMLElement>(".bullet-line");
+    if (!btn || !wrap) return;
+    const proofRoot = wrap.querySelector<HTMLElement>("[data-proof]");
+
+    const toggle = () => {
+      const next = wrap.dataset.open !== "true";
+      wrap.dataset.open = String(next);
+      btn.setAttribute("aria-expanded", String(next));
+      li.classList.toggle("is-open", next);
+      if (next && proofRoot) proofRoot.dispatchEvent(new CustomEvent("play"));
+    };
+
+    btn.addEventListener("click", (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      toggle();
+    });
+    line?.addEventListener("click", (e) => {
+      const tgt = e.target as HTMLElement;
+      if (tgt.closest("a") || tgt.closest("[data-proof-toggle]")) return;
+      toggle();
+    });
+  });
+</script>

@@ -1,0 +1,367 @@
+---
+// ResumeShell — the document-viewer chrome around the résumé.
+//
+// Renders the résumé as a "sheet" sitting on the speckled desk, framed by a
+// slim toolbar that carries the two non-negotiables of this page:
+//   1. a Document ⇄ Live mode toggle (Live is the alive experience; Document
+//      freezes to the clean static résumé that mirrors the print output), and
+//   2. a Download-PDF action that is ALWAYS one click away (it triggers the
+//      browser print dialog, where the @media print one-pager is saved).
+//
+// Mode is expressed as `data-resume-mode` on the root. A single global rule
+// governs every live-only element (class `r-live`): visible in Live mode,
+// hidden in Document mode, and hidden in print. The base résumé text is never
+// `r-live`, so it always renders — on screen in both modes and on paper.
+//
+// Theme-aware throughout (tokens only). Honors prefers-reduced-motion. The
+// toolbar + hint + sheet chrome all reset under @media print so the PDF stays
+// byte-faithful to ResumeRenderer's tuned one-page layout.
+---
+
+<div class="rs-root" data-resume-shell data-resume-mode="live">
+  <div class="rs-bar print-hide" role="toolbar" aria-label="Résumé view controls">
+    <div class="rs-id">
+      <svg class="rs-id-icon" viewBox="0 0 16 20" width="15" height="18" aria-hidden="true">
+        <path d="M2.5 1.5h7l4 4v13a0.5 0.5 0 0 1-0.5 0.5H2.5a0.5 0.5 0 0 1-0.5-0.5V2a0.5 0.5 0 0 1 0.5-0.5Z" fill="none" stroke="currentColor" stroke-width="1.1"/>
+        <path d="M9.5 1.5v4h4" fill="none" stroke="currentColor" stroke-width="1.1"/>
+        <path d="M4.6 9h6.8M4.6 11.6h6.8M4.6 14.2h4.2" stroke="currentColor" stroke-width="1.1" stroke-linecap="round"/>
+      </svg>
+      <span class="rs-id-label">Résumé</span>
+      <span class="rs-mode-pill" data-rs-pill>
+        <span class="rs-mode-dot" aria-hidden="true"></span>
+        <span data-rs-pill-text>LIVE</span>
+      </span>
+    </div>
+
+    <div class="rs-actions">
+      <div class="rs-seg" role="group" aria-label="View mode">
+        <span class="rs-seg-glider" data-rs-glider aria-hidden="true"></span>
+        <button class="rs-seg-btn is-active" type="button" data-mode-btn="live" aria-pressed="true">Live</button>
+        <button class="rs-seg-btn" type="button" data-mode-btn="document" aria-pressed="false">Document</button>
+      </div>
+      <button class="rs-dl" type="button" data-rs-download aria-label="Download the clean PDF résumé">
+        <svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true">
+          <path d="M8 1.5v8.5M4.5 7l3.5 3.5L11.5 7" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M2.5 13.5h11" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>
+        </svg>
+        <span>Download PDF</span>
+      </button>
+    </div>
+  </div>
+
+  <div class="rs-deskwrap">
+    <div class="rs-sheet">
+      <slot />
+    </div>
+    <p class="rs-hint print-hide" data-rs-hint>
+      <span data-rs-hint-text>This résumé is alive. Hover or tap any <b>tagged line</b> to watch the work prove itself.</span>
+      <span class="rs-hint-pdf">The clean PDF is one click away, or press <kbd>⌘P</kbd>.</span>
+    </p>
+  </div>
+</div>
+
+<style>
+  .rs-root {
+    --rs-sheet-max: 58rem;
+    --rs-radius: 5px;
+    position: relative;
+  }
+
+  /* ── Toolbar ── */
+  .rs-bar {
+    position: sticky;
+    top: var(--rs-bar-top, 0px);
+    z-index: 40;
+    max-width: var(--rs-sheet-max);
+    margin: 0 auto var(--space-5);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-4);
+    padding: var(--space-3) var(--space-3) var(--space-3) var(--space-4);
+    background: color-mix(in srgb, var(--surface-1) 86%, transparent);
+    -webkit-backdrop-filter: saturate(1.4) blur(10px);
+    backdrop-filter: saturate(1.4) blur(10px);
+    border: 1px solid var(--line);
+    border-radius: var(--rs-radius);
+    box-shadow: 0 10px 30px -22px rgba(0, 0, 0, 0.5);
+  }
+
+  .rs-id {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    min-width: 0;
+  }
+  .rs-id-icon { color: var(--muted); flex-shrink: 0; }
+  .rs-id-label {
+    font-family: "Space Grotesk Variable", "Space Grotesk", ui-sans-serif, system-ui, sans-serif;
+    font-weight: var(--fw-semibold);
+    font-size: 0.9375rem;
+    letter-spacing: -0.01em;
+    color: var(--text);
+  }
+  .rs-mode-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 0.625rem;
+    font-weight: var(--fw-semibold);
+    letter-spacing: 0.16em;
+    color: var(--accent);
+    border: 1px solid color-mix(in srgb, var(--accent) 40%, transparent);
+    border-radius: 999px;
+    padding: 2px 8px 2px 7px;
+    white-space: nowrap;
+  }
+  .rs-mode-dot {
+    width: 6px; height: 6px; border-radius: 50%;
+    background: var(--accent);
+    box-shadow: 0 0 0 0 color-mix(in srgb, var(--accent) 60%, transparent);
+    animation: rs-pulse 2.4s ease-in-out infinite;
+  }
+  @keyframes rs-pulse {
+    0%, 100% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--accent) 55%, transparent); }
+    50% { box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent) 0%, transparent); }
+  }
+  .rs-root[data-resume-mode="document"] .rs-mode-pill {
+    color: var(--muted);
+    border-color: var(--line);
+  }
+  .rs-root[data-resume-mode="document"] .rs-mode-dot {
+    background: var(--muted);
+    animation: none;
+  }
+
+  .rs-actions { display: flex; align-items: center; gap: var(--space-3); }
+
+  /* Segmented control */
+  .rs-seg {
+    position: relative;
+    display: inline-flex;
+    padding: 3px;
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--bg) 50%, transparent);
+  }
+  .rs-seg-glider {
+    position: absolute;
+    top: 3px; left: 3px;
+    height: calc(100% - 6px);
+    border-radius: 999px;
+    background: var(--ink);
+    transition: transform 320ms cubic-bezier(0.22, 1, 0.36, 1), width 320ms cubic-bezier(0.22, 1, 0.36, 1);
+    z-index: 0;
+  }
+  .rs-seg-btn {
+    position: relative;
+    z-index: 1;
+    appearance: none;
+    border: none;
+    background: transparent;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 0.6875rem;
+    font-weight: var(--fw-semibold);
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--muted);
+    padding: 6px 13px;
+    cursor: pointer;
+    border-radius: 999px;
+    transition: color 200ms ease;
+  }
+  .rs-seg-btn.is-active { color: var(--ink-fg); }
+  .rs-seg-btn:not(.is-active):hover { color: var(--text); }
+
+  /* Download button */
+  .rs-dl {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    appearance: none;
+    border: 1px solid var(--accent);
+    background: var(--accent);
+    color: #fff;
+    font-family: inherit;
+    font-size: 0.8125rem;
+    font-weight: var(--fw-semibold);
+    letter-spacing: 0.01em;
+    padding: 7px 14px;
+    border-radius: 999px;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: transform 160ms ease, box-shadow 200ms ease, filter 160ms ease;
+    box-shadow: 0 6px 18px -10px color-mix(in srgb, var(--accent) 70%, transparent);
+  }
+  .rs-dl svg { color: #fff; }
+  .rs-dl:hover { transform: translateY(-1px); filter: brightness(1.05); box-shadow: 0 10px 22px -10px color-mix(in srgb, var(--accent) 80%, transparent); }
+  .rs-dl:active { transform: translateY(0); }
+
+  /* ── Sheet ── */
+  .rs-deskwrap { position: relative; }
+  .rs-sheet {
+    position: relative;
+    max-width: var(--rs-sheet-max);
+    margin: 0 auto;
+    background: var(--surface-1);
+    border: 1px solid var(--line);
+    border-radius: var(--rs-radius);
+    box-shadow:
+      0 1px 0 color-mix(in srgb, var(--text) 6%, transparent),
+      0 28px 64px -40px rgba(0, 0, 0, 0.6),
+      0 6px 18px -14px rgba(0, 0, 0, 0.4);
+    overflow: clip;
+  }
+  /* Document header rule — a thin accent edge at the top of the page */
+  .rs-sheet::before {
+    content: "";
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 3px;
+    background: linear-gradient(90deg, var(--accent), color-mix(in srgb, var(--accent) 35%, transparent));
+    z-index: 2;
+  }
+
+  .rs-hint {
+    max-width: var(--rs-sheet-max);
+    margin: var(--space-4) auto 0;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 0.75rem;
+    line-height: 1.5;
+    color: var(--muted);
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px 10px;
+    align-items: baseline;
+  }
+  .rs-hint b { color: var(--text); font-weight: var(--fw-semibold); }
+  .rs-hint-pdf { opacity: 0.85; }
+  .rs-hint kbd {
+    font-family: inherit;
+    font-size: 0.6875rem;
+    border: 1px solid var(--line);
+    border-bottom-width: 2px;
+    border-radius: 4px;
+    padding: 1px 5px;
+    color: var(--text);
+  }
+
+  @media (max-width: 40rem) {
+    .rs-bar {
+      flex-wrap: wrap;
+      gap: var(--space-2);
+      padding: var(--space-2) var(--space-3);
+    }
+    .rs-id-label { display: none; }
+    .rs-actions { width: 100%; justify-content: space-between; }
+    .rs-dl span { display: none; }
+    .rs-dl { padding: 8px 10px; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .rs-mode-dot { animation: none; }
+    .rs-seg-glider { transition: none; }
+    .rs-dl { transition: none; }
+  }
+
+  /* ── Print: dissolve all chrome, leave the clean document ── */
+  @media print {
+    .rs-bar, .rs-hint { display: none !important; }
+    .rs-root, .rs-deskwrap { margin: 0 !important; padding: 0 !important; }
+    .rs-sheet {
+      max-width: 100%;
+      margin: 0 !important;
+      padding: 0 !important;
+      background: #fff !important;
+      border: none !important;
+      border-radius: 0 !important;
+      box-shadow: none !important;
+      overflow: visible;
+    }
+    .rs-sheet::before { display: none !important; }
+    .rs-root { --rs-sheet-max: 100%; }
+  }
+</style>
+
+<style is:global>
+  /* ── The Live / Document / Print visibility contract ──
+     `r-live`  = a live-only adornment (proofs, timeline, constellation).
+     `r-doc`   = the plain substrate a live adornment replaces on screen
+                 (e.g. the ATS skills list under the constellation).
+     The mode-based hiding lives inside @media screen ONLY, so print is never
+     touched by it: print always hides `r-live` and always keeps `r-doc` at its
+     natural display. Everything else (header, summary, experience text,
+     education) carries neither class and survives every mode + print. */
+  @media screen {
+    [data-resume-mode="document"] .r-live { display: none !important; }
+    [data-resume-mode="live"] .r-doc { display: none !important; }
+  }
+  @media print {
+    .r-live { display: none !important; }
+    /* The route wrapper + shell must not add page height in print, or the
+       carefully tuned one-page layout spills onto a second sheet. */
+    .resume-page { padding: 0 !important; margin: 0 !important; }
+  }
+</style>
+
+<script>
+  (() => {
+    const root = document.querySelector<HTMLElement>("[data-resume-shell]");
+    if (!root) return;
+
+    const bar = root.querySelector<HTMLElement>(".rs-bar");
+    const glider = root.querySelector<HTMLElement>("[data-rs-glider]");
+    const btns = Array.from(root.querySelectorAll<HTMLButtonElement>("[data-mode-btn]"));
+    const pillText = root.querySelector<HTMLElement>("[data-rs-pill-text]");
+    const hintText = root.querySelector<HTMLElement>("[data-rs-hint-text]");
+
+    // Sit the sticky toolbar just below the site header (whose height we can't
+    // assume — measure it so we never overlap and never edit shared chrome).
+    const placeBar = () => {
+      const header = document.querySelector<HTMLElement>(".site-header, header.site-header, header[class*='header']");
+      const h = header ? Math.round(header.getBoundingClientRect().height) : 0;
+      root.style.setProperty("--rs-bar-top", `${h + 8}px`);
+    };
+    placeBar();
+    window.addEventListener("resize", placeBar);
+
+    const moveGlider = () => {
+      const active = btns.find((b) => b.classList.contains("is-active"));
+      if (active && glider) {
+        glider.style.width = `${active.offsetWidth}px`;
+        glider.style.transform = `translateX(${active.offsetLeft - 3}px)`;
+      }
+    };
+    // Defer one frame so layout has settled.
+    requestAnimationFrame(moveGlider);
+    window.setTimeout(moveGlider, 60);
+    window.addEventListener("resize", moveGlider);
+
+    const setMode = (mode: "live" | "document") => {
+      root.dataset.resumeMode = mode;
+      btns.forEach((b) => {
+        const on = b.dataset.modeBtn === mode;
+        b.classList.toggle("is-active", on);
+        b.setAttribute("aria-pressed", String(on));
+      });
+      moveGlider();
+      if (pillText) pillText.textContent = mode === "live" ? "LIVE" : "DOCUMENT";
+      if (hintText) {
+        hintText.innerHTML =
+          mode === "live"
+            ? 'This résumé is alive. Hover or tap any <b>tagged line</b> to watch the work prove itself.'
+            : 'Clean document view, exactly what prints. Switch to <b>Live</b> to see the work behind each line.';
+      }
+      // Let proofs know (so count-ups can re-fire if returning to live, etc.)
+      root.dispatchEvent(new CustomEvent("resume:mode", { detail: { mode } }));
+    };
+
+    btns.forEach((b) =>
+      b.addEventListener("click", () => setMode(b.dataset.modeBtn as "live" | "document"))
+    );
+
+    const print = () => window.print();
+    root.querySelector<HTMLButtonElement>("[data-rs-download]")?.addEventListener("click", print);
+  })();
+</script>
