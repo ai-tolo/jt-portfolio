@@ -1,0 +1,201 @@
+---
+// The living skills field. The plain Tools list (the ATS + print substrate)
+// stays in ResumeRenderer as `r-doc`; this is the `r-live` screen view: the
+// same skills, grouped as the résumé groups them, but alive. Tools the bullets
+// actually tie to a company light that role card above on hover, so skills and
+// experience are wired together instead of being a dead word-list. Nothing is
+// invented: only tools explicitly grounded in a bullet get a role link.
+
+import type { ToolGroup } from "../../lib/resumes";
+
+interface Props {
+  groups: ToolGroup[];
+}
+const { groups } = Astro.props;
+
+// company slug must match the `data-company` slug used on role cards.
+const slug = (s: string) => s.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+
+// Defensible skill → role links, each traceable to a résumé bullet:
+//  Figma/FigJam → CHS (FigJam system) + Raylu (Figma prototypes) + Crediverso (design)
+//  React → Raylu (mapped 1:1 to React) + CHS (front-end partnership)
+//  dbt/SQL/Snowflake/Alation/Power BI → CHS (the dbt tool + BI work)
+//  ChatGPT → CHS (internal AI team)  ·  Jira → Raylu (agile roadmap)
+//  Maze/Mixpanel/Qualtrics/Google Analytics → Crediverso (usability testing) + CHS
+const LINKS: Record<string, string[]> = {
+  figma: ["chs-inc", "raylu-inc", "crediverso"],
+  figjam: ["chs-inc"],
+  react: ["raylu-inc", "chs-inc"],
+  sql: ["chs-inc"],
+  snowflake: ["chs-inc"],
+  dbt: ["chs-inc"],
+  alation: ["chs-inc"],
+  "power bi": ["chs-inc"],
+  chatgpt: ["chs-inc"],
+  jira: ["raylu-inc"],
+  maze: ["crediverso"],
+  mixpanel: ["crediverso"],
+  qualtrics: ["crediverso"],
+  "google analytics": ["crediverso", "chs-inc"],
+};
+
+const COMPANY_SHORT: Record<string, string> = {
+  "chs-inc": "CHS",
+  "raylu-inc": "Raylu",
+  crediverso: "Crediverso",
+};
+
+let n = 0;
+const enriched = groups.map((g) => ({
+  category: g.category,
+  items: g.items.map((label) => {
+    const links = LINKS[label.toLowerCase()] ?? [];
+    return { label, links, i: n++ };
+  }),
+}));
+const linkedCount = enriched.reduce(
+  (acc, g) => acc + g.items.filter((it) => it.links.length).length,
+  0
+);
+---
+
+<div class="sk r-live" data-skills>
+  <p class="sk-hint" aria-hidden="true">
+    <span class="sk-hint-dot"></span>
+    {linkedCount} of these shipped in the roles above. Hover one to see where.
+  </p>
+  <div class="sk-groups">
+    {enriched.map((g) => (
+      <div class="sk-group">
+        <span class="sk-cat">{g.category}</span>
+        <div class="sk-chips">
+          {g.items.map((it) => (
+            <span
+              class:list={["sk-chip", { "is-linked": it.links.length > 0 }]}
+              style={`--d:${(it.i % 7) * 0.45}s`}
+              data-roles={it.links.join(" ")}
+              tabindex={it.links.length ? 0 : undefined}
+            >
+              {it.links.length > 0 && <span class="sk-star" aria-hidden="true"></span>}
+              <span class="sk-label">{it.label}</span>
+              {it.links.length > 0 && (
+                <span class="sk-where">
+                  {it.links.map((r) => COMPANY_SHORT[r] ?? r).join(" · ")}
+                </span>
+              )}
+            </span>
+          ))}
+        </div>
+      </div>
+    ))}
+  </div>
+</div>
+
+<script>
+  import { onPlay, prefersReduced } from "./lib/motion";
+
+  document.querySelectorAll<HTMLElement>("[data-skills]").forEach((root) => {
+    if (!prefersReduced()) onPlay(root, () => root.classList.add("is-live"), { threshold: 0.25 });
+
+    const chips = Array.from(root.querySelectorAll<HTMLElement>(".sk-chip.is-linked"));
+    const cue = (chip: HTMLElement, on: boolean) => {
+      (chip.dataset.roles || "").split(" ").filter(Boolean).forEach((key) => {
+        document.querySelector<HTMLElement>(`.role[data-company="${key}"]`)?.classList.toggle("role-cued", on);
+      });
+    };
+    chips.forEach((chip) => {
+      chip.addEventListener("mouseenter", () => cue(chip, true));
+      chip.addEventListener("mouseleave", () => cue(chip, false));
+      chip.addEventListener("focus", () => cue(chip, true));
+      chip.addEventListener("blur", () => cue(chip, false));
+    });
+  });
+</script>
+
+<style>
+  .sk { margin-top: var(--space-2); }
+  .sk-hint {
+    display: flex; align-items: center; gap: 7px;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 0.6875rem; color: var(--muted);
+    margin: 0 0 var(--space-4);
+  }
+  .sk-hint-dot {
+    width: 6px; height: 6px; border-radius: 50%; background: var(--accent);
+    box-shadow: 0 0 0 0 color-mix(in srgb, var(--accent) 55%, transparent);
+    animation: sk-pulse 2.4s ease-in-out infinite;
+  }
+  @keyframes sk-pulse {
+    0%, 100% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--accent) 50%, transparent); }
+    50% { box-shadow: 0 0 0 4px transparent; }
+  }
+
+  .sk-groups { display: flex; flex-direction: column; gap: var(--space-4); }
+  .sk-group { display: grid; grid-template-columns: 7.5rem 1fr; gap: var(--space-3); align-items: start; }
+  @media (max-width: 34rem) { .sk-group { grid-template-columns: 1fr; gap: 6px; } }
+  .sk-cat {
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 0.625rem; letter-spacing: 0.08em; text-transform: uppercase;
+    color: var(--accent); padding-top: 6px;
+  }
+  .sk-chips { display: flex; flex-wrap: wrap; gap: 7px; }
+
+  .sk-chip {
+    position: relative;
+    display: inline-flex; align-items: center; gap: 6px;
+    font-size: 0.8125rem;
+    color: var(--text);
+    background: var(--surface-1);
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    padding: 5px 12px;
+    transition: border-color 200ms ease, color 200ms ease, transform 200ms ease, background 200ms ease;
+  }
+  .sk.is-live .sk-chip { animation: sk-drift 4.8s ease-in-out var(--d) infinite; }
+  @keyframes sk-drift {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-3px); }
+  }
+  .sk-chip.is-linked { cursor: pointer; }
+  .sk-chip.is-linked:hover,
+  .sk-chip.is-linked:focus-visible {
+    border-color: var(--accent);
+    color: var(--accent);
+    transform: translateY(-2px);
+    outline: none;
+    animation-play-state: paused;
+  }
+  .sk-star {
+    width: 5px; height: 5px; border-radius: 50%;
+    background: var(--accent);
+    flex-shrink: 0;
+    opacity: 0.8;
+  }
+  .sk-label { white-space: nowrap; }
+
+  /* the "where it shipped" tag expands on hover/focus */
+  .sk-where {
+    max-width: 0;
+    overflow: hidden;
+    white-space: nowrap;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 0.625rem;
+    color: var(--accent);
+    opacity: 0;
+    transition: max-width 320ms cubic-bezier(0.22, 1, 0.36, 1), opacity 200ms ease, margin 320ms ease;
+  }
+  .sk-chip.is-linked:hover .sk-where,
+  .sk-chip.is-linked:focus-visible .sk-where {
+    max-width: 16rem;
+    opacity: 1;
+    margin-left: 2px;
+    padding-left: 7px;
+    border-left: 1px solid color-mix(in srgb, var(--accent) 40%, transparent);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .sk-hint-dot { animation: none; }
+    .sk.is-live .sk-chip { animation: none; }
+    .sk-chip, .sk-where { transition: none; }
+  }
+</style>

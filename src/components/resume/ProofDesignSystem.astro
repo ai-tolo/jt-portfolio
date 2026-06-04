@@ -1,0 +1,315 @@
+---
+// PROOF — the Raylu bullet: "Designed the visual identity, component set, and
+// clickable Figma prototypes... Patterns mapped 1:1 to the React
+// implementation." Rather than claim a design system, this IS one: a small
+// token playground where every sample component re-skins from one token change,
+// next to a Figma-layers ⇄ React-code view that shows the same component named
+// the same on both sides. Theme-aware, reduced-motion-safe, mobile-stacking.
+---
+
+<div class="pf pf-ds" data-proof="designsystem">
+  <div class="pf-head">
+    <span class="pf-kicker">live · one system, design and code</span>
+    <h4 class="pf-title">Change one token. Everything follows.</h4>
+  </div>
+
+  <div class="ds-grid">
+    <!-- token controls -->
+    <div class="ds-tokens">
+      <div class="ds-tgroup">
+        <span class="ds-tlabel">accent / 500</span>
+        <div class="ds-swatches" data-swatches>
+          <button type="button" class="ds-sw is-active" style="--c: var(--accent)" data-accent="var(--accent)" data-name="brand" aria-label="brand accent"></button>
+          <button type="button" class="ds-sw" style="--c:#6C5CE7" data-accent="#6C5CE7" data-name="iris" aria-label="iris accent"></button>
+          <button type="button" class="ds-sw" style="--c:#0FB5A6" data-accent="#0FB5A6" data-name="teal" aria-label="teal accent"></button>
+          <button type="button" class="ds-sw" style="--c:#E8553B" data-accent="#E8553B" data-name="ember" aria-label="ember accent"></button>
+        </div>
+      </div>
+      <div class="ds-tgroup">
+        <span class="ds-tlabel">radius / md</span>
+        <div class="ds-radii" data-radii>
+          <button type="button" class="ds-rad" data-radius="3px">3</button>
+          <button type="button" class="ds-rad is-active" data-radius="9px">9</button>
+          <button type="button" class="ds-rad" data-radius="18px">18</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- live component canvas + parity view -->
+    <div class="ds-stage">
+      <div class="ds-canvas" data-canvas style="--ds-accent: var(--accent); --ds-radius: 9px;">
+        <div class="ds-canvas-row">
+          <button type="button" class="ds-btn ds-btn-primary">Get started</button>
+          <button type="button" class="ds-btn ds-btn-ghost">Learn more</button>
+        </div>
+        <label class="ds-field">
+          <span>Email</span>
+          <input type="text" placeholder="you@raylu.ai" aria-label="sample email field" />
+        </label>
+        <div class="ds-canvas-row ds-canvas-row-mini">
+          <span class="ds-tag">● Verified</span>
+          <button type="button" class="ds-switch is-on" data-switch role="switch" aria-checked="true" aria-label="sample toggle"></button>
+          <span class="ds-meta" data-canvas-meta>4 components · 1 token set</span>
+        </div>
+      </div>
+
+      <div class="ds-parity">
+        <div class="ds-parity-head">
+          <span class="ds-parity-name">Button / Primary</span>
+          <div class="ds-seg" data-views role="group" aria-label="representation">
+            <button type="button" class="ds-seg-btn is-active" data-view="layers">Figma</button>
+            <button type="button" class="ds-seg-btn" data-view="code">Code</button>
+          </div>
+        </div>
+
+        <div class="ds-layers" data-pane="layers">
+          <div class="ds-layer ds-l0"><span class="ds-caret">▾</span><b>Button / Primary</b><span class="ds-badge">component</span></div>
+          <div class="ds-layer ds-l1"><span class="ds-caret">▾</span>Auto layout <em>· H 40 · pad 16</em></div>
+          <div class="ds-layer ds-l2">Fill <em>·</em> <span class="ds-tok" data-tok-accent>accent/500</span></div>
+          <div class="ds-layer ds-l2">Corner <em>·</em> <span class="ds-tok" data-tok-radius>radius/md</span></div>
+          <div class="ds-layer ds-l1">Label <em>·</em> "Get started"</div>
+        </div>
+
+        <pre class="ds-code" data-pane="code" hidden><code><span class="ds-c-tag">&lt;Button</span> <span class="ds-c-attr">variant</span>=<span class="ds-c-str">"primary"</span> <span class="ds-c-attr">size</span>=<span class="ds-c-str">"md"</span><span class="ds-c-tag">&gt;</span>
+  Get started
+<span class="ds-c-tag">&lt;/Button&gt;</span>
+<span class="ds-c-com">// fill: <span data-tok-accent>accent/500</span>  radius: <span data-tok-radius>radius/md</span></span></code></pre>
+
+        <p class="ds-parity-note">Same names on both sides. The design file and the React component read from one token, so a rename never drifts.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  import { onPlay, prefersReduced } from "./lib/motion";
+
+  document.querySelectorAll<HTMLElement>('[data-proof="designsystem"]').forEach((root) => {
+    const canvas = root.querySelector<HTMLElement>("[data-canvas]");
+    const swatches = Array.from(root.querySelectorAll<HTMLButtonElement>(".ds-sw"));
+    const radii = Array.from(root.querySelectorAll<HTMLButtonElement>(".ds-rad"));
+    const accentToks = Array.from(root.querySelectorAll<HTMLElement>("[data-tok-accent]"));
+    const radiusToks = Array.from(root.querySelectorAll<HTMLElement>("[data-tok-radius]"));
+    const viewBtns = Array.from(root.querySelectorAll<HTMLButtonElement>("[data-view]"));
+    const panes = {
+      layers: root.querySelector<HTMLElement>('[data-pane="layers"]'),
+      code: root.querySelector<HTMLElement>('[data-pane="code"]'),
+    };
+    const sw = root.querySelector<HTMLButtonElement>("[data-switch]");
+    let interacted = false;
+    let reel: number[] = [];
+    const stopReel = () => { reel.forEach(clearTimeout); reel = []; };
+
+    const setAccent = (val: string, name: string, btn?: HTMLButtonElement) => {
+      canvas?.style.setProperty("--ds-accent", val);
+      swatches.forEach((s) => s.classList.toggle("is-active", s === btn));
+      const label = name === "brand" ? "accent/500" : `accent/${name}`;
+      accentToks.forEach((t) => (t.textContent = label));
+    };
+    const setRadius = (val: string, btn?: HTMLButtonElement) => {
+      canvas?.style.setProperty("--ds-radius", val);
+      radii.forEach((r) => r.classList.toggle("is-active", r === btn));
+      const md = val === "3px" ? "radius/sm" : val === "18px" ? "radius/lg" : "radius/md";
+      radiusToks.forEach((t) => (t.textContent = md));
+    };
+
+    swatches.forEach((s) =>
+      s.addEventListener("click", () => {
+        interacted = true; stopReel();
+        setAccent(s.dataset.accent || "var(--accent)", s.dataset.name || "brand", s);
+      })
+    );
+    radii.forEach((r) =>
+      r.addEventListener("click", () => {
+        interacted = true; stopReel();
+        setRadius(r.dataset.radius || "9px", r);
+      })
+    );
+    sw?.addEventListener("click", () => {
+      interacted = true; stopReel();
+      const on = sw.classList.toggle("is-on");
+      sw.setAttribute("aria-checked", String(on));
+    });
+
+    const showView = (view: string, btn?: HTMLButtonElement) => {
+      viewBtns.forEach((b) => {
+        const on = b === btn;
+        b.classList.toggle("is-active", on);
+        b.setAttribute("aria-pressed", String(on));
+      });
+      if (panes.layers) panes.layers.hidden = view !== "layers";
+      if (panes.code) panes.code.hidden = view !== "code";
+    };
+    viewBtns.forEach((b) =>
+      b.addEventListener("click", () => { interacted = true; showView(b.dataset.view || "layers", b); })
+    );
+
+    // Reveal reel: a single gentle pass through the swatches so it is obvious
+    // the components are token-driven, then settle back on the brand accent.
+    const play = () => {
+      if (prefersReduced() || interacted) return;
+      const order: Array<[string, string, HTMLButtonElement]> = [
+        ["#6C5CE7", "iris", swatches[1]],
+        ["#0FB5A6", "teal", swatches[2]],
+        ["var(--accent)", "brand", swatches[0]],
+      ];
+      order.forEach(([val, name, btn], i) => {
+        reel.push(window.setTimeout(() => { if (!interacted) setAccent(val, name, btn); }, 500 + i * 620));
+      });
+    };
+    onPlay(root, play, { threshold: 0.35 });
+  });
+</script>
+
+<style>
+  .pf-ds { /* inherits .pf card chrome from ProofDbtPipeline's global-ish .pf */ }
+  /* .pf base styles are defined in ProofDbtPipeline; redeclare the essentials
+     here so this component stands alone if used without it. */
+  .pf {
+    --pf-bg: color-mix(in srgb, var(--surface-1) 60%, var(--bg));
+    margin-top: var(--space-4);
+    /* gradient "selected" border, matching the portal bucket cards */
+    border: 1.5px solid transparent;
+    border-radius: 8px;
+    background:
+      linear-gradient(var(--pf-bg), var(--pf-bg)) padding-box,
+      linear-gradient(135deg, #ff3b6e 0%, #ff6e21 50%, #eeff00 100%) border-box;
+    box-shadow: 0 0 22px rgba(255, 59, 110, 0.15), 0 10px 26px -12px rgba(0, 0, 0, 0.5);
+    padding: var(--space-4);
+    font-weight: var(--fw-regular);
+  }
+  .pf-head { display: flex; align-items: baseline; gap: var(--space-3); margin-bottom: var(--space-4); flex-wrap: wrap; }
+  .pf-kicker { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0.625rem; letter-spacing: 0.16em; text-transform: uppercase; color: var(--accent); }
+  .pf-title { font-size: 0.9375rem; font-weight: var(--fw-semibold); letter-spacing: -0.01em; color: var(--text); flex: 1 1 auto; }
+
+  .ds-grid { display: grid; grid-template-columns: minmax(120px, 0.6fr) 1fr; gap: var(--space-4); align-items: start; }
+  @media (max-width: 36rem) { .ds-grid { grid-template-columns: 1fr; } }
+
+  /* ── tokens ── */
+  .ds-tokens { display: flex; flex-direction: column; gap: var(--space-4); }
+  .ds-tgroup { display: flex; flex-direction: column; gap: 7px; }
+  .ds-tlabel { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0.625rem; letter-spacing: 0.06em; color: var(--muted); }
+  .ds-swatches { display: flex; gap: 7px; }
+  .ds-sw {
+    width: 26px; height: 26px; border-radius: 7px; cursor: pointer;
+    background: var(--c); border: 2px solid transparent;
+    box-shadow: 0 0 0 1px var(--line);
+    transition: transform 160ms ease, box-shadow 160ms ease;
+  }
+  .ds-sw:hover { transform: translateY(-2px); }
+  .ds-sw.is-active { box-shadow: 0 0 0 2px var(--bg), 0 0 0 4px var(--c); }
+  .ds-radii { display: flex; gap: 6px; }
+  .ds-rad {
+    min-width: 30px; height: 28px; padding: 0 8px;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0.6875rem;
+    color: var(--muted); background: var(--bg);
+    border: 1px solid var(--line); border-radius: 6px; cursor: pointer;
+    transition: color 160ms ease, border-color 160ms ease;
+  }
+  .ds-rad:hover { color: var(--text); }
+  .ds-rad.is-active { color: var(--accent); border-color: var(--accent); }
+
+  /* ── stage ── */
+  .ds-stage { display: flex; flex-direction: column; gap: var(--space-3); min-width: 0; }
+  .ds-canvas {
+    display: flex; flex-direction: column; gap: 10px;
+    padding: var(--space-3);
+    background: var(--bg);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+  }
+  .ds-canvas-row { display: flex; align-items: center; gap: 9px; flex-wrap: wrap; }
+  .ds-canvas-row-mini { gap: 10px; }
+
+  .ds-btn {
+    font: inherit; font-size: 0.8125rem; font-weight: var(--fw-semibold);
+    padding: 8px 14px; cursor: pointer;
+    border-radius: var(--ds-radius);
+    border: 1px solid var(--ds-accent);
+    transition: background 280ms ease, color 280ms ease, border-color 280ms ease, border-radius 280ms ease, box-shadow 200ms ease;
+  }
+  .ds-btn-primary { background: var(--ds-accent); color: #fff; border-color: var(--ds-accent); }
+  .ds-btn-primary:hover { box-shadow: 0 4px 14px -6px var(--ds-accent); }
+  .ds-btn-ghost { background: transparent; color: var(--text); border-color: var(--line); }
+  .ds-btn-ghost:hover { border-color: var(--ds-accent); color: var(--ds-accent); }
+
+  .ds-field { display: flex; flex-direction: column; gap: 3px; }
+  .ds-field span { font-size: 0.625rem; color: var(--muted); font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+  .ds-field input {
+    font: inherit; font-size: 0.8125rem; color: var(--text);
+    background: var(--surface-1); padding: 7px 10px;
+    border: 1px solid var(--line); border-radius: var(--ds-radius); outline: none;
+    transition: border-color 200ms ease, box-shadow 200ms ease, border-radius 280ms ease;
+  }
+  .ds-field input:focus { border-color: var(--ds-accent); box-shadow: 0 0 0 3px color-mix(in srgb, var(--ds-accent) 25%, transparent); }
+
+  .ds-tag {
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0.6875rem;
+    color: var(--ds-accent); padding: 4px 10px;
+    border: 1px solid color-mix(in srgb, var(--ds-accent) 40%, transparent);
+    border-radius: var(--ds-radius);
+    background: color-mix(in srgb, var(--ds-accent) 10%, transparent);
+    transition: color 280ms ease, border-color 280ms ease, background 280ms ease, border-radius 280ms ease;
+  }
+  .ds-switch {
+    position: relative; width: 38px; height: 22px; flex-shrink: 0;
+    border-radius: 999px; cursor: pointer; border: none;
+    background: var(--line);
+    transition: background 240ms ease;
+  }
+  .ds-switch::after {
+    content: ""; position: absolute; top: 3px; left: 3px;
+    width: 16px; height: 16px; border-radius: 50%; background: #fff;
+    transition: transform 240ms cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  .ds-switch.is-on { background: var(--ds-accent); }
+  .ds-switch.is-on::after { transform: translateX(16px); }
+  .ds-meta { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0.5625rem; color: var(--muted); margin-left: auto; }
+
+  /* ── parity ── */
+  .ds-parity { border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
+  .ds-parity-head {
+    display: flex; align-items: center; justify-content: space-between; gap: 8px;
+    padding: 8px 10px; border-bottom: 1px solid var(--line);
+    background: color-mix(in srgb, var(--surface-1) 50%, var(--bg));
+  }
+  .ds-parity-name { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0.6875rem; color: var(--text); }
+  .ds-seg { display: inline-flex; border: 1px solid var(--line); border-radius: 999px; overflow: hidden; }
+  .ds-seg-btn {
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0.625rem; letter-spacing: 0.04em;
+    padding: 4px 11px; cursor: pointer; border: none; background: transparent; color: var(--muted);
+    transition: background 160ms ease, color 160ms ease;
+  }
+  .ds-seg-btn.is-active { background: var(--accent); color: #fff; }
+
+  .ds-layers { padding: 8px 6px; }
+  .ds-layer {
+    display: flex; align-items: center; gap: 5px;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0.625rem;
+    color: var(--text); padding: 2px 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .ds-layer em { color: var(--muted); font-style: normal; }
+  .ds-l1 { padding-left: 16px; }
+  .ds-l2 { padding-left: 30px; }
+  .ds-caret { color: var(--muted); font-size: 0.5rem; }
+  .ds-l0 b { font-weight: var(--fw-semibold); }
+  .ds-badge { font-size: 0.5rem; color: var(--accent); border: 1px solid color-mix(in srgb, var(--accent) 40%, transparent); border-radius: 3px; padding: 0 4px; margin-left: 2px; }
+  .ds-tok { color: var(--accent); }
+
+  .ds-code { margin: 0; padding: 10px; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0.625rem; line-height: 1.7; color: var(--text); overflow-x: auto; }
+  .ds-code[hidden], .ds-layers[hidden] { display: none !important; }
+  .ds-c-tag { color: var(--muted); }
+  .ds-c-attr { color: var(--accent); }
+  .ds-c-str { color: var(--text); }
+  .ds-c-com { color: var(--muted); }
+
+  .ds-parity-note {
+    margin: 0; padding: 8px 10px; border-top: 1px solid var(--line);
+    font-size: 0.625rem; line-height: 1.5; color: var(--muted);
+  }
+  .ds-parity-note code { color: var(--accent); font-size: 0.95em; }
+
+  @media (prefers-reduced-motion: reduce) {
+    .ds-sw, .ds-btn, .ds-field input, .ds-tag, .ds-switch, .ds-switch::after { transition: none !important; }
+  }
+</style>

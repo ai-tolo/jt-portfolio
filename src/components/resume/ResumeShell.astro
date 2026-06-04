@@ -1,0 +1,170 @@
+---
+// ResumeShell — the page frame around the résumé.
+//
+// The résumé reads as a clean, literal page. Interactive parts are flagged with
+// Post-it page flags (see ResumeTab) that reveal/play their element on click.
+//
+// There's no in-page toolbar: on the résumé route the site header's "Available
+// for work" pill and "Resume" CTA are redundant, so we hide them (route-scoped
+// CSS that only loads here) and host the Download-PDF action in the header
+// where the Resume button was. The header is sticky, so the clean PDF stays one
+// click away while scrolling.
+//
+// Visibility contract: .r-live = screen-only adornments; .r-doc = print-only
+// substrate (the plain ATS skills list). All chrome resets under @media print
+// so the PDF stays byte-faithful to ResumeRenderer's one-page layout.
+---
+
+<div class="rs-root" data-resume-shell>
+  <div class="rs-deskwrap">
+    <div class="rs-sheet">
+      <slot />
+    </div>
+    <p class="rs-hint print-hide">
+      <span>The <b>tabs</b> mark what comes alive. Pull one.</span>
+      <span class="rs-hint-pdf">Prefer it plain? <kbd>⌘P</kbd> or Download PDF, always one page.</span>
+    </p>
+  </div>
+</div>
+
+<style>
+  .rs-root { --rs-sheet-max: 58rem; --rs-radius: 5px; position: relative; }
+
+  .rs-deskwrap { position: relative; }
+  .rs-sheet {
+    position: relative;
+    max-width: var(--rs-sheet-max);
+    margin: 0 auto;
+    background: var(--surface-1);
+    border: 1px solid var(--line);
+    border-radius: var(--rs-radius);
+    box-shadow:
+      0 1px 0 color-mix(in srgb, var(--text) 6%, transparent),
+      0 28px 64px -40px rgba(0, 0, 0, 0.6),
+      0 6px 18px -14px rgba(0, 0, 0, 0.4);
+    /* visible so the Post-it flags can hang off the edges */
+    overflow: visible;
+  }
+  .rs-sheet::before {
+    content: "";
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 3px;
+    border-radius: var(--rs-radius) var(--rs-radius) 0 0;
+    background: linear-gradient(90deg, var(--accent), color-mix(in srgb, var(--accent) 35%, transparent));
+    z-index: 2;
+  }
+
+  .rs-hint {
+    max-width: var(--rs-sheet-max);
+    margin: var(--space-5) auto 0;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 0.75rem;
+    line-height: 1.5;
+    color: var(--muted);
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px 12px;
+    align-items: baseline;
+  }
+  .rs-hint b { color: var(--accent); font-weight: var(--fw-semibold); }
+  .rs-hint-pdf { opacity: 0.85; }
+  .rs-hint kbd {
+    font-family: inherit;
+    font-size: 0.6875rem;
+    border: 1px solid var(--line);
+    border-bottom-width: 2px;
+    border-radius: 4px;
+    padding: 1px 5px;
+    color: var(--text);
+  }
+
+  /* ── Print: leave the clean document ── */
+  @media print {
+    .rs-hint { display: none !important; }
+    .rs-root, .rs-deskwrap { margin: 0 !important; padding: 0 !important; }
+    .rs-sheet {
+      max-width: 100%;
+      margin: 0 !important;
+      padding: 0 !important;
+      background: #fff !important;
+      border: none !important;
+      border-radius: 0 !important;
+      box-shadow: none !important;
+      overflow: visible;
+    }
+    .rs-sheet::before { display: none !important; }
+    .rs-root { --rs-sheet-max: 100%; }
+  }
+</style>
+
+<style is:global>
+  /* ── Live / Print visibility contract ──
+     .r-live = screen-only (flags, proofs, timeline, skills field).
+     .r-doc  = print-only substrate (the plain ATS skills list). */
+  @media screen {
+    .r-doc { display: none !important; }
+  }
+  @media print {
+    .r-live { display: none !important; }
+    /* the route wrapper must not add page height, or the taller tailored
+       variants spill onto a 2nd sheet */
+    .resume-page { padding: 0 !important; margin: 0 !important; }
+  }
+
+  /* ── Header on the résumé route (this CSS only loads where ResumeShell is) ──
+     The page already IS the résumé, so the availability pill and Resume CTA add
+     nothing here. Hide them and host the Download-PDF action in their place
+     (injected into the header nav by the script below). */
+  .site-header .status,
+  .site-header .resume-cta { display: none !important; }
+
+  .resume-dl-cta {
+    font-family: inherit;
+    font-size: var(--fs-eyebrow);
+    font-weight: var(--fw-semibold);
+    letter-spacing: var(--ls-eyebrow);
+    text-transform: uppercase;
+    color: var(--accent);
+    background: transparent;
+    border: 1px solid var(--accent);
+    padding: 8px 14px;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: background-color 200ms ease, color 200ms ease;
+  }
+  .resume-dl-cta:hover,
+  .resume-dl-cta:focus-visible {
+    background: var(--accent);
+    color: var(--bg);
+    outline: none;
+  }
+  .rdl-arrow { display: inline-block; margin-left: 3px; transition: transform 200ms ease; }
+  .resume-dl-cta:hover .rdl-arrow,
+  .resume-dl-cta:focus-visible .rdl-arrow { transform: translateY(2px); }
+
+  @media (max-width: 28rem) {
+    .resume-dl-cta { padding: 7px 10px; letter-spacing: 0.12em; }
+  }
+  @media print {
+    .resume-dl-cta { display: none !important; }
+  }
+</style>
+
+<script>
+  (() => {
+    // Host the Download-PDF action in the site header, where the Resume CTA was
+    // (it's hidden via CSS on this route). The header is sticky, so the clean
+    // PDF stays one click away while scrolling.
+    const nav = document.querySelector<HTMLElement>(".site-header .nav");
+    if (nav && !nav.querySelector(".resume-dl-cta")) {
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "resume-dl-cta";
+      btn.setAttribute("aria-label", "Download the clean PDF résumé");
+      btn.innerHTML = 'Download PDF<span class="rdl-arrow" aria-hidden="true"> ↓</span>';
+      btn.addEventListener("click", () => window.print());
+      nav.appendChild(btn);
+    }
+  })();
+</script>
