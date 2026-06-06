@@ -714,6 +714,10 @@ export interface MixBusPlan {
 
 export interface MixPlan {
   philosophy_summary: string;
+  /** Input-state route the Engineer chose for this source (audit "aim upstream"). */
+  route?: "mastered" | "rough_mix" | "stems";
+  /** Rendering treatment: "polish" (gentle, already-mastered input) or "master". */
+  treatment?: string;
   // ── Stem-remix era (optional now that master mode is the default) ──
   stems?: Record<string, MixStemPlan>;
   relationships?: MixRelationship[];
