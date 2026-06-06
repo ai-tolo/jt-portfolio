@@ -3459,11 +3459,16 @@ function stemSoloUrls(sf) {
   function setActivePair(pair: HTMLElement) {
     activePairEl = pair;
     currentSolo = null;
-    // Default to original (null side) when a source URL is available;
-    // fall back to A if not (e.g. retry-only jobs missing source path —
-    // shouldn't happen in practice but better than no audio).
+    // Default to whatever take sits in blind POSITION 1 — NOT always the
+    // original. Defaulting to the source (null) meant the first take you heard
+    // was ALWAYS the original, so you could identify it before any reveal,
+    // breaking the blind A/B. The chips render in per-pair shuffled order, so
+    // chips[0] is position 1 and maps to a / b / source depending on the shuffle.
     const hasOriginal = !!pair.dataset.sourceAudioUrl;
-    currentSide = hasOriginal ? null : "a";
+    const firstChip = pair.querySelector<HTMLElement>("[data-side-btn], [data-now-side]");
+    currentSide = firstChip
+      ? (firstChip.hasAttribute("data-now-side") ? null : ((firstChip.dataset.sideBtn as "a" | "b") ?? "a"))
+      : (hasOriginal ? null : "a");
     // Pause everything first to stop bleed-through from the previous
     // pair, then assign and eagerly load so the first tap has buffer
     // ready.
