@@ -759,6 +759,13 @@ function stemSoloUrls(sf) {
                             aria-label="Crown this take as king"
                             title="Crown this take as your king"
                           >♛</button>
+                          <button
+                            class="winner-dismiss-take"
+                            type="button"
+                            data-action="dismiss-take"
+                            aria-label="Dismiss this take"
+                            title="Dismiss this take — drops it from play + crown (click again to bring it back)"
+                          >✕</button>
                         </li>
                       ))
                     ) : (
@@ -2578,6 +2585,40 @@ function stemSoloUrls(sf) {
     border-color: #ffd28a;
     box-shadow: 0 0 14px rgba(255, 184, 77, 0.45);
   }
+  /* Per-take dismiss ✕ — narrow down candidates before crowning. */
+  .winner-dismiss-take {
+    width: 32px;
+    height: 32px;
+    flex-shrink: 0;
+    border-radius: 4px;
+    background: transparent;
+    color: rgba(245, 241, 232, 0.3);
+    border: 1px solid rgba(245, 241, 232, 0.15);
+    font-size: 13px;
+    line-height: 1;
+    cursor: pointer;
+    transition: all 120ms ease;
+    font-family: inherit;
+  }
+  .winner-dismiss-take:hover {
+    color: #ff8a8a;
+    border-color: rgba(255, 107, 107, 0.5);
+    background: rgba(255, 107, 107, 0.08);
+  }
+  /* Dismissed take: greyed + struck, dropped from play + crown, but the ✕
+     stays live so you can bring it back. Numbers never re-flow. */
+  .winner[data-dismissed="true"] { opacity: 0.4; }
+  .winner[data-dismissed="true"] .winner-label { text-decoration: line-through; }
+  .winner[data-dismissed="true"] .winner-play,
+  .winner[data-dismissed="true"] .winner-crown {
+    pointer-events: none;
+    opacity: 0.3;
+  }
+  .winner[data-dismissed="true"] .winner-dismiss-take {
+    opacity: 1;
+    color: #ff8a8a;
+    border-color: rgba(255, 107, 107, 0.4);
+  }
   .winners-list-partial .winners-card {
     background: rgba(0, 0, 0, 0.03);
     border-style: dashed;
@@ -4097,6 +4138,7 @@ function stemSoloUrls(sf) {
     }
 
     function swapTo(i: number, play = true) {
+      if (ctrl.audios[i]?.row.dataset.dismissed === "true") return; // skip dismissed takes
       const prev = active();
       const t = prev.currentTime;
       if (!prev.paused) prev.pause();
@@ -4188,6 +4230,26 @@ function stemSoloUrls(sf) {
           ctrl.rafId = requestAnimationFrame(tick);
         }
       });
+    });
+
+    // Per-take dismiss ✕ (session-only): grey a candidate out + drop it from
+    // play and crown, reversible, WITHOUT re-indexing — Take numbers stay
+    // stable so the takes you keep don't shuffle under you.
+    card.addEventListener("click", (e) => {
+      const x = (e.target as HTMLElement).closest<HTMLElement>("[data-action='dismiss-take']");
+      if (!x || !card.contains(x)) return;
+      const row = x.closest<HTMLElement>(".winner");
+      if (!row) return;
+      const nowDismissed = row.dataset.dismissed !== "true";
+      row.dataset.dismissed = nowDismissed ? "true" : "false";
+      if (nowDismissed) {
+        const idx = ctrl.audios.findIndex((a) => a.row === row);
+        if (idx === ctrl.activeIndex) {
+          ctrl.audios[idx]?.audio.pause();
+          const live = ctrl.audios.findIndex((a) => a.row.dataset.dismissed !== "true");
+          if (live >= 0) swapTo(live, false);
+        }
+      }
     });
 
     // Click-to-seek on the waveform. Sets currentTime on every audio in
@@ -4467,14 +4529,13 @@ function stemSoloUrls(sf) {
         }
         return;
       }
-      if (e.key === "ArrowUp") {
+      if (e.key === "ArrowUp" || e.key === "ArrowDown") {
         e.preventDefault();
-        kbCard.swapTo(Math.max(0, kbCard.activeIndex - 1), true);
-        return;
-      }
-      if (e.key === "ArrowDown") {
-        e.preventDefault();
-        kbCard.swapTo(Math.min(kbCard.audios.length - 1, kbCard.activeIndex + 1), true);
+        const step = e.key === "ArrowUp" ? -1 : 1;
+        let i = kbCard.activeIndex + step;
+        while (i >= 0 && i < kbCard.audios.length
+               && kbCard.audios[i].row.dataset.dismissed === "true") i += step;
+        if (i >= 0 && i < kbCard.audios.length) kbCard.swapTo(i, true);
         return;
       }
     }
