@@ -38,16 +38,22 @@ const works = [...allWorks].sort((a, b) => rankOf(a.slug) - rankOf(b.slug));
 
     <section class="section about" id="about" aria-label="About">
       <div class="inner">
-        <h2 class="about-statement" data-reveal>My title</h2>
+        <div class="about-grid">
+          <div class="about-text" data-reveal>
+            <span class="section-eyebrow"><i class="se-tick" aria-hidden="true"></i>About</span>
+            <h2 class="about-statement">
+              The box says <em>business&nbsp;analyst</em>.
+            </h2>
+            <p class="about-desc">
+              Open it and the job reads <strong>designer who builds</strong> — systems,
+              interfaces, the tools, and the sound underneath.
+            </p>
+          </div>
 
-        <div class="about-exhibit">
-          <AboutBox />
+          <div class="about-exhibit">
+            <AboutBox />
+          </div>
         </div>
-
-        <p class="about-desc">
-          Designer who builds — systems, interfaces, the tools, and the sound
-          underneath. <span>The title is just what's written on the box.</span>
-        </p>
       </div>
     </section>
 
@@ -260,56 +266,53 @@ const works = [...allWorks].sort((a, b) => rankOf(a.slug) - rankOf(b.slug));
     padding: var(--space-16) 0;
   }
 
-  /* About — "My title", then the box (which IS the title), then a blurb that
-     only surfaces once you open the box. A single centered scroll beat. */
-  .about {
-    text-align: center;
-  }
-  .about .inner {
-    display: flex;
-    flex-direction: column;
+  /* About — mirrors the work index: framing text on the left, the box as the
+     "exhibit" on the right. Open the box (hover / focus) and the reveal line
+     surfaces — the same engage-to-reveal beat as the index below it. */
+  .about-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) clamp(20rem, 34vw, 27rem);
+    gap: clamp(2.5rem, 6vw, 5rem);
     align-items: center;
   }
+  .about-text { max-width: 32rem; }
   .about-statement {
-    width: 100%;
-    max-width: min(94vw, 60rem);
-    margin: 0 auto var(--space-1);
-    padding-left: 0.06em;
-    text-align: left;
+    margin: 1rem 0 0;
     font-family: "Space Grotesk Variable", "Space Grotesk", ui-sans-serif, system-ui, sans-serif;
-    font-size: clamp(1.875rem, 4.6vw, 3.5rem);
+    font-size: clamp(1.7rem, 3.6vw, 2.85rem);
     font-weight: var(--fw-bold);
-    line-height: 1.05;
+    line-height: 1.07;
     letter-spacing: -0.03em;
     color: var(--text);
   }
-  .about-exhibit {
-    width: 100%;
-    max-width: min(94vw, 60rem);
-    margin: 0 auto;
-  }
-  /* The blurb is hidden until the box is opened (hover / focus), then it fades
-     up — the box tells the story; this is the footnote. */
+  /* "business analyst" reads as the label, not the verdict — the box reframes it */
+  .about-statement em { font-style: normal; color: var(--muted); }
+  /* The reveal line surfaces once the box opens — the box tells the story,
+     this line names it. */
   .about-desc {
-    width: 100%;
-    max-width: min(94vw, 60rem);
-    margin: var(--space-5) auto 0;
-    padding-left: 0.06em;
-    text-align: left;
+    margin: var(--space-5) 0 0;
     font-size: 1.125rem;
     font-weight: var(--fw-medium);
     line-height: 1.5;
-    color: var(--text);
+    color: var(--muted);
     opacity: 0;
     transform: translateY(8px);
     transition: opacity 460ms ease, transform 460ms cubic-bezier(0.2, 0, 0, 1);
   }
-  .about-desc span { color: var(--muted); }
-  .about-inner-open .about-desc,
+  .about-desc strong { color: var(--text); font-weight: var(--fw-bold); }
   .about .inner:has(.ab:hover) .about-desc,
-  .about .inner:has(.ab:focus-within) .about-desc {
+  .about .inner:has(.ab:focus-within) .about-desc,
+  .about .inner:has(.ab.is-open) .about-desc {
     opacity: 1;
     transform: none;
+  }
+
+  @media (max-width: 55.99rem) {
+    .about-grid { grid-template-columns: 1fr; gap: var(--space-8); align-items: start; }
+    .about-exhibit { order: 1; max-width: 21rem; }
+    .about-text { order: 2; max-width: none; }
+    /* no hover on touch — keep the reveal line visible so nothing hides */
+    .about-desc { opacity: 1; transform: none; }
   }
   @media (prefers-reduced-motion: reduce) {
     .about-desc { transition: opacity 200ms ease; transform: none; }
