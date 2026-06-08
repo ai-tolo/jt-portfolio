@@ -9,19 +9,15 @@ import { getCaseStudies } from "../lib/notion";
 export const prerender = true;
 
 // Order the case studies by strength (Jon's call 2026-06-03), overriding the
-// Notion Order field. The first slug is featured full-width; the rest fall into
-// the grid in this order. The "Case study NN" badge = this strength rank.
+// Notion Order field. This order is the index numbering 01..NN, top of the list
+// first; the first item is also the default preview shown in the pane at rest.
 const RANK = ["the-console", "chs", "raylu", "crediverso", "momence"];
-const FEATURED_SLUG = RANK[0];
 const rankOf = (slug: string) => {
   const i = RANK.indexOf(slug);
   return i === -1 ? RANK.length : i;
 };
 const allWorks = await getCaseStudies();
 const works = [...allWorks].sort((a, b) => rankOf(a.slug) - rankOf(b.slug));
-// The lead piece hangs full-width; the rest hang as a staggered gallery wall.
-const featuredWork = works.find((w) => w.slug === FEATURED_SLUG) ?? works[0];
-const galleryWorks = works.filter((w) => w !== featuredWork);
 ---
 
 <Layout title="Jonathan Tollefson — User Experience Architect">
@@ -56,41 +52,61 @@ const galleryWorks = works.filter((w) => w !== featuredWork);
     </section>
 
     <section class="section work" id="work" aria-label="Selected work">
-      <div class="inner" data-work-list>
-        <div class="work-featured">
-          <WorkEntry
-            index={rankOf(featuredWork.slug) + 1}
-            name={featuredWork.name}
-            subtitle={featuredWork.subtitle}
-            outcome={featuredWork.outcome}
-            role={featuredWork.role}
-            timeline={featuredWork.timeline}
-            tools={featuredWork.tools}
-            tags={featuredWork.tags.slice(0, 4)}
-            slug={featuredWork.slug}
-            cover={featuredWork.cover}
-            featured={true}
-          />
+      <div class="inner">
+        <div class="work-head">
+          <span class="section-eyebrow"><i class="se-tick" aria-hidden="true"></i>Selected work</span>
+          <p class="work-intro">Five projects — the catalog. Pull one up.</p>
         </div>
 
-        <div class="work-gallery">
-          {galleryWorks.map((w, i) => (
-            <div class="hang" data-h={i}>
+        <div class="windex" data-work-list data-active="0">
+          <ol class="windex-list">
+            {works.map((w, i) => (
               <WorkEntry
-                index={rankOf(w.slug) + 1}
+                i={i}
                 name={w.name}
                 subtitle={w.subtitle}
                 outcome={w.outcome}
                 role={w.role}
                 timeline={w.timeline}
-                tools={w.tools}
-                tags={w.tags.slice(0, 4)}
+                tags={w.tags.slice(0, 3)}
                 slug={w.slug}
                 cover={w.cover}
-                featured={false}
               />
-            </div>
-          ))}
+            ))}
+          </ol>
+
+          {/* The exhibit plate. A visual, desktop-only enhancement fed by the
+              same data the rows carry, so it's aria-hidden: the rows already
+              announce title + pitch + outcome to assistive tech. The default
+              (first) plate shows at rest; CSS swaps it to whichever row is
+              hovered or keyboard-focused. */}
+          <aside class="windex-preview" aria-hidden="true">
+            {works.map((w, i) => (
+              <article class="pv" data-pv={i}>
+                <div class="pv-now">
+                  <span class="pv-eq" aria-hidden="true"><span></span><span></span><span></span></span>
+                  <span class="pv-now-l">Now viewing</span>
+                </div>
+                <div class="pv-frame">
+                  {w.cover ? (
+                    <img src={w.cover} alt="" loading={i === 0 ? "eager" : "lazy"} />
+                  ) : (
+                    <div class="pv-empty"></div>
+                  )}
+                </div>
+                <div class="pv-body">
+                  <p class="pv-pitch">{w.subtitle}</p>
+                  {w.outcome && (
+                    <p class="pv-out"><span class="pv-k">Outcome</span>{w.outcome}</p>
+                  )}
+                  {w.tags.length > 0 && (
+                    <ul class="pv-tags">{w.tags.slice(0, 3).map((t) => <li>{t}</li>)}</ul>
+                  )}
+                  <span class="pv-view"><span>View case study</span><i aria-hidden="true">→</i></span>
+                </div>
+              </article>
+            ))}
+          </aside>
         </div>
 
         <div class="work-foot">
@@ -122,6 +138,30 @@ const galleryWorks = works.filter((w) => w !== featuredWork);
         }
       }, { threshold: 0.18 });
       entries.forEach((e) => io.observe(e));
+
+      /* Bring the hovered / keyboard-focused project up in the preview pane and
+         dim the rest. data-active drives which plate shows (CSS); data-engaged +
+         .is-active drive the dim + the row's active visuals. Defaults to 0 in
+         the markup, so the first plate shows even with no JS. */
+      const rows = Array.from(list.querySelectorAll<HTMLAnchorElement>(".we-a"));
+      const engage = (i: number) => {
+        list.setAttribute("data-active", String(i));
+        list.setAttribute("data-engaged", "1");
+        rows.forEach((r, j) => r.classList.toggle("is-active", j === i));
+      };
+      const release = () => {
+        list.setAttribute("data-active", "0");
+        list.removeAttribute("data-engaged");
+        rows.forEach((r) => r.classList.remove("is-active"));
+      };
+      rows.forEach((row, i) => {
+        row.addEventListener("pointerenter", () => engage(i));
+        row.addEventListener("focus", () => engage(i));
+      });
+      list.addEventListener("pointerleave", release);
+      list.addEventListener("focusout", (e) => {
+        if (!list.contains((e.relatedTarget as Node) ?? null)) release();
+      });
     }
 
     /* Reveal-on-scroll for [data-reveal] blocks. The class gate keeps content
@@ -275,39 +315,122 @@ const galleryWorks = works.filter((w) => w !== featuredWork);
     .about-desc { transition: opacity 200ms ease; transform: none; }
   }
 
-  /* The gallery — the lead piece hangs full-width; the rest hang as a salon
-     wall: two columns, each card a different geometry, staggered to different
-     heights so nothing lines up. The hang offsets live on the .hang wrapper so
-     they don't fight WorkEntry's own reveal / hover transforms. */
-  .work-featured { margin-bottom: var(--space-12); }
+  /* The work index — a quiet tracklist of the projects. The title is all you
+     see at rest; the cover + outcome surface in a fixed preview pane on the
+     right on hover / keyboard focus. Collapses to inline cards on touch. Every
+     colour is a token, so it re-themes (dark-first). */
+  .work-head { margin-bottom: clamp(2.2rem, 5vw, 3.5rem); }
+  .section-eyebrow {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.6rem;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: var(--fs-eyebrow);
+    font-weight: var(--fw-semibold);
+    letter-spacing: var(--ls-eyebrow);
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  .se-tick { width: 22px; height: 2px; background: var(--accent); display: inline-block; }
+  .work-intro {
+    margin-top: 0.9rem;
+    font-family: "Space Grotesk Variable", "Space Grotesk", ui-sans-serif, system-ui, sans-serif;
+    font-size: clamp(1.1rem, 2.4vw, 1.5rem);
+    font-weight: 500;
+    letter-spacing: -0.01em;
+    line-height: 1.2;
+    color: var(--text);
+  }
 
-  .work-gallery {
+  .windex {
     display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    column-gap: clamp(2.5rem, 6vw, 5.5rem);
-    row-gap: 7rem;
+    grid-template-columns: minmax(0, 1fr) clamp(20rem, 32vw, 27rem);
+    gap: clamp(2.5rem, 6vw, 5rem);
     align-items: start;
-    padding-bottom: 7rem;
   }
-  .hang {
-    min-width: 0;
-    transition: opacity 420ms ease, filter 420ms ease;
+  .windex-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    border-top: 1px solid var(--line);
   }
-  /* staggered heights — col 2 hangs lower than col 1; gentle so nothing collides */
-  .hang[data-h="0"] { transform: translateY(0); }       /* CHS  · col1 */
-  .hang[data-h="1"] { transform: translateY(2.25rem); } /* Raylu · col2, low */
-  .hang[data-h="2"] { transform: translateY(0.75rem); } /* Crediverso · col1 */
-  .hang[data-h="3"] { transform: translateY(3rem); }    /* Momence · col2, lowest */
 
-  /* Spotlight — hovering one piece dims the others on the wall. */
-  .work-gallery:has(.hang:hover) .hang:not(:hover) {
-    opacity: 0.16;
-    filter: saturate(0.35) brightness(0.5);
+  /* the exhibit plate — five stacked previews share one grid cell; opacity swaps */
+  .windex-preview {
+    position: sticky;
+    top: clamp(1.5rem, 8vh, 4rem);
+    display: grid;
   }
+  .pv {
+    grid-area: 1 / 1;
+    opacity: 0;
+    transform: translateY(10px);
+    transition: opacity 0.45s ease, transform 0.45s cubic-bezier(0.2, 0, 0, 1);
+    pointer-events: none;
+  }
+  /* The active plate is driven by data-active on .windex (set by the controller
+     script; defaults to 0 in markup so the first plate shows with no JS). Both
+     .windex and .pv are owned here, so this stays scoped. */
+  .windex[data-active="0"] .pv[data-pv="0"],
+  .windex[data-active="1"] .pv[data-pv="1"],
+  .windex[data-active="2"] .pv[data-pv="2"],
+  .windex[data-active="3"] .pv[data-pv="3"],
+  .windex[data-active="4"] .pv[data-pv="4"],
+  .windex[data-active="5"] .pv[data-pv="5"] { opacity: 1; transform: none; }
+
+  .pv-now { display: flex; align-items: center; gap: 0.55rem; margin-bottom: 0.85rem; }
+  .pv-eq { display: inline-flex; align-items: flex-end; gap: 2px; height: 11px; }
+  .pv-eq span { width: 2.5px; height: 35%; background: var(--accent); animation: pv-eq 1.05s ease-in-out infinite; }
+  .pv-eq span:nth-child(2) { animation-delay: 0.18s; }
+  .pv-eq span:nth-child(3) { animation-delay: 0.36s; }
+  @keyframes pv-eq { 0%, 100% { height: 28%; } 50% { height: 100%; } }
+  .pv-now-l {
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 0.62rem; letter-spacing: 0.18em; text-transform: uppercase; color: var(--muted);
+  }
+  .pv-frame {
+    aspect-ratio: 16 / 10;
+    border: 1px solid var(--line);
+    background: var(--surface-1);
+    overflow: hidden;
+    box-shadow: 0 30px 50px rgba(0, 0, 0, 0.45);
+  }
+  .pv-frame img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .pv-empty { width: 100%; height: 100%; background: radial-gradient(120% 100% at 70% 0%, color-mix(in srgb, var(--accent) 18%, transparent), transparent 60%), var(--surface-1); }
+  .pv-body { padding-top: 1.1rem; }
+  .pv-pitch {
+    font-family: "Space Grotesk Variable", "Space Grotesk", sans-serif;
+    font-weight: 500; font-size: clamp(1rem, 1.4vw, 1.2rem); line-height: 1.34; letter-spacing: -0.01em;
+    color: var(--text);
+  }
+  .pv-out { margin-top: 0.85rem; font-size: 0.86rem; line-height: 1.5; color: var(--muted); }
+  .pv-k {
+    display: inline-block; font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 0.6rem; letter-spacing: 0.16em; text-transform: uppercase; color: var(--accent); margin-right: 0.5rem;
+  }
+  .pv-tags { list-style: none; display: flex; flex-wrap: wrap; gap: 0.4rem; margin-top: 1rem; }
+  .pv-tags li {
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 0.6rem; letter-spacing: 0.06em; text-transform: uppercase;
+    color: color-mix(in srgb, var(--text) 72%, transparent);
+    padding: 0.25rem 0.6rem; border: 1px solid var(--line); border-radius: 999px;
+  }
+  .pv-view {
+    display: inline-flex; align-items: center; gap: 0.5rem; margin-top: 1.25rem;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 0.66rem; font-weight: 700; letter-spacing: 0.16em; text-transform: uppercase;
+    color: var(--text); border-bottom: 2px solid var(--accent); padding-bottom: 0.35rem;
+  }
+  .pv-view i { font-style: normal; color: var(--accent); }
 
   @media (max-width: 55.99rem) {
-    .work-gallery { grid-template-columns: 1fr; gap: var(--space-8); padding-bottom: var(--space-8); }
-    .hang { transform: none !important; }
+    .windex { grid-template-columns: 1fr; gap: 0; }
+    .windex-preview { display: none; }
+    .work-intro { max-width: 28ch; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .pv { transition: opacity 0.2s ease; transform: none; }
+    .pv-eq span { animation: none; height: 55%; }
   }
 
   .work-foot {
@@ -334,4 +457,12 @@ const galleryWorks = works.filter((w) => w !== featuredWork);
     color: var(--bg);
     background: var(--accent);
   }
+</style>
+
+<style is:global>
+  /* The one cross-component rule: dim the other rows while one is engaged.
+     References WorkEntry's .we-a, so it lives in a global block (namespaced
+     under .windex). Driven by the controller script's data-engaged + .is-active;
+     no :has, so it invalidates reliably on mouse and keyboard. */
+  .windex[data-engaged] .we-a:not(.is-active) { opacity: 0.32; }
 </style>
