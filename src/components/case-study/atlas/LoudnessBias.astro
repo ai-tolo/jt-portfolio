@@ -1,0 +1,339 @@
+---
+// "Louder always wins" — a 10-second interactive that teaches loudness bias to
+// non-audio people, so the rendition toggle's blind + loudness-matched design
+// lands as a real unlock, not a detail.
+//
+// The trick: A and B are the SAME master — one is just ~2 dB louder. You audition,
+// you vote, and almost everyone picks the louder one as "better" (fuller lows,
+// crisper highs — the equal-loudness illusion). Then you level-match them and they
+// go identical. The lesson: an honest A/B has to be loudness-matched first, and
+// doing that by hand for six masters is the grind. Reuses one rendition clip.
+const CLIP = "/case-studies/the-console/renditions/take3.mp3";
+// Static SSR meter bars (overwritten with the real waveform after decode).
+const BARS = Array.from({ length: 72 }, (_, i) => {
+  const s = 0.5 + 0.32 * Math.sin(i * 0.4) + 0.12 * Math.cos(i * 1.3);
+  return Math.round(Math.max(0.2, Math.min(1, s)) * 100);
+});
+---
+
+<div class="lb" data-lb data-clip={CLIP} data-side="A" data-matched="false" data-voted="false">
+  <header class="lb-head">
+    <span class="lb-q">Quick test — which master sounds better to you?</span>
+    <span class="lb-sub">Two masters of the same track. Audition both, then call it.</span>
+  </header>
+
+  <div class="lb-stage">
+    <button type="button" class="lb-side" data-lb-side="A" data-active="true">
+      <span class="lb-side-key">A</span>
+      <span class="lb-bars" data-lb-bars="A">{BARS.map((h) => <span class="lb-bar" style={`height:${h}%`}></span>)}</span>
+    </button>
+    <button type="button" class="lb-side" data-lb-side="B" data-active="false">
+      <span class="lb-side-key">B</span>
+      <span class="lb-bars" data-lb-bars="B">{BARS.map((h) => <span class="lb-bar" style={`height:${h}%`}></span>)}</span>
+    </button>
+  </div>
+
+  <div class="lb-transport">
+    <button type="button" class="lb-play" data-lb-play aria-label="Play / pause">▶</button>
+    <span class="lb-now" data-lb-now>tap A or B to play</span>
+    <span class="lb-level" data-lb-level aria-hidden="true"></span>
+  </div>
+
+  <div class="lb-vote" data-lb-vote>
+    <span class="lb-vote-q">Your gut says:</span>
+    <button type="button" class="lb-pick" data-lb-pick="A">A is better</button>
+    <button type="button" class="lb-pick" data-lb-pick="B">B is better</button>
+    <button type="button" class="lb-pick lb-pick-same" data-lb-pick="same">they're the same</button>
+  </div>
+
+  <div class="lb-reveal" data-lb-reveal hidden>
+    <p class="lb-reveal-text" data-lb-reveal-text></p>
+    <button type="button" class="lb-match" data-lb-match>⚖ now level-match them →</button>
+    <p class="lb-match-note" data-lb-match-note hidden>
+      Identical now — switching A/B does nothing. That's the one honest step before any
+      comparison: <b>match the loudness</b>. By hand it's print each version, meter its LUFS,
+      nudge the gain a hair, re-check, repeat — for every master. <span class="lb-arrow">↓</span>
+      The toggle below does it for you, blind — so the difference you hear is <em>real</em>.
+    </p>
+  </div>
+</div>
+
+<script>
+  const LOUDER_DB = 2.0; // small enough to feel like "better," not "louder"
+
+  document.querySelectorAll<HTMLElement>("[data-lb]").forEach((root) => {
+    const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const playBtn = root.querySelector<HTMLButtonElement>("[data-lb-play]");
+    const nowEl = root.querySelector<HTMLElement>("[data-lb-now]");
+    const levelEl = root.querySelector<HTMLElement>("[data-lb-level]");
+    const sides = [...root.querySelectorAll<HTMLButtonElement>("[data-lb-side]")];
+    const allBars = [...root.querySelectorAll<HTMLElement>(".lb-bar")];
+    const voteWrap = root.querySelector<HTMLElement>("[data-lb-vote]");
+    const picks = [...root.querySelectorAll<HTMLButtonElement>("[data-lb-pick]")];
+    const reveal = root.querySelector<HTMLElement>("[data-lb-reveal]");
+    const revealText = root.querySelector<HTMLElement>("[data-lb-reveal-text]");
+    const matchBtn = root.querySelector<HTMLButtonElement>("[data-lb-match]");
+    const matchNote = root.querySelector<HTMLElement>("[data-lb-match-note]");
+
+    // Randomly pick which side is the louder one (so it isn't always "B").
+    const louder: "A" | "B" = Math.random() < 0.5 ? "A" : "B";
+    const quieter = louder === "A" ? "B" : "A";
+    const gainFor = (side: string, matched: boolean) =>
+      !matched && side === louder ? Math.pow(10, LOUDER_DB / 20) : 1;
+
+    let ctx: AudioContext | null = null;
+    let buffer: AudioBuffer | null = null;
+    let source: AudioBufferSourceNode | null = null;
+    let gain: GainNode | null = null;
+    let loaded = false;
+    let loadingP: Promise<void> | null = null;
+    let playing = false;
+    let side = "A";
+
+    function setLevelLabel() {
+      if (!levelEl) return;
+      const matched = root.dataset.matched === "true";
+      const db = gainFor(side, matched) > 1 ? "+2.0 dB" : "0.0 dB";
+      levelEl.textContent = matched ? "matched · 0.0 dB" : db;
+      // bars opacity reflects relative level (subtle visual)
+      sides.forEach((s) => {
+        const sd = s.dataset.lbSide!;
+        const tall = gainFor(sd, matched) > 1;
+        s.querySelector<HTMLElement>(".lb-bars")!.style.opacity = tall ? "1" : "0.62";
+      });
+    }
+
+    async function ensureLoaded() {
+      if (loaded) return;
+      if (loadingP) return loadingP;
+      loadingP = (async () => {
+        const AC = window.AudioContext || (window as any).webkitAudioContext;
+        ctx = new AC();
+        gain = ctx.createGain();
+        gain.connect(ctx.destination);
+        const ab = await fetch(root.dataset.clip!).then((r) => r.arrayBuffer());
+        buffer = await ctx.decodeAudioData(ab);
+        drawWaveform(buffer);
+        loaded = true;
+      })();
+      return loadingP;
+    }
+
+    function drawWaveform(buf: AudioBuffer) {
+      const data = buf.getChannelData(0);
+      const perSide = allBars.length / 2;
+      const N = Math.floor(perSide);
+      const step = Math.max(1, Math.floor(data.length / N));
+      const peaks: number[] = [];
+      let max = 0.0001;
+      for (let i = 0; i < N; i++) {
+        let p = 0;
+        const start = i * step;
+        for (let j = 0; j < step; j += 16) { const a = Math.abs(data[start + j] || 0); if (a > p) p = a; }
+        peaks.push(p); if (p > max) max = p;
+      }
+      const h = peaks.map((p) => Math.max(8, Math.round(Math.pow(p / max, 0.7) * 100)));
+      allBars.forEach((b, i) => { b.style.height = `${h[i % N]}%`; });
+    }
+
+    function applyGain() {
+      if (!ctx || !gain) return;
+      const g = gainFor(side, root.dataset.matched === "true") * 0.92;
+      gain.gain.setTargetAtTime(g, ctx.currentTime, 0.012);
+    }
+
+    function setSide(s: string) {
+      side = s;
+      root.dataset.side = s;
+      sides.forEach((el) => (el.dataset.active = el.dataset.lbSide === s ? "true" : "false"));
+      if (nowEl) nowEl.textContent = playing ? `playing ${s}` : `master ${s}`;
+      applyGain();
+      setLevelLabel();
+    }
+
+    async function play() {
+      playBtn?.setAttribute("data-state", "loading");
+      await ensureLoaded();
+      await ctx!.resume();
+      if (!source) {
+        source = ctx!.createBufferSource();
+        source.buffer = buffer!;
+        source.loop = true;
+        source.connect(gain!);
+        source.start();
+      }
+      applyGain();
+      playBtn?.removeAttribute("data-state");
+      playing = true;
+      root.dataset.playing = "true";
+      if (playBtn) playBtn.textContent = "❚❚";
+      if (nowEl) nowEl.textContent = `playing ${side}`;
+    }
+    async function pause() {
+      playing = false;
+      root.dataset.playing = "false";
+      if (playBtn) playBtn.textContent = "▶";
+      if (nowEl) nowEl.textContent = `master ${side}`;
+      await ctx?.suspend();
+    }
+    const toggle = () => { playing ? pause() : play(); };
+
+    playBtn?.addEventListener("click", toggle);
+    sides.forEach((el) => el.addEventListener("click", () => { setSide(el.dataset.lbSide!); if (!playing) play(); }));
+
+    picks.forEach((b) => b.addEventListener("click", () => {
+      if (root.dataset.voted === "true") return;
+      root.dataset.voted = "true";
+      const choice = b.dataset.lbPick!;
+      voteWrap?.setAttribute("data-done", "true");
+      picks.forEach((p) => (p.dataset.chosen = p === b ? "true" : "false"));
+      let msg: string;
+      if (choice === louder) {
+        msg = `Gotcha. <b>A and B are the exact same master</b> — “${louder}” was just <b>2 dB louder</b>. A touch more level reads as fuller lows and crisper highs, so it <em>sounds</em> better even though nothing about the mix changed. That's loudness bias.`;
+      } else if (choice === "same") {
+        msg = `Sharp ear. They <b>are</b> the same master — “${louder}” was simply <b>2 dB louder</b>. Most people can't unhear that extra level and call the louder one “better.”`;
+      } else {
+        msg = `Interesting — you picked the quieter one. They're actually the <b>same master</b>; “${louder}” was just <b>2 dB louder</b>, and most people fall for it and pick that one as “better.”`;
+      }
+      if (revealText) revealText.innerHTML = msg;
+      reveal?.removeAttribute("hidden");
+      reveal?.setAttribute("data-on", "true");
+    }));
+
+    matchBtn?.addEventListener("click", () => {
+      root.dataset.matched = "true";
+      matchBtn.setAttribute("disabled", "true");
+      matchBtn.textContent = "⚖ levels matched";
+      applyGain();
+      setLevelLabel();
+      matchNote?.removeAttribute("hidden");
+    });
+
+    setSide("A");
+    setLevelLabel();
+  });
+</script>
+
+<style>
+  .lb {
+    background: linear-gradient(180deg, rgba(17, 12, 22, 0.96), rgba(11, 8, 15, 0.96));
+    border: 1px solid rgba(245, 241, 232, 0.12);
+    border-radius: 10px;
+    padding: 20px 22px 18px;
+    color: #f5f1e8;
+    font-family: "Geist Variable", ui-sans-serif, system-ui, sans-serif;
+  }
+  .lb-head { margin-bottom: 16px; }
+  .lb-q { display: block; font-size: 16px; font-weight: 600; letter-spacing: -0.01em; }
+  .lb-sub {
+    display: block; margin-top: 4px;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 11.5px; color: rgba(245, 241, 232, 0.55);
+  }
+
+  .lb-stage { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 14px; }
+  .lb-side {
+    position: relative; display: flex; align-items: center; gap: 12px;
+    padding: 14px 16px; cursor: pointer; overflow: hidden;
+    border: 1px solid rgba(245, 241, 232, 0.16); border-radius: 8px;
+    background: rgba(245, 241, 232, 0.025); color: #f5f1e8;
+    transition: border-color 160ms ease, background 160ms ease, transform 120ms ease;
+  }
+  .lb-side:hover { transform: translateY(-1px); border-color: rgba(245, 241, 232, 0.34); }
+  .lb-side[data-active="true"] {
+    border-color: rgba(255, 150, 80, 0.6);
+    background: rgba(255, 150, 80, 0.06);
+    box-shadow: 0 0 18px -6px rgba(255, 140, 80, 0.5);
+  }
+  .lb-side-key {
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 22px; font-weight: 900; line-height: 1; flex: 0 0 auto;
+  }
+  .lb-side[data-active="true"] .lb-side-key { color: var(--brand-orange); }
+  .lb-bars {
+    display: flex; align-items: center; gap: 1px; height: 34px; flex: 1; min-width: 0;
+    transition: opacity 200ms ease;
+  }
+  .lb-bar {
+    flex: 1 1 0; border-radius: 1px;
+    background: linear-gradient(180deg, rgba(14, 196, 252, 0.6), rgba(14, 196, 252, 0.22));
+    transition: height 240ms ease;
+  }
+  .lb-side[data-active="true"] .lb-bar { background: linear-gradient(180deg, rgba(255, 150, 80, 0.7), rgba(255, 150, 80, 0.26)); }
+
+  .lb-transport { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; }
+  .lb-play {
+    width: 34px; height: 34px; border-radius: 50%; flex: 0 0 auto; position: relative;
+    border: 1px solid rgba(245, 241, 232, 0.3); background: rgba(245, 241, 232, 0.04);
+    color: #f5f1e8; font-size: 12px; cursor: pointer; display: flex; align-items: center; justify-content: center;
+  }
+  .lb[data-playing="true"] .lb-play { color: var(--brand-orange); border-color: rgba(255, 150, 80, 0.5); }
+  .lb-play[data-state="loading"] { color: transparent; }
+  .lb-play[data-state="loading"]::after {
+    content: ""; position: absolute; width: 13px; height: 13px;
+    border: 2px solid rgba(245, 241, 232, 0.6); border-top-color: transparent;
+    border-radius: 50%; animation: lb-spin 0.7s linear infinite;
+  }
+  @keyframes lb-spin { to { transform: rotate(360deg); } }
+  .lb-now {
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px;
+    color: rgba(245, 241, 232, 0.66);
+  }
+  .lb-level {
+    margin-left: auto; font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 11px; letter-spacing: 0.04em; color: var(--brand-yellow);
+    border: 1px solid rgba(255, 179, 71, 0.3); border-radius: 20px; padding: 3px 10px;
+  }
+
+  .lb-vote { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .lb-vote-q {
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 11px;
+    letter-spacing: 0.14em; text-transform: uppercase; color: rgba(245, 241, 232, 0.5); margin-right: 2px;
+  }
+  .lb-pick {
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; cursor: pointer;
+    color: rgba(245, 241, 232, 0.8); background: transparent;
+    border: 1px solid rgba(245, 241, 232, 0.22); border-radius: 5px; padding: 7px 13px;
+    transition: color 140ms ease, border-color 140ms ease, background 140ms ease;
+  }
+  .lb-pick:hover { color: #fff; border-color: rgba(245, 241, 232, 0.5); }
+  .lb-pick-same { color: rgba(245, 241, 232, 0.55); }
+  .lb-vote[data-done="true"] .lb-pick { opacity: 0.5; cursor: default; pointer-events: none; }
+  .lb-vote[data-done="true"] .lb-pick[data-chosen="true"] {
+    opacity: 1; color: #0d060f; border-color: transparent;
+    background: linear-gradient(135deg, #ff2d8b, #ff7a3d, #ffd23d); font-weight: 700;
+  }
+
+  .lb-reveal { margin-top: 16px; border-top: 1px solid rgba(245, 241, 232, 0.1); padding-top: 14px; }
+  .lb-reveal[hidden] { display: none; }
+  .lb-reveal-text {
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 13px; line-height: 1.6;
+    color: rgba(245, 241, 232, 0.9); margin: 0 0 14px; max-width: 64ch;
+  }
+  .lb-reveal-text b { color: var(--brand-yellow); }
+  .lb-reveal-text em { color: #fff; font-style: italic; }
+  .lb-match {
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; cursor: pointer;
+    color: #062330; font-weight: 700; font-style: italic;
+    background: linear-gradient(90deg, #0ec4fc, #19e0ff); border: none; border-radius: 5px; padding: 8px 15px;
+    transition: filter 140ms ease;
+  }
+  .lb-match:hover { filter: brightness(1.08); }
+  .lb-match[disabled] { background: rgba(14, 196, 252, 0.14); color: var(--brand-cyan); cursor: default; }
+  .lb-match-note {
+    margin: 14px 0 0; font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 12.5px; line-height: 1.6; color: rgba(245, 241, 232, 0.7); max-width: 64ch;
+  }
+  .lb-match-note[hidden] { display: none; }
+  .lb-match-note b { color: #f5f1e8; }
+  .lb-match-note em { color: var(--brand-cyan); font-style: italic; }
+  .lb-arrow { color: var(--brand-cyan); font-weight: 700; }
+
+  @media (max-width: 560px) {
+    .lb-stage { grid-template-columns: 1fr; }
+    .lb-vote { gap: 6px; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .lb-bar, .lb-bars, .lb-side { transition: none; }
+  }
+</style>
