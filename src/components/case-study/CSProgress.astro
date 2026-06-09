@@ -1,0 +1,181 @@
+---
+// CSProgress — the case-study reading indicator, lifted from the homepage comet
+// (AboutSignal.astro). A thin fixed rail on the LEFT edge: a dim track, a
+// brand-gradient trail that grows top→down with reading progress, and a comet
+// bead (the homepage's radial-gradient dot + trailing tail) riding the head of
+// the trail. After de-numbering, THIS carries the reader's orientation.
+//
+// Scroll-linked, NOT section-linked: progress is the reader's position through
+// the <main class="cs-main"> article (0 → 100% of its scroll height), so it's
+// fully decoupled from how many sections a study has or whether they're numbered.
+// The trail is a vertical brand gradient revealed by clip (the homepage
+// .als-trace trick, turned vertical), so the bead's colour walks pink→orange→
+// amber as a second, ambient progress cue.
+//
+// Reuse: the comet's colours (var(--brand-*) on .cs-body) and the homepage's
+// scroll-progress formula (-rect.top / (height - innerHeight), clamped 0–1).
+// Reduced-motion: the trail still follows the reader's OWN scroll (that's a
+// scrollbar, not vestibular motion), but the idle glow pulse is dropped.
+// Decorative orientation aid → aria-hidden (a per-scroll-tick announcement would
+// just be noise for AT users; the real headings carry the structure).
+---
+
+<div class="cs-progress" data-cs-progress aria-hidden="true">
+  <div class="cs-progress-track"></div>
+  <div class="cs-progress-fill"></div>
+  <span class="cs-progress-comet"></span>
+</div>
+
+<style>
+  .cs-progress {
+    position: fixed;
+    top: 24px;
+    bottom: 24px;
+    left: clamp(10px, 1.6vw, 22px);
+    width: 12px; /* visual box; the bead overhangs the 2px line within it */
+    z-index: 60;
+    pointer-events: none;
+    /* Hidden until the script confirms the page actually scrolls. */
+    opacity: 0;
+    transition: opacity 400ms ease;
+  }
+  .cs-progress[data-scrollable="true"] {
+    opacity: 1;
+  }
+
+  /* The wire: a dim unread track + the lit read trail share the same 2px line,
+     centred in the box so the bead can overhang it. */
+  .cs-progress-track,
+  .cs-progress-fill {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 50%;
+    width: 2px;
+    transform: translateX(-50%);
+    border-radius: 2px;
+  }
+  .cs-progress-track {
+    background: rgba(245, 241, 232, 0.1); /* --cs-line */
+  }
+
+  /* The trail: the brand gradient mapped to the FULL rail, revealed from the top
+     down to the reading head via clip — so the head colour shifts pink→amber as
+     you progress (the homepage .als-trace reveal, vertical). */
+  .cs-progress-fill {
+    background: linear-gradient(
+      180deg,
+      var(--brand-pink) 0%,
+      var(--brand-orange) 50%,
+      var(--brand-yellow) 100%
+    );
+    clip-path: inset(0 0 calc((1 - var(--p, 0)) * 100%) 0);
+    filter: drop-shadow(0 0 6px color-mix(in srgb, var(--brand-orange) 42%, transparent));
+  }
+
+  /* The comet bead: the homepage dot — white-hot core → brand orange → dark —
+     riding the head of the trail at top: p·100%. Its tail streaks UP (back the
+     way it came, since progress travels down), exactly like the homepage fall. */
+  .cs-progress-comet {
+    position: absolute;
+    left: 50%;
+    top: calc(var(--p, 0) * 100%);
+    width: 11px;
+    height: 11px;
+    border-radius: 50%;
+    transform: translate(-50%, -50%);
+    background: radial-gradient(
+      circle at 50% 38%,
+      #fff 0%,
+      var(--brand-orange) 55%,
+      color-mix(in srgb, var(--brand-orange) 55%, #000) 100%
+    );
+    box-shadow: 0 0 14px 3px color-mix(in srgb, var(--brand-orange) 55%, transparent);
+  }
+  .cs-progress-comet::after {
+    content: "";
+    position: absolute;
+    left: 50%;
+    bottom: 50%;
+    width: 7px;
+    height: 26px;
+    transform: translateX(-50%);
+    background: linear-gradient(to top, var(--brand-orange), transparent);
+    border-radius: 6px;
+    filter: blur(2px);
+    pointer-events: none;
+  }
+
+  /* A slow, low-amplitude idle glow so the bead reads "alive" like the homepage
+     signal. Motion-only; reduced-motion keeps the calm static glow above. */
+  @media (prefers-reduced-motion: no-preference) {
+    .cs-progress-comet {
+      animation: cs-progress-pulse 3.8s ease-in-out infinite;
+    }
+  }
+  @keyframes cs-progress-pulse {
+    0%,
+    100% {
+      box-shadow: 0 0 12px 2px color-mix(in srgb, var(--brand-orange) 48%, transparent);
+    }
+    50% {
+      box-shadow: 0 0 20px 5px color-mix(in srgb, var(--brand-orange) 68%, transparent);
+    }
+  }
+
+  /* Narrow viewports: tuck the rail flush to the edge so it never crowds the
+     reading column's gutter. */
+  @media (max-width: 600px) {
+    .cs-progress {
+      left: 7px;
+    }
+  }
+</style>
+
+<script>
+  // Drive --p from the reader's position through the article. Mirrors the
+  // homepage comet's scroll-progress math (AboutSignal.astro), measured on
+  // .cs-main so it's decoupled from section count / numbering. rAF-throttled,
+  // passive listeners — no layout thrash on scroll.
+  (() => {
+    const rail = document.querySelector<HTMLElement>("[data-cs-progress]");
+    const main = document.querySelector<HTMLElement>(".cs-main");
+    if (!rail || !main) return;
+
+    const clamp = (v: number, a: number, b: number) => Math.min(b, Math.max(a, v));
+    let ticking = false;
+    let scrollable = false;
+
+    const measure = () => {
+      const span = main.offsetHeight - window.innerHeight;
+      const nowScrollable = span > 4;
+      if (nowScrollable !== scrollable) {
+        scrollable = nowScrollable;
+        rail.setAttribute("data-scrollable", String(scrollable));
+      }
+      if (!scrollable) {
+        rail.style.setProperty("--p", "0");
+        return;
+      }
+      // -rect.top = px of the article scrolled above the viewport top; over its
+      // scrollable span that's 0 at the article top, 1 when its bottom lands.
+      const top = main.getBoundingClientRect().top;
+      rail.style.setProperty("--p", clamp(-top / span, 0, 1).toFixed(4));
+    };
+
+    const onScroll = () => {
+      if (ticking) return;
+      ticking = true;
+      requestAnimationFrame(() => {
+        ticking = false;
+        measure();
+      });
+    };
+
+    measure();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    window.addEventListener("resize", onScroll, { passive: true });
+    // Late content (fonts, images, lazy interactives) can change main's height.
+    window.addEventListener("load", measure);
+  })();
+</script>
