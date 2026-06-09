@@ -58,7 +58,10 @@ function readRichText(prop: unknown): string {
 // Paired with cover.lock in /public/case-studies/[slug]/ + the lock
 // check inside scripts/sync-notion-images.mjs.
 const COVER_OVERRIDE: Record<string, string> = {
-  "the-console": "/case-studies/the-console/cover.svg",
+  // The Lathe ships a hand-built "Finder → understood" cover (raster: macOS
+  // chrome + brand type + the spectral reveal) that previews what the case
+  // study is, not the generated waveform SVG (kept on disk, now superseded).
+  "the-console": "/case-studies/the-console/cover.webp",
   // Momence's Notion cover carries a "momence" wordmark that collides with the
   // card's overlaid title; this hand-built SVG (the reshuffling profile) is clean.
   "momence": "/case-studies/momence/cover.svg",

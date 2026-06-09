@@ -1,22 +1,15 @@
 ---
-// THE INTAKE — §02. The reader performs the transformation.
+// THE KILN — §02. One physical console: a single backplate with three modules
+// bolted to it — a VOICE MEMOS handheld (the Finder is its screen), the KILN
+// engine beneath it (the 3D chromatic control), and the AUDIODEX terminal to the
+// right — wired together by conduit traces. Press the kiln: the source-conduit
+// lights, the memos scan, energy runs the trace into a CHARGE CELL that fills,
+// the cell discharges down the trace into the terminal, and its screen populates
+// with the forged record. Each file forges its own card.
 //
-// A dead voice memo (a name + a date in Finder) becomes a record the catalog
-// UNDERSTANDS. Framed as a real machine module: SOURCE (Finder) → READER (a
-// scanner + one solid actuator) → ENTRY (a faithful BucketCard). Pick one of
-// three memos, press RUN: a beam scans the whole Finder, the reader spins up,
-// and the entry resolves into the output bay. Each file writes its own record.
-//
-// STABLE BY DESIGN: the bays are top-aligned (align-items:start) and the output
-// bay reserves its height, so the RUN actuator never moves whether a card is
-// present or not — it reads as a fixed control on a fixed panel.
-//
-//   idle    → SOURCE + READER, OUTPUT bay empty. "select a file."
-//   running → scan sweep + reader spins up; the actuator ring fills.
-//   done    → the entry sits in the OUTPUT bay, fully interactive.
-//
-// Reduced-motion: press renders the card at once. The running→done flip is one
-// setTimeout (rAF throttles headless, atlas gotcha #6).
+// Desktop-first per direction: the console is a fixed-px object (so the conduits
+// stay registered to the modules) and scales as one unit on smaller screens.
+// running→done is one setTimeout (rAF throttles headless, atlas gotcha #6).
 
 const musicBars = Array.from({ length: 84 }, (_, i) => {
   const lull = 0.2 + 0.12 * Math.sin(i * 0.16);
@@ -109,134 +102,188 @@ const RECORDS: Record<string, Rec> = {
   },
 };
 const ORDER = ["46", "47", "48"];
-const SCOPE = Array.from({ length: 22 }, (_, i) => i);
+
+const FORGE_W = Array.from({ length: 23 }, (_, i) => {
+  const center = 1 - Math.abs(i - 11) / 14;
+  const v = (0.32 + 0.55 * Math.abs(Math.sin(i * 0.7))) * (0.45 + 0.55 * center);
+  return Math.max(0.14, Math.min(1, v));
+});
+const fx = (i: number) => 84 + (i * 72) / (FORGE_W.length - 1);
 ---
 
-<section class="ft" data-ft data-state="idle" data-file={DEFAULT_FILE} aria-label="Turn a voice memo into an AudioDex record">
-  <!-- module header -->
-  <div class="ft-head">
-    <span class="ft-leds" aria-hidden="true"><i></i><i></i><i></i></span>
-    <span class="ft-head-title"><span class="ft-adx">AudioDex</span> · intake</span>
-    <span class="ft-readout" data-ft-readout>ready</span>
-  </div>
+<section class="ft" data-ft data-state="idle" data-file={DEFAULT_FILE} aria-label="Fire a voice memo through the kiln into an AudioDex record">
+  <div class="ft-stage">
+    <div class="ft-console">
+      <!-- chassis decoration -->
+      <span class="ft-chassis-brand" aria-hidden="true">AUDIODEX · INTAKE</span>
+      <span class="ft-chassis-serial" aria-hidden="true">MK·I — THE LATHE</span>
+      <span class="ft-chassis-vents" aria-hidden="true"></span>
+      <span class="ft-bolt ft-bolt-tl" aria-hidden="true"></span><span class="ft-bolt ft-bolt-tr" aria-hidden="true"></span>
+      <span class="ft-bolt ft-bolt-bl" aria-hidden="true"></span><span class="ft-bolt ft-bolt-br" aria-hidden="true"></span>
 
-  <div class="ft-bays">
-    <!-- ── SOURCE · the Finder (selectable) ── -->
-    <div class="ft-bay ft-bay-source">
-      <span class="ft-bay-label">Source</span>
-      <div class="ft-finder">
-        <div class="ft-finder-bar">
-          <span class="ft-tl" aria-hidden="true"><i></i><i></i><i></i></span>
-          <span class="ft-finder-folder">Voice Memos</span>
-          <span class="ft-finder-view" aria-hidden="true">
-            <svg viewBox="0 0 14 11" width="13" height="10"><g fill="none" stroke="currentColor" stroke-width="1.1" stroke-linecap="round"><path d="M1 1.5h2M5 1.5h8M1 5.5h2M5 5.5h8M1 9.5h2M5 9.5h8"/></g></svg>
-          </span>
-        </div>
-        <div class="ft-finder-cols"><span class="ft-col-name">Name <i aria-hidden="true">▲</i></span><span class="ft-col-date">Date Modified</span></div>
-        <ul class="ft-finder-list" role="listbox" aria-label="Pick a voice memo to run">
-          {FILES.map((f) => (
-            <li>
-              <button type="button" class="ft-frow" data-ft-pick={f.id} role="option" aria-selected={f.id === DEFAULT_FILE ? "true" : "false"}>
-                <span class="ft-fname">
-                  <svg class="ft-fic" viewBox="0 0 14 14" width="13" height="13" aria-hidden="true"><rect x="0.6" y="0.6" width="12.8" height="12.8" rx="3" fill="currentColor" opacity="0.16"/><path d="M4 9.5V5.2l5-1.1v4.1" fill="none" stroke="currentColor" stroke-width="1.1" stroke-linecap="round"/><circle cx="3.4" cy="9.6" r="1.2" fill="currentColor"/><circle cx="8.4" cy="8.2" r="1.2" fill="currentColor"/></svg>
-                  {f.name}
-                </span>
-                <span class="ft-fdate">{f.date}</span>
-              </button>
-            </li>
-          ))}
-        </ul>
-        <div class="ft-scan" aria-hidden="true"></div>
+      <!-- conduit traces + charge cell, registered to the module positions -->
+      <svg class="ft-traces" viewBox="0 0 1160 660" aria-hidden="true">
+        <g class="ft-trace-base" fill="none" stroke="rgba(120,170,220,0.16)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M238 332 L238 314" />
+          <path d="M430 168 H470 L492 190 V338 L512 358 H516" />
+          <path d="M580 358 H628" />
+        </g>
+        <g class="ft-trace-flow" fill="none" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+          <path class="ft-flow ft-flow-power" d="M238 332 L238 314" />
+          <path class="ft-flow ft-flow-charge" d="M430 168 H470 L492 190 V338 L512 358 H516" />
+          <path class="ft-flow ft-flow-dis" d="M580 358 H628" />
+        </g>
+        <defs>
+          <linearGradient id="ftRainbow" x1="0" y1="0" x2="1" y2="0">
+            <stop offset="0" stop-color="#19e0ff" /><stop offset="0.38" stop-color="#7b5cff" /><stop offset="0.7" stop-color="#ff2d8b" /><stop offset="1" stop-color="#ffd23d" />
+          </linearGradient>
+        </defs>
+      </svg>
+
+      <!-- the charge cell · a glass diode in a socket -->
+      <div class="ft-cell" aria-hidden="true">
+        <svg class="ft-cell-ring" viewBox="0 0 70 70">
+          <circle cx="35" cy="35" r="30" fill="#0a0f18" stroke="rgba(120,170,220,0.32)" stroke-width="1.5" />
+          <circle class="ft-cellr-fill" cx="35" cy="35" r="30" fill="none" stroke="var(--brand-cyan)" stroke-width="3.5" stroke-linecap="round" transform="rotate(-90 35 35)" />
+        </svg>
+        <span class="ft-cell-rainbow"></span>
+        <span class="ft-cell-diode"><span class="ft-cell-diode-core"></span><span class="ft-cell-diode-spec"></span></span>
       </div>
-      <p class="ft-source-foot">A name and a date. Everything your Mac can tell you.</p>
-    </div>
 
-    <!-- ── READER · the scanner + the one solid control ── -->
-    <div class="ft-bay ft-bay-reader">
-      <span class="ft-bay-label">Reader</span>
-      <div class="ft-reader">
-        <div class="ft-scope" aria-hidden="true">
-          {SCOPE.map((i) => <span class="ft-scope-bar" style={`--i:${i}`}></span>)}
+      <!-- ── VOICE MEMOS handheld ── -->
+      <div class="dev ft-mod ft-source-dev">
+        <div class="dev-top">
+          <span class="dev-led dev-led-cyan" aria-hidden="true"></span>
+          <span class="dev-brand">Voice Memos</span>
+          <span class="dev-port" aria-hidden="true"></span>
         </div>
-        <button type="button" class="ft-run" data-ft-fire aria-describedby="ft-run-note">
-          <svg class="ft-run-ring" viewBox="0 0 52 52" aria-hidden="true">
-            <circle class="ft-run-track" cx="26" cy="26" r="23" />
-            <circle class="ft-run-prog" cx="26" cy="26" r="23" />
+        <div class="dev-screen">
+          <div class="ft-finder">
+            <div class="ft-finder-bar">
+              <span class="ft-tl" aria-hidden="true"><i></i><i></i><i></i></span>
+              <span class="ft-finder-folder">Voice Memos</span>
+              <span class="ft-finder-view" aria-hidden="true">
+                <svg viewBox="0 0 14 11" width="13" height="10"><g fill="none" stroke="currentColor" stroke-width="1.1" stroke-linecap="round"><path d="M1 1.5h2M5 1.5h8M1 5.5h2M5 5.5h8M1 9.5h2M5 9.5h8"/></g></svg>
+              </span>
+            </div>
+            <div class="ft-finder-cols"><span class="ft-col-name">Name <i aria-hidden="true">▲</i></span><span class="ft-col-date">Date Modified</span></div>
+            <ul class="ft-finder-list" role="listbox" aria-label="Pick a voice memo to fire">
+              {FILES.map((f) => (
+                <li>
+                  <button type="button" class="ft-frow" data-ft-pick={f.id} role="option" aria-selected={f.id === DEFAULT_FILE ? "true" : "false"}>
+                    <span class="ft-fname">
+                      <svg class="ft-fic" viewBox="0 0 14 14" width="13" height="13" aria-hidden="true"><rect x="0.6" y="0.6" width="12.8" height="12.8" rx="3" fill="currentColor" opacity="0.16"/><path d="M4 9.5V5.2l5-1.1v4.1" fill="none" stroke="currentColor" stroke-width="1.1" stroke-linecap="round"/><circle cx="3.4" cy="9.6" r="1.2" fill="currentColor"/><circle cx="8.4" cy="8.2" r="1.2" fill="currentColor"/></svg>
+                      {f.name}
+                    </span>
+                    <span class="ft-fdate">{f.date}</span>
+                  </button>
+                </li>
+              ))}
+            </ul>
+            <div class="ft-scan" aria-hidden="true"></div>
+          </div>
+        </div>
+        <div class="dev-foot"><span class="dev-grille" aria-hidden="true"></span><span class="dev-tag">SRC-01 · how the Mac sees it</span></div>
+      </div>
+
+      <!-- ── KILN engine (the control) ── -->
+      <button type="button" class="ft-mod ft-forge" data-ft-fire aria-describedby="ft-forge-note">
+        <span class="ft-forge-dome" aria-hidden="true">
+          <span class="ft-forge-body"></span>
+          <span class="ft-forge-iris"></span>
+          <svg class="ft-forge-svg" viewBox="0 0 240 240">
+            <g class="ft-ticks" stroke="rgba(120,210,255,0.55)" stroke-width="1.3">
+              {Array.from({ length: 48 }, (_, i) => {
+                const a = (i / 48) * Math.PI * 2;
+                const r1 = i % 4 === 0 ? 99 : 103;
+                const x1 = 120 + Math.cos(a) * r1, y1 = 120 + Math.sin(a) * r1;
+                const x2 = 120 + Math.cos(a) * 111, y2 = 120 + Math.sin(a) * 111;
+                return <line x1={x1} y1={y1} x2={x2} y2={y2} opacity={i % 4 === 0 ? 0.7 : 0.28} />;
+              })}
+            </g>
+            <circle class="ft-charge" cx="120" cy="120" r="114" fill="none" stroke="var(--brand-cyan)" stroke-width="2.5" stroke-linecap="round" transform="rotate(-90 120 120)" />
+            <circle class="ft-pulse" cx="120" cy="120" r="44" fill="none" stroke="rgba(25,224,255,0.7)" stroke-width="1.5" style="--pd:0s" />
+            <circle class="ft-pulse" cx="120" cy="120" r="44" fill="none" stroke="rgba(123,92,255,0.45)" stroke-width="1.5" style="--pd:0.55s" />
+            <g class="ft-arcs" stroke="#dffaff" stroke-width="1.4" fill="none" stroke-linecap="round">
+              <path class="ft-arc" d="M120 120 L142 98 L134 112 L156 96" style="--ad:0s" />
+              <path class="ft-arc" d="M120 120 L98 140 L110 130 L88 148" style="--ad:0.45s" />
+            </g>
+            <g class="ft-wave">
+              {FORGE_W.map((h, i) => (
+                <rect class="ft-wbar" x={fx(i) - 1.3} y={120 - (h * 50) / 2} width="2.6" height={h * 50} rx="1.3" style={`--i:${i}`} />
+              ))}
+            </g>
+            <circle class="ft-core" cx="120" cy="120" r="26" fill="url(#ftCore)" />
+            <defs><radialGradient id="ftCore" cx="50%" cy="50%" r="50%"><stop offset="0" stop-color="#eaffff" /><stop offset="40%" stop-color="#19e0ff" /><stop offset="100%" stop-color="#0a3b52" stop-opacity="0" /></radialGradient></defs>
           </svg>
-          <span class="ft-run-face">
-            <span class="ft-run-glyph" aria-hidden="true"></span>
-            <span class="ft-run-label" data-ft-runlabel>Run</span>
-          </span>
-        </button>
-        <p class="ft-run-status" data-ft-status>reads transcript, names it, stamps BPM + key</p>
-      </div>
-      <p id="ft-run-note" class="ft-sr">Run the reader on the selected voice memo to write its catalog entry.</p>
-    </div>
+          <span class="ft-forge-glass"></span>
+          <span class="ft-forge-cap"><span class="ft-forge-word" data-ft-word>Fire the kiln</span></span>
+        </span>
+      </button>
+      <p id="ft-forge-note" class="ft-sr">Fire the kiln on the selected voice memo to forge its catalog entry.</p>
 
-    <!-- ── ENTRY · the output bay (reserved height → nothing reflows) ── -->
-    <div class="ft-bay ft-bay-output">
-      <span class="ft-bay-label">Entry</span>
-      <div class="ft-platen" data-ft-platen aria-live="polite">
-        <div class="ft-platen-empty" data-ft-empty>
-          <span class="ft-empty-mark" aria-hidden="true"></span>
-          awaiting a file
+      <!-- ── AUDIODEX terminal ── -->
+      <div class="dev ft-mod ft-out-dev" data-ft-platen>
+        <div class="dev-top">
+          <span class="dev-led dev-led-amber" aria-hidden="true"></span>
+          <span class="dev-brand"><span class="ft-adx">AudioDex</span></span>
+          <span class="dev-readout" data-ft-readout>standby</span>
         </div>
+        <div class="dev-screen ft-screen">
+          <div class="ft-standby" data-ft-empty aria-hidden="true"><span class="ft-standby-mark"></span>awaiting signal</div>
+          <div class="ft-screen-wake" aria-hidden="true"></div>
 
-        {ORDER.map((id) => {
-          const r = RECORDS[id];
-          return (
-            <article class="ft-card" data-rec={id} data-kind={r.kind} data-open="true" aria-label={`${r.title} — AudioDex ${r.tier} entry`}>
-              <header class="ft-card-head">
-                <span class:list={["ft-tier", `ft-tier-${r.kind}`]}>{r.tier}</span>
-                <span class="ft-title">{r.title}</span>
-                {r.keeper && <span class="ft-keeper">{r.keeper}</span>}
-              </header>
-
-              <div class="ft-wave-row">
-                <span class="ft-duration" aria-label="Length">{r.duration}</span>
-                <div class="ft-wave">
-                  {r.bars.map((h, i) => <span class="ft-bar" style={`--h:${h}%; --i:${i}`}></span>)}
-                </div>
-              </div>
-
-              <button type="button" class="ft-date" data-ft-cardtoggle aria-expanded="true" aria-label="Collapse or expand this entry">
-                <span class="ft-date-rel">{r.rel}</span><span class="ft-date-bracket"> [</span><span class="ft-date-stamped">{r.stamped}</span><span class="ft-date-bracket">]</span><span class="ft-date-sep"> · </span><span class="ft-date-days">{r.days}</span><span class="ft-date-chev" aria-hidden="true">▾</span>
-              </button>
-
-              <div class="ft-body">
-                <div class="ft-body-inner">
-                  <div class="ft-summary">
-                    <span class="ft-line-label">Summary</span>
-                    <p>{r.summary.map((s) => (s.b ? <b>{s.b}</b> : s.t))}</p>
+          {ORDER.map((id) => {
+            const r = RECORDS[id];
+            return (
+              <article class="ft-card" data-rec={id} data-kind={r.kind} data-open="true" aria-label={`${r.title} — AudioDex ${r.tier} entry`}>
+                <header class="ft-card-head">
+                  <span class:list={["ft-tier", `ft-tier-${r.kind}`]}>{r.tier}</span>
+                  <span class="ft-title">{r.title}</span>
+                  {r.keeper && <span class="ft-keeper">{r.keeper}</span>}
+                </header>
+                <div class="ft-wave-row">
+                  <span class="ft-duration" aria-label="Length">{r.duration}</span>
+                  <div class="ft-wave-card">
+                    {r.bars.map((h, i) => <span class="ft-bar" style={`--h:${h}%; --i:${i}`}></span>)}
                   </div>
-
-                  <div class="ft-tx" data-ft-tx data-open="false">
-                    <button type="button" class="ft-tx-toggle" data-ft-txtoggle aria-expanded="false">
-                      {r.txLabel}<em class="ft-wordcount">{r.txCount}</em><span class="ft-tx-chev" aria-hidden="true">▾</span>
-                    </button>
-                    <div class="ft-tx-body">
-                      <div class="ft-tx-scroll">
-                        {r.tx.map((seg) => (
-                          <p class="ft-tx-seg"><span class="ft-tx-time">{seg.t}</span><span>{seg.s}{seg.dim && <span class="ft-dim">{seg.dim}</span>}{seg.hl && <span class="ft-hl">{seg.hl}</span>}{seg.after}</span></p>
-                        ))}
+                </div>
+                <button type="button" class="ft-date" data-ft-cardtoggle aria-expanded="true" aria-label="Collapse or expand this entry">
+                  <span class="ft-date-rel">{r.rel}</span><span class="ft-date-bracket"> [</span><span class="ft-date-stamped">{r.stamped}</span><span class="ft-date-bracket">]</span><span class="ft-date-sep"> · </span><span class="ft-date-days">{r.days}</span><span class="ft-date-chev" aria-hidden="true">▾</span>
+                </button>
+                <div class="ft-body">
+                  <div class="ft-body-inner">
+                    <div class="ft-summary">
+                      <span class="ft-line-label">Summary</span>
+                      <p>{r.summary.map((s) => (s.b ? <b>{s.b}</b> : s.t))}</p>
+                    </div>
+                    <div class="ft-tx" data-ft-tx data-open="false">
+                      <button type="button" class="ft-tx-toggle" data-ft-txtoggle aria-expanded="false">
+                        {r.txLabel}<em class="ft-wordcount">{r.txCount}</em><span class="ft-tx-chev" aria-hidden="true">▾</span>
+                      </button>
+                      <div class="ft-tx-body">
+                        <div class="ft-tx-scroll">
+                          {r.tx.map((seg) => (
+                            <p class="ft-tx-seg"><span class="ft-tx-time">{seg.t}</span><span>{seg.s}{seg.dim && <span class="ft-dim">{seg.dim}</span>}{seg.hl && <span class="ft-hl">{seg.hl}</span>}{seg.after}</span></p>
+                          ))}
+                        </div>
                       </div>
                     </div>
-                  </div>
-
-                  <div class="ft-tags">
-                    {r.tags.map((t) => <span class="ft-tag">{t}</span>)}
-                  </div>
-
-                  <div class="ft-actions">
-                    <button type="button" class="ft-act"><span class="ft-act-ic" aria-hidden="true">✂</span>rip the keeper</button>
-                    <button type="button" class="ft-act ft-act-hot"><span class="ft-act-ic" aria-hidden="true">🐢</span>send to Richard</button>
-                    <button type="button" class="ft-act"><span class="ft-act-ic" aria-hidden="true">▲</span>promote to Live</button>
+                    <div class="ft-tags">
+                      {r.tags.map((t) => <span class="ft-tag">{t}</span>)}
+                    </div>
+                    <div class="ft-actions">
+                      <button type="button" class="ft-act"><span class="ft-act-ic" aria-hidden="true">✂</span>rip the keeper</button>
+                      <button type="button" class="ft-act ft-act-hot"><span class="ft-act-ic" aria-hidden="true">🐢</span>send to Richard</button>
+                      <button type="button" class="ft-act"><span class="ft-act-ic" aria-hidden="true">▲</span>promote to Live</button>
+                    </div>
                   </div>
                 </div>
-              </div>
-            </article>
-          );
-        })}
+              </article>
+            );
+          })}
+        </div>
+        <div class="dev-foot"><span class="dev-grille" aria-hidden="true"></span><span class="dev-tag">DEX-01 · what the catalog understands</span></div>
       </div>
     </div>
   </div>
@@ -245,36 +292,32 @@ const SCOPE = Array.from({ length: 22 }, (_, i) => i);
 <script>
   document.querySelectorAll<HTMLElement>("[data-ft]").forEach((root) => {
     const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const word = root.querySelector<HTMLElement>("[data-ft-word]");
     const readout = root.querySelector<HTMLElement>("[data-ft-readout]");
-    const runLabel = root.querySelector<HTMLElement>("[data-ft-runlabel]");
     const fire = root.querySelector<HTMLButtonElement>("[data-ft-fire]");
     const picks = root.querySelectorAll<HTMLButtonElement>("[data-ft-pick]");
-    const READOUT: Record<string, string> = { idle: "ready", running: "reading…", done: "entry written" };
+    const READOUT: Record<string, string> = { idle: "standby", running: "charging…", done: "online" };
     let timer = 0;
 
     const sync = () => {
       const st = root.dataset.state || "idle";
-      if (readout) readout.textContent = READOUT[st] ?? "ready";
-      if (runLabel) runLabel.textContent = st === "running" ? "Reading" : st === "done" ? "Again" : "Run";
+      if (word) word.textContent = st === "running" ? "Firing…" : st === "done" ? "Fire again" : "Fire the kiln";
+      if (readout) readout.textContent = READOUT[st] ?? "standby";
     };
-
     const select = (id: string) => {
-      const valid = ["46", "47", "48"].includes(id);
-      if (!valid) return;
+      if (!["46", "47", "48"].includes(id)) return;
       root.dataset.file = id;
       picks.forEach((p) => p.setAttribute("aria-selected", String(p.dataset.ftPick === id)));
       if (root.dataset.state === "done") { root.dataset.state = "idle"; sync(); }
     };
-
     const run = () => {
       if (root.dataset.state === "running") return;
       if (root.dataset.state === "done") { root.dataset.state = "idle"; sync(); return; }
       if (reduce) { root.dataset.state = "done"; sync(); return; }
       root.dataset.state = "running"; sync();
       window.clearTimeout(timer);
-      timer = window.setTimeout(() => { root.dataset.state = "done"; sync(); }, 2050);
+      timer = window.setTimeout(() => { root.dataset.state = "done"; sync(); }, 2400);
     };
-
     picks.forEach((p) => p.addEventListener("click", () => select(p.dataset.ftPick || "")));
     fire?.addEventListener("click", run);
 
@@ -293,61 +336,115 @@ const SCOPE = Array.from({ length: 22 }, (_, i) => i);
         txToggle.setAttribute("aria-expanded", String(!open));
       });
     });
-
     sync();
   });
 </script>
 
 <style>
-  /* ── the module panel ── */
-  .ft {
-    position: relative;
-    border: 1px solid rgba(245, 241, 232, 0.12);
-    border-radius: 14px;
-    background:
-      radial-gradient(140% 100% at 50% -10%, rgba(14, 196, 252, 0.05), transparent 60%),
-      linear-gradient(180deg, rgba(17, 15, 24, 0.7), rgba(10, 9, 15, 0.72));
-    box-shadow: 0 30px 80px -50px rgba(0, 0, 0, 0.9);
-    color: #f5f1e8;
-    overflow: hidden;
-  }
+  .ft { position: relative; width: 100%; color: #f5f1e8; overflow: hidden; isolation: isolate;
+    min-height: clamp(620px, 88vh, 880px); display: flex; align-items: center; justify-content: center;
+    padding: clamp(20px, 4vh, 44px) clamp(16px, 4vw, 56px);
+    background: radial-gradient(70% 60% at 50% 50%, rgba(14, 196, 252, 0.05), transparent 75%); }
   .ft-sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+  .ft-stage { display: flex; align-items: center; justify-content: center; }
 
-  .ft-head {
-    display: flex; align-items: center; gap: 12px;
-    padding: 11px 18px; border-bottom: 1px solid rgba(245, 241, 232, 0.08);
-    background: rgba(245, 241, 232, 0.015);
+  /* ── the unifying console (one physical object) ── */
+  .ft-console {
+    position: relative; width: 1160px; height: 660px; flex: 0 0 auto; border-radius: 30px;
+    background:
+      radial-gradient(80% 70% at 50% 30%, rgba(36, 44, 58, 0.6), transparent 70%),
+      repeating-linear-gradient(98deg, rgba(255, 255, 255, 0.012) 0 2px, transparent 2px 5px),
+      linear-gradient(162deg, #2b313d 0%, #181c25 46%, #0f1219 100%);
+    border: 1px solid rgba(0, 0, 0, 0.6);
+    box-shadow: 0 60px 110px -44px rgba(0, 0, 0, 0.92), inset 0 2px 0 rgba(255, 255, 255, 0.14), inset 0 -5px 12px rgba(0, 0, 0, 0.6), inset 0 0 0 1px rgba(120, 160, 210, 0.05);
   }
-  .ft-leds { display: inline-flex; gap: 6px; }
-  .ft-leds i { width: 7px; height: 7px; border-radius: 50%; display: block; background: rgba(245, 241, 232, 0.18); }
-  .ft-leds i:nth-child(1) { background: var(--brand-cyan); box-shadow: 0 0 7px var(--brand-cyan); }
-  .ft-head-title { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 11px; letter-spacing: 0.18em; text-transform: uppercase; color: rgba(245, 241, 232, 0.6); }
-  .ft-adx { color: var(--brand-cyan); font-weight: 700; }
-  .ft-readout {
-    margin-left: auto; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 10px;
-    letter-spacing: 0.2em; text-transform: uppercase; color: rgba(245, 241, 232, 0.5);
-    border: 1px solid rgba(245, 241, 232, 0.14); border-radius: 4px; padding: 3px 9px;
+  .ft-console::before { /* inner recessed bezel */
+    content: ""; position: absolute; inset: 14px; border-radius: 20px; pointer-events: none;
+    box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.5), inset 0 2px 6px rgba(0, 0, 0, 0.45), inset 0 -1px 0 rgba(255, 255, 255, 0.05);
   }
-  .ft[data-state="running"] .ft-readout { color: var(--brand-cyan); border-color: rgba(14, 196, 252, 0.45); }
-  .ft[data-state="done"] .ft-readout { color: var(--brand-green); border-color: rgba(0, 255, 77, 0.4); }
+  @media (max-width: 1240px) { .ft-console { transform: scale(0.92); } }
+  @media (max-width: 1080px) { .ft-console { transform: scale(0.8); } }
+  @media (max-width: 920px) { .ft-console { transform: scale(0.66); } }
+  @media (max-width: 760px) { .ft-console { transform: scale(0.52); } }
 
-  /* ── bays: top-aligned so nothing recentres when the entry appears ── */
-  .ft-bays {
-    display: grid;
-    grid-template-columns: minmax(0, 0.92fr) clamp(150px, 17vw, 188px) minmax(0, 1.16fr);
-    align-items: start;
-    gap: 22px;
-    padding: 22px;
-  }
-  @media (max-width: 900px) { .ft-bays { grid-template-columns: 1fr; gap: 20px; } }
-  .ft-bay { min-width: 0; display: flex; flex-direction: column; gap: 12px; }
-  .ft-bay-label {
-    font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 9px; font-weight: 700;
-    letter-spacing: 0.26em; text-transform: uppercase; color: rgba(245, 241, 232, 0.34);
-  }
+  .ft-chassis-brand { position: absolute; left: 30px; bottom: 18px; font-family: "Space Grotesk Variable", "Space Grotesk", sans-serif; font-weight: 700; font-size: 12px; letter-spacing: 0.34em; text-transform: uppercase; color: rgba(245, 241, 232, 0.34); }
+  .ft-chassis-serial { position: absolute; right: 34px; bottom: 19px; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 9px; letter-spacing: 0.22em; text-transform: uppercase; color: rgba(245, 241, 232, 0.24); }
+  .ft-chassis-vents { position: absolute; left: 50%; bottom: 16px; transform: translateX(-50%); width: 120px; height: 12px; border-radius: 3px; background: repeating-linear-gradient(90deg, rgba(0, 0, 0, 0.4) 0 2px, rgba(245, 241, 232, 0.06) 2px 5px); opacity: 0.6; }
+  .ft-bolt { position: absolute; width: 11px; height: 11px; border-radius: 50%; background: radial-gradient(circle at 38% 32%, #535a67, #14171d); box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.55), 0 1px 0 rgba(255, 255, 255, 0.06); }
+  .ft-bolt::after { content: ""; position: absolute; inset: 3px; border-top: 1px solid rgba(0, 0, 0, 0.5); transform: rotate(40deg); }
+  .ft-bolt-tl { top: 20px; left: 20px; } .ft-bolt-tr { top: 20px; right: 20px; } .ft-bolt-bl { bottom: 20px; left: 20px; } .ft-bolt-br { bottom: 20px; right: 20px; }
 
-  /* ── SOURCE · Finder ── */
-  .ft-finder { position: relative; border-radius: 9px; overflow: hidden; border: 1px solid rgba(0, 0, 0, 0.5); background: #1d1d1f; box-shadow: 0 14px 36px -22px rgba(0, 0, 0, 0.7); font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, sans-serif; }
+  /* conduit traces */
+  .ft-traces { position: absolute; inset: 0; width: 100%; height: 100%; z-index: 1; overflow: visible; pointer-events: none; }
+  .ft-flow { stroke: #19e0ff; stroke-dasharray: 1200; stroke-dashoffset: 1200; opacity: 0; filter: drop-shadow(0 0 5px rgba(25, 224, 255, 0.9)); }
+  .ft[data-state="running"] .ft-flow-power { opacity: 1; animation: ft-draw 0.4s linear 0.05s forwards; }
+  .ft[data-state="running"] .ft-flow-charge { opacity: 1; animation: ft-draw 0.95s ease-in-out 0.95s forwards; }
+  .ft[data-state="running"] .ft-flow-dis { opacity: 1; animation: ft-draw 0.4s ease-out 1.92s forwards; }
+  @keyframes ft-draw { from { stroke-dashoffset: 1200; } to { stroke-dashoffset: 0; } }
+  /* the line out to the terminal carries the rainbow the cell peaks at */
+  .ft-flow-dis { stroke: url(#ftRainbow); filter: drop-shadow(0 0 5px rgba(255, 90, 180, 0.7)); }
+
+  /* charge cell · a glass diode seated in a socket */
+  .ft-cell { position: absolute; left: 513px; top: 323px; width: 70px; height: 70px; z-index: 3; display: grid; place-items: center; }
+  .ft-cell-ring { position: absolute; inset: 0; width: 100%; height: 100%; }
+  .ft-cellr-fill { stroke-dasharray: 188; stroke-dashoffset: 188; opacity: 0; }
+  .ft-cell-rainbow { position: absolute; width: 50px; height: 50px; border-radius: 50%; opacity: 0; mix-blend-mode: screen; filter: blur(8px);
+    background: conic-gradient(from 0deg, #19e0ff, #7b5cff, #ff2d8b, #ffd23d, #19e0ff); }
+  .ft-cell-diode { position: relative; width: 25px; height: 25px; border-radius: 50%; overflow: hidden; border: 1px solid rgba(180, 230, 255, 0.4);
+    background: radial-gradient(circle at 38% 30%, rgba(255, 255, 255, 0.95), rgba(190, 244, 255, 0.55) 28%, rgba(14, 196, 252, 0.32) 60%, rgba(8, 24, 40, 0.6) 100%);
+    box-shadow: inset 0 0 6px rgba(255, 255, 255, 0.45), inset 0 -3px 5px rgba(0, 0, 0, 0.45), 0 0 12px rgba(14, 196, 252, 0.55); }
+  .ft-cell-diode-core { position: absolute; inset: 28%; border-radius: 50%; background: radial-gradient(circle, #eaffff, #19e0ff 70%); opacity: 0.5; }
+  .ft-cell-diode-spec { position: absolute; top: 13%; left: 22%; width: 32%; height: 24%; border-radius: 50%; background: rgba(255, 255, 255, 0.9); filter: blur(0.4px); }
+  .ft[data-state="running"] .ft-cellr-fill { opacity: 1; animation: ft-cellfill 0.95s ease-out 0.95s forwards; }
+  @keyframes ft-cellfill { from { stroke-dashoffset: 188; } to { stroke-dashoffset: 0; } }
+  .ft[data-state="running"] .ft-cell-diode-core { animation: ft-diodecore 2.4s ease-in forwards; }
+  @keyframes ft-diodecore { 0%, 40% { opacity: 0.4; } 78% { opacity: 1; } 100% { opacity: 0.6; } }
+  .ft[data-state="running"] .ft-cell-diode { animation: ft-diodeglow 2.4s ease-in forwards; }
+  @keyframes ft-diodeglow {
+    0%, 40% { box-shadow: inset 0 0 6px rgba(255, 255, 255, 0.45), inset 0 -3px 5px rgba(0, 0, 0, 0.45), 0 0 12px rgba(14, 196, 252, 0.55); }
+    82% { box-shadow: inset 0 0 9px rgba(255, 255, 255, 0.75), 0 0 24px 5px rgba(123, 92, 255, 0.85); }
+    100% { box-shadow: inset 0 0 6px rgba(255, 255, 255, 0.5), 0 0 12px rgba(14, 196, 252, 0.6); }
+  }
+  .ft[data-state="running"] .ft-cell-rainbow { animation: ft-cellrainbow 2.4s linear forwards; }
+  @keyframes ft-cellrainbow {
+    0%, 70% { opacity: 0; transform: scale(0.5) rotate(0deg); }
+    80% { opacity: 0.95; transform: scale(1.5) rotate(150deg); }
+    90% { opacity: 1; transform: scale(2) rotate(270deg); }
+    100% { opacity: 0; transform: scale(2.7) rotate(380deg); }
+  }
+  .ft[data-state="done"] .ft-cellr-fill { opacity: 1; stroke-dashoffset: 0; stroke: var(--brand-green); }
+
+  /* ── modules mounted on the console ── */
+  .ft-mod { position: absolute; }
+  .dev { border-radius: 18px; padding: 10px 11px 11px;
+    background: linear-gradient(158deg, #3a4150 0%, #1d222c 46%, #0f1219 100%);
+    border: 1px solid rgba(0, 0, 0, 0.6);
+    box-shadow: 0 20px 40px -20px rgba(0, 0, 0, 0.85), inset 0 1.5px 0 rgba(255, 255, 255, 0.16), inset 0 -3px 7px rgba(0, 0, 0, 0.6); }
+  .dev-top { display: flex; align-items: center; gap: 9px; padding: 2px 7px 9px; }
+  .dev-brand { flex: 1; font-family: "Space Grotesk Variable", "Space Grotesk", sans-serif; font-weight: 700; font-size: 12px; letter-spacing: 0.04em; color: rgba(245, 241, 232, 0.62); }
+  .ft-adx { color: var(--brand-cyan); }
+  .dev-led { width: 8px; height: 8px; border-radius: 50%; flex: 0 0 auto; }
+  .dev-led-cyan { background: radial-gradient(circle at 35% 30%, #bff4ff, #0ec4fc 70%); box-shadow: 0 0 8px rgba(14, 196, 252, 0.9), inset 0 0 2px rgba(255, 255, 255, 0.6); }
+  .dev-led-amber { background: radial-gradient(circle at 35% 30%, #ffe6b0, #ffb347 70%); box-shadow: 0 0 8px rgba(255, 179, 71, 0.8); transition: background 200ms ease, box-shadow 200ms ease; }
+  .ft[data-state="running"] .dev-led-amber { background: radial-gradient(circle at 35% 30%, #bff4ff, #0ec4fc 70%); box-shadow: 0 0 10px rgba(14, 196, 252, 0.9); }
+  .ft[data-state="done"] .dev-led-amber { background: radial-gradient(circle at 35% 30%, #d8ffe4, #00ff4d 70%); box-shadow: 0 0 10px rgba(0, 255, 77, 0.8); }
+  .dev-readout, .dev-port { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 9px; letter-spacing: 0.18em; text-transform: uppercase; color: rgba(245, 241, 232, 0.46); border: 1px solid rgba(245, 241, 232, 0.16); border-radius: 4px; padding: 2px 7px; }
+  .ft[data-state="done"] .dev-readout { color: var(--brand-green); border-color: rgba(0, 255, 77, 0.4); }
+  .ft[data-state="running"] .dev-readout { color: var(--brand-cyan); border-color: rgba(14, 196, 252, 0.4); }
+  .dev-port { padding: 4px 5px; border-style: dashed; opacity: 0.6; }
+  .dev-screen { position: relative; border-radius: 11px; overflow: hidden; background: #07060c; box-shadow: inset 0 3px 11px rgba(0, 0, 0, 0.8), inset 0 0 0 1px rgba(0, 0, 0, 0.7), inset 0 0 0 2px rgba(120, 160, 210, 0.06); }
+  .dev-screen::after { content: ""; position: absolute; inset: 0; pointer-events: none; z-index: 9; background: linear-gradient(135deg, rgba(255, 255, 255, 0.07), transparent 36%); }
+  .dev-foot { display: flex; align-items: center; gap: 10px; padding: 8px 7px 1px; }
+  .dev-grille { flex: 0 0 auto; width: 28px; height: 7px; border-radius: 2px; background: repeating-linear-gradient(90deg, rgba(245, 241, 232, 0.22) 0 1.5px, transparent 1.5px 4px); opacity: 0.55; }
+  .dev-tag { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 8.5px; letter-spacing: 0.16em; text-transform: uppercase; color: rgba(245, 241, 232, 0.32); }
+
+  /* module placements (console coords) */
+  .ft-source-dev { left: 48px; top: 40px; width: 380px; z-index: 2; }
+  .ft-forge { left: 56px; top: 332px; width: 364px; z-index: 2; }
+  .ft-out-dev { left: 624px; top: 62px; width: 488px; z-index: 2; }
+
+  /* SOURCE · Finder */
+  .ft-finder { position: relative; font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, sans-serif; }
   .ft-finder-bar { display: flex; align-items: center; gap: 10px; padding: 7px 12px; background: linear-gradient(180deg, #323234, #2a2a2c); border-bottom: 1px solid rgba(0, 0, 0, 0.45); }
   .ft-tl { display: inline-flex; gap: 6px; }
   .ft-tl i { width: 10px; height: 10px; border-radius: 50%; display: block; }
@@ -356,15 +453,10 @@ const SCOPE = Array.from({ length: 22 }, (_, i) => i);
   .ft-finder-view { margin-left: auto; color: rgba(255, 255, 255, 0.5); display: inline-flex; }
   .ft-finder-cols { display: flex; justify-content: space-between; padding: 6px 14px; background: #252527; border-bottom: 1px solid rgba(0, 0, 0, 0.4); font-size: 11px; color: rgba(255, 255, 255, 0.5); }
   .ft-col-name i { color: rgba(255, 255, 255, 0.7); font-style: normal; font-size: 8px; }
-  .ft-finder-list { list-style: none; margin: 0; padding: 4px; }
+  .ft-finder-list { list-style: none; margin: 0; padding: 5px; background: #1d1d1f; }
   .ft-finder-list li { margin: 0; }
-  .ft-frow {
-    display: flex; justify-content: space-between; align-items: center; gap: 12px; width: 100%;
-    padding: 7px 10px; font-size: 12.5px; color: rgba(255, 255, 255, 0.82);
-    background: transparent; border: 1px solid transparent; border-radius: 5px; cursor: pointer; text-align: left;
-    transition: background 140ms ease, border-color 140ms ease, box-shadow 140ms ease;
-  }
-  .ft-fname { display: inline-flex; align-items: center; gap: 8px; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .ft-frow { display: flex; justify-content: space-between; align-items: center; gap: 12px; width: 100%; padding: 8px 11px; font-size: 12.5px; color: rgba(255, 255, 255, 0.82); background: transparent; border: 1px solid transparent; border-radius: 6px; cursor: pointer; text-align: left; transition: background 140ms ease, border-color 140ms ease, box-shadow 200ms ease; }
+  .ft-fname { display: inline-flex; align-items: center; gap: 9px; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .ft-fic { color: #8aa9c9; flex: 0 0 auto; }
   .ft-fdate { color: rgba(255, 255, 255, 0.5); font-size: 11.5px; flex: 0 0 auto; }
   .ft-frow:hover { background: rgba(255, 255, 255, 0.06); border-color: rgba(255, 255, 255, 0.12); }
@@ -372,110 +464,84 @@ const SCOPE = Array.from({ length: 22 }, (_, i) => i);
   .ft-frow[aria-selected="true"] { background: #0a63d6; color: #fff; border-color: #0a63d6; }
   .ft-frow[aria-selected="true"] .ft-fic { color: #cfe0f3; }
   .ft-frow[aria-selected="true"] .ft-fdate { color: rgba(255, 255, 255, 0.82); }
-  .ft-source-foot { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 11px; line-height: 1.5; color: rgba(245, 241, 232, 0.4); margin: 0; }
 
-  .ft-scan {
-    position: absolute; top: 0; bottom: 0; left: 0; width: 38%;
-    background: linear-gradient(90deg, transparent, rgba(14, 196, 252, 0.04) 42%, rgba(25, 224, 255, 0.7) 50%, rgba(14, 196, 252, 0.04) 58%, transparent);
-    mix-blend-mode: screen; opacity: 0; pointer-events: none; z-index: 3; transform: translateX(-110%);
-  }
-  .ft[data-state="running"] .ft-scan { animation: ft-scan 1s cubic-bezier(0.5, 0, 0.5, 1) forwards; }
-  @keyframes ft-scan { 0% { opacity: 0; transform: translateX(-110%); } 12% { opacity: 1; } 88% { opacity: 1; } 100% { opacity: 0; transform: translateX(300%); } }
+  .ft-scan { position: absolute; top: 0; bottom: 0; left: 0; width: 36%; pointer-events: none; opacity: 0; z-index: 5;
+    background: linear-gradient(90deg, transparent, rgba(25, 224, 255, 0.08) 55%, rgba(25, 224, 255, 0.8) 90%, rgba(191, 244, 255, 0.95));
+    border-right: 1.5px solid rgba(191, 244, 255, 0.95); box-shadow: 0 0 22px rgba(25, 224, 255, 0.7);
+    -webkit-mask-image: linear-gradient(90deg, transparent, #000 65%); mask-image: linear-gradient(90deg, transparent, #000 65%); }
+  .ft[data-state="running"] .ft-scan { animation: ft-scan 1s cubic-bezier(0.5, 0, 0.5, 1) 0.35s forwards; }
+  @keyframes ft-scan { 0% { opacity: 0; transform: translateX(-100%); } 14% { opacity: 1; } 86% { opacity: 1; } 100% { opacity: 0; transform: translateX(320%); } }
+  .ft[data-state="running"] .ft-frow[aria-selected="true"] { box-shadow: 0 0 0 1px rgba(25, 224, 255, 0.7), 0 0 22px -4px rgba(25, 224, 255, 0.7); }
 
-  /* ── READER · scope + actuator (fixed, never moves) ── */
-  .ft-bay-reader { align-items: center; }
-  .ft-bay-reader .ft-bay-label { align-self: flex-start; }
-  .ft-reader { display: flex; flex-direction: column; align-items: center; gap: 18px; width: 100%; padding-top: 6px; }
+  /* ── KILN forge ── */
+  .ft-forge { border: 0; padding: 0; background: transparent; cursor: pointer; display: flex; flex-direction: column; align-items: center; }
+  .ft-forge-dome { position: relative; width: 232px; aspect-ratio: 1; display: grid; place-items: center; }
+  .ft-forge-body { position: absolute; inset: 0; border-radius: 50%;
+    background: radial-gradient(132% 132% at 33% 25%, #33425f 0%, #18223a 38%, #0b1120 72%, #070a14 100%);
+    box-shadow: 0 22px 44px -18px rgba(0, 0, 0, 0.85), inset 0 2px 3px rgba(255, 255, 255, 0.2), inset 0 -20px 34px rgba(0, 0, 0, 0.6);
+    border: 1px solid rgba(255, 255, 255, 0.05); }
+  .ft-forge-iris { position: absolute; inset: 3px; border-radius: 50%; mix-blend-mode: screen; opacity: 0.85;
+    background: conic-gradient(from 210deg, #19e0ff, #7b5cff, #ff2d8b, #ffd23d, #19e0ff);
+    -webkit-mask: radial-gradient(circle, transparent 87%, #000 88%); mask: radial-gradient(circle, transparent 87%, #000 88%);
+    animation: ft-iris 14s linear infinite; }
+  @keyframes ft-iris { to { transform: rotate(-360deg); } }
+  .ft-forge-svg { position: relative; width: 100%; height: 100%; overflow: visible; }
+  .ft-forge-glass { position: absolute; inset: 0; border-radius: 50%; pointer-events: none; background: radial-gradient(58% 42% at 34% 22%, rgba(255, 255, 255, 0.3), transparent 60%); }
+  .ft-forge-cap { position: absolute; left: 0; right: 0; bottom: 21%; display: grid; place-items: center; pointer-events: none; }
+  .ft-forge-word { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 11px; font-weight: 700; letter-spacing: 0.22em; text-transform: uppercase; color: #eaffff; text-shadow: 0 0 10px rgba(14, 196, 252, 0.9); }
+  .ft-forge:focus-visible { outline: none; }
+  .ft-forge:focus-visible .ft-forge-body { box-shadow: 0 22px 44px -18px rgba(0,0,0,0.85), 0 0 0 3px rgba(14, 196, 252, 0.5); }
+  .ft-forge:hover .ft-forge-dome { transform: translateY(-1px); }
+  .ft-forge:active .ft-forge-dome { transform: translateY(1px) scale(0.99); }
+  .ft-core { transform-box: fill-box; transform-origin: center; animation: ft-breathe 4s ease-in-out infinite; }
+  @keyframes ft-breathe { 0%, 100% { opacity: 0.55; transform: scale(0.9); } 50% { opacity: 0.78; transform: scale(1); } }
+  .ft-wbar { transform-box: fill-box; transform-origin: center; fill: rgba(120, 210, 255, 0.6); transition: fill 240ms ease; }
+  .ft-forge:hover .ft-wbar { fill: rgba(25, 224, 255, 0.85); }
+  .ft-charge { stroke-dasharray: 716; stroke-dashoffset: 716; opacity: 0; }
+  .ft-pulse { transform-box: fill-box; transform-origin: center; opacity: 0; }
+  .ft-arc { opacity: 0; filter: drop-shadow(0 0 4px rgba(25, 224, 255, 0.9)); }
+  .ft[data-state="running"] .ft-forge-iris { animation: ft-iris 3s linear infinite; opacity: 1; }
+  .ft[data-state="running"] .ft-core { animation: ft-blaze 2.4s ease-in-out forwards; }
+  @keyframes ft-blaze { 0% { opacity: 0.6; transform: scale(0.9); } 26% { opacity: 1; transform: scale(1.5); } 60% { opacity: 1; transform: scale(1.65); } 100% { opacity: 0.95; transform: scale(1.2); } }
+  .ft[data-state="running"] .ft-wbar { animation: ft-wbar 0.5s ease-in-out infinite alternate; animation-delay: calc(var(--i) * 16ms); fill: #19e0ff; }
+  @keyframes ft-wbar { from { transform: scaleY(0.45); } to { transform: scaleY(1.75); } }
+  .ft[data-state="running"] .ft-charge { opacity: 1; animation: ft-fcharge 2.2s cubic-bezier(0.4, 0, 0.2, 1) forwards; }
+  @keyframes ft-fcharge { from { stroke-dashoffset: 716; } to { stroke-dashoffset: 0; } }
+  .ft[data-state="running"] .ft-pulse { animation: ft-fpulse 1.4s ease-out infinite; animation-delay: var(--pd); }
+  @keyframes ft-fpulse { 0% { transform: scale(1); opacity: 0; } 15% { opacity: 0.9; } 100% { transform: scale(2.4); opacity: 0; } }
+  .ft[data-state="running"] .ft-arc { animation: ft-arc 0.32s steps(2) infinite; animation-delay: var(--ad); }
+  @keyframes ft-arc { 0%, 100% { opacity: 0; } 40%, 60% { opacity: 0.95; } }
+  .ft[data-state="running"] .ft-ticks { animation: ft-ticks-spin 9s linear infinite; transform-box: fill-box; transform-origin: center; }
+  @keyframes ft-ticks-spin { to { transform: rotate(360deg); } }
+  .ft[data-state="done"] .ft-charge { opacity: 1; stroke-dashoffset: 0; stroke: var(--brand-green); }
+  .ft[data-state="done"] .ft-core { opacity: 0.85; }
+  .ft[data-state="done"] .ft-wbar { fill: rgba(0, 255, 77, 0.42); }
+  .ft[data-state="done"] .ft-forge-word { color: #d8ffe4; text-shadow: 0 0 10px rgba(0, 255, 77, 0.7); }
 
-  .ft-scope {
-    display: flex; align-items: flex-end; justify-content: center; gap: 2px; height: 40px; width: 100%;
-    padding: 0 6px; opacity: 0.7;
-  }
-  .ft-scope-bar {
-    flex: 1 1 0; max-width: 4px; height: 14%; border-radius: 1px;
-    background: rgba(14, 196, 252, 0.35);
-    transition: height 200ms ease, background 200ms ease;
-  }
-  .ft[data-state="running"] .ft-scope-bar { animation: ft-scope 0.85s ease-in-out infinite; animation-delay: calc(var(--i) * 26ms); background: var(--brand-cyan); }
-  @keyframes ft-scope { 0%, 100% { height: 12%; } 50% { height: 86%; } }
-  .ft[data-state="done"] .ft-scope-bar { height: 30%; background: rgba(0, 255, 77, 0.4); }
+  /* ── AUDIODEX terminal ── */
+  .ft-screen { min-height: 470px; }
+  .ft-standby { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 10.5px; letter-spacing: 0.22em; text-transform: uppercase; color: rgba(245, 241, 232, 0.26);
+    background: repeating-linear-gradient(0deg, transparent 0 3px, rgba(120, 160, 210, 0.025) 3px 4px); }
+  .ft-standby-mark { width: 30px; height: 30px; border-radius: 50%; border: 1px solid rgba(14, 196, 252, 0.3); position: relative; }
+  .ft-standby-mark::after { content: ""; position: absolute; inset: 9px; border-radius: 50%; background: rgba(14, 196, 252, 0.2); }
+  .ft[data-state="done"] .ft-standby { display: none; }
+  .ft-screen-wake { position: absolute; inset: 0; z-index: 4; opacity: 0; pointer-events: none; background: radial-gradient(circle at 6% 50%, rgba(234, 255, 255, 0.8), rgba(25, 224, 255, 0.2) 40%, transparent 72%); }
+  .ft[data-state="running"] .ft-screen-wake { animation: ft-wake 2.4s linear forwards; }
+  @keyframes ft-wake { 0%, 80% { opacity: 0; } 86% { opacity: 0.85; } 100% { opacity: 0; } }
 
-  .ft-run {
-    position: relative; width: clamp(80px, 9vw, 96px); height: clamp(80px, 9vw, 96px);
-    border-radius: 50%; border: 0; padding: 0; cursor: pointer; background: transparent;
-    display: grid; place-items: center;
-  }
-  .ft-run-ring { position: absolute; inset: 0; width: 100%; height: 100%; transform: rotate(-90deg); }
-  .ft-run-track { fill: none; stroke: rgba(245, 241, 232, 0.12); stroke-width: 2; }
-  .ft-run-prog {
-    fill: none; stroke: var(--brand-cyan); stroke-width: 2.5; stroke-linecap: round;
-    stroke-dasharray: 144.5; stroke-dashoffset: 144.5;
-  }
-  .ft[data-state="running"] .ft-run-prog { animation: ft-prog 2.05s linear forwards; }
-  @keyframes ft-prog { from { stroke-dashoffset: 144.5; } to { stroke-dashoffset: 0; } }
-  .ft[data-state="done"] .ft-run-prog { stroke-dashoffset: 0; stroke: var(--brand-green); }
-  .ft-run-face {
-    position: relative; width: 76%; height: 76%; border-radius: 50%;
-    background: radial-gradient(circle at 50% 32%, #1a2230, #0c0f16 78%);
-    border: 1px solid rgba(14, 196, 252, 0.28);
-    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px;
-    box-shadow: inset 0 1px 0 rgba(245, 241, 232, 0.08), inset 0 -10px 18px rgba(0, 0, 0, 0.55);
-    transition: transform 110ms ease, box-shadow 160ms ease, border-color 160ms ease;
-  }
-  .ft-run-glyph {
-    width: 0; height: 0; border-top: 6px solid transparent; border-bottom: 6px solid transparent;
-    border-left: 11px solid var(--brand-cyan); margin-left: 3px;
-    filter: drop-shadow(0 0 4px rgba(14, 196, 252, 0.6));
-  }
-  .ft-run-label { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 10px; font-weight: 700; letter-spacing: 0.18em; text-transform: uppercase; color: rgba(245, 241, 232, 0.82); }
-  .ft-run:hover .ft-run-face { border-color: rgba(14, 196, 252, 0.6); box-shadow: inset 0 1px 0 rgba(245, 241, 232, 0.1), 0 0 28px -8px rgba(14, 196, 252, 0.8); }
-  .ft-run:focus-visible { outline: none; }
-  .ft-run:focus-visible .ft-run-face { box-shadow: 0 0 0 3px rgba(14, 196, 252, 0.4); }
-  .ft-run:active .ft-run-face { transform: scale(0.95); }
-  .ft[data-state="running"] .ft-run-glyph { border: 0; width: 9px; height: 9px; border-radius: 1px; background: var(--brand-cyan); margin: 0; animation: ft-run-pulse 0.7s ease-in-out infinite; }
-  @keyframes ft-run-pulse { 0%, 100% { opacity: 0.5; } 50% { opacity: 1; } }
-  .ft[data-state="done"] .ft-run-face { border-color: rgba(0, 255, 77, 0.4); }
-  .ft[data-state="done"] .ft-run-glyph {
-    width: 12px; height: 7px; border: 0; border-left: 2px solid var(--brand-green); border-bottom: 2px solid var(--brand-green);
-    transform: rotate(-45deg); margin: 0 0 3px 0; background: transparent; border-radius: 0;
-    filter: drop-shadow(0 0 4px rgba(0, 255, 77, 0.6));
-  }
-  .ft-run-status {
-    font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 10.5px; line-height: 1.5;
-    color: rgba(245, 241, 232, 0.42); margin: 0; text-align: center; max-width: 22ch;
-  }
-
-  /* ── ENTRY · reserved-height output bay ── */
-  .ft-platen { position: relative; min-height: 320px; display: grid; }
-  .ft-platen-empty {
-    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px;
-    min-height: 320px; border: 1px dashed rgba(245, 241, 232, 0.12); border-radius: 12px;
-    font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 10.5px; letter-spacing: 0.18em;
-    text-transform: uppercase; color: rgba(245, 241, 232, 0.3); text-align: center;
-  }
-  .ft-empty-mark { width: 30px; height: 30px; border-radius: 7px; border: 1px solid rgba(245, 241, 232, 0.18); position: relative; }
-  .ft-empty-mark::after { content: ""; position: absolute; inset: 9px; border-radius: 3px; border: 1px solid rgba(14, 196, 252, 0.3); }
-  .ft[data-state="done"] .ft-platen-empty { display: none; }
-
-  .ft-card { display: none; align-self: start; }
+  .ft-card { display: none; }
   .ft[data-state="done"][data-file="46"] .ft-card[data-rec="46"],
   .ft[data-state="done"][data-file="47"] .ft-card[data-rec="47"],
-  .ft[data-state="done"][data-file="48"] .ft-card[data-rec="48"] {
-    display: block; animation: ft-resolve 460ms cubic-bezier(0.2, 1, 0.32, 1) both;
-  }
-  @keyframes ft-resolve {
-    0% { opacity: 0; transform: translateY(6px); }
-    100% { opacity: 1; transform: none; }
-  }
+  .ft[data-state="done"][data-file="48"] .ft-card[data-rec="48"] { display: block; animation: ft-populate 0.6s cubic-bezier(0.2, 1, 0.32, 1) both; }
+  @keyframes ft-populate { 0% { opacity: 0; transform: scale(0.96); filter: brightness(2.2); } 55% { filter: brightness(1.2); } 100% { opacity: 1; transform: none; filter: none; } }
 
-  .ft-card {
-    position: relative; border: 1.5px solid transparent; border-radius: 12px; padding: 16px 18px 15px;
+  .ft-card { position: relative; border: 1.5px solid transparent; border-radius: 11px; padding: 16px 18px 15px; text-align: left; margin: 11px;
     background:
       radial-gradient(130% 80% at 100% 0%, rgba(255, 110, 33, 0.07), transparent 55%) padding-box,
       linear-gradient(180deg, rgba(18, 16, 26, 0.97), rgba(11, 9, 16, 0.975)) padding-box,
       linear-gradient(135deg, #ff2761 0%, #ff5a3c 52%, #ff6e21 100%) border-box;
-    box-shadow: 0 24px 60px -34px rgba(0, 0, 0, 0.82), 0 0 38px -16px rgba(255, 60, 70, 0.28);
-  }
+    box-shadow: 0 24px 60px -34px rgba(0, 0, 0, 0.82), 0 0 38px -16px rgba(255, 60, 70, 0.28); }
   .ft-card-head { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; flex-wrap: wrap; }
   .ft-tier { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 9.5px; letter-spacing: 0.18em; text-transform: uppercase; border-radius: 3px; padding: 3px 8px; }
   .ft-tier-jam { color: var(--brand-cyan); border: 1px solid rgba(14, 196, 252, 0.4); background: rgba(14, 196, 252, 0.06); }
@@ -483,37 +549,28 @@ const SCOPE = Array.from({ length: 22 }, (_, i) => i);
   .ft-tier-inbox { color: rgba(245, 241, 232, 0.7); border: 1px solid rgba(245, 241, 232, 0.28); background: rgba(245, 241, 232, 0.04); }
   .ft-title { flex: 1; min-width: 12ch; font-family: "Space Grotesk Variable", "Space Grotesk", ui-sans-serif, system-ui, sans-serif; font-weight: 700; font-size: 18px; line-height: 1.15; color: #f8f6ef; letter-spacing: -0.01em; }
   .ft-keeper { flex: 0 0 auto; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 9.5px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: #00ff4d; border: 1px solid rgba(0, 255, 77, 0.4); border-radius: 3px; padding: 2px 7px; background: rgba(0, 255, 77, 0.06); }
-
   .ft-wave-row { display: flex; align-items: center; gap: 12px; min-width: 0; }
   .ft-duration { flex: 0 0 auto; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-style: italic; font-size: 16px; font-weight: 700; color: #ff3b6e; font-feature-settings: "tnum"; line-height: 1; letter-spacing: 0.04em; min-width: 3.6em; text-align: right; text-shadow: 0 0 4px rgba(255, 59, 110, 0.65), 0 0 10px rgba(255, 59, 110, 0.35); }
-  .ft-wave { flex: 1 1 auto; display: flex; align-items: center; gap: 1px; height: 46px; padding: 0 3px; background: #07060c; border-radius: 4px; overflow: hidden; }
+  .ft-wave-card { flex: 1 1 auto; display: flex; align-items: center; gap: 1px; height: 46px; padding: 0 3px; background: #07060c; border-radius: 4px; overflow: hidden; }
   .ft-bar { flex: 1 1 0; height: 8%; align-self: center; border-radius: 1px; background: linear-gradient(180deg, rgba(14, 196, 252, 0.66), rgba(14, 196, 252, 0.24)); transition: height 480ms cubic-bezier(0.22, 1, 0.36, 1); transition-delay: calc(var(--i) * 4ms); }
   .ft-card[data-kind="field"] .ft-bar { background: linear-gradient(180deg, rgba(0, 255, 77, 0.6), rgba(0, 255, 77, 0.2)); }
   .ft-card[data-kind="inbox"] .ft-bar { background: linear-gradient(180deg, rgba(245, 241, 232, 0.5), rgba(245, 241, 232, 0.18)); }
   .ft[data-state="done"] .ft-card .ft-bar { height: var(--h); }
-
   .ft-date { display: inline-flex; align-items: baseline; gap: 2px; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 13px; font-weight: 600; letter-spacing: 0.02em; color: rgba(245, 241, 232, 0.72); line-height: 1; margin: 9px 0 0; padding: 6px 9px 6px 7px; margin-left: -7px; background: transparent; border: 0; border-radius: 4px; cursor: pointer; transition: background 160ms ease, color 160ms ease; }
   .ft-date:hover, .ft-date:focus-visible { background: rgba(14, 196, 252, 0.06); outline: none; }
-  .ft-date-rel { color: #f5f1e8; font-weight: 700; }
-  .ft-date-bracket { color: rgba(245, 241, 232, 0.32); font-weight: 500; }
-  .ft-date-stamped { color: rgba(245, 241, 232, 0.65); font-weight: 500; }
-  .ft-date-sep { color: rgba(245, 241, 232, 0.32); font-weight: 500; }
-  .ft-date-days { color: rgba(245, 241, 232, 0.5); font-weight: 500; font-feature-settings: "tnum"; }
+  .ft-date-rel { color: #f5f1e8; font-weight: 700; } .ft-date-bracket { color: rgba(245, 241, 232, 0.32); } .ft-date-stamped { color: rgba(245, 241, 232, 0.65); } .ft-date-sep { color: rgba(245, 241, 232, 0.32); } .ft-date-days { color: rgba(245, 241, 232, 0.5); font-feature-settings: "tnum"; }
   .ft-date-chev { margin-left: 8px; color: rgba(245, 241, 232, 0.55); font-size: 12px; transition: transform 240ms ease, color 160ms ease; }
   .ft-card[data-open="true"] .ft-date-chev { transform: rotate(180deg); color: var(--brand-cyan); }
-
   .ft-body { display: grid; grid-template-rows: 1fr; transition: grid-template-rows 380ms cubic-bezier(0.4, 0, 0.2, 1); }
   .ft-card[data-open="false"] .ft-body { grid-template-rows: 0fr; }
   .ft-body-inner { overflow: hidden; min-height: 0; padding-top: 12px; }
   .ft-card[data-open="false"] .ft-body-inner { padding-top: 0; }
-
   .ft-summary { margin-bottom: 12px; }
   .ft-line-label { display: flex; align-items: baseline; gap: 8px; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 9px; letter-spacing: 0.16em; text-transform: uppercase; color: rgba(245, 241, 232, 0.42); margin-bottom: 5px; }
   .ft-summary p { margin: 0; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 13.5px; line-height: 1.5; color: rgba(245, 241, 232, 0.92); }
   .ft-summary b { color: var(--brand-cyan); font-weight: 600; }
   .ft-card[data-kind="field"] .ft-summary b { color: var(--brand-green); }
   .ft-card[data-kind="inbox"] .ft-summary b { color: #f5f1e8; }
-
   .ft-tx { margin-bottom: 13px; }
   .ft-tx-toggle { display: inline-flex; align-items: baseline; gap: 6px; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 9px; font-weight: 700; letter-spacing: 0.18em; text-transform: uppercase; color: rgba(14, 196, 252, 0.82); background: transparent; border: 0; padding: 0; cursor: pointer; transition: color 160ms ease; }
   .ft-tx-toggle:hover, .ft-tx-toggle:focus-visible { color: #00ff4d; outline: none; }
@@ -528,13 +585,10 @@ const SCOPE = Array.from({ length: 22 }, (_, i) => i);
   .ft-tx-seg { display: flex; gap: 9px; margin: 0 0 7px; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; line-height: 1.5; color: rgba(245, 241, 232, 0.78); }
   .ft-tx-seg:last-child { margin-bottom: 0; }
   .ft-tx-time { flex: 0 0 auto; color: rgba(0, 255, 77, 0.7); font-feature-settings: "tnum"; }
-  .ft-dim { color: rgba(245, 241, 232, 0.4); }
-  .ft-hl { color: #00ff4d; }
-
+  .ft-dim { color: rgba(245, 241, 232, 0.4); } .ft-hl { color: #00ff4d; }
   .ft-tags { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 14px; }
   .ft-tag { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 10.5px; color: rgba(245, 241, 232, 0.6); border: 1px solid rgba(245, 241, 232, 0.14); border-radius: 20px; padding: 3px 10px; }
   .ft-tag::before { content: "#"; color: rgba(245, 241, 232, 0.32); }
-
   .ft-actions { display: flex; flex-wrap: wrap; gap: 8px; }
   .ft-act { display: inline-flex; align-items: center; gap: 6px; cursor: pointer; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 11.5px; color: rgba(245, 241, 232, 0.8); background: rgba(245, 241, 232, 0.03); border: 1px solid rgba(245, 241, 232, 0.18); border-radius: 5px; padding: 7px 12px; transition: color 150ms ease, border-color 150ms ease, background 150ms ease, transform 100ms ease; }
   .ft-act-ic { font-size: 12px; }
@@ -542,17 +596,10 @@ const SCOPE = Array.from({ length: 22 }, (_, i) => i);
   .ft-act-hot { color: var(--brand-orange); border-color: rgba(255, 110, 33, 0.45); background: rgba(255, 110, 33, 0.06); }
   .ft-act-hot:hover { color: #1a0c06; border-color: transparent; background: linear-gradient(135deg, #ff2761, #ff6e21); }
 
-  @media (max-width: 900px) {
-    .ft-bay-reader { align-items: stretch; }
-    .ft-reader { flex-direction: row; flex-wrap: wrap; justify-content: center; gap: 16px; }
-    .ft-scope { width: auto; flex: 1 1 120px; min-width: 120px; }
-    .ft-run-status { flex-basis: 100%; }
-    .ft-platen, .ft-platen-empty { min-height: 0; }
-  }
-
   @media (prefers-reduced-motion: reduce) {
-    .ft-scan, .ft-scope-bar, .ft-run-prog, .ft-run-glyph, .ft-bar, .ft-card { animation: none !important; transition: none !important; }
-    .ft-scan { display: none; }
+    .ft-scan, .ft-core, .ft-wbar, .ft-charge, .ft-pulse, .ft-arc, .ft-ticks, .ft-forge-iris, .ft-bar, .ft-card, .ft-flow, .ft-cellr-fill, .ft-cell-rainbow, .ft-cell-diode-core, .ft-cell-diode, .ft-screen-wake { animation: none !important; transition: none !important; }
+    .ft-scan, .ft-screen-wake, .ft-cell-rainbow { display: none; }
+    .ft[data-state="done"] .ft-charge, .ft[data-state="done"] .ft-cellr-fill { opacity: 1; stroke-dashoffset: 0; }
     .ft-body, .ft-tx-body { transition: none; }
   }
 </style>

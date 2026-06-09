@@ -1,296 +1,47 @@
 ---
 /**
- * HeroName — "Jonathan Tollefson" where TOLLEFSON is cut from an intense
- * waveform: an accent-coloured mirror-waveform fill with dark grooves showing
- * through the letters (the cut-outs), a static-textured electric border tracing
- * the glyphs + cut-out edges (feTurbulence/feDisplacementMap, no white line),
- * and an organic wave tail trailing off the end. Theme-aware: every colour is
- * derived from --accent / --text, so orange on carbon becomes the red accent on
- * powder/field/honey. The waveform geometry is computed once at build time.
- *
- * Approved direction: ~/Desktop/jt-name-v6 ("good enough for now"). The tail
- * replaces the old hero SoundField as the page's waveform motif.
+ * HeroName — the landing masthead. A tight uppercase architectural stack (the
+ * approved type treatment) with a mono eyebrow above and a role line below. The
+ * instrument rule under the name was removed 2026-06-08 — the site carries ONE
+ * waveform, the expansive about-signal directly below (AboutSignal.astro); a
+ * second wave under the name competed with it. Real text (h1) for a11y + SEO,
+ * fully tokenised so it re-themes.
  */
-const CW = 1500,
-  CH = 560;
-const X = 90,
-  baseY = 470,
-  fontSize = 210;
-const lettersTop = baseY - fontSize * 0.72;
-const lettersBot = baseY + fontSize * 0.04;
-const cy = (lettersTop + lettersBot) / 2;
-const halfH = (lettersBot - lettersTop) / 2;
-const nameW = 1010;
-
-const env = (t: number) =>
-  0.62 +
-  0.36 *
-    (0.5 +
-      0.5 *
-        (Math.sin(t * 11 + 1) * 0.5 +
-          Math.sin(t * 27 + 2) * 0.3 +
-          Math.sin(t * 53 + 0.6) * 0.2));
-
-function fillPath() {
-  const N = 220,
-    top: string[] = [],
-    bot: string[] = [];
-  for (let i = 0; i <= N; i++) {
-    const t = i / N,
-      a = env(t) * halfH,
-      x = X + t * nameW;
-    top.push(`${x.toFixed(1)},${(cy - a).toFixed(1)}`);
-    bot.push(`${x.toFixed(1)},${(cy + a).toFixed(1)}`);
-  }
-  return "M" + top.join(" L") + " L" + bot.reverse().join(" L") + " Z";
-}
-function crest(off: number) {
-  const N = 240;
-  let d = "";
-  for (let i = 0; i <= N; i++) {
-    const t = i / N,
-      v =
-        Math.sin(t * 11 + 1) * 0.5 +
-        Math.sin(t * 27 + 2) * 0.3 +
-        Math.sin(t * 53 + 0.6) * 0.2,
-      x = X + t * nameW,
-      y = cy + off - v * halfH * 0.55;
-    d += (i ? " L" : "M") + `${x.toFixed(1)},${y.toFixed(1)}`;
-  }
-  return d;
-}
-function tail() {
-  const x0 = X + nameW - 30,
-    x1 = CW - 30,
-    N = 200;
-  let d = "";
-  for (let i = 0; i <= N; i++) {
-    const t = i / N,
-      decay = 1 - t * 0.15,
-      v =
-        Math.sin(t * 9) * 0.55 +
-        Math.sin(t * 22 + 1) * 0.3 +
-        Math.sin(t * 41 + 2) * 0.18,
-      x = x0 + t * (x1 - x0),
-      y = cy + v * 70 * decay;
-    d += (i ? " L" : "M") + `${x.toFixed(1)},${y.toFixed(1)}`;
-  }
-  return d;
-}
-
-// A second, UNIQUE waveform feeding in from the LEFT of the name. Starts just
-// left of the "T" and runs far off the page (x = -5200) at a steady amplitude,
-// so at any viewport width it reads as continuing leftward forever: the svg's
-// overflow:visible lets it draw past the viewBox without resizing the name, and
-// the hero's overflow:clip crops it at the screen edge.
-function leftWave() {
-  const x0 = 60,
-    x1 = -5200,
-    N = 1200;
-  let d = "";
-  for (let i = 0; i <= N; i++) {
-    const t = i / N,
-      x = x0 + t * (x1 - x0),
-      // per-pixel phase tuned to the right-hand tail's wiggle wavelength, with
-      // the tail's three-harmonic shape but unique ratios + phases so it reads
-      // as its own waveform. Steady amplitude so it never tapers (looks endless).
-      p = (x0 - x) * 0.023,
-      v =
-        Math.sin(p + 0.4) * 0.55 +
-        Math.sin(p * 2.3 + 1.7) * 0.3 +
-        Math.sin(p * 4.1 + 0.9) * 0.18,
-      y = cy + v * 67;
-    d += (i ? " L" : "M") + `${x.toFixed(1)},${y.toFixed(1)}`;
-  }
-  return d;
-}
-
-const fill = fillPath();
-const tailD = tail();
-const leftD = leftWave();
-
-// Crop the viewBox to the inked area ("Jonathan" top ≈ 254 → letters/tail
-// bottom ≈ 470) so the name fills its box instead of floating with dead space.
-const vbY = 222;
-const vbH = 286;
 ---
 
-<h1 class="hero-name">
-  <span class="sr-only">Jonathan Tollefson</span>
-  <svg
-    class="hn-svg"
-    viewBox={`0 ${vbY} ${CW} ${vbH}`}
-    role="img"
-    aria-hidden="true"
-    preserveAspectRatio="xMinYMid meet"
-  >
-    <defs>
-      <linearGradient id="hn-grad" x1="0" y1="0" x2="0" y2="1">
-        <stop class="hn-g-top" offset="0"></stop>
-        <stop class="hn-g-bot" offset="1"></stop>
-      </linearGradient>
-      <filter id="hn-grain">
-        <feTurbulence
-          type="fractalNoise"
-          baseFrequency="0.8"
-          numOctaves="2"
-          stitchTiles="stitch"
-          result="n"></feTurbulence>
-        <feColorMatrix in="n" type="saturate" values="0"></feColorMatrix>
-        <feComponentTransfer
-          ><feFuncA type="linear" slope="0.5"></feFuncA></feComponentTransfer
-        >
-      </filter>
-      <filter id="hn-static" x="-6%" y="-25%" width="112%" height="150%">
-        <feTurbulence
-          type="turbulence"
-          baseFrequency="0.022 0.06"
-          numOctaves="2"
-          seed="5"
-          result="n"></feTurbulence>
-        <feDisplacementMap
-          in="SourceGraphic"
-          in2="n"
-          scale="11"
-          xChannelSelector="R"
-          yChannelSelector="G"></feDisplacementMap>
-      </filter>
-      <clipPath id="hn-clip">
-        <text
-          x={X}
-          y={baseY}
-          font-family="'Space Grotesk Variable', 'Space Grotesk', sans-serif"
-          font-weight="700"
-          font-size={fontSize}
-          letter-spacing="-9">Tollefson</text
-        >
-      </clipPath>
-    </defs>
-
-    {/* the incoming waveform from the left — drawn first so it reads as feeding
-        into the name; runs off the page edge (overflow:visible + hero clip) */}
-    <path class="hn-leftwave-ghost" d={leftD} fill="none" stroke-width="10" opacity="0.12" stroke-linecap="round"></path>
-    <path class="hn-leftwave" d={leftD} fill="none" stroke-width="2.6" opacity="0.9" stroke-linecap="round"></path>
-
-    <text
-      class="hn-jonathan"
-      x={X + 6}
-      y={lettersTop - 22}
-      font-family="'Space Grotesk Variable', 'Space Grotesk', sans-serif"
-      font-weight="600"
-      font-size="42"
-      letter-spacing="0.5">Jonathan</text
-    >
-
-    <g clip-path="url(#hn-clip)">
-      <rect
-        class="hn-shade"
-        x={X}
-        y={(cy - halfH - 14).toFixed(1)}
-        width={nameW}
-        height={(halfH * 2 + 28).toFixed(1)}></rect>
-      <path class="hn-fill" d={fill}></path>
-      <path class="hn-crest" d={crest(-8)} fill="none" stroke-width="2.6" opacity="0.5"></path>
-      <path class="hn-crest" d={crest(36)} fill="none" stroke-width="1.4" opacity="0.22"></path>
-      <path class="hn-crest" d={crest(-46)} fill="none" stroke-width="1.4" opacity="0.22"></path>
-      <rect
-        x={X}
-        y={cy - halfH}
-        width={nameW}
-        height={halfH * 2}
-        filter="url(#hn-grain)"
-        opacity="0.16"></rect>
-    </g>
-
-    <g filter="url(#hn-static)">
-      <text
-        class="hn-border"
-        x={X}
-        y={baseY}
-        font-family="'Space Grotesk Variable', 'Space Grotesk', sans-serif"
-        font-weight="700"
-        font-size={fontSize}
-        letter-spacing="-9"
-        fill="none"
-        stroke-width="2.4"
-        opacity="0.85">Tollefson</text
-      >
-      <g clip-path="url(#hn-clip)">
-        <path class="hn-border" d={fill} fill="none" stroke-width="1.9" opacity="0.62"></path>
-      </g>
-    </g>
-
-    <path class="hn-tail-ghost" d={tailD} fill="none" stroke-width="10" opacity="0.12" stroke-linecap="round"></path>
-    <path class="hn-tail" d={tailD} fill="none" stroke-width="2.6" opacity="0.9" stroke-linecap="round" pathLength="1"></path>
-  </svg>
-</h1>
+<div class="hn">
+  <p class="hn-eyebrow">2026 · Minneapolis</p>
+  <h1 class="hn-name"><span>Jonathan</span><span>Tollefson</span></h1>
+  <p class="hn-role">
+    <span class="hn-role-a">User experience architect</span>
+    <span class="hn-role-sep" aria-hidden="true"></span>
+    <span class="hn-role-b">Soundbender</span>
+  </p>
+</div>
 
 <style>
-  .hero-name {
-    margin: 0;
-    width: 100%;
+  /* masthead lockup — uppercase stack on an instrument rule, with a role line */
+  .hn { display: grid; justify-items: start; gap: clamp(0.85rem, 1.8vh, 1.3rem); max-width: 100%; }
+  .hn-eyebrow {
+    margin: 0; font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 0.7rem; letter-spacing: 0.22em; text-transform: uppercase; color: var(--muted);
   }
-  .sr-only {
-    position: absolute;
-    width: 1px;
-    height: 1px;
-    padding: 0;
-    margin: -1px;
-    overflow: hidden;
-    clip: rect(0, 0, 0, 0);
-    white-space: nowrap;
-    border: 0;
+  .hn-name {
+    margin: 0; text-transform: uppercase;
+    font-family: "Space Grotesk Variable", "Space Grotesk", ui-sans-serif, system-ui, sans-serif;
+    font-weight: 700; font-size: clamp(2.6rem, 9.2vw, 7.75rem); line-height: 0.9;
+    letter-spacing: -0.03em; color: var(--text);
   }
-  .hn-svg {
-    display: block;
-    /* Break past the content column so the name reads BIG. "Tollefson" fills
-       (and a touch overruns) the column; the tail runs off the right and is
-       clipped by the hero's overflow:clip. Scales with the viewport. */
-    width: 138%;
-    height: auto;
-    max-width: none;
-    overflow: visible;
+  .hn-name span { display: block; }
+  .hn-role {
+    margin: 0; display: flex; align-items: center; gap: 0.8rem;
+    font-family: "Space Grotesk Variable", "Space Grotesk", ui-sans-serif, system-ui, sans-serif;
+    font-weight: 500; font-size: clamp(1rem, 1.5vw, 1.3rem); letter-spacing: -0.005em;
+    color: var(--text);
   }
-
-  /* Every colour derives from the theme accent / text so the name re-themes
-     with the rest of the site (orange on carbon → red on powder/field/honey). */
-  .hn-g-top { stop-color: color-mix(in srgb, var(--accent) 82%, #fff); }
-  .hn-g-bot { stop-color: color-mix(in srgb, var(--accent) 86%, #000); }
-  .hn-fill { fill: url(#hn-grad); }
-  .hn-shade { fill: color-mix(in srgb, var(--accent) 14%, #1a0a06); }
-  .hn-crest { stroke: color-mix(in srgb, var(--accent) 22%, #fff); }
-  .hn-border { stroke: color-mix(in srgb, var(--accent) 60%, #fff); }
-  .hn-tail,
-  .hn-tail-ghost { stroke: var(--accent); }
-  .hn-leftwave,
-  .hn-leftwave-ghost { stroke: var(--accent); }
-  .hn-jonathan { fill: var(--text); }
-
-  /* Entrance: name fades up, tail draws out toward the identity line below. */
-  .hn-svg {
-    animation: hn-rise 760ms cubic-bezier(0.2, 0.7, 0.3, 1.08) 120ms backwards;
-  }
-  .hn-tail {
-    stroke-dasharray: 1;
-    stroke-dashoffset: 1;
-    animation: hn-draw 1100ms cubic-bezier(0.4, 0, 0.2, 1) 720ms forwards;
-  }
-  @keyframes hn-rise {
-    from { opacity: 0; transform: translateY(16px); }
-    to { opacity: 1; transform: translateY(0); }
-  }
-  @keyframes hn-draw {
-    to { stroke-dashoffset: 0; }
-  }
-
-  @media (prefers-reduced-motion: reduce) {
-    .hn-svg { animation: none; }
-    .hn-tail { stroke-dashoffset: 0; animation: none; }
-  }
-
-  /* On narrow screens the tail eats horizontal room; let the name fill the
-     width and the tail run off into the margin so "Tollefson" stays large. */
+  .hn-role-sep { width: 6px; height: 6px; border-radius: 50%; background: var(--accent); flex: none; }
+  .hn-role-b { color: var(--accent); font-weight: 600; }
   @media (max-width: 40rem) {
-    .hn-svg { max-width: none; width: 132%; }
+    .hn-role { font-size: 1rem; gap: 0.6rem; }
   }
 </style>

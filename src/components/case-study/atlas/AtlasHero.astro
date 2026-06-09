@@ -79,32 +79,37 @@ const ghosts = GHOSTS.map((name, i) => {
 
   <div class="ah-grid">
     {eyebrow && <p class="ah-eyebrow">{eyebrow}</p>}
-    <h1 class="ah-title">{title}</h1>
-
-    {glossary && (
-      <div class="ah-gloss" tabindex="0" aria-label={`Definition of ${glossary.term}`}>
-        <span class="ah-gloss-head">
-          <span class="ah-gloss-term">{glossary.term}</span>
-          {glossary.ipa && <span class="ah-gloss-ipa">{glossary.ipa}</span>}
-          {glossary.pos && <span class="ah-gloss-pos">{glossary.pos}</span>}
-          <span class="ah-gloss-hint" aria-hidden="true">
-            <svg viewBox="0 0 16 16" width="11" height="11"><path d="M8 1.6a6.4 6.4 0 100 12.8A6.4 6.4 0 008 1.6zM8 7.2v3.6M8 4.7h.01" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
-          </span>
+    <div
+      class:list={["ah-titlewrap", { "ah-gloss": glossary }]}
+      tabindex={glossary ? "0" : undefined}
+      aria-label={glossary ? `Definition of ${glossary.term}` : undefined}
+    >
+      <h1 class="ah-title">{title}</h1>
+      {glossary && (
+        <span class="ah-gloss-mark" aria-hidden="true">
+          <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 1.6a6.4 6.4 0 100 12.8A6.4 6.4 0 008 1.6zM8 7.2v3.6M8 4.7h.01" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
         </span>
-        <div class="ah-gloss-card" role="tooltip">
+      )}
+      {glossary && (
+        <span class="ah-gloss-card" role="tooltip">
+          <span class="ah-gloss-cardhead">
+            <span class="ah-gloss-term">{glossary.term}</span>
+            {glossary.ipa && <span class="ah-gloss-ipa">{glossary.ipa}</span>}
+            {glossary.pos && <span class="ah-gloss-pos">{glossary.pos}</span>}
+          </span>
           {glossary.senses.map((s, i) => (
-            <p class="ah-gloss-sense">
+            <span class="ah-gloss-sense">
               <span class="ah-gloss-num">{i + 1}</span>
               <span>
                 {s.tag && <span class="ah-gloss-tag">{s.tag}</span>}
                 {s.text}
               </span>
-            </p>
+            </span>
           ))}
-          {glossary.etymology && <p class="ah-gloss-ety">{glossary.etymology}</p>}
-        </div>
-      </div>
-    )}
+          {glossary.etymology && <span class="ah-gloss-ety">{glossary.etymology}</span>}
+        </span>
+      )}
+    </div>
 
     {subtitle && <p class="ah-subtitle">{subtitle}</p>}
 
@@ -135,7 +140,7 @@ const ghosts = GHOSTS.map((name, i) => {
     padding: 80px 48px 56px;
     overflow: hidden;
     isolation: isolate;
-    border-bottom: 1px solid rgba(245, 241, 232, 0.06);
+    border-bottom: 1px solid var(--cs-line);
   }
 
   /* ── Drifting filename ghosts ── */
@@ -197,7 +202,7 @@ const ghosts = GHOSTS.map((name, i) => {
     font-size: 11px;
     letter-spacing: 0.28em;
     text-transform: uppercase;
-    color: rgba(245, 241, 232, 0.6);
+    color: var(--cs-text-muted);
     margin: 0;
   }
 
@@ -221,61 +226,55 @@ const ghosts = GHOSTS.map((name, i) => {
     font-style: italic;
     font-size: clamp(17px, 2.1vw, 25px);
     line-height: 1.4;
-    color: rgba(245, 241, 232, 0.86);
+    color: rgba(245, 241, 232, 0.88);
     max-width: 40ch;
     margin: 4px 0 0;
     border-left: 2px solid var(--brand-orange);
     padding-left: 18px;
   }
 
-  /* ── Lathe lexicon gloss: a subtle dictionary entry under the title that
-        reveals a rich definition on hover/focus. Desktop flourish. ── */
-  .ah-gloss {
+  /* ── Lathe lexicon gloss: the ⓘ is attached to the wordmark itself; hovering
+        or focusing the title reveals a dictionary card below it. Desktop
+        flourish (suppressed on touch, where hover can't fire). ── */
+  .ah-titlewrap {
     position: relative;
-    display: inline-block;
-    margin: 0;
-    outline: none;
-    cursor: help;
+    display: flex;
+    align-items: flex-start;
+    gap: clamp(8px, 1vw, 16px);
+    max-width: 100%;
   }
-  .ah-gloss-head {
+  .ah-gloss { cursor: help; outline: none; }
+
+  .ah-gloss-mark {
+    flex: 0 0 auto;
+    margin-top: clamp(6px, 1.3vw, 20px);
     display: inline-flex;
-    align-items: baseline;
-    gap: 9px;
-    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-    border-bottom: 1px dotted rgba(245, 241, 232, 0.32);
-    padding-bottom: 3px;
-    transition: border-color 160ms ease;
+    align-items: center;
+    justify-content: center;
+    width: clamp(20px, 2vw, 28px);
+    height: clamp(20px, 2vw, 28px);
+    border-radius: 50%;
+    color: var(--cs-text-muted);
+    border: 1px solid var(--cs-line-strong);
+    transition: color 160ms ease, border-color 160ms ease, background 160ms ease;
   }
-  .ah-gloss:hover .ah-gloss-head,
-  .ah-gloss:focus-visible .ah-gloss-head { border-bottom-color: var(--brand-orange); }
-  .ah-gloss-term {
-    font-style: italic;
-    font-size: 14px;
-    color: rgba(245, 241, 232, 0.82);
-  }
-  .ah-gloss-ipa { font-size: 12.5px; color: rgba(245, 241, 232, 0.5); }
-  .ah-gloss-pos {
-    font-size: 10px;
-    letter-spacing: 0.18em;
-    text-transform: uppercase;
-    color: rgba(245, 241, 232, 0.42);
-  }
-  .ah-gloss-hint {
-    display: inline-flex;
-    align-self: center;
-    color: var(--brand-cyan);
-    opacity: 0.5;
+  .ah-gloss-mark svg { width: 58%; height: 58%; display: block; }
+  .ah-gloss:hover .ah-gloss-mark,
+  .ah-gloss:focus-visible .ah-gloss-mark {
+    color: var(--brand-orange);
+    border-color: var(--brand-orange);
+    background: rgba(255, 90, 60, 0.08);
   }
 
   .ah-gloss-card {
     position: absolute;
-    top: calc(100% + 12px);
+    top: calc(100% + 14px);
     left: 0;
     z-index: 5;
-    width: min(430px, 80vw);
+    width: min(440px, 86vw);
     padding: 16px 18px 14px;
     background: rgba(9, 8, 13, 0.97);
-    border: 1px solid rgba(245, 241, 232, 0.14);
+    border: 1px solid var(--cs-line-strong);
     border-left: 2px solid var(--brand-orange);
     border-radius: 7px;
     box-shadow: 0 18px 50px rgba(0, 0, 0, 0.55);
@@ -284,6 +283,15 @@ const ghosts = GHOSTS.map((name, i) => {
     transform: translateY(5px);
     transition: opacity 180ms ease, transform 180ms ease, visibility 0s linear 180ms;
     pointer-events: none;
+  }
+  /* invisible bridge across the gap so the card stays reachable from the title */
+  .ah-gloss-card::before {
+    content: "";
+    position: absolute;
+    top: -16px;
+    left: 0;
+    right: 0;
+    height: 16px;
   }
   .ah-gloss:hover .ah-gloss-card,
   .ah-gloss:focus .ah-gloss-card,
@@ -294,6 +302,24 @@ const ghosts = GHOSTS.map((name, i) => {
     transition: opacity 180ms ease, transform 180ms ease;
     pointer-events: auto;
   }
+  .ah-gloss-cardhead {
+    display: flex;
+    align-items: baseline;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin: 0 0 10px;
+    padding-bottom: 9px;
+    border-bottom: 1px solid var(--cs-line);
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  }
+  .ah-gloss-term { font-style: italic; font-size: 14px; color: var(--cs-text); }
+  .ah-gloss-ipa { font-size: 12.5px; color: var(--cs-text-muted); }
+  .ah-gloss-pos {
+    font-size: 10px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--cs-text-dim);
+  }
   .ah-gloss-sense {
     display: flex;
     gap: 9px;
@@ -301,31 +327,31 @@ const ghosts = GHOSTS.map((name, i) => {
     font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
     font-size: 12.5px;
     line-height: 1.5;
-    color: rgba(245, 241, 232, 0.85);
+    color: rgba(245, 241, 232, 0.88);
   }
   .ah-gloss-num { flex: none; font-size: 10px; color: var(--brand-orange); padding-top: 2px; }
   .ah-gloss-tag {
     margin-right: 7px;
     font-style: italic;
     color: var(--brand-cyan);
-    opacity: 0.88;
   }
   .ah-gloss-ety {
+    display: block;
     margin: 11px 0 0;
     padding-top: 10px;
-    border-top: 1px solid rgba(245, 241, 232, 0.1);
+    border-top: 1px solid var(--cs-line);
     font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
     font-style: italic;
     font-size: 11.5px;
     line-height: 1.45;
-    color: rgba(245, 241, 232, 0.5);
+    color: var(--cs-text-muted);
   }
 
   .ah-meta {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
     gap: 18px 22px;
-    border-top: 1px solid rgba(245, 241, 232, 0.16);
+    border-top: 1px solid var(--cs-line-strong);
     padding-top: 22px;
     margin: 26px 0 0;
     width: 100%;
@@ -337,14 +363,14 @@ const ghosts = GHOSTS.map((name, i) => {
     font-size: 10px;
     letter-spacing: 0.22em;
     text-transform: uppercase;
-    color: rgba(245, 241, 232, 0.46);
+    color: var(--cs-text-muted);
   }
   .ah-meta dd {
     margin: 0;
     font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
     font-style: italic;
     font-size: 13px;
-    color: rgba(245, 241, 232, 0.9);
+    color: rgba(245, 241, 232, 0.88);
   }
 
   .ah-scrollcue {
@@ -356,7 +382,7 @@ const ghosts = GHOSTS.map((name, i) => {
     font-size: 10px;
     letter-spacing: 0.24em;
     text-transform: uppercase;
-    color: rgba(245, 241, 232, 0.4);
+    color: var(--cs-text-dim);
   }
   .ah-scrollcue svg { animation: ah-bobcue 1.8s ease-in-out infinite; }
   @keyframes ah-bobcue {
@@ -368,7 +394,8 @@ const ghosts = GHOSTS.map((name, i) => {
     .ah-hero { padding: 72px 24px 44px; min-height: 90vh; }
     .ah-ghost { font-size: 10px; }
     .ah-title { font-size: clamp(34px, 9.2vw, 60px); }
-    .ah-gloss-card { display: none; }  /* hover-only flourish; the headword line stays */
+    /* hover-only flourish — drop both the mark and the card on touch */
+    .ah-gloss-mark, .ah-gloss-card { display: none; }
   }
 
   @media (prefers-reduced-motion: reduce) {

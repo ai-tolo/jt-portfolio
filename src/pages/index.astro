@@ -2,7 +2,7 @@
 import Layout from "../layouts/Layout.astro";
 import WorkEntry from "../components/WorkEntry.astro";
 import Footer from "../components/Footer.astro";
-import HeroName from "../components/HeroName.astro";
+import AboutSignal from "../components/AboutSignal.astro";
 import { getCaseStudies } from "../lib/notion";
 
 export const prerender = true;
@@ -19,31 +19,12 @@ const allWorks = await getCaseStudies();
 const works = [...allWorks].sort((a, b) => rankOf(a.slug) - rankOf(b.slug));
 ---
 
-<Layout title="Jonathan Tollefson — User Experience Architect">
+<Layout title="Jonathan Tollefson — User Experience Architect" hideThemeSelector={true}>
   <main>
-    <section class="hero">
-      <div class="inner hero-layout">
-        <p class="hero-meta">
-          <span class="eyebrow">2026 · Minneapolis</span>
-          <span class="hero-trace" aria-hidden="true"></span>
-          <span class="eyebrow hero-disc">Design · sound · systems</span>
-        </p>
-
-        <div class="hero-main">
-          <HeroName />
-        </div>
-      </div>
-    </section>
-
-    <section class="section about" id="about" aria-label="About">
-      <div class="inner">
-        <p class="about-thesis" data-reveal>
-          By title, a <em>business&nbsp;analyst</em>. By practice — a designer who builds
-          the interfaces, the tools behind them, and <span class="th-sound">the sound
-          underneath</span>.
-        </p>
-      </div>
-    </section>
+    {/* The landing + about, nested as one scroll-through: the masthead name, then
+        the signal you scrub — three honest descriptors of Jon surface as it
+        lights up — before it releases into the work below. See AboutSignal. */}
+    <AboutSignal />
 
     <section class="section work" id="work" aria-label="Selected work">
       <div class="inner">
@@ -157,121 +138,21 @@ const works = [...allWorks].sort((a, b) => rankOf(a.slug) - rankOf(b.slug));
         if (!list.contains((e.relatedTarget as Node) ?? null)) release();
       });
     }
-
-    /* Reveal-on-scroll for [data-reveal] blocks. The class gate keeps content
-       visible if this never runs. */
-    document.documentElement.classList.add("reveal-ready");
-    const reveals = document.querySelectorAll<HTMLElement>("[data-reveal]");
-    if (reveals.length) {
-      const rio = new IntersectionObserver((records) => {
-        for (const r of records) {
-          if (r.isIntersecting) {
-            r.target.classList.add("is-in");
-            rio.unobserve(r.target);
-          }
-        }
-      }, { threshold: 0.16, rootMargin: "0px 0px -8% 0px" });
-      reveals.forEach((el) => rio.observe(el));
-    }
   </script>
 </Layout>
 
 <style>
   main {
-    padding-top: var(--space-8);
-  }
-
-  /* Reveal-on-scroll. Only engages once JS adds .reveal-ready to <html>, so
-     content is never trapped invisible if scripts fail. Off under reduced motion. */
-  :global(html.reveal-ready) [data-reveal] {
-    opacity: 0;
-    transform: translateY(18px);
-    transition: opacity 720ms cubic-bezier(0.2, 0, 0, 1),
-                transform 720ms cubic-bezier(0.2, 0, 0, 1);
-  }
-  :global(html.reveal-ready) [data-reveal].is-in {
-    opacity: 1;
-    transform: none;
-  }
-  @media (prefers-reduced-motion: reduce) {
-    :global(html.reveal-ready) [data-reveal] {
-      opacity: 1;
-      transform: none;
-      transition: none;
-    }
-  }
-
-  /* Hero — kept as the chunk-clipping vocabulary. Adds a small
-     descender link to "Selected work" so the page invites a scroll. */
-  .hero {
-    position: relative;
-    padding: var(--space-8) 0 var(--space-4);
-    isolation: isolate;
-    overflow: clip;
-  }
-  .hero-layout {
-    position: relative;
-    z-index: 1;
-    min-height: calc(100svh - var(--space-32));
-    display: flex;
-    flex-direction: column;
-    gap: var(--space-8);
-  }
-  .hero-meta {
-    align-self: flex-start;
-    display: inline-flex;
-    align-items: center;
-    gap: var(--space-3);
-    flex-wrap: wrap;
-    margin: 0;
-  }
-  /* a tiny live oscilloscope tick between the two eyebrow phrases */
-  .hero-trace {
-    width: 34px;
-    height: 10px;
-    background: currentColor;
-    color: var(--accent);
-    -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='34' height='10' viewBox='0 0 34 10'%3E%3Cpath d='M0 5 H7 L9 1 L12 9 L15 3 L17 5 H34' fill='none' stroke='black' stroke-width='1.4' stroke-linejoin='round'/%3E%3C/svg%3E") no-repeat center / contain;
-    mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='34' height='10' viewBox='0 0 34 10'%3E%3Cpath d='M0 5 H7 L9 1 L12 9 L15 3 L17 5 H34' fill='none' stroke='black' stroke-width='1.4' stroke-linejoin='round'/%3E%3C/svg%3E") no-repeat center / contain;
-    opacity: 0.85;
-  }
-  .hero-disc {
-    color: var(--muted);
-  }
-  @media (max-width: 30rem) {
-    .hero-trace { display: none; }
-  }
-  .hero-main {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    gap: var(--space-8);
+    /* The landing/about (AboutSignal) owns the top of the page: it centres the
+       masthead in the live stage and sets its own padding in the static
+       fallback, so main adds none here. */
+    padding-top: 0;
   }
 
   /* Generic section — no rules between sections; the page flows. */
   .section {
     padding: var(--space-16) 0;
   }
-
-  /* About — a single editorial statement: the bridge from the name to the work.
-     No section chrome, no widget; the five case studies below are the proof.
-     (Copy is a working draft — to be refined.) */
-  .about-thesis {
-    max-width: min(92vw, 52rem);
-    margin: 0;
-    font-family: "Space Grotesk Variable", "Space Grotesk", ui-sans-serif, system-ui, sans-serif;
-    font-weight: var(--fw-bold);
-    font-size: clamp(1.75rem, 4.4vw, 3.4rem);
-    line-height: 1.16;
-    letter-spacing: -0.025em;
-    color: var(--text);
-    text-wrap: balance;
-  }
-  /* "business analyst" is the label, stated plainly, not trashed */
-  .about-thesis em { font-style: normal; color: var(--muted); }
-  /* the sound is the through-line — the one accent in the sentence */
-  .about-thesis .th-sound { color: var(--accent); }
 
   /* The work index — a quiet tracklist of the projects. The title is all you
      see at rest; the cover + outcome surface in a fixed preview pane on the
@@ -301,6 +182,7 @@ const works = [...allWorks].sort((a, b) => rankOf(a.slug) - rankOf(b.slug));
   }
 
   .windex {
+    /* list (left) + sticky "now viewing" preview plate (right) */
     display: grid;
     grid-template-columns: minmax(0, 1fr) clamp(20rem, 32vw, 27rem);
     gap: clamp(2.5rem, 6vw, 5rem);

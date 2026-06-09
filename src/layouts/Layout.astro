@@ -11,6 +11,8 @@ interface Props {
   description?: string;
   /** Override the default OG image. Path relative to site root, e.g. "/og-case-study.png". */
   ogImage?: string;
+  /** Hide the floating theme switcher (e.g. the homepage, where the comet parks in the corner). */
+  hideThemeSelector?: boolean;
 }
 
 const DEFAULT_DESCRIPTION =
@@ -20,6 +22,7 @@ const {
   title,
   description = DEFAULT_DESCRIPTION,
   ogImage = "/og-image.png",
+  hideThemeSelector = false,
 } = Astro.props;
 
 // Astro.site is set in astro.config.mjs. Falls back to uxjon.com if missing.
@@ -90,23 +93,23 @@ const ogImageUrl = new URL(ogImage, siteOrigin).toString();
     </script>
   </head>
   <body>
-    <ThemeSelector />
+    {!hideThemeSelector && <ThemeSelector />}
     <Cursor />
     <Header />
     <slot />
 
     {/* Hidden trigger: typing "cloud" anywhere on the public site (outside
         text inputs) opens the Tolo.Cloud portal. Sliding-window matcher so
-        a stale 'c' from minutes ago doesn't poison the sequence. Single
-        fullscreen overlay fades to black, then we navigate — the login
-        page then handles its own dramatic entrance. */}
+        a stale 'c' from minutes ago doesn't poison the sequence. A single
+        fullscreen gradient overlay fades in, then we navigate to the
+        minimal /portal/login screen. */}
     <div data-cloud-overlay class="cloud-overlay" aria-hidden="true">
       <span class="cloud-mark">Tolo.Cloud</span>
     </div>
     <style is:global>
       /* Trigger transition is pure CSS — zero network cost so the keystroke
-         feels instant. The destination /portal/login then carries the
-         heavier artwork load (lazy in the next navigation). */
+         feels instant. The destination /portal/login is an equally light,
+         image-free gradient screen, so the entrance stays seamless. */
       .cloud-overlay {
         position: fixed;
         inset: 0;

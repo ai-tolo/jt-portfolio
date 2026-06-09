@@ -2,6 +2,12 @@
 import "@fontsource-variable/geist";
 import "../../styles/tokens.css";
 
+// Server-rendered login must never be cached. Without this, the browser can
+// repaint a stale (pre-redesign) copy of this page for a frame before the live
+// minimal UI renders — the "old artwork" flash on entry. no-store forbids
+// storing the response, so navigating here always paints the current page fresh.
+Astro.response.headers.set("Cache-Control", "no-store");
+
 const nextParam = Astro.url.searchParams.get("next") ?? "";
 const hasError = Astro.url.searchParams.get("error") === "1";
 ---
