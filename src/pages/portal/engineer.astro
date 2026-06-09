@@ -224,8 +224,8 @@ function stemSoloUrls(sf) {
         coordinated with faceoff + winners via the global Stage selector so only
         one section plays at once. The whole block (h2 + card) shows/hides as a
         unit via data-cur-wrap. */}
-    <section class="asks-section" data-cur-wrap hidden>
-      <h2 class="section-head"><span class="section-emoji" aria-hidden="true">🐢</span>Richard</h2>
+    <section class="asks-section" data-cur-wrap hidden data-collapsible data-section-key="richard" data-section-collapsed="false">
+      <h2 class="section-head" data-section-toggle role="button" tabindex="0" aria-expanded="true" title="Collapse / expand this section"><span class="section-chevron-s" aria-hidden="true">▸</span><span class="section-emoji" aria-hidden="true">🐢</span>Richard</h2>
       <div class="cur-thinking" data-cur-thinking hidden>
         <span class="cur-thinking-dot" aria-hidden="true"></span>
         the Engineer is thinking about your last votes…
@@ -342,8 +342,8 @@ function stemSoloUrls(sf) {
       </div>
     )}
 
-    <section class="pair-tinder">
-      <h2 class="section-head"><span class="section-emoji" aria-hidden="true">⚔️</span>Arena<span class="queue-count" data-queue-count hidden></span></h2>
+    <section class="pair-tinder" data-collapsible data-section-key="arena" data-section-collapsed="false">
+      <h2 class="section-head" data-section-toggle role="button" tabindex="0" aria-expanded="true" title="Collapse / expand this section"><span class="section-chevron-s" aria-hidden="true">▸</span><span class="section-emoji" aria-hidden="true">⚔️</span>Arena<span class="queue-count" data-queue-count hidden></span></h2>
       {pairs.length === 0 ? (
         <p class="empty">
           No pairs to judge. Send a track from <a href="/portal/buckets/tracks">Buckets</a> and come back when its job is "ready to judge".
@@ -552,8 +552,8 @@ function stemSoloUrls(sf) {
       )}
     </section>
 
-    <section class="winners" id="winners">
-      <h2 class="section-head"><span class="section-emoji" aria-hidden="true">💿</span>Records</h2>
+    <section class="winners" id="winners" data-collapsible data-section-key="records" data-section-collapsed="false">
+      <h2 class="section-head" data-section-toggle role="button" tabindex="0" aria-expanded="true" title="Collapse / expand this section"><span class="section-chevron-s" aria-hidden="true">▸</span><span class="section-emoji" aria-hidden="true">💿</span>Records</h2>
       {winners.length === 0 ? (
         <p class="empty">
           No winners yet. Vote on a pair above and the source track lands here once its first vote is cast.
@@ -731,7 +731,7 @@ function stemSoloUrls(sf) {
                           </li>
                         )}
                       </Fragment>
-                    ) : (isKingRound || w.axes_decided >= 3) ? (
+                    ) : (isKingRound || w.axes_decided >= 3 || w.awaiting_votes === false) ? (
                       /* CROWNABLE + BLIND: the ORIGINAL is shuffled in among the
                          candidate mixes, each shown only as an anonymous "Take N",
                          so the crown follows sound — not reputation or "the
@@ -819,10 +819,10 @@ function stemSoloUrls(sf) {
                         ♛ King candidates — {w.synthesis_summary || "3 fresh masters synthesized from your A/B picks"}. Listen blind and crown the Take you love (your unprocessed original is shuffled in among them). These play at their REAL level — you're judging the final master here, not a level-matched preview like the faceoff.
                       </p>
                     )}
-                    {!hasKing && !isKingRound && w.axes_decided >= 3 && (
+                    {!hasKing && !isKingRound && (w.axes_decided >= 3 || w.awaiting_votes === false) && (
                       <p class="winners-hint">Listen blind and tap ♛ on the Take you love to crown your king (your original is shuffled in among them), or render a fresh batch below.</p>
                     )}
-                    {!hasKing && !isKingRound && w.axes_decided < 3 && (
+                    {!hasKing && !isKingRound && w.axes_decided < 3 && w.awaiting_votes !== false && (
                       <p class="winners-hint">
                         {3 - w.axes_decided} more mix{3 - w.axes_decided === 1 ? "" : "es"} left to vote on in the Mix Faceoff above. Or skip ahead with Make more mixes for a fresh batch.
                       </p>
@@ -959,6 +959,41 @@ function stemSoloUrls(sf) {
     background: rgba(255, 200, 92, 0.13);
     border-color: rgba(255, 200, 92, 0.42);
     box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.14), 0 0 16px rgba(255, 200, 92, 0.22);
+  }
+  /* ── #2 Collapsible sections. The whole .section-head toggles its section;
+        the chevron hangs slightly into the left gutter. New names only (no
+        .winners-* reuse → no CSS cross-fire) and the handler never claims the
+        audio Stage. ── */
+  .engineer [data-collapsible] > .section-head {
+    cursor: pointer;
+    user-select: none;
+  }
+  .engineer .section-head .section-chevron-s {
+    flex-shrink: 0;
+    width: 12px;
+    margin-left: -22px;
+    text-align: center;
+    color: rgba(245, 241, 232, 0.5);
+    font-size: 11px;
+    transition: transform 160ms ease, color 160ms ease;
+    transform: rotate(90deg);
+  }
+  .engineer [data-collapsible] > .section-head:hover .section-chevron-s {
+    color: rgba(245, 241, 232, 0.85);
+  }
+  .engineer section[data-section-collapsed="true"] > .section-head .section-chevron-s {
+    transform: rotate(0deg);
+  }
+  .engineer section[data-section-collapsed="true"] > .section-head {
+    margin-bottom: 0;
+  }
+  .engineer section[data-section-collapsed="true"] > :not(.section-head) {
+    display: none !important;
+  }
+  .engineer [data-collapsible] > .section-head:focus-visible {
+    outline: 2px solid rgba(255, 200, 92, 0.5);
+    outline-offset: 4px;
+    border-radius: 6px;
   }
   /* Professional queue counter — a quiet monospace badge pinned to the far end
      of the Arena heading. Reads as metadata, not a loud chip. */
@@ -5015,5 +5050,46 @@ function stemSoloUrls(sf) {
     });
 
     load();
+  })();
+</script>
+
+<script>
+  // #2 Collapsible Engineer sections. Isolated module (NOT the Block-A
+  // pair/winners controller) so a stray top-level name can't silently kill
+  // the arena/winners JS. Persists per-section collapse so it survives the
+  // reload-on-every-action flow. Never touches the audio Stage.
+  (() => {
+    const KEY = "engineer:sections:collapsed:v1";
+    let saved = {};
+    try { saved = JSON.parse(localStorage.getItem(KEY) || "{}"); } catch (e) {}
+    const sections = Array.from(
+      document.querySelectorAll("[data-collapsible][data-section-key]"),
+    );
+    const persist = () => {
+      const state = {};
+      for (const s of sections) {
+        state[s.dataset.sectionKey] = s.dataset.sectionCollapsed === "true";
+      }
+      try { localStorage.setItem(KEY, JSON.stringify(state)); } catch (e) {}
+    };
+    const set = (section, collapsed) => {
+      section.dataset.sectionCollapsed = collapsed ? "true" : "false";
+      const head = section.querySelector("[data-section-toggle]");
+      if (head) head.setAttribute("aria-expanded", collapsed ? "false" : "true");
+    };
+    for (const section of sections) {
+      const key = section.dataset.sectionKey;
+      if (key in saved) set(section, !!saved[key]);
+      const head = section.querySelector("[data-section-toggle]");
+      if (!head) continue;
+      const toggle = () => {
+        set(section, section.dataset.sectionCollapsed !== "true");
+        persist();
+      };
+      head.addEventListener("click", toggle);
+      head.addEventListener("keydown", (e) => {
+        if (e.key === "Enter" || e.key === " ") { e.preventDefault(); toggle(); }
+      });
+    }
   })();
 </script>
