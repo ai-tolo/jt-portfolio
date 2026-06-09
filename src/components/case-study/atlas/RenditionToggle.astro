@@ -1,23 +1,24 @@
 ---
 // ★ THE CENTERPIECE — the rendition toggle.
 //
-// Three takes, REAL audio. Two are masters Richard actually rendered for my
-// track "Tops + Tolo" — the crowned champions of two separate jobs — and the
-// third is the untouched original, shuffled in exactly the way the live app
-// blinds you with it. The SAME 37 seconds plays in each; pressing 1·2·3
-// crossfades which master is audible while the playhead never loses its place,
-// so the moment is identical and only the mix changes.
+// Three takes, REAL audio — three masters Richard actually rendered for my
+// track "head to toe," the crowned champions across his three taste axes:
+// bright & forward, warm & intimate, and open & unhyped. The SAME 16 bars play
+// in each; pressing 1·2·3 crossfades which master is audible while the playhead
+// never loses its place, so the moment is identical and only the finishing
+// changes.
 //
-// Clips are the first 0:37 of each, loudness-matched to −14 LUFS (so you judge
-// the mix, not the volume), served from
+// Each is a beat-aligned loop, loudness-matched to −14 LUFS (so you judge the
+// mix, not the volume — the bright one was naturally 3 LU louder), served from
 // /public/case-studies/the-console/renditions/. Blind by default; reveal shows
-// each take's identity; hold a key to crown. Keyboard: 1·2·3 switch, space
-// play/pause, R reveal. Honors prefers-reduced-motion.
+// each take's identity + the record it was matched toward; hold a key to crown.
+// Keyboard: 1·2·3 + R work whenever the demo is on screen; space play/pause
+// when it's hovered/focused (so it never hijacks page scroll). Reduced-motion safe.
 interface Take { id: string; ref: string; file: string; }
 const TAKES: Take[] = [
-  { id: "recessed · warm", ref: "vocal pulled inside the bed",         file: "/case-studies/the-console/renditions/take1.mp3" },
-  { id: "punchy · dry",    ref: "→ Tame Impala, “Let It Happen”",      file: "/case-studies/the-console/renditions/take2.mp3" },
-  { id: "the original",    ref: "untouched — straight off the bounce", file: "/case-studies/the-console/renditions/take3.mp3" },
+  { id: "bright · forward", ref: "toward Caroline Polachek’s never-harsh top end",   file: "/case-studies/the-console/renditions/take1.mp3" },
+  { id: "warm · intimate",  ref: "toward Frank Ocean’s recessed, in-the-room vocal", file: "/case-studies/the-console/renditions/take2.mp3" },
+  { id: "open · unhyped",   ref: "toward Tame Impala’s big, open low end",           file: "/case-studies/the-console/renditions/take3.mp3" },
 ];
 
 // Placeholder waveform bars for SSR; the script overwrites these heights with
@@ -35,7 +36,7 @@ const BARS = Array.from({ length: 128 }, (_, i) => {
 <div class="rt" data-rt data-active="0" data-playing="false" data-revealed="false">
   <header class="rt-head">
     <div class="rt-head-left">
-      <span class="rt-source">Tops + Tolo</span>
+      <span class="rt-source">head to toe</span>
       <span class="rt-tag">real masters · blind</span>
     </div>
     <span class="rt-loud" title="All three are normalized to the same loudness, so you're voting on the mix — not on whichever one is louder.">⚖ loudness-matched</span>
@@ -78,8 +79,11 @@ const BARS = Array.from({ length: 128 }, (_, i) => {
     <span class="rt-status" data-rt-status aria-live="polite"></span>
   </div>
 
+  <!-- on reveal: what the active take was matched toward -->
+  <p class="rt-refline" data-rt-refline hidden></p>
+
   <p class="rt-hint">
-    <kbd>1</kbd><kbd>2</kbd><kbd>3</kbd> switch · <kbd>space</kbd> play · <kbd>R</kbd> reveal · hold a key to <span class="rt-hint-crown">♛ crown</span>
+    <kbd>1</kbd><kbd>2</kbd><kbd>3</kbd> switch · hold to <span class="rt-hint-crown">♛ vote</span> · <kbd>R</kbd> reveal mixes · <kbd>space</kbd> play when selected
   </p>
 </div>
 
@@ -88,9 +92,9 @@ const BARS = Array.from({ length: 128 }, (_, i) => {
   //    played as sample-aligned looping sources; switching only crossfades
   //    which one is audible, so the playhead carries across takes. ──────────
   const TAKES = [
-    { id: "recessed · warm", ref: "vocal pulled inside the bed", file: "/case-studies/the-console/renditions/take1.mp3" },
-    { id: "punchy · dry", ref: "→ Tame Impala", file: "/case-studies/the-console/renditions/take2.mp3" },
-    { id: "the original", ref: "untouched", file: "/case-studies/the-console/renditions/take3.mp3" },
+    { id: "bright · forward", ref: "toward Caroline Polachek’s never-harsh top end", file: "/case-studies/the-console/renditions/take1.mp3" },
+    { id: "warm · intimate", ref: "toward Frank Ocean’s recessed, in-the-room vocal", file: "/case-studies/the-console/renditions/take2.mp3" },
+    { id: "open · unhyped", ref: "toward Tame Impala’s big, open low end", file: "/case-studies/the-console/renditions/take3.mp3" },
   ];
 
   document.querySelectorAll<HTMLElement>("[data-rt]").forEach((root) => {
@@ -106,6 +110,7 @@ const BARS = Array.from({ length: 128 }, (_, i) => {
     const keyIds = [...root.querySelectorAll<HTMLElement>("[data-rt-key-id]")];
     const revealBtn = root.querySelector<HTMLButtonElement>("[data-rt-reveal]");
     const statusEl = root.querySelector<HTMLElement>("[data-rt-status]");
+    const refline = root.querySelector<HTMLElement>("[data-rt-refline]");
 
     let ctx: AudioContext | null = null;
     let master: GainNode | null = null;
@@ -194,11 +199,22 @@ const BARS = Array.from({ length: 128 }, (_, i) => {
       waveBars.forEach((b, i) => { b.style.height = `${Math.max(6, Math.round(Math.pow(peaks[i] / max, 0.7) * 100))}%`; });
     }
 
+    function updateRefline() {
+      if (!refline) return;
+      if (root.dataset.revealed === "true") {
+        refline.innerHTML = `<b>Take ${active + 1} — ${TAKES[active].id}</b> · ${TAKES[active].ref}`;
+        refline.removeAttribute("hidden");
+      } else {
+        refline.setAttribute("hidden", "");
+      }
+    }
+
     function setActive(i: number, announce = true) {
       active = i;
       root.dataset.active = String(i);
       keys.forEach((k, idx) => (k.dataset.active = idx === i ? "true" : "false"));
       if (nowEl) nowEl.textContent = root.dataset.revealed === "true" ? TAKES[i].id : `Take ${i + 1}`;
+      updateRefline();
       // Crossfade chain gains — same sources, same instant; only the mix changes.
       if (ctx && chainGains.length) {
         const now = ctx.currentTime;
@@ -278,8 +294,7 @@ const BARS = Array.from({ length: 128 }, (_, i) => {
       setActive(i, false);
       keys.forEach((k, idx) => (k.dataset.crowned = idx === i ? "true" : "false"));
       const id = root.dataset.revealed === "true" ? ` — ${TAKES[i].id}` : "";
-      const note = i === 2 ? " · you crowned the original — Richard takes the note" : " · sent to your taste model";
-      flash(`♛ crowned Take ${i + 1}${id}${note}`);
+      flash(`♛ crowned Take ${i + 1}${id} · Richard logs the win and leans your references this way`);
     }
 
     function setRevealed(on: boolean) {
@@ -287,6 +302,7 @@ const BARS = Array.from({ length: 128 }, (_, i) => {
       keyIds.forEach((el, i) => { el.textContent = on ? TAKES[i].id : `Take ${i + 1}`; });
       if (nowEl) nowEl.textContent = on ? TAKES[active].id : `Take ${active + 1}`;
       if (revealBtn) revealBtn.textContent = on ? "🙈 hide identities" : "🔍 reveal what I'm hearing";
+      updateRefline();
     }
     revealBtn?.addEventListener("click", () => setRevealed(root.dataset.revealed !== "true"));
 
@@ -299,13 +315,40 @@ const BARS = Array.from({ length: 128 }, (_, i) => {
       if (!playing) play();
     });
 
-    // keyboard (when the card has focus)
+    // ── Keyboard. The old handler was bound to the card and only fired once the
+    //    card had focus, so 1·2·3 silently did nothing on first load (the live-site
+    //    glitch). Now it's document-level and gated on visibility: 1·2·3 + R work
+    //    whenever the demo is on screen; space is scoped to hover/focus so it can
+    //    never hijack page-scroll. ──
     root.tabIndex = 0;
-    root.addEventListener("keydown", (e) => {
+    let inView = false;
+    new IntersectionObserver(
+      (es) => es.forEach((e) => (inView = e.isIntersecting)),
+      { threshold: 0.45 }
+    ).observe(root);
+    let hovered = false;
+    root.addEventListener("pointerenter", () => (hovered = true));
+    root.addEventListener("pointerleave", () => (hovered = false));
+    const focused = () => root.contains(document.activeElement);
+
+    document.addEventListener("keydown", (e) => {
+      const t = e.target as HTMLElement | null;
+      if (t && (t.tagName === "INPUT" || t.tagName === "TEXTAREA" || t.isContentEditable)) return;
       const k = e.key.toLowerCase();
-      if (k === " " || k === "spacebar") { e.preventDefault(); toggle(); }
-      else if (k === "1" || k === "2" || k === "3") { e.preventDefault(); if (!playing) play(); setActive(Number(k) - 1); }
-      else if (k === "r") { e.preventDefault(); setRevealed(root.dataset.revealed !== "true"); }
+      if (k === "1" || k === "2" || k === "3") {
+        if (!inView) return;
+        e.preventDefault();
+        if (!playing) play();
+        setActive(Number(k) - 1);
+      } else if (k === "r") {
+        if (!inView) return;
+        e.preventDefault();
+        setRevealed(root.dataset.revealed !== "true");
+      } else if (k === " " || k === "spacebar") {
+        if (!hovered && !focused()) return; // never steal page scroll
+        e.preventDefault();
+        toggle();
+      }
     });
 
     // expose minimal state for verification
@@ -375,7 +418,13 @@ const BARS = Array.from({ length: 128 }, (_, i) => {
     border-radius: 50%; animation: rt-spin 0.7s linear infinite;
   }
   @keyframes rt-spin { to { transform: rotate(360deg); } }
-  .rt-time { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; color: rgba(245, 241, 232, 0.62); font-feature-settings: "tnum"; }
+  /* track time — the pink italic LCD readout from the real BucketCard */
+  .rt-time {
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-style: italic; font-weight: 700; font-size: 15px; color: #ff3b6e;
+    font-feature-settings: "tnum"; letter-spacing: 0.04em; line-height: 1;
+    text-shadow: 0 0 4px rgba(255, 59, 110, 0.65), 0 0 10px rgba(255, 59, 110, 0.35);
+  }
   .rt-now {
     margin-left: auto; font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
     font-size: 11px; letter-spacing: 0.08em; color: rgba(245, 241, 232, 0.7);
@@ -448,18 +497,41 @@ const BARS = Array.from({ length: 128 }, (_, i) => {
   }
   .rt-key[data-active="true"] .rt-key-id { opacity: 0.92; }
   .rt-key[data-crowned="true"]::before {
-    content: "♛"; position: absolute; top: 3px; right: 6px; font-size: 11px; z-index: 3;
-    color: #ffd23d; text-shadow: 0 0 6px rgba(255, 210, 61, 0.8);
+    content: "♛"; position: absolute; top: 3px; right: 6px; font-size: 12px; z-index: 4;
+    color: #ffd23d; text-shadow: 0 0 7px rgba(255, 210, 61, 0.9);
+    animation: rt-crownpop 480ms cubic-bezier(0.2, 1.5, 0.45, 1) 1;
   }
   .rt-key[data-active="true"][data-crowned="true"]::before { color: #0d060f; text-shadow: none; }
-  /* hold-to-crown fill */
+  @keyframes rt-crownpop {
+    0% { transform: scale(0) rotate(-30deg); opacity: 0; }
+    60% { transform: scale(1.55) rotate(8deg); opacity: 1; }
+    100% { transform: scale(1) rotate(0); opacity: 1; }
+  }
+  /* the vote locking in — a one-shot gold ring bursts out from the key */
+  .rt-key[data-crowned="true"] { animation: rt-crownburst 560ms ease-out 1; }
+  @keyframes rt-crownburst {
+    0% { box-shadow: 0 0 0 0 rgba(255, 210, 61, 0.75), 0 0 24px 6px rgba(255, 210, 61, 0.6); }
+    100% { box-shadow: 0 0 0 18px rgba(255, 210, 61, 0), 0 0 24px 6px rgba(255, 210, 61, 0); }
+  }
+
+  /* hold-to-vote — a gold charge fills bottom-up while the key lifts and glows,
+     so you SEE and FEEL the vote building before it locks. */
   .rt-hold-fill {
     position: absolute; inset: 0; border-radius: inherit; z-index: 1;
-    transform-origin: left center; transform: scaleX(0); pointer-events: none;
-    background: linear-gradient(90deg, rgba(255, 150, 80, 0.5) 0%, #ffd23d 100%);
-    box-shadow: inset 0 0 16px rgba(255, 255, 255, 0.22);
+    transform-origin: bottom center; transform: scaleY(0); pointer-events: none;
+    background: linear-gradient(180deg, #ffe27a 0%, rgba(255, 150, 80, 0.5) 100%);
+    box-shadow: inset 0 0 20px rgba(255, 255, 255, 0.3);
   }
-  .rt-key[data-holding="true"] .rt-hold-fill { transform: scaleX(1); transition: transform 0.65s linear; }
+  .rt-key[data-holding="true"] .rt-hold-fill { transform: scaleY(1); transition: transform 0.65s linear; }
+  .rt-key[data-holding="true"] {
+    transform: translateY(-2px) scale(1.05);
+    border-color: rgba(255, 210, 61, 0.7);
+    box-shadow: 0 0 30px rgba(255, 210, 61, 0.6), 0 5px 12px rgba(0, 0, 0, 0.45),
+      inset 0 2px 3px rgba(255, 255, 255, 0.4);
+    z-index: 3;
+  }
+  .rt-key[data-holding="true"] .rt-key-num { animation: rt-holdpulse 0.5s ease-in-out infinite alternate; }
+  @keyframes rt-holdpulse { from { transform: scale(1); } to { transform: scale(1.12); } }
 
   /* foot */
   .rt-foot { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; min-height: 22px; }
@@ -472,9 +544,21 @@ const BARS = Array.from({ length: 128 }, (_, i) => {
   .rt-reveal:hover { color: #f5f1e8; border-color: rgba(245, 241, 232, 0.45); }
   .rt-status { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 11.5px; color: var(--brand-cyan); }
 
+  .rt-refline {
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 12px; line-height: 1.5; color: rgba(245, 241, 232, 0.64);
+    margin: 13px 0 0; padding: 9px 13px;
+    border: 1px solid rgba(255, 150, 80, 0.22);
+    border-left: 2px solid var(--brand-orange);
+    border-radius: 5px; background: rgba(255, 150, 80, 0.04);
+  }
+  .rt-refline[hidden] { display: none; }
+  .rt-refline b { color: var(--brand-orange); font-style: normal; font-weight: 700; }
+
   .rt-hint {
     font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 10.5px;
     color: rgba(245, 241, 232, 0.42); margin: 14px 0 0; letter-spacing: 0.03em;
+    max-width: none; /* escape the global .cs-main p 64ch cap so it stays one line */
   }
   .rt-hint kbd {
     color: rgba(245, 241, 232, 0.78); border: 1px solid rgba(245, 241, 232, 0.22);
@@ -490,5 +574,8 @@ const BARS = Array.from({ length: 128 }, (_, i) => {
   @media (prefers-reduced-motion: reduce) {
     .rt-bar, .rt-play, .rt-key { transition: none; }
     .rt-buffering[data-on="true"] { animation: none; }
+    .rt-hold-fill { transition: none; }
+    .rt-key[data-crowned="true"], .rt-key[data-crowned="true"]::before,
+    .rt-key[data-holding="true"] .rt-key-num { animation: none; }
   }
 </style>

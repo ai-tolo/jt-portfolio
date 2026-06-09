@@ -6,27 +6,32 @@
 // three taste axes; every job masters the track six ways across them. Tap a
 // record to see what the engineer learned from it and which pole it anchors.
 
+// The three taste axes are the dimensions a mastering chain actually controls
+// on the WHOLE mix — tonal balance, dynamics, and stereo width. (Reference-
+// matching shapes the mix's character; it never isolates or moves parts.)
 const AXES = [
-  { key: "focal",    label: "focal",    poles: ["forward · bright", "recessed · warm"], color: "cyan" },
-  { key: "space",    label: "space",    poles: ["punchy · dry", "spacious · wet"], color: "pink" },
-  { key: "dynamics", label: "dynamics", poles: ["modern · loud", "vintage · open"], color: "yellow" },
+  { key: "focal",    label: "tone",     poles: ["forward · bright", "recessed · warm"], color: "cyan" },
+  { key: "space",    label: "width",    poles: ["punchy · dry", "spacious · wide"], color: "pink" },
+  { key: "dynamics", label: "dynamics", poles: ["modern · dense", "vintage · open"], color: "yellow" },
 ];
 
-// real-flavor reference catalog: loved records + "what I like" notes + the pole each anchors
+// real-flavor reference catalog: loved records + "what I like" notes + the pole
+// each anchors. Each record carries its own accent so the shelf reads like a
+// row of distinct sleeves, and the note adopts the selected record's color.
 const REFS = [
-  { artist: "Tame Impala", track: "Let It Happen", note: "huge low end that never turns to mud", axis: "dynamics", pole: 1 },
-  { artist: "Frank Ocean", track: "Pyramids", note: "the vocal sits back and lets the space do the work", axis: "focal", pole: 1 },
-  { artist: "070 Shake", track: "Guilty Conscience", note: "walls of synth, still hits punchy and dry", axis: "space", pole: 0 },
-  { artist: "Bon Iver", track: "715 - CRΣΣKS", note: "intimate and warm — every breath is in the room", axis: "focal", pole: 1 },
-  { artist: "Blood Orange", track: "Charcoal Baby", note: "soft tape transients, nothing brittle up top", axis: "dynamics", pole: 1 },
-  { artist: "Caroline Polachek", track: "So Hot…", note: "a bright top end that somehow never hurts", axis: "focal", pole: 0 },
+  { artist: "Tame Impala", track: "Let It Happen", note: "huge low end that never turns to mud", axis: "dynamics", pole: 1, color: "#00ff4d" },
+  { artist: "Frank Ocean", track: "Pyramids", note: "a warm, unforward balance — nothing claws at you up top", axis: "focal", pole: 1, color: "#a06cf0" },
+  { artist: "070 Shake", track: "Guilty Conscience", note: "walls of synth, still hits punchy and dry", axis: "space", pole: 0, color: "#ff2d8b" },
+  { artist: "Bon Iver", track: "715 - CRΣΣKS", note: "intimate and warm — every breath is in the room", axis: "focal", pole: 1, color: "#0ec4fc" },
+  { artist: "Blood Orange", track: "Charcoal Baby", note: "soft tape transients, nothing brittle up top", axis: "dynamics", pole: 1, color: "#ff7a3d" },
+  { artist: "Caroline Polachek", track: "So Hot…", note: "a bright top end that somehow never hurts", axis: "focal", pole: 0, color: "#ffd23d" },
 ];
 ---
 
 <div class="eb" data-eb data-sel="0">
   <div class="eb-shelf" role="list" aria-label="Reference records">
     {REFS.map((r, i) => (
-      <button type="button" class="eb-rec" data-eb-rec={String(i)} data-axis={r.axis} data-active={i === 0 ? "true" : "false"} role="listitem">
+      <button type="button" class="eb-rec" data-eb-rec={String(i)} data-axis={r.axis} data-active={i === 0 ? "true" : "false"} role="listitem" style={`--rc:${r.color}`}>
         <span class="eb-vinyl" aria-hidden="true"><span class="eb-vinyl-hole"></span></span>
         <span class="eb-rec-meta">
           <span class="eb-rec-artist">{r.artist}</span>
@@ -66,7 +71,7 @@ const REFS = [
 <script>
   const REFS = [
     { note: "huge low end that never turns to mud", axis: "dynamics", pole: 1, poleLabel: "vintage · open" },
-    { note: "the vocal sits back and lets the space do the work", axis: "focal", pole: 1, poleLabel: "recessed · warm" },
+    { note: "a warm, unforward balance — nothing claws at you up top", axis: "focal", pole: 1, poleLabel: "recessed · warm" },
     { note: "walls of synth, still hits punchy and dry", axis: "space", pole: 0, poleLabel: "punchy · dry" },
     { note: "intimate and warm — every breath is in the room", axis: "focal", pole: 1, poleLabel: "recessed · warm" },
     { note: "soft tape transients, nothing brittle up top", axis: "dynamics", pole: 1, poleLabel: "vintage · open" },
@@ -81,6 +86,9 @@ const REFS = [
     const select = (i: number) => {
       const r = REFS[i];
       root.dataset.sel = String(i);
+      // the note + lit pole adopt the selected record's accent
+      const rc = recs[i].style.getPropertyValue("--rc") || "#0ec4fc";
+      root.style.setProperty("--rc", rc);
       recs.forEach((el, idx) => el.dataset.active = idx === i ? "true" : "false");
       if (noteText) noteText.textContent = r.note;
       if (noteAnchor) noteAnchor.innerHTML = `anchors <b>${r.poleLabel}</b>`;
@@ -96,7 +104,7 @@ const REFS = [
 </script>
 
 <style>
-  .eb { color: #f5f1e8; }
+  .eb { color: #f5f1e8; --rc: #00ff4d; }
 
   /* ── reference shelf ── */
   .eb-shelf {
@@ -110,15 +118,21 @@ const REFS = [
     border-radius: 8px; padding: 14px 8px 10px; cursor: pointer;
     transition: border-color 180ms ease, background 180ms ease, transform 180ms ease;
   }
-  .eb-rec:hover { transform: translateY(-2px); }
-  .eb-rec[data-active="true"] { border-color: rgba(255, 150, 80, 0.5); background: rgba(255, 150, 80, 0.05); }
+  .eb-rec:hover { transform: translateY(-2px); border-color: color-mix(in srgb, var(--rc) 55%, transparent); background: color-mix(in srgb, var(--rc) 9%, transparent); }
+  .eb-rec[data-active="true"] {
+    border-color: color-mix(in srgb, var(--rc) 70%, transparent);
+    background: color-mix(in srgb, var(--rc) 13%, transparent);
+    box-shadow: 0 0 20px -5px color-mix(in srgb, var(--rc) 75%, transparent);
+  }
+  .eb-rec[data-active="true"] .eb-rec-artist { color: var(--rc); }
   .eb-vinyl {
     width: 46px; height: 46px; border-radius: 50%; position: relative; flex: 0 0 auto;
     background: radial-gradient(circle at 50% 50%, #14101a 0 30%, #2a1f33 31% 33%, #14101a 34% 46%, #2a1f33 47% 49%, #14101a 50%);
     box-shadow: 0 4px 12px -4px rgba(0, 0, 0, 0.7), inset 0 0 0 1px rgba(245, 241, 232, 0.06);
     transition: transform 600ms ease;
   }
-  .eb-rec[data-active="true"] .eb-vinyl { animation: eb-spin 3.6s linear infinite; }
+  .eb-rec[data-active="true"] .eb-vinyl { animation: eb-spin 3.6s linear infinite; box-shadow: 0 4px 12px -4px rgba(0,0,0,0.7), 0 0 16px -1px var(--rc); }
+  .eb-rec[data-active="true"] .eb-vinyl-hole { background: var(--rc); box-shadow: 0 0 8px var(--rc); }
   .eb-vinyl-hole { position: absolute; top: 50%; left: 50%; width: 8px; height: 8px; border-radius: 50%; transform: translate(-50%, -50%); background: linear-gradient(135deg, #ff2d8b, #ffb347); }
   @keyframes eb-spin { to { transform: rotate(360deg); } }
   .eb-rec-meta { display: flex; flex-direction: column; align-items: center; gap: 1px; text-align: center; }
@@ -127,14 +141,16 @@ const REFS = [
 
   /* ── note ── */
   .eb-note {
-    background: rgba(255, 150, 80, 0.04); border: 1px solid rgba(255, 150, 80, 0.22);
+    background: color-mix(in srgb, var(--rc) 7%, transparent);
+    border: 1px solid color-mix(in srgb, var(--rc) 34%, transparent);
     border-radius: 6px; padding: 12px 16px; margin-bottom: 18px;
     font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-style: italic; font-size: 14px;
     color: rgba(245, 241, 232, 0.86); display: flex; align-items: baseline; gap: 4px; flex-wrap: wrap;
+    transition: background 200ms ease, border-color 200ms ease;
   }
-  .eb-note-q { color: var(--brand-orange); font-size: 18px; }
+  .eb-note-q { color: var(--rc); font-size: 18px; }
   .eb-note-anchor { margin-left: auto; font-style: normal; font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: rgba(245, 241, 232, 0.5); }
-  .eb-note-anchor b { color: var(--brand-yellow); }
+  .eb-note-anchor b { color: var(--rc); }
 
   /* ── axes ── */
   .eb-axes { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 20px; }
@@ -153,8 +169,8 @@ const REFS = [
   .eb-axis-vs { color: rgba(245, 241, 232, 0.3); font-size: 12px; }
   .eb-pole[data-lit="true"] {
     color: #0d060f; font-weight: 700;
-    background: linear-gradient(135deg, #ff2d8b, #ff7a3d, #ffd23d);
-    border-color: transparent; box-shadow: 0 0 18px rgba(255, 140, 80, 0.4);
+    background: var(--rc); border-color: transparent;
+    box-shadow: 0 0 18px -2px var(--rc);
   }
 
   /* ── outcome ── */

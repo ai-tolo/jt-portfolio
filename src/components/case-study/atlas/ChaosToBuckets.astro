@@ -143,6 +143,7 @@ const maxSlots = Math.max(...slotCount);
               </svg>
               <span class="ctb-chip-name">{c.name}</span>
               {c.dupe && <span class="ctb-chip-dup">⤬ dup</span>}
+              {c.hero && <span class="ctb-chip-follow">▸ the one we follow</span>}
             </span>
           </span>
         ))}
@@ -260,17 +261,34 @@ const maxSlots = Math.max(...slotCount);
     font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
     font-size: 14px;
     line-height: 1.55;
-    max-width: 50ch;
+    max-width: 52ch;
     margin: 0;
+    /* legibility plate: copy stays crisp while the chips drift behind it */
+    padding: 13px 16px;
+    border-radius: 9px;
+    background: rgba(8, 7, 13, 0.64);
+    border: 1px solid rgba(245, 241, 232, 0.08);
+    backdrop-filter: blur(5px);
+    -webkit-backdrop-filter: blur(5px);
+    box-shadow: 0 12px 32px -18px rgba(0, 0, 0, 0.8);
     transition: opacity 500ms ease;
   }
   .ctb-eyebrow {
-    display: block;
-    font-size: 10px;
-    letter-spacing: 0.28em;
+    display: inline-flex;
+    align-items: center;
+    gap: 9px;
+    font-size: 12.5px;
+    font-weight: 700;
+    letter-spacing: 0.24em;
     text-transform: uppercase;
     color: var(--brand-pink);
-    margin-bottom: 8px;
+    margin-bottom: 12px;
+  }
+  .ctb-eyebrow::before {
+    content: "";
+    width: 22px; height: 3px; border-radius: 2px;
+    background: currentColor;
+    box-shadow: 0 0 10px currentColor;
   }
   .ctb-eyebrow-swept { color: var(--brand-green); }
   .ctb-name { font-style: italic; font-weight: 700; color: var(--brand-cyan); }
@@ -388,6 +406,7 @@ const maxSlots = Math.max(...slotCount);
   }
   /* chaos drift lives on the inner so it composes with the chip's flight */
   .ctb-chip-inner {
+    position: relative;
     display: inline-flex;
     align-items: center;
     gap: 6px;
@@ -434,11 +453,50 @@ const maxSlots = Math.max(...slotCount);
     color: #00ff4d;
     box-shadow: 0 0 16px rgba(0,255,77,0.18);
   }
+  /* on settle the protagonist pops, then breathes — the satisfying landing */
   .ctb-stage[data-phase="swept"] .ctb-chip-hero .ctb-chip-inner {
     color: #00ff4d;
     border-color: rgba(0,255,77,0.6);
+    animation: ctb-heropop 560ms cubic-bezier(0.22, 1, 0.36, 1) 1100ms 1,
+               ctb-heroglow 2.6s ease-in-out 1700ms infinite;
   }
   .ctb-stage[data-phase="swept"] .ctb-chip-hero .ctb-chip-wave { color: #00ff4d; }
+  @keyframes ctb-heropop {
+    0% { transform: rotate(0) scale(1); }
+    45% { transform: rotate(0) scale(1.16); }
+    100% { transform: rotate(0) scale(1); }
+  }
+  @keyframes ctb-heroglow {
+    0%, 100% { box-shadow: 0 0 16px rgba(0,255,77,0.18); }
+    50% { box-shadow: 0 0 28px rgba(0,255,77,0.42); }
+  }
+  /* "the one we follow" — appears under the protagonist once it lands, pointing
+     the reader toward the file beat that comes next */
+  .ctb-chip-follow {
+    position: absolute;
+    bottom: calc(100% + 8px);
+    left: 50%;
+    transform: translateX(-50%);
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 8.5px; letter-spacing: 0.1em; text-transform: uppercase;
+    color: #00ff4d; white-space: nowrap; opacity: 0; pointer-events: none;
+    background: rgba(7, 6, 12, 0.95);
+    border: 1px solid rgba(0,255,77,0.45);
+    border-radius: 5px; padding: 3px 9px;
+    box-shadow: 0 8px 20px -8px rgba(0,0,0,0.85);
+    transition: opacity 420ms ease 1500ms;
+  }
+  /* down-caret so the plate reads as a tag pointing at the chip */
+  .ctb-chip-follow::after {
+    content: ""; position: absolute; top: 100%; left: 50%; transform: translateX(-50%);
+    border: 5px solid transparent; border-top-color: rgba(0,255,77,0.45);
+  }
+  .ctb-stage[data-phase="swept"] .ctb-chip-hero .ctb-chip-follow { opacity: 1; }
+  @media (max-width: 720px) { .ctb-chip-follow { display: none; } }
+
+  /* the stage itself reads "resolved" once everything lands */
+  .ctb-stage { transition: border-color 600ms ease 900ms; }
+  .ctb-stage[data-phase="swept"] { border-color: rgba(14,196,252,0.18); }
 
   /* dup chips merge: fly to bin, then collapse */
   .ctb-stage[data-phase="swept"] .ctb-chip-dupe {
@@ -488,6 +546,7 @@ const maxSlots = Math.max(...slotCount);
   @media (prefers-reduced-motion: reduce) {
     .ctb-chip { transition: none; }
     .ctb-chip-inner { animation: none !important; }
+    .ctb-chip-follow { transition: none; }
     .ctb-stage[data-phase="swept"] .ctb-chip-dupe { animation: none; opacity: 0; }
   }
 </style>

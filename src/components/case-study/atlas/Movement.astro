@@ -1,28 +1,38 @@
 ---
-// A "movement" pillar — the dramatic, minimalist chapter break that names one
-// of the two halves the whole system stands on (AudioDex · the index, then
-// Richard · the engineer). Hero-scale Space Grotesk wordmark, an accent kicker
-// + rule, and a giant ghost numeral behind it. Static by design (a title should
-// never be trapped invisible behind a reveal). Accent colour-codes the half.
+// A "movement" pillar — the dramatic chapter break that names one of the two
+// halves the whole system stands on (AudioDex · the index, then Richard · the
+// engineer), now carrying that half's emblem so the reveal has a face: the
+// AudioDex journal, or Richard himself. Hero-scale wordmark, accent kicker +
+// rule, a giant ghost numeral behind it. Static by design (a title should never
+// be trapped invisible behind a reveal).
+import AudioDexMark from "./AudioDexMark.astro";
+import Richard from "./Richard.astro";
 interface Props {
   index: string;   // "I" / "II"
-  kicker: string;  // "The index" / "The engineer"
+  kicker: string;  // "the index" / "the engineer"
   name: string;    // "AudioDex" / "Richard"
   tagline: string;
   accent?: "cyan" | "green" | "orange" | "pink";
-  /** Flow continuously out of the module above (no top rule, tight top pad). */
+  mark?: "audiodex" | "richard";
   flush?: boolean;
 }
-const { index, kicker, name, tagline, accent = "cyan", flush = false } = Astro.props;
+const { index, kicker, name, tagline, accent = "cyan", mark, flush = false } = Astro.props;
 ---
 
 <section class:list={["mv", `mv-${accent}`, "cs-bleed", { "mv-flush": flush }]}>
   <div class="mv-inner">
     <span class="mv-ghost" aria-hidden="true">{index}</span>
-    <p class="mv-eyebrow"><span class="mv-tick" aria-hidden="true"></span>Movement {index} — {kicker}</p>
-    <h2 class="mv-name">{name}</h2>
-    <span class="mv-rule" aria-hidden="true"></span>
-    <p class="mv-tag">{tagline}</p>
+    <div class="mv-text">
+      <p class="mv-eyebrow"><span class="mv-tick" aria-hidden="true"></span>Movement {index} — {kicker}</p>
+      <h2 class="mv-name">{name}</h2>
+      <span class="mv-rule" aria-hidden="true"></span>
+      <p class="mv-tag">{tagline}</p>
+    </div>
+    {mark && (
+      <div class="mv-mark">
+        {mark === "audiodex" ? <AudioDexMark size={168} /> : <Richard size={168} />}
+      </div>
+    )}
   </div>
 </section>
 
@@ -45,7 +55,22 @@ const { index, kicker, name, tagline, accent = "cyan", flush = false } = Astro.p
     max-width: 1160px;
     margin: 0 auto;
     padding: 0 32px;
+    display: flex;
+    align-items: center;
+    gap: 40px;
   }
+  .mv-text { flex: 1 1 auto; min-width: 0; }
+  .mv-mark {
+    flex: 0 0 auto;
+    filter: drop-shadow(0 10px 30px color-mix(in srgb, var(--mv-accent) 30%, transparent));
+    animation: mv-float 6s ease-in-out infinite;
+  }
+  @keyframes mv-float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-9px); } }
+  @media (max-width: 720px) {
+    .mv-inner { flex-direction: column-reverse; align-items: flex-start; gap: 22px; }
+    .mv-mark { align-self: center; }
+  }
+  @media (prefers-reduced-motion: reduce) { .mv-mark { animation: none; } }
 
   /* giant ghost numeral, sunk far back */
   .mv-ghost {
