@@ -1,0 +1,410 @@
+---
+// ROUND 04 — THE APPRENTICE (the debunk you live).
+//
+// The feature Jon was proudest of: an engine that studies your crowns and gets
+// more "yours" every time. Round 04 lets the visitor opt INTO that dead idea,
+// then plays their own crowns (read from the ledger the earlier rounds wrote)
+// back as evidence that the learning signal was a funhouse mirror. Lands the
+// four beats: taste is per-track not per-person; the proud feature failed its
+// own blind test; the signal was sighted + loudness-unmatched + single-rater;
+// better DSP would only amplify a biased judge.
+//
+// Rhymes with RoundFrame (same "Round NN · phase" header, the-bet belief line,
+// post-reveal stamp). Recycles EngineerBrain's vinyl disk (static here, shelved)
+// and TasteLoops' pond box (headless: the engineer's surface without the
+// engineer, because the idea is off the platter). Reads the ledger ONCE on
+// script run (no IO / no scroll / no rAF — the preview throttles those); every
+// reveal is click or keyboard driven. Graceful fallback to Jon's own scattered
+// crowns when the visitor skipped the earlier rounds. Reduced-motion safe.
+---
+
+<section
+  class="tt"
+  data-taste-trial
+  data-path="fallback"
+  data-revealed="idle"
+>
+  <header class="tt-head">
+    <span class="tt-num">Round 04</span>
+    <span class="tt-phase">apprentice</span>
+  </header>
+
+  <p class="tt-belief">
+    <span class="tt-belief-tag">the bet</span>
+    If which master wins depends on the track and the listener, then I should be able to learn the listener: an engine that studies every crown you give it and gets more yours each time. It even asked you questions. It was the feature I was proudest of.
+  </p>
+
+  <!-- S1 · the seductive opt-in (real button; label swapped per path on boot) -->
+  <div class="tt-cta" data-tt-cta>
+    <button type="button" class="tt-optin" data-tt-optin>yes, learn from my crowns</button>
+    <span class="tt-cta-hint" data-tt-cta-hint>It kept every pick you made above.</span>
+  </div>
+
+  <!-- S2 · the evidence wall, headless pond box (revealed on opt-in) -->
+  <div class="tt-wall-wrap" data-tt-wall-wrap hidden>
+    <div class="tt-wall">
+      <svg class="tt-pond" viewBox="0 0 400 58" preserveAspectRatio="none" aria-hidden="true">
+        <g fill="none" stroke="#22d3ff" stroke-width="1.1" opacity="0.4" stroke-linecap="round">
+          <path d="M0 30 q26 -7 52 0 t52 0 t52 0 t52 0 t52 0 t52 0 t52 0" />
+          <path d="M0 42 q30 6 60 0 t60 0 t60 0 t60 0 t60 0 t60 0" opacity="0.7" />
+        </g>
+        <g opacity="0.85">
+          <path d="M60 40 a17 7 0 1 0 34 0 a17 7 0 1 0 -34 0 M77 40 l9 -4" fill="#2f7a4c" stroke="#1f5a37" stroke-width="0.8" />
+          <path d="M300 41 a15 6 0 1 0 30 0 a15 6 0 1 0 -30 0 M315 41 l8 -3.5" fill="#2f7a4c" stroke="#1f5a37" stroke-width="0.8" />
+        </g>
+        <g stroke="#4aa86a" stroke-width="2" stroke-linecap="round" fill="none">
+          <path d="M356 56 q-3 -18 1 -30" /><path d="M366 56 q2 -16 -1 -28" /><path d="M376 56 q-2 -14 1 -24" />
+        </g>
+        <path d="M14 56 q4 -12 16 -11 q10 1 12 11 Z" fill="#525866" stroke="#3a3f4b" stroke-width="0.8" />
+      </svg>
+
+      <h3 class="tt-wall-head" data-tt-wall-head tabindex="-1">Before it learns anything, look at what you actually crowned.</h3>
+      <div class="tt-shelf" role="list" aria-label="The crowns the engine was about to learn from" data-tt-shelf></div>
+
+      <button type="button" class="tt-see" data-tt-see>see what broke &rarr;</button>
+    </div>
+  </div>
+
+  <!-- S3 · the verdict (revealed on "see what broke") -->
+  <div class="tt-overturn" data-tt-overturn hidden>
+    <span class="tt-stamp">debunked</span>
+    <div class="tt-verdict">
+      <p class="tt-readout" data-tt-readout aria-live="polite"></p>
+      <p class="tt-thesis">So here is what broke. Taste turned out to be per-track, not per-person: the crowns above do not line up, and the votes underneath them line up even less. The feature I was proudest of could not survive its own blind test, because the signal it learned from was a funhouse mirror: the votes that actually trained it were sighted, never loudness-matched, and one rater deep. Teaching it harder would not have fixed that. Better DSP only sharpens whatever the judge already believes, so a smarter engine fed these votes hands you the same bias, louder. The bottleneck was never the DSP. It was that the judge was biased. So I shelved the learning loop and went back to fix the judge first: blind, loudness-matched, every time.</p>
+    </div>
+  </div>
+</section>
+
+<script>
+  // ── Ledger contract (written by VerdictLedger / TheBench): localStorage key
+  //    "lathe-verdicts-v1" -> Record<roundId, {isOriginal, gain, label}>. ──
+  const KEY = "lathe-verdicts-v1";
+  const ORDER = ["r1-stems", "r2-loudness", "r3-fulltrack"];
+  const ROUND_META: Record<string, { tag: string; rc: string }> = {
+    "r1-stems": { tag: "round 01 · split it into parts", rc: "#0ec4fc" },
+    "r2-loudness": { tag: "round 02 · the loudness trap", rc: "#ff2d8b" },
+    "r3-fulltrack": { tag: "round 03 · the whole track", rc: "#ffd23d" },
+  };
+
+  type Verdict = { isOriginal: boolean; gain: number; label: string };
+  type Tile = { tag: string; rc: string; crowned: string; stamp: string; sub: string };
+
+  // What treating THIS crown as taste would have taught the engine. Honest about
+  // the visitor's blind crowns (no "sighted" here — the rounds above were blind).
+  const flawFor = (v: Verdict): { stamp: string; sub: string } => {
+    if (v.isOriginal) return { stamp: "do-nothing won", sub: "it would have learned to process less" };
+    if (v.gain > 1) return { stamp: "the level, not the mix", sub: "louder, learned as better" };
+    return { stamp: "one track", sub: "true here, not a rule" };
+  };
+
+  // Fallback: Jon's own real, safe crowns. Here "sighted" IS honest — he knew
+  // which take was the original. No retired metrics; only the real "11 to 1".
+  const FALLBACK: Tile[] = [
+    { tag: "my ear · she can't hurt me", rc: "#0ec4fc", crowned: "I crowned the untouched original, 11 votes to 1", stamp: "sighted", sub: "eleven times I knew which was the original" },
+    { tag: "my ear · a hot bounce", rc: "#ff2d8b", crowned: "I crowned the louder take every time", stamp: "the level, not the mix", sub: "until I matched the loudness, then it stopped" },
+    { tag: "my ear · the next track over", rc: "#ffd23d", crowned: "A different song pulled the opposite way, warm over bright", stamp: "one rater", sub: "true for that song, not a rule" },
+  ];
+
+  document.querySelectorAll<HTMLElement>("[data-taste-trial]").forEach((root) => {
+    const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const optin = root.querySelector<HTMLButtonElement>("[data-tt-optin]");
+    const ctaHint = root.querySelector<HTMLElement>("[data-tt-cta-hint]");
+    const cta = root.querySelector<HTMLElement>("[data-tt-cta]");
+    const wallWrap = root.querySelector<HTMLElement>("[data-tt-wall-wrap]");
+    const wallHead = root.querySelector<HTMLElement>("[data-tt-wall-head]");
+    const shelf = root.querySelector<HTMLElement>("[data-tt-shelf]");
+    const seeBtn = root.querySelector<HTMLButtonElement>("[data-tt-see]");
+    const overturn = root.querySelector<HTMLElement>("[data-tt-overturn]");
+    const readout = root.querySelector<HTMLElement>("[data-tt-readout]");
+
+    // ── S0 BOOT: read the ledger once, decide the path, build the tile model. ──
+    let verdicts: Array<Verdict & { round: string }> = [];
+    try {
+      const raw = JSON.parse(localStorage.getItem(KEY) || "{}");
+      verdicts = ORDER.filter((id) => raw && raw[id]).map((id) => ({
+        round: id,
+        isOriginal: !!raw[id].isOriginal,
+        gain: Number(raw[id].gain) || 1,
+        label: typeof raw[id].label === "string" ? raw[id].label : "",
+      }));
+    } catch {
+      verdicts = [];
+    }
+    const path = verdicts.length ? "visitor" : "fallback";
+    root.dataset.path = path;
+
+    const tiles: Tile[] = path === "visitor"
+      ? verdicts.map((v) => {
+          const meta = ROUND_META[v.round] || { tag: v.round, rc: "#a06cf0" };
+          const flaw = flawFor(v);
+          return {
+            tag: meta.tag,
+            rc: meta.rc,
+            crowned: `you crowned: ${v.label || "your pick"}`,
+            stamp: flaw.stamp,
+            sub: flaw.sub,
+          };
+        })
+      : FALLBACK;
+
+    // path-aware microcopy (textContent only — no user string ever hits innerHTML)
+    if (optin) optin.textContent = path === "visitor" ? "yes, learn from my crowns" : "show me where it broke";
+    if (ctaHint) ctaHint.textContent = path === "visitor"
+      ? "It kept every pick you made above."
+      : "You skipped the rounds above, so these are my own crowns.";
+    if (wallHead) wallHead.textContent = path === "visitor"
+      ? "Before it learns anything, look at what you actually crowned."
+      : "Before it learns anything, look at what I actually crowned. My records, not yours, but this is where the idea broke.";
+
+    // ── readout: the visceral contradiction (the structural flaws are named in
+    //    the static thesis, so this stays personal and adapts to any vote set). ──
+    const buildReadout = (): string => {
+      if (path === "fallback") {
+        return "I ran these same crowns on my own records. No pattern, just scatter. On one song I crowned the untouched take eleven times to one, and the engine was about to learn from exactly that vote.";
+      }
+      const hasOriginal = verdicts.some((v) => v.isOriginal);
+      const hasLouder = verdicts.some((v) => !v.isOriginal && v.gain > 1);
+      const hasMatched = verdicts.some((v) => !v.isOriginal && !(v.gain > 1));
+      const clauses: string[] = [];
+      if (hasOriginal) clauses.push("One round you crowned the untouched take.");
+      if (hasLouder) clauses.push("One round the level fooled you, not the mix.");
+      if (hasMatched) clauses.push("One round you picked a mix that only wins on this track.");
+      const distinct = [hasOriginal, hasLouder, hasMatched].filter(Boolean).length;
+      const opener = distinct >= 2 ? "Different rounds, different calls. " : "";
+      const close = distinct >= 2
+        ? " No agreement between them. That was the whole signal it wanted to learn you from."
+        : " One crown is not a taste, it is a coin flip. That was the whole signal it wanted to learn you from.";
+      return opener + clauses.join(" ") + close;
+    };
+
+    // ── render the shelf via DOM nodes (no innerHTML for the data strings). ──
+    const renderShelf = () => {
+      if (!shelf) return;
+      shelf.textContent = "";
+      tiles.forEach((t, i) => {
+        const tile = document.createElement("div");
+        tile.className = "tt-tile";
+        tile.setAttribute("role", "listitem");
+        tile.style.setProperty("--rc", t.rc);
+        tile.setAttribute("aria-label", `${t.tag}. ${t.crowned}. ${t.stamp}.`);
+        if (i === 0 && !reduce) tile.dataset.pulse = "true";
+
+        const vinyl = document.createElement("span");
+        vinyl.className = "tt-vinyl";
+        vinyl.setAttribute("aria-hidden", "true");
+        const hole = document.createElement("span");
+        hole.className = "tt-vinyl-hole";
+        vinyl.appendChild(hole);
+
+        const tag = document.createElement("span");
+        tag.className = "tt-tile-tag";
+        tag.textContent = t.tag;
+
+        const crowned = document.createElement("span");
+        crowned.className = "tt-tile-crowned";
+        crowned.textContent = t.crowned;
+
+        const stamp = document.createElement("span");
+        stamp.className = "tt-tile-stamp";
+        stamp.textContent = t.stamp;
+
+        const sub = document.createElement("span");
+        sub.className = "tt-tile-sub";
+        sub.textContent = t.sub;
+
+        tile.append(vinyl, tag, crowned, stamp, sub);
+        shelf.appendChild(tile);
+      });
+    };
+
+    // ── S2: reveal the wall ──
+    const revealWall = () => {
+      if (root.dataset.revealed !== "idle") return;
+      root.dataset.revealed = "wall";
+      renderShelf();
+      if (cta) cta.setAttribute("hidden", "");
+      if (wallWrap) wallWrap.removeAttribute("hidden");
+      // move focus to the wall heading for screen-reader continuity
+      window.setTimeout(() => wallHead?.focus(), reduce ? 0 : 60);
+    };
+
+    // ── S3: reveal the verdict (terminal) ──
+    const revealDebunk = () => {
+      if (root.dataset.revealed !== "wall") return;
+      root.dataset.revealed = "debunk";
+      if (readout) readout.textContent = buildReadout();
+      if (seeBtn) seeBtn.setAttribute("hidden", "");
+      if (overturn) overturn.removeAttribute("hidden");
+    };
+
+    optin?.addEventListener("click", revealWall);
+    seeBtn?.addEventListener("click", revealDebunk);
+
+    // verification hook
+    (root as any).__tasteTrial = {
+      get path() { return path; },
+      get revealed() { return root.dataset.revealed; },
+      get tileCount() { return tiles.length; },
+      get stamps() { return tiles.map((t) => t.stamp); },
+    };
+  });
+</script>
+
+<style>
+  .tt { max-width: 760px; margin: 0 auto; color: #f5f1e8; }
+
+  /* ── header: rhymes with RoundFrame's rf-head ── */
+  .tt-head { display: flex; align-items: baseline; gap: 12px; margin-bottom: 10px; flex-wrap: wrap; }
+  .tt-num {
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 11px; font-weight: 700; letter-spacing: 0.24em; text-transform: uppercase;
+    color: var(--brand-cyan);
+  }
+  .tt-phase {
+    font-family: "Space Grotesk Variable", "Space Grotesk", ui-sans-serif, system-ui, sans-serif;
+    font-weight: 700; font-size: clamp(18px, 2.2vw, 22px); color: #f5f1e8; letter-spacing: -0.01em;
+  }
+  .tt-belief {
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 13.5px; line-height: 1.6; color: rgba(245, 241, 232, 0.82);
+    margin: 0 0 18px; max-width: 64ch;
+  }
+  .tt-belief-tag {
+    display: inline-block; margin-right: 9px;
+    font-size: 9px; font-weight: 700; letter-spacing: 0.2em; text-transform: uppercase;
+    color: rgba(245, 241, 232, 0.4); vertical-align: 1px;
+  }
+
+  /* ── S1: the seductive opt-in ── */
+  .tt-cta { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+  .tt-cta[hidden] { display: none; }
+  .tt-optin {
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 13px; font-weight: 700;
+    color: #062330; cursor: pointer; border: none; border-radius: 6px; padding: 11px 20px;
+    background: linear-gradient(135deg, #00ff8a, #19e0ff);
+    box-shadow: 0 0 0 1px rgba(0, 255, 138, 0.4), 0 6px 18px -6px rgba(0, 255, 138, 0.6);
+    transition: filter 160ms ease, transform 160ms ease;
+  }
+  .tt-optin:hover { filter: brightness(1.08); transform: translateY(-1px); }
+  .tt-optin:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
+  .tt-cta-hint {
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 11.5px;
+    color: rgba(245, 241, 232, 0.5); font-style: italic;
+  }
+
+  /* ── S2: the evidence wall — TasteLoops' pond box, headless (no turtle) ── */
+  .tt-wall-wrap[hidden] { display: none; }
+  .tt-wall-wrap { animation: tt-rise 420ms cubic-bezier(0.22, 1, 0.36, 1) both; }
+  .tt-wall {
+    position: relative; overflow: hidden; border-radius: 18px; padding: 20px 22px 18px;
+    background:
+      radial-gradient(135% 90% at 50% 122%, rgba(34, 168, 99, 0.12), transparent 62%),
+      linear-gradient(180deg, rgba(15, 21, 25, 0.96), rgba(9, 13, 15, 0.975));
+    border: 1px solid rgba(34, 211, 255, 0.24);
+    box-shadow: 0 12px 44px rgba(0, 0, 0, 0.42), 0 0 60px rgba(34, 168, 99, 0.06);
+  }
+  .tt-pond { position: absolute; left: 0; right: 0; bottom: 0; width: 100%; height: 58px; z-index: 0; opacity: 0.45; pointer-events: none; }
+  .tt-wall-head, .tt-shelf, .tt-see { position: relative; z-index: 1; }
+  .tt-wall-head {
+    margin: 0 0 16px; outline: none;
+    font-family: "Geist Variable", ui-sans-serif, system-ui, sans-serif;
+    font-size: 14.5px; font-weight: 600; line-height: 1.5; color: #f4eee3; text-wrap: pretty;
+  }
+
+  /* the crowns, as records taken off the platter (static vinyl, not spinning) */
+  .tt-shelf { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 18px; }
+  @media (max-width: 560px) { .tt-shelf { grid-template-columns: repeat(2, 1fr); } }
+  @media (max-width: 360px) { .tt-shelf { grid-template-columns: 1fr; } }
+  /* the evidence tiles are created in the client <script>, so they never get
+     Astro's scope attribute; their styles live in the is:global block below,
+     anchored under .tt so they cannot leak past this component. */
+
+  .tt-see {
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px;
+    color: rgba(245, 241, 232, 0.72); background: transparent;
+    border: 1px solid rgba(245, 241, 232, 0.24); border-radius: 5px;
+    padding: 8px 15px; cursor: pointer; transition: color 160ms ease, border-color 160ms ease, background 160ms ease;
+  }
+  .tt-see:hover { color: #f5f1e8; border-color: rgba(255, 39, 97, 0.5); background: rgba(255, 39, 97, 0.05); }
+  .tt-see:focus-visible { outline: 2px solid var(--brand-pink); outline-offset: 2px; }
+  .tt-see[hidden] { display: none; }
+
+  /* ── S3: the verdict — RoundFrame's overturn panel, debunked = pink ── */
+  .tt-overturn[hidden] { display: none; }
+  .tt-overturn {
+    margin: 16px 0 0; padding: 16px 18px 16px 18px; border-radius: 8px;
+    display: grid; grid-template-columns: auto 1fr; align-items: start; gap: 14px;
+    background: rgba(245, 241, 232, 0.02);
+    border: 1px solid var(--cs-line, rgba(245, 241, 232, 0.12));
+    border-left: 2px solid var(--brand-pink);
+    animation: tt-rise 420ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+  .tt-stamp {
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 10px; font-weight: 700; letter-spacing: 0.18em; text-transform: uppercase;
+    color: var(--brand-pink); border: 1px solid currentColor; border-radius: 4px;
+    padding: 4px 9px; white-space: nowrap; transform: rotate(-3deg); align-self: center;
+  }
+  .tt-verdict { display: flex; flex-direction: column; gap: 12px; }
+  .tt-readout {
+    margin: 0; font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 13px; line-height: 1.62; color: #f5f1e8;
+  }
+  .tt-thesis {
+    margin: 0; font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 13px; line-height: 1.65; color: var(--cs-text-muted, rgba(245, 241, 232, 0.7));
+  }
+
+  @keyframes tt-rise { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+
+  @media (max-width: 560px) {
+    .tt-overturn { grid-template-columns: 1fr; }
+    .tt-stamp { justify-self: start; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .tt-wall-wrap, .tt-overturn { animation: none; }
+    .tt-optin:hover { transform: none; }
+  }
+</style>
+
+<!-- The evidence tiles are built in the client script (so Astro's scope attribute
+     never reaches them). These rules are global but every selector is anchored
+     under .tt, which exists only in this component, so nothing leaks. -->
+<style is:global>
+  .tt .tt-tile {
+    --rc: #0ec4fc;
+    display: flex; flex-direction: column; align-items: center; gap: 8px; text-align: center;
+    padding: 16px 12px 14px; border-radius: 10px;
+    border: 1px solid color-mix(in srgb, var(--rc) 30%, transparent);
+    background: color-mix(in srgb, var(--rc) 6%, rgba(8, 6, 12, 0.5));
+    box-shadow: inset 0 0 24px -10px color-mix(in srgb, var(--rc) 70%, transparent);
+  }
+  .tt .tt-tile[data-pulse="true"] .tt-vinyl { animation: tt-pulse 2.6s ease-in-out infinite; }
+  .tt .tt-vinyl {
+    width: 44px; height: 44px; border-radius: 50%; position: relative; flex: 0 0 auto;
+    background: radial-gradient(circle at 50% 50%, #14101a 0 30%, #2a1f33 31% 33%, #14101a 34% 46%, #2a1f33 47% 49%, #14101a 50%);
+    box-shadow: 0 4px 12px -4px rgba(0, 0, 0, 0.7), inset 0 0 0 1px rgba(245, 241, 232, 0.06), 0 0 14px -2px var(--rc);
+  }
+  .tt .tt-vinyl-hole { position: absolute; top: 50%; left: 50%; width: 8px; height: 8px; border-radius: 50%; transform: translate(-50%, -50%); background: var(--rc); box-shadow: 0 0 7px var(--rc); }
+  .tt .tt-tile-tag {
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 10px;
+    letter-spacing: 0.08em; text-transform: uppercase; color: var(--rc); line-height: 1.3;
+  }
+  .tt .tt-tile-crowned {
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-style: italic;
+    font-size: 11px; line-height: 1.45; color: #f5f1e8;
+  }
+  .tt .tt-tile-stamp {
+    margin-top: 2px; font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 9px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase;
+    color: var(--brand-pink);
+    border: 1px solid color-mix(in srgb, var(--brand-pink) 45%, transparent);
+    border-radius: 3px; padding: 3px 7px;
+  }
+  .tt .tt-tile-sub { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 9.5px; line-height: 1.4; color: rgba(245, 241, 232, 0.45); }
+
+  @keyframes tt-pulse { 0%, 100% { opacity: 0.62; } 50% { opacity: 1; } }
+  @media (prefers-reduced-motion: reduce) {
+    .tt .tt-tile[data-pulse="true"] .tt-vinyl { animation: none; }
+  }
+</style>
