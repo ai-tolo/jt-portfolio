@@ -1,0 +1,76 @@
+---
+// VERDICT LEDGER — the running record of what the visitor's ear actually did.
+//
+// Listens (document-level) for every Bench `bench:verdict`, keeps the latest
+// verdict per round in localStorage, and tallies: how many rounds judged, how
+// often the visitor crowned the untouched original, how often the louder take
+// fooled them. Ambient proof they are really judging, and the data source the
+// debunk round (TasteTrial) reads back. Survives scroll + refresh. No audio,
+// no motion dependency.
+---
+<aside class="vl" data-ledger aria-live="polite" aria-label="Your judging record">
+  <span class="vl-label"><span class="vl-dot" aria-hidden="true"></span>your ledger</span>
+  <span class="vl-stat"><b data-vl-judged>0</b> judged</span>
+  <span class="vl-stat vl-orig"><b data-vl-original>0</b> crowned the original</span>
+  <span class="vl-stat vl-loud"><b data-vl-louder>0</b> fooled by louder</span>
+</aside>
+
+<script>
+  const KEY = "lathe-verdicts-v1";
+  type V = { isOriginal: boolean; gain: number; label: string };
+  const load = (): Record<string, V> => {
+    try { return JSON.parse(localStorage.getItem(KEY) || "{}"); } catch { return {}; }
+  };
+  const save = (m: Record<string, V>) => {
+    try { localStorage.setItem(KEY, JSON.stringify(m)); } catch {}
+  };
+
+  document.querySelectorAll<HTMLElement>("[data-ledger]").forEach((el) => {
+    const judged = el.querySelector<HTMLElement>("[data-vl-judged]");
+    const orig = el.querySelector<HTMLElement>("[data-vl-original]");
+    const loud = el.querySelector<HTMLElement>("[data-vl-louder]");
+    const render = () => {
+      const vals = Object.values(load());
+      if (judged) judged.textContent = String(vals.length);
+      if (orig) orig.textContent = String(vals.filter((v) => v.isOriginal).length);
+      if (loud) loud.textContent = String(vals.filter((v) => v.gain > 1).length);
+      el.dataset.judged = String(vals.length);
+    };
+    document.addEventListener("bench:verdict", (e: Event) => {
+      const d = (e as CustomEvent).detail || {};
+      if (!d.round) return;
+      const m = load();
+      m[d.round] = { isOriginal: !!d.isOriginal, gain: d.gain || 1, label: d.label || "" };
+      save(m);
+      render();
+      el.dataset.bumped = "1";
+      window.setTimeout(() => el.removeAttribute("data-bumped"), 500);
+    });
+    render();
+  });
+</script>
+
+<style>
+  .vl {
+    display: inline-flex; align-items: center; flex-wrap: wrap; gap: 8px 18px;
+    max-width: 760px; margin: 0 auto; padding: 10px 16px; border-radius: 8px;
+    background: rgba(245, 241, 232, 0.02);
+    border: 1px solid var(--cs-line, rgba(245, 241, 232, 0.12));
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    transition: border-color 300ms ease, background 300ms ease;
+  }
+  .vl[data-bumped] { border-color: rgba(255, 210, 61, 0.5); background: rgba(255, 210, 61, 0.04); }
+  .vl-label {
+    display: inline-flex; align-items: center; gap: 8px;
+    font-size: 10px; font-weight: 700; letter-spacing: 0.22em; text-transform: uppercase;
+    color: rgba(245, 241, 232, 0.5);
+  }
+  .vl-dot {
+    width: 6px; height: 6px; border-radius: 50%; background: var(--brand-cyan);
+    box-shadow: 0 0 7px var(--brand-cyan);
+  }
+  .vl-stat { font-size: 11.5px; color: rgba(245, 241, 232, 0.55); letter-spacing: 0.02em; }
+  .vl-stat b { color: #f5f1e8; font-style: italic; font-feature-settings: "tnum"; margin-right: 3px; }
+  .vl-orig b { color: var(--brand-green); }
+  .vl-loud b { color: var(--brand-pink); }
+</style>

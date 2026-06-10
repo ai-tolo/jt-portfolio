@@ -1,0 +1,119 @@
+---
+// ROUND FRAME — the connective theater around one Bench in Movement II.
+//
+// Belief goes in (the hypothesis the engine held), the visitor judges on the
+// Bench inside, and AFTER they crown, the overturn line is revealed — chosen by
+// what their ear actually did (crowned the untouched original / picked the
+// louder one / default). Input-driven (listens for the child Bench's
+// `bench:verdict`), so it never depends on an IntersectionObserver or
+// scroll-timeline firing (the preview throttles those). Static + fully visible
+// with no JS, and under prefers-reduced-motion.
+export interface Props {
+  index: string;            // "01"
+  phase: string;            // "split it into parts"
+  belief: string;           // the hypothesis going in
+  overturn: string;         // default reveal line after the verdict
+  overturnOriginal?: string;// shown if they crowned the untouched original
+  overturnLouder?: string;  // shown if they crowned a louder (gain > 1) take
+  verdict?: "debunked" | "held" | "live"; // the stamp color
+}
+const { index, phase, belief, overturn, overturnOriginal, overturnLouder, verdict = "debunked" } = Astro.props;
+---
+<section
+  class="rf"
+  data-round-frame
+  data-verdict={verdict}
+  data-overturn={overturn}
+  data-overturn-original={overturnOriginal ?? ""}
+  data-overturn-louder={overturnLouder ?? ""}
+>
+  <header class="rf-head">
+    <span class="rf-num">Round {index}</span>
+    <span class="rf-phase">{phase}</span>
+  </header>
+  <p class="rf-belief"><span class="rf-belief-tag">the bet</span>{belief}</p>
+
+  <div class="rf-bench"><slot /></div>
+
+  <div class="rf-overturn" data-rf-overturn hidden>
+    <span class="rf-stamp" data-rf-stamp>{verdict}</span>
+    <p class="rf-overturn-text" data-rf-text></p>
+  </div>
+</section>
+
+<script>
+  document.querySelectorAll<HTMLElement>("[data-round-frame]").forEach((frame) => {
+    const bench = frame.querySelector<HTMLElement>("[data-bench]");
+    const panel = frame.querySelector<HTMLElement>("[data-rf-overturn]");
+    const text = frame.querySelector<HTMLElement>("[data-rf-text]");
+    if (!bench || !panel || !text) return;
+    bench.addEventListener("bench:verdict", (e: Event) => {
+      const d = (e as CustomEvent).detail || {};
+      let txt = frame.dataset.overturn || "";
+      if (d.isOriginal && frame.dataset.overturnOriginal) txt = frame.dataset.overturnOriginal;
+      else if (d.gain && d.gain > 1 && frame.dataset.overturnLouder) txt = frame.dataset.overturnLouder;
+      text.textContent = txt;
+      panel.removeAttribute("hidden");
+      frame.dataset.verdicted = "true";
+    });
+  });
+</script>
+
+<style>
+  .rf { max-width: 760px; margin: 0 auto; }
+  .rf-head { display: flex; align-items: baseline; gap: 12px; margin-bottom: 10px; flex-wrap: wrap; }
+  .rf-num {
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 11px; font-weight: 700; letter-spacing: 0.24em; text-transform: uppercase;
+    color: var(--brand-cyan);
+  }
+  .rf-phase {
+    font-family: "Space Grotesk Variable", "Space Grotesk", ui-sans-serif, system-ui, sans-serif;
+    font-weight: 700; font-size: clamp(18px, 2.2vw, 22px); color: #f5f1e8; letter-spacing: -0.01em;
+  }
+  .rf-belief {
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 13.5px; line-height: 1.6; color: rgba(245, 241, 232, 0.82);
+    margin: 0 0 16px; max-width: 64ch;
+  }
+  .rf-belief-tag {
+    display: inline-block; margin-right: 9px;
+    font-size: 9px; font-weight: 700; letter-spacing: 0.2em; text-transform: uppercase;
+    color: rgba(245, 241, 232, 0.4); vertical-align: 1px;
+  }
+  .rf-bench { margin: 0 0 4px; }
+
+  /* the overturn reveal — appears only after the visitor commits a verdict */
+  .rf-overturn {
+    margin: 16px 0 0; padding: 14px 16px 14px 18px; border-radius: 8px;
+    display: grid; grid-template-columns: auto 1fr; align-items: start; gap: 14px;
+    background: rgba(245, 241, 232, 0.02);
+    border: 1px solid var(--cs-line, rgba(245, 241, 232, 0.12));
+    animation: rf-rise 420ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+  .rf-overturn[hidden] { display: none; }
+  @keyframes rf-rise { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+  .rf-stamp {
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 10px; font-weight: 700; letter-spacing: 0.18em; text-transform: uppercase;
+    border: 1px solid currentColor; border-radius: 4px; padding: 4px 9px; white-space: nowrap;
+    transform: rotate(-3deg); align-self: center;
+  }
+  .rf[data-verdict="debunked"] .rf-stamp { color: var(--brand-pink); }
+  .rf[data-verdict="debunked"] .rf-overturn { border-left: 2px solid var(--brand-pink); }
+  .rf[data-verdict="held"] .rf-stamp { color: var(--brand-green); }
+  .rf[data-verdict="held"] .rf-overturn { border-left: 2px solid var(--brand-green); }
+  .rf[data-verdict="live"] .rf-stamp { color: var(--brand-yellow); }
+  .rf[data-verdict="live"] .rf-overturn { border-left: 2px solid var(--brand-yellow); }
+  .rf-overturn-text {
+    margin: 0; font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 13.5px; line-height: 1.6; color: #f5f1e8;
+  }
+  @media (max-width: 560px) {
+    .rf-overturn { grid-template-columns: 1fr; }
+    .rf-stamp { justify-self: start; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .rf-overturn { animation: none; }
+  }
+</style>
