@@ -857,6 +857,10 @@ export interface WinnersJob {
   finished_at: string | null;
   /** 1 through 3; how many axes have a recorded winner. */
   axes_decided: number;
+  /** True when the faceoff still has an A/B pair to serve for this job. False
+   *  once every servable axis is voted/skipped or render-gapped — the card is
+   *  crownable even at <3 decided axes (skips/gaps can't be voted). */
+  awaiting_votes: boolean;
   /** Always ordered focal → space → dynamics. Missing axes are absent. */
   winners: WinnerVariant[];
   /** The curator's cross-axis "this one's the strongest" pick, or null. */

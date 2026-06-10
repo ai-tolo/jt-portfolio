@@ -858,6 +858,18 @@ export async function postMixJudgement(body: {
   chose_original?: boolean;
   axis?: string | null;
   comment?: string | null;
+  /** Phase A (2026-06-10): self-certifying eval metadata; the M1 endpoint
+   *  records these so analyze_votes can keep only decision-grade votes. */
+  rater_id?: string | null;
+  is_author?: boolean;
+  blind?: boolean;
+  loudness_matched?: boolean;
+  matched_target_lufs?: number | null;
+  presented_order?: string | null;
+  chosen_slot?: number | null;
+  codec?: string | null;
+  catch_trial?: boolean;
+  catch_correct?: boolean | null;
 }): Promise<ApiResult<MixJudgementResponse>> {
   return _post<MixJudgementResponse>("/mix/judgement", body);
 }
