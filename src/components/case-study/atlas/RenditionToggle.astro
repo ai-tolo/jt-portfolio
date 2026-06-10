@@ -33,14 +33,20 @@ const BARS = Array.from({ length: 128 }, (_, i) => {
 });
 ---
 
-<div class="rt" data-rt data-active="0" data-playing="false" data-revealed="false">
+<div class="rt" data-rt data-active="0" data-playing="false" data-revealed="false" data-played="false">
   <header class="rt-head">
     <div class="rt-head-left">
       <span class="rt-source">head to toe</span>
-      <span class="rt-tag">real masters · blind</span>
+      <span class="rt-tag"><span class="rt-eq" aria-hidden="true"><i></i><i></i><i></i><i></i></span>real masters · blind</span>
     </div>
     <span class="rt-loud" title="All three are normalized to the same loudness, so you're voting on the mix — not on whichever one is louder.">⚖ loudness-matched</span>
   </header>
+
+  <!-- audibility cue: unlike the page's other interactives, this one plays sound -->
+  <p class="rt-soundcue">
+    <span class="rt-soundcue-ear" aria-hidden="true">🎧</span>
+    <span><b>Sound on.</b> Unlike the rest of this page, this one plays.</span>
+  </p>
 
   <!-- transport -->
   <div class="rt-transport">
@@ -243,6 +249,7 @@ const BARS = Array.from({ length: 128 }, (_, i) => {
       playBtn?.removeAttribute("data-state");
       playing = true;
       root.dataset.playing = "true";
+      root.dataset.played = "true";   // clears the "press to hear" invite ring after first play
       if (playBtn) playBtn.textContent = "❚❚";
       loopTick();
     }
@@ -401,14 +408,51 @@ const BARS = Array.from({ length: 128 }, (_, i) => {
     border-radius: 20px; padding: 4px 11px; cursor: help;
   }
 
+  /* little equalizer glyph — the unambiguous "this is audio" mark (Apple Music
+     now-playing convention). Tied to the three take accents. Static under
+     reduced motion. */
+  .rt-eq { display: inline-flex; align-items: flex-end; gap: 2px; height: 11px; margin-right: 7px; vertical-align: -1px; }
+  .rt-eq i { width: 2.5px; border-radius: 1px; height: 40%; background: var(--brand-cyan); animation: rt-eq 0.9s ease-in-out infinite; }
+  .rt-eq i:nth-child(2) { background: var(--brand-pink); animation-delay: 0.18s; }
+  .rt-eq i:nth-child(3) { background: var(--brand-yellow); animation-delay: 0.36s; }
+  .rt-eq i:nth-child(4) { background: var(--brand-cyan); animation-delay: 0.54s; }
+  @keyframes rt-eq { 0%, 100% { height: 28%; } 50% { height: 100%; } }
+
+  /* audibility cue strip — present at rest so the visitor knows this module makes
+     sound before they touch it (the other interactives on the page are silent). */
+  .rt-soundcue {
+    display: flex; align-items: center; gap: 10px; margin: 0 0 14px;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 12px; line-height: 1.45; color: rgba(245, 241, 232, 0.68);
+    padding: 9px 13px; border-radius: 6px;
+    background: rgba(0, 255, 77, 0.05);
+    border: 1px solid rgba(0, 255, 77, 0.22);
+    border-left: 2px solid var(--brand-green);
+  }
+  .rt-soundcue b { color: #f5f1e8; font-weight: 700; }
+  .rt-soundcue-ear { font-size: 15px; flex: 0 0 auto; line-height: 1; }
+
   /* transport */
   .rt-transport { display: flex; align-items: center; gap: 14px; margin-bottom: 12px; }
   .rt-play {
-    width: 38px; height: 38px; border-radius: 50%; flex: 0 0 auto;
+    width: 46px; height: 46px; border-radius: 50%; flex: 0 0 auto;
     border: 1px solid rgba(245, 241, 232, 0.3); background: rgba(245, 241, 232, 0.04);
-    color: #f5f1e8; font-size: 13px; cursor: pointer; position: relative;
+    color: #f5f1e8; font-size: 15px; cursor: pointer; position: relative;
     display: flex; align-items: center; justify-content: center;
-    transition: background 160ms ease, border-color 160ms ease;
+    transition: background 160ms ease, border-color 160ms ease, transform 160ms ease;
+  }
+  .rt-play:hover { background: rgba(245, 241, 232, 0.09); border-color: rgba(245, 241, 232, 0.5); transform: scale(1.05); }
+  /* before the first play, a calm ring breathes out of the play button so it reads
+     as "press to hear" — rhythmic, never a spinner. Clears once data-played flips. */
+  .rt-play::before {
+    content: ""; position: absolute; inset: -4px; border-radius: 50%;
+    border: 1.5px solid rgba(0, 255, 77, 0.5); opacity: 0; pointer-events: none;
+  }
+  .rt[data-played="false"] .rt-play::before { animation: rt-invite 2.1s ease-out infinite; }
+  @keyframes rt-invite {
+    0% { opacity: 0.7; transform: scale(0.84); }
+    70% { opacity: 0; transform: scale(1.28); }
+    100% { opacity: 0; transform: scale(1.28); }
   }
   .rt[data-playing="true"] .rt-play { background: rgba(0, 255, 77, 0.08); border-color: rgba(0, 255, 77, 0.5); color: #00ff4d; }
   .rt-play[data-state="loading"] { color: transparent; }
@@ -577,5 +621,7 @@ const BARS = Array.from({ length: 128 }, (_, i) => {
     .rt-hold-fill { transition: none; }
     .rt-key[data-crowned="true"], .rt-key[data-crowned="true"]::before,
     .rt-key[data-holding="true"] .rt-key-num { animation: none; }
+    .rt-eq i { animation: none; height: 68%; }
+    .rt[data-played="false"] .rt-play::before { animation: none; opacity: 0; }
   }
 </style>
