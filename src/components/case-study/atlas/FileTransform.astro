@@ -319,7 +319,9 @@ const ORDER = ["46", "47", "48"];
           </span>
 
           <span class="ft-forge-glass"></span>
+          <span class="ft-forge-arm" aria-hidden="true"></span>
         </span>
+        <span class="ft-forge-label" aria-hidden="true" data-ft-label>forge</span>
       </button>
       <p id="ft-forge-note" class="ft-sr">Fire the kiln on the selected voice memo to forge its catalog entry.</p>
 
@@ -397,6 +399,8 @@ const ORDER = ["46", "47", "48"];
     const fire = root.querySelector<HTMLButtonElement>("[data-ft-fire]");
     const picks = root.querySelectorAll<HTMLButtonElement>("[data-ft-pick]");
     const READOUT: Record<string, string> = { idle: "standby", running: "charging…", done: "online" };
+    const LABEL: Record<string, string> = { idle: "forge", running: "forging", done: "forged" };
+    const labelEl = root.querySelector<HTMLElement>("[data-ft-label]");
     let timer = 0;
 
     // give each conduit path its TRUE length so the draw fills over its full duration (uniform + fluid — kills the fast-then-wait "stop at the orb")
@@ -405,6 +409,7 @@ const ORDER = ["46", "47", "48"];
     const sync = () => {
       const st = root.dataset.state || "idle";
       if (readout) readout.textContent = READOUT[st] ?? "standby";
+      if (labelEl) labelEl.textContent = LABEL[st] ?? "forge";
     };
     const select = (id: string) => {
       if (!["46", "47", "48"].includes(id)) return;
@@ -413,12 +418,13 @@ const ORDER = ["46", "47", "48"];
       if (root.dataset.state === "done") { root.dataset.state = "idle"; sync(); }
     };
     const run = () => {
+      root.dataset.fired = "true";              // first press proves it is a control — retires the invite ring
       if (root.dataset.state === "running") return;
       if (root.dataset.state === "done") { root.dataset.state = "idle"; sync(); return; }
       if (reduce) { root.dataset.state = "done"; sync(); return; }
       root.dataset.state = "running"; sync();
       window.clearTimeout(timer);
-      timer = window.setTimeout(() => { root.dataset.state = "done"; sync(); }, 2700);
+      timer = window.setTimeout(() => { root.dataset.state = "done"; sync(); }, 2200);
     };
     picks.forEach((p) => p.addEventListener("click", () => select(p.dataset.ftPick || "")));
     fire?.addEventListener("click", run);
@@ -480,13 +486,13 @@ const ORDER = ["46", "47", "48"];
   /* lifted above the modules (z-index 2) so the canal can trace the AudioDex screen border on top */
   .ft-traces { position: absolute; inset: 0; width: 100%; height: 100%; z-index: 3; overflow: visible; pointer-events: none; }
   .ft-flow { stroke: #19e0ff; stroke-dasharray: var(--len, 1200); stroke-dashoffset: var(--len, 1200); opacity: 0; filter: drop-shadow(0 0 5px rgba(25, 224, 255, 0.9)); }
-  /* the canal — UNIFORM river-flow: --len is set (JS) to each path's TRUE length so the draw fills over its FULL duration (~190px/s, no fast-then-wait stall) until the orb's perimeter is fully lit … */
-  .ft[data-state="running"] .ft-flow-power  { opacity: 1; animation: ft-draw 0.0675s linear 0.06s forwards; }
-  .ft[data-state="running"] .ft-flow-charge { opacity: 1; animation: ft-draw 0.975s linear 0.1275s forwards; }
-  .ft[data-state="running"] .ft-flow-arc    { opacity: 1; animation: ft-draw 0.4875s linear 1.1025s forwards; }
-  /* … the lit perimeter holds for a beat, THEN the orb charges and hits release — BOOM: discharge + AudioDex border shoot fast */
-  .ft[data-state="running"] .ft-flow-dis    { opacity: 1; animation: ft-draw 0.105s ease-in 2.295s forwards; }
-  .ft[data-state="running"] .ft-flow-border { opacity: 1; animation: ft-draw 0.3375s cubic-bezier(0.16, 0.85, 0.3, 1) 2.34s forwards; }
+  /* ONE fluid trace at constant speed (linear): the canal runs kiln -> charge cell, then continues around the orb's perimeter, with no decel-stall at the junction. The charge does not begin until the perimeter is closed (~1.0s). */
+  .ft[data-state="running"] .ft-flow-power  { opacity: 1; animation: ft-draw 0.05s linear 0.04s forwards; }
+  .ft[data-state="running"] .ft-flow-charge { opacity: 1; animation: ft-draw 0.6s linear 0.1s forwards; }
+  .ft[data-state="running"] .ft-flow-arc    { opacity: 1; animation: ft-draw 0.3s linear 0.7s forwards; }
+  /* then the cell CHARGES (1.0s -> 2.0s); at the BURST the discharge + AudioDex border shoot fast and the record lands */
+  .ft[data-state="running"] .ft-flow-dis    { opacity: 1; animation: ft-draw 0.07s ease-in 2.04s forwards; }
+  .ft[data-state="running"] .ft-flow-border { opacity: 1; animation: ft-draw 0.13s cubic-bezier(0.16, 0.85, 0.3, 1) 2.06s forwards; }
   @keyframes ft-draw { from { stroke-dashoffset: var(--len, 1200); } to { stroke-dashoffset: 0; } }
   /* past the orb the canal carries the rainbow the cell forges — discharge + the AudioDex border */
   .ft-flow-dis, .ft-flow-border { stroke: url(#ftRainbow); filter: drop-shadow(0 0 5px rgba(255, 90, 180, 0.7)); }
@@ -500,8 +506,15 @@ const ORDER = ["46", "47", "48"];
     background: radial-gradient(circle, rgba(25,224,255,0.42) 0%, rgba(123,92,255,0.18) 40%, transparent 70%); filter: blur(7px);
     animation: ft-aura-hum 5s ease-in-out infinite; }
   @keyframes ft-aura-hum { 0%,100% { opacity: 0.38; transform: scale(0.95); } 50% { opacity: 0.6; transform: scale(1.05); } }
-  .ft[data-state="running"] .ft-cell-aura { animation: ft-aura-charge 2.7s ease-out forwards; }
-  @keyframes ft-aura-charge { 0%, 80% { opacity: 0.4; transform: scale(0.92); } 85% { opacity: 1; transform: scale(1.32); } 100% { opacity: 0.5; transform: scale(1.02); } }
+  .ft[data-state="running"] .ft-cell-aura { animation: ft-aura-charge 1s ease-out 1s both; }
+  @keyframes ft-aura-charge {
+    0% { opacity: 0.45; transform: scale(0.95); }
+    55% { opacity: 0.72; transform: scale(1.22); }
+    68% { opacity: 0.78; transform: scale(1.3); }
+    76% { opacity: 0.7; transform: scale(1.22); }
+    84% { opacity: 1; transform: scale(1.66); }
+    100% { opacity: 0.45; transform: scale(0.98); }
+  }
   .ft-cell-rainbow { position: absolute; width: 68px; height: 68px; border-radius: 50%; opacity: 0; mix-blend-mode: screen; filter: blur(10px);
     background: conic-gradient(from 0deg, #19e0ff, #7b5cff, #ff2d8b, #ffd23d, #19e0ff); }
   /* the orb — an EMPTY GLASS bulb at rest (clear, dark interior, glassy highlights + a faint cold filament); FILLS the chamber so no dead-space to the ring, and lights up with energy as it charges */
@@ -513,37 +526,48 @@ const ORDER = ["46", "47", "48"];
     box-shadow: inset 0 0 16px rgba(0,0,0,0.55), inset 0 2px 6px rgba(255,255,255,0.14), inset 0 -6px 12px rgba(0,0,0,0.35), 0 0 12px rgba(14,196,252,0.2); }
   .ft-cell-diode-core { position: absolute; inset: 40%; border-radius: 50%; background: radial-gradient(circle, rgba(174,249,255,0.55), rgba(25,224,255,0.12) 70%); opacity: 0.32; filter: blur(1.4px); }
   .ft-cell-diode-spec { position: absolute; top: 14%; left: 24%; width: 26%; height: 18%; border-radius: 50%; background: rgba(255,255,255,0.7); filter: blur(1.6px); }
-  /* the orb holds EMPTY/dim (flat) while the perimeter traces, then FLASHES full at release (~85%) and discharges into the AudioDex */
-  .ft[data-state="running"] .ft-cell-diode-core { animation: ft-diodecore 2.7s ease-out forwards; }
-  @keyframes ft-diodecore { 0%, 80% { opacity: 0.32; } 85% { opacity: 1; } 100% { opacity: 0.55; } }
-  .ft[data-state="running"] .ft-cell-diode { animation: ft-diodeglow 2.7s ease-out forwards; }
-  @keyframes ft-diodeglow {
-    0%, 80% { box-shadow: inset 0 0 16px rgba(0,0,0,0.55), inset 0 2px 6px rgba(255,255,255,0.14), inset 0 -6px 12px rgba(0,0,0,0.35), 0 0 12px rgba(14,196,252,0.2); }
-    85% { box-shadow: inset 0 0 30px rgba(255,255,255,0.98), 0 0 64px 16px rgba(123,92,255,0.98); }
-    100% { box-shadow: inset 0 0 16px rgba(255,255,255,0.42), 0 0 26px rgba(14,196,252,0.6); }
+  /* the orb stays at rest while the conduit traces TO and AROUND it; the charge is DELAYED until the perimeter closes (~1.0s), then runs over the second half */
+  .ft[data-state="running"] .ft-cell-diode-core { animation: ft-diodecore 1.2s linear 1s both; }
+  /* FILL -> HOLD -> FLASH: the core fills to a held full charge, holds steady briefly, then a sudden flash empties into the record */
+  @keyframes ft-diodecore {
+    0% { opacity: 0.32; transform: scale(1); animation-timing-function: ease-out; }
+    50% { opacity: 0.82; transform: scale(2.1); }
+    58% { opacity: 0.85; transform: scale(2.18); }
+    78% { opacity: 0.85; transform: scale(2.18); animation-timing-function: cubic-bezier(0.6, 0, 0.1, 1); }
+    88% { opacity: 1; transform: scale(3.8); }
+    100% { opacity: 0.32; transform: scale(1); }
   }
-  .ft[data-state="running"] .ft-cell-rainbow { animation: ft-cellrainbow 2.7s linear forwards; }
+  .ft[data-state="running"] .ft-cell-diode { animation: ft-diodeglow 1.2s linear 1s both; }
+  @keyframes ft-diodeglow {
+    0% { box-shadow: inset 0 0 16px rgba(0,0,0,0.55), inset 0 2px 6px rgba(255,255,255,0.14), inset 0 -6px 12px rgba(0,0,0,0.35), 0 0 12px rgba(14,196,252,0.2); animation-timing-function: ease-out; }
+    50% { box-shadow: inset 0 0 30px rgba(120,210,245,0.62), inset 0 2px 6px rgba(255,255,255,0.22), 0 0 40px rgba(25,224,255,0.66); }
+    58% { box-shadow: inset 0 0 34px rgba(150,225,255,0.76), 0 0 48px rgba(25,224,255,0.76); }
+    78% { box-shadow: inset 0 0 34px rgba(150,225,255,0.76), 0 0 48px rgba(25,224,255,0.76); animation-timing-function: cubic-bezier(0.6, 0, 0.1, 1); }
+    88% { box-shadow: inset 0 0 42px rgba(255,255,255,0.98), 0 0 90px 22px rgba(123,92,255,0.98); }
+    100% { box-shadow: inset 0 0 16px rgba(0,0,0,0.55), inset 0 2px 6px rgba(255,255,255,0.14), inset 0 -6px 12px rgba(0,0,0,0.35), 0 0 12px rgba(14,196,252,0.2); }
+  }
+  .ft[data-state="running"] .ft-cell-rainbow { animation: ft-cellrainbow 1.2s linear 1s both; }
   @keyframes ft-cellrainbow {
-    0%, 82% { opacity: 0; transform: scale(0.4) rotate(0deg); }
-    85% { opacity: 1; transform: scale(1.9) rotate(60deg); }
-    92% { opacity: 0.82; transform: scale(2.4) rotate(190deg); }
+    0%, 80% { opacity: 0; transform: scale(0.4) rotate(0deg); }
+    88% { opacity: 1; transform: scale(1.9) rotate(60deg); }
+    95% { opacity: 0.8; transform: scale(2.5) rotate(200deg); }
     100% { opacity: 0; transform: scale(3) rotate(320deg); }
   }
 
   /* the glass chamber HARNESSES energy in its dead-space once the perimeter is full, then discharges into the AudioDex */
   .ft-cell-chamber { position: absolute; width: 72px; height: 72px; border-radius: 50%; opacity: 0; mix-blend-mode: screen; pointer-events: none; filter: blur(2.5px);
     background: radial-gradient(circle, rgba(234,255,255,0.92) 0%, rgba(25,224,255,0.72) 32%, rgba(123,92,255,0.44) 64%, rgba(123,92,255,0.1) 84%, transparent 100%); }
-  .ft[data-state="running"] .ft-cell-chamber { animation: ft-chamber 2.7s ease-out forwards; }
+  .ft[data-state="running"] .ft-cell-chamber { animation: ft-chamber 1.2s ease-out 1s both; }
   @keyframes ft-chamber {
     0%, 80% { opacity: 0; transform: scale(0.3); }
-    85% { opacity: 1; transform: scale(1.1); }
-    91% { opacity: 0.2; transform: scale(0.82); }
+    88% { opacity: 1; transform: scale(1.15); }
+    94% { opacity: 0.2; transform: scale(0.85); }
     100% { opacity: 0; transform: scale(0.5); }
   }
   /* the chamber's glass border lights up as it charges */
   .ft-cell-ring-glow { filter: drop-shadow(0 0 3px #19e0ff); }
-  .ft[data-state="running"] .ft-cell-ring-glow { animation: ft-ringglow 2.7s ease-out forwards; }
-  @keyframes ft-ringglow { 0%, 80% { opacity: 0; } 85% { opacity: 1; } 100% { opacity: 0.18; } }
+  .ft[data-state="running"] .ft-cell-ring-glow { animation: ft-ringglow 1.2s ease-out 1s both; }
+  @keyframes ft-ringglow { 0% { opacity: 0; } 50% { opacity: 0.8; } 58% { opacity: 0.85; } 78% { opacity: 0.85; } 88% { opacity: 1; } 100% { opacity: 0; } }
 
   /* ── modules mounted on the console ── */
   .ft-mod { position: absolute; }
@@ -600,7 +624,7 @@ const ORDER = ["46", "47", "48"];
     background: linear-gradient(90deg, transparent, rgba(25, 224, 255, 0.08) 55%, rgba(25, 224, 255, 0.8) 90%, rgba(191, 244, 255, 0.95));
     border-right: 1.5px solid rgba(191, 244, 255, 0.95); box-shadow: 0 0 22px rgba(25, 224, 255, 0.7);
     -webkit-mask-image: linear-gradient(90deg, transparent, #000 65%); mask-image: linear-gradient(90deg, transparent, #000 65%); }
-  .ft[data-state="running"] .ft-scan { animation: ft-scan 1s cubic-bezier(0.5, 0, 0.5, 1) 0.35s forwards; }
+  .ft[data-state="running"] .ft-scan { animation: ft-scan 0.7s cubic-bezier(0.5, 0, 0.5, 1) 0.08s forwards; }
   @keyframes ft-scan { 0% { opacity: 0; transform: translateX(-100%); } 14% { opacity: 1; } 86% { opacity: 1; } 100% { opacity: 0; transform: translateX(320%); } }
   .ft[data-state="running"] .ft-frow[aria-selected="true"] { box-shadow: 0 0 0 1px rgba(25, 224, 255, 0.7), 0 0 22px -4px rgba(25, 224, 255, 0.7); }
 
@@ -682,27 +706,73 @@ const ORDER = ["46", "47", "48"];
   .ft-forge-glass { position: absolute; inset: 0; border-radius: 50%; pointer-events: none; z-index: 4;
     background: radial-gradient(58% 42% at 34% 22%, rgba(255,255,255,0.28), transparent 60%); mix-blend-mode: screen; }
 
-  /* idle press / hover / focus */
+  /* idle press / hover / focus — the dome lifts and the screen brightens on hover
+     so the object reads as a pressable control, not a status display */
+  .ft-forge-dome { transition: transform 200ms cubic-bezier(0.22, 1, 0.36, 1); }
+  .ft-forge-screen { transition: box-shadow 240ms ease; }
   .ft-forge:focus-visible { outline: none; }
   .ft-forge:focus-visible .ft-forge-body { box-shadow: 0 22px 44px -18px rgba(0,0,0,0.85), 0 0 0 3px rgba(14,196,252,0.5); }
-  .ft-forge:hover .ft-forge-dome { transform: translateY(-1px); }
-  .ft-forge:active .ft-forge-dome { transform: translateY(1px) scale(0.99); }
+  .ft-forge:hover .ft-forge-dome { transform: translateY(-3px) scale(1.015); }
+  .ft-forge:active .ft-forge-dome { transform: translateY(1px) scale(0.985); }
+  .ft-forge:hover .ft-forge-screen { box-shadow: 0 0 0 1px rgba(123,92,255,0.72), 0 0 30px rgba(123,92,255,0.6); }
 
-  /* ════ RUNNING (~2.7s) — the dial spins faster; the plasma charges and BOOMs at release (~85%) ════ */
-  .ft[data-state="running"] .ft-forge-dial { animation: ft-spin 0.85s linear infinite; }
-  .ft[data-state="running"] .ft-pl-core { animation: ft-pl-charge 2.7s ease-out forwards; }
-  @keyframes ft-pl-charge { 0% { transform: scale(1); } 70% { transform: scale(1.16); } 85% { transform: scale(1.4); } 100% { transform: scale(1.12); } }
-  .ft[data-state="running"] .ft-pl-bloom { animation: ft-pl-bloomcharge 2.7s ease-out forwards; }
-  @keyframes ft-pl-bloomcharge { 0% { opacity: 0.7; transform: scale(1); } 70% { opacity: 0.9; transform: scale(1.1); } 85% { opacity: 1; transform: scale(1.4); } 100% { opacity: 0.85; transform: scale(1.12); } }
-  /* SOLIDIFY — the plasma calmly fills into a SOLID glowing disc by the release, the bolts melting into the light (no strobe, no rattle) */
-  .ft[data-state="running"] .ft-pl-arcs, .ft[data-state="running"] .ft-pl-forks, .ft[data-state="running"] .ft-pl-tips { animation: ft-pl-meld 2.7s ease-in-out forwards; }
-  @keyframes ft-pl-meld { 0% { opacity: 0.85; filter: brightness(1); } 55% { opacity: 1; filter: brightness(1.3); } 82% { opacity: 0.3; filter: brightness(1.6); } 100% { opacity: 0.9; filter: brightness(1.05); } }
-  .ft[data-state="running"] .ft-pl-flash { animation: ft-pl-fill 2.7s ease-in-out forwards; }
-  @keyframes ft-pl-fill { 0% { opacity: 0; transform: scale(0.9); } 60% { opacity: 0.5; transform: scale(1); } 85% { opacity: 1; transform: scale(1); } 100% { opacity: 1; transform: scale(1); } }
+  /* ── PRESS SIGNIFIER: a sighted "press to fire" label so a first-time visitor
+     knows this object is a control. Legible at rest, tracks state
+     (firing / fired), goes full on hover. ── */
+  /* a diegetic machine legend, not a UI instruction: the kiln's function ("forge")
+     etched in micro-type, led by a small status LED that breathes "live / ready".
+     The verb + the live LED + the invite ring + cursor read as "operable" without
+     a shouted "press to fire". Tracks state: forge -> forging -> forged. */
+  .ft-forge-label {
+    margin-top: 16px; display: inline-flex; align-items: center; gap: 8px;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 10px; font-weight: 600; letter-spacing: 0.34em; text-transform: lowercase;
+    color: rgba(245, 241, 232, 0.5); white-space: nowrap; padding-left: 2px;
+    transition: color 260ms ease, text-shadow 260ms ease;
+  }
+  .ft-forge-label::before {
+    content: ""; width: 6px; height: 6px; border-radius: 50%; flex: 0 0 auto;
+    background: radial-gradient(circle at 35% 30%, #d6c4ff, #7b5cff 70%);
+    box-shadow: 0 0 8px rgba(123, 92, 255, 0.9);
+    animation: ft-led 2.3s ease-in-out infinite;
+  }
+  @keyframes ft-led { 0%, 100% { opacity: 0.4; } 50% { opacity: 1; } }
+  .ft-forge:hover .ft-forge-label { color: rgba(245, 241, 232, 0.95); text-shadow: 0 0 12px rgba(123, 92, 255, 0.6); }
+  .ft[data-state="running"] .ft-forge-label { color: var(--brand-cyan); }
+  .ft[data-state="running"] .ft-forge-label::before { background: radial-gradient(circle at 35% 30%, #bff4ff, #0ec4fc 70%); box-shadow: 0 0 9px rgba(14,196,252,0.95); animation: none; opacity: 1; }
+  .ft[data-state="done"] .ft-forge-label { color: var(--brand-green); }
+  .ft[data-state="done"] .ft-forge-label::before { background: radial-gradient(circle at 35% 30%, #d8ffe4, #00ff4d 70%); box-shadow: 0 0 9px rgba(0,255,77,0.95); animation: none; opacity: 1; }
 
-  /* ════ DONE — the screen holds FULLY SOLID (the charged disc); the rim confirms ════ */
-  .ft[data-state="done"] .ft-pl-flash { opacity: 1; }
-  .ft[data-state="done"] .ft-forge-screen { box-shadow: 0 0 0 1px rgba(123,92,255,0.7), 0 0 26px rgba(123,92,255,0.5); }
+  /* ── INVITE RING: a calm ring breathes from the dome edge ("live control,
+     press me") until the first fire retires it. Rhythmic, never spinning, so it
+     never reads as loading. ── */
+  .ft-forge-arm {
+    position: absolute; inset: -7px; border-radius: 50%; z-index: 5; pointer-events: none;
+    border: 1.5px solid rgba(123, 92, 255, 0.6); opacity: 0;
+  }
+  .ft:not([data-fired="true"]) .ft-forge-arm { animation: ft-arm 2.3s ease-out infinite; }
+  @keyframes ft-arm {
+    0% { opacity: 0.75; transform: scale(0.9); }
+    70% { opacity: 0; transform: scale(1.16); }
+    100% { opacity: 0; transform: scale(1.16); }
+  }
+
+  /* ════ RUNNING (~2.2s) — once the circuit closes (~1.0s) the kiln's CENTER SCREEN fills with energy, holds at full, then flares on release; the charge cell fills + bursts in lockstep ════ */
+  .ft[data-state="running"] .ft-forge-dial { animation: ft-spin 0.7s linear infinite; }
+  .ft[data-state="running"] .ft-pl-core { animation: ft-pl-charge 1.2s linear 1s both; }
+  /* the plasma core fills (grows + brightens), holds at full, then flares wide on release, then settles to idle */
+  @keyframes ft-pl-charge { 0% { transform: scale(1); animation-timing-function: ease-out; } 50% { transform: scale(1.42); } 58% { transform: scale(1.46); } 78% { transform: scale(1.46); animation-timing-function: cubic-bezier(0.6, 0, 0.1, 1); } 88% { transform: scale(1.95); } 100% { transform: scale(1); } }
+  .ft[data-state="running"] .ft-pl-bloom { animation: ft-pl-bloomcharge 1.2s linear 1s both; }
+  @keyframes ft-pl-bloomcharge { 0% { opacity: 0.7; transform: scale(1); animation-timing-function: ease-out; } 50% { opacity: 1; transform: scale(1.24); } 78% { opacity: 1; transform: scale(1.24); } 88% { opacity: 1; transform: scale(1.5); } 100% { opacity: 0.7; transform: scale(1.02); } }
+  /* the electric arcs intensify as the screen fills, hold, blaze on release, then settle back to idle arcs (no solid disc) */
+  .ft[data-state="running"] .ft-pl-arcs, .ft[data-state="running"] .ft-pl-forks, .ft[data-state="running"] .ft-pl-tips { animation: ft-pl-meld 1.2s linear 1s both; }
+  @keyframes ft-pl-meld { 0% { opacity: 0.85; filter: brightness(1); animation-timing-function: ease-out; } 50% { opacity: 1; filter: brightness(1.5); } 78% { opacity: 1; filter: brightness(1.5); } 86% { opacity: 1; filter: brightness(2.6); } 94% { opacity: 0.7; filter: brightness(1.4); } 100% { opacity: 0.85; filter: brightness(1); } }
+  .ft[data-state="running"] .ft-pl-flash { animation: ft-pl-fill 1.2s linear 1s both; }
+  /* the white flash overlay flares ONLY on release, then fades so the screen returns to its plasma */
+  @keyframes ft-pl-fill { 0%, 78% { opacity: 0; transform: scale(0.9); } 88% { opacity: 1; transform: scale(1); } 100% { opacity: 0; transform: scale(1); } }
+
+  /* ════ DONE — the screen settles back to its idle plasma after the flash; a faint warm rim lingers ════ */
+  .ft[data-state="done"] .ft-forge-screen { box-shadow: 0 0 0 1px rgba(123,92,255,0.5), 0 0 20px rgba(123,92,255,0.32); }
 
   /* ════ reduced motion — NO motion anywhere; static, lit, OPEN reactor screen ════ */
   @media (prefers-reduced-motion: reduce) {
@@ -718,6 +788,7 @@ const ORDER = ["46", "47", "48"];
     .ft-pl-arcs, .ft-pl-tips, .ft-pl-forks { opacity: 1 !important; }
     .ft-pl-flash { opacity: 0 !important; }
     .ft-forge:hover .ft-forge-dome, .ft-forge:active .ft-forge-dome { transform: none; }
+    .ft-forge-arm { animation: none !important; opacity: 0 !important; }
   }
 
   /* ── AUDIODEX terminal ── */
@@ -729,8 +800,8 @@ const ORDER = ["46", "47", "48"];
   .ft-standby-mark::after { content: ""; position: absolute; inset: 9px; border-radius: 50%; background: rgba(14, 196, 252, 0.2); }
   .ft[data-state="done"] .ft-standby { display: none; }
   .ft-screen-wake { position: absolute; inset: 0; z-index: 4; opacity: 0; pointer-events: none; background: radial-gradient(circle at 6% 50%, rgba(234, 255, 255, 0.8), rgba(25, 224, 255, 0.2) 40%, transparent 72%); }
-  .ft[data-state="running"] .ft-screen-wake { animation: ft-wake 2.7s linear forwards; }
-  @keyframes ft-wake { 0%, 88% { opacity: 0; } 94% { opacity: 0.85; } 100% { opacity: 0; } }
+  .ft[data-state="running"] .ft-screen-wake { animation: ft-wake 2.2s linear forwards; }
+  @keyframes ft-wake { 0%, 91% { opacity: 0; } 96% { opacity: 0.9; } 100% { opacity: 0; } }
 
   .ft-card { display: none; }
   .ft[data-state="done"][data-file="46"] .ft-card[data-rec="46"],
@@ -799,8 +870,9 @@ const ORDER = ["46", "47", "48"];
   .ft-act-hot:hover { color: #1a0c06; border-color: transparent; background: linear-gradient(135deg, #ff2761, #ff6e21); }
 
   @media (prefers-reduced-motion: reduce) {
-    .ft-scan, .ft-bar, .ft-card, .ft-flow, .ft-cell-aura, .ft-cell-rainbow, .ft-cell-chamber, .ft-cell-ring-glow, .ft-cell-diode-core, .ft-cell-diode, .ft-screen-wake { animation: none !important; transition: none !important; }
+    .ft-scan, .ft-bar, .ft-card, .ft-flow, .ft-cell-aura, .ft-cell-rainbow, .ft-cell-chamber, .ft-cell-ring-glow, .ft-cell-diode-core, .ft-cell-diode, .ft-screen-wake, .ft-forge-label::before { animation: none !important; transition: none !important; }
     .ft-scan, .ft-screen-wake, .ft-cell-rainbow { display: none; }
+    .ft-forge-label::before { opacity: 1; }
     .ft-body, .ft-tx-body { transition: none; }
   }
 </style>
