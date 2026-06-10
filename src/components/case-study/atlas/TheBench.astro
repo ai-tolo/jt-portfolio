@@ -1,0 +1,624 @@
+---
+// THE BENCH — the recurring judge's station for Movement II ("You are the judge").
+//
+// A generalized recast of the RenditionToggle engine: ONE real client-side Web
+// Audio instrument, reused across every round of the engineer's evolution. The
+// same passage plays as 2 to 4 takes, decoded once and run as sample-aligned
+// looping sources; switching crossfades which take is audible so the playhead
+// never loses its place (the moment is identical, only the finishing changes).
+// Blind by default; hold a key to crown; reveal shows each take's identity.
+//
+// Each round is just a CONFIG (the `round` prop): which clips, an optional
+// per-take gain (the "same master, louder" trick), an optional untouched
+// ORIGINAL shuffled in, and what the reveal says. Clips are read from the DOM
+// (no JSON interpolated into <script> — atlas gotcha #1). On crown it emits a
+// `bench:verdict` CustomEvent the ledger listens for. Keyboard is scoped to the
+// hovered/focused bench (so multiple coexist and it survives the preview's IO
+// throttle). Reduced-motion safe.
+export interface BenchTake {
+  /** Revealed identity, e.g. "warm · intimate" or "the untouched original". */
+  label: string;
+  /** Public clip URL under /public. */
+  file: string;
+  /** Playback gain when this take is audible. 1 = matched. >1 = louder (the trap). */
+  gain?: number;
+  /** What it was matched toward, shown on reveal (optional). */
+  ref?: string;
+  /** True if this is the do-nothing / untouched source. */
+  isOriginal?: boolean;
+}
+export interface BenchRound {
+  id: string;
+  /** Track name chip, e.g. "head to toe". */
+  source?: string;
+  /** Small caps tag, e.g. "blind · loudness-matched". */
+  tag?: string;
+  /** Tooltip on the loudness badge. Omit to hide the badge. */
+  loudnessNote?: string;
+  takes: BenchTake[];
+}
+const { round } = Astro.props as { round: BenchRound };
+const takes = round.takes ?? [];
+
+// Placeholder waveform bars for SSR; the script overwrites these with the real
+// peak envelope once the first clip decodes.
+const BARS = Array.from({ length: 128 }, (_, i) => {
+  const beat = (i % 16) / 16;
+  const kick = beat < 0.06 || (beat > 0.5 && beat < 0.56) ? 1 : 0;
+  const swell = 0.42 + 0.3 * Math.sin(i * 0.18) + 0.16 * Math.cos(i * 0.5);
+  const arp = 0.16 * Math.abs(Math.sin(i * 1.31));
+  const h = Math.max(0.16, Math.min(1, swell + arp + kick * 0.45));
+  return Math.round(h * 100);
+});
+---
+
+<div class="tb" data-bench data-round={round.id} data-active="0" data-playing="false" data-revealed="false" data-played="false">
+  <header class="tb-head">
+    <div class="tb-head-left">
+      {round.source && <span class="tb-source">{round.source}</span>}
+      <span class="tb-tag"><span class="tb-eq" aria-hidden="true"><i></i><i></i><i></i><i></i></span>{round.tag ?? "real audio · blind"}</span>
+    </div>
+    {round.loudnessNote && (
+      <span class="tb-loud" title={round.loudnessNote}>⚖ loudness-matched</span>
+    )}
+  </header>
+
+  <!-- audibility cue: unlike the page's other interactives, this one plays sound -->
+  <p class="tb-soundcue">
+    <span class="tb-soundcue-ear" aria-hidden="true">🎧</span>
+    <span><b>Sound on.</b> You're the judge here. Listen blind, then crown one.</span>
+  </p>
+
+  <!-- transport -->
+  <div class="tb-transport">
+    <button type="button" class="tb-play" data-tb-play aria-label="Play / pause">▶</button>
+    <span class="tb-time" data-tb-time>0:00 / 0:00</span>
+    <span class="tb-now" data-tb-now>Take 1</span>
+  </div>
+
+  <!-- shared waveform + playhead -->
+  <div class="tb-wave" data-tb-wave role="img" aria-label="Waveform — click to seek">
+    {BARS.map((h) => <span class="tb-bar" style={`height:${h}%`}></span>)}
+    <div class="tb-playhead" data-tb-playhead></div>
+    <div class="tb-buffering" data-tb-buffering></div>
+  </div>
+
+  <!-- numbered keycaps — one per take, blind -->
+  <div class="tb-switch" role="group" aria-label="Takes — tap a number to switch which one plays (the playhead carries), hold to crown your pick.">
+    {takes.map((t, i) => (
+      <button
+        type="button"
+        class="tb-key"
+        data-tb-key={String(i)}
+        data-active={i === 0 ? "true" : "false"}
+        data-file={t.file}
+        data-gain={String(t.gain ?? 1)}
+        data-rlabel={t.label}
+        data-rref={t.ref ?? ""}
+        data-orig={t.isOriginal ? "true" : "false"}
+        aria-label={`Take ${i + 1} — tap to audition, hold to crown`}
+      >
+        <span class="tb-hold-fill" aria-hidden="true"></span>
+        <span class="tb-key-num">{i + 1}</span>
+        <span class="tb-key-id" data-tb-key-id={String(i)}>Take {i + 1}</span>
+      </button>
+    ))}
+  </div>
+
+  <!-- reveal + status row -->
+  <div class="tb-foot">
+    <button type="button" class="tb-reveal" data-tb-reveal>🔍 reveal what you're hearing</button>
+    <span class="tb-status" data-tb-status aria-live="polite"></span>
+  </div>
+
+  <!-- on reveal: what the active take actually was -->
+  <p class="tb-refline" data-tb-refline hidden></p>
+
+  <p class="tb-hint">
+    <kbd>1</kbd>…<kbd>{String(takes.length)}</kbd> switch · hold to <span class="tb-hint-crown">♛ crown</span> · <kbd>R</kbd> reveal · <kbd>space</kbd> play when selected
+  </p>
+</div>
+
+<script>
+  // ── Each bench is self-contained. Clips, gains, and identities are read from
+  //    the keycap data-attributes (no JSON in this script). The audio graph is
+  //    the proven RenditionToggle engine: decode once, sample-aligned looping
+  //    sources, crossfade chain gains so the playhead carries across takes. ──
+  document.querySelectorAll<HTMLElement>("[data-bench]").forEach((root) => {
+    const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const roundId = root.dataset.round || "round";
+    const playBtn = root.querySelector<HTMLButtonElement>("[data-tb-play]");
+    const timeEl = root.querySelector<HTMLElement>("[data-tb-time]");
+    const nowEl = root.querySelector<HTMLElement>("[data-tb-now]");
+    const wave = root.querySelector<HTMLElement>("[data-tb-wave]");
+    const waveBars = [...root.querySelectorAll<HTMLElement>(".tb-bar")];
+    const playhead = root.querySelector<HTMLElement>("[data-tb-playhead]");
+    const buffering = root.querySelector<HTMLElement>("[data-tb-buffering]");
+    const keys = [...root.querySelectorAll<HTMLButtonElement>("[data-tb-key]")];
+    const keyIds = [...root.querySelectorAll<HTMLElement>("[data-tb-key-id]")];
+    const revealBtn = root.querySelector<HTMLButtonElement>("[data-tb-reveal]");
+    const statusEl = root.querySelector<HTMLElement>("[data-tb-status]");
+    const refline = root.querySelector<HTMLElement>("[data-tb-refline]");
+
+    // round config, read from the DOM
+    const TAKES = keys.map((k) => ({
+      file: k.dataset.file || "",
+      gain: parseFloat(k.dataset.gain || "1") || 1,
+      label: k.dataset.rlabel || "",
+      ref: k.dataset.rref || "",
+      original: k.dataset.orig === "true",
+    }));
+    const N = TAKES.length;
+
+    let ctx: AudioContext | null = null;
+    let master: GainNode | null = null;
+    let buffers: AudioBuffer[] = [];
+    let sources: AudioBufferSourceNode[] = [];
+    let chainGains: GainNode[] = [];
+    let loopDur = 0;
+    let active = 0;
+    let playing = false;
+    let loaded = false;
+    let loadingPromise: Promise<void> | null = null;
+    let startCtxTime = 0;
+    let raf = 0;
+
+    const fmt = (s: number) => {
+      const x = Math.max(0, s);
+      const m = Math.floor(x / 60);
+      const r = Math.floor(x % 60);
+      return `${m}:${String(r).padStart(2, "0")}`;
+    };
+    const flash = (msg: string) => {
+      if (!statusEl) return;
+      statusEl.textContent = msg;
+      window.setTimeout(() => { if (statusEl.textContent === msg) statusEl.textContent = ""; }, 2800);
+    };
+    const label = (i: number) => `Take ${i + 1}`;
+
+    // ── Decode all clips once; build the persistent crossfade graph. Distinct
+    //    files are fetched once and shared (the "louder" trick reuses one file
+    //    at two gains, so we never double-download). ──
+    async function ensureLoaded() {
+      if (loaded) return;
+      if (loadingPromise) return loadingPromise;
+      loadingPromise = (async () => {
+        const AC = window.AudioContext || (window as any).webkitAudioContext;
+        ctx = new AC();
+        master = ctx.createGain();
+        master.gain.value = 0.95;
+        master.connect(ctx.destination);
+        const cache: Record<string, Promise<AudioBuffer>> = {};
+        const decode = (file: string) => {
+          if (!cache[file]) cache[file] = fetch(file).then((r) => r.arrayBuffer()).then((ab) => ctx!.decodeAudioData(ab));
+          return cache[file];
+        };
+        buffers = await Promise.all(TAKES.map((t) => decode(t.file)));
+        loopDur = Math.min(...buffers.map((b) => b.duration));
+        chainGains = buffers.map((_, i) => {
+          const g = ctx!.createGain();
+          g.gain.value = i === active ? TAKES[i].gain : 0;
+          g.connect(master!);
+          return g;
+        });
+        drawWaveform(buffers[active]);
+        loaded = true;
+      })();
+      return loadingPromise;
+    }
+
+    function startSources(offset: number) {
+      if (!ctx) return;
+      sources.forEach((s) => { try { s.stop(); } catch {} });
+      const off = ((offset % loopDur) + loopDur) % loopDur;
+      sources = buffers.map((buf, i) => {
+        const s = ctx!.createBufferSource();
+        s.buffer = buf;
+        s.loop = true;
+        s.loopStart = 0;
+        s.loopEnd = loopDur;
+        s.connect(chainGains[i]);
+        return s;
+      });
+      const t = ctx.currentTime + 0.03;
+      sources.forEach((s) => s.start(t, off));
+      startCtxTime = t - off;
+    }
+
+    function drawWaveform(buf: AudioBuffer) {
+      const data = buf.getChannelData(0);
+      const len = waveBars.length;
+      const step = Math.max(1, Math.floor(data.length / len));
+      const peaks: number[] = [];
+      let max = 0.0001;
+      for (let i = 0; i < len; i++) {
+        let p = 0;
+        const start = i * step;
+        for (let j = 0; j < step; j += 16) { const a = Math.abs(data[start + j] || 0); if (a > p) p = a; }
+        peaks.push(p);
+        if (p > max) max = p;
+      }
+      waveBars.forEach((b, i) => { b.style.height = `${Math.max(6, Math.round(Math.pow(peaks[i] / max, 0.7) * 100))}%`; });
+    }
+
+    function updateRefline() {
+      if (!refline) return;
+      if (root.dataset.revealed === "true") {
+        const t = TAKES[active];
+        const ref = t.ref ? ` · ${t.ref}` : "";
+        refline.innerHTML = `<b>Take ${active + 1} — ${t.label}</b>${ref}`;
+        refline.removeAttribute("hidden");
+      } else {
+        refline.setAttribute("hidden", "");
+      }
+    }
+
+    function setActive(i: number, announce = true) {
+      active = i;
+      root.dataset.active = String(i);
+      keys.forEach((k, idx) => (k.dataset.active = idx === i ? "true" : "false"));
+      const revealed = root.dataset.revealed === "true";
+      if (nowEl) nowEl.textContent = revealed ? TAKES[i].label : label(i);
+      updateRefline();
+      // Crossfade chain gains — same sources, same instant; only the mix changes.
+      if (ctx && chainGains.length) {
+        const now = ctx.currentTime;
+        chainGains.forEach((g, idx) => {
+          g.gain.cancelScheduledValues(now);
+          g.gain.setTargetAtTime(idx === i ? TAKES[idx].gain : 0, now, 0.04);
+        });
+      }
+      if (announce) flash(`take ${i + 1}${revealed ? " · " + TAKES[i].label : ""}`);
+    }
+
+    async function play() {
+      buffering?.setAttribute("data-on", "true");
+      playBtn?.setAttribute("data-state", "loading");
+      try {
+        await ensureLoaded();
+        await ctx!.resume();
+      } catch (err) {
+        buffering?.setAttribute("data-on", "false");
+        playBtn?.removeAttribute("data-state");
+        flash("couldn't load audio — check your connection");
+        return;
+      }
+      if (!sources.length) startSources(0);
+      buffering?.setAttribute("data-on", "false");
+      playBtn?.removeAttribute("data-state");
+      playing = true;
+      root.dataset.playing = "true";
+      root.dataset.played = "true";
+      if (playBtn) playBtn.textContent = "❚❚";
+      loopTick();
+    }
+    async function pause() {
+      playing = false;
+      root.dataset.playing = "false";
+      if (playBtn) playBtn.textContent = "▶";
+      if (raf) cancelAnimationFrame(raf);
+      await ctx?.suspend();
+    }
+    const toggle = () => { playing ? pause() : play(); };
+
+    function loopTick() {
+      if (!playing || !ctx) return;
+      const elapsed = (ctx.currentTime - startCtxTime) % loopDur;
+      const frac = elapsed / loopDur;
+      if (playhead) playhead.style.left = `${frac * 100}%`;
+      if (timeEl) timeEl.textContent = `${fmt(elapsed)} / ${fmt(loopDur)}`;
+      raf = requestAnimationFrame(loopTick);
+    }
+
+    playBtn?.addEventListener("click", toggle);
+    keys.forEach((k, i) => {
+      let holdTimer = 0;
+      let held = false;
+      const startHold = (e: Event) => {
+        e.preventDefault();
+        held = false;
+        k.dataset.holding = "true";
+        holdTimer = window.setTimeout(() => {
+          held = true;
+          k.dataset.holding = "false";
+          crown(i);
+        }, reduce ? 1 : 650);
+      };
+      const endHold = () => {
+        k.dataset.holding = "false";
+        if (holdTimer) clearTimeout(holdTimer);
+        if (!held) { if (!playing) play(); setActive(i); }
+      };
+      k.addEventListener("pointerdown", startHold);
+      k.addEventListener("pointerup", endHold);
+      k.addEventListener("pointerleave", () => { k.dataset.holding = "false"; if (holdTimer) clearTimeout(holdTimer); });
+    });
+
+    let crowned = -1;
+    function crown(i: number) {
+      crowned = i;
+      setActive(i, false);
+      keys.forEach((k, idx) => (k.dataset.crowned = idx === i ? "true" : "false"));
+      root.dataset.crowned = String(i);
+      const t = TAKES[i];
+      const id = root.dataset.revealed === "true" ? ` — ${t.label}` : "";
+      flash(`♛ crowned Take ${i + 1}${id}`);
+      // tell the ledger (and any round frame) what the ear actually did
+      root.dispatchEvent(new CustomEvent("bench:verdict", {
+        bubbles: true,
+        detail: { round: roundId, index: i, label: t.label, isOriginal: t.original, gain: t.gain, takes: N },
+      }));
+    }
+
+    function setRevealed(on: boolean) {
+      root.dataset.revealed = on ? "true" : "false";
+      keyIds.forEach((el, i) => { el.textContent = on ? TAKES[i].label : label(i); });
+      if (nowEl) nowEl.textContent = on ? TAKES[active].label : label(active);
+      if (revealBtn) revealBtn.textContent = on ? "🙈 hide identities" : "🔍 reveal what you're hearing";
+      updateRefline();
+    }
+    revealBtn?.addEventListener("click", () => setRevealed(root.dataset.revealed !== "true"));
+
+    wave?.addEventListener("click", (e) => {
+      if (!loaded || !loopDur) { if (!playing) play(); return; }
+      const rect = wave.getBoundingClientRect();
+      const frac = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+      startSources(frac * loopDur);
+      if (!playing) play();
+    });
+
+    // ── Keyboard, scoped to THIS bench when hovered or focused (so multiple
+    //    benches never fight, and it does not depend on an IntersectionObserver
+    //    callback firing — the headless preview throttles those). ──
+    root.tabIndex = 0;
+    let hovered = false;
+    root.addEventListener("pointerenter", () => (hovered = true));
+    root.addEventListener("pointerleave", () => (hovered = false));
+    const engaged = () => hovered || root.contains(document.activeElement);
+
+    document.addEventListener("keydown", (e) => {
+      if (!engaged()) return;
+      const t = e.target as HTMLElement | null;
+      if (t && (t.tagName === "INPUT" || t.tagName === "TEXTAREA" || t.isContentEditable)) return;
+      const k = e.key.toLowerCase();
+      const num = parseInt(k, 10);
+      if (!Number.isNaN(num) && num >= 1 && num <= N) {
+        e.preventDefault();
+        if (!playing) play();
+        setActive(num - 1);
+      } else if (k === "r") {
+        e.preventDefault();
+        setRevealed(root.dataset.revealed !== "true");
+      } else if (k === " " || k === "spacebar") {
+        e.preventDefault();
+        toggle();
+      }
+    });
+
+    // verification hooks
+    (root as any).__bench = {
+      get round() { return roundId; },
+      get active() { return active; },
+      get crowned() { return crowned; },
+      get playing() { return playing; },
+      get loaded() { return loaded; },
+      get gains() { return chainGains.map((g) => Math.round(g.gain.value * 100) / 100); },
+      get ctxState() { return ctx?.state ?? "none"; },
+      get loopDur() { return Math.round(loopDur * 100) / 100; },
+      get takes() { return N; },
+    };
+  });
+</script>
+
+<style>
+  .tb {
+    background: linear-gradient(180deg, rgba(17, 12, 22, 0.96), rgba(11, 8, 15, 0.96));
+    border: 1px solid rgba(245, 241, 232, 0.12);
+    border-radius: 10px;
+    padding: 22px 24px 18px;
+    color: #f5f1e8;
+    font-family: "Geist Variable", ui-sans-serif, system-ui, sans-serif;
+    outline: none;
+    transition: border-color 200ms ease, box-shadow 200ms ease;
+  }
+  .tb:focus-within { border-color: rgba(255, 150, 80, 0.4); box-shadow: 0 0 0 1px rgba(255, 150, 80, 0.28); }
+
+  .tb-head { display: flex; align-items: center; justify-content: space-between; gap: 14px; margin-bottom: 16px; flex-wrap: wrap; }
+  .tb-head-left { display: flex; align-items: center; gap: 12px; min-width: 0; }
+  .tb-source {
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-style: italic; font-weight: 700; font-size: 16px;
+    color: #00ff4d; background: rgba(0, 255, 77, 0.05);
+    border: 1px solid rgba(0, 255, 77, 0.32); border-radius: 4px;
+    padding: 5px 11px; box-shadow: 0 0 12px rgba(0, 255, 77, 0.12);
+  }
+  .tb-tag, .tb-loud {
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 10px; letter-spacing: 0.16em; text-transform: uppercase; color: rgba(245, 241, 232, 0.5);
+  }
+  .tb-loud { color: var(--brand-yellow); border: 1px solid rgba(255, 179, 71, 0.4); border-radius: 20px; padding: 4px 11px; cursor: help; }
+
+  .tb-eq { display: inline-flex; align-items: flex-end; gap: 2px; height: 11px; margin-right: 7px; vertical-align: -1px; }
+  .tb-eq i { width: 2.5px; border-radius: 1px; height: 40%; background: var(--brand-cyan); animation: tb-eq 0.9s ease-in-out infinite; }
+  .tb-eq i:nth-child(2) { background: var(--brand-pink); animation-delay: 0.18s; }
+  .tb-eq i:nth-child(3) { background: var(--brand-yellow); animation-delay: 0.36s; }
+  .tb-eq i:nth-child(4) { background: var(--brand-cyan); animation-delay: 0.54s; }
+  @keyframes tb-eq { 0%, 100% { height: 28%; } 50% { height: 100%; } }
+
+  .tb-soundcue {
+    display: flex; align-items: center; gap: 10px; margin: 0 0 14px;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 12px; line-height: 1.45; color: rgba(245, 241, 232, 0.68);
+    padding: 9px 13px; border-radius: 6px;
+    background: rgba(0, 255, 77, 0.05); border: 1px solid rgba(0, 255, 77, 0.22); border-left: 2px solid var(--brand-green);
+  }
+  .tb-soundcue b { color: #f5f1e8; font-weight: 700; }
+  .tb-soundcue-ear { font-size: 15px; flex: 0 0 auto; line-height: 1; }
+
+  .tb-transport { display: flex; align-items: center; gap: 14px; margin-bottom: 12px; }
+  .tb-play {
+    width: 46px; height: 46px; border-radius: 50%; flex: 0 0 auto;
+    border: 1px solid rgba(245, 241, 232, 0.3); background: rgba(245, 241, 232, 0.04);
+    color: #f5f1e8; font-size: 15px; cursor: pointer; position: relative;
+    display: flex; align-items: center; justify-content: center;
+    transition: background 160ms ease, border-color 160ms ease, transform 160ms ease;
+  }
+  .tb-play:hover { background: rgba(245, 241, 232, 0.09); border-color: rgba(245, 241, 232, 0.5); transform: scale(1.05); }
+  .tb-play::before {
+    content: ""; position: absolute; inset: -4px; border-radius: 50%;
+    border: 1.5px solid rgba(0, 255, 77, 0.5); opacity: 0; pointer-events: none;
+  }
+  .tb[data-played="false"] .tb-play::before { animation: tb-invite 2.1s ease-out infinite; }
+  @keyframes tb-invite {
+    0% { opacity: 0.7; transform: scale(0.84); }
+    70% { opacity: 0; transform: scale(1.28); }
+    100% { opacity: 0; transform: scale(1.28); }
+  }
+  .tb[data-playing="true"] .tb-play { background: rgba(0, 255, 77, 0.08); border-color: rgba(0, 255, 77, 0.5); color: #00ff4d; }
+  .tb-play[data-state="loading"] { color: transparent; }
+  .tb-play[data-state="loading"]::after {
+    content: ""; position: absolute; width: 15px; height: 15px;
+    border: 2px solid rgba(245, 241, 232, 0.6); border-top-color: transparent;
+    border-radius: 50%; animation: tb-spin 0.7s linear infinite;
+  }
+  @keyframes tb-spin { to { transform: rotate(360deg); } }
+  .tb-time {
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-style: italic; font-weight: 700; font-size: 15px; color: #ff3b6e;
+    font-feature-settings: "tnum"; letter-spacing: 0.04em; line-height: 1;
+    text-shadow: 0 0 4px rgba(255, 59, 110, 0.65), 0 0 10px rgba(255, 59, 110, 0.35);
+  }
+  .tb-now {
+    margin-left: auto; font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 11px; letter-spacing: 0.08em; color: rgba(245, 241, 232, 0.7);
+    background: rgba(245, 241, 232, 0.04); border: 1px solid rgba(245, 241, 232, 0.14);
+    border-radius: 4px; padding: 4px 10px;
+  }
+
+  .tb-wave {
+    position: relative; height: 72px; background: #07060c;
+    border-radius: 4px; overflow: hidden; margin-bottom: 16px;
+    display: flex; align-items: center; gap: 1px; padding: 0 6px; cursor: pointer;
+  }
+  .tb-bar {
+    flex: 1 1 0; border-radius: 1px;
+    background: linear-gradient(180deg, rgba(14, 196, 252, 0.62) 0%, rgba(14, 196, 252, 0.26) 100%);
+    transition: background 280ms ease, height 280ms ease;
+  }
+  .tb[data-active="1"] .tb-bar { background: linear-gradient(180deg, rgba(255, 39, 97, 0.6) 0%, rgba(255, 39, 97, 0.24) 100%); }
+  .tb[data-active="2"] .tb-bar { background: linear-gradient(180deg, rgba(255, 179, 71, 0.62) 0%, rgba(255, 179, 71, 0.26) 100%); }
+  .tb[data-active="3"] .tb-bar { background: linear-gradient(180deg, rgba(0, 255, 77, 0.55) 0%, rgba(0, 255, 77, 0.22) 100%); }
+  .tb-playhead {
+    position: absolute; top: 0; bottom: 0; width: 2px; left: 0%;
+    background: #f5f1e8; box-shadow: 0 0 8px rgba(245, 241, 232, 0.6); pointer-events: none; z-index: 3;
+  }
+  .tb[data-playing="false"] .tb-playhead { opacity: 0.35; }
+  .tb-buffering {
+    position: absolute; inset: 0; pointer-events: none; opacity: 0;
+    background: linear-gradient(90deg, transparent, rgba(245, 241, 232, 0.07), transparent);
+    transition: opacity 200ms ease;
+  }
+  .tb-buffering[data-on="true"] { opacity: 1; animation: tb-shimmer 1s linear infinite; }
+  @keyframes tb-shimmer { 0% { transform: translateX(-100%); } 100% { transform: translateX(100%); } }
+
+  .tb-switch { display: flex; gap: 8px; margin-bottom: 14px; }
+  .tb-key {
+    position: relative; flex: 1; overflow: hidden;
+    display: flex; flex-direction: column; align-items: center; gap: 3px;
+    padding: 12px 10px 11px; cursor: pointer;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    color: #ece3f2; user-select: none; touch-action: none;
+    border: 1px solid rgba(236, 227, 242, 0.22); border-bottom-color: rgba(0, 0, 0, 0.55);
+    border-radius: 8px;
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.12) 0%, rgba(236, 227, 242, 0.05) 46%, rgba(0, 0, 0, 0.12) 100%);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.24), inset 0 -2px 4px rgba(0, 0, 0, 0.3), 0 2px 0 rgba(0, 0, 0, 0.5), 0 4px 7px rgba(0, 0, 0, 0.42);
+    transition: transform 120ms ease, box-shadow 120ms ease, border-color 120ms ease, color 120ms ease;
+  }
+  .tb-key:hover {
+    border-color: rgba(236, 227, 242, 0.5); color: #fff; transform: translateY(-1px);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.32), inset 0 -2px 4px rgba(0, 0, 0, 0.3), 0 3px 0 rgba(0, 0, 0, 0.5), 0 6px 12px rgba(0, 0, 0, 0.48);
+  }
+  .tb-key[data-active="true"] {
+    background: linear-gradient(135deg, #ff2d8b, #ff7a3d, #ffd23d);
+    color: #0d060f; border-color: rgba(255, 180, 90, 0.55); border-bottom-color: rgba(120, 45, 10, 0.7);
+    transform: translateY(2px);
+    box-shadow: 0 0 24px rgba(255, 140, 80, 0.5), 0 1px 0 rgba(0, 0, 0, 0.35), inset 0 2px 3px rgba(255, 255, 255, 0.45), inset 0 -3px 6px rgba(150, 55, 10, 0.5);
+  }
+  .tb-key-num { font-size: 17px; font-weight: 700; line-height: 1; position: relative; z-index: 2; }
+  .tb-key-id { font-size: 10px; letter-spacing: 0.02em; position: relative; z-index: 2; color: inherit; opacity: 0.78; text-align: center; white-space: nowrap; }
+  .tb-key[data-active="true"] .tb-key-id { opacity: 0.92; }
+  .tb-key[data-crowned="true"]::before {
+    content: "♛"; position: absolute; top: 3px; right: 6px; font-size: 12px; z-index: 4;
+    color: #ffd23d; text-shadow: 0 0 7px rgba(255, 210, 61, 0.9);
+    animation: tb-crownpop 480ms cubic-bezier(0.2, 1.5, 0.45, 1) 1;
+  }
+  .tb-key[data-active="true"][data-crowned="true"]::before { color: #0d060f; text-shadow: none; }
+  @keyframes tb-crownpop {
+    0% { transform: scale(0) rotate(-30deg); opacity: 0; }
+    60% { transform: scale(1.55) rotate(8deg); opacity: 1; }
+    100% { transform: scale(1) rotate(0); opacity: 1; }
+  }
+  .tb-key[data-crowned="true"] { animation: tb-crownburst 560ms ease-out 1; }
+  @keyframes tb-crownburst {
+    0% { box-shadow: 0 0 0 0 rgba(255, 210, 61, 0.75), 0 0 24px 6px rgba(255, 210, 61, 0.6); }
+    100% { box-shadow: 0 0 0 18px rgba(255, 210, 61, 0), 0 0 24px 6px rgba(255, 210, 61, 0); }
+  }
+  .tb-hold-fill {
+    position: absolute; inset: 0; border-radius: inherit; z-index: 1;
+    transform-origin: bottom center; transform: scaleY(0); pointer-events: none;
+    background: linear-gradient(180deg, #ffe27a 0%, rgba(255, 150, 80, 0.5) 100%);
+    box-shadow: inset 0 0 20px rgba(255, 255, 255, 0.3);
+  }
+  .tb-key[data-holding="true"] .tb-hold-fill { transform: scaleY(1); transition: transform 0.65s linear; }
+  .tb-key[data-holding="true"] {
+    transform: translateY(-2px) scale(1.05); border-color: rgba(255, 210, 61, 0.7);
+    box-shadow: 0 0 30px rgba(255, 210, 61, 0.6), 0 5px 12px rgba(0, 0, 0, 0.45), inset 0 2px 3px rgba(255, 255, 255, 0.4);
+    z-index: 3;
+  }
+  .tb-key[data-holding="true"] .tb-key-num { animation: tb-holdpulse 0.5s ease-in-out infinite alternate; }
+  @keyframes tb-holdpulse { from { transform: scale(1); } to { transform: scale(1.12); } }
+
+  .tb-foot { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; min-height: 22px; }
+  .tb-reveal {
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 11px;
+    color: rgba(245, 241, 232, 0.66); background: transparent;
+    border: 1px solid rgba(245, 241, 232, 0.2); border-radius: 4px;
+    padding: 6px 12px; cursor: pointer; transition: color 160ms ease, border-color 160ms ease;
+  }
+  .tb-reveal:hover { color: #f5f1e8; border-color: rgba(245, 241, 232, 0.45); }
+  .tb-status { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 11.5px; color: var(--brand-cyan); }
+
+  .tb-refline {
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 12px; line-height: 1.5; color: var(--cs-text-muted);
+    margin: 13px 0 0; padding: 9px 13px;
+    border: 1px solid rgba(255, 150, 80, 0.22); border-left: 2px solid var(--brand-orange);
+    border-radius: 5px; background: rgba(255, 150, 80, 0.04);
+  }
+  .tb-refline[hidden] { display: none; }
+  .tb-refline b { color: var(--brand-orange); font-style: normal; font-weight: 700; }
+
+  .tb-hint {
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 10.5px;
+    color: var(--cs-text-dim); margin: 14px 0 0; letter-spacing: 0.03em; max-width: none;
+  }
+  .tb-hint kbd {
+    color: rgba(245, 241, 232, 0.78); border: 1px solid rgba(245, 241, 232, 0.22);
+    background: rgba(245, 241, 232, 0.03); border-radius: 2px; padding: 1px 5px; margin: 0 1px; font-size: 10px;
+  }
+  .tb-hint-crown { color: var(--brand-yellow); }
+
+  @media (max-width: 640px) {
+    .tb-key-id { font-size: 8px; white-space: normal; line-height: 1.15; }
+    .tb-key-num { font-size: 15px; }
+    .tb-switch { align-items: stretch; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .tb-bar, .tb-play, .tb-key { transition: none; }
+    .tb-buffering[data-on="true"] { animation: none; }
+    .tb-hold-fill { transition: none; }
+    .tb-key[data-crowned="true"], .tb-key[data-crowned="true"]::before, .tb-key[data-holding="true"] .tb-key-num { animation: none; }
+    .tb-eq i { animation: none; height: 68%; }
+    .tb[data-played="false"] .tb-play::before { animation: none; opacity: 0; }
+  }
+</style>
