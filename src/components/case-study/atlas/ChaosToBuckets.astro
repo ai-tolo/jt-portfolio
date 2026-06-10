@@ -1,15 +1,19 @@
 ---
-// ACT 1 + 2 — Chaos → The Sweep.
+// ACT 1 + 2 — Chaos to catalog, scroll-scrubbed.
 //
-// A sticky-stage theater. ~60 file chips start scattered and drifting (the
-// chaos). As the reader scrolls into the scene, the whole swarm is swept up
-// and snaps into the five named bins (Inbox · Jam · Loops · Field · Tracks),
-// de-duping and rendering waveforms as it lands. One chip — Audio 14.wav —
-// flies into Tracks, highlighted: the protagonist file we follow.
+// A sticky stage the reader scrubs: as you scroll the pinned section, ~55
+// scattered file chips fly into the five named bins (Inbox, Jam, Loops, Field,
+// Tracks), counters climb, duplicate copies fold away, and the protagonist
+// (Audio 14.wav) lands last in Tracks. Everything on screen is a pure function
+// of one scroll fraction p, so the sweep is fully reversible (scroll back and it
+// un-sweeps) and there are no timers to get stuck.
 //
-// Motion is one toggled CSS phase (chaos → swept); a ↻ replay re-runs it.
-// IntersectionObserver fires the sweep; prefers-reduced-motion lands binned
-// with no flight. All copy + counters are real values from the build log.
+// Robust by design: p comes from a passive scroll handler reading the section's
+// rect over its scrollable height (NOT a CSS scroll-timeline, NOT an
+// IntersectionObserver, both of which the preview throttles). The whole frame is
+// painted by one idempotent apply(p); a test hook (root.__ctb.setProgress) drives
+// it without scrolling. Transform-only motion (no left/top). prefers-reduced-
+// motion paints one settled poster and never scrubs. All copy + counts are real.
 
 interface Chip { name: string; bin: number; dupe?: boolean; hero?: boolean }
 
@@ -22,7 +26,7 @@ const BINS = [
   { key: "tracks", label: "Tracks", count: 169,  blurb: "finished songs + their bounces", accent: "green" },
 ];
 
-// 60 chips, distributed across the five bins. The protagonist + two dup pairs
+// The chips, distributed across the five bins. The protagonist + two dup pairs
 // live in Tracks. Names are the same scattered-audio vocabulary as the hero.
 const CHIPS: Chip[] = [
   // Tracks (8) — protagonist first, two dup pairs
@@ -73,69 +77,79 @@ const slotCount = [0, 0, 0, 0, 0];
 const chips = CHIPS.map((c, i) => {
   const slot = slotCount[c.bin]++;
   const binCenter = c.bin * 20 + 10;          // % across the stage
-  // % down, stacked in the bin. Starts at 21% — BELOW the kicker/counters
-  // header band so the left column never collides with the act subtext. Step
-  // tuned so the tallest column (13 chips) nests inside its frame (84%).
+  // % down, stacked in the bin. Starts at 21% — BELOW the kicker/counters band.
   const ty = 21 + slot * 4.6;
   // chaos scatter
   const cx = 6 + rnd(i, 12.9898) * 88;
   const cy = 8 + rnd(i, 78.233) * 80;
   const rot = (rnd(i, 39.425) - 0.5) * 26;
-  const ddur = 7 + rnd(i, 21.17) * 7;
-  const ddelay = -rnd(i, 5.31) * 8;
-  const dx = (rnd(i, 8.7) - 0.5) * 24;         // chaos drift vector
-  const dy = (rnd(i, 3.3) - 0.5) * 20;
-  return { ...c, cx, cy, tx: binCenter, ty, rot, ddur, ddelay, dx, dy, slot };
+  return { ...c, cx, cy, tx: binCenter, ty, rot, binIndex: c.bin, slot };
 });
 const maxSlots = Math.max(...slotCount);
 ---
 
 <section class="ctb" aria-label="Chaos to catalog">
   <div class="ctb-sticky">
-    <div class="ctb-stage" data-ctb-stage data-phase="chaos" style={`--rows:${maxSlots}`}>
+    <div class="ctb-stage" data-ctb-stage data-beat="0" style={`--rows:${maxSlots}; --resolve:0`}>
 
-      <!-- phase kicker overlay -->
-      <div class="ctb-kicker" data-ctb-kicker>
-        <p class="ctb-kicker-chaos">
-          <span class="ctb-eyebrow">the problem</span>
+      <!-- per-beat captions (stacked; one is opaque at a time, driven by p) -->
+      <div class="ctb-kicker">
+        <p class="ctb-caption" data-ctb-caption style="opacity:1">
+          <span class="ctb-eyebrow ctb-eyebrow-pink">the problem</span>
           Twenty thousand files. Four drives, iCloud, the Voice&nbsp;Memos vault,
           friends' DMs. No master list, no way to even ask what's in here.
         </p>
-        <p class="ctb-kicker-swept">
-          <span class="ctb-eyebrow ctb-eyebrow-swept">one sweep</span>
-          Every file read, fingerprinted by sound, and filed by what it actually
-          is. The pile becomes something you can ask questions of. ↓
+        <p class="ctb-caption" data-ctb-caption style="opacity:0">
+          <span class="ctb-eyebrow ctb-eyebrow-green">the sweep</span>
+          Every file read by sound, fingerprinted, and flown into the bin it
+          actually belongs in. Watch the pile become a shape.
+        </p>
+        <p class="ctb-caption" data-ctb-caption style="opacity:0">
+          <span class="ctb-eyebrow ctb-eyebrow-yellow">deduped</span>
+          Same take, three names. The catalog hears that they are identical and
+          folds the copies away. Twenty groups, gone.
+        </p>
+        <p class="ctb-caption" data-ctb-caption style="opacity:0">
+          <span class="ctb-eyebrow ctb-eyebrow-cyan">a catalog</span>
+          Twenty thousand two hundred seventy nine files, read and filed. Now you
+          can browse any category, or ask it anything. Audio&nbsp;14.wav is in
+          Tracks, waiting. Scroll on.
         </p>
       </div>
 
-      <!-- counters -->
-      <div class="ctb-counters" data-ctb-counters aria-hidden="true">
-        <div class="ctb-counter"><b data-ctb-n data-to="20279">0</b><span>catalogued</span></div>
-        <div class="ctb-counter"><b data-ctb-n data-to="1718">0</b><span>auto-sorted</span></div>
-        <div class="ctb-counter"><b data-ctb-n data-to="20">0</b><span>dup groups merged</span></div>
+      <!-- counters (present from the start, climb with p) -->
+      <div class="ctb-counters" aria-hidden="true">
+        <div class="ctb-counter"><b data-ctb-counter="catalogued">0</b><span>catalogued</span></div>
+        <div class="ctb-counter"><b data-ctb-counter="autosorted">0</b><span>auto-sorted</span></div>
+        <div class="ctb-counter"><b data-ctb-counter="dupgroups">0</b><span>dup groups merged</span></div>
       </div>
 
-      <!-- bins backdrop -->
+      <!-- bins backdrop: labeled UP FRONT; frames fill toward their accent as
+           their chips land (driven by --fill) -->
       <div class="ctb-bins" aria-hidden="true">
         {BINS.map((b) => (
-          <div class={`ctb-bin ctb-bin-${b.accent}`} data-bin-key={b.key}>
+          <div class={`ctb-bin ctb-bin-${b.accent}`} data-bin-key={b.key} data-bin-frame style="--fill:0">
             <div class="ctb-bin-frame"></div>
             <div class="ctb-bin-foot">
               <span class="ctb-bin-label">{b.label}</span>
-              <span class="ctb-bin-count" data-ctb-binn data-to={String(b.count)}>0</span>
+              <span class="ctb-bin-count" data-ctb-binn>0</span>
               <span class="ctb-bin-blurb">{b.blurb}</span>
             </div>
           </div>
         ))}
       </div>
 
-      <!-- chips -->
-      <div class="ctb-chips">
+      <!-- chips: positioned by transform alone (no left/top). The SSR inline
+           transform is the scatter; apply(p) owns it from then on. Decorative
+           theater, hidden from the a11y tree (the section aria-label + the
+           surrounding prose carry the narrative). -->
+      <div class="ctb-chips" aria-hidden="true">
         {chips.map((c) => (
           <span
             class:list={["ctb-chip", { "ctb-chip-hero": c.hero, "ctb-chip-dupe": c.dupe }]}
-            data-bin={c.bin}
-            style={`--cx:${c.cx}%; --cy:${c.cy}%; --tx:${c.tx}%; --ty:${c.ty}%; --rot:${c.rot}deg; --ddur:${c.ddur}s; --ddelay:${c.ddelay}s; --dx:${c.dx}px; --dy:${c.dy}px;`}
+            data-cx={c.cx} data-cy={c.cy} data-tx={c.tx} data-ty={c.ty}
+            data-rot={c.rot} data-bin={c.binIndex} data-slot={c.slot}
+            style={`--lit:0; transform: translate(${c.cx}cqw, ${c.cy}cqh) translate(-50%, -50%) rotate(${c.rot}deg);`}
           >
             <span class="ctb-chip-inner">
               <svg class="ctb-chip-wave" viewBox="0 0 40 12" preserveAspectRatio="none" aria-hidden="true">
@@ -149,386 +163,268 @@ const maxSlots = Math.max(...slotCount);
         ))}
       </div>
 
-      <!-- replay -->
-      <button type="button" class="ctb-replay" data-ctb-replay>↻ watch it organize</button>
+      <!-- scroll-progress cue -->
+      <div class="ctb-prog" aria-hidden="true">
+        <i class="ctb-prog-fill" data-ctb-prog-fill></i>
+        <span class="ctb-prog-pct" data-ctb-prog-pct>0%</span>
+      </div>
     </div>
   </div>
-  <!-- sweep trigger lives in the tall scroll track (not the pinned stage) so it
-       actually crosses the viewport as you scroll. -->
-  <div class="ctb-fire" data-ctb-fire aria-hidden="true"></div>
 </section>
 
 <script>
-  const stages = document.querySelectorAll<HTMLElement>("[data-ctb-stage]");
-  stages.forEach((stage) => {
+  document.querySelectorAll<HTMLElement>(".ctb").forEach((section) => {
+    const stage = section.querySelector<HTMLElement>("[data-ctb-stage]");
+    if (!stage) return;
     const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    const section = stage.closest<HTMLElement>(".ctb");
-    const replay = stage.querySelector<HTMLButtonElement>("[data-ctb-replay]");
-    const counters = stage.querySelectorAll<HTMLElement>("[data-ctb-n]");
-    const binCounts = stage.querySelectorAll<HTMLElement>("[data-ctb-binn]");
-    let swept = false;
 
-    const countUp = (el: HTMLElement, to: number, ms: number) => {
-      const final = to.toLocaleString("en-US");
-      if (reduce) { el.textContent = final; return; }
-      const start = performance.now();
-      const tick = (now: number) => {
-        const t = Math.min(1, (now - start) / ms);
-        const eased = 1 - Math.pow(1 - t, 3);
-        el.textContent = Math.round(to * eased).toLocaleString("en-US");
-        if (t < 1) requestAnimationFrame(tick);
-      };
-      requestAnimationFrame(tick);
-      // Guarantee the final value lands even if rAF is throttled/never fires
-      // (headless preview tabs do this). Real browsers animate; this is a no-op
-      // re-set there.
-      window.setTimeout(() => { el.textContent = final; }, ms + 120);
+    const clamp01 = (x: number) => Math.max(0, Math.min(1, x));
+    const easeOutCubic = (t: number) => 1 - Math.pow(1 - t, 3);
+
+    // ── precompute one frozen record per chip (scatter + target + sweep window) ──
+    const SW0 = 0.22, SW1 = 0.70;
+    const els = [...stage.querySelectorAll<HTMLElement>(".ctb-chip")];
+    const PRE = els.map((el, i) => {
+      const cx = +(el.dataset.cx || 0), cy = +(el.dataset.cy || 0);
+      const tx = +(el.dataset.tx || 0), ty = +(el.dataset.ty || 0);
+      const rot = +(el.dataset.rot || 0);
+      const binIndex = +(el.dataset.bin || 0), slotIndex = +(el.dataset.slot || 0);
+      const dupe = el.classList.contains("ctb-chip-dupe");
+      const hero = el.classList.contains("ctb-chip-hero");
+      // bin-then-slot stagger, compressed into the leading 0.08 of the sweep band
+      const start = binIndex * 0.06 + slotIndex * 0.004 + (hero ? 0.05 : 0);
+      const s0 = hero ? SW0 + 0.06 : SW0 + (start / 0.34) * 0.08;
+      return { el, i, cx, cy, tx, ty, rot, binIndex, slotIndex, dupe, hero, s0, s1: SW1 };
+    });
+
+    const captions = [...stage.querySelectorAll<HTMLElement>("[data-ctb-caption]")];
+    const counters: Record<string, HTMLElement | null> = {
+      catalogued: stage.querySelector('[data-ctb-counter="catalogued"]'),
+      autosorted: stage.querySelector('[data-ctb-counter="autosorted"]'),
+      dupgroups: stage.querySelector('[data-ctb-counter="dupgroups"]'),
+    };
+    const binFrames = [...stage.querySelectorAll<HTMLElement>("[data-bin-frame]")];
+    const binCounts = [...stage.querySelectorAll<HTMLElement>("[data-ctb-binn]")];
+    const progFill = stage.querySelector<HTMLElement>("[data-ctb-prog-fill]");
+    const progPct = stage.querySelector<HTMLElement>("[data-ctb-prog-pct]");
+    const BIN_TARGETS = [7589, 329, 339, 1389, 169];
+    const fmt = (n: number) => n.toLocaleString("en-US");
+    const setCounter = (k: string, v: number) => { const el = counters[k]; if (el) el.textContent = fmt(v); };
+
+    const heroScale = (p: number) => {
+      const a = clamp01((p - 0.70) / 0.04);   // 1 -> 1.16 across 0.70..0.74
+      const b = clamp01((p - 0.74) / 0.04);   // back to 1 across 0.74..0.78
+      return 1 + 0.16 * (a - b);
     };
 
-    const sweep = () => {
-      if (swept) return;
-      swept = true;
-      stage.dataset.phase = "swept";
-      counters.forEach((c) => countUp(c, Number(c.dataset.to || "0"), 1200));
-      binCounts.forEach((c) => countUp(c, Number(c.dataset.to || "0"), 1400));
-    };
+    // ── the single source of truth: paint the whole frame from p ──
+    function apply(p: number) {
+      p = clamp01(p);
+      const beat = p < 0.22 ? 0 : p < 0.70 ? 1 : p < 0.88 ? 2 : 3;
+      stage!.dataset.beat = String(beat);
+      captions.forEach((c, idx) => (c.style.opacity = idx === beat ? "1" : "0"));
 
-    const reset = () => {
-      swept = false;
-      stage.dataset.phase = "chaos";
-      counters.forEach((c) => (c.textContent = "0"));
-      binCounts.forEach((c) => (c.textContent = "0"));
-    };
+      const fill = [0, 0, 0, 0, 0], cnt = [0, 0, 0, 0, 0];
+      for (const r of PRE) {
+        const ct = clamp01((p - r.s0) / (r.s1 - r.s0));
+        const e = easeOutCubic(ct);
+        const X = r.cx + (r.tx - r.cx) * e;
+        const Y = r.cy + (r.ty - r.cy) * e;
+        const R = r.rot * (1 - e);
+        // chaos wobble: scroll-driven, fades out as the chip flies (e -> 1)
+        const dX = (1 - e) * 0.6 * Math.sin(p * 6.283 * 1.3 + r.i);
+        const dY = (1 - e) * 0.5 * Math.cos(p * 6.283 * 1.1 + r.i);
+        let S = 1, O = 1;
+        if (r.dupe) { const t = clamp01((p - 0.70) / 0.18); S = 1 - 0.4 * t; O = 1 - t; }
+        else if (r.hero) { S = heroScale(p); }
+        r.el.style.transform =
+          `translate(${(X + dX).toFixed(2)}cqw, ${(Y + dY).toFixed(2)}cqh) translate(-50%, -50%) rotate(${R.toFixed(2)}deg) scale(${S.toFixed(3)})`;
+        r.el.style.opacity = O !== 1 ? O.toFixed(3) : "";
+        r.el.style.setProperty("--lit", e.toFixed(3));
+        if (r.hero) r.el.style.setProperty("--glow", clamp01((p - 0.70) / 0.06).toFixed(3));
+        fill[r.binIndex] += e; cnt[r.binIndex] += 1;
+      }
+      binFrames.forEach((bf, b) => bf.style.setProperty("--fill", (cnt[b] ? fill[b] / cnt[b] : 0).toFixed(3)));
 
-    // Fire the sweep once the reader is ~a third of the way through the pinned
-    // section. Scroll-progress is robust where an IntersectionObserver sentinel
-    // isn't (the sticky stage keeps a sentinel pinned, never crossing).
-    let manualReset = false;
+      const rmp = easeOutCubic(clamp01((p - 0.22) / 0.56));
+      setCounter("catalogued", Math.floor(20279 * rmp));
+      setCounter("autosorted", Math.floor(1718 * rmp));
+      setCounter("dupgroups", Math.floor(20 * rmp));
+      binCounts.forEach((el, b) => (el.textContent = fmt(Math.floor(BIN_TARGETS[b] * rmp))));
+
+      stage!.style.setProperty("--resolve", clamp01((p - 0.88) / 0.12).toFixed(3));
+      if (progFill) progFill.style.transform = `scaleX(${p.toFixed(4)})`;
+      if (progPct) progPct.textContent = Math.round(p * 100) + "%";
+      stage!.dataset.p = p.toFixed(4);
+    }
+
+    // ── test hook: drive the frame deterministically without scrolling/rAF ──
+    (section as any).__ctb = {
+      setProgress: (p: number) => apply(clamp01(p)),
+      apply,
+      get beat() { return Number(stage!.dataset.beat); },
+      get p() { return Number(stage!.dataset.p); },
+    };
+    (window as any).__ctb = (section as any).__ctb;
+
+    if (reduce) {
+      // one settled poster, no scrub, no scroll listener
+      apply(1);
+      return;
+    }
+
+    // ── scroll driver: rect-fraction, passive, rAF-coalesced. apply() stays
+    //    directly callable + idempotent, so the test hook never needs rAF. ──
+    let queued = false, lastP = 0;
     const onScroll = () => {
-      if (swept || manualReset || !section) return;
       const total = section.offsetHeight - window.innerHeight;
       const scrolled = -section.getBoundingClientRect().top;
-      if (total > 0 && scrolled / total >= 0.32) sweep();
+      lastP = total > 0 ? clamp01(scrolled / total) : 0;
+      if (queued) return;
+      queued = true;
+      requestAnimationFrame(() => { queued = false; apply(lastP); });
     };
     window.addEventListener("scroll", onScroll, { passive: true });
+    apply(0);      // paint the initial frame immediately (don't wait for a scroll)
     onScroll();
-
-    replay?.addEventListener("click", () => {
-      manualReset = true;
-      reset();
-      window.setTimeout(() => { manualReset = false; sweep(); }, reduce ? 0 : 420);
-    });
   });
 </script>
 
 <style>
-  .ctb {
-    position: relative;
-    height: 215vh;
-    margin-top: 10px;
-  }
-  .ctb-sticky {
-    position: sticky;
-    top: 6vh;
-    height: 88vh;
-    display: flex;
-    align-items: stretch;
-  }
+  .ctb { position: relative; height: 215vh; margin-top: 10px; }
+  .ctb-sticky { position: sticky; top: 6vh; height: 88vh; display: flex; align-items: stretch; }
   .ctb-stage {
-    position: relative;
-    flex: 1;
-    margin: 0 auto;
-    max-width: 1280px;
-    width: 100%;
-    border: 1px solid var(--cs-line);
-    border-radius: 8px;
+    position: relative; flex: 1; margin: 0 auto; max-width: 1280px; width: 100%;
+    container-type: size;          /* makes cqw/cqh equal 1% of the stage box */
+    border: 1px solid var(--cs-line); border-radius: 8px;
     background:
       radial-gradient(120% 90% at 50% 0%, rgba(255, 39, 97, 0.05), transparent 60%),
       linear-gradient(180deg, #0c0a12 0%, #08070d 100%);
-    overflow: hidden;
-    box-shadow: 0 30px 80px -40px rgba(0,0,0,0.8);
+    overflow: hidden; box-shadow: 0 30px 80px -40px rgba(0,0,0,0.8);
+    /* resolve tint: neutral -> cyan as p crosses the last beat */
+    border-color: color-mix(in srgb, var(--brand-cyan) calc(var(--resolve, 0) * 18%), var(--cs-line));
   }
 
-  /* ── kicker copy ── */
-  .ctb-kicker {
-    position: absolute;
-    top: 0; left: 0; right: 0;
-    z-index: 6;
-    padding: 26px 30px 0;
-    pointer-events: none;
-  }
-  .ctb-kicker p {
-    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-    font-size: 14px;
-    line-height: 1.55;
-    max-width: 52ch;
-    margin: 0;
-    /* legibility plate: copy stays crisp while the chips drift behind it */
-    padding: 13px 16px;
-    border-radius: 9px;
-    background: rgba(8, 7, 13, 0.64);
-    border: 1px solid rgba(245, 241, 232, 0.08);
-    backdrop-filter: blur(5px);
-    -webkit-backdrop-filter: blur(5px);
+  /* ── captions (stacked, opacity-toggled per beat) ── */
+  .ctb-kicker { position: absolute; top: 0; left: 0; right: 0; z-index: 6; padding: 26px 30px 0; pointer-events: none; }
+  .ctb-caption {
+    position: absolute; top: 26px; left: 30px; right: 30px;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 14px; line-height: 1.55;
+    max-width: 52ch; margin: 0; color: rgba(245, 241, 232, 0.78);
+    padding: 13px 16px; border-radius: 9px;
+    background: rgba(8, 7, 13, 0.64); border: 1px solid rgba(245, 241, 232, 0.08);
+    backdrop-filter: blur(5px); -webkit-backdrop-filter: blur(5px);
     box-shadow: 0 12px 32px -18px rgba(0, 0, 0, 0.8);
-    transition: opacity 500ms ease;
+    transition: opacity 420ms ease;
   }
   .ctb-eyebrow {
-    display: inline-flex;
-    align-items: center;
-    gap: 9px;
-    font-size: 12.5px;
-    font-weight: 700;
-    letter-spacing: 0.24em;
-    text-transform: uppercase;
-    color: var(--brand-pink);
-    margin-bottom: 12px;
+    display: inline-flex; align-items: center; gap: 9px;
+    font-size: 12.5px; font-weight: 700; letter-spacing: 0.24em; text-transform: uppercase;
+    color: var(--brand-pink); margin-bottom: 12px;
   }
-  .ctb-eyebrow::before {
-    content: "";
-    width: 22px; height: 3px; border-radius: 2px;
-    background: currentColor;
-    box-shadow: 0 0 10px currentColor;
-  }
-  .ctb-eyebrow-swept { color: var(--brand-green); }
-  .ctb-name { font-style: italic; font-weight: 700; color: var(--brand-cyan); }
-  .ctb-kicker-chaos { color: rgba(245,241,232,0.74); }
-  .ctb-kicker-swept {
-    position: absolute;
-    top: 26px; left: 30px; right: 30px;
-    color: rgba(245,241,232,0.82);
-  }
-  .ctb-stage[data-phase="chaos"] .ctb-kicker-swept { opacity: 0; }
-  .ctb-stage[data-phase="swept"] .ctb-kicker-chaos { opacity: 0; }
+  .ctb-eyebrow::before { content: ""; width: 22px; height: 3px; border-radius: 2px; background: currentColor; box-shadow: 0 0 10px currentColor; }
+  .ctb-eyebrow-pink { color: var(--brand-pink); }
+  .ctb-eyebrow-green { color: var(--brand-green); }
+  .ctb-eyebrow-yellow { color: var(--brand-yellow); }
+  .ctb-eyebrow-cyan { color: var(--brand-cyan); }
 
   /* ── counters ── */
-  .ctb-counters {
-    position: absolute;
-    top: 24px; right: 30px;
-    z-index: 6;
-    display: flex;
-    gap: 22px;
-    opacity: 0;
-    transform: translateY(-6px);
-    transition: opacity 500ms ease 260ms, transform 500ms ease 260ms;
-  }
-  .ctb-stage[data-phase="swept"] .ctb-counters { opacity: 1; transform: none; }
+  .ctb-counters { position: absolute; top: 24px; right: 30px; z-index: 6; display: flex; gap: 22px; }
   .ctb-counter { text-align: right; }
   .ctb-counter b {
-    display: block;
-    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-    font-style: italic;
-    font-size: 22px;
-    font-weight: 700;
-    color: #f5f1e8;
-    font-feature-settings: "tnum";
+    display: block; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-style: italic;
+    font-size: 22px; font-weight: 700; color: #f5f1e8; font-feature-settings: "tnum";
   }
   .ctb-counter span {
-    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-    font-size: 9px;
-    letter-spacing: 0.16em;
-    text-transform: uppercase;
-    color: rgba(245,241,232,0.45);
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 9px;
+    letter-spacing: 0.16em; text-transform: uppercase; color: rgba(245,241,232,0.45);
   }
 
-  /* ── bins ── */
-  .ctb-bins {
-    position: absolute;
-    inset: 0;
-    display: grid;
-    grid-template-columns: repeat(5, 1fr);
-    z-index: 1;
-  }
-  .ctb-bin { position: relative; }
+  /* ── bins (labeled up front; frame fills toward accent via --fill) ── */
+  .ctb-bins { position: absolute; inset: 0; display: grid; grid-template-columns: repeat(5, 1fr); z-index: 1; }
+  .ctb-bin { position: relative; --bin-accent: #f5f1e8; }
+  .ctb-bin-cyan { --bin-accent: var(--brand-cyan); }
+  .ctb-bin-yellow { --bin-accent: var(--brand-yellow); }
+  .ctb-bin-pink { --bin-accent: var(--brand-pink); }
+  .ctb-bin-green { --bin-accent: var(--brand-green); }
   .ctb-bin-frame {
-    position: absolute;
-    inset: 18% 8% 16% 8%;
-    border: 1px dashed rgba(245,241,232,0.12);
-    border-radius: 6px;
-    opacity: 0;
-    transform: scale(0.96);
-    transition: opacity 500ms ease, transform 500ms ease, border-color 500ms ease;
+    position: absolute; inset: 18% 8% 16% 8%;
+    border: 1px dashed; border-radius: 6px;
+    border-color: color-mix(in srgb, var(--bin-accent) calc(var(--fill, 0) * 100%), rgba(245,241,232,0.16));
+    opacity: calc(0.5 + 0.5 * var(--fill, 0));
   }
-  .ctb-stage[data-phase="swept"] .ctb-bin-frame { opacity: 1; transform: none; }
-  .ctb-bin-foot {
-    position: absolute;
-    bottom: 4%; left: 8%; right: 8%;
-    text-align: center;
-    opacity: 0;
-    transform: translateY(8px);
-    transition: opacity 500ms ease 120ms, transform 500ms ease 120ms;
-  }
-  .ctb-stage[data-phase="swept"] .ctb-bin-foot { opacity: 1; transform: none; }
+  .ctb-bin-foot { position: absolute; bottom: 4%; left: 8%; right: 8%; text-align: center; }
   .ctb-bin-label {
-    display: block;
-    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-    font-style: italic;
-    font-weight: 700;
-    font-size: 15px;
-    letter-spacing: 0.02em;
+    display: block; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-style: italic;
+    font-weight: 700; font-size: 15px; letter-spacing: 0.02em; color: var(--bin-accent);
   }
   .ctb-bin-count {
-    display: block;
-    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-    font-size: 12px;
-    font-feature-settings: "tnum";
-    color: rgba(245,241,232,0.55);
-    margin-top: 2px;
+    display: block; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px;
+    font-feature-settings: "tnum"; color: rgba(245,241,232,0.55); margin-top: 2px;
   }
   .ctb-bin-blurb {
-    display: block;
-    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-    font-size: 9.5px;
-    line-height: 1.3;
-    color: rgba(245,241,232,0.34);
-    margin-top: 4px;
+    display: block; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 9.5px;
+    line-height: 1.3; color: rgba(245,241,232,0.34); margin-top: 4px;
   }
-  .ctb-bin-white .ctb-bin-label { color: #f5f1e8; }
-  .ctb-bin-cyan  .ctb-bin-label { color: var(--brand-cyan); }
-  .ctb-bin-yellow .ctb-bin-label { color: var(--brand-yellow); }
-  .ctb-bin-pink  .ctb-bin-label { color: var(--brand-pink); }
-  .ctb-bin-green .ctb-bin-label { color: var(--brand-green); }
-  .ctb-stage[data-phase="swept"] .ctb-bin-cyan  .ctb-bin-frame { border-color: rgba(14,196,252,0.3); }
-  .ctb-stage[data-phase="swept"] .ctb-bin-yellow .ctb-bin-frame { border-color: rgba(255,179,71,0.3); }
-  .ctb-stage[data-phase="swept"] .ctb-bin-pink  .ctb-bin-frame { border-color: rgba(255,39,97,0.3); }
-  .ctb-stage[data-phase="swept"] .ctb-bin-green .ctb-bin-frame { border-color: rgba(0,255,77,0.3); }
 
-  /* ── chips ── */
+  /* ── chips (transform-only; JS owns the transform; no transition on it) ── */
   .ctb-chips { position: absolute; inset: 0; z-index: 3; }
-  .ctb-chip {
-    position: absolute;
-    left: var(--cx);
-    top: var(--cy);
-    transform: translate(-50%, -50%);
-    transition: left 1100ms cubic-bezier(0.22, 1, 0.36, 1),
-                top 1100ms cubic-bezier(0.22, 1, 0.36, 1);
-    will-change: left, top;
-  }
-  /* chaos drift lives on the inner so it composes with the chip's flight */
+  .ctb-chip { position: absolute; left: 0; top: 0; will-change: transform; }
   .ctb-chip-inner {
-    position: relative;
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    padding: 5px 9px;
-    border-radius: 5px;
+    position: relative; display: inline-flex; align-items: center; gap: 6px;
+    padding: 5px 9px; border-radius: 5px;
     background: linear-gradient(180deg, rgba(42, 34, 52, 0.96), rgba(28, 22, 38, 0.96));
-    border: 1px solid rgba(245,241,232,0.2);
-    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-    font-size: 11px;
-    white-space: nowrap;
-    color: rgba(245,241,232,0.82);
-    transform: rotate(var(--rot));
-    animation: ctb-drift var(--ddur) ease-in-out var(--ddelay) infinite alternate;
+    /* border tints toward cyan as the chip is read + filed (--lit 0 -> 1) */
+    border: 1px solid color-mix(in srgb, var(--brand-cyan) calc(var(--lit, 0) * 30%), rgba(245,241,232,0.2));
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 11px;
+    white-space: nowrap; color: rgba(245,241,232,0.82);
     box-shadow: 0 6px 18px -8px rgba(0,0,0,0.85);
+    transition: border-color 300ms ease, color 300ms ease;
   }
-  .ctb-chip-wave { width: 26px; height: 11px; color: rgba(245,241,232,0.3); opacity: 0; transition: opacity 500ms ease 500ms; flex: 0 0 auto; }
+  .ctb-chip-wave {
+    width: 26px; height: 11px; flex: 0 0 auto;
+    color: color-mix(in srgb, var(--brand-cyan) calc(var(--lit, 0) * 100%), rgba(245,241,232,0.3));
+    opacity: calc(0.25 + 0.75 * var(--lit, 0));
+  }
   .ctb-chip-name { overflow: hidden; text-overflow: ellipsis; max-width: 15vw; }
-  .ctb-chip-dup {
-    font-size: 9px; color: var(--brand-pink);
-    opacity: 0; transition: opacity 300ms ease;
-  }
-
-  @keyframes ctb-drift {
-    from { transform: rotate(var(--rot)) translate(0, 0); }
-    to   { transform: rotate(var(--rot)) translate(var(--dx), var(--dy)); }
-  }
-
-  /* swept: chips fly to their bin slot, stop drifting, straighten, get legible */
-  .ctb-stage[data-phase="swept"] .ctb-chip { left: var(--tx); top: var(--ty); }
-  .ctb-stage[data-phase="swept"] .ctb-chip-inner {
-    animation: none;
-    transform: rotate(0deg);
-    background: linear-gradient(180deg, rgba(26, 20, 34, 0.97), rgba(18, 14, 24, 0.97));
-    border-color: rgba(245,241,232,0.22);
-    color: rgba(245,241,232,0.86);
-    transition: transform 700ms ease, background 500ms ease, border-color 500ms ease, color 500ms ease;
-  }
-  .ctb-stage[data-phase="swept"] .ctb-chip-wave { opacity: 1; color: var(--brand-cyan); }
+  .ctb-chip-dup { font-size: 9px; color: var(--brand-pink); }
 
   /* protagonist */
   .ctb-chip-hero { z-index: 5; }
   .ctb-chip-hero .ctb-chip-inner {
-    border-color: rgba(0,255,77,0.5);
-    color: #00ff4d;
-    box-shadow: 0 0 16px rgba(0,255,77,0.18);
+    border-color: rgba(0,255,77,0.5); color: #00ff4d;
+    /* glow strength is p-derived (--glow), so reversing un-glows cleanly */
+    box-shadow: 0 0 calc(10px + 20px * var(--glow, 0)) rgba(0,255,77, calc(0.14 + 0.3 * var(--glow, 0)));
   }
-  /* on settle the protagonist pops, then breathes — the satisfying landing */
-  .ctb-stage[data-phase="swept"] .ctb-chip-hero .ctb-chip-inner {
-    color: #00ff4d;
-    border-color: rgba(0,255,77,0.6);
-    animation: ctb-heropop 560ms cubic-bezier(0.22, 1, 0.36, 1) 1100ms 1,
-               ctb-heroglow 2.6s ease-in-out 1700ms infinite;
-  }
-  .ctb-stage[data-phase="swept"] .ctb-chip-hero .ctb-chip-wave { color: #00ff4d; }
-  @keyframes ctb-heropop {
-    0% { transform: rotate(0) scale(1); }
-    45% { transform: rotate(0) scale(1.16); }
-    100% { transform: rotate(0) scale(1); }
-  }
-  @keyframes ctb-heroglow {
-    0%, 100% { box-shadow: 0 0 16px rgba(0,255,77,0.18); }
-    50% { box-shadow: 0 0 28px rgba(0,255,77,0.42); }
-  }
-  /* "the one we follow" — appears under the protagonist once it lands, pointing
-     the reader toward the file beat that comes next */
+  .ctb-chip-hero .ctb-chip-wave { color: #00ff4d; }
   .ctb-chip-follow {
-    position: absolute;
-    bottom: calc(100% + 8px);
-    left: 50%;
-    transform: translateX(-50%);
-    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-    font-size: 8.5px; letter-spacing: 0.1em; text-transform: uppercase;
-    color: #00ff4d; white-space: nowrap; opacity: 0; pointer-events: none;
-    background: rgba(7, 6, 12, 0.95);
-    border: 1px solid rgba(0,255,77,0.45);
-    border-radius: 5px; padding: 3px 9px;
-    box-shadow: 0 8px 20px -8px rgba(0,0,0,0.85);
-    transition: opacity 420ms ease 1500ms;
+    position: absolute; bottom: calc(100% + 8px); left: 50%; transform: translateX(-50%);
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 8.5px;
+    letter-spacing: 0.1em; text-transform: uppercase; color: #00ff4d; white-space: nowrap;
+    background: rgba(7, 6, 12, 0.95); border: 1px solid rgba(0,255,77,0.45); border-radius: 5px;
+    padding: 3px 9px; box-shadow: 0 8px 20px -8px rgba(0,0,0,0.85);
+    opacity: var(--glow, 0); pointer-events: none; transition: opacity 200ms ease;
   }
-  /* down-caret so the plate reads as a tag pointing at the chip */
   .ctb-chip-follow::after {
     content: ""; position: absolute; top: 100%; left: 50%; transform: translateX(-50%);
     border: 5px solid transparent; border-top-color: rgba(0,255,77,0.45);
   }
-  .ctb-stage[data-phase="swept"] .ctb-chip-hero .ctb-chip-follow { opacity: 1; }
   @media (max-width: 720px) { .ctb-chip-follow { display: none; } }
 
-  /* the stage itself reads "resolved" once everything lands */
-  .ctb-stage { transition: border-color 600ms ease 900ms; }
-  .ctb-stage[data-phase="swept"] { border-color: rgba(14,196,252,0.18); }
-
-  /* dup chips merge: fly to bin, then collapse */
-  .ctb-stage[data-phase="swept"] .ctb-chip-dupe {
-    animation: ctb-merge 700ms ease 1100ms forwards;
+  /* ── progress cue ── */
+  .ctb-prog {
+    position: absolute; bottom: 12px; left: 30px; right: 30px; height: 3px; z-index: 7;
+    background: rgba(245,241,232,0.08); border-radius: 2px;
   }
-  .ctb-stage[data-phase="swept"] .ctb-chip-dupe .ctb-chip-dup { opacity: 1; transition: opacity 300ms ease 1100ms; }
-  @keyframes ctb-merge {
-    to { opacity: 0; transform: translate(-50%, -50%) scale(0.6); }
+  .ctb-prog-fill {
+    display: block; height: 100%; width: 100%; border-radius: 2px; transform-origin: left; transform: scaleX(0);
+    background: linear-gradient(90deg, var(--brand-cyan), var(--brand-yellow) 40%, var(--brand-pink) 70%, var(--brand-green));
   }
-
-  /* ── replay ── */
-  .ctb-replay {
-    position: absolute;
-    bottom: 16px; left: 50%;
-    transform: translateX(-50%);
-    z-index: 7;
-    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-    font-size: 11px;
-    letter-spacing: 0.1em;
-    color: rgba(245,241,232,0.7);
-    background: rgba(20,16,26,0.85);
-    border: 1px solid rgba(245,241,232,0.2);
-    border-radius: 20px;
-    padding: 7px 16px;
-    cursor: pointer;
-    opacity: 0;
-    transition: opacity 400ms ease 700ms, color 160ms ease, border-color 160ms ease;
+  .ctb-prog-pct {
+    position: absolute; right: 0; bottom: 8px;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 9px;
+    font-feature-settings: "tnum"; color: rgba(245,241,232,0.5);
   }
-  .ctb-stage[data-phase="swept"] .ctb-replay { opacity: 1; }
-  .ctb-replay:hover { color: #f5f1e8; border-color: rgba(245,241,232,0.45); }
-
-  .ctb-fire { position: absolute; top: 92vh; left: 0; width: 1px; height: 1px; pointer-events: none; }
 
   @media (max-width: 720px) {
     .ctb { height: 180vh; }
@@ -540,13 +436,11 @@ const maxSlots = Math.max(...slotCount);
     .ctb-counter { text-align: left; }
     .ctb-counter b { font-size: 16px; }
     .ctb-bin-blurb { display: none; }
-    .ctb-kicker p { font-size: 12px; }
+    .ctb-caption { font-size: 12px; }
+    .ctb-prog-pct { display: none; }
   }
 
   @media (prefers-reduced-motion: reduce) {
-    .ctb-chip { transition: none; }
-    .ctb-chip-inner { animation: none !important; }
-    .ctb-chip-follow { transition: none; }
-    .ctb-stage[data-phase="swept"] .ctb-chip-dupe { animation: none; opacity: 0; }
+    .ctb-caption, .ctb-chip-inner, .ctb-chip-follow { transition: none; }
   }
 </style>
