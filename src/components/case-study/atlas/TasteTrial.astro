@@ -212,7 +212,14 @@
         sub.className = "tt-tile-sub";
         sub.textContent = t.sub;
 
-        tile.append(vinyl, tag, crowned, stamp, sub);
+        // text on the left of the card, the record set down on the right
+        const flawRow = document.createElement("div");
+        flawRow.className = "tt-tile-flaw";
+        flawRow.append(stamp, sub);
+        const textWrap = document.createElement("div");
+        textWrap.className = "tt-tile-text";
+        textWrap.append(tag, crowned, flawRow);
+        tile.append(textWrap, vinyl);
         shelf.appendChild(tile);
       });
     };
@@ -312,9 +319,7 @@
   }
 
   /* the crowns, as records taken off the platter (static vinyl, not spinning) */
-  .tt-shelf { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 18px; }
-  @media (max-width: 560px) { .tt-shelf { grid-template-columns: repeat(2, 1fr); } }
-  @media (max-width: 360px) { .tt-shelf { grid-template-columns: 1fr; } }
+  .tt-shelf { display: flex; flex-direction: column; gap: 10px; margin-bottom: 18px; }
   /* the evidence tiles are created in the client <script>, so they never get
      Astro's scope attribute; their styles live in the is:global block below,
      anchored under .tt so they cannot leak past this component. */
@@ -373,12 +378,14 @@
 <style is:global>
   .tt .tt-tile {
     --rc: #0ec4fc;
-    display: flex; flex-direction: column; align-items: center; gap: 8px; text-align: center;
-    padding: 16px 12px 14px; border-radius: 10px;
+    display: flex; flex-direction: row; align-items: center; gap: 16px; text-align: left;
+    padding: 14px 16px; border-radius: 10px;
     border: 1px solid color-mix(in srgb, var(--rc) 30%, transparent);
     background: color-mix(in srgb, var(--rc) 6%, rgba(8, 6, 12, 0.5));
     box-shadow: inset 0 0 24px -10px color-mix(in srgb, var(--rc) 70%, transparent);
   }
+  .tt .tt-tile-text { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; align-items: flex-start; gap: 5px; }
+  .tt .tt-tile-flaw { display: flex; align-items: center; gap: 9px; flex-wrap: wrap; margin-top: 1px; }
   .tt .tt-tile[data-pulse="true"] .tt-vinyl { animation: tt-pulse 2.6s ease-in-out infinite; }
   .tt .tt-vinyl {
     width: 44px; height: 44px; border-radius: 50%; position: relative; flex: 0 0 auto;
@@ -395,7 +402,7 @@
     font-size: 11px; line-height: 1.45; color: #f5f1e8;
   }
   .tt .tt-tile-stamp {
-    margin-top: 2px; font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    margin: 0; font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
     font-size: 9px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase;
     color: var(--brand-pink);
     border: 1px solid color-mix(in srgb, var(--brand-pink) 45%, transparent);
