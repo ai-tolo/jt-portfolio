@@ -193,13 +193,15 @@ const SWOT = {
     </ol>
   </div>
 
-  {/* THE GATE — locked until both options have been viewed. */}
+  {/* THE GATE — three states. (1) locked: look at both options. (2) commit:
+       you've seen both, now SHIP one — skin in the game before the answer.
+       (3) unlocked: the reveal, branched on the choice you committed to. */}
   <div class="cv-swot-gate" data-cv-swot-gate data-state="locked">
     <div class="cv-swot-gate-locked" data-cv-gate-locked>
       <span class="cv-swot-gate-lock" aria-hidden="true">⌧</span>
       <p class="cv-swot-gate-prompt">
-        The matrix runs even and the tap-count favors Combined — but the tap-count
-        isn't what decided it. <strong>Look at both options</strong> to see what did.
+        The matrix ran even and the tap-count favors Combined — but that's not the
+        whole story. <strong>Look at both options,</strong> then you make the call.
       </p>
       <div class="cv-swot-gate-progress" aria-hidden="true">
         <span class="cv-swot-gate-pip" data-cv-gate-pip="split">Split</span>
@@ -207,17 +209,33 @@ const SWOT = {
       </div>
     </div>
 
+    <div class="cv-swot-commit" data-cv-commit hidden>
+      <p class="cv-swot-commit-q">
+        You've seen both. You're the Garcia sending a cousin $200 —
+        <strong>which nav would you ship?</strong>
+      </p>
+      <div class="cv-swot-commit-opts" role="group" aria-label="Ship a nav model">
+        <button type="button" class="cv-swot-commit-btn" data-cv-commit-pick="split">Ship Split</button>
+        <button type="button" class="cv-swot-commit-btn" data-cv-commit-pick="combined">Ship Combined</button>
+      </div>
+    </div>
+
     <div class="cv-swot-tip" data-cv-gate-reveal hidden>
       <span class="cv-swot-tip-tag">What tipped it</span>
-      <p class="cv-swot-tip-lead">
-        Combined ships — and <em>not</em> because it saved two taps.
+      <p class="cv-swot-tip-lead" data-cv-reveal-lead="combined" hidden>
+        You shipped Combined — the call I made too. And <em>not</em> because it saved two taps.
+      </p>
+      <p class="cv-swot-tip-lead" data-cv-reveal-lead="split" hidden>
+        You shipped Split — genuinely cleaner for one user, and the tap-count is on
+        your side. I made the other call; here's the trade you took.
       </p>
       <p>
         Both SWOTs are defensible. Split is genuinely cleaner for a single user.
-        But splitting the household behind a tab would bury the family thesis the
-        whole product is built on. The tiebreaker isn't the matrix and it isn't
-        the tap-count — it's the identity: <em>family-first.</em> Move Money becomes
-        its own dedicated action surface inside the combined home.
+        But splitting the household behind a tab buries the family thesis the whole
+        product is built on — the family you were just invited into. The tiebreaker
+        isn't the matrix and it isn't the tap-count — it's the identity:
+        <em>family-first.</em> That's why Combined shipped, with Move Money as its
+        own dedicated action surface inside the combined home.
       </p>
     </div>
   </div>
@@ -255,11 +273,15 @@ const SWOT = {
     const seenBadges = root.querySelectorAll<HTMLElement>("[data-cv-seen-badge]");
     const gate = root.querySelector<HTMLElement>("[data-cv-swot-gate]");
     const gatePips = root.querySelectorAll<HTMLElement>("[data-cv-gate-pip]");
+    const commit = root.querySelector<HTMLElement>("[data-cv-commit]");
+    const commitBtns = root.querySelectorAll<HTMLButtonElement>("[data-cv-commit-pick]");
     const reveal = root.querySelector<HTMLElement>("[data-cv-gate-reveal]");
+    const revealLeads = root.querySelectorAll<HTMLElement>("[data-cv-reveal-lead]");
 
-    // Track which options the reader has actually looked at. Split is shown
-    // on load, so it counts as seen immediately.
-    const seen = new Set<string>(["split"]);
+    // Track which options the reader has actually CLICKED. Nothing is seen on
+    // load — the gate genuinely requires viewing both before it opens. (Split
+    // is shown on load for orientation, but that is not a choice the reader made.)
+    const seen = new Set<string>();
 
     const markSeen = (id: string) => {
       seen.add(id);
@@ -269,14 +291,30 @@ const SWOT = {
       gatePips.forEach((p) => {
         if (seen.has(p.dataset.cvGatePip || "")) p.classList.add("on");
       });
-      if (seen.has("split") && seen.has("combined")) unlock();
+      if (seen.has("split") && seen.has("combined")) showCommit();
     };
 
+    // Step 2 — both options seen → ask the reader to commit to one BEFORE the
+    // reveal, so they have skin in the call (the RenditionToggle move, silent).
+    let committed = false;
+    const showCommit = () => {
+      if (committed || !gate || !commit) return;
+      gate.dataset.state = "commit";
+      commit.removeAttribute("hidden");
+    };
+
+    // Step 3 — the reader ships one → reveal, branched on their choice.
     let unlocked = false;
-    const unlock = () => {
+    const choose = (pick: string) => {
       if (unlocked || !gate || !reveal) return;
       unlocked = true;
+      committed = true;
       gate.dataset.state = "unlocked";
+      if (commit) commit.setAttribute("hidden", "");
+      revealLeads.forEach((l) => {
+        if (l.dataset.cvRevealLead === pick) l.removeAttribute("hidden");
+        else l.setAttribute("hidden", "");
+      });
       reveal.removeAttribute("hidden");
       if (reduce) {
         reveal.classList.add("in");
@@ -289,6 +327,11 @@ const SWOT = {
       }
     };
 
+    commitBtns.forEach((b) => {
+      b.addEventListener("click", () => choose(b.dataset.cvCommitPick || "combined"));
+    });
+
+    // Visual switch only — does NOT mark an option seen (only a real click does).
     const activate = (id: string) => {
       opts.forEach((o) => {
         const on = o.dataset.cvSwotOpt === id;
@@ -299,14 +342,17 @@ const SWOT = {
       costCells.forEach((c) => c.classList.toggle("on", c.dataset.cvCostCell === id));
       const steps = SCENARIO_TAPS_MAP[id] || [];
       if (flow) flow.innerHTML = steps.map((s) => `<li>${s}</li>`).join("");
-      markSeen(id);
     };
 
     opts.forEach((o) => {
-      o.addEventListener("click", () => activate(o.dataset.cvSwotOpt || "split"));
+      o.addEventListener("click", () => {
+        const id = o.dataset.cvSwotOpt || "split";
+        activate(id);
+        markSeen(id);
+      });
     });
 
-    // Prime the initial state (Split is active on load).
+    // Prime the initial visual state (Split shown on load, but NOT counted seen).
     activate("split");
   }
 </script>
@@ -706,6 +752,7 @@ const SWOT = {
     background: rgba(245, 241, 232, 0.015);
     transition: opacity 300ms ease, transform 300ms ease;
   }
+  .cv-swot-gate[data-state="commit"] .cv-swot-gate-locked,
   .cv-swot-gate[data-state="unlocked"] .cv-swot-gate-locked {
     display: none;
   }
@@ -751,6 +798,52 @@ const SWOT = {
     border-color: rgba(0, 255, 77, 0.4);
   }
   .cv-swot-gate-pip.on::before { content: "●"; color: var(--brand-green); }
+
+  /* the commit step — both seen, now ship one before the answer is revealed */
+  .cv-swot-commit {
+    text-align: center;
+    padding: 22px 22px 20px;
+    border: 1px solid var(--cs-line-strong);
+    border-radius: 6px;
+    background:
+      radial-gradient(140% 120% at 0% 0%, rgba(255, 90, 60, 0.08), transparent 55%),
+      rgba(245, 241, 232, 0.02);
+  }
+  .cv-swot-commit-q {
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 13px;
+    line-height: 1.55;
+    color: rgba(245, 241, 232, 0.78);
+    margin: 0 auto 16px;
+    max-width: 50ch;
+  }
+  .cv-swot-commit-q strong { color: var(--cs-text); font-weight: 700; }
+  .cv-swot-commit-opts {
+    display: inline-flex;
+    gap: 12px;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+  .cv-swot-commit-btn {
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-style: italic;
+    font-weight: 700;
+    font-size: 14px;
+    color: var(--cs-text);
+    background: rgba(255, 90, 60, 0.06);
+    border: 1px solid var(--brand-orange);
+    border-radius: 4px;
+    padding: 10px 20px;
+    cursor: pointer;
+    transition: background 160ms ease, color 160ms ease, transform 120ms ease;
+  }
+  .cv-swot-commit-btn:hover,
+  .cv-swot-commit-btn:focus-visible {
+    background: var(--brand-orange);
+    color: #11283f;
+    outline: none;
+  }
+  .cv-swot-commit-btn:active { transform: translateY(1px); }
 
   /* the reveal — fades + rises in with weight once unlocked */
   .cv-swot-tip {

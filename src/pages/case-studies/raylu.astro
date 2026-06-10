@@ -2,22 +2,33 @@
 // ─────────────────────────────────────────────────────────────────────────
 // RAYLU — "Can a Figma file close a $4M round?"
 //
-// Theatrical rebuild. The founders had a deep product and no design, brand,
-// or clickable artifact. Jon made the Figma workspace itself the alignment
-// artifact: one navigable, date-stamped file that served as investor deck +
-// product spec + engineering handoff + brand bible. They closed a $4M seed.
+// Theatrical rebuild, v2 — make the visitor PERFORM the proof. The founders
+// had a deep product and no design, brand, or clickable artifact. Jon made
+// the Figma workspace itself the alignment artifact: one navigable,
+// date-stamped file that served as investor deck + product spec +
+// engineering handoff + brand bible. They closed a $4M seed.
 //
-// The page is built around that question and its honest answer — Jon can't
-// claim causal credit, and that humility next to the big number is the
-// emotional payload. Setpieces:
-//   · hero pullquote — "the file is the deck"
-//   · §03 — the Figma file as a scroll-reveal "you just got the link"
-//   · §04 — a live sketch → hi-fi before/after the viewer drags
-//   · §06 — the $4M number STOPS the page, then the caveat undercuts it
+// The argument: the highest-leverage thing a pre-PMF designer builds isn't a
+// screen — it's an artifact that lets everyone reach the right conclusion
+// WITHOUT the designer in the room. So the page makes you do the one verb the
+// proof was built for: you operate the artifact (lasso a cluster of
+// embeddings into a named slice — the exact gesture an investor made), and
+// only THEN does the $4M land, immediately undercut by the honest caveat.
+//
+// Sequence:
+//   · hero — ".fig / you just got the link" world, the $4M legible up top
+//   · §03 — the file as a navigable scroll ("you just got the link"), with
+//           the sketch→hi-fi loop folded in as a supporting beat
+//   · §04 — THE LASSO (the one real interaction): you slice the UMAP surface
+//   · §05 — the $4M STOPS the page (now you operated the thing it bought),
+//           then the caveat refuses the easy brag
+//   · §06 — what generalizes + the earned "0"
 //
 // Notion drives metadata; this file owns the body. Honors reduced-motion;
-// all motion is IntersectionObserver / pointer-gated. Keeps every fact
-// faithful ($4M seed, $8M Series A 2025, the pivot, named investors).
+// all motion is IntersectionObserver / pointer-gated, and the lasso renders
+// its resolved "pre-made slice" server-side so no-JS / reduced-motion users
+// see the named result with zero animation. Keeps every fact faithful
+// ($4M seed, $8M Series A 2025, the pivot, named investors).
 // ─────────────────────────────────────────────────────────────────────────
 
 import CSLayout from "../../components/case-study/CSLayout.astro";
@@ -26,10 +37,56 @@ import CSSection from "../../components/case-study/CSSection.astro";
 import CSPullquote from "../../components/case-study/CSPullquote.astro";
 import CSStatGrid from "../../components/case-study/CSStatGrid.astro";
 import CSLiveDemo from "../../components/case-study/CSLiveDemo.astro";
-import CSFigure from "../../components/case-study/CSFigure.astro";
 import RayluFigmaTimeline from "../../components/case-study/showcase/RayluFigmaTimeline.astro";
 
 export const prerender = true;
+
+// ── the lasso surface — a deterministic point cloud over the real UMAP
+// screenshot (viewBox 900×575, matching the asset). It mirrors what the
+// screenshot already shows: a tight "vehicle" cluster top-left (the slice the
+// investor drew), a small cluster lower-middle, and a broad cluster at right.
+// Generated server-side so the resolved slice exists with no JS.
+function mulberry32(a: number) {
+  return function () {
+    a |= 0;
+    a = (a + 0x6d2b79f5) | 0;
+    let t = Math.imul(a ^ (a >>> 15), 1 | a);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+const rnd = mulberry32(20231004);
+const clamp = (v: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, v));
+function blob(cx: number, cy: number, sx: number, sy: number, n: number) {
+  const out: { x: number; y: number }[] = [];
+  for (let i = 0; i < n; i++) {
+    const a = rnd();
+    const b = rnd();
+    const g1 = Math.sqrt(-2 * Math.log(a + 1e-9)) * Math.cos(6.2831853 * b);
+    const g2 = Math.sqrt(-2 * Math.log(a + 1e-9)) * Math.sin(6.2831853 * b);
+    out.push({
+      x: +clamp(cx + g1 * sx, 298, 858).toFixed(1),
+      y: +clamp(cy + g2 * sy, 136, 506).toFixed(1),
+    });
+  }
+  return out;
+}
+const CLUSTERS = [
+  // the hinted target — what the investor sliced, what you'll slice
+  { name: "vehicle", count: 47, color: "green", cx: 398, cy: 218, sx: 20, sy: 17, n: 18, target: true },
+  { name: "road", count: 318, color: "coral", cx: 705, cy: 320, sx: 34, sy: 60, n: 46, target: false },
+  { name: "water", count: 29, color: "green", cx: 527, cy: 392, sx: 11, sy: 9, n: 8, target: false },
+];
+const POINTS = CLUSTERS.flatMap((cl, ci) =>
+  blob(cl.cx, cl.cy, cl.sx, cl.sy, cl.n).map((p) => ({
+    x: p.x,
+    y: p.y,
+    ci,
+    color: cl.color,
+    target: cl.target,
+  }))
+);
+const CLUSTER_META = CLUSTERS.map((c) => ({ name: c.name, count: c.count, target: c.target }));
 ---
 
 <CSLayout
@@ -43,14 +100,14 @@ export const prerender = true;
     subtitle="Can a Figma file close a $4M round?"
     cover="/case-studies/raylu/cover.png"
     meta={[
+      { label: "The file", value: "raylu-workspace.fig — you just got the link" },
       { label: "Role", value: "Sole designer, working with the founders" },
       { label: "Timeline", value: "Apr — Oct 2023 · ~6 months" },
-      { label: "Stack", value: "Figma · React handoff" },
-      { label: "Deliverable", value: "Brand · clickable prototype · component patterns" },
+      { label: "Outcome", value: "$4M seed closed (2023) · $8M Series A (2025)" },
     ]}
   />
 
-  {/* ─────── 01 · THE PITCH ─────── */}
+  {/* ─────── 01 · THE PITCH (skim path: thesis + the $4M, legible up top) ─────── */}
   <CSSection title="Two founders, a deep product, no artifact" deck="Raylu was building UI for ML pipeline observability. The founders had product depth and technical clarity. What they didn't have was a single thing an investor could open." noTopRule>
     <div class="prose-block">
       <p>It started as a wireframe pass for a pitch deck and became a six-month engagement: brand, a Figma component system, and clickable prototypes for fundraising and early-adopter conversations — everything between a founder sketch and a React-ready component library.</p>
@@ -79,7 +136,7 @@ export const prerender = true;
     </div>
   </CSSection>
 
-  {/* ─────── 03 · THE WORKSPACE (SETPIECE) ─────── */}
+  {/* ─────── 03 · THE WORKSPACE (the navigable file) + the make-loop, folded in ─────── */}
   <CSSection title="You just got the link" deck="This is the file an investor opened cold. Scroll it the way they did — top to bottom, one page at a time. Brand. Competitive analysis. Strategy. Wireframes. Hi-fi. Each section dates itself, names itself, then fills in.">
     <CSLiveDemo
       label="LIVE · SCROLL THE FILE"
@@ -89,16 +146,13 @@ export const prerender = true;
     >
       <RayluFigmaTimeline />
     </CSLiveDemo>
-  </CSSection>
 
-  {/* ─────── 04 · SKETCH → HI-FI (live before/after) ─────── */}
-  <CSSection title="Sketch in the morning, frame by the afternoon" deck="Founder sketches came in over Zoom; hi-fi frames went back the same day. Drag the handle from a napkin sketch to a clickable Figma frame from the same build — the wireframe-to-mockup loop kept founder intent visible at every step, no translation lost between the sketch and the screen.">
-    <CSLiveDemo
-      label="LIVE · DRAG TO REVEAL"
-      caption="Left of the handle: a founder's sketch from a Zoom call — a left nav rail and a working canvas. Right of the handle: a real, clickable Figma frame from the same build, hours later. The rail and the intent carried straight through the loop."
-      bleed
-      pad="none"
-    >
+    {/* the sketch→hi-fi loop, demoted from its own exhibit to a supporting beat:
+        it's HOW two of those file sections got made, same day. */}
+    <div class="ry-loop">
+      <h3 class="ry-loop-head">Sketch in the morning, frame by the afternoon</h3>
+      <p class="ry-loop-deck">Two of those sections — Wireframes and Hi-fi — came from this loop. Founder sketches arrived over Zoom; clickable frames went back the same day. Drag the handle: a napkin sketch on the left, a real Figma frame from the same build on the right. No intent lost between the sketch and the screen.</p>
+
       <div
         class="ba"
         data-ba
@@ -138,22 +192,86 @@ export const prerender = true;
         </div>
         <span class="ba-hint" data-ba-hint>‹ drag to compare ›</span>
       </div>
-    </CSLiveDemo>
+      <p class="ry-loop-cap">Left of the handle: a founder's sketch from a Zoom call. Right: a real, clickable Figma frame from the same build, hours later. The rail and the intent carried straight through.</p>
+    </div>
   </CSSection>
 
-  {/* ─────── 05 · THE PIPELINE UI ─────── */}
-  <CSSection title="ML primitives a product manager could read" deck="The hi-fi was a clickable pipeline builder. The hard part was never the ML — it was making real ML primitives legible to a non-engineer mid-demo. Take the UMAP slice surface: dimensionality reduction turned into something a PM can point at and grab.">
-    <CSFigure
-      src="/case-studies/raylu/notion-35fed8d4704f8005968fd121bdbfc1d8.png"
-      alt="Raylu UMAP slice surface — a real Figma frame: a left rail with the raylu wordmark and nav icons; a 2D embedding scatterplot with green and orange point clusters and a dashed lasso-select box mid-drag; a left panel of controls — point size, opacity, thumbnail size, a reduction-algorithm dropdown set to UMAP, and an annotation field set to 'vehicle'."
-      caption="The UMAP slice surface. A 2D embedding of the dataset where you lasso a cluster and it becomes a named slice — dimensionality reduction made into something a PM can grab, not a research notebook."
-      width="wide"
-      framed
-    />
+  {/* ─────── 04 · THE LASSO — the one real interaction, on the section spine ─────── */}
+  <CSSection title="ML primitives a PM could read" deck="The hard part was never the ML — it was making a real ML primitive legible to a non-engineer mid-demo. Here's the UMAP slice surface, live. Drag a box around a cluster of embeddings and it resolves into a named slice. Dimensionality reduction made into something you can grab.">
+    <div class="ry-lasso is-resolved" data-ry-lasso data-clusters={JSON.stringify(CLUSTER_META)}>
+      <div class="ry-lasso-fig">
+        {/* faux Figma chrome — the same .fig world as the file above */}
+        <div class="ry-l-bar">
+          <span class="ry-l-dots" aria-hidden="true"><i></i><i></i><i></i></span>
+          <span class="ry-l-file">
+            <span class="ry-l-file-ic" aria-hidden="true">◢</span>
+            raylu — workspace<span class="ry-l-ext">.fig</span>
+          </span>
+          <span class="ry-l-frametag" aria-hidden="true">▸ hi-fi / umap-slice</span>
+          <span class="ry-l-presence" aria-label="In the file right now: you and the two founders">
+            <span class="ry-l-curs" aria-hidden="true"><i class="ry-l-c-you"></i><i class="ry-l-c-f1"></i><i class="ry-l-c-f2"></i></span>
+            <span class="ry-l-who">you + the two founders</span>
+          </span>
+        </div>
+
+        <div
+          class="ry-l-stage"
+          data-ry-stage
+          tabindex="0"
+          role="application"
+          aria-roledescription="Embedding slice tool"
+          aria-label="UMAP embedding scatterplot. Drag a box around a cluster of points to save it as a slice. Press Enter to slice the vehicle cluster; Escape to clear."
+          aria-describedby="ry-l-instr"
+        >
+          <img
+            class="ry-l-img"
+            src="/case-studies/raylu/notion-35fed8d4704f8005968fd121bdbfc1d8.png"
+            alt="Raylu UMAP slice surface — a real Figma frame: a left rail with the raylu wordmark and nav icons, a left control panel (point size, opacity, thumbnail size, a reduction-algorithm dropdown set to UMAP, an annotation field set to 'vehicle'), and a 2D embedding scatterplot of green and orange point clusters."
+            loading="lazy"
+            draggable="false"
+          />
+          <svg class="ry-l-svg" viewBox="0 0 900 575" preserveAspectRatio="none" data-ry-svg aria-hidden="true">
+            {/* cover the screenshot's baked points + frozen lasso so the live
+                cloud is the only one; the white matches the canvas exactly. */}
+            <rect class="ry-l-cover" x="289" y="127" width="578" height="389"></rect>
+            {/* the affordance: a soft hint box where the slice wants to be drawn */}
+            <rect class="ry-l-guide" x="346" y="170" width="104" height="96" rx="3"></rect>
+            {/* the live embedding */}
+            {POINTS.map((p) => (
+              <circle
+                class:list={["ry-l-pt", `ry-l-pt-${p.color}`, { "ry-l-sliced": p.target }]}
+                cx={p.x}
+                cy={p.y}
+                r="3.3"
+                data-cx={p.x}
+                data-cy={p.y}
+                data-cluster={p.ci}
+              ></circle>
+            ))}
+            {/* the marquee — SSR draws the pre-made vehicle slice */}
+            <rect class="ry-l-marq ry-l-marq-on" data-ry-marq x="346" y="170" width="104" height="96" rx="2"></rect>
+          </svg>
+          {/* the resolved slice label, anchored above its cluster */}
+          <span class="ry-l-pill" data-ry-pill style="left:44%; top:30%;">vehicle · 47 images</span>
+          <button class="ry-l-reset" data-ry-reset type="button" hidden>↺ slice again</button>
+        </div>
+      </div>
+
+      <div class="ry-lasso-foot">
+        <p class="ry-l-instr" id="ry-l-instr">
+          Drag a box around the green cluster — or press <kbd>Enter</kbd> to slice the <em>vehicle</em> cluster.
+        </p>
+        <p class="ry-l-reveal" data-ry-reveal>
+          That's the gesture an investor made mid-demo. Now you've made it too.
+        </p>
+        <p class="ry-l-cap">You just clicked into this screen. So did they.</p>
+        <span class="ry-l-live" data-ry-live aria-live="polite"></span>
+      </div>
+    </div>
   </CSSection>
 
-  {/* ─────── 06 · THE $4M MOMENT (must stop the page) ─────── */}
-  <CSSection title="What followed" deck="The file held up where it mattered: investor demos that didn't need a designer in the room, early-adopter conversations, and a workspace an engineering team could read.">
+  {/* ─────── 05 · THE $4M MOMENT — lands AFTER you operated the artifact ─────── */}
+  <CSSection title="What followed" deck="You just ran the slice tool. So did the people in the room. The file held up where it mattered — investor demos that didn't need a designer present, early-adopter conversations, a workspace an engineering team could read.">
     <div class="ry-bignum" data-ry-bignum>
       <div class="ry-bignum-fig">
         <span class="ry-bignum-pre">$</span><span class="ry-bignum-n" data-ry-num data-to="4">0</span><span class="ry-bignum-suf">M</span>
@@ -171,7 +289,7 @@ export const prerender = true;
     </div>
   </CSSection>
 
-  {/* ─────── 07 · WHAT GENERALIZES ─────── */}
+  {/* ─────── 06 · WHAT GENERALIZES ─────── */}
   <CSSection title="What generalizes" deck="What I'd carry into any early-stage engagement — one principle, and one number.">
     <ul class="generalize">
       <li>
@@ -200,8 +318,8 @@ export const prerender = true;
 </CSLayout>
 
 <script>
-  // §06 — the $4M number counts up the first time it crosses the viewport,
-  // then a slow ring sweeps once to make it land. §07 — the earned "0"
+  // §05 — the $4M number counts up the first time it crosses the viewport,
+  // then a slow ring sweeps once to make it land. §06 — the earned "0"
   // flips in last with a beat. Both IntersectionObserver-gated; reduced
   // motion lands on final values with no animation.
   (() => {
@@ -256,7 +374,7 @@ export const prerender = true;
     }
   })();
 
-  // §04 — sketch → hi-fi before/after. Pointer + keyboard driven so it works
+  // §03 — sketch → hi-fi before/after. Pointer + keyboard driven so it works
   // on touch and never depends on CSS transitions for its core state.
   (() => {
     const ba = document.querySelector<HTMLElement>("[data-ba]");
@@ -339,6 +457,179 @@ export const prerender = true;
       io.observe(ba);
     }
   })();
+
+  // §04 — THE LASSO. You drag a marquee around a cluster of embeddings; the
+  // points inside light up and the selection resolves into a named slice.
+  // Pointer + keyboard. The resolved slice is rendered server-side, so this
+  // script's first job (for non-reduced-motion users) is to CLEAR it back to
+  // an empty, operable canvas — progressive enhancement, not a hard dep.
+  (() => {
+    const root = document.querySelector<HTMLElement>("[data-ry-lasso]");
+    if (!root) return;
+    const stage = root.querySelector<HTMLElement>("[data-ry-stage]");
+    const marq = root.querySelector<SVGRectElement>("[data-ry-marq]");
+    const pill = root.querySelector<HTMLElement>("[data-ry-pill]");
+    const live = root.querySelector<HTMLElement>("[data-ry-live]");
+    const reset = root.querySelector<HTMLElement>("[data-ry-reset]");
+    const pts = Array.from(root.querySelectorAll<SVGCircleElement>(".ry-l-pt"));
+    if (!stage || !marq || !pill) return;
+
+    let clusters: { name: string; count: number; target: boolean }[] = [];
+    try { clusters = JSON.parse(root.dataset.clusters || "[]"); } catch {}
+
+    const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const VW = 900, VH = 575;
+    const PLOT = { x0: 289, y0: 127, x1: 867, y1: 516 };
+    const REVEAL = "That's the gesture an investor made mid-demo. Now you've made it too.";
+
+    const setMarq = (x: number, y: number, w: number, h: number) => {
+      marq.setAttribute("x", String(x));
+      marq.setAttribute("y", String(y));
+      marq.setAttribute("width", String(Math.max(0, w)));
+      marq.setAttribute("height", String(Math.max(0, h)));
+    };
+    const clusterOf = (c: SVGCircleElement) => Number(c.dataset.cluster);
+    const cx = (c: SVGCircleElement) => Number(c.dataset.cx);
+    const cy = (c: SVGCircleElement) => Number(c.dataset.cy);
+
+    const clearSlice = () => {
+      root.classList.remove("is-resolved");
+      pts.forEach((p) => p.classList.remove("ry-l-sliced", "ry-l-sel"));
+      marq.classList.remove("ry-l-marq-on");
+    };
+
+    const resolve = (idx: number, rect?: { x: number; y: number; w: number; h: number }) => {
+      const c = clusters[idx];
+      if (!c) return;
+      pts.forEach((p) => {
+        p.classList.remove("ry-l-sel");
+        p.classList.toggle("ry-l-sliced", clusterOf(p) === idx);
+      });
+      const sel = pts.filter((p) => clusterOf(p) === idx);
+      const ax = sel.reduce((a, p) => a + cx(p), 0) / sel.length;
+      const minY = Math.min(...sel.map(cy));
+      pill.textContent = `${c.name} · ${c.count} images`;
+      pill.style.left = (ax / VW) * 100 + "%";
+      pill.style.top = (minY / VH) * 100 + "%";
+      if (rect) setMarq(rect.x, rect.y, rect.w, rect.h);
+      marq.classList.add("ry-l-marq-on");
+      root.classList.add("is-resolved");
+      if (reset) reset.hidden = false;
+      if (live) live.textContent = `Saved slice: ${c.name}, ${c.count} images. ${REVEAL}`;
+    };
+
+    const toVB = (clientX: number, clientY: number) => {
+      const r = stage.getBoundingClientRect();
+      return {
+        x: ((clientX - r.left) / r.width) * VW,
+        y: ((clientY - r.top) / r.height) * VH,
+      };
+    };
+    const inPlot = (p: { x: number; y: number }) =>
+      p.x >= PLOT.x0 && p.x <= PLOT.x1 && p.y >= PLOT.y0 && p.y <= PLOT.y1;
+    const clampPlot = (p: { x: number; y: number }) => ({
+      x: Math.max(PLOT.x0, Math.min(PLOT.x1, p.x)),
+      y: Math.max(PLOT.y0, Math.min(PLOT.y1, p.y)),
+    });
+
+    let drag: { sx: number; sy: number } | null = null;
+
+    const paint = (x0: number, y0: number, w: number, h: number) => {
+      setMarq(x0, y0, w, h);
+      marq.classList.add("ry-l-marq-on");
+      pts.forEach((p) => {
+        const px = cx(p), py = cy(p);
+        p.classList.toggle("ry-l-sel", px >= x0 && px <= x0 + w && py >= y0 && py <= y0 + h);
+      });
+    };
+
+    const finish = () => {
+      if (!drag) return;
+      const x0 = Number(marq.getAttribute("x"));
+      const y0 = Number(marq.getAttribute("y"));
+      const w = Number(marq.getAttribute("width"));
+      const h = Number(marq.getAttribute("height"));
+      const counts: Record<number, number> = {};
+      pts.forEach((p) => {
+        if (p.classList.contains("ry-l-sel")) {
+          const k = clusterOf(p);
+          counts[k] = (counts[k] || 0) + 1;
+        }
+      });
+      let best = -1, bestN = 0;
+      for (const k of Object.keys(counts)) {
+        const n = counts[Number(k)];
+        if (n > bestN) { bestN = n; best = Number(k); }
+      }
+      drag = null;
+      stage.classList.remove("ry-l-dragging");
+      if (best >= 0 && bestN >= 3) {
+        resolve(best, { x: x0, y: y0, w, h });
+      } else {
+        marq.classList.remove("ry-l-marq-on");
+        pts.forEach((p) => p.classList.remove("ry-l-sel"));
+      }
+    };
+
+    stage.addEventListener("pointerdown", (e) => {
+      if (root.classList.contains("is-resolved")) clearSlice();
+      const raw = toVB(e.clientX, e.clientY);
+      if (!inPlot(raw)) return;
+      const p = clampPlot(raw);
+      drag = { sx: p.x, sy: p.y };
+      stage.setPointerCapture?.(e.pointerId);
+      stage.classList.add("ry-l-dragging");
+      setMarq(p.x, p.y, 0, 0);
+      e.preventDefault();
+    });
+    stage.addEventListener("pointermove", (e) => {
+      if (!drag) return;
+      const p = clampPlot(toVB(e.clientX, e.clientY));
+      paint(Math.min(drag.sx, p.x), Math.min(drag.sy, p.y), Math.abs(p.x - drag.sx), Math.abs(p.y - drag.sy));
+    });
+    stage.addEventListener("pointerup", (e) => { finish(); stage.releasePointerCapture?.(e.pointerId); });
+    stage.addEventListener("pointercancel", () => { drag = null; stage.classList.remove("ry-l-dragging"); });
+
+    // committed keyboard gesture: Enter/Space slices the vehicle (target)
+    // cluster — the same result as dragging a box around it. Esc clears.
+    const sliceCanonical = () => {
+      const idx = Math.max(0, clusters.findIndex((c) => c.target));
+      const sel = pts.filter((p) => clusterOf(p) === idx);
+      if (!sel.length) return;
+      const xs = sel.map(cx), ys = sel.map(cy);
+      const pad = 16;
+      const rx = Math.min(...xs) - pad;
+      const ry = Math.min(...ys) - pad;
+      const rw = Math.max(...xs) - Math.min(...xs) + pad * 2;
+      const rh = Math.max(...ys) - Math.min(...ys) + pad * 2;
+      clearSlice();
+      const done = () => resolve(idx, { x: rx, y: ry, w: rw, h: rh });
+      if (reduce) { done(); return; }
+      // grow the marquee from the cluster center so the gesture reads. Stepped
+      // via timeouts (not rAF) so it survives a throttled/headless preview tab,
+      // and the final timeout guarantees the slice resolves regardless.
+      const mx = rx + rw / 2, my = ry + rh / 2;
+      const steps = 8;
+      for (let i = 1; i <= steps; i++) {
+        const t = i / steps;
+        window.setTimeout(() => paint(mx - (rw / 2) * t, my - (rh / 2) * t, rw * t, rh * t), i * 32);
+      }
+      window.setTimeout(done, steps * 32 + 40);
+    };
+
+    stage.addEventListener("keydown", (e) => {
+      if (e.key === "Enter" || e.key === " ") { e.preventDefault(); sliceCanonical(); }
+      else if (e.key === "Escape") { clearSlice(); }
+    });
+
+    reset?.addEventListener("click", () => { clearSlice(); stage.focus(); });
+
+    // INIT. SSR shipped the resolved "vehicle · 47 images" slice so no-JS and
+    // reduced-motion users get the named result. For everyone else, clear it
+    // back to an operable empty canvas and let them perform the gesture.
+    if (reset) reset.hidden = false;
+    if (!reduce) clearSlice();
+  })();
 </script>
 
 <style>
@@ -347,7 +638,258 @@ export const prerender = true;
   .prose-block em { font-style: italic; color: var(--cs-text); }
   .prose-block .muted { color: var(--cs-text-muted); font-size: 13px; }
 
-  /* ── §06 · the $4M moment ─────────────────────────────────────────── */
+  /* ── §03 · the sketch→hi-fi loop, demoted to a supporting beat ──────── */
+  .ry-loop {
+    max-width: 760px;
+    margin: 48px 0 0;
+    padding-left: 18px;
+    border-left: 2px solid var(--cs-line);
+  }
+  .ry-loop-head {
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-style: italic;
+    font-weight: 600;
+    font-size: clamp(20px, 2.6vw, 26px);
+    line-height: 1.15;
+    color: var(--cs-text);
+    margin: 0 0 12px;
+  }
+  .ry-loop-deck {
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 14px;
+    line-height: 1.55;
+    color: var(--cs-text-muted);
+    margin: 0 0 18px;
+    max-width: 60ch;
+  }
+  .ry-loop-cap {
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-style: italic;
+    font-size: 12.5px;
+    line-height: 1.5;
+    color: var(--cs-text-muted);
+    margin: 12px 0 0;
+  }
+
+  /* ── §04 · THE LASSO ───────────────────────────────────────────────── */
+  .ry-lasso { margin-top: 8px; }
+  .ry-lasso-fig {
+    border: 1px solid var(--cs-line-strong);
+    border-radius: 8px;
+    overflow: hidden;
+    background:
+      radial-gradient(140% 60% at 50% -10%, rgba(14, 196, 252, 0.05), transparent 55%),
+      linear-gradient(180deg, #0c0a12 0%, #08070d 100%);
+    box-shadow: 0 30px 80px -44px rgba(0, 0, 0, 0.85);
+  }
+
+  /* faux Figma title bar — mirrors the file above so one world governs */
+  .ry-l-bar {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 10px 16px;
+    background: rgba(8, 7, 13, 0.86);
+    border-bottom: 1px solid var(--cs-line);
+  }
+  .ry-l-dots { display: inline-flex; gap: 6px; flex: 0 0 auto; }
+  .ry-l-dots i { width: 10px; height: 10px; border-radius: 50%; background: rgba(245, 241, 232, 0.16); }
+  .ry-l-file {
+    display: inline-flex; align-items: center; gap: 7px;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 12px; color: rgba(245, 241, 232, 0.86);
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .ry-l-file-ic { color: var(--brand-cyan); font-size: 11px; }
+  .ry-l-ext { color: rgba(245, 241, 232, 0.4); }
+  .ry-l-frametag {
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 10px; letter-spacing: 0.08em;
+    color: rgba(245, 241, 232, 0.4);
+    border: 1px solid var(--cs-line);
+    border-radius: 3px; padding: 2px 7px;
+    white-space: nowrap;
+  }
+  .ry-l-presence {
+    margin-left: auto;
+    display: inline-flex; align-items: center; gap: 7px; flex: 0 0 auto;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 10.5px; color: rgba(245, 241, 232, 0.58);
+  }
+  .ry-l-curs { display: inline-flex; gap: 4px; }
+  .ry-l-curs i { width: 6px; height: 6px; border-radius: 50%; }
+  .ry-l-c-you { background: var(--brand-cyan); box-shadow: 0 0 6px var(--brand-cyan); animation: ry-l-blink 2.4s ease-in-out infinite; }
+  .ry-l-c-f1 { background: var(--brand-pink); animation: ry-l-blink 2.4s ease-in-out 0.8s infinite; }
+  .ry-l-c-f2 { background: var(--brand-yellow); animation: ry-l-blink 2.4s ease-in-out 1.6s infinite; }
+  .ry-l-who { white-space: nowrap; }
+  @keyframes ry-l-blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.25; } }
+
+  /* the interactive stage: the real screenshot + an SVG overlay */
+  .ry-l-stage {
+    position: relative;
+    display: block;
+    aspect-ratio: 900 / 575;
+    background: #fff;
+    touch-action: none;
+    cursor: crosshair;
+    user-select: none;
+    -webkit-user-select: none;
+    outline: none;
+  }
+  .ry-l-stage:focus-visible { box-shadow: inset 0 0 0 2px var(--brand-orange); }
+  .ry-l-img {
+    position: absolute; inset: 0;
+    width: 100%; height: 100%;
+    object-fit: fill;
+    display: block;
+    pointer-events: none;
+  }
+  .ry-l-svg { position: absolute; inset: 0; width: 100%; height: 100%; }
+
+  /* white cover hides the screenshot's baked scatter + frozen lasso box */
+  .ry-l-cover { fill: #ffffff; }
+
+  /* the affordance hint — only while there's no slice yet */
+  .ry-l-guide {
+    fill: rgba(14, 196, 252, 0.04);
+    stroke: rgba(70, 80, 92, 0.55);
+    stroke-width: 1.4;
+    stroke-dasharray: 6 5;
+    opacity: 0;
+    transition: opacity 280ms ease;
+  }
+  .ry-lasso:not(.is-resolved) .ry-l-guide { opacity: 1; animation: ry-l-guide-pulse 2.4s ease-in-out infinite; }
+  @keyframes ry-l-guide-pulse {
+    0%, 100% { stroke-opacity: 0.5; }
+    50% { stroke-opacity: 0.95; }
+  }
+
+  /* the points */
+  .ry-l-pt { transition: r 160ms ease, fill 160ms ease; }
+  .ry-l-pt-green { fill: #2fbf9b; }
+  .ry-l-pt-coral { fill: #df733b; }
+  .ry-l-pt.ry-l-sel { r: 4.4; }
+  .ry-l-pt-green.ry-l-sel { fill: #16c79a; }
+  .ry-l-pt-coral.ry-l-sel { fill: #ff7a3a; }
+  /* a saved slice locks brighter, with a faint halo */
+  .ry-l-pt.ry-l-sliced {
+    r: 4.4;
+    filter: drop-shadow(0 0 3px currentColor);
+  }
+  .ry-l-pt-green.ry-l-sliced { fill: #10d8a3; color: #10d8a3; }
+  .ry-l-pt-coral.ry-l-sliced { fill: #ff7a3a; color: #ff7a3a; }
+
+  /* the marquee — echoes the product's own dashed select box */
+  .ry-l-marq {
+    fill: rgba(47, 191, 155, 0.08);
+    stroke: rgba(47, 150, 130, 0.9);
+    stroke-width: 1.6;
+    stroke-dasharray: 7 5;
+    opacity: 0;
+  }
+  .ry-l-marq-on { opacity: 1; }
+  .ry-lasso.is-resolved .ry-l-marq { fill: rgba(16, 199, 163, 0.1); stroke: rgba(16, 199, 163, 0.95); }
+
+  /* the resolved slice label */
+  .ry-l-pill {
+    position: absolute;
+    z-index: 4;
+    transform: translate(-50%, calc(-100% - 10px));
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.01em;
+    color: #07120e;
+    background: #10d8a3;
+    border-radius: 4px;
+    padding: 5px 11px;
+    white-space: nowrap;
+    box-shadow: 0 6px 18px -6px rgba(0, 0, 0, 0.6);
+    opacity: 0;
+    transition: opacity 240ms ease, transform 240ms cubic-bezier(0.34, 1.56, 0.64, 1);
+    pointer-events: none;
+  }
+  .ry-l-pill::after {
+    content: "";
+    position: absolute;
+    left: 50%; bottom: -5px;
+    width: 9px; height: 9px;
+    transform: translateX(-50%) rotate(45deg);
+    background: #10d8a3;
+  }
+  .ry-lasso.is-resolved .ry-l-pill { opacity: 1; }
+
+  /* the "slice again" affordance, shown once resolved (JS un-hides it) */
+  .ry-l-reset {
+    position: absolute;
+    right: 12px; bottom: 12px;
+    z-index: 5;
+    display: none;
+    align-items: center;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 10.5px;
+    letter-spacing: 0.08em;
+    color: rgba(7, 6, 12, 0.82);
+    background: rgba(245, 241, 232, 0.92);
+    border: none;
+    border-radius: 20px;
+    padding: 5px 12px;
+    cursor: pointer;
+  }
+  .ry-l-reset:hover { background: #fff; }
+  .ry-l-reset:focus-visible { outline: 2px solid var(--brand-orange); outline-offset: 2px; }
+  .ry-lasso.is-resolved .ry-l-reset:not([hidden]) { display: inline-flex; }
+
+  /* the foot — the narrative beats, in the reading column */
+  .ry-lasso-foot { margin-top: 18px; max-width: 64ch; }
+  .ry-l-instr {
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 13px;
+    color: var(--cs-text-muted);
+    margin: 0;
+  }
+  .ry-l-instr em { font-style: italic; color: var(--brand-cyan); }
+  .ry-l-instr kbd {
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 11px;
+    color: var(--cs-text);
+    background: rgba(245, 241, 232, 0.06);
+    border: 1px solid var(--cs-line-strong);
+    border-bottom-width: 2px;
+    border-radius: 4px;
+    padding: 1px 6px;
+  }
+  .ry-l-reveal {
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-style: italic;
+    font-weight: 700;
+    font-size: clamp(20px, 2.6vw, 26px);
+    line-height: 1.25;
+    color: var(--cs-text);
+    margin: 0;
+    border-left: 2px solid var(--brand-cyan);
+    padding-left: 18px;
+  }
+  .ry-l-cap {
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-style: italic;
+    font-size: 12.5px;
+    color: var(--cs-text-muted);
+    margin: 12px 0 0;
+  }
+  /* swap: instruction before the gesture, reveal + caption after */
+  .ry-l-reveal, .ry-l-cap { display: none; }
+  .ry-lasso.is-resolved .ry-l-instr { display: none; }
+  .ry-lasso.is-resolved .ry-l-reveal,
+  .ry-lasso.is-resolved .ry-l-cap { display: block; }
+  .ry-l-live {
+    position: absolute;
+    width: 1px; height: 1px;
+    overflow: hidden; clip: rect(0 0 0 0);
+    white-space: nowrap;
+  }
+
+  /* ── §05 · the $4M moment ─────────────────────────────────────────── */
   .ry-bignum {
     margin: 8px 0 32px;
     padding: 8px 0 4px;
@@ -402,7 +944,7 @@ export const prerender = true;
     padding-left: 18px;
   }
 
-  /* ── §04 · sketch → hi-fi before/after ────────────────────────────── */
+  /* ── §03 · sketch → hi-fi before/after ────────────────────────────── */
   /* One fixed-ratio stage. The two source frames have different aspect
      ratios (sketch 375×318, hi-fi 900×575), so BOTH images sit `contain`-fit
      and centered on the same dark artboard — nothing is cropped (the sketch's
@@ -414,6 +956,7 @@ export const prerender = true;
     aspect-ratio: 900 / 575;
     overflow: hidden;
     border-radius: 6px;
+    border: 1px solid var(--cs-line);
     background:
       radial-gradient(120% 80% at 50% 0%, rgba(14, 196, 252, 0.04), transparent 60%),
       #07060c;
@@ -511,7 +1054,7 @@ export const prerender = true;
   }
   .ba-hint-gone { opacity: 0; transform: translateX(-50%) translateY(-8px); animation: none; }
 
-  /* ── §07 · the earned zero ────────────────────────────────────────── */
+  /* ── §06 · the earned zero ────────────────────────────────────────── */
   .ry-zero {
     display: flex;
     align-items: center;
@@ -557,7 +1100,7 @@ export const prerender = true;
     color: var(--cs-text-muted);
   }
 
-  /* ── §07 · generalize list (kept) ─────────────────────────────────── */
+  /* ── §06 · generalize list (kept) ─────────────────────────────────── */
   .generalize {
     list-style: none;
     padding: 0;
@@ -611,6 +1154,8 @@ export const prerender = true;
   @media (max-width: 720px) {
     .ry-zero { gap: 16px; padding: 16px 16px; }
     .ba-grip { width: 32px; height: 32px; }
+    .ry-l-frametag { display: none; }
+    .ry-l-who { display: none; }
   }
 
   @media (prefers-reduced-motion: reduce) {
@@ -618,5 +1163,8 @@ export const prerender = true;
     .ry-zero-n span { transition: none; opacity: 1; transform: none; }
     .ba-hint { transition: none; animation: none; }
     .ba-grip { transition: none; }
+    .ry-l-guide { animation: none; }
+    .ry-l-c-you, .ry-l-c-f1, .ry-l-c-f2 { animation: none; }
+    .ry-l-pt, .ry-l-pill { transition: none; }
   }
 </style>
