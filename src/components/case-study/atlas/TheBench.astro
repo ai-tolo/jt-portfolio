@@ -272,6 +272,10 @@ const BARS = Array.from({ length: 128 }, (_, i) => {
     }
 
     async function play() {
+      // Claim the stage the instant we start. Any other bench that is playing
+      // (or mid-load) pauses now, even before this one's audio is decoded, so
+      // attempting to start a bench is enough to silence the rest.
+      document.dispatchEvent(new CustomEvent("bench:play", { detail: { source: root } }));
       buffering?.setAttribute("data-on", "true");
       playBtn?.setAttribute("data-state", "loading");
       try {
@@ -300,6 +304,23 @@ const BARS = Array.from({ length: 128 }, (_, i) => {
       await ctx?.suspend();
     }
     const toggle = () => { playing ? pause() : play(); };
+
+    // ── One instrument, not three. A bench never plays over another, never keeps
+    //    playing once it has left the viewport, and never plays on a hidden tab —
+    //    so the listener never has to chase down what is making sound. ──
+    document.addEventListener("bench:play", (e) => {
+      const src = (e as CustomEvent).detail?.source;
+      if (src !== root && playing) pause();
+    });
+    if ("IntersectionObserver" in window) {
+      new IntersectionObserver(
+        (entries) => { for (const en of entries) if (!en.isIntersecting && playing) pause(); },
+        { threshold: 0 },
+      ).observe(root);
+    }
+    document.addEventListener("visibilitychange", () => {
+      if (document.hidden && playing) pause();
+    });
 
     function loopTick() {
       if (!playing || !ctx) return;
