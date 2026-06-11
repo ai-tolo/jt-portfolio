@@ -71,7 +71,7 @@ const SECTIONS = [
     accent: "green",
     asset: "/case-studies/raylu/notion-35fed8d4704f8005968fd121bdbfc1d8.png",
     assetAlt: "Raylu hi-fi UMAP slicing UI. A scatterplot with orange and green clusters, a left rail of sliders (point size, opacity, thumbnail size), and a UMAP reduction-algorithm selector. Model Integration button top right.",
-    assetCaption: "The UMAP slice surface. Investor demos clicked into this screen to feel \"this is real.\"",
+    assetCaption: "The hi-fi pipeline — model nav, label errors, UMAP slicing. The investor didn't just scroll past this screen. In a moment, you'll open it yourself.",
   },
 ];
 ---
@@ -85,18 +85,17 @@ const SECTIONS = [
       raylu — workspace
       <span class="ry-fig-file-ext">.fig</span>
     </span>
+    <span class="ry-fig-presence" aria-label="In the file right now: you and the two founders">
+      <span class="ry-fig-cursors" aria-hidden="true"><i class="ry-c3"></i><i class="ry-c1"></i><i class="ry-c2"></i></span>
+      <span class="ry-fig-who">you + the two founders</span>
+    </span>
     <span class="ry-fig-share" aria-hidden="true">
       <span class="ry-fig-share-cur"></span>
-      <span class="ry-fig-cursors"><i class="ry-c1"></i><i class="ry-c2"></i></span>
       Anyone with the link
     </span>
   </div>
 
   {/* scroll progress through the file */}
-  <div class="ry-fig-rail" aria-hidden="true">
-    <div class="ry-fig-rail-fill" data-ry-fill></div>
-  </div>
-
   <div class="ry-fig-pages">
     {SECTIONS.map((s, i) => (
       <section
@@ -162,8 +161,6 @@ const SECTIONS = [
     const pages = Array.from(
       root.querySelectorAll<HTMLElement>("[data-ry-pg]")
     );
-    const fill = root.querySelector<HTMLElement>("[data-ry-fill]");
-
     const revealAll = () => pages.forEach((p) => p.classList.add("ry-in"));
 
     if (reduce) {
@@ -194,23 +191,6 @@ const SECTIONS = [
             p.classList.add("ry-in");
         });
       }, 1400);
-    }
-
-    // file-scroll progress on the left rail — purely decorative, cheap.
-    if (fill) {
-      const pagesWrap =
-        root.querySelector<HTMLElement>(".ry-fig-pages") ?? root;
-      const onScroll = () => {
-        const r = pagesWrap.getBoundingClientRect();
-        const total = r.height - window.innerHeight * 0.5;
-        const seen = Math.min(
-          1,
-          Math.max(0, (window.innerHeight * 0.5 - r.top) / Math.max(1, total))
-        );
-        fill.style.transform = `scaleY(${seen})`;
-      };
-      window.addEventListener("scroll", onScroll, { passive: true });
-      onScroll();
     }
   }
 </script>
@@ -260,8 +240,21 @@ const SECTIONS = [
   }
   .ry-fig-file-icon { color: var(--brand-cyan); font-size: 11px; transform: rotate(0deg); }
   .ry-fig-file-ext { color: rgba(245, 241, 232, 0.4); }
-  .ry-fig-share {
+  /* live presence — read as "you + the two founders", not decoration */
+  .ry-fig-presence {
     margin-left: auto;
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    flex: 0 0 auto;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 10.5px;
+    letter-spacing: 0.02em;
+    color: rgba(245, 241, 232, 0.58);
+  }
+  .ry-fig-who { white-space: nowrap; }
+  .ry-fig-share {
+    margin-left: 10px;
     display: inline-flex;
     align-items: center;
     gap: 8px;
@@ -280,28 +273,13 @@ const SECTIONS = [
     background: var(--brand-green);
     box-shadow: 0 0 6px var(--brand-green);
   }
-  /* two faux collaborator cursors blinking on the share pill */
+  /* three live cursors — you (cyan) + the two founders (pink, yellow) */
   .ry-fig-cursors { display: inline-flex; gap: 4px; }
-  .ry-fig-cursors i { width: 5px; height: 5px; border-radius: 50%; }
-  .ry-c1 { background: var(--brand-pink); animation: ry-blink 2.4s ease-in-out infinite; }
-  .ry-c2 { background: var(--brand-yellow); animation: ry-blink 2.4s ease-in-out 0.8s infinite; }
+  .ry-fig-cursors i { width: 6px; height: 6px; border-radius: 50%; }
+  .ry-c3 { background: var(--brand-cyan); box-shadow: 0 0 6px var(--brand-cyan); animation: ry-blink 2.4s ease-in-out infinite; }
+  .ry-c1 { background: var(--brand-pink); animation: ry-blink 2.4s ease-in-out 0.8s infinite; }
+  .ry-c2 { background: var(--brand-yellow); animation: ry-blink 2.4s ease-in-out 1.6s infinite; }
   @keyframes ry-blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.25; } }
-
-  /* left scroll-progress rail */
-  .ry-fig-rail {
-    position: absolute;
-    top: 41px; bottom: 0; left: 0;
-    width: 2px;
-    background: rgba(245, 241, 232, 0.06);
-    z-index: 2;
-  }
-  .ry-fig-rail-fill {
-    position: absolute;
-    inset: 0;
-    background: var(--brand-grad);
-    transform: scaleY(0);
-    transform-origin: top;
-  }
 
   /* ── pages ─────────────────────────────────────────────────────────── */
   .ry-fig-pages { padding: 8px 0 0; }
@@ -564,24 +542,23 @@ const SECTIONS = [
   @media (max-width: 720px) {
     .ry-pg { grid-template-columns: 30px 1fr; padding: 24px 16px 24px 0; }
     .ry-pg-node { width: 9px; height: 9px; }
-    .ry-fig-rail { top: 39px; }
-    .ry-fig-share { font-size: 9.5px; padding: 4px 9px; }
-    .ry-fig-share { gap: 6px; }
+    .ry-fig-presence { font-size: 9.5px; gap: 6px; }
+    .ry-fig-share { font-size: 9.5px; padding: 4px 9px; gap: 6px; }
     .ry-pg-q { font-size: 10.5px; padding: 4px 8px; }
     .ry-fig-end { padding-left: 30px; }
   }
-  @media (max-width: 460px) {
-    /* the "Anyone with the link" label is the first thing to drop on tiny
-       screens — keep the live dot + cursors as the affordance. */
+  @media (max-width: 540px) {
+    /* drop the word labels first; the blinking cursors are the affordance
+       that "you + the two founders" are live in the file. */
+    .ry-fig-who { display: none; }
     .ry-fig-share { font-size: 0; gap: 5px; padding: 5px 9px; }
-    .ry-fig-share-cur, .ry-fig-cursors i { font-size: 0; }
+    .ry-fig-share-cur { font-size: 0; }
   }
 
   @media (prefers-reduced-motion: reduce) {
     .ry-pg-node, .ry-pg-thread, [data-ry-el] { transition: none !important; }
     [data-ry-el] { opacity: 1; transform: none; }
     .ry-pg-thread { transform: translateX(-50%) scaleY(1); }
-    .ry-fig-rail-fill { transform: scaleY(1); opacity: 0.4; }
     .ry-c1, .ry-c2 { animation: none; }
   }
 </style>
