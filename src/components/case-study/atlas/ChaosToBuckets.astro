@@ -151,13 +151,13 @@ const maxSlots = Math.max(...slotCount);
             data-rot={c.rot} data-bin={c.binIndex} data-slot={c.slot}
             style={`--lit:0; transform: translate(${c.cx}cqw, ${c.cy}cqh) translate(-50%, -50%) rotate(${c.rot}deg);`}
           >
+            {c.hero && <span class="ctb-chip-halo" aria-hidden="true"></span>}
             <span class="ctb-chip-inner">
               <svg class="ctb-chip-wave" viewBox="0 0 40 12" preserveAspectRatio="none" aria-hidden="true">
                 <path d="M0,6 Q3,1 6,6 T12,6 Q15,11 18,6 T24,6 Q27,2 30,6 T36,6 T40,6" fill="none" stroke="currentColor" stroke-width="1.1"/>
               </svg>
               <span class="ctb-chip-name">{c.name}</span>
               {c.dupe && <span class="ctb-chip-dup">⤬ dup</span>}
-              {c.hero && <span class="ctb-chip-follow">▸ the one we follow</span>}
             </span>
           </span>
         ))}
@@ -242,6 +242,9 @@ const maxSlots = Math.max(...slotCount);
         r.el.style.opacity = O !== 1 ? O.toFixed(3) : "";
         r.el.style.setProperty("--lit", e.toFixed(3));
         if (r.hero) r.el.style.setProperty("--glow", clamp01((p - 0.70) / 0.06).toFixed(3));
+        // the last 20% of the scroll blooms a heavenly halo around the protagonist —
+        // attention without a literal label (pure function of p, fully reversible)
+        if (r.hero) r.el.style.setProperty("--glow2", clamp01((p - 0.80) / 0.20).toFixed(3));
         fill[r.binIndex] += e; cnt[r.binIndex] += 1;
       }
       binFrames.forEach((bf, b) => bf.style.setProperty("--fill", (cnt[b] ? fill[b] / cnt[b] : 0).toFixed(3)));
@@ -397,19 +400,26 @@ const maxSlots = Math.max(...slotCount);
     box-shadow: 0 0 calc(10px + 20px * var(--glow, 0)) rgba(0,255,77, calc(0.14 + 0.3 * var(--glow, 0)));
   }
   .ctb-chip-hero .ctb-chip-wave { color: #00ff4d; }
-  .ctb-chip-follow {
-    position: absolute; bottom: calc(100% + 8px); left: 50%; transform: translateX(-50%);
-    font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 8.5px;
-    letter-spacing: 0.1em; text-transform: uppercase; color: #00ff4d; white-space: nowrap;
-    background: rgba(7, 6, 12, 0.95); border: 1px solid rgba(0,255,77,0.45); border-radius: 5px;
-    padding: 3px 9px; box-shadow: 0 8px 20px -8px rgba(0,0,0,0.85);
-    opacity: var(--glow, 0); pointer-events: none; transition: opacity 200ms ease;
+  /* the heavenly halo — instead of a literal "the one we follow" label, the last 20%
+     of the scroll blooms a soft radiant glow around the protagonist. Size + opacity are
+     a pure function of --glow2 (p 0.80 -> 1.0), so it's fully reversible + RM-safe with
+     no animation. Sits behind the chip but above the settled pile. */
+  .ctb-chip-halo {
+    position: absolute; top: 50%; left: 50%; z-index: -1; pointer-events: none;
+    width: 260px; height: 260px; border-radius: 50%;
+    transform: translate(-50%, -50%) scale(calc(0.34 + 0.66 * var(--glow2, 0)));
+    opacity: var(--glow2, 0); mix-blend-mode: screen; filter: blur(6px);
+    background: radial-gradient(circle, rgba(220, 255, 232, 0.58) 0%, rgba(0, 255, 77, 0.26) 22%, rgba(0, 255, 77, 0.08) 46%, transparent 68%);
   }
-  .ctb-chip-follow::after {
-    content: ""; position: absolute; top: 100%; left: 50%; transform: translateX(-50%);
-    border: 5px solid transparent; border-top-color: rgba(0,255,77,0.45);
+  /* faint divine light-beams that strengthen with the bloom (static, masked to a ring) */
+  .ctb-chip-halo::before {
+    content: ""; position: absolute; inset: -14%; border-radius: 50%;
+    background: repeating-conic-gradient(from 9deg, rgba(224, 255, 236, 0.16) 0deg 2deg, transparent 2deg 13deg);
+    -webkit-mask: radial-gradient(circle, transparent 16%, #000 40%, transparent 76%);
+            mask: radial-gradient(circle, transparent 16%, #000 40%, transparent 76%);
+    opacity: calc(0.55 * var(--glow2, 0));
   }
-  @media (max-width: 720px) { .ctb-chip-follow { display: none; } }
+  @media (max-width: 720px) { .ctb-chip-halo { width: 180px; height: 180px; } }
 
   /* ── progress cue ── */
   .ctb-prog {
@@ -441,6 +451,6 @@ const maxSlots = Math.max(...slotCount);
   }
 
   @media (prefers-reduced-motion: reduce) {
-    .ctb-caption, .ctb-chip-inner, .ctb-chip-follow { transition: none; }
+    .ctb-caption, .ctb-chip-inner { transition: none; }
   }
 </style>
