@@ -52,6 +52,9 @@ import type {
   CuriosityResponse,
   CuriosityAnswerResponse,
   CuriosityHistoryResponse,
+  MixRoundResponse,
+  MixMetricsResponse,
+  MixPathwayType,
 } from "./console-types";
 
 // process.env is checked first so Vercel's runtime env vars always win in
@@ -858,6 +861,18 @@ export async function postMixJudgement(body: {
   chose_original?: boolean;
   axis?: string | null;
   comment?: string | null;
+  /** Phase A (2026-06-10): self-certifying eval metadata; the M1 endpoint
+   *  records these so analyze_votes can keep only decision-grade votes. */
+  rater_id?: string | null;
+  is_author?: boolean;
+  blind?: boolean;
+  loudness_matched?: boolean;
+  matched_target_lufs?: number | null;
+  presented_order?: string | null;
+  chosen_slot?: number | null;
+  codec?: string | null;
+  catch_trial?: boolean;
+  catch_correct?: boolean | null;
 }): Promise<ApiResult<MixJudgementResponse>> {
   return _post<MixJudgementResponse>("/mix/judgement", body);
 }
@@ -989,6 +1004,84 @@ export function curiosityHistory(limit = 20) {
   return call<CuriosityHistoryResponse>(
     `/mix/curiosity/history?limit=${limit}`,
   );
+}
+
+// ── Pathway rounds (2026-06-10) ────────────────────────────────────────────
+// The active-learning surface. The orchestrator chooses the single most useful
+// blind comparison and serves ONE round; the page renders it, Jon votes, the
+// engine learns + serves the next. Generalizes /mix/pairs + the curiosity card.
+
+/** The next round the engine wants judged, or a thinking/none status. Poll
+ *  while `thinking` (the orchestrator runs on M1 and the GET returns fast). */
+export function getMixRound(opts?: FetchOpts) {
+  return call<MixRoundResponse>("/mix/round", { timeoutMs: 8_000, ...opts });
+}
+
+/** Record a blind round vote. Lands in the same training sink as the legacy
+ *  /mix/judgement (the engine dispatches on `round_id`), so the decision-grade
+ *  signal is preserved — this just generalizes it past the old 2-variant pair.
+ *  chosen_take_id=null + is_skip=true records a skip. The reveal-derived legacy
+ *  ids are best-effort for 2-take rounds; the engine can also resolve takes from
+ *  round_id, so a raw-vs-one-master round (no clean a/b pair) is fine. */
+export function postRoundVote(body: {
+  round_id: string;
+  // Widened to string: the engine is the source of truth for pathways and
+  // dispatches on round_id, so the UI/proxy must not reject an unknown one. (L2)
+  pathway_type: MixPathwayType | string;
+  source_asset_id: number;
+  presented_order: string; // comma-joined take_ids in shown order
+  chosen_take_id: string | null;
+  is_skip: boolean;
+  blind: boolean;
+  loudness_matched: boolean;
+  matched_target_lufs: number | null;
+  chosen_slot: number | null;
+  comment?: string | null;
+  rater_id?: string;
+  is_author?: boolean;
+  codec?: string;
+  // best-effort legacy mapping (2-take rounds); engine may ignore.
+  variant_a_id?: number | null;
+  variant_b_id?: number | null;
+  chosen_variant_id?: number | null;
+  chose_original?: boolean;
+}): Promise<ApiResult<MixJudgementResponse>> {
+  return _post<MixJudgementResponse>("/mix/judgement", body);
+}
+
+/** Record a blind, loudness-matched king-triage decision: of N crowned kings for
+ *  one source, which one the curator kept (and in what presented order). This is
+ *  a real cross-job preference, so it's decision-grade training data — not just
+ *  curation. CONTRACT ASK (2026-06-10): the engine adds a /mix/triage-judgement
+ *  route that records this + (optionally) performs the uncrowns atomically. The
+ *  UI posts this best-effort and still uncrowns the losers itself, so pruning
+ *  never blocks on this route existing yet. */
+export function postTriageJudgement(body: {
+  source_asset_id: number;
+  kept_job_id: number;
+  presented_order: string; // comma-joined job_ids in shown order
+  chosen_slot: number;
+  blind: boolean;
+  loudness_matched: boolean;
+  matched_target_lufs: number | null;
+  rater_id?: string;
+  is_author?: boolean;
+}): Promise<ApiResult<{ ok: boolean }>> {
+  return _post<{ ok: boolean }>("/mix/triage-judgement", body);
+}
+
+/** Skip the current round without voting; the next GET surfaces a different
+ *  comparison. Mirrors skipCuriosity. */
+export function skipMixRound(round_id: string) {
+  return _post<{ ok: boolean; round_id: string }>("/mix/round/skip", {
+    round_id,
+  });
+}
+
+/** The footer signal: how often the curator's master is beating raw across
+ *  tracks + which way it's trending, plus a soft round counter. */
+export function getMixMetrics(opts?: FetchOpts) {
+  return call<MixMetricsResponse>("/mix/metrics", { timeoutMs: 6_000, ...opts });
 }
 
 // ── The Desk (content planning) — streamed `claude` runs on the M1 engine ──

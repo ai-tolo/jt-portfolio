@@ -13,6 +13,16 @@ export const POST: APIRoute = async ({ request }) => {
     chose_original?: unknown;
     axis?: unknown;
     comment?: unknown;
+    rater_id?: unknown;
+    is_author?: unknown;
+    blind?: unknown;
+    loudness_matched?: unknown;
+    matched_target_lufs?: unknown;
+    presented_order?: unknown;
+    chosen_slot?: unknown;
+    codec?: unknown;
+    catch_trial?: unknown;
+    catch_correct?: unknown;
   };
   try {
     payload = await request.json();
@@ -44,6 +54,21 @@ export const POST: APIRoute = async ({ request }) => {
   const choseOriginal = payload.chose_original === true;
   const axis = typeof payload.axis === "string" ? payload.axis : null;
   const comment = typeof payload.comment === "string" ? payload.comment : null;
+  // Phase A rigor fields (pass-through; the M1 endpoint accepts + records them).
+  const raterId = typeof payload.rater_id === "string" ? payload.rater_id : null;
+  const isAuthor = payload.is_author === true;
+  const blind = payload.blind === true;
+  const loudnessMatched = payload.loudness_matched === true;
+  const matchedTargetLufs =
+    typeof payload.matched_target_lufs === "number" ? payload.matched_target_lufs : null;
+  const presentedOrder =
+    typeof payload.presented_order === "string" ? payload.presented_order : null;
+  const chosenSlot =
+    typeof payload.chosen_slot === "number" ? payload.chosen_slot : null;
+  const codec = typeof payload.codec === "string" ? payload.codec : null;
+  const catchTrial = payload.catch_trial === true;
+  const catchCorrect =
+    typeof payload.catch_correct === "boolean" ? payload.catch_correct : null;
 
   const result = await postMixJudgement({
     job_id: jobId,
@@ -53,6 +78,16 @@ export const POST: APIRoute = async ({ request }) => {
     chose_original: choseOriginal,
     axis,
     comment,
+    rater_id: raterId,
+    is_author: isAuthor,
+    blind,
+    loudness_matched: loudnessMatched,
+    matched_target_lufs: matchedTargetLufs,
+    presented_order: presentedOrder,
+    chosen_slot: chosenSlot,
+    codec,
+    catch_trial: catchTrial,
+    catch_correct: catchCorrect,
   });
   if (!result.ok) {
     const status = result.error.kind === "http" ? result.error.status : 502;

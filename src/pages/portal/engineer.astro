@@ -3,29 +3,24 @@ import PortalLayout from "../../layouts/PortalLayout.astro";
 import EngineerTurtle from "../../components/portal/EngineerTurtle.astro";
 import {
   listMixJobs,
-  listMixPairs,
   listMixWinners,
 } from "../../lib/console-api";
 import type {
   MixJobSummary,
   MixJobStatus,
-  MixPairItem,
   WinnersJob,
 } from "../../lib/console-types";
 
-// Engineer (Build 5) lobby page. Lists mix jobs by status and surfaces
-// A/B pairs awaiting judgement. Phase 0 lands the lifecycle plumbing
-// (queue, worker, status tracking); Phase 1 fills in real variant
-// rendering, at which point the "Pair Tinder" section becomes live.
-// Phase 3 (2026-05-27) replaces the Completed column with a Winners
-// section — per-job per-axis winners with inline playback and a
-// cross-axis champion pick.
+// Engineer (Build 5) page. Lists mix jobs by status, surfaces the active-
+// learning Round player (client-side via /api/console/mix-round), and the
+// Records section where crowned mixes collect + multi-crown tracks are triaged.
+// The per-axis A/B pairs (/mix/pairs) were retired 2026-06-10 with the Arena —
+// the engine now serves one orchestrator-chosen round at a time.
 //
 // Graceful fallback when the engine is unreachable: page renders with
 // empty buckets + a small notice, mirroring rotation.astro's pattern.
 
 let jobs: MixJobSummary[] = [];
-let pairs: MixPairItem[] = [];
 let winners: WinnersJob[] = [];
 let usingMock = true;
 let fetchError: string | null = null;
@@ -41,11 +36,6 @@ try {
         ? `engine returned ${jobsRes.error.status}`
         : "engine unreachable";
   }
-  // Bumped from 10 → 30 so multiple ready jobs surface their pairs at once.
-  // The engine already orders ready jobs oldest-first, so newer renders
-  // appear at the bottom of the page.
-  const pairsRes = await listMixPairs(30);
-  if (pairsRes.ok) pairs = pairsRes.data.items;
   // include_partial defaults to true so the curator sees in-progress
   // jobs alongside fully-decided ones.
   const winnersRes = await listMixWinners({ limit: 50 });
@@ -63,24 +53,36 @@ const readyToCrown = winners.filter(
   (w) => w.axes_decided >= 3 && w.champion_variant_id === null,
 ).length;
 
-// Cluster Winners into stage groups so the list reads at a glance and
-// PUBLISHED tracks group together (the Sounds page folded in here, 2026-06-03):
-//   0 In progress (voting / ready-to-crown / king-round)
-//   1 Crowned (a variant king, not yet published)
-//   2 Published (live on the public /sounds route) — auto-grouped
-//   3 Original wins (the source still beats every mix)
-const winnerRank = (w: WinnersJob): number =>
-  w.king_is_public ? 2
-  : w.champion_is_original ? 3
-  : w.champion_variant_id !== null ? 1
-  : 0;
-const WINNER_GROUP_LABEL: Record<number, string> = {
-  0: "In progress",
-  1: "Crowned",
-  2: "Published",
-  3: "Original wins",
-};
-const sortedWinners = [...winners].sort((a, b) => winnerRank(a) - winnerRank(b));
+// #3 status badge: an at-a-glance label per card (the stage label used to be
+// computed here but never rendered). Same buckets plus a clearer
+// "Ready to crown" / "Voting" / "King candidates" split for in-progress cards.
+const winnerStatus = (w: WinnersJob): { label: string; kind: string } =>
+  w.king_is_public ? { label: "Published", kind: "published" }
+  : w.champion_is_original ? { label: "Original wins", kind: "original" }
+  : w.champion_variant_id !== null ? { label: "Crowned", kind: "crowned" }
+  : w.is_king_round ? { label: "King candidates", kind: "kinground" }
+  : w.awaiting_votes === false ? { label: "Ready to crown", kind: "ready" }
+  : { label: "Voting", kind: "voting" };
+
+// #3 STABLE order: sort by source (most-recent job first), NOT by mutable crown
+// stage. The old winnerRank sort moved a card to a different bucket the instant
+// it was crowned/published, and every action reloads the page — so cards visibly
+// jumped. Sorting by source recency + id depends only on immutable ids, so order
+// holds across reloads AND a source's kept kings cluster together (feeds the
+// per-source grouping in the template).
+const _srcRecency = new Map<number, number>();
+for (const w of winners) {
+  _srcRecency.set(
+    w.source_asset_id,
+    Math.max(_srcRecency.get(w.source_asset_id) ?? 0, w.job_id),
+  );
+}
+const sortedWinners = [...winners].sort(
+  (a, b) =>
+    (_srcRecency.get(b.source_asset_id)! - _srcRecency.get(a.source_asset_id)!) ||
+    (a.source_asset_id - b.source_asset_id) ||
+    (b.job_id - a.job_id),
+);
 
 // Workshop grouping (inherited from the folded-in Sounds page): group the
 // Winners by the curator's collection label on the source track so EP ideas /
@@ -103,6 +105,67 @@ const hasCollections = _namedCollections.length > 0;
 // Distinct collection names for the per-card datalist (quick re-use of an
 // existing EP name when pinning another track).
 const collectionNames = _namedCollections;
+
+// ── King-triage (2026-06-10) ───────────────────────────────────────────────
+// Jon's pain: over many rounds a track accumulates multiple crowned kings, and
+// the list balloons. Any source with ≥2 crowns gets an inline "compare & prune"
+// affordance in Records that opens the blind, loudness-matched N-take transport
+// (master playhead + 1-9/↑↓ switch mid-playback). He keeps one; the losers are
+// uncrowned in place. We pre-compute the crowned kings per source here and emit
+// them as JSON for the triage module — output_lufs lands once the engine adds
+// it to /mix/winners (contract ask D); until then the match falls back to unity.
+type TriageKing = {
+  job_id: number;
+  kind: "variant" | "source";
+  asset_path: string;
+  output_lufs: number | null;
+  label: string;
+  reference: string | null;
+};
+const _kingsBySrc = new Map<number, TriageKing[]>();
+for (const w of winners) {
+  const crownedVariant = !w.champion_is_original && w.champion_variant_id !== null;
+  if (!crownedVariant && !w.champion_is_original) continue; // not crowned → skip
+  let king: TriageKing | null = null;
+  if (w.champion_is_original) {
+    if (w.source_audio_path) {
+      king = {
+        job_id: w.job_id,
+        kind: "source",
+        asset_path: w.source_audio_path,
+        output_lufs: w.source_lufs ?? null,
+        label: "ORIGINAL",
+        reference: null,
+      };
+    }
+  } else {
+    const v = w.winners.find((x) => x.variant_id === w.champion_variant_id);
+    if (v && v.asset_path) {
+      king = {
+        job_id: w.job_id,
+        kind: "variant",
+        asset_path: v.asset_path,
+        output_lufs: v.output_lufs ?? null,
+        label: v.reference || v.color,
+        reference: v.reference ?? null,
+      };
+    }
+  }
+  if (!king) continue;
+  if (!_kingsBySrc.has(w.source_asset_id)) _kingsBySrc.set(w.source_asset_id, []);
+  _kingsBySrc.get(w.source_asset_id)!.push(king);
+}
+// Only sources with MORE THAN ONE crown can be triaged.
+const triageData: Record<number, { title: string; kings: TriageKing[] }> = {};
+for (const [srcId, kings] of _kingsBySrc) {
+  if (kings.length < 2) continue;
+  const w = winners.find((x) => x.source_asset_id === srcId);
+  triageData[srcId] = {
+    title: w?.source_display_name || w?.source_filename || `asset ${srcId}`,
+    kings,
+  };
+}
+const triageSourceIds = new Set(Object.keys(triageData).map(Number));
 
 const AXIS_ORDER = ["focal", "space", "dynamics"] as const;
 
@@ -201,103 +264,86 @@ function stemSoloUrls(sf) {
     <header class="intro">
       <h1>Engineer</h1>
       <p class="lede">
-        Send a track from <a href="/portal/buckets/all">Buckets</a>, vote on
-        the pairs below, and crown a king mix in <a href="#winners">Winners</a>.
-        Publish a king and it groups under <a href="#winners">Published in Winners</a>.
+        Listen to the round, pick the take that sounds better, and watch the
+        Engineer converge. Send tracks from <a href="/portal/buckets/all">Buckets</a>;
+        crowned mixes collect in <a href="#winners">Records</a>.
       </p>
       {fetchError && (
         <p class="notice">Engine unreachable: {fetchError}. Showing empty state.</p>
       )}
     </header>
 
-    {/* The Engineer's curiosity surface — ONE question it's genuinely unsure
-        about (where its renders lost in a way it didn't expect, a QA-flagged
-        take you crowned anyway, a dead-split contest). Populated client-side:
-        synthesis runs claude -p on M1 and can take 10–60s, so SSR never blocks
-        on it. Jon listens to the referenced audio inline + answers freeform;
-        the answer folds back into taste.py (bounded per-pole nudge) + every
-        future question. See engineer/curiosity.py + api/curiosity_endpoints.py. */}
-    {/* Engineer asks — a section peer to Mix Faceoff + Winners, with its own
-        <h2>. The card itself is a Mix Faceoff pair: a shared source waveform +
-        one transport + numbered take chips (1/2/3) that switch which mix plays,
-        carrying the playhead. Built client-side from the fetched refs;
-        coordinated with faceoff + winners via the global Stage selector so only
-        one section plays at once. The whole block (h2 + card) shows/hides as a
-        unit via data-cur-wrap. */}
-    <section class="asks-section" data-cur-wrap hidden>
-      <h2 class="section-head"><span class="section-emoji" aria-hidden="true">🐢</span>Richard</h2>
-      <div class="cur-thinking" data-cur-thinking hidden>
-        <span class="cur-thinking-dot" aria-hidden="true"></span>
-        the Engineer is thinking about your last votes…
-      </div>
-      <div class="curiosity" data-curiosity data-section="asks" aria-live="polite" hidden>
-      <div class="cur-card pair-shell" data-cur-card>
-        {/* Richard's pond — a subtle habitat tucked along the card's bottom edge
-            (lily pads · reeds · ripples), behind all content. Decorative only. */}
-        <svg class="cur-pond" viewBox="0 0 400 58" preserveAspectRatio="none" aria-hidden="true">
-          <g fill="none" stroke="#22d3ff" stroke-width="1.1" opacity="0.5" stroke-linecap="round">
-            <path d="M0 30 q26 -7 52 0 t52 0 t52 0 t52 0 t52 0 t52 0 t52 0" />
-            <path d="M0 42 q30 6 60 0 t60 0 t60 0 t60 0 t60 0 t60 0" opacity="0.7" />
-          </g>
-          <g opacity="0.9">
-            <!-- lily pads -->
-            <path d="M60 40 a17 7 0 1 0 34 0 a17 7 0 1 0 -34 0 M77 40 l9 -4" fill="#2f7a4c" stroke="#1f5a37" stroke-width="0.8" />
-            <circle cx="76" cy="36" r="1.7" fill="#ffd23d" opacity="0.85" />
-            <path d="M150 46 a13 5.5 0 1 0 26 0 a13 5.5 0 1 0 -26 0 M163 46 l7 -3" fill="#3f9e63" stroke="#27623f" stroke-width="0.8" />
-            <path d="M300 41 a15 6 0 1 0 30 0 a15 6 0 1 0 -30 0 M315 41 l8 -3.5" fill="#2f7a4c" stroke="#1f5a37" stroke-width="0.8" />
-            <circle cx="314" cy="37.5" r="1.6" fill="#ff7ab8" opacity="0.85" />
-          </g>
-          <!-- reeds / cattails on the right -->
-          <g stroke="#4aa86a" stroke-width="2" stroke-linecap="round" fill="none">
-            <path d="M356 56 q-3 -18 1 -30" /><path d="M366 56 q2 -16 -1 -28" /><path d="M376 56 q-2 -14 1 -24" />
-          </g>
-          <g fill="#9c6b3a">
-            <rect x="355" y="22" width="3.6" height="9" rx="1.8" /><rect x="365" y="24" width="3.4" height="8" rx="1.7" />
-          </g>
-          <!-- rock, bottom-left -->
-          <path d="M14 56 q4 -12 16 -11 q10 1 12 11 Z" fill="#525866" stroke="#3a3f4b" stroke-width="0.8" />
-        </svg>
-        <div class="cur-head">
-          <h3 class="pair-source cur-track" data-cur-title></h3>
-          <span class="cur-finding" data-cur-finding hidden></span>
-        </div>
-        {/* Richard speaking: the avatar + a speech bubble carrying the question,
-            so the asks section reads as the turtle engineer talking. */}
-        <div class="cur-speech">
-          <div class="cur-avatar"><EngineerTurtle size={96} speaking={true} /></div>
-          <p class="cur-question" data-cur-question></p>
-        </div>
+    {/* ── The Round ──────────────────────────────────────────────────────────
+        The Engineer's active-learning surface. The orchestrator picks the ONE
+        most useful blind comparison and serves a single round of 2–N blind,
+        loudness-matched takes on a shared transport; Jon listens, votes the
+        better take, and the next round auto-loads. He never instructs the
+        engine — listen → pick → next. Built client-side from /api/console/mix-round
+        (the orchestrator runs on M1, so SSR never blocks on it); joins the global
+        Stage selector so only one section plays at once. Supersedes the old
+        per-axis Arena + the freeform "Richard" curiosity card. */}
+    <section class="round-section" data-round-wrap data-collapsible data-section-key="round" data-section-collapsed="false">
+      <h2 class="section-head" data-section-toggle role="button" tabindex="0" aria-expanded="true" title="Collapse / expand this section"><span class="section-chevron-s" aria-hidden="true">▸</span><span class="section-emoji" aria-hidden="true">🎧</span>The Round</h2>
 
-        <div class="pair-stage">
-          <div class="pair-waveform" data-cur-wave>
-            <img data-cur-waveimg alt="" loading="lazy" hidden />
-            <div class="pair-waveform-fallback" data-cur-wavefallback hidden>listen below</div>
-            <div class="pair-playhead" data-cur-playhead hidden></div>
-          </div>
-          <div class="pair-transport">
-            <button class="transport-btn" data-cur-skip="-10" aria-label="Back 10 seconds">⏮</button>
-            <button class="transport-btn transport-play" data-cur-toggle data-state="paused" aria-label="Play / pause"></button>
-            <button class="transport-btn" data-cur-skip="10" aria-label="Forward 10 seconds">⏭</button>
-            <span class="pair-time" data-cur-time>0:00 / —:—</span>
-            <div class="ab-switch" data-cur-takes role="group" aria-label="Numbered takes — tap a number or press 1/2/3 to switch which mix plays"></div>
-          </div>
-          <div class="pair-loudness cur-takelegend" data-cur-legend aria-live="polite"></div>
-        </div>
-
-        <div class="cur-respond" data-cur-respond>
-          <textarea
-            class="cur-answer"
-            data-cur-answer
-            rows="3"
-            placeholder="Tell me what you hear — as much or as little as you want."
-          ></textarea>
-          <div class="cur-actions">
-            <button type="button" class="cur-send" data-cur-send>Send →</button>
-            <button type="button" class="cur-skip" data-cur-skip-q>ask me something else</button>
-          </div>
-        </div>
-        <p class="cur-done" data-cur-done hidden></p>
+      <div class="round-thinking" data-round-thinking hidden>
+        <span class="round-thinking-dot" aria-hidden="true"></span>
+        the Engineer is choosing your next round…
       </div>
+
+      <div class="round-empty" data-round-empty hidden>
+        <p class="empty">
+          No round right now. Send a track from <a href="/portal/buckets/tracks">Buckets</a> —
+          the Engineer starts serving comparisons as soon as it has masters to test.
+        </p>
+      </div>
+
+      <div class="round" data-round hidden>
+        <div class="round-card" data-round-card>
+          <div class="round-framing">
+            <span class="round-index" data-round-index>Round —</span>
+            <span class="round-pathway" data-round-pathway hidden></span>
+          </div>
+          {/* Richard speaking the framing line — the turtle engineer's voice. */}
+          <div class="round-speech">
+            <div class="round-avatar"><EngineerTurtle size={72} speaking={true} /></div>
+            <p class="round-question" data-round-framing-text></p>
+          </div>
+          <h3 class="round-track" data-round-track></h3>
+
+          <div class="pair-stage">
+            <div class="pair-waveform" data-round-wave>
+              <img data-round-waveimg alt="" loading="lazy" hidden />
+              <div class="pair-waveform-fallback" data-round-wavefallback hidden>listen below</div>
+              <div class="pair-playhead" data-round-playhead hidden></div>
+            </div>
+            <div class="pair-transport">
+              <button class="transport-btn" data-round-skip="-10" aria-label="Back 10 seconds">⏮</button>
+              <button class="transport-btn transport-play" data-round-toggle data-state="paused" aria-label="Play / pause"></button>
+              <button class="transport-btn" data-round-skip="10" aria-label="Forward 10 seconds">⏭</button>
+              {/* aria-hidden: the clock repaints every animation frame; left in the
+                  a11y tree it would flood the live region. Sighted users still see it. */}
+              <span class="pair-time" data-round-time aria-hidden="true">0:00 / —:—</span>
+              <div class="ab-switch" data-round-takes role="group" aria-label="Blind takes — tap a number to audition, press 1–9 to switch which take plays. Hold a number (or press Enter) to vote it the winner."></div>
+            </div>
+            <div class="pair-loudness" data-round-loudness aria-live="polite" aria-atomic="true"></div>
+          </div>
+
+          <div class="round-vote">
+            <button class="round-vote-btn" type="button" data-round-vote-current>
+              <span class="round-vote-label">▲ this take is better</span>
+              <span class="round-vote-kbd" aria-hidden="true">⏎</span>
+            </button>
+            <button type="button" class="round-skip" data-round-skip-q>ask me something else</button>
+          </div>
+
+          {/* Optional, never-required "why" — voting works without it. */}
+          <details class="round-why" data-round-why-wrap>
+            <summary><span class="round-why-caret" aria-hidden="true">▾</span> add a note (optional)</summary>
+            <textarea class="round-note" data-round-note rows="2" placeholder="Anything you noticed — never required."></textarea>
+          </details>
+
+          <p class="round-reveal" data-round-reveal hidden aria-live="polite" aria-atomic="true"></p>
+        </div>
       </div>
     </section>
 
@@ -342,218 +388,11 @@ function stemSoloUrls(sf) {
       </div>
     )}
 
-    <section class="pair-tinder">
-      <h2 class="section-head"><span class="section-emoji" aria-hidden="true">⚔️</span>Arena<span class="queue-count" data-queue-count hidden></span></h2>
-      {pairs.length === 0 ? (
-        <p class="empty">
-          No pairs to judge. Send a track from <a href="/portal/buckets/tracks">Buckets</a> and come back when its job is "ready to judge".
-        </p>
-      ) : (
-        <ul class="pair-list">
-          {pairs.map((p, i) => {
-            const waveSrc = p.source_waveform_sha1
-              ? `/api/console/waveform?sha1=${p.source_waveform_sha1}`
-              : null;
-            const aUrl = p.variant_a.asset_path
-              ? `/api/console/asset?path=${encodeURIComponent(p.variant_a.asset_path)}&variant=opus`
-              : "";
-            const bUrl = p.variant_b.asset_path
-              ? `/api/console/asset?path=${encodeURIComponent(p.variant_b.asset_path)}&variant=opus`
-              : "";
-            // Build a {stem_name: opus_url} map per side for solo playback.
-            const stemUrlsA = stemSoloUrls(p.variant_a.stem_files);
-            const stemUrlsB = stemSoloUrls(p.variant_b.stem_files);
-            // Blind voting: present the three takes (variant A / variant B /
-            // ORIGINAL) as identical, numbered chips in a per-pair-shuffled
-            // order, so neither the source nor any reference's reputation can
-            // bias the vote. The role wiring (data-side-btn / data-now-side /
-            // data-hold) is unchanged, so the server still records the true
-            // variant_a_id / variant_b_id / chose_original. Identities are
-            // revealed only in the opt-in "reveal" toggle and after a crown.
-            const BLIND_PERMS = [
-              ["a", "b", "o"], ["a", "o", "b"], ["b", "a", "o"],
-              ["b", "o", "a"], ["o", "a", "b"], ["o", "b", "a"],
-            ] as const;
-            // Seed per (job, axis) so the ORIGINAL's slot also varies across a
-            // job's three axis-pairs — not just job-to-job.
-            const _axisIdx = Math.max(0, ["focal", "space", "dynamics"].indexOf(p.axis));
-            const blindOrder = BLIND_PERMS[(((p.job_id * 3 + _axisIdx) % 6) + 6) % 6];
-            const blindMeta = {
-              a: { role: "a", pole: p.variant_a.pole as string | null, ref: (p.variant_a.plan?.reference ?? null) as string | null },
-              b: { role: "b", pole: p.variant_b.pole as string | null, ref: (p.variant_b.plan?.reference ?? null) as string | null },
-              o: { role: "o", pole: null as string | null, ref: null as string | null },
-            };
-            const blindOpts = blindOrder.map((r, idx) => ({ ...blindMeta[r as "a" | "b" | "o"], n: idx + 1 }));
-            return (
-              <li
-                class={`pair${i === 0 ? " pair-active" : ""}`}
-                data-pair
-                data-job-id={p.job_id}
-                data-axis={p.axis}
-                data-a={p.variant_a.id}
-                data-b={p.variant_b.id}
-                data-source-asset-id={p.source_asset_id}
-                data-duration={p.source_duration_seconds ?? ""}
-                data-side="a"
-                data-url-a={aUrl}
-                data-url-b={bUrl}
-                data-stem-urls-a={JSON.stringify(stemUrlsA)}
-                data-stem-urls-b={JSON.stringify(stemUrlsB)}
-                data-source-audio-url={p.source_audio_path
-                  ? `/api/console/asset?path=${encodeURIComponent(p.source_audio_path)}&variant=opus`
-                  : ""}
-                data-source-lufs={p.source_lufs ?? ""}
-                data-a-lufs={p.variant_a.output_lufs ?? ""}
-                data-b-lufs={p.variant_b.output_lufs ?? ""}
-                data-a-peak={p.variant_a.true_peak_dbfs ?? ""}
-                data-b-peak={p.variant_b.true_peak_dbfs ?? ""}
-                data-a-qa={p.variant_a.qa_flag ? "1" : ""}
-                data-b-qa={p.variant_b.qa_flag ? "1" : ""}
-              >
-                <div class="pair-head">
-                  <h3 class="pair-source">{p.job_source_display}</h3>
-                  {p.variant_a.plan?.route === "stems" && (
-                    <span class="pair-mode-badge" title="The Engineer mixed your clean stems, then mastered the bus">🎚 mixed from stems</span>
-                  )}
-                  {(p.variant_a.plan?.route === "mastered" || p.variant_a.plan?.treatment === "polish") && (
-                    <span class="pair-mode-badge" title="Source is already a finished master — these are subtle polishes; the original legitimately competes">✨ polish</span>
-                  )}
-                  <button
-                    type="button"
-                    class="pair-skip-x"
-                    data-hold="skip"
-                    aria-label="Hold to skip this pair"
-                    title="Hold to skip"
-                  ><span class="hold-fill" aria-hidden="true"></span><span class="hold-glyph">×</span></button>
-                </div>
-
-                <div class="pair-stage">
-                  <div class="pair-waveform" data-stage-waveform>
-                    {waveSrc ? (
-                      <img src={waveSrc} alt="" loading="lazy" />
-                    ) : (
-                      <div class="pair-waveform-fallback">no waveform for source</div>
-                    )}
-                    <div class="pair-playhead" data-playhead hidden></div>
-                  </div>
-                  <div class="pair-transport">
-                    <button class="transport-btn" data-skip="-10" aria-label="Back 10 seconds">⏮</button>
-                    <button class="transport-btn transport-play" data-toggle-play aria-label="Play / pause">▶</button>
-                    <button class="transport-btn" data-skip="10" aria-label="Forward 10 seconds">⏭</button>
-                    <span class="pair-time" data-time>0:00 / —:—</span>
-                    <div class="ab-switch" role="group" aria-label="Three blind takes — tap a number to audition, hold it to vote. Identities are hidden; use ‘reveal’ below to see them.">
-                      {blindOpts.map((o) => (
-                        o.role === "o" ? (
-                          <button class="ab-side ab-side-blind" data-now-side data-hold="original" title="Tap to audition · hold to vote this take">
-                            <span class="hold-fill" aria-hidden="true"></span>
-                            <span class="ab-key">{o.n}</span>
-                          </button>
-                        ) : (
-                          <button class="ab-side ab-side-blind" data-side-btn={o.role} data-hold={o.role} title="Tap to audition · hold to vote this take">
-                            <span class="hold-fill" aria-hidden="true"></span>
-                            <span class="ab-key">{o.n}</span>
-                          </button>
-                        )
-                      ))}
-                    </div>
-                  </div>
-
-                  <div class="pair-loudness" data-loudness aria-live="polite"></div>
-
-                  {(Object.keys(stemUrlsA).length > 0 || Object.keys(stemUrlsB).length > 0) && (
-                    <div class="pair-solo-bar">
-                      <span class="solo-bar-label">solo</span>
-                      <button class="solo-btn solo-btn-full" data-solo-full data-active="true">FULL MIX</button>
-                      {[...new Set([...Object.keys(stemUrlsA), ...Object.keys(stemUrlsB)])].map((stem) => (
-                        <button class="solo-btn" data-solo-stem={stem}>{stem}</button>
-                      ))}
-                    </div>
-                  )}
-
-                  <div class="pair-reasoning">
-                    {/* One shared toggle expands BOTH descriptions together —
-                        master mode has no per-stem moves to expand into, so the
-                        old per-card details opened onto nothing. (#5) */}
-                    <details class="pair-why" data-pair-why>
-                      <summary>
-                        <span class="pair-why-caret" aria-hidden="true">▾</span>
-                        <span class="pair-why-label">🔍 reveal what each take is (spoils the blind)</span>
-                      </summary>
-                      <div class="pair-why-grid">
-                        {blindOpts.map((o) => {
-                          const variant = o.role === "a" ? p.variant_a : o.role === "b" ? p.variant_b : null;
-                          const plan = variant?.plan;
-                          // Master philosophy reads "Mastered toward X (pole) — why";
-                          // drop the prefix so the why stands on its own.
-                          const why =
-                            plan?.philosophy_summary?.split(" — ").slice(1).join(" — ") ||
-                            plan?.philosophy_summary ||
-                            "";
-                          const flags = variant?.translation?.summary_flags ?? [];
-                          return (
-                            <div class="pair-why-col">
-                              <div class="pair-why-head">
-                                <span class="pair-why-side">#{o.n}</span>
-                                <span class="pair-why-pole">{o.role === "o" ? "ORIGINAL" : (o.pole ?? "").replace(/_/g, " ")}</span>
-                              </div>
-                              {o.role === "o" ? (
-                                <div class="pair-why-ref">your unprocessed source</div>
-                              ) : (o.ref && (
-                                <div class="pair-why-ref">toward <strong>{o.ref}</strong></div>
-                              ))}
-                              {why && <div class="pair-why-text">{why}</div>}
-                              {plan?.layer_tools && plan.layer_tools.length > 0 && (
-                                <div class="pair-why-layers">
-                                  {plan.layer_tools.map((lt) => (
-                                    <span class="pair-why-layer" title={lt.why ?? ""}>
-                                      + {(lt.kind ?? "").replace(/_/g, " ")}
-                                      {lt.scope && lt.scope !== "full" ? ` · ${lt.scope}` : ""}
-                                    </span>
-                                  ))}
-                                </div>
-                              )}
-                              {variant && (
-                                <div class="pair-why-qa">
-                                  {typeof variant.output_lufs === "number" && (
-                                    <span>{variant.output_lufs.toFixed(1)} LUFS</span>
-                                  )}
-                                  {typeof variant.true_peak_dbfs === "number" && (
-                                    <span>{variant.true_peak_dbfs.toFixed(1)} dBTP</span>
-                                  )}
-                                  {variant.qa_flag && <span class="pair-why-qa-warn">⚠ check</span>}
-                                </div>
-                              )}
-                              {flags.length > 0 && (
-                                <div class="pair-why-flags">
-                                  {flags.map((f) => (
-                                    <span class="plan-warning-chip">⚠ {f}</span>
-                                  ))}
-                                </div>
-                              )}
-                            </div>
-                          );
-                        })}
-                      </div>
-                    </details>
-                  </div>
-                </div>
-
-                <textarea
-                  class="comment"
-                  data-comment
-                  rows="2"
-                  placeholder="Notes (optional). What worked, what didn't, what you'd change."
-                ></textarea>
-
-              </li>
-            );
-          })}
-        </ul>
-      )}
-    </section>
-
-    <section class="winners" id="winners">
-      <h2 class="section-head"><span class="section-emoji" aria-hidden="true">💿</span>Records</h2>
+    {/* The per-axis Arena (focal/space/dynamics A/B) was retired 2026-06-10 —
+        superseded by The Round above (one blind, loudness-matched comparison the
+        orchestrator chooses). Its dormant controller no-ops without .pair nodes. */}
+    <section class="winners" id="winners" data-collapsible data-section-key="records" data-section-collapsed="false">
+      <h2 class="section-head" data-section-toggle role="button" tabindex="0" aria-expanded="true" title="Collapse / expand this section"><span class="section-chevron-s" aria-hidden="true">▸</span><span class="section-emoji" aria-hidden="true">💿</span>Records</h2>
       {winners.length === 0 ? (
         <p class="empty">
           No winners yet. Vote on a pair above and the source track lands here once its first vote is cast.
@@ -568,7 +407,7 @@ function stemSoloUrls(sf) {
               {hasCollections && (
                 <li class="winners-group-header" role="presentation">{group.label ?? "Unsorted"}</li>
               )}
-              {group.items.map((w) => {
+              {group.items.map((w, idx) => {
             const sourceUrl = sourceAudioUrl(w.source_audio_path);
             const waveSrc = w.source_waveform_sha1
               ? `/api/console/waveform?sha1=${w.source_waveform_sha1}`
@@ -590,6 +429,10 @@ function stemSoloUrls(sf) {
             // the source for all of them.
             const variantWinners = w.winners.filter((v) => !v.is_original);
             const title = w.source_display_name || w.source_filename || `asset ${w.source_asset_id}`;
+            const status = winnerStatus(w);
+            const _srcItems = group.items.filter((x) => x.source_asset_id === w.source_asset_id);
+            const _isFirstOfSrc = group.items.findIndex((x) => x.source_asset_id === w.source_asset_id) === idx;
+            const showSrcHeader = _srcItems.length > 1 && _isFirstOfSrc;
             const isKingRound = w.is_king_round === true;
             const inFlightKing = w.in_flight_kind === "king";
             // Collapsed card stays uniform: just the two left actions (↗ open in
@@ -597,6 +440,24 @@ function stemSoloUrls(sf) {
             // not as inline text (#2): green chevron = published; a distinct
             // border + bottom-grouped sort = ORIGINAL still beats every mix.
             return (
+              <Fragment>
+                {showSrcHeader && (
+                  <li class="winners-source-header" role="presentation">
+                    <span class="winners-source-header-name">{title}</span>
+                    <span class="winners-source-header-count">{_srcItems.length} kept kings</span>
+                    {triageSourceIds.has(w.source_asset_id) && (
+                      <button
+                        type="button"
+                        class="kings-triage-btn"
+                        data-triage-open={w.source_asset_id}
+                        title="Compare every crowned king for this track in one blind, level-matched player — keep one, prune the rest"
+                      >⚖ compare &amp; prune {triageData[w.source_asset_id].kings.length} kings</button>
+                    )}
+                  </li>
+                )}
+                {showSrcHeader && triageSourceIds.has(w.source_asset_id) && (
+                  <li class="kings-triage-host" role="presentation" data-triage-host={w.source_asset_id} hidden></li>
+                )}
               <li
                 class={`winners-card${hasKing ? " winners-card-crowned" : ""}`}
                 data-winners-job-id={w.job_id}
@@ -621,6 +482,7 @@ function stemSoloUrls(sf) {
                     <span class="winners-chevron" aria-hidden="true">▸</span>
                     <span class="winners-source">{title}</span>
                   </button>
+                  <span class={`winners-status winners-status-${status.kind}`}>{status.label}</span>
                   {w.in_flight_job_id && (
                     <span
                       class="winners-inflight-tag"
@@ -731,7 +593,7 @@ function stemSoloUrls(sf) {
                           </li>
                         )}
                       </Fragment>
-                    ) : (isKingRound || w.axes_decided >= 3) ? (
+                    ) : (isKingRound || w.axes_decided >= 3 || w.awaiting_votes === false) ? (
                       /* CROWNABLE + BLIND: the ORIGINAL is shuffled in among the
                          candidate mixes, each shown only as an anonymous "Take N",
                          so the crown follows sound — not reputation or "the
@@ -819,10 +681,10 @@ function stemSoloUrls(sf) {
                         ♛ King candidates — {w.synthesis_summary || "3 fresh masters synthesized from your A/B picks"}. Listen blind and crown the Take you love (your unprocessed original is shuffled in among them). These play at their REAL level — you're judging the final master here, not a level-matched preview like the faceoff.
                       </p>
                     )}
-                    {!hasKing && !isKingRound && w.axes_decided >= 3 && (
+                    {!hasKing && !isKingRound && (w.axes_decided >= 3 || w.awaiting_votes === false) && (
                       <p class="winners-hint">Listen blind and tap ♛ on the Take you love to crown your king (your original is shuffled in among them), or render a fresh batch below.</p>
                     )}
-                    {!hasKing && !isKingRound && w.axes_decided < 3 && (
+                    {!hasKing && !isKingRound && w.axes_decided < 3 && w.awaiting_votes !== false && (
                       <p class="winners-hint">
                         {3 - w.axes_decided} more mix{3 - w.axes_decided === 1 ? "" : "es"} left to vote on in the Mix Faceoff above. Or skip ahead with Make more mixes for a fresh batch.
                       </p>
@@ -856,6 +718,7 @@ function stemSoloUrls(sf) {
                   </div>
                 </div>
               </li>
+              </Fragment>
             );
               })}
             </Fragment>
@@ -863,6 +726,28 @@ function stemSoloUrls(sf) {
         </ul>
       )}
     </section>
+
+    {/* King-triage data for the inline compare-and-prune player, keyed by
+        source_asset_id. set:html does NOT escape, and JSON.stringify won't escape
+        "<", so a "</script>" inside a track name would close this element early
+        and break the JSON. Escape "<" → "<" (JSON.parse round-trips it
+        losslessly) so a stray title can't kill all of triage. (review M4) */}
+    <script type="application/json" data-triage-data set:html={JSON.stringify(triageData).replace(/</g, "\\u003c")} />
+
+    {/* Persistent footer — the ONLY progress signal that matters: the learning
+        made visible. Consumes /api/console/mix-metrics; stays hidden until a
+        metric arrives, and goes quiet again if the engine is asleep. */}
+    <footer class="round-footer" data-round-footer hidden aria-live="polite">
+      <div class="round-footer-metric">
+        <span class="round-footer-label" data-footer-label></span>
+        <span class="round-footer-score" data-footer-score></span>
+        <span class="round-footer-trend" data-footer-trend></span>
+        {/* held-out headline stays the hero; broader (all decision-grade) signals
+            ride along muted. */}
+        <span class="round-footer-secondary" data-footer-secondary></span>
+      </div>
+      <span class="round-footer-rounds" data-footer-rounds></span>
+    </footer>
   </section>
 </PortalLayout>
 
@@ -872,6 +757,12 @@ function stemSoloUrls(sf) {
     margin: 0 auto;
     padding: 24px 16px 64px;
     color: var(--ink);
+    /* Fill the viewport so the sticky footer bottom-aligns instead of floating
+       mid-screen on short/early pages. margin-top:auto on the footer does the
+       push (set below). (review #8) */
+    min-height: 100dvh;
+    display: flex;
+    flex-direction: column;
   }
   .intro h1 {
     font-size: 28px;
@@ -914,6 +805,131 @@ function stemSoloUrls(sf) {
   .asks-section[hidden] { display: none; }
   .curiosity { margin: 0; }
   .curiosity[hidden] { display: none; }
+
+  /* ── The Round (2026-06-10) — the active-learning round player ─────────── */
+  .round-section { margin: 2px 0 30px; }
+  .round { margin: 0; }
+  .round[hidden], .round-empty[hidden], .round-thinking[hidden] { display: none; }
+  .round-thinking {
+    display: flex; align-items: center; gap: 10px;
+    margin: 2px 0 26px; font-size: 14px; font-style: italic;
+    color: rgba(255, 255, 255, 0.42);
+  }
+  .round-thinking-dot {
+    width: 8px; height: 8px; border-radius: 50%;
+    background: #0ec4fc; box-shadow: 0 0 10px rgba(14, 196, 252, 0.6);
+    animation: cur-pulse 1.25s ease-in-out infinite;
+  }
+  .round-empty { margin: 2px 0 24px; }
+
+  .round-card {
+    position: relative; overflow: hidden;
+    border-radius: 18px; padding: 18px 22px 20px;
+    background:
+      radial-gradient(135% 90% at 50% 122%, rgba(34, 168, 99, 0.13), transparent 62%),
+      linear-gradient(180deg, rgba(15, 21, 25, 0.96), rgba(9, 13, 15, 0.975));
+    border: 1px solid rgba(34, 211, 255, 0.24);
+    box-shadow: 0 12px 44px rgba(0, 0, 0, 0.42), 0 0 60px rgba(34, 168, 99, 0.07);
+  }
+  .round-framing { display: flex; align-items: center; gap: 10px; margin: 0 0 10px; }
+  .round-index {
+    font-size: 12px; font-weight: 700; letter-spacing: 0.14em;
+    text-transform: uppercase; color: rgba(245, 241, 232, 0.55);
+    font-variant-numeric: tabular-nums;
+  }
+  .round-pathway {
+    font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: #9fe7ff;
+    background: rgba(34, 211, 255, 0.12); border: 1px solid rgba(34, 211, 255, 0.3);
+    border-radius: 999px; padding: 2px 9px;
+  }
+  .round-pathway[hidden] { display: none; }
+  .round-speech { display: flex; align-items: center; gap: 14px; margin: 4px 0 8px; }
+  .round-avatar { flex: 0 0 auto; }
+  .round-question { margin: 0; font-size: 19px; line-height: 1.4; font-weight: 600; color: #f5efe6; }
+  .round-track {
+    margin: 0 0 6px; font-size: 13px; font-weight: 600;
+    letter-spacing: 0.04em; color: rgba(245, 241, 232, 0.6);
+  }
+  .round-vote { display: flex; align-items: center; gap: 14px; margin: 14px 0 4px; flex-wrap: wrap; }
+  .round-vote-btn {
+    position: relative; overflow: hidden; display: inline-flex; align-items: center; gap: 10px;
+    padding: 12px 22px; border-radius: 12px; border: 1px solid rgba(34, 211, 255, 0.45);
+    background: linear-gradient(180deg, rgba(34, 211, 255, 0.20), rgba(34, 211, 255, 0.10));
+    color: #eafaff; font-size: 15px; font-weight: 700; letter-spacing: 0.02em; cursor: pointer;
+    transition: transform .08s ease, box-shadow .15s ease, background .15s ease;
+  }
+  .round-vote-btn:hover {
+    background: linear-gradient(180deg, rgba(34, 211, 255, 0.30), rgba(34, 211, 255, 0.16));
+    box-shadow: 0 4px 18px rgba(34, 211, 255, 0.25);
+  }
+  .round-vote-btn:active { transform: translateY(1px); }
+  .round-vote-btn:disabled { opacity: .5; cursor: default; box-shadow: none; }
+  .round-vote-kbd { font-size: 12px; opacity: .7; border: 1px solid rgba(255, 255, 255, 0.25); border-radius: 5px; padding: 1px 6px; }
+  .round-skip { background: none; border: none; color: rgba(245, 241, 232, 0.45); font-size: 13px; cursor: pointer; text-decoration: underline; text-underline-offset: 3px; }
+  .round-skip:hover { color: rgba(245, 241, 232, 0.7); }
+  .round-why { margin: 10px 0 2px; }
+  .round-why > summary { cursor: pointer; font-size: 13px; color: rgba(245, 241, 232, 0.5); list-style: none; }
+  .round-why > summary::-webkit-details-marker { display: none; }
+  .round-why-caret { display: inline-block; transition: transform .15s ease; font-size: 10px; }
+  .round-why[open] .round-why-caret { transform: rotate(180deg); }
+  .round-note {
+    width: 100%; margin-top: 8px; box-sizing: border-box; background: rgba(0, 0, 0, 0.25);
+    border: 1px solid rgba(255, 255, 255, 0.12); border-radius: 8px; color: #f5efe6;
+    padding: 8px 10px; font: inherit; font-size: 14px; resize: vertical;
+  }
+  .round-note:focus { outline: none; border-color: rgba(34, 211, 255, 0.5); }
+  .round-reveal { margin: 12px 0 0; font-size: 14px; color: #9fe7ff; letter-spacing: 0.02em; }
+  .round-reveal[hidden] { display: none; }
+  .round-reveal-next { color: rgba(245, 241, 232, 0.5); }
+  .round-reveal-warn { color: #ff9d6b; }
+
+  /* ── Footer: the learning made visible ─────────────────────────────────── */
+  .round-footer {
+    position: sticky; bottom: 0; z-index: 5;
+    display: flex; align-items: center; justify-content: space-between; gap: 14px;
+    /* margin-top:auto pushes the footer to the bottom of the flex column on short
+       pages; keep the -16px side bleed + -28px bottom. (review #8) */
+    margin: auto -16px -28px; padding: 12px 20px;
+    background: linear-gradient(180deg, rgba(12, 14, 18, 0.6), rgba(12, 14, 18, 0.95));
+    -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px);
+    border-top: 1px solid rgba(34, 211, 255, 0.18); font-size: 14px;
+  }
+  .round-footer[hidden] { display: none; }
+  .round-footer-metric { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+  .round-footer-label { color: rgba(245, 241, 232, 0.7); letter-spacing: 0.03em; }
+  .round-footer-score { font-weight: 800; font-size: 18px; color: #f5efe6; font-variant-numeric: tabular-nums; }
+  .round-footer-trend { font-size: 12px; letter-spacing: 0.06em; text-transform: uppercase; padding: 2px 8px; border-radius: 999px; }
+  .round-footer-trend[data-trend="climbing"] { color: #7ef0a8; background: rgba(46, 196, 102, 0.14); }
+  .round-footer-trend[data-trend="flat"] { color: rgba(245, 241, 232, 0.6); background: rgba(255, 255, 255, 0.06); }
+  .round-footer-trend[data-trend="slipping"] { color: #ff9d6b; background: rgba(255, 120, 80, 0.14); }
+  .round-footer-secondary { color: rgba(245, 241, 232, 0.4); font-size: 12px; letter-spacing: 0.02em; }
+  .round-footer-secondary:empty { display: none; }
+  .round-footer-rounds { color: rgba(245, 241, 232, 0.4); font-size: 12px; letter-spacing: 0.06em; }
+
+  /* ── King-triage — compare crowned kings, keep one, prune the rest ─────── */
+  .kings-triage-btn {
+    margin-left: 12px; background: rgba(255, 200, 92, 0.10); border: 1px solid rgba(255, 200, 92, 0.32);
+    color: #ffe6a8; font-size: 12px; letter-spacing: 0.03em; border-radius: 999px; padding: 3px 11px; cursor: pointer;
+  }
+  .kings-triage-btn:hover { background: rgba(255, 200, 92, 0.18); }
+  .kings-triage-host[hidden] { display: none; }
+  .kings-triage {
+    margin: 4px 0 14px; padding: 14px 16px; border: 1px solid rgba(255, 200, 92, 0.25);
+    border-radius: 12px; background: rgba(255, 200, 92, 0.04);
+  }
+  .kings-triage-head { font-size: 13px; color: rgba(245, 241, 232, 0.65); margin-bottom: 12px; line-height: 1.45; }
+  .kings-triage-actions { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 12px; }
+  .kings-keep-btn {
+    background: rgba(255, 200, 92, 0.12); border: 1px solid rgba(255, 200, 92, 0.4);
+    color: #ffe6a8; font-weight: 700; font-size: 13px; border-radius: 9px; padding: 8px 16px; cursor: pointer;
+  }
+  .kings-keep-btn:hover { background: rgba(255, 200, 92, 0.22); }
+  .kings-keep-btn:disabled { opacity: .5; cursor: default; }
+  .kings-triage-reveal { margin-top: 12px; font-size: 13px; color: #ffe6a8; }
+  .kings-triage-reveal[hidden] { display: none; }
+  .kings-triage-blocked {
+    margin: 4px 0 0; font-size: 13px; color: #ff9d6b; line-height: 1.45;
+  }
 
   /* ── Uniform section headings across all three sections (Richard · Arena ·
         Records). One clean, professional style; the per-section h2 rules below
@@ -959,6 +975,41 @@ function stemSoloUrls(sf) {
     background: rgba(255, 200, 92, 0.13);
     border-color: rgba(255, 200, 92, 0.42);
     box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.14), 0 0 16px rgba(255, 200, 92, 0.22);
+  }
+  /* ── #2 Collapsible sections. The whole .section-head toggles its section;
+        the chevron hangs slightly into the left gutter. New names only (no
+        .winners-* reuse → no CSS cross-fire) and the handler never claims the
+        audio Stage. ── */
+  .engineer [data-collapsible] > .section-head {
+    cursor: pointer;
+    user-select: none;
+  }
+  .engineer .section-head .section-chevron-s {
+    flex-shrink: 0;
+    width: 12px;
+    margin-left: -22px;
+    text-align: center;
+    color: rgba(245, 241, 232, 0.5);
+    font-size: 11px;
+    transition: transform 160ms ease, color 160ms ease;
+    transform: rotate(90deg);
+  }
+  .engineer [data-collapsible] > .section-head:hover .section-chevron-s {
+    color: rgba(245, 241, 232, 0.85);
+  }
+  .engineer section[data-section-collapsed="true"] > .section-head .section-chevron-s {
+    transform: rotate(0deg);
+  }
+  .engineer section[data-section-collapsed="true"] > .section-head {
+    margin-bottom: 0;
+  }
+  .engineer section[data-section-collapsed="true"] > :not(.section-head) {
+    display: none !important;
+  }
+  .engineer [data-collapsible] > .section-head:focus-visible {
+    outline: 2px solid rgba(255, 200, 92, 0.5);
+    outline-offset: 4px;
+    border-radius: 6px;
   }
   /* Professional queue counter — a quiet monospace badge pinned to the far end
      of the Arena heading. Reads as metadata, not a loud chip. */
@@ -1447,6 +1498,11 @@ function stemSoloUrls(sf) {
     opacity: 0.78;
     pointer-events: none;
   }
+  /* Explicit attribute rules: the author display values above/below beat the UA
+     [hidden]{display:none}, so a toggled img/fallback only stayed hidden thanks
+     to the parent's overflow:hidden. Make hiding real. (review L4) */
+  .pair-waveform img[hidden] { display: none; }
+  .pair-waveform-fallback[hidden] { display: none; }
   .pair-waveform-fallback {
     display: flex;
     align-items: center;
@@ -2809,6 +2865,40 @@ function stemSoloUrls(sf) {
     transition: transform 160ms ease;
     font-size: 12px;
   }
+  /* #3 status badge — at-a-glance card state, pinned in the card head. */
+  .winners-status {
+    flex-shrink: 0;
+    margin-left: 10px;
+    padding: 3px 9px;
+    border-radius: 999px;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    white-space: nowrap;
+    border: 1px solid transparent;
+  }
+  .winners-status-voting { color: #cfe8ff; background: rgba(80, 160, 255, 0.12); border-color: rgba(80, 160, 255, 0.34); }
+  .winners-status-ready { color: #ffe6a8; background: rgba(255, 200, 92, 0.14); border-color: rgba(255, 200, 92, 0.42); }
+  .winners-status-kinground { color: #ffd9c2; background: rgba(255, 140, 92, 0.14); border-color: rgba(255, 140, 92, 0.40); }
+  .winners-status-crowned { color: #ffe6a8; background: rgba(255, 200, 92, 0.18); border-color: rgba(255, 200, 92, 0.50); }
+  .winners-status-published { color: #b8f5cf; background: rgba(72, 220, 140, 0.15); border-color: rgba(72, 220, 140, 0.45); }
+  .winners-status-original { color: #e8d9ff; background: rgba(180, 140, 255, 0.14); border-color: rgba(180, 140, 255, 0.40); }
+  /* #3 source sub-header — clusters a source's multiple kept kings under one label. */
+  .winners-source-header {
+    list-style: none;
+    margin: 18px 0 2px;
+    padding: 0 2px;
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+    font-size: 11px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: rgba(245, 241, 232, 0.62);
+  }
+  .winners-source-header-name { font-weight: 700; color: rgba(245, 241, 232, 0.82); }
+  .winners-source-header-count { color: rgba(245, 241, 232, 0.45); letter-spacing: 0.06em; }
   .winners-card .winners-source {
     /* Override the older h3-based heading style now that the title
        sits inside a button. */
@@ -3673,6 +3763,18 @@ function stemSoloUrls(sf) {
     // differentiates via the chose_original flag.
     const chosen = choice === "a" ? aId : choice === "b" ? bId : null;
     const comment = getComment(pair);
+    // Phase A: self-certifying vote metadata. Computed in-scope (no Block-A
+    // top-level consts). blindOrder + the loudness target are values the arena
+    // already derives (data-blind-order; applyLoudnessMatch) then discarded.
+    const blindOrder = (pair.dataset.blindOrder ?? "").split(",").filter(Boolean);
+    const lufsVals = [pair.dataset.aLufs, pair.dataset.bLufs, pair.dataset.sourceLufs]
+      .map((v) => (v == null || v === "" ? null : Number(v)))
+      .filter((x): x is number => x !== null && Number.isFinite(x));
+    const matchTarget = lufsVals.length >= 2 ? Math.min(...lufsVals) : null;
+    const role =
+      choice === "a" ? "a" : choice === "b" ? "b" : choice === "original" ? "o" : null;
+    const chosenSlot =
+      role && blindOrder.length ? blindOrder.indexOf(role) + 1 : null;
     setNowPlaying(pair, "recording…");
     const res = await fetch("/api/console/mix-judgement", {
       method: "POST",
@@ -3685,6 +3787,16 @@ function stemSoloUrls(sf) {
         chose_original: choice === "original",
         axis,
         comment: comment || null,
+        rater_id: "jon",
+        is_author: true,
+        blind: true,
+        loudness_matched: matchTarget !== null,
+        matched_target_lufs: matchTarget,
+        presented_order: blindOrder.length ? blindOrder.join(",") : null,
+        chosen_slot: chosenSlot,
+        codec: "wav",
+        catch_trial: false,
+        catch_correct: null,
       }),
     });
     if (!res.ok) {
@@ -5015,5 +5127,846 @@ function stemSoloUrls(sf) {
     });
 
     load();
+  })();
+</script>
+
+<script>
+  /* ── The Round + footer + king-triage (2026-06-10) ────────────────────────
+     The active-learning surface. One blind, loudness-matched comparison at a
+     time: listen → vote the better take → the next round auto-loads. Plus the
+     persistent footer (the learning made visible) and the inline king-triage
+     compare-and-prune player. All three share one loudness-match helper and join
+     the global Stage selector so only one player sounds at a time. Plain JS to
+     match the curiosity module; own scope (a stray name here can't kill the
+     dormant arena/winners controllers above). */
+  (() => {
+    // ── Shared loudness match: attenuate N takes to the quietest take's LUFS,
+    // so louder never wins. Same math the retired arena used, generalized past
+    // its 3 hardwired elements. Returns {target, matched}. Unity + matched:false
+    // when fewer than two takes carry a measured LUFS (older renders). ──────────
+    const LoudnessMatch = (window.__engLoudness = window.__engLoudness || {
+      apply(takes) {
+        const lufs = takes.map((t) =>
+          typeof t.lufs === "number" && isFinite(t.lufs) ? t.lufs : null,
+        );
+        const finite = lufs.filter((x) => x !== null);
+        const target = finite.length >= 2 ? Math.min.apply(null, finite) : null;
+        takes.forEach((t, i) => {
+          const L = lufs[i];
+          if (target === null || L === null) { t.audio.volume = 1; return; }
+          t.audio.volume = Math.min(1, Math.max(0, Math.pow(10, (target - L) / 20)));
+        });
+        // `matched` means EVERY take was actually attenuated — not just "some
+        // pair was." A null-LUFS take (e.g. the raw source, or an un-measured
+        // king) plays at unity and could win on level alone, so it must NOT be
+        // reported or recorded as a clean match. `partial` = matched the ones we
+        // could but at least one take is at an unknown level. (review C1)
+        const allFinite = takes.length >= 2 && finite.length === takes.length;
+        return {
+          target,
+          matched: target !== null && allFinite,
+          partial: target !== null && !allFinite,
+          matchedCount: finite.length,
+          total: takes.length,
+        };
+      },
+    });
+
+    const Stage = window.__engStage;
+    const assetUrl = (p) =>
+      p ? "/api/console/asset?path=" + encodeURIComponent(p) + "&variant=opus" : "";
+    const esc = (s) =>
+      String(s == null ? "" : s).replace(/[&<>"]/g, (c) =>
+        ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+    const fmt = (s) => {
+      if (!isFinite(s) || s < 0) s = 0;
+      const m = Math.floor(s / 60), ss = Math.floor(s % 60);
+      return m + ":" + (ss < 10 ? "0" : "") + ss;
+    };
+    // Defensive Fisher–Yates so presentation order never leaks identity, even if
+    // the engine sends takes in a fixed order.
+    const shuffle = (arr) => {
+      const a = arr.slice();
+      for (let i = a.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        const t = a[i]; a[i] = a[j]; a[j] = t;
+      }
+      return a;
+    };
+    const PATHWAY_LABEL = {
+      raw_vs_processed: "raw vs master",
+      section_dependence: "section test",
+      treatment_family: "family vs family",
+      champion_challenge: "challenger vs king",
+      defect_confirm: "defect check",
+    };
+
+    // ── Footer (the learning made visible) ──────────────────────────────────
+    const Footer = (() => {
+      const el = document.querySelector("[data-round-footer]");
+      if (!el) return { refresh() {} };
+      const labelEl = el.querySelector("[data-footer-label]");
+      const scoreEl = el.querySelector("[data-footer-score]");
+      const trendEl = el.querySelector("[data-footer-trend]");
+      const secondaryEl = el.querySelector("[data-footer-secondary]");
+      const roundsEl = el.querySelector("[data-footer-rounds]");
+      const TREND = { climbing: "climbing ↑", flat: "holding →", slipping: "slipping ↓" };
+      let timer = null;
+      async function refresh() {
+        let data = null;
+        try {
+          const r = await fetch("/api/console/mix-metrics", { headers: { accept: "application/json" } });
+          if (r.ok) data = await r.json();
+        } catch (e) {}
+        if (!data || data.unavailable || !data.headline) { el.hidden = true; return; }
+        const h = data.headline;
+        if (labelEl) labelEl.textContent = h.label;
+        if (scoreEl) scoreEl.textContent = h.num + "/" + h.den + " " + (h.unit || "");
+        if (trendEl) {
+          trendEl.textContent = TREND[h.trend] || "";
+          trendEl.dataset.trend = h.trend || "";
+        }
+        // Held-out headline is the hero; broader signals (e.g. "all tracks 18/25")
+        // ride along muted. The engine labels each one. (engine guidance #3)
+        if (secondaryEl) {
+          const sec = Array.isArray(data.secondary) ? data.secondary : [];
+          secondaryEl.textContent = sec.length
+            ? "· " + sec.map((s) => s.label + " " + s.num + "/" + s.den).join(" · ")
+            : "";
+        }
+        if (roundsEl) roundsEl.textContent =
+          data.rounds_done != null ? "round " + data.rounds_done + " · learning" : "";
+        el.hidden = false;
+      }
+      // Slow poll keeps the number live during a long session; the Round module
+      // also calls refresh() right after each vote for an instant tick.
+      function start() { if (!timer) timer = setInterval(refresh, 30000); }
+      window.__engFooterRefresh = refresh;
+      refresh(); start();
+      return { refresh };
+    })();
+
+    // ── The Round player ────────────────────────────────────────────────────
+    (() => {
+      const SECTION = "round";
+      const wrap = document.querySelector("[data-round-wrap]");
+      const root = document.querySelector("[data-round]");
+      const thinking = document.querySelector("[data-round-thinking]");
+      const emptyEl = document.querySelector("[data-round-empty]");
+      if (!wrap || !root) return;
+      const indexEl = root.querySelector("[data-round-index]");
+      const pathwayEl = root.querySelector("[data-round-pathway]");
+      const framingEl = root.querySelector("[data-round-framing-text]");
+      const trackEl = root.querySelector("[data-round-track]");
+      const waveEl = root.querySelector("[data-round-wave]");
+      const waveImg = root.querySelector("[data-round-waveimg]");
+      const waveFallback = root.querySelector("[data-round-wavefallback]");
+      const playhead = root.querySelector("[data-round-playhead]");
+      const timeEl = root.querySelector("[data-round-time]");
+      const takesEl = root.querySelector("[data-round-takes]");
+      const loudnessEl = root.querySelector("[data-round-loudness]");
+      const toggleBtn = root.querySelector("[data-round-toggle]");
+      const voteBtn = root.querySelector("[data-round-vote-current]");
+      const skipBtn = root.querySelector("[data-round-skip-q]");
+      const noteEl = root.querySelector("[data-round-note]");
+      const revealEl = root.querySelector("[data-round-reveal]");
+      const claim = () => { if (Stage) Stage.claim(SECTION); };
+
+      let round = null;
+      let takes = [];          // [{ take_id, reveal, audio, lufs, chip, n }]
+      let order = [];          // take_ids in presented order
+      let activeIndex = 0;
+      let rafId = null;
+      let voting = false;
+      let roundMatched = false; // true only when ALL takes are loudness-matched
+      let pollTimer = null;
+      let loading = false;      // single-flight latch for load() (review #2)
+      const HOLD_MS = 650;
+
+      const active = () => (takes[activeIndex] ? takes[activeIndex].audio : null);
+
+      function silence() {
+        const a = active();
+        if (a && !a.paused) a.pause();
+        renderState();
+      }
+      if (Stage) Stage.register(SECTION, silence);
+
+      function renderState() {
+        const a = active();
+        takes.forEach((t, i) => {
+          const on = i === activeIndex;
+          t.chip.classList.toggle("ab-side-active", on);
+          if (on) t.chip.removeAttribute("data-dim");
+          else t.chip.setAttribute("data-dim", "true");
+        });
+        if (toggleBtn) toggleBtn.dataset.state = a && !a.paused ? "playing" : "paused";
+        if (timeEl) {
+          const dur = a ? a.duration : 0;
+          timeEl.textContent = fmt(a ? a.currentTime : 0) + " / " + (dur && isFinite(dur) ? fmt(dur) : "—:—");
+        }
+        if (playhead && a) {
+          const dur = a.duration;
+          const frac = dur && a.currentTime > 0 ? Math.max(0, Math.min(1, a.currentTime / dur)) : 0;
+          playhead.style.left = frac * 100 + "%";
+          playhead.removeAttribute("hidden");
+        }
+      }
+      function tick() {
+        renderState();
+        const a = active();
+        if (!a || a.paused) { rafId = null; return; }
+        rafId = requestAnimationFrame(tick);
+      }
+      function startTick() { if (rafId == null) rafId = requestAnimationFrame(tick); }
+
+      // Switch to take i, carrying the playhead — the sync'd-compare swap.
+      function swapTo(i, play) {
+        if (i < 0 || i >= takes.length) return;
+        const prev = active();
+        const t = prev ? prev.currentTime : 0;
+        if (prev && !prev.paused) prev.pause();
+        activeIndex = i;
+        const next = active();
+        if (next) {
+          try { next.currentTime = t; } catch (e) {}
+          // If the target take hasn't loaded its metadata yet, currentTime may not
+          // stick — re-apply once it does so the playhead truly carries. (review H6)
+          if (!next.readyState || !isFinite(next.duration)) {
+            const restore = () => { try { next.currentTime = t; } catch (e) {} };
+            next.addEventListener("loadedmetadata", restore, { once: true });
+          }
+        }
+        if (play && next) { claim(); next.play().then(startTick).catch(() => {}); }
+        renderState();
+      }
+      function toggle() {
+        const a = active();
+        if (!a) return;
+        if (a.paused) { claim(); a.play().then(startTick).catch(() => {}); }
+        else a.pause();
+        renderState();
+      }
+      function seekFrac(frac) {
+        const a = active();
+        if (!a || !a.duration || !isFinite(a.duration)) return;
+        const nt = frac * a.duration;
+        takes.forEach((t) => { try { t.audio.currentTime = nt; } catch (e) {} });
+        renderState();
+      }
+      function skip(delta) {
+        const a = active();
+        if (!a) return;
+        const nt = Math.max(0, a.currentTime + delta);
+        takes.forEach((t) => { try { t.audio.currentTime = nt; } catch (e) {} });
+        renderState();
+      }
+
+      function teardown() {
+        takes.forEach((t) => {
+          try { t.audio.pause(); t.audio.removeAttribute("src"); t.audio.load(); } catch (e) {}
+        });
+        takes = [];
+        order = [];
+        activeIndex = 0;
+        if (takesEl) takesEl.innerHTML = "";
+        if (rafId != null) { cancelAnimationFrame(rafId); rafId = null; }
+      }
+
+      // Hold-to-vote on a chip (650ms) mirrors the arena's hold mechanic.
+      function bindHold(chip, idx) {
+        let timer = null;
+        const startHold = () => {
+          if (voting) return;
+          chip.setAttribute("data-holding", "true");
+          timer = window.setTimeout(() => {
+            timer = null;
+            chip.removeAttribute("data-holding");
+            castVote(idx);
+          }, HOLD_MS);
+        };
+        const cancel = () => {
+          if (timer != null) { clearTimeout(timer); timer = null; }
+          chip.removeAttribute("data-holding");
+        };
+        chip.addEventListener("pointerdown", (e) => { e.preventDefault(); claim(); startHold(); });
+        chip.addEventListener("pointerup", () => {
+          const wasHolding = timer != null;
+          cancel();
+          // A short press (released before the bar fills) is an audition switch.
+          if (wasHolding) { if (idx === activeIndex) toggle(); else swapTo(idx, true); }
+        });
+        chip.addEventListener("pointerleave", cancel);
+        chip.addEventListener("pointercancel", cancel);
+      }
+
+      function buildTakes() {
+        teardown();
+        const matchSet = [];
+        // Presented order — defensively shuffled so order never leaks identity.
+        order = shuffle(round.takes.map((t) => t.take_id));
+        const byId = {};
+        round.takes.forEach((t) => { byId[t.take_id] = t; });
+        order.forEach((take_id) => {
+          const t = byId[take_id];
+          const url = assetUrl(t.asset_path);
+          if (!url) return;
+          const n = takes.length + 1;
+          const audio = new Audio();
+          audio.preload = "auto";
+          audio.src = url;
+          const chip = document.createElement("button");
+          chip.type = "button";
+          chip.className = "ab-side ab-side-blind";
+          chip.title = "Tap to audition · hold to vote this take";
+          chip.innerHTML = '<span class="hold-fill" aria-hidden="true"></span><span class="ab-key">' + n + "</span>";
+          takesEl.appendChild(chip);
+          const idx = takes.length;
+          const entry = { take_id, reveal: t.reveal || {}, audio, lufs: t.output_lufs, chip, n };
+          takes.push(entry);
+          matchSet.push(entry);
+          bindHold(chip, idx);
+          audio.addEventListener("timeupdate", () => {
+            if (takes[activeIndex] && takes[activeIndex].audio === audio) {
+              renderState();
+              if (rafId == null && !audio.paused) startTick();
+            }
+          });
+          audio.addEventListener("playing", () => {
+            if (takes[activeIndex] && takes[activeIndex].audio === audio) { claim(); startTick(); }
+          });
+          audio.addEventListener("ended", () => {
+            if (takes[activeIndex] && takes[activeIndex].audio === audio) renderState();
+          });
+          // The round loads paused; without this the duration half of the clock
+          // stays "—:—" until first play (fresh Audio has duration=NaN). (review #4)
+          audio.addEventListener("loadedmetadata", () => {
+            if (takes[activeIndex] && takes[activeIndex].audio === audio) renderState();
+          });
+        });
+        // Loudness-match across all takes; confirm without leaking per-take levels.
+        const res = LoudnessMatch.apply(matchSet);
+        // Invariant #1 parity with king-triage: a vote is only allowed when EVERY
+        // take is level-matched. If one take would play at unity it could win on
+        // loudness, so we steer to Skip rather than record a level-biased vote.
+        // (The round contract requires per-take output_lufs, so this is a defensive
+        // guard that rarely fires.) (review #5)
+        roundMatched = res.matched;
+        if (voteBtn) voteBtn.disabled = !res.matched;
+        if (loudnessEl) {
+          loudnessEl.textContent = res.matched
+            ? "🔊 all " + res.total + " takes level-matched to " + res.target.toFixed(1) + " LUFS — vote on tone, not loudness"
+            : res.partial
+              ? "⚠️ only " + res.matchedCount + " of " + res.total + " takes carry a measured level — the rest play at unity, so skip this round"
+              : "loudness match unavailable on these renders — skip this round";
+        }
+        activeIndex = 0;
+        renderState();
+      }
+
+      function setWave() {
+        const sha = round.source && round.source.waveform_sha1;
+        if (sha && waveImg) {
+          waveImg.src = "/api/console/waveform?sha1=" + sha;
+          waveImg.hidden = false;
+          if (waveFallback) waveFallback.hidden = true;
+        } else {
+          if (waveImg) waveImg.hidden = true;
+          if (waveFallback) waveFallback.hidden = false;
+        }
+      }
+
+      function render(r) {
+        round = r;
+        voting = false;
+        if (indexEl) indexEl.textContent = "Round " + (r.round_index != null ? r.round_index : "—");
+        if (pathwayEl) {
+          // pathway_type is an OPEN string — the catalog grows past the known set.
+          // Render a known label, else a humanized default chip; never hide on an
+          // unknown type and never let it affect voting. (engine guidance #5)
+          const lbl = PATHWAY_LABEL[r.pathway_type] ||
+            (r.pathway_type ? String(r.pathway_type).replace(/_/g, " ") : "");
+          if (lbl) { pathwayEl.textContent = lbl; pathwayEl.hidden = false; }
+          else pathwayEl.hidden = true;
+        }
+        if (framingEl) framingEl.textContent = r.framing || "Which take sounds better?";
+        if (trackEl) trackEl.textContent = (r.source && r.source.display_name) || "this track";
+        if (revealEl) { revealEl.hidden = true; revealEl.textContent = ""; }
+        if (noteEl) noteEl.value = "";
+        if (voteBtn) voteBtn.disabled = false;
+        setWave();
+        buildTakes();
+        if (emptyEl) emptyEl.hidden = true;
+        if (thinking) thinking.hidden = true;
+        root.hidden = false;
+        wrap.hidden = false;
+      }
+
+      async function castVote(idx) {
+        if (voting || !round || !takes[idx]) return;
+        // Don't record a vote on an un-level-matched round (keyboard Enter / hold
+        // can reach here even though the button is disabled). (review #5)
+        if (!roundMatched) return;
+        voting = true;
+        if (voteBtn) voteBtn.disabled = true;
+        for (const t of takes) { try { t.audio.pause(); } catch (e) {} }
+        const chosen = takes[idx];
+        // A round must carry its source id or the vote can't be recorded — the
+        // proxy 400s on a non-finite source_asset_id and we'd silently drop the
+        // training signal. Bail visibly instead of losing the vote. (review M2)
+        const srcId =
+          round.source && typeof round.source.asset_id === "number" ? round.source.asset_id : null;
+        if (srcId == null) {
+          if (revealEl) {
+            revealEl.innerHTML = '<span class="round-reveal-warn">this round is missing its source id — can’t record the vote</span>';
+            revealEl.hidden = false;
+          }
+          voting = false;
+          if (voteBtn) voteBtn.disabled = false;
+          return;
+        }
+        const res = LoudnessMatch.apply(takes); // recompute target for the record
+        // Best-effort legacy mapping for 2-take rounds (engine also resolves via round_id).
+        const vidOf = (t) => (t && t.reveal && typeof t.reveal.variant_id === "number" ? t.reveal.variant_id : null);
+        // "Is this the raw source?" keys on IDENTITY only — a master can carry a
+        // null variant_id, and conflating that with the source would mislabel it
+        // as chose_original in the training signal. (review M1)
+        const isSource = (t) => !!(t && t.reveal && t.reveal.kind === "source");
+        const body = {
+          round_id: round.round_id,
+          pathway_type: round.pathway_type,
+          source_asset_id: srcId,
+          // The RENDERED takes, in shown order — a no-URL take is dropped from
+          // `takes` but would still sit in `order`, desyncing chosen_slot. (review H3)
+          presented_order: takes.map((t) => t.take_id).join(","),
+          chosen_take_id: chosen.take_id,
+          is_skip: false,
+          blind: true,
+          loudness_matched: res.matched,
+          matched_target_lufs: res.matched ? res.target : null,
+          chosen_slot: idx + 1,
+          comment: noteEl && noteEl.value.trim() ? noteEl.value.trim() : null,
+          rater_id: "jon",
+          is_author: true,
+          codec: "opus",
+          variant_a_id: takes[0] ? vidOf(takes[0]) : null,
+          variant_b_id: takes[1] ? vidOf(takes[1]) : null,
+          chosen_variant_id: vidOf(chosen),
+          chose_original: isSource(chosen),
+        };
+        let ok = false;
+        try {
+          const r = await fetch("/api/console/mix-round-vote", {
+            method: "POST",
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify(body),
+          });
+          ok = r.ok;
+        } catch (e) {}
+        // The converging-game reveal — ONLY on success. On failure the takes stay
+        // blind (numbered, unlabeled) so the re-vote is still a genuine blind vote,
+        // not one made after seeing the identities. (review H4)
+        if (revealEl) {
+          if (ok) {
+            const parts = takes.map((t, i) => {
+              const lab = (t.reveal && t.reveal.label) || (isSource(t) ? "your raw" : "master");
+              return (i + 1) + " = " + esc(lab) + (i === idx ? " ✓" : "");
+            });
+            revealEl.innerHTML = parts.join("  ·  ") + '<span class="round-reveal-next"> — next round…</span>';
+          } else {
+            revealEl.innerHTML = '<span class="round-reveal-warn">couldn’t reach the Engineer — try again</span>';
+          }
+          revealEl.hidden = false;
+        }
+        if (ok && window.__engFooterRefresh) window.__engFooterRefresh();
+        // Auto-advance to the next round.
+        setTimeout(() => { if (ok) load(); else { voting = false; if (voteBtn) voteBtn.disabled = false; } }, ok ? 1700 : 0);
+      }
+
+      async function doSkip() {
+        // Share the in-flight latch with castVote so a round can't be voted AND
+        // skipped (two contradictory signals on one round_id). (review H2)
+        if (voting || !round) return;
+        voting = true;
+        const id = round.round_id;
+        if (skipBtn) skipBtn.disabled = true;
+        for (const t of takes) { try { t.audio.pause(); } catch (e) {} }
+        try {
+          await fetch("/api/console/mix-round-skip", {
+            method: "POST", headers: { "content-type": "application/json" },
+            body: JSON.stringify({ round_id: id }),
+          });
+        } catch (e) {}
+        if (skipBtn) skipBtn.disabled = false;
+        load(); // load() → render() resets `voting` once the next round is built
+      }
+
+      // Transport wiring.
+      if (toggleBtn) toggleBtn.addEventListener("click", () => { claim(); toggle(); });
+      root.querySelectorAll("[data-round-skip]").forEach((b) =>
+        b.addEventListener("click", () => { claim(); skip(Number(b.getAttribute("data-round-skip"))); }));
+      if (waveEl) waveEl.addEventListener("click", (e) => {
+        const rect = waveEl.getBoundingClientRect();
+        claim();
+        seekFrac(Math.min(1, Math.max(0, (e.clientX - rect.left) / rect.width)));
+      });
+      if (voteBtn) voteBtn.addEventListener("click", () => castVote(activeIndex));
+      if (skipBtn) skipBtn.addEventListener("click", doSkip);
+
+      document.addEventListener("keydown", (e) => {
+        const tag = (document.activeElement && document.activeElement.tagName || "").toLowerCase();
+        if (tag === "input" || tag === "textarea") return;
+        if (!Stage || Stage.active !== SECTION) return;
+        if (root.hidden || voting) return;
+        const k = e.key;
+        if (/^[1-9]$/.test(k)) { const i = Number(k) - 1; if (i < takes.length) { e.preventDefault(); swapTo(i, true); } }
+        else if (k === " ") { e.preventDefault(); toggle(); }
+        else if (k === "ArrowLeft") { e.preventDefault(); skip(-10); }
+        else if (k === "ArrowRight") { e.preventDefault(); skip(10); }
+        else if (k === "ArrowUp") { e.preventDefault(); swapTo(Math.max(0, activeIndex - 1), true); }
+        else if (k === "ArrowDown") { e.preventDefault(); swapTo(Math.min(takes.length - 1, activeIndex + 1), true); }
+        else if (k === "Enter") { e.preventDefault(); castVote(activeIndex); }
+        else if (k === "Escape") { e.preventDefault(); doSkip(); }
+      });
+
+      async function fetchOnce() {
+        if (window.__ENG_MOCK_ROUND__) return window.__ENG_MOCK_ROUND__;
+        try {
+          const r = await fetch("/api/console/mix-round", { headers: { accept: "application/json" } });
+          if (!r.ok) return { status: "none" };
+          return await r.json();
+        } catch (e) { return { status: "none" }; }
+      }
+      async function load() {
+        // Single-flight: the 3.5s poll can fire again while a prior load()'s GET
+        // (up to 8s) is still in flight; a late resolver would teardown + rebuild a
+        // round the curator is mid-audition. Latch it. (review #2)
+        if (loading) return;
+        loading = true;
+        // Do NOT clear `voting` here: the just-voted round is still on screen
+        // during the await below, and clearing the latch early reopens a
+        // double-vote window on the same round_id. render() resets `voting` only
+        // after the NEXT round is built; the non-round branches reset it once the
+        // card is torn down (non-votable). (review H1)
+        try {
+          const data = await fetchOnce();
+          if (data && data.status === "ready" && data.round) {
+            // Same round already on screen → don't rebuild (would cut audio). (review #2)
+            if (round && data.round.round_id === round.round_id) { stopPoll(); return; }
+            stopPoll(); render(data.round);
+          } else if (data && data.status === "thinking") {
+            voting = false;
+            teardown(); wrap.hidden = false; root.hidden = true;
+            if (emptyEl) emptyEl.hidden = true;
+            if (thinking) thinking.hidden = false;
+            // Honor the engine's retry_after_s (framing-line synthesis takes
+            // 10–60s; engine sends ~6s), else fall back to 3.5s. (engine guidance #6)
+            const wait = typeof data.retry_after_s === "number" && data.retry_after_s > 0
+              ? data.retry_after_s * 1000 : 3500;
+            scheduleNext(wait);
+          } else {
+            voting = false;
+            stopPoll(); teardown(); root.hidden = true;
+            if (thinking) thinking.hidden = true;
+            if (emptyEl) emptyEl.hidden = false;
+            wrap.hidden = false;
+          }
+        } finally {
+          loading = false;
+        }
+      }
+      // Self-scheduling single poll (setTimeout, not setInterval) so each
+      // thinking response can set its own retry delay. (engine guidance #6)
+      function scheduleNext(ms) { stopPoll(); pollTimer = setTimeout(load, ms); }
+      function stopPoll() { if (pollTimer) { clearTimeout(pollTimer); pollTimer = null; } }
+
+      load();
+    })();
+
+    // ── King-triage: compare every crowned king for a track, keep one, prune ──
+    (() => {
+      const dataEl = document.querySelector("[data-triage-data]");
+      if (!dataEl) return;
+      let TRIAGE = {};
+      try { TRIAGE = JSON.parse(dataEl.textContent || "{}"); } catch (e) { TRIAGE = {}; }
+      const SECTION = "triage";
+      let cur = null; // { srcId, host, takes, activeIndex, rafId }
+
+      function teardown() {
+        if (!cur) return;
+        try { if (cur._stop) cur._stop(); } catch (e) {}
+        (cur.takes || []).forEach((t) => {
+          try { t.audio.pause(); t.audio.removeAttribute("src"); t.audio.load(); } catch (e) {}
+        });
+        if (cur.host) { cur.host.innerHTML = ""; cur.host.hidden = true; }
+        cur = null;
+      }
+      if (Stage) Stage.register(SECTION, () => { if (cur) (cur.takes || []).forEach((t) => { try { t.audio.pause(); } catch (e) {} }); });
+
+      function fmt2(s) {
+        if (!isFinite(s) || s < 0) s = 0;
+        const m = Math.floor(s / 60), ss = Math.floor(s % 60);
+        return m + ":" + (ss < 10 ? "0" : "") + ss;
+      }
+
+      function open(srcId) {
+        const host = document.querySelector('[data-triage-host="' + srcId + '"]');
+        const info = TRIAGE[srcId];
+        if (!host || !info) return;
+        if (cur && cur.srcId === srcId) { teardown(); return; } // toggle closed
+        teardown();
+        if (Stage) Stage.claim(SECTION);
+
+        // Blind, shuffled presentation — kings have known identities, so we hide
+        // them behind numbers and reveal after the keep decision.
+        const present = info.kings.map((k, i) => ({ k, origIndex: i }));
+        for (let i = present.length - 1; i > 0; i--) {
+          const j = Math.floor(Math.random() * (i + 1)); const t = present[i]; present[i] = present[j]; present[j] = t;
+        }
+        host.hidden = false;
+        host.innerHTML =
+          '<div class="kings-triage">' +
+            '<div class="kings-triage-head">Compare blind — ' + present.length + ' kings, level-matched. ' +
+              '1–' + present.length + ' / ↑↓ switch mid-play. Keep one, the rest are uncrowned.</div>' +
+            '<div class="pair-stage">' +
+              '<div class="pair-transport">' +
+                '<button class="transport-btn" data-kt-skip="-10" aria-label="Back 10s">⏮</button>' +
+                '<button class="transport-btn transport-play" data-kt-toggle data-state="paused" aria-label="Play / pause"></button>' +
+                '<button class="transport-btn" data-kt-skip="10" aria-label="Forward 10s">⏭</button>' +
+                '<span class="pair-time" data-kt-time aria-hidden="true">0:00 / —:—</span>' +
+                '<div class="ab-switch" data-kt-takes role="group"></div>' +
+              '</div>' +
+              '<div class="pair-loudness" data-kt-loud></div>' +
+            '</div>' +
+            '<div class="kings-triage-actions" data-kt-actions></div>' +
+            '<p class="kings-triage-reveal" data-kt-reveal hidden></p>' +
+          '</div>';
+
+        const takesEl = host.querySelector("[data-kt-takes]");
+        const timeEl = host.querySelector("[data-kt-time]");
+        const loudEl = host.querySelector("[data-kt-loud]");
+        const toggleBtn = host.querySelector("[data-kt-toggle]");
+        const actionsEl = host.querySelector("[data-kt-actions]");
+        const revealEl = host.querySelector("[data-kt-reveal]");
+
+        const takes = [];
+        let activeIndex = 0, rafId = null;
+        const active = () => (takes[activeIndex] ? takes[activeIndex].audio : null);
+        const claim = () => { if (Stage) Stage.claim(SECTION); };
+
+        function renderState() {
+          const a = active();
+          takes.forEach((t, i) => {
+            const on = i === activeIndex;
+            t.chip.classList.toggle("ab-side-active", on);
+            if (on) t.chip.removeAttribute("data-dim"); else t.chip.setAttribute("data-dim", "true");
+          });
+          if (toggleBtn) toggleBtn.dataset.state = a && !a.paused ? "playing" : "paused";
+          if (timeEl) {
+            const dur = a ? a.duration : 0;
+            timeEl.textContent = fmt2(a ? a.currentTime : 0) + " / " + (dur && isFinite(dur) ? fmt2(dur) : "—:—");
+          }
+        }
+        function tick() { renderState(); const a = active(); if (!a || a.paused) { rafId = null; return; } rafId = requestAnimationFrame(tick); }
+        function startTick() { if (rafId == null) rafId = requestAnimationFrame(tick); }
+        function swapTo(i, play) {
+          if (i < 0 || i >= takes.length) return;
+          const prev = active(); const t = prev ? prev.currentTime : 0;
+          if (prev && !prev.paused) prev.pause();
+          activeIndex = i;
+          const next = active();
+          if (next) {
+            try { next.currentTime = t; } catch (e) {}
+            // Re-apply once metadata loads so the playhead carries. (review H7)
+            if (!next.readyState || !isFinite(next.duration)) {
+              const restore = () => { try { next.currentTime = t; } catch (e) {} };
+              next.addEventListener("loadedmetadata", restore, { once: true });
+            }
+          }
+          if (play && next) { claim(); next.play().then(startTick).catch(() => {}); }
+          renderState();
+        }
+        function toggle() { const a = active(); if (!a) return; if (a.paused) { claim(); a.play().then(startTick).catch(() => {}); } else a.pause(); renderState(); }
+        function skip(d) { const a = active(); if (!a) return; const nt = Math.max(0, a.currentTime + d); takes.forEach((t) => { try { t.audio.currentTime = nt; } catch (e) {} }); renderState(); }
+
+        const matchSet = [];
+        present.forEach((p, n) => {
+          const url = p.k.asset_path ? "/api/console/asset?path=" + encodeURIComponent(p.k.asset_path) + "&variant=opus" : "";
+          const audio = new Audio(); audio.preload = "auto"; if (url) audio.src = url;
+          const chip = document.createElement("button");
+          chip.type = "button"; chip.className = "ab-side ab-side-blind";
+          chip.innerHTML = '<span class="ab-key">' + (n + 1) + "</span>";
+          takesEl.appendChild(chip);
+          const idx = takes.length;
+          const entry = { audio, lufs: p.k.output_lufs, chip, king: p.k };
+          takes.push(entry); matchSet.push(entry);
+          chip.addEventListener("click", () => { claim(); if (idx === activeIndex) toggle(); else swapTo(idx, true); });
+          audio.addEventListener("timeupdate", () => { if (takes[activeIndex] && takes[activeIndex].audio === audio) { renderState(); if (rafId == null && !audio.paused) startTick(); } });
+          // Paint the duration before first play (fresh Audio = NaN duration). (review #4)
+          audio.addEventListener("loadedmetadata", () => { if (takes[activeIndex] && takes[activeIndex].audio === audio) renderState(); });
+        });
+        const res = LoudnessMatch.apply(matchSet);
+        if (loudEl) loudEl.textContent = res.matched
+          ? "🔊 level-matched to " + res.target.toFixed(1) + " LUFS"
+          : res.partial
+            ? "⚠️ only " + res.matchedCount + " of " + res.total + " kings carry a measured level — the rest play at unity and may sound louder"
+            : "level match unavailable — re-render kings to enable";
+
+        // The prune is IRREVERSIBLE, so only allow it when EVERY king is actually
+        // level-matched — never let a keep/prune be decided on a take that's louder
+        // by accident (would violate invariant #1 on a destructive action). When
+        // not fully matched, replace the keep buttons with a note. (review C1b)
+        if (res.matched) {
+          present.forEach((p, n) => {
+            const b = document.createElement("button");
+            b.type = "button"; b.className = "kings-keep-btn";
+            b.textContent = "keep #" + (n + 1);
+            b.addEventListener("click", () => keep(srcId, present, p, host, revealEl, actionsEl, res));
+            actionsEl.appendChild(b);
+          });
+        } else {
+          const note = document.createElement("p");
+          note.className = "kings-triage-blocked";
+          // An ORIGINAL/source king is leveled by source_lufs, which can't be
+          // produced by re-rendering (the raw source isn't rendered). Tell the
+          // truth instead of an impossible "re-render" instruction. (review #3)
+          const unmeasuredSource = present.some(
+            (p) => p.k.kind === "source" &&
+              !(typeof p.k.output_lufs === "number" && isFinite(p.k.output_lufs)),
+          );
+          note.textContent = unmeasuredSource
+            ? "Pruning is disabled: this track's ORIGINAL crown was never level-measured. The raw source can't be re-rendered — the engine needs to record its integrated LUFS before these crowns can be compared."
+            : "Pruning is disabled until every king carries a measured level — re-render so the compare is truly loudness-matched.";
+          actionsEl.appendChild(note);
+        }
+
+        if (toggleBtn) toggleBtn.addEventListener("click", () => { claim(); toggle(); });
+        host.querySelectorAll("[data-kt-skip]").forEach((bb) => bb.addEventListener("click", () => { claim(); skip(Number(bb.getAttribute("data-kt-skip"))); }));
+
+        // Keyboard while this triage owns the Stage.
+        const onKey = (e) => {
+          if (!cur || cur.srcId !== srcId) return;
+          if (!Stage || Stage.active !== SECTION) return;
+          const tag = (document.activeElement && document.activeElement.tagName || "").toLowerCase();
+          if (tag === "input" || tag === "textarea") return;
+          const k = e.key;
+          if (/^[1-9]$/.test(k)) { const i = Number(k) - 1; if (i < takes.length) { e.preventDefault(); swapTo(i, true); } }
+          else if (k === " ") { e.preventDefault(); toggle(); }
+          else if (k === "ArrowUp") { e.preventDefault(); swapTo(Math.max(0, activeIndex - 1), true); }
+          else if (k === "ArrowDown") { e.preventDefault(); swapTo(Math.min(takes.length - 1, activeIndex + 1), true); }
+          else if (k === "ArrowLeft") { e.preventDefault(); skip(-10); }
+          else if (k === "ArrowRight") { e.preventDefault(); skip(10); }
+        };
+        document.addEventListener("keydown", onKey);
+
+        cur = {
+          srcId, host, takes,
+          _stop: () => { if (rafId != null) cancelAnimationFrame(rafId); document.removeEventListener("keydown", onKey); },
+        };
+        renderState();
+      }
+
+      async function keep(srcId, present, keepP, host, revealEl, actionsEl, res) {
+        // Two things happen here:
+        //  1. Record the blind, level-matched N-way preference as a decision-grade
+        //     signal (review H5) — this comparison is real training data, not just
+        //     curation. It posts to /mix/triage-judgement (CONTRACT ASK: a new
+        //     engine route that records the cross-job preference). Best-effort: if
+        //     the route isn't built yet it fails quietly and the prune still runs,
+        //     so we never block Jon's pruning on an in-flight engine change.
+        //  2. Uncrown every OTHER king (each is its own job) so only the kept one
+        //     stays crowned — identical shape to the existing per-job uncrown.
+        const losers = present.filter((p) => p !== keepP);
+        if (revealEl) {
+          revealEl.hidden = false;
+          revealEl.innerHTML = "Keeping <strong>" + (keepP.k.label || "this king") + "</strong> — uncrowning " + losers.length + " other" + (losers.length === 1 ? "" : "s") + "…";
+        }
+        actionsEl.querySelectorAll("button").forEach((b) => (b.disabled = true));
+
+        // 1. Decision-grade record (best-effort, non-blocking).
+        try {
+          await fetch("/api/console/mix-triage-judgement", {
+            method: "POST", headers: { "content-type": "application/json" },
+            body: JSON.stringify({
+              source_asset_id: srcId,
+              kept_job_id: keepP.k.job_id,
+              presented_order: present.map((p) => p.k.job_id).join(","),
+              chosen_slot: present.indexOf(keepP) + 1,
+              blind: true,
+              loudness_matched: !!(res && res.matched),
+              matched_target_lufs: res && res.matched ? res.target : null,
+              rater_id: "jon",
+              is_author: true,
+            }),
+          });
+        } catch (e) {}
+
+        // 2. Uncrown the losers, counting failures so a failed clear doesn't
+        //    leave a stale king crowned behind a misleading reload. (review M3)
+        let failed = 0;
+        for (const p of losers) {
+          try {
+            const r = await fetch("/api/console/mix-champion", {
+              method: "POST", headers: { "content-type": "application/json" },
+              body: JSON.stringify({ job_id: p.k.job_id, variant_id: null }),
+            });
+            if (!r.ok) failed++;
+          } catch (e) { failed++; }
+        }
+        if (failed > 0) {
+          if (revealEl) revealEl.innerHTML =
+            "Couldn't uncrown " + failed + " king" + (failed === 1 ? "" : "s") + " — try again.";
+          actionsEl.querySelectorAll("button").forEach((b) => (b.disabled = false));
+          return;
+        }
+        // Reload so Records re-renders with the pruned king list.
+        setTimeout(() => window.location.reload(), 700);
+      }
+
+      document.querySelectorAll("[data-triage-open]").forEach((btn) => {
+        btn.addEventListener("click", () => open(Number(btn.getAttribute("data-triage-open"))));
+      });
+    })();
+  })();
+</script>
+
+<script>
+  // #2 Collapsible Engineer sections. Isolated module (NOT the Block-A
+  // pair/winners controller) so a stray top-level name can't silently kill
+  // the arena/winners JS. Persists per-section collapse so it survives the
+  // reload-on-every-action flow. Never touches the audio Stage.
+  (() => {
+    const KEY = "engineer:sections:collapsed:v1";
+    let saved = {};
+    try { saved = JSON.parse(localStorage.getItem(KEY) || "{}"); } catch (e) {}
+    const sections = Array.from(
+      document.querySelectorAll("[data-collapsible][data-section-key]"),
+    );
+    const persist = () => {
+      const state = {};
+      for (const s of sections) {
+        state[s.dataset.sectionKey] = s.dataset.sectionCollapsed === "true";
+      }
+      try { localStorage.setItem(KEY, JSON.stringify(state)); } catch (e) {}
+    };
+    const set = (section, collapsed) => {
+      section.dataset.sectionCollapsed = collapsed ? "true" : "false";
+      const head = section.querySelector("[data-section-toggle]");
+      if (head) head.setAttribute("aria-expanded", collapsed ? "false" : "true");
+    };
+    for (const section of sections) {
+      const key = section.dataset.sectionKey;
+      if (key in saved) set(section, !!saved[key]);
+      const head = section.querySelector("[data-section-toggle]");
+      if (!head) continue;
+      const toggle = () => {
+        set(section, section.dataset.sectionCollapsed !== "true");
+        persist();
+      };
+      head.addEventListener("click", toggle);
+      head.addEventListener("keydown", (e) => {
+        if (e.key === "Enter" || e.key === " ") { e.preventDefault(); toggle(); }
+      });
+    }
   })();
 </script>
