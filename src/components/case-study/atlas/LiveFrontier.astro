@@ -1,17 +1,42 @@
 ---
-// ROUND 05 — THE LIVE FRONTIER (the honest closer).
+// ROUND 05 — THE LIVE FRONTIER (the honest closer, rebuilt 2026-06-11).
 //
-// The last beat of the engineer's evolution: not a win, the current edge. It
-// names the live defect (the vocal goes tinny while the body stays full), the
-// fix direction (protect the vocal, process the body, per track), the blind
-// multi-rater roadmap, and wears "n=1 · not shipped" as a feature. The only
-// number it will stand on is the -2 dBTP ceiling that survives streaming codecs.
+// The old beat (a vocal/body "defect", "not shipped", a blind pipeline as future
+// roadmap) is retired: the blind loop now EXISTS and runs decision-grade. The
+// current story is three tight beats:
+//   the proof  — processing beats raw, but per-SECTION: verse wants it on, drop
+//                wants it off; a hard-cut hybrid beat both straight-through masters.
+//                A master no single chain could make.
+//   the loop   — no universal chain + meters fight the ears, so the engine stopped
+//                guessing and started ASKING: it models its own uncertainty, serves
+//                the single most-useful blind round, takes the vote, updates, repeats.
+//   the frontier — the falsifiable promise: uncertainty falls round-over-round, so the
+//                rounds it serves drift toward genuine toss-ups — the live frontier.
 //
-// 100% server-rendered and visible with no JS (the honest readout must never
-// hide behind a click). The ONLY script is a tiny class toggle on the defect
-// glyph (defect <-> protected); no IntersectionObserver / scroll / rAF, so it
-// survives the preview throttle. Rhymes with RoundFrame/TasteTrial (header,
-// the-bet line, the verdict="live" yellow). Reduced-motion + keyboard safe.
+// 100% server-rendered, visible with NO JS (the honest readout must never hide behind
+// a click). All visuals are static inline SVG, so there's no IO/scroll/rAF to throttle,
+// and reduced-motion is automatic. Rhymes with RoundFrame/TasteTrial (Round-05 header,
+// the-bet line, the verdict="live" yellow). The −2 dBTP floor + the aim close it out.
+
+// the proof: one real track, split into the two sections that disagreed.
+const SECTIONS = [
+  { name: "verse", won: "processed", note: "wanted it on" },
+  { name: "drop", won: "raw", note: "wanted it off" },
+];
+// the scoreboard: the two straight-through masters vs the section-aware hybrid.
+const MASTERS = [
+  { label: "all processed", win: false },
+  { label: "all raw", win: false },
+  { label: "section-aware hybrid", win: true },
+];
+// the loop, three nodes on a cycle.
+const LOOP = [
+  { k: "asks", t: "it asks", s: "the round it's least sure of", lead: true },
+  { k: "vote", t: "you vote", s: "blind · loudness-matched" },
+  { k: "learn", t: "it learns", s: "updates its belief" },
+];
+// the frontier: average uncertainty falling round-over-round (illustrative shape).
+const UNCERT = [0.92, 0.71, 0.55, 0.42, 0.33, 0.27];
 ---
 
 <section class="lf" data-live-frontier>
@@ -22,117 +47,120 @@
 
   <p class="lf-belief">
     <span class="lf-belief-tag">the bet</span>
-    This is where the engine actually is right now, not where it lands. Mastering the whole track at once, the vocal can go tinny while the body stays full. One curve cannot serve both. The next move is to protect the vocal and process the body on their own paths, surgically, per track. I have not shipped it. I am living the test.
+    It used to fire six masters into the dark and hope one stuck. Now it's wired to win: it asks the one thing it's least sure of, I vote blind, it learns, and it asks again.
   </p>
 
   <div class="lf-status">
-    <span class="lf-stamp">n=1 · not shipped</span>
-    <span class="lf-stamp-cap">One engine, one builder, living the test in the open. The honesty is the credibility: it is the opposite of a button that forgets you and overclaims.</span>
+    <span class="lf-stamp">n=1 · learning in the open</span>
+    <span class="lf-stamp-cap">One builder, one set of ears, working in the open. The honesty is the credibility — the opposite of a button that overclaims and forgets you.</span>
   </div>
 
-  <!-- the defect: a neutral panel, because this is the problem, not the live edge -->
-  <div class="lf-defect">
-    <span class="lf-mini">the defect</span>
-    <p class="lf-text">When it masters the whole track, the vocal can go thin and tinny while the body stays full and warm. A single processing curve cannot flatter both at the same time.</p>
+  <!-- BEAT 1 · the proof — section-aware beats any single chain -->
+  <div class="lf-panel lf-proof-panel">
+    <span class="lf-mini">the proof</span>
+    <p class="lf-text">Processing beats raw — but not everywhere in a song. On one track the <b>verse</b> wanted it on and the <b>drop</b> wanted it off, every blind time. A hard-cut hybrid — processed verse, raw drop — beat <b>both</b> straight-through masters. A master no single chain could make.</p>
 
-    <div class="lf-glyph-wrap">
-      <svg class="lf-glyph" viewBox="0 0 180 88" role="img" aria-hidden="true">
-        <text x="2" y="27" class="lf-glyph-lab">vocal</text>
-        <text x="2" y="70" class="lf-glyph-lab">body</text>
-        <line x1="34" y1="44" x2="176" y2="44" class="lf-divider" />
-        <!-- vocal: thin, brittle, spiking, thinning out at the right -->
-        <rect class="lf-shield" x="33" y="11" width="140" height="30" rx="7" />
-        <polyline class="lf-vocal" points="34,31 48,30 60,32 72,16 79,31 90,12 97,32 108,21 115,31 132,30 150,32 162,30" />
-        <path class="lf-arrow" d="M168,17 L168,29 M164,25 L168,30 L172,25" />
-        <!-- body: full, warm, rounded -->
-        <path class="lf-body" d="M40,80 Q40,57 106,57 Q172,57 172,80 Z" />
+    <div class="lf-proofviz">
+      <svg class="lf-track" viewBox="0 0 320 92" role="img" aria-label="One track split into two sections. The verse won the processed master; the drop won the raw master. The section-aware hybrid of the two beat both straight-through masters, blind, four out of four.">
+        <text x="0" y="9" class="lf-cap">CantBreathe · by section</text>
+        <!-- the split track lane -->
+        <g transform="translate(0,16)">
+          <rect class="lf-seg lf-seg-proc" x="0" y="0" width="174" height="26" rx="4" />
+          <rect class="lf-seg lf-seg-raw" x="178" y="0" width="142" height="26" rx="4" />
+          <text x="14" y="16" class="lf-seg-lab">verse → processed</text>
+          <text x="190" y="16" class="lf-seg-lab lf-seg-lab-dim">drop → raw</text>
+        </g>
+        <!-- the scoreboard: two uniform masters lose, the hybrid wins -->
+        <g transform="translate(0,52)" class="lf-score">
+          <g>
+            <text x="0" y="9" class="lf-score-lab">all processed</text>
+            <rect x="120" y="2" width="120" height="7" rx="3.5" class="lf-bar lf-bar-lose" />
+            <text x="318" y="9" text-anchor="end" class="lf-score-x">lost</text>
+          </g>
+          <g transform="translate(0,14)">
+            <text x="0" y="9" class="lf-score-lab">all raw</text>
+            <rect x="120" y="2" width="96" height="7" rx="3.5" class="lf-bar lf-bar-lose" />
+            <text x="318" y="9" text-anchor="end" class="lf-score-x">lost</text>
+          </g>
+          <g transform="translate(0,28)">
+            <text x="0" y="9" class="lf-score-lab lf-score-win">section-aware hybrid</text>
+            <rect x="120" y="2" width="120" height="7" rx="3.5" class="lf-bar lf-bar-win" />
+            <text x="318" y="9" text-anchor="end" class="lf-score-w">won · 4/4 blind</text>
+          </g>
+        </g>
       </svg>
-      <span class="lf-sr">Two frequency bands. The vocal band on top is thin and spiking and thinning out. The body band below is full and rounded. The fix protects the vocal band and processes the body separately.</span>
-      <button type="button" class="lf-glyph-toggle" data-lf-toggle aria-pressed="false">protect the vocal</button>
+    </div>
+
+    {/*
+      REAL-AUDIO HOOK — when Jon supplies the CantBreathe clips (uniform vs the hybrid,
+      same passage, loudness-matched), a <TheBench round={r5SectionAB} /> drops in here,
+      matching the BenchRound API. Ships invisible until then: no player chrome.
+    */}
+    <div class="lf-bench-slot" data-audio-slot="round05-section-ab" hidden></div>
+  </div>
+
+  <!-- BEAT 2 · the loop — the engine stopped guessing and started asking -->
+  <div class="lf-panel lf-loop-panel">
+    <span class="lf-mini">the loop</span>
+    <p class="lf-text">There's no universal chain, and the meters disagree with the ears. So the engine stopped guessing and started <b>asking</b>: it models what it's least sure about, serves that one blind round, takes the vote, updates, and serves the next.</p>
+
+    <div class="lf-loop" role="img" aria-label="A repeating loop: the engine asks the round it is least sure of, you vote blind and loudness-matched, it learns and updates its belief, then it asks again.">
+      {LOOP.map((n, i) => (
+        <Fragment>
+          <div class:list={["lf-node", { "lf-node-lead": n.lead }]}>
+            <span class="lf-node-t">{n.t}</span>
+            <span class="lf-node-s">{n.s}</span>
+          </div>
+          {i < LOOP.length - 1 && <span class="lf-node-arrow" aria-hidden="true">&rarr;</span>}
+        </Fragment>
+      ))}
+      <span class="lf-loop-return" aria-hidden="true">
+        <svg viewBox="0 0 300 24" preserveAspectRatio="none"><path d="M296 2 v8 a6 6 0 0 1 -6 6 H12 a6 6 0 0 1 -6 -6 V2" /><path class="lf-loop-head" d="M2 8 L6 2 L10 8" /></svg>
+        <em>repeat</em>
+      </span>
     </div>
   </div>
 
-  <!-- the fix: the live edge, accented yellow -->
-  <div class="lf-fix">
-    <span class="lf-mini">the fix</span>
-    <p class="lf-text">Protect the vocal so it keeps its presence and never dries out. Process the body on its own path: clean it, shape it, give it room. Then meet the two cleanly. Per track, because every song wants a different balance.</p>
-  </div>
+  <!-- BEAT 3 · the frontier — the falsifiable promise, made literal -->
+  <div class="lf-panel lf-frontier-panel">
+    <span class="lf-mini">the frontier</span>
+    <p class="lf-text">The claim I can be proven wrong on: its uncertainty has to <b>fall, round over round</b>. As it does, the rounds it serves drift toward genuine <b>toss-ups</b> — the calls it still can't make on its own. That moving edge is the live frontier.</p>
 
-  {/*
-    FUTURE A/B HOOK — when Jon supplies two clips (vocal-saturated vs vocal-protected,
-    same passage, loudness-matched), a <TheBench round={r5VocalAB} /> drops in here.
-    Matches TheBench's BenchRound API:
-      const r5VocalAB = {
-        id: "r5-vocal", source: "<passage>", tag: "real audio · blind",
-        loudnessNote: "Both matched to one loudness, so you judge the vocal, not the level.",
-        takes: [
-          { label: "the body processed, vocal untouched", file: `${REN}/r5-saturated.mp3` },
-          { label: "the vocal protected, body processed", file: `${REN}/r5-protected.mp3` },
-        ],
-      };
-    Ships invisible until then: no player chrome, no "coming soon".
-  */}
-  <div class="lf-bench-slot" data-audio-slot="round05-vocal-ab" hidden></div>
-
-  <!-- the test: the blind multi-rater pipeline that ends in a ship-or-not gate -->
-  <div class="lf-roadmap">
-    <span class="lf-mini">the test</span>
-    <div class="lf-pipe" role="list" aria-label="The blind test pipeline, in three stages">
-      <div class="lf-stage" role="listitem">
-        <span class="lf-stage-n">01</span>
-        <span class="lf-stage-label">I crown blind</span>
-      </div>
-      <span class="lf-pipe-arrow" aria-hidden="true">&rarr;</span>
-      <div class="lf-stage" role="listitem">
-        <span class="lf-stage-n">02</span>
-        <span class="lf-stage-label">outsiders crown blind</span>
-      </div>
-      <span class="lf-pipe-arrow" aria-hidden="true">&rarr;</span>
-      <div class="lf-stage lf-stage-gate" role="listitem">
-        <span class="lf-stage-n">03</span>
-        <span class="lf-stage-label">re-score gate</span>
-      </div>
-    </div>
-    <p class="lf-text">The method from here is one repeatable blind test. I crown blind first. Then listeners outside my own ear crown blind, loudness-matched, with no idea I built it, which strips the you-made-it bias I cannot strip from myself. From what both sets crown, I learn the per-track conditioning. Then the gate: it ships only if it beats doing nothing, blind, every single time.</p>
-  </div>
-
-  <!-- the floor: the one number, framed as a necessity cleared, not a victory -->
-  <div class="lf-proof">
-    <span class="lf-mini">the floor</span>
-    <div class="lf-proof-row">
-      <span class="lf-proof-num">&minus;2 dBTP</span>
-      <p class="lf-text">The one number I will stand on: the true-peak ceiling is set to minus 2 dBTP. Lossy streaming codecs add inter-sample peaks when they re-encode, and a minus 1 dBTP master clips after the transcode. At minus 2 dBTP these masters survive it. That is the floor, cleared.</p>
+    <div class="lf-frontierviz">
+      <svg class="lf-uncert" viewBox="0 0 320 104" role="img" aria-label="A chart of the engine's average uncertainty falling across six rounds, approaching a toss-up line at the bottom. The rounds it serves trend toward that frontier of genuine toss-ups.">
+        <text x="0" y="9" class="lf-cap">avg. uncertainty / round &darr;</text>
+        <!-- toss-up frontier line -->
+        <line x1="0" y1="86" x2="268" y2="86" class="lf-tossline" />
+        <text x="318" y="89" text-anchor="end" class="lf-tosslab">toss-up</text>
+        {UNCERT.map((u, i) => {
+          const x = 14 + i * 46;
+          const h = Math.round(u * 64);
+          const y = 84 - h;
+          return (
+            <g>
+              <rect x={x} y={y} width="26" height={h} rx="3" class:list={["lf-ubar", { "lf-ubar-edge": i >= UNCERT.length - 2 }]} />
+              <text x={x + 13} y="98" class="lf-uax">{`r${i + 1}`}</text>
+            </g>
+          );
+        })}
+      </svg>
     </div>
   </div>
 
-  <p class="lf-end">The aim is simple, and it is not finished yet: the master you prefer to doing nothing, proven blind.</p>
+  <!-- the floor: the one hard number -->
+  <div class="lf-floor">
+    <span class="lf-floor-num">&minus;2 dBTP</span>
+    <p class="lf-text">The one hard number it will stand on: a true-peak ceiling that survives streaming codecs intact, where a &minus;1 dBTP master clips after the transcode.</p>
+  </div>
+
+  <p class="lf-end">The master you'd keep over doing nothing — proven blind. Not finished. Truer every round.</p>
 </section>
-
-<script>
-  // The only interactivity: flip the defect glyph to its protected state. Pure
-  // class toggle on a server-rendered node, so no IO / scroll / rAF involved.
-  const SR_DEFECT = "Two frequency bands. The vocal band on top is thin and spiking and thinning out. The body band below is full and rounded.";
-  const SR_FIX = "Two frequency bands. The vocal band on top is now wrapped in a protective shield so it keeps its presence. The body band below is processed on its own path.";
-  document.querySelectorAll<HTMLButtonElement>("[data-lf-toggle]").forEach((btn) => {
-    const defect = btn.closest(".lf-defect");
-    const glyph = defect?.querySelector<SVGElement>(".lf-glyph");
-    const sr = defect?.querySelector<HTMLElement>(".lf-sr");
-    if (!glyph) return;
-    btn.addEventListener("click", () => {
-      const on = glyph.classList.toggle("is-fix");
-      btn.setAttribute("aria-pressed", on ? "true" : "false");
-      btn.textContent = on ? "show the defect" : "protect the vocal";
-      // keep the screen-reader description in lockstep with the glyph state
-      if (sr) sr.textContent = on ? SR_FIX : SR_DEFECT;
-    });
-  });
-</script>
 
 <style>
   .lf { max-width: 760px; margin: 0 auto; color: #f5f1e8; }
 
-  /* ── header + belief: rhyme RoundFrame / TasteTrial; only the num color shifts
-        to yellow to signal the live frontier at a glance ── */
+  /* ── header + belief: rhyme RoundFrame / TasteTrial; the num is yellow to flag the
+        live frontier at a glance ── */
   .lf-head { display: flex; align-items: baseline; gap: 12px; margin-bottom: 10px; flex-wrap: wrap; }
   .lf-num {
     font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
@@ -169,16 +197,14 @@
     font-size: 11.5px; line-height: 1.5; color: rgba(245, 241, 232, 0.55);
   }
 
-  /* ── shared panel chrome ── */
-  .lf-defect, .lf-fix, .lf-roadmap, .lf-proof {
+  /* ── shared panel chrome — left rule yellow on the live beats ── */
+  .lf-panel {
     background: rgba(245, 241, 232, 0.02);
     border: 1px solid var(--cs-line, rgba(245, 241, 232, 0.1));
     border-radius: 8px; padding: 14px 16px; margin-top: 12px;
+    border-left: 2px solid var(--brand-yellow);
   }
-  .lf-defect { border-left: 2px solid rgba(245, 241, 232, 0.22); }
-  .lf-fix { border-left: 2px solid var(--brand-yellow); }
-  .lf-proof { border-left: 2px solid var(--brand-yellow); }
-  .lf-roadmap { border-left: 2px solid rgba(245, 241, 232, 0.14); }
+  .lf-loop-panel { border-left-color: rgba(245, 241, 232, 0.18); }
   .lf-mini {
     display: block; margin-bottom: 8px;
     font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
@@ -188,68 +214,74 @@
   .lf-text {
     margin: 0; max-width: 64ch;
     font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-    font-size: 13px; line-height: 1.62; color: var(--cs-text-muted, rgba(245, 241, 232, 0.7));
+    font-size: 13px; line-height: 1.62; color: var(--cs-text-muted, rgba(245, 241, 232, 0.72));
   }
+  .lf-text b { color: #f5f1e8; font-weight: 600; }
 
-  /* ── the defect glyph: vocal band thin/brittle, body band full ── */
-  .lf-glyph-wrap { display: flex; flex-direction: column; align-items: flex-start; gap: 10px; margin-top: 12px; }
-  .lf-glyph { width: 200px; max-width: 100%; height: auto; }
-  .lf-glyph-lab {
+  /* ── shared viz type ── */
+  .lf-cap, .lf-seg-lab, .lf-score-lab, .lf-score-x, .lf-score-w, .lf-uax, .lf-tosslab {
     font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-    font-size: 8px; letter-spacing: 0.1em; text-transform: uppercase; fill: rgba(245, 241, 232, 0.5);
   }
-  .lf-divider { stroke: rgba(245, 241, 232, 0.16); stroke-width: 1; }
-  .lf-vocal { fill: none; stroke: #a06cf0; stroke-width: 1.6; stroke-linejoin: round; stroke-linecap: round; }
-  .lf-body { fill: rgba(14, 196, 252, 0.18); stroke: #0ec4fc; stroke-width: 1.4; }
-  .lf-arrow { fill: none; stroke: #a06cf0; stroke-width: 1.4; stroke-linecap: round; stroke-linejoin: round; transition: opacity 240ms ease; }
-  .lf-shield { fill: none; stroke: var(--brand-yellow); stroke-width: 1; stroke-dasharray: 3 3; opacity: 0; transition: opacity 240ms ease; }
-  .lf-glyph.is-fix .lf-arrow { opacity: 0; }
-  .lf-glyph.is-fix .lf-shield { opacity: 0.9; }
-  .lf-sr { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
-  .lf-glyph-toggle {
-    font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 11px;
-    color: rgba(245, 241, 232, 0.72); background: transparent;
-    border: 1px solid rgba(245, 241, 232, 0.24); border-radius: 5px;
-    padding: 6px 13px; cursor: pointer; transition: color 160ms ease, border-color 160ms ease, background 160ms ease;
-  }
-  .lf-glyph-toggle:hover { color: #f5f1e8; border-color: rgba(255, 179, 71, 0.5); background: rgba(255, 179, 71, 0.05); }
-  .lf-glyph-toggle:focus-visible { outline: 2px solid var(--brand-yellow); outline-offset: 2px; }
-  .lf-glyph-toggle[aria-pressed="true"] { color: var(--brand-yellow); border-color: rgba(255, 179, 71, 0.5); }
+  .lf-cap { font-size: 8px; letter-spacing: 0.12em; text-transform: uppercase; fill: rgba(245, 241, 232, 0.4); }
 
-  /* ── the blind-test pipeline ── */
-  .lf-pipe { display: flex; align-items: stretch; gap: 8px; flex-wrap: wrap; margin: 4px 0 14px; }
-  .lf-stage {
-    flex: 1 1 0; min-width: 130px;
-    display: flex; flex-direction: column; gap: 5px;
-    border: 1px solid rgba(245, 241, 232, 0.14); border-radius: 6px; padding: 10px 13px;
+  /* BEAT 1 · the proof viz */
+  .lf-proofviz { margin-top: 13px; }
+  .lf-track { width: 100%; max-width: 340px; height: auto; }
+  .lf-seg { stroke-width: 1; }
+  .lf-seg-proc { fill: rgba(14, 196, 252, 0.16); stroke: rgba(14, 196, 252, 0.6); }
+  .lf-seg-raw { fill: rgba(245, 241, 232, 0.04); stroke: rgba(245, 241, 232, 0.28); stroke-dasharray: 3 2.5; }
+  .lf-seg-lab { font-size: 9px; letter-spacing: 0.04em; fill: #bfeeff; }
+  .lf-seg-lab-dim { fill: rgba(245, 241, 232, 0.6); }
+  .lf-score-lab { font-size: 8.5px; fill: rgba(245, 241, 232, 0.62); }
+  .lf-score-win { fill: var(--brand-yellow); }
+  .lf-bar { }
+  .lf-bar-lose { fill: rgba(245, 241, 232, 0.14); }
+  .lf-bar-win { fill: var(--brand-yellow); }
+  .lf-score-x { font-size: 8px; letter-spacing: 0.06em; fill: rgba(245, 241, 232, 0.34); }
+  .lf-score-w { font-size: 8px; font-weight: 700; letter-spacing: 0.06em; fill: var(--brand-yellow); }
+
+  /* BEAT 2 · the loop */
+  .lf-loop { display: flex; align-items: stretch; gap: 8px; flex-wrap: wrap; margin-top: 13px; position: relative; padding-bottom: 26px; }
+  .lf-node {
+    flex: 1 1 0; min-width: 120px; display: flex; flex-direction: column; gap: 3px;
+    border: 1px solid rgba(245, 241, 232, 0.14); border-radius: 6px; padding: 9px 12px;
     background: rgba(245, 241, 232, 0.015);
   }
-  .lf-stage-n {
-    font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 9px; font-weight: 700;
-    letter-spacing: 0.16em; color: rgba(245, 241, 232, 0.4);
-  }
-  .lf-stage-label {
-    font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px;
-    line-height: 1.35; color: #f5f1e8;
-  }
-  .lf-stage-gate {
-    border-color: rgba(255, 179, 71, 0.5);
-    background: rgba(255, 179, 71, 0.05);
-    box-shadow: inset 0 0 22px -12px var(--brand-yellow);
-  }
-  .lf-stage-gate .lf-stage-n { color: var(--brand-yellow); }
-  .lf-pipe-arrow { align-self: center; color: rgba(245, 241, 232, 0.32); font-size: 14px; flex: 0 0 auto; }
+  .lf-node-lead { border-color: rgba(255, 179, 71, 0.5); background: rgba(255, 179, 71, 0.05); box-shadow: inset 0 0 22px -12px var(--brand-yellow); }
+  .lf-node-t { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; color: #f5f1e8; font-weight: 700; }
+  .lf-node-lead .lf-node-t { color: var(--brand-yellow); }
+  .lf-node-s { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 9.5px; line-height: 1.3; color: rgba(245, 241, 232, 0.5); }
+  .lf-node-arrow { align-self: center; color: rgba(245, 241, 232, 0.32); font-size: 14px; flex: 0 0 auto; }
+  .lf-loop-return { position: absolute; left: 0; right: 0; bottom: 0; display: flex; align-items: center; gap: 8px; height: 22px; }
+  .lf-loop-return svg { flex: 1 1 auto; height: 22px; width: 100%; fill: none; stroke: rgba(245, 241, 232, 0.26); stroke-width: 1.2; }
+  .lf-loop-head { stroke: rgba(245, 241, 232, 0.26); }
+  .lf-loop-return em { flex: 0 0 auto; font-style: normal; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 8.5px; letter-spacing: 0.16em; text-transform: uppercase; color: rgba(245, 241, 232, 0.4); }
 
-  /* ── the one number ── */
-  .lf-proof-row { display: flex; align-items: baseline; gap: 16px; flex-wrap: wrap; }
-  .lf-proof-num {
+  /* BEAT 3 · the frontier */
+  .lf-frontierviz { margin-top: 13px; }
+  .lf-uncert { width: 100%; max-width: 340px; height: auto; }
+  .lf-ubar { fill: rgba(245, 241, 232, 0.18); }
+  .lf-ubar-edge { fill: var(--brand-yellow); opacity: 0.85; }
+  .lf-uax { font-size: 8px; fill: rgba(245, 241, 232, 0.34); text-anchor: middle; }
+  .lf-tossline { stroke: var(--brand-yellow); stroke-width: 1; stroke-dasharray: 3 3; opacity: 0.6; }
+  .lf-tosslab { font-size: 7.5px; letter-spacing: 0.1em; text-transform: uppercase; fill: rgba(255, 179, 71, 0.7); }
+
+  /* ── the floor: the one number ── */
+  .lf-floor {
+    display: flex; align-items: baseline; gap: 16px; flex-wrap: wrap;
+    margin-top: 12px; padding: 14px 16px;
+    background: rgba(245, 241, 232, 0.02);
+    border: 1px solid var(--cs-line, rgba(245, 241, 232, 0.1));
+    border-left: 2px solid var(--brand-yellow); border-radius: 8px;
+  }
+  .lf-floor-num {
     flex: 0 0 auto;
     font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
     font-style: italic; font-weight: 700; font-size: 26px; letter-spacing: 0.01em;
     color: var(--brand-yellow); font-feature-settings: "tnum";
     text-shadow: 0 0 14px rgba(255, 179, 71, 0.3);
   }
-  .lf-proof-row .lf-text { flex: 1 1 280px; }
+  .lf-floor .lf-text { flex: 1 1 280px; }
 
   /* ── the aim ── */
   .lf-end {
@@ -259,10 +291,8 @@
   }
 
   @media (max-width: 560px) {
-    .lf-pipe { flex-direction: column; align-items: stretch; }
-    .lf-pipe-arrow { transform: rotate(90deg); align-self: flex-start; margin-left: 14px; }
-  }
-  @media (prefers-reduced-motion: reduce) {
-    .lf-arrow, .lf-shield, .lf-glyph-toggle { transition: none; }
+    .lf-loop { flex-direction: column; align-items: stretch; }
+    .lf-node-arrow { transform: rotate(90deg); align-self: flex-start; margin-left: 14px; }
+    .lf-loop-return { display: none; }
   }
 </style>
