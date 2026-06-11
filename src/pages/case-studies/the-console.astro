@@ -21,6 +21,8 @@ import CSLayout from "../../components/case-study/CSLayout.astro";
 import CSSection from "../../components/case-study/CSSection.astro";
 import CSPullquote from "../../components/case-study/CSPullquote.astro";
 import CSLiveDemo from "../../components/case-study/CSLiveDemo.astro";
+import CSJar from "../../components/case-study/CSJar.astro";
+import CSCodeBlock from "../../components/case-study/CSCodeBlock.astro";
 import AtlasHero from "../../components/case-study/atlas/AtlasHero.astro";
 import ChaosToBuckets from "../../components/case-study/atlas/ChaosToBuckets.astro";
 import FileTransform from "../../components/case-study/atlas/FileTransform.astro";
@@ -61,6 +63,50 @@ const round3 = {
     { label: "open · unhyped", file: `${REN}/take3.mp3`, ref: "matched toward a big, open low end" },
   ],
 };
+
+// ── real code excerpts surfaced in the jars (engineer-mode reveals) ──
+// TheBench's in-browser crossfade graph (verbatim-condensed from TheBench.astro).
+const benchCode = `// decode every distinct clip once; the louder take reuses one file at two gains
+const cache = {};
+const decode = (file) => {
+  if (!cache[file]) cache[file] = fetch(file).then(r => r.arrayBuffer()).then(ab => ctx.decodeAudioData(ab));
+  return cache[file];
+};
+buffers = await Promise.all(TAKES.map(t => decode(t.file)));
+loopDur = Math.min(...buffers.map(b => b.duration));   // lock every take to the shortest loop
+
+// one persistent gain node per take, all summed into the master
+chainGains = buffers.map((_, i) => {
+  const g = ctx.createGain();
+  g.gain.value = i === active ? TAKES[i].gain : 0;
+  g.connect(master);
+  return g;
+});
+
+// switch takes: ramp the chosen take up, the rest down, on the same running sources
+chainGains.forEach((g, idx) =>
+  g.gain.setTargetAtTime(idx === i ? TAKES[idx].gain : 0, now, 0.04));`;
+
+// The engine's planning step (condensed from engineer/planner.py on the M1).
+const plannerCode = `def make_plan(analysis, axis, pole, feedback_text=None, judgement_history=None):
+    """Ask the model for a mastering plan, reasoning over the song and every past verdict."""
+    personality   = PERSONALITY_PROMPTS[(axis, pole)]
+    history_block = _format_feedback_history(judgement_history)          # past crowns, rolled in
+    anchors       = format_for_prompt(closest_references(analysis, n=3)) # records this track sits near
+
+    user_msg = (
+        _SYSTEM_PROMPT
+        + "\\n\\nReply with ONLY a JSON object matching this schema:\\n" + json.dumps(_PLAN_SCHEMA)
+        + f"\\n\\nPHILOSOPHY ({axis} = {pole}):\\n{personality}"
+        + history_block + anchors
+        + f"\\n\\nMIX ANALYSIS:\\n{_format_analysis_for_prompt(analysis)}\\n"
+    )
+
+    proc = subprocess.run([CLAUDE_BIN, "-p", user_msg],
+                          capture_output=True, text=True, timeout=CLAUDE_TIMEOUT_S)
+    plan = _extract_json(proc.stdout)   # ordered moves per stem, per section, each with its reasoning
+    plan.setdefault("bus", {"moves": [], "target_lufs": -14.0})
+    return plan`;
 
 export const prerender = true;
 ---
@@ -151,6 +197,22 @@ export const prerender = true;
   {/* ─────── ACT 3 · THE COMPANION ─────── */}
   <CSSection title="Send it over" deck="Zoom all the way in on one row in Tracks: a finished song, mixed rough, on headphones, at 2 a.m. The next step was always the lonely one: master it, A/B it against records you love, decide if it's done. So I built someone to do it with.">
     <RichardReveal />
+
+    {/* jars: the agent loop, made legible. Collapsed by default; artist-mode scrolls past. */}
+    <div class="jar-stack">
+      <CSJar summary="Behind the speech bubble, Richard runs a loop, not a button." accent="green">
+        <p class="jar-lead">He reads the song section by section, plans a different master for each taste axis while carrying every past verdict as state, renders six variants, then writes how each will sound on a phone, in a car, in a club. The winner he never picks himself. That is the blind vote below, by design.</p>
+        <figure class="jar-fig">
+          <img src="/case-studies/the-console/diagram-engineer-flow.svg" alt="Richard's pipeline: source to analyzer to planner to renderer to translator" loading="lazy" />
+          <figcaption>This diagram is an earlier plan. Two of its bets, stems-first and learning by taste, are the ones the rounds below go on to test, and one I tore down and rebuilt. The part that held is the loop itself.</figcaption>
+        </figure>
+      </CSJar>
+
+      <CSJar summary="Read one real step the engine plans." accent="green">
+        <p class="jar-lead">The planner is handed the song's structure, the records it sits nearest, and every past verdict on this track, and it returns an ordered set of moves per stem and per section, each with its own reasoning. This is the step that reasons over state.</p>
+        <CSCodeBlock file="engineer/planner.py · make_plan()" lang="py" caption="The real planning call on the M1. Its output feeds the renderer; the winner is still chosen by the blind vote, not here.">{plannerCode}</CSCodeBlock>
+      </CSJar>
+    </div>
   </CSSection>
 
   {/* ─────── ACT 4 · YOU ARE THE JUDGE (the engineer's evolution, lived) ─────── */}
@@ -205,8 +267,36 @@ export const prerender = true;
           <TheBench round={round3} />
         </RoundFrame>
 
+        {/* jar: the bench itself is the front-end proof. After the rounds, so it never spoils the trap. */}
+        <CSJar summary="The benches you just used are hand-built in the browser. See how the crossfade works." accent="green">
+          <p class="jar-lead">Every take is decoded once and shared, so the same master a few dB louder is one file at two gains, never downloaded twice. The takes play as looping sources locked to one shared length, each summed through its own gain node. Switching ramps the gains over about forty milliseconds, so the playhead never reloads and never loses its place.</p>
+          <CSCodeBlock file="TheBench.astro · the crossfade graph" lang="ts" caption="Web Audio, no library. The A/B you just played is this graph.">{benchCode}</CSCodeBlock>
+        </CSJar>
+
+        {/* jar: the controls, named as a method. Post-rounds, so Round 02's trap stays a surprise. */}
+        <CSJar summary="The controls that make this a real listening test." accent="green">
+          <ul class="jar-list">
+            <li><b>Blind by default.</b> The takes are unlabeled until you crown one, so the name never votes.</li>
+            <li><b>Loudness-matched.</b> Levels are equalized before you judge, the discipline behind ITU-R BS.1770 and the BS.1534 listening-test protocol, so the level never votes either.</li>
+            <li><b>A do-nothing baseline.</b> Round 01 puts the untouched original in the running, so the engine has to beat doing nothing to win.</li>
+            <li><b>A planted trap.</b> Round 02 was the same master a few dB hotter, to show how fast louder reads as better.</li>
+          </ul>
+          <p class="jar-note">These are the controls a proper listening test is supposed to have. Most upload-a-file tools steer toward a sound; this one judges, blind, against a baseline.</p>
+        </CSJar>
+
         {/* Round 04 · the apprentice — the debunk the visitor lives (reads the ledger) */}
         <TasteTrial />
+
+        {/* jar: the crown jewel. The judge insight, named against the frontier it rediscovered. */}
+        <CSJar summary="This failure has a name. The field found it before I did." accent="pink">
+          <p class="jar-lead">I hit this the hard way on an audio system, alone, and only later found the field already had a name for it. When you train a model against a judge that is itself biased, the model learns to satisfy the judge's blind spots instead of getting genuinely better. The field calls it reward-model overoptimization.</p>
+          <ul class="jar-list">
+            <li><b>Gao et al., Scaling Laws for Reward Model Overoptimization.</b> Push hard on a proxy reward and the proxy keeps climbing while the thing you actually wanted starts to fall.</li>
+            <li><b>Reward Models Are Metrics in a Trench Coat (2025).</b> A convenient metric is not the thing you cared about. It just dresses up like it.</li>
+            <li><b>DeepMind, MusicRL.</b> In audio, automatic scores like FAD and CLAP track human-preferred quality only weakly, and what counts as good is partly down to the listener.</li>
+          </ul>
+          <p class="jar-note">The controls I reached for on my own are the standard ones: judge blind, match the loudness, keep a do-nothing baseline, never trust a single round or a single rater. I did not kill the idea of learning from votes. I killed the version that trained on a biased judge, and rebuilt it on an honest one. The lesson generalizes past audio: for anything that generates media, the evaluator is the binding constraint on quality, not the model. That is the part I find most worth building tooling around.</p>
+        </CSJar>
 
         {/* Round 05 · the live frontier — the honest current edge (n=1, not shipped) */}
         <LiveFrontier />
@@ -220,13 +310,13 @@ export const prerender = true;
     <div class="standout">
       <div class="so-row so-them">
         <span class="so-tag">Everyone else</span>
-        <p>LANDR, Ozone, the rest are a <strong>stateless upload box</strong>: send a file, get a master, it forgets you. None reference the records you love. None live in your library. None prove what they did to your ear.</p>
+        <p>LANDR, Ozone, the rest are a <strong>stateless upload box</strong>: send a file, get a master, it forgets you. Some can match a reference you upload, but you are still steering toward it. None sit inside your own library and pick the winner for you, blind, then prove what they did.</p>
       </div>
       <div class="so-row so-this">
         <span class="so-tag">The Lathe</span>
-        <p>References the records I actually love, A/Bs them <strong>blind and loudness-matched</strong> (the method engineers insist on and nobody else bothers with), and lives inside my own library, where every comparison is measured, never guessed.</p>
+        <p>Like the good tools, it can reference the records I love. Then it judges the result <strong>blind and loudness-matched</strong>, against doing nothing, inside my own library, where every comparison is measured, not guessed.</p>
       </div>
-      <p class="so-foot">The blind, loudness-matched method is not a feature. It is the only honest one, and everyone else skips it. The point was never to beat a label release. It was to make eight years of my own work finishable, in my own ear.</p>
+      <p class="so-foot">Blind and loudness-matched is not a feature, it is just the honest way to run the test, and the upload-a-file-get-a-master tools do not bother. The point was never to beat a label release. It was to make eight years of my own work finishable, in my own ear.</p>
     </div>
   </CSSection>
 
@@ -248,6 +338,26 @@ export const prerender = true;
       Utility, not synthesis. The machine sorts, fingerprints, surfaces, and clears the friction. The artist still chooses, still drags, still arranges.
     </CSPullquote>
   </CSSection>
+
+  {/* jar: one builder, the whole stack. The breadth-of-ownership proof, at the threshold. */}
+  <div class="jar-stack jar-stack-finale">
+    <CSJar summary="Before you step in, the back of the machine." accent="cyan">
+      <p class="jar-lead">One person designed and built every layer of this: the catalog and its API, the verb contract the surfaces are built on, the front end you are reading, and the classifier that filled it.</p>
+      <figure class="jar-fig">
+        <img src="/case-studies/the-console/diagram-architecture.svg" alt="The Console architecture: capture sources, the catalog and engine, the inboxes, and the surfaces" loading="lazy" />
+        <figcaption>Twenty thousand of my own files, read by sound and filed without me. Whisper hears the words, Claude titles each one, librosa stamps key and tempo, all held in one SQLite catalog and served over a small FastAPI on the M1. The diagram is the rest of the wiring.</figcaption>
+      </figure>
+      <figure class="jar-fig">
+        <img src="/case-studies/the-console/diagram-verbs.svg" alt="The verb contract: the read and write endpoints every surface runs on" loading="lazy" />
+        <figcaption>Every surface talks to the same small set of verbs over that one API. The interfaces are disposable; the catalog and the verbs are not. When two surfaces got deleted in May, the catalog did not move.</figcaption>
+      </figure>
+      <figure class="jar-fig">
+        <img src="/case-studies/the-console/diagram-pivot.svg" alt="The Build 3 Max device killed by two architectural walls, reframed into Build 4" loading="lazy" />
+        <figcaption>Not everything I built survived. An earlier version lived inside the DAW as a Max device and hit two walls I could not engineer around, so I stopped pushing on a dead approach and wrote into the DAW's own browser instead. The judgment was knowing which wall was load-bearing and which was a detour.</figcaption>
+      </figure>
+      <p class="jar-note">The surfaces are disposable. The catalog, the verbs, and the calls about what not to build are not.</p>
+    </CSJar>
+  </div>
 
   {/* ─────── THE GATEWAY · the finale: step into the running console (key: "soundbender").
        The module is situated + the post-login view lives in SecretDoor.astro. ─────── */}
@@ -290,7 +400,43 @@ export const prerender = true;
   /* On the backplate, let every round fill its own 760 max-width so the modules
      read as uniform bays (the flex column otherwise shrink-to-fits each round to
      its content). Additive: the rounds' own max-width is unchanged, they just fill it. */
-  .judge > :global(.rf), .judge > :global(.tt), .judge > :global(.lf) { width: 100%; }
+  .judge > :global(.rf), .judge > :global(.tt), .judge > :global(.lf), .judge > :global(.jar) { width: 100%; }
+
+  /* ── jars: quiet engineer-mode reveals threaded through the film. Collapsed by
+     default (CSJar), so artist-mode never pays for them; these style the open body. ── */
+  .jar-stack { max-width: 760px; margin: 6px auto 0; }
+  .jar-stack-finale { margin: 0 auto 4px; }
+  .jar-lead {
+    font-size: 15px; line-height: 1.65; color: rgba(245, 241, 232, 0.84);
+    max-width: 64ch; margin: 0 0 14px;
+  }
+  .jar-note {
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 13px; line-height: 1.62; color: rgba(245, 241, 232, 0.62);
+    max-width: 66ch; margin: 14px 0 0;
+  }
+  .jar-list {
+    list-style: none; padding: 0; margin: 0; max-width: 66ch;
+    display: flex; flex-direction: column; gap: 9px;
+  }
+  .jar-list li {
+    position: relative; padding-left: 15px;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 13px; line-height: 1.6; color: rgba(245, 241, 232, 0.78);
+  }
+  .jar-list li::before { content: "·"; position: absolute; left: 3px; color: var(--brand-green); font-weight: 700; }
+  .jar-list b { color: #f5f1e8; font-weight: 600; }
+  .jar-fig { margin: 0 0 18px; }
+  .jar-fig:last-of-type { margin-bottom: 0; }
+  .jar-fig img {
+    display: block; width: 100%; height: auto;
+    border-radius: 8px; border: 1px solid var(--cs-line, rgba(245, 241, 232, 0.12)); background: #0f1219;
+  }
+  .jar-fig figcaption {
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 12px; font-style: italic; line-height: 1.55;
+    color: rgba(245, 241, 232, 0.55); margin-top: 8px; max-width: 72ch;
+  }
 
   /* chassis plates + fasteners, lifted from the kiln's ft-chassis and ft-bolt rules
      and greened. The serial deliberately reads MK·II to the kiln's MK·I: one

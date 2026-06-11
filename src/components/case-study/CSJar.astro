@@ -1,0 +1,85 @@
+---
+// CSJar — a quiet, collapsed-by-default disclosure for the case study.
+//
+// The page is an artist-mode film; a jar must never tax that reader. So it is a
+// single understated mono line with a caret, shut by default, sitting UNDER the
+// prose it belongs to. Open is a deliberate engineer-mode act: the body (a code
+// excerpt, a diagram, a note) only paints on expand, so heavy assets never
+// compete with the film on first load.
+//
+// Native <details> for free accessibility, keyboard, and no-JS behaviour. The
+// aria-expanded collapse pattern already lives in FileTransform / SecretDoor /
+// BucketCardShowcase; this generalises it into one reusable wrapper.
+interface Props {
+  /** The collapsed-state label. Plain, literary, no em dash. */
+  summary: string;
+  /** Caret + hover accent. Tracks the Movement it sits in. */
+  accent?: "cyan" | "green" | "pink" | "yellow" | "orange" | "neutral";
+}
+const { summary, accent = "neutral" } = Astro.props;
+const accentVar =
+  accent === "neutral" ? "rgba(245, 241, 232, 0.5)" : `var(--brand-${accent})`;
+---
+
+<details class="jar" style={`--jar-accent: ${accentVar}`}>
+  <summary class="jar-sum">
+    <span class="jar-caret" aria-hidden="true"></span>
+    <span class="jar-label">{summary}</span>
+  </summary>
+  <div class="jar-body">
+    <slot />
+  </div>
+</details>
+
+<style>
+  .jar {
+    margin: 0;
+    border-top: 1px solid var(--cs-line, rgba(245, 241, 232, 0.12));
+  }
+  .jar-sum {
+    list-style: none;
+    cursor: pointer;
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+    padding: 12px 2px;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 12.5px;
+    line-height: 1.5;
+    letter-spacing: 0.01em;
+    color: rgba(245, 241, 232, 0.56);
+    transition: color 160ms ease;
+    user-select: none;
+  }
+  .jar-sum::-webkit-details-marker { display: none; }
+  .jar-sum:hover,
+  .jar:not([open]) .jar-sum:focus-visible,
+  .jar[open] .jar-sum { color: rgba(245, 241, 232, 0.92); }
+  .jar-sum:focus-visible { outline: 2px solid var(--jar-accent); outline-offset: 3px; border-radius: 3px; }
+
+  /* a small triangle that turns down on open */
+  .jar-caret {
+    flex: 0 0 auto;
+    width: 0; height: 0;
+    border-left: 5px solid var(--jar-accent);
+    border-top: 4px solid transparent;
+    border-bottom: 4px solid transparent;
+    transform: translateY(1px);
+    transition: transform 200ms cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  .jar[open] .jar-caret { transform: translateY(1px) rotate(90deg); }
+
+  .jar-body {
+    padding: 4px 2px 22px;
+    animation: jar-open 320ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+  @keyframes jar-open {
+    from { opacity: 0; transform: translateY(-4px); }
+    to { opacity: 1; transform: none; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .jar-caret { transition: none; }
+    .jar-body { animation: none; }
+  }
+</style>
