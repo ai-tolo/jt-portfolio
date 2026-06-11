@@ -1,0 +1,243 @@
+---
+// PROOF — the Engineer bullet: "an active-learning model that learned my taste
+// and steered masters toward it... was overfitting a biased evaluator rather
+// than improving the audio. I shelved it and put the work into the judge."
+// Instead of asserting the insight, this draws it: the score the biased judge
+// hands out climbs while blind, loudness-matched preference stays flat. They
+// diverge. That gap is reward-model overoptimization. Then the fix lights up:
+// blind, loudness-matched, gated against doing nothing. Theme-aware,
+// reduced-motion-safe, fluid SVG so it never overflows on mobile.
+
+const W = 320;
+const H = 116;
+// y inverted: lower y = higher value.
+// what the biased judge rewarded — climbs.
+const REWARD = [[0, 96], [70, 78], [140, 58], [230, 36], [320, 20]];
+// what I actually preferred, judged blind — stays flat, then dips.
+const TRUE = [[0, 96], [70, 92], [140, 90], [230, 94], [320, 100]];
+const toPath = (pts: number[][]) => pts.map((p, i) => `${i ? "L" : "M"}${p[0]} ${p[1]}`).join(" ");
+const REWARD_D = toPath(REWARD);
+const TRUE_D = toPath(TRUE);
+const SPLIT = [140, 74]; // where the two lines visibly part
+
+const FIXES = ["blind", "loudness-matched", "gated vs doing nothing"];
+---
+
+<div class="pf pf-judge" data-proof="judge">
+  <div class="pf-head">
+    <span class="pf-kicker">live · the evaluation</span>
+    <h4 class="pf-title">The judge was overfitting. The audio was not improving.</h4>
+    <button type="button" class="pf-replay" data-replay aria-label="Replay the divergence">
+      <svg viewBox="0 0 16 16" width="13" height="13" aria-hidden="true"><path d="M13 8a5 5 0 1 1-1.46-3.54M13 2.5V5h-2.5" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      <span data-run-label>Replay</span>
+    </button>
+  </div>
+
+  <figure class="jg-chart">
+    <svg class="jg-svg" viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" role="img" aria-label="The reward the biased judge handed out climbed while blind preference stayed flat; the gap is reward-model overoptimization.">
+      <g class="jg-grid" aria-hidden="true">
+        <line x1="0" y1="0.5" x2={W} y2="0.5"></line>
+        <line x1="0" y1={H * 0.5} x2={W} y2={H * 0.5}></line>
+        <line x1="0" y1={H - 0.5} x2={W} y2={H - 0.5}></line>
+      </g>
+      <!-- divergence shading between the two lines, right of the split -->
+      <path class="jg-gap" data-gap d={`M${SPLIT[0]} ${SPLIT[1]} L320 20 L320 100 L${SPLIT[0]} ${TRUE[2][1]} Z`} aria-hidden="true"></path>
+      <!-- blind preference (flat, muted) -->
+      <path class="jg-true" data-true d={TRUE_D} fill="none"></path>
+      <!-- what the judge rewarded (climbs, accent) -->
+      <path class="jg-reward" data-reward d={REWARD_D} fill="none"></path>
+      <circle class="jg-split" data-split cx={SPLIT[0]} cy={SPLIT[1]} r="3.2" aria-hidden="true"></circle>
+    </svg>
+
+    <span class="jg-tag jg-tag-reward" data-endlabel aria-hidden="true">reward ↑</span>
+    <span class="jg-tag jg-tag-true" aria-hidden="true">blind preference →</span>
+    <span class="jg-gaplabel" data-gaplabel aria-hidden="true">overfitting the evaluator</span>
+  </figure>
+
+  <div class="jg-fix" data-fix>
+    <span class="jg-fix-label">so I shelved it and rebuilt the judge:</span>
+    <span class="jg-chips">
+      {FIXES.map((f) => (
+        <span class="jg-chip" data-chip>{f}</span>
+      ))}
+    </span>
+  </div>
+</div>
+
+<script>
+  import { onPlay, prefersReduced } from "./lib/motion";
+
+  document.querySelectorAll<HTMLElement>('[data-proof="judge"]').forEach((root) => {
+    const reward = root.querySelector<SVGPathElement>("[data-reward]");
+    const truth = root.querySelector<SVGPathElement>("[data-true]");
+    const runLabel = root.querySelector<HTMLElement>("[data-run-label]");
+    const chips = Array.from(root.querySelectorAll<HTMLElement>("[data-chip]"));
+
+    const setup = (p: SVGPathElement | null) => {
+      const len = p?.getTotalLength?.() ?? 320;
+      if (p) { p.style.strokeDasharray = `${len}`; p.style.strokeDashoffset = `${len}`; }
+      return len;
+    };
+    const rLen = setup(reward);
+    const tLen = setup(truth);
+
+    let timers: number[] = [];
+    const clear = () => { timers.forEach(clearTimeout); timers = []; };
+    const after = (ms: number, fn: () => void) => { timers.push(window.setTimeout(fn, ms)); };
+
+    const draw = (p: SVGPathElement | null, dur: number) => {
+      if (!p) return;
+      p.style.transition = "none";
+      // force reflow so the reset takes before we animate
+      void p.getBoundingClientRect();
+      requestAnimationFrame(() => requestAnimationFrame(() => {
+        p.style.transition = `stroke-dashoffset ${dur}ms cubic-bezier(0.4, 0, 0.1, 1)`;
+        p.style.strokeDashoffset = "0";
+      }));
+    };
+
+    const settle = () => {
+      if (reward) { reward.style.transition = "none"; reward.style.strokeDashoffset = "0"; }
+      if (truth) { truth.style.transition = "none"; truth.style.strokeDashoffset = "0"; }
+      root.classList.add("is-done");
+      chips.forEach((c) => c.classList.add("is-on"));
+    };
+
+    const run = () => {
+      clear();
+      root.classList.remove("is-done");
+      chips.forEach((c) => c.classList.remove("is-on"));
+      if (runLabel) runLabel.textContent = "Replaying";
+
+      if (prefersReduced()) { settle(); if (runLabel) runLabel.textContent = "Replay"; return; }
+
+      if (reward) reward.style.strokeDashoffset = `${rLen}`;
+      if (truth) truth.style.strokeDashoffset = `${tLen}`;
+      draw(truth, 1100);
+      draw(reward, 1300);
+
+      after(1450, () => {
+        root.classList.add("is-done");
+        if (runLabel) runLabel.textContent = "Replay";
+      });
+      chips.forEach((c, i) => after(1550 + i * 360, () => c.classList.add("is-on")));
+      // headless backstop
+      after(2900, settle);
+    };
+
+    root.querySelector<HTMLButtonElement>("[data-replay]")?.addEventListener("click", run);
+    onPlay(root, run, { threshold: 0.3 });
+  });
+</script>
+
+<style>
+  .pf {
+    --pf-radius: 8px;
+    --pf-bg: color-mix(in srgb, var(--surface-1) 60%, var(--bg));
+    margin-top: var(--space-4);
+    border: 1.5px solid transparent;
+    border-radius: var(--pf-radius);
+    background:
+      linear-gradient(var(--pf-bg), var(--pf-bg)) padding-box,
+      linear-gradient(135deg, #ff3b6e 0%, #ff6e21 50%, #eeff00 100%) border-box;
+    box-shadow: 0 0 22px rgba(255, 59, 110, 0.15), 0 10px 26px -12px rgba(0, 0, 0, 0.5);
+    padding: var(--space-4);
+    font-weight: var(--fw-regular);
+  }
+  .pf-head { display: flex; align-items: baseline; gap: var(--space-3); margin-bottom: var(--space-4); flex-wrap: wrap; }
+  .pf-kicker { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0.625rem; letter-spacing: 0.16em; text-transform: uppercase; color: var(--accent); }
+  .pf-title { font-size: 0.9375rem; font-weight: var(--fw-semibold); letter-spacing: -0.01em; color: var(--text); flex: 1 1 auto; }
+  .pf-replay {
+    display: inline-flex; align-items: center; gap: 6px; appearance: none;
+    border: 1px solid var(--line); background: var(--bg); color: var(--text);
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0.6875rem;
+    letter-spacing: 0.04em; padding: 5px 11px; border-radius: 999px; cursor: pointer;
+    transition: border-color 160ms ease, color 160ms ease;
+  }
+  .pf-replay:hover { border-color: var(--accent); color: var(--accent); }
+
+  /* ── chart ── */
+  .jg-chart { margin: 0; position: relative; }
+  .jg-svg { display: block; width: 100%; height: 116px; overflow: visible; }
+  .jg-grid line { stroke: var(--line); stroke-width: 1; opacity: 0.5; vector-effect: non-scaling-stroke; }
+
+  .jg-gap {
+    fill: color-mix(in srgb, var(--accent) 12%, transparent);
+    opacity: 0;
+    transition: opacity 0.6s ease 0.9s;
+  }
+  .pf-judge.is-done .jg-gap { opacity: 1; }
+
+  .jg-true {
+    stroke: var(--muted);
+    stroke-width: 1.8;
+    stroke-dasharray: 4 3;
+    stroke-linecap: round;
+    vector-effect: non-scaling-stroke;
+  }
+  .jg-reward {
+    stroke: var(--accent);
+    stroke-width: 2.4;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    vector-effect: non-scaling-stroke;
+  }
+  .jg-split {
+    fill: var(--bg); stroke: var(--accent); stroke-width: 1.6;
+    vector-effect: non-scaling-stroke;
+    opacity: 0; transition: opacity 0.4s ease 0.8s;
+  }
+  .pf-judge.is-done .jg-split { opacity: 1; }
+
+  /* ── overlay labels ── */
+  .jg-tag {
+    position: absolute;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 0.5625rem; white-space: nowrap; pointer-events: none;
+    opacity: 0; transition: opacity 0.4s ease 1s;
+  }
+  .pf-judge.is-done .jg-tag { opacity: 1; }
+  .jg-tag-reward { right: 0; top: 4px; color: var(--accent); font-weight: var(--fw-semibold); }
+  .jg-tag-true { right: 0; bottom: 2px; color: var(--muted); }
+  .jg-gaplabel {
+    position: absolute; left: 44%; top: 30%;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 0.5625rem; letter-spacing: 0.02em; color: var(--accent);
+    background: color-mix(in srgb, var(--bg) 86%, transparent);
+    border: 1px solid color-mix(in srgb, var(--accent) 40%, var(--line));
+    border-radius: 4px; padding: 1px 5px; white-space: nowrap; pointer-events: none;
+    opacity: 0; transform: translateY(4px); transition: opacity 0.45s ease 1.1s, transform 0.45s ease 1.1s;
+  }
+  .pf-judge.is-done .jg-gaplabel { opacity: 1; transform: none; }
+
+  /* ── the fix ── */
+  .jg-fix {
+    display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px;
+    margin-top: var(--space-4); padding-top: var(--space-3);
+    border-top: 1px solid var(--line);
+  }
+  .jg-fix-label { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0.6875rem; color: var(--muted); }
+  .jg-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+  .jg-chip {
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0.625rem;
+    color: var(--muted); background: var(--bg);
+    border: 1px solid var(--line); border-radius: 999px; padding: 3px 9px;
+    opacity: 0.45; transform: translateY(2px);
+    transition: opacity 0.32s ease, transform 0.32s ease, color 0.32s ease, border-color 0.32s ease;
+  }
+  .jg-chip.is-on {
+    opacity: 1; transform: none; color: var(--accent);
+    border-color: color-mix(in srgb, var(--accent) 50%, var(--line));
+  }
+  .jg-chip.is-on::before { content: "✓ "; }
+
+  @media (max-width: 34rem) {
+    .jg-svg { height: 104px; }
+    .jg-gaplabel { left: 38%; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .jg-gap, .jg-split, .jg-tag, .jg-gaplabel, .jg-chip { transition: none !important; }
+    .jg-reward, .jg-true { stroke-dashoffset: 0 !important; }
+  }
+</style>

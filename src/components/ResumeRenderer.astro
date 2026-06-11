@@ -12,6 +12,8 @@ import ProofDbtPipeline from "./resume/ProofDbtPipeline.astro";
 import ProofDesignSystem from "./resume/ProofDesignSystem.astro";
 import ProofGrowth from "./resume/ProofGrowth.astro";
 import ProofUsability from "./resume/ProofUsability.astro";
+import ProofAgentLoop from "./resume/ProofAgentLoop.astro";
+import ProofJudge from "./resume/ProofJudge.astro";
 
 interface Props {
   resume: ResumeAST;
@@ -54,6 +56,13 @@ function proofFor(company: string, text: string): Proof | null {
     if (t.includes("follower") || t.includes("125") || t.includes("growth"))
       return { id: "growth", label: "grow", color: "#F45D9B", ink: "#ffffff", side: "left", rot: 3, aria: "Watch the follower growth" };
   }
+  // The Engineer (the build section): the two jars that carry the design-engineer story.
+  if (c.includes("engineer")) {
+    if (t.includes("renders several masters") || t.includes("agent, not a button"))
+      return { id: "agentloop", label: "the loop", color: "#4D7CFE", ink: "#ffffff", side: "left", rot: -3, aria: "Play the agent loop" };
+    if (t.includes("evaluator") || t.includes("shelved"))
+      return { id: "judge", label: "the judge", color: "#F5B524", ink: "#3a2705", side: "right", rot: 2.5, aria: "See the evaluation insight" };
+  }
   return null;
 }
 
@@ -65,13 +74,24 @@ type TabDef = {
   ink: string; side: "left" | "right"; rot: number; aria: string;
 };
 const tabDefs: TabDef[] = [];
+const buildsSection = sections.find((s) => s.kind === "builds");
 const expSection = sections.find((s) => s.kind === "experience");
+// The Gantt shows the whole shape: current builds plus employment, newest first.
+const timelineRoles = [
+  ...(buildsSection && buildsSection.kind === "builds" ? buildsSection.roles : []),
+  ...(expSection && expSection.kind === "experience" ? expSection.roles : []),
+];
+// The timeline flag leads (it hangs on the experience heading).
 if (expSection && expSection.kind === "experience") {
   tabDefs.push({
     panelId: "panel-timeline", targetId: "exp-head", label: "timeline",
     color: "#15C2E6", ink: "#06323a", side: "left", rot: -3, aria: "Show the experience timeline",
   });
-  for (const r of expSection.roles) {
+}
+// Proof flags follow their bullets, across both the builds and experience roles.
+for (const sec of [buildsSection, expSection]) {
+  if (!sec || (sec.kind !== "builds" && sec.kind !== "experience")) continue;
+  for (const r of sec.roles) {
     for (const b of r.bullets) {
       const proof = proofFor(r.company, plainText(b));
       if (proof) {
@@ -123,13 +143,16 @@ if (expSection && expSection.kind === "experience") {
       );
     }
 
-    if (s.kind === "experience") {
+    if (s.kind === "experience" || s.kind === "builds") {
+      const isExp = s.kind === "experience";
       return (
-        <section class="section section-experience">
-          <h2 class="section-title" id="exp-head">{s.title}</h2>
-          <div class="proof-wrap r-live" id="panel-timeline" data-proof-wrap data-open="false">
-            <div class="proof-inner"><ResumeTimeline roles={s.roles} /></div>
-          </div>
+        <section class={`section section-${s.kind}`}>
+          <h2 class="section-title" id={isExp ? "exp-head" : "builds-head"}>{s.title}</h2>
+          {isExp && (
+            <div class="proof-wrap r-live" id="panel-timeline" data-proof-wrap data-open="false">
+              <div class="proof-inner"><ResumeTimeline roles={timelineRoles} /></div>
+            </div>
+          )}
           <div class="section-body">
             {s.roles.map((r) => (
               <div class="role" data-company={companySlug(r.company)}>
@@ -159,6 +182,8 @@ if (expSection && expSection.kind === "experience") {
                                 {proof.id === "designsystem" && <ProofDesignSystem />}
                                 {proof.id === "usability" && <ProofUsability />}
                                 {proof.id === "growth" && <ProofGrowth />}
+                                {proof.id === "agentloop" && <ProofAgentLoop />}
+                                {proof.id === "judge" && <ProofJudge />}
                               </div>
                             </div>
                           )}

@@ -41,6 +41,7 @@ export interface ResumeAST extends ResumeMeta {
 
 export type ResumeSection =
   | { kind: "summary"; title: string; paragraphs: RichTextItemResponse[][] }
+  | { kind: "builds"; title: string; roles: Role[] }
   | { kind: "experience"; title: string; roles: Role[] }
   | { kind: "education"; title: string; schools: School[] }
   | { kind: "tools"; title: string; groups: ToolGroup[] }
@@ -137,6 +138,8 @@ function isAllBold(rt: RichTextItemResponse[]): boolean {
 function classifySection(title: string): ResumeSection["kind"] {
   const t = title.toLowerCase().trim();
   if (t === "summary") return "summary";
+  if (t === "selected builds" || t === "builds" || t === "selected work" || t === "selected projects" || t === "projects")
+    return "builds";
   if (t === "experience" || t.includes("professional experience")) return "experience";
   if (t === "education") return "education";
   if (t === "tools" || t === "toolbox" || t === "additional information" || t === "skills") return "tools";
@@ -257,7 +260,7 @@ function buildSection(
     return { kind, title, paragraphs };
   }
 
-  if (kind === "experience") {
+  if (kind === "experience" || kind === "builds") {
     const roles: Role[] = [];
     let current: Role | null = null;
     for (const b of blocks) {
