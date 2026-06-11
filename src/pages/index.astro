@@ -1,6 +1,5 @@
 ---
 import Layout from "../layouts/Layout.astro";
-import WorkEntry from "../components/WorkEntry.astro";
 import Footer from "../components/Footer.astro";
 import AboutSignal from "../components/AboutSignal.astro";
 import { getCaseStudies } from "../lib/notion";
@@ -17,6 +16,20 @@ const rankOf = (slug: string) => {
 };
 const allWorks = await getCaseStudies();
 const works = [...allWorks].sort((a, b) => rankOf(a.slug) - rankOf(b.slug));
+
+// ── The Card Deck: each project is a numbered "signal node" on the left rail —
+// it carries the project's --accent and a pentatonic note (for the optional hover
+// tone). Tuning a node in (hover / keyboard focus) fills the big cover CARD with
+// that project. Sapphire #0ec4fc is the shared system colour at rest.
+const DECK: Record<string, { accent: string; note: string; freq: number }> = {
+  "the-console": { accent: "#16c5f5", note: "C5", freq: 523.25 },
+  "chs":         { accent: "#ffb347", note: "D5", freq: 587.33 },
+  "crediverso":  { accent: "#ff6f91", note: "E5", freq: 659.25 },
+  "raylu":       { accent: "#57d39a", note: "G5", freq: 783.99 },
+  "momence":     { accent: "#b69cff", note: "A5", freq: 880.0 },
+};
+const DECK_FALLBACK = { accent: "#16c5f5", note: "C5", freq: 523.25 };
+const deck = works.map((proj, i) => ({ proj, i, ...(DECK[proj.slug] ?? DECK_FALLBACK) }));
 ---
 
 <Layout title="Jonathan Tollefson — User Experience Architect" hideThemeSelector={true}>
@@ -30,58 +43,82 @@ const works = [...allWorks].sort((a, b) => rankOf(a.slug) - rankOf(b.slug));
       <div class="inner">
         <div class="work-head">
           <span class="section-eyebrow"><i class="se-tick" aria-hidden="true"></i>Selected work</span>
-          <p class="work-intro">Five projects — the catalog. Don't just read them; pull one up and operate it.</p>
+          <p class="work-intro">Five projects — the catalog. Tune one in.</p>
         </div>
 
-        <div class="windex" data-work-list data-active="0">
-          <ol class="windex-list">
-            {works.map((w, i) => (
-              <WorkEntry
-                i={i}
-                name={w.name}
-                subtitle={w.subtitle}
-                outcome={w.outcome}
-                role={w.role}
-                timeline={w.timeline}
-                tags={w.tags.slice(0, 3)}
-                slug={w.slug}
-                cover={w.cover}
-              />
+        {/* The Card Deck: a signal-routing DEVICE. Each project is a numbered
+            "signal node" on the left rail; hover / keyboard-focus tunes it in —
+            its cover fills the big CARD (now viewing), the accent floods the
+            device, and (only if the visitor switches sound on) its note plays.
+            The <a> nodes carry the full aria-label, so the big card is aria-hidden. */}
+        <div class="deck module" data-work-list data-active="0" data-sound="off">
+          {/* the AUDIO SWITCH — sits at the top of the rail, vertically in line
+              with the signal nodes; a broadcast-style control to opt into the
+              per-project hover tones (off by default). */}
+          <button class="dk-audio" type="button" aria-pressed="false" aria-label="Toggle hover sound" title="Hover sound">
+            <span class="dk-ripple" aria-hidden="true"></span>
+            <svg class="dk-ico" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+              <circle class="dk-core" cx="12" cy="12" r="2.3"></circle>
+              <path class="dk-arc" d="M8 8.4a5 5 0 0 0 0 7.2"></path>
+              <path class="dk-arc" d="M5.4 5.8a8.6 8.6 0 0 0 0 12.4"></path>
+              <path class="dk-arc" d="M16 8.4a5 5 0 0 1 0 7.2"></path>
+              <path class="dk-arc" d="M18.6 5.8a8.6 8.6 0 0 1 0 12.4"></path>
+              <line class="dk-slash" x1="4.5" y1="19.5" x2="19.5" y2="4.5"></line>
+            </svg>
+          </button>
+
+          <ol class="deck-rail bank">
+            {deck.map((d) => (
+              <li class="we" data-i={d.i} style={`--accent:${d.accent}`}>
+                <a class="node" href={`/case-studies/${d.proj.slug}`} data-i={d.i} data-freq={d.freq}
+                   aria-label={`View case study: ${d.proj.name} — ${d.proj.subtitle}${d.proj.outcome ? ". " + d.proj.outcome : ""}`}>
+                  <span class="nd-ping" aria-hidden="true"></span>
+                  <span class="nd-disc" aria-hidden="true"></span>
+                  <span class="nd-no" aria-hidden="true">{String(d.i + 1).padStart(2, "0")}</span>
+                  {d.proj.cover && (
+                    <span class="nd-cover" aria-hidden="true" style={`background-image:url(${d.proj.cover})`}></span>
+                  )}
+                  <span class="nd-mobile" aria-hidden="true">
+                    <span class="nd-m-name">{d.proj.name}</span>
+                    <span class="nd-m-pitch">{d.proj.subtitle}</span>
+                    {d.proj.outcome && <span class="nd-m-out">{d.proj.outcome}</span>}
+                  </span>
+                </a>
+              </li>
             ))}
           </ol>
 
-          {/* The exhibit plate. A visual, desktop-only enhancement fed by the
-              same data the rows carry, so it's aria-hidden: the rows already
-              announce title + pitch + outcome to assistive tech. The default
-              (first) plate shows at rest; CSS swaps it to whichever row is
-              hovered or keyboard-focused. */}
-          <aside class="windex-preview" aria-hidden="true">
-            {works.map((w, i) => (
-              <article class="pv" data-pv={i}>
-                <div class="pv-now">
-                  <span class="pv-eq" aria-hidden="true"><span></span><span></span><span></span></span>
-                  <span class="pv-now-l">Now viewing</span>
-                </div>
-                <div class="pv-frame">
-                  {w.cover ? (
-                    <img src={w.cover} alt="" loading={i === 0 ? "eager" : "lazy"} />
+          {/* The big CARD — the now-viewing. A visual, desktop-only enhancement
+              fed by the same data the rail links carry, so it's aria-hidden. The
+              default (first) card shows at rest; CSS swaps on hover / keyboard
+              focus (data-active). The cover is the readout — no meter, no waveform. */}
+          <div class="deck-card screen" aria-hidden="true" data-active="0">
+            {deck.map((d) => (
+              <article class="dcard" data-dc={d.i} style={`--accent:${d.accent}`}>
+                <div class="dc-cover">
+                  {d.proj.cover ? (
+                    <img src={d.proj.cover} alt="" loading={d.i === 0 ? "eager" : "lazy"} />
                   ) : (
-                    <div class="pv-empty"></div>
+                    <div class="dc-empty"></div>
                   )}
                 </div>
-                <div class="pv-body">
-                  <p class="pv-pitch">{w.subtitle}</p>
-                  {w.outcome && (
-                    <p class="pv-out"><span class="pv-k">Outcome</span>{w.outcome}</p>
-                  )}
-                  {w.tags.length > 0 && (
-                    <ul class="pv-tags">{w.tags.slice(0, 3).map((t) => <li>{t}</li>)}</ul>
-                  )}
-                  <span class="pv-view"><span>View case study</span><i aria-hidden="true">→</i></span>
+                <span class="dc-edge"></span>
+                <span class="dc-sweep"></span>
+                <div class="dc-tuned"><span class="dc-dot"></span>♪ Tuned · <span class="dc-note">{d.note}</span></div>
+                <div class="dc-plate">
+                  <div class="dc-title">{d.proj.name}</div>
+                  <p class="dc-sub">{d.proj.subtitle}</p>
+                  <div class="dc-sig"><span class="dc-base"></span><span class="dc-blip"></span></div>
+                  <div class="dc-meta">
+                    {d.proj.tags.length > 0 && (
+                      <span class="dc-tags">{d.proj.tags.slice(0, 3).map((t) => <span class="dc-tag">{t}</span>)}</span>
+                    )}
+                    <span class="dc-view">View case study →</span>
+                  </div>
                 </div>
               </article>
             ))}
-          </aside>
+          </div>
         </div>
 
         <div class="work-foot">
@@ -96,47 +133,87 @@ const works = [...allWorks].sort((a, b) => rankOf(a.slug) - rankOf(b.slug));
 
   <Footer />
 
-  {/* Work gallery: reveal each card as it enters the viewport. The cards are
-      anchors, so keyboard users already step through them with Tab + the focus
-      states defined in WorkEntry. Scoped to the home page; the reveal animation
-      is a no-op under prefers-reduced-motion (handled in WorkEntry's styles). */}
+  {/* The Card Deck controller: reveal the nodes as the deck enters, then tune a
+      node in on hover / keyboard focus (swap the card, light the node + accent
+      glow, fire the sonar ping, and — only if the visitor opted into sound — play
+      that project's note). Defaults to node 0, so the first project shows live
+      even with no JS. Audio is off until the toggle is pressed (its click is the
+      user gesture that unlocks the AudioContext, and keeps the page silent by
+      default). */}
   <script>
-    const list = document.querySelector<HTMLOListElement>("[data-work-list]");
+    const list = document.querySelector<HTMLElement>("[data-work-list]");
     if (list) {
-      const entries = Array.from(list.querySelectorAll<HTMLElement>(".we"));
-      const io = new IntersectionObserver((records) => {
+      const reveal = new IntersectionObserver((records) => {
         for (const r of records) {
-          if (r.isIntersecting) {
-            r.target.classList.add("we-in");
-            io.unobserve(r.target);
-          }
+          if (r.isIntersecting) { r.target.classList.add("we-in"); reveal.unobserve(r.target); }
         }
       }, { threshold: 0.18 });
-      entries.forEach((e) => io.observe(e));
+      Array.from(list.querySelectorAll<HTMLElement>(".we")).forEach((e) => reveal.observe(e));
 
-      /* Bring the hovered / keyboard-focused project up in the preview pane and
-         dim the rest. data-active drives which plate shows (CSS); data-engaged +
-         .is-active drive the dim + the row's active visuals. Defaults to 0 in
-         the markup, so the first plate shows even with no JS. */
-      const rows = Array.from(list.querySelectorAll<HTMLAnchorElement>(".we-a"));
+      const card = list.querySelector<HTMLElement>(".deck-card");
+      const nodes = Array.from(list.querySelectorAll<HTMLAnchorElement>(".node"));
+      const accents = Array.from(list.querySelectorAll<HTMLElement>(".we"))
+        .map((b) => b.style.getPropertyValue("--accent").trim() || "#16c5f5");
+      const glow = (i: number) => list.style.setProperty("--accent-glow", accents[i] || "transparent");
+      const reduce = window.matchMedia("(prefers-reduced-motion: reduce)");
+
+      // optional hover tone — off until opted in; lazy AudioContext, low gain, short.
+      let soundOn = false, actx: AudioContext | null = null;
+      const ensureCtx = () => (actx = actx || new (window.AudioContext || (window as any).webkitAudioContext)());
+      const tone = (freq: number) => {
+        if (!soundOn || !freq) return;
+        try {
+          const ac = ensureCtx(), t = ac.currentTime;
+          const o = ac.createOscillator(), o2 = ac.createOscillator(), g = ac.createGain(), lp = ac.createBiquadFilter();
+          o.type = "sine"; o2.type = "triangle"; o.frequency.value = freq; o2.frequency.value = freq * 2;
+          lp.type = "lowpass"; lp.frequency.value = 2600;
+          g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(0.06, t + 0.012);
+          g.gain.exponentialRampToValueAtTime(0.0008, t + 0.4);
+          o.connect(g); o2.connect(g); g.connect(lp); lp.connect(ac.destination);
+          o.start(t); o2.start(t); o.stop(t + 0.42); o2.stop(t + 0.42);
+        } catch {}
+      };
+      const retrigger = (el: Element | null | undefined, cls: string) => {
+        if (!el || reduce.matches) return;
+        el.classList.remove(cls); void (el as HTMLElement).offsetWidth; el.classList.add(cls);
+      };
+
       const engage = (i: number) => {
         list.setAttribute("data-active", String(i));
         list.setAttribute("data-engaged", "1");
-        rows.forEach((r, j) => r.classList.toggle("is-active", j === i));
+        card?.setAttribute("data-active", String(i));
+        nodes.forEach((n, j) => n.classList.toggle("is-active", j === i));
+        glow(i);
+        retrigger(nodes[i], "pinging");
+        retrigger(card?.querySelector(`.dcard[data-dc="${i}"]`), "swept");
+        tone(+(nodes[i].dataset.freq || 0));
       };
       const release = () => {
         list.setAttribute("data-active", "0");
         list.removeAttribute("data-engaged");
-        rows.forEach((r) => r.classList.remove("is-active"));
+        card?.setAttribute("data-active", "0");
+        nodes.forEach((n) => n.classList.remove("is-active"));
+        glow(0);
       };
-      rows.forEach((row, i) => {
-        row.addEventListener("pointerenter", () => engage(i));
-        row.addEventListener("focus", () => engage(i));
+      nodes.forEach((node, i) => {
+        node.addEventListener("pointerenter", () => engage(i));
+        node.addEventListener("focus", () => engage(i));
       });
       list.addEventListener("pointerleave", release);
       list.addEventListener("focusout", (e) => {
         if (!list.contains((e.relatedTarget as Node) ?? null)) release();
       });
+
+      const soundBtn = list.querySelector<HTMLButtonElement>(".dk-audio");
+      soundBtn?.addEventListener("click", () => {
+        soundOn = !soundOn;
+        list.setAttribute("data-sound", soundOn ? "on" : "off");
+        soundBtn.setAttribute("aria-pressed", String(soundOn));
+        retrigger(soundBtn, "pulsing");
+        if (soundOn) { try { ensureCtx().resume?.(); } catch {} }
+      });
+
+      glow(0);   // the card floods with node 0's accent at rest
     }
   </script>
 </Layout>
@@ -153,12 +230,16 @@ const works = [...allWorks].sort((a, b) => rankOf(a.slug) - rankOf(b.slug));
   .section {
     padding: var(--space-16) 0;
   }
+  /* The work index is the arrival composition: it must land the whole catalog in one
+     viewport, so it runs a tighter top than a generic section (the comet/portal owns
+     the headroom above it). */
+  .work.section { padding-top: clamp(1.5rem, 4vh, 2.6rem); }
 
   /* The work index — a quiet tracklist of the projects. The title is all you
      see at rest; the cover + outcome surface in a fixed preview pane on the
      right on hover / keyboard focus. Collapses to inline cards on touch. Every
      colour is a token, so it re-themes (dark-first). */
-  .work-head { margin-bottom: clamp(2.2rem, 5vw, 3.5rem); }
+  .work-head { margin-bottom: clamp(1.1rem, 2.6vw, 1.7rem); }
   .section-eyebrow {
     display: inline-flex;
     align-items: center;
@@ -181,96 +262,212 @@ const works = [...allWorks].sort((a, b) => rankOf(a.slug) - rankOf(b.slug));
     color: var(--text);
   }
 
-  .windex {
-    /* list (left) + sticky "now viewing" preview plate (right) */
+  .deck {
+    /* the Card Deck DEVICE: a chassis housing a header, the slim left rail of
+       signal NODES, and the big cover CARD (right). The card scales to the
+       viewport so the whole unit composes in one frame. Chassis + card are dark
+       in every theme; per-project --accent + sapphire are the only colour. */
+    position: relative;
     display: grid;
-    grid-template-columns: minmax(0, 1fr) clamp(20rem, 32vw, 27rem);
-    gap: clamp(2.5rem, 6vw, 5rem);
-    align-items: start;
-  }
-  .windex-list {
-    list-style: none;
-    margin: 0;
-    padding: 0;
-    border-top: 1px solid var(--line);
-  }
-
-  /* the exhibit plate — five stacked previews share one grid cell; opacity swaps */
-  .windex-preview {
-    position: sticky;
-    top: clamp(1.5rem, 8vh, 4rem);
-    display: grid;
-  }
-  .pv {
-    grid-area: 1 / 1;
-    opacity: 0;
-    transform: translateY(10px);
-    transition: opacity 0.45s ease, transform 0.45s cubic-bezier(0.2, 0, 0, 1);
-    pointer-events: none;
-  }
-  /* The active plate is driven by data-active on .windex (set by the controller
-     script; defaults to 0 in markup so the first plate shows with no JS). Both
-     .windex and .pv are owned here, so this stays scoped. */
-  .windex[data-active="0"] .pv[data-pv="0"],
-  .windex[data-active="1"] .pv[data-pv="1"],
-  .windex[data-active="2"] .pv[data-pv="2"],
-  .windex[data-active="3"] .pv[data-pv="3"],
-  .windex[data-active="4"] .pv[data-pv="4"],
-  .windex[data-active="5"] .pv[data-pv="5"] { opacity: 1; transform: none; }
-
-  .pv-now { display: flex; align-items: center; gap: 0.55rem; margin-bottom: 0.85rem; }
-  .pv-eq { display: inline-flex; align-items: flex-end; gap: 2px; height: 11px; }
-  .pv-eq span { width: 2.5px; height: 35%; background: var(--accent); animation: pv-eq 1.05s ease-in-out infinite; }
-  .pv-eq span:nth-child(2) { animation-delay: 0.18s; }
-  .pv-eq span:nth-child(3) { animation-delay: 0.36s; }
-  @keyframes pv-eq { 0%, 100% { height: 28%; } 50% { height: 100%; } }
-  .pv-now-l {
-    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-    font-size: 0.62rem; letter-spacing: 0.18em; text-transform: uppercase; color: var(--muted);
-  }
-  .pv-frame {
-    aspect-ratio: 16 / 10;
-    border: 1px solid var(--line);
-    background: var(--surface-1);
+    grid-template-columns: clamp(4.2rem, 6vw, 5.4rem) minmax(0, 1fr);
+    grid-template-rows: auto 1fr;
+    gap: clamp(0.8rem, 1.6vh, 1.3rem) clamp(1rem, 2vw, 1.5rem);
+    align-items: stretch;
+    padding: clamp(14px, 1.6vw, 22px);
+    border-radius: 18px;
+    border: 1px solid rgba(150, 190, 240, 0.14);
+    background: linear-gradient(157deg, rgba(30, 39, 55, 0.46) 0%, rgba(11, 15, 23, 0.6) 100%);
+    box-shadow:
+      0 44px 90px -46px rgba(0, 0, 0, 0.88),
+      inset 0 1.5px 0 rgba(255, 255, 255, 0.11),
+      inset 0 0 0 1px rgba(120, 160, 210, 0.06),
+      inset 0 -7px 16px rgba(0, 0, 0, 0.3),
+      0 0 70px -34px color-mix(in srgb, var(--accent-glow, #0ec4fc) 55%, transparent);
     overflow: hidden;
-    box-shadow: 0 30px 50px rgba(0, 0, 0, 0.45);
   }
-  .pv-frame img { width: 100%; height: 100%; object-fit: cover; display: block; }
-  .pv-empty { width: 100%; height: 100%; background: radial-gradient(120% 100% at 70% 0%, color-mix(in srgb, var(--accent) 18%, transparent), transparent 60%), var(--surface-1); }
-  .pv-body { padding-top: 1.1rem; }
-  .pv-pitch {
-    font-family: "Space Grotesk Variable", "Space Grotesk", sans-serif;
-    font-weight: 500; font-size: clamp(1rem, 1.4vw, 1.2rem); line-height: 1.34; letter-spacing: -0.01em;
-    color: var(--text);
+  /* a soft glass sheen across the top-left; content sits above it */
+  .deck::before {
+    content: ""; position: absolute; inset: 0; pointer-events: none; z-index: 0;
+    background: linear-gradient(152deg, rgba(255, 255, 255, 0.05) 0%, rgba(255, 255, 255, 0) 28%);
   }
-  .pv-out { margin-top: 0.85rem; font-size: 0.86rem; line-height: 1.5; color: var(--muted); }
-  .pv-k {
-    display: inline-block; font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-    font-size: 0.6rem; letter-spacing: 0.16em; text-transform: uppercase; color: var(--accent); margin-right: 0.5rem;
+  /* the POWER-VEIL: a dark layer over the whole device that LIFTS as the signal boots it
+     (--boot 0→1, set by AboutSignal as the comet is absorbed). Defaults to 1 = lifted
+     (full power) when not in the live arrival, so the static/browse module reads normal. */
+  .deck::after {
+    content: ""; position: absolute; inset: 0; pointer-events: none; z-index: 6; border-radius: 18px;
+    background: radial-gradient(132% 104% at 80% 28%, rgba(4, 7, 12, 0.9), rgba(1, 2, 5, 0.97));
+    opacity: calc(1 - var(--boot, 1));
   }
-  .pv-tags { list-style: none; display: flex; flex-wrap: wrap; gap: 0.4rem; margin-top: 1rem; }
-  .pv-tags li {
-    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-    font-size: 0.6rem; letter-spacing: 0.06em; text-transform: uppercase;
-    color: color-mix(in srgb, var(--text) 72%, transparent);
-    padding: 0.25rem 0.6rem; border: 1px solid var(--line); border-radius: 999px;
+  .dk-audio, .deck-rail, .deck-card { position: relative; z-index: 1; }
+  /* the AUDIO SWITCH — a prominent broadcast control at the top of the rail, in
+     line with the signal nodes. Sapphire #0ec4fc is the shared system colour;
+     OFF reads as a dim, slashed signal, ON lights the broadcast arcs. */
+  .dk-audio {
+    grid-column: 1; grid-row: 1;
+    display: flex; align-items: center; justify-content: center;
+    width: clamp(40px, 4.4vw, 52px); height: clamp(40px, 4.4vw, 52px);
+    margin: 0 auto clamp(8px, 1.3vh, 12px); padding: 0; cursor: pointer;
+    border-radius: 50%; border: 1px solid rgba(150, 190, 240, 0.16);
+    background: linear-gradient(180deg, rgba(38, 47, 62, 0.5), rgba(15, 20, 29, 0.62));
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06), 0 2px 6px rgba(0, 0, 0, 0.4);
+    transition: border-color 0.25s ease, box-shadow 0.25s ease, background 0.25s ease;
   }
-  .pv-view {
-    display: inline-flex; align-items: center; gap: 0.5rem; margin-top: 1.25rem;
-    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-    font-size: 0.66rem; font-weight: 700; letter-spacing: 0.16em; text-transform: uppercase;
-    color: var(--text); border-bottom: 2px solid var(--accent); padding-bottom: 0.35rem;
+  .dk-audio:focus-visible { outline: 2px solid #0ec4fc; outline-offset: 2px; }
+  .dk-ico { width: 56%; height: 56%; overflow: visible; }
+  .dk-core { fill: #6c7a89; transition: fill 0.25s ease; }
+  .dk-arc { stroke: #6c7a89; stroke-width: 1.7; stroke-linecap: round; opacity: 0.7; transition: stroke 0.25s ease, opacity 0.25s ease; }
+  .dk-slash { stroke: #8590a0; stroke-width: 1.7; stroke-linecap: round; opacity: 0.95; transition: opacity 0.25s ease; }
+  .dk-ripple { position: absolute; inset: -1px; border-radius: 50%; border: 1.5px solid #0ec4fc; opacity: 0; pointer-events: none; }
+  .deck[data-sound="on"] .dk-audio {
+    border-color: color-mix(in srgb, #0ec4fc 60%, transparent);
+    background: radial-gradient(circle at 50% 36%, color-mix(in srgb, #0ec4fc 22%, #10151c), #0a0e14);
+    box-shadow: inset 0 0 16px color-mix(in srgb, #0ec4fc 22%, transparent), 0 0 20px -3px #0ec4fc;
   }
-  .pv-view i { font-style: normal; color: var(--accent); }
+  .deck[data-sound="on"] .dk-core { fill: #0ec4fc; }
+  .deck[data-sound="on"] .dk-arc { stroke: #0ec4fc; opacity: 1; }
+  .deck[data-sound="on"] .dk-slash { opacity: 0; }
+  .dk-audio.pulsing .dk-ripple { animation: dk-ping 0.55s cubic-bezier(0.2, 0.6, 0.3, 1); }
 
+  /* ── the rail of signal NODES (the projects) ── */
+  .deck-rail {
+    list-style: none; margin: 0; padding: 0; grid-column: 1; grid-row: 2; align-self: stretch;
+    display: flex; flex-direction: column; justify-content: center; gap: clamp(8px, 1.3vh, 12px);
+  }
+  .we { margin: 0; flex: 1 1 0; display: flex; }   /* nodes grow to fill the rail height */
+  .node {
+    position: relative; flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 5px;
+    min-height: clamp(46px, 7vh, 70px); text-decoration: none; border-radius: 11px;
+    border: 1px solid rgba(150, 190, 240, 0.1);
+    background: linear-gradient(180deg, rgba(38, 47, 62, 0.42), rgba(15, 20, 29, 0.5));
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05), 0 2px 6px rgba(0, 0, 0, 0.3);
+    transition: background 0.3s ease, box-shadow 0.3s ease, border-color 0.3s ease;
+  }
+  .node:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .nd-disc {
+    position: relative; width: 24px; height: 24px; border-radius: 50%;
+    background: radial-gradient(circle at 50% 36%, #2a313c, #0c0f14 70%);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12), inset 0 -2px 4px rgba(0, 0, 0, 0.7);
+    transition: background 0.3s ease, box-shadow 0.3s ease;
+  }
+  .nd-disc::before {
+    content: ""; position: absolute; inset: 5px; border-radius: 50%;
+    border: 1.5px solid color-mix(in srgb, var(--accent) 50%, #3a414c); opacity: 0.5; transition: opacity 0.3s ease;
+  }
+  .nd-no { font-family: ui-monospace, "IBM Plex Mono", Menlo, monospace; font-size: 0.56rem; font-weight: 600; letter-spacing: 0.08em; color: #7a8694; transition: color 0.3s ease; }
+  /* one-shot sonar PING on hover/focus (re-fired by the controller via .pinging) */
+  .nd-ping {
+    position: absolute; top: 50%; left: 50%; width: 24px; height: 24px; margin: -12px 0 0 -12px; border-radius: 50%;
+    border: 1.5px solid var(--accent); opacity: 0; pointer-events: none; transform: scale(0.6);
+  }
+  .node.pinging .nd-ping { animation: dk-ping 0.55s cubic-bezier(0.2, 0.6, 0.3, 1); }
+  @keyframes dk-ping { 0% { opacity: 0.8; transform: scale(0.55); } 100% { opacity: 0; transform: scale(2.4); } }
+  .nd-cover, .nd-mobile { display: none; }
+  /* TUNED IN — the live node: disc lights, ring blooms, accent glow */
+  .node:hover, .node:focus-visible, .node.is-active,
+  .deck:not([data-engaged]) .we[data-i="0"] .node {
+    background: linear-gradient(180deg, color-mix(in srgb, var(--accent) 14%, rgba(30, 38, 52, 0.46)), rgba(15, 20, 29, 0.5));
+    border-color: color-mix(in srgb, var(--accent) 45%, transparent);
+    box-shadow: inset 0 0 18px color-mix(in srgb, var(--accent) 12%, transparent), 0 0 16px -5px color-mix(in srgb, var(--accent) 55%, transparent);
+  }
+  .node:hover .nd-disc, .node:focus-visible .nd-disc, .node.is-active .nd-disc,
+  .deck:not([data-engaged]) .we[data-i="0"] .node .nd-disc {
+    background: radial-gradient(circle at 50% 36%, #fff, var(--accent) 62%);
+    box-shadow: 0 0 12px color-mix(in srgb, var(--accent) 85%, transparent);
+  }
+  .node:hover .nd-disc::before, .node:focus-visible .nd-disc::before, .node.is-active .nd-disc::before,
+  .deck:not([data-engaged]) .we[data-i="0"] .node .nd-disc::before { opacity: 0; }
+  .node:hover .nd-no, .node:focus-visible .nd-no, .node.is-active .nd-no,
+  .deck:not([data-engaged]) .we[data-i="0"] .node .nd-no { color: #fff; }
+
+  /* ── THE CARD — the now-viewing display; five covers stack, opacity-swapped.
+     Dark in every theme, with a glow keyed to the live project's --accent-glow. */
+  .deck-card {
+    grid-column: 2; grid-row: 1 / -1; position: relative; border-radius: 14px; overflow: hidden;
+    border: 1px solid rgba(150, 200, 255, 0.13);
+    background: linear-gradient(155deg, #0e1a28 0%, #070d16 70%, #050a12 100%);
+    box-shadow:
+      inset 0 2px 6px rgba(0, 0, 0, 0.5), inset 0 0 0 1.5px rgba(0, 0, 0, 0.5), inset 0 0 44px rgba(0, 0, 0, 0.45),
+      0 0 calc(40px * var(--boot, 1)) -6px color-mix(in srgb, var(--accent-glow, transparent) 44%, transparent);
+    min-height: clamp(14rem, 40svh, 25rem);
+    transition: box-shadow 0.4s ease;
+  }
+  .dcard {
+    position: absolute; inset: 0; opacity: 0; pointer-events: none;
+    transition: opacity 0.45s ease;
+  }
+  /* the active card is driven by data-active on .deck-card (controller; defaults to
+     0 in markup so the first card shows with no JS). Scoped to .deck-card / .dcard. */
+  .deck-card[data-active="0"] .dcard[data-dc="0"],
+  .deck-card[data-active="1"] .dcard[data-dc="1"],
+  .deck-card[data-active="2"] .dcard[data-dc="2"],
+  .deck-card[data-active="3"] .dcard[data-dc="3"],
+  .deck-card[data-active="4"] .dcard[data-dc="4"],
+  .deck-card[data-active="5"] .dcard[data-dc="5"] { opacity: var(--boot, 1); }
+  .dc-cover { position: absolute; inset: 0; }
+  .dc-cover img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .dc-empty { width: 100%; height: 100%; background: radial-gradient(120% 100% at 70% 0%, color-mix(in srgb, var(--accent) 22%, transparent), transparent 60%), #04070c; }
+  .dc-edge { position: absolute; left: 0; right: 0; top: 0; height: 3px; z-index: 4; opacity: 0.75; background: linear-gradient(90deg, transparent, var(--accent), transparent); }
+  /* a signal SWEEP across the card on swap (controller toggles .swept) */
+  .dc-sweep {
+    position: absolute; inset: 0; z-index: 3; pointer-events: none; opacity: 0; width: 40%;
+    background: linear-gradient(90deg, transparent, color-mix(in srgb, var(--accent) 26%, transparent), transparent);
+  }
+  .dcard.swept .dc-sweep { animation: dk-sweep 0.5s ease; }
+  @keyframes dk-sweep { 0% { opacity: 0.9; transform: translateX(-120%); } 100% { opacity: 0; transform: translateX(330%); } }
+  /* the tuned-in label (audio cue, NOT a meter): the project's note */
+  .dc-tuned {
+    position: absolute; top: 12px; right: 13px; z-index: 5; display: inline-flex; align-items: center; gap: 7px;
+    font-family: ui-monospace, Menlo, monospace; font-size: 0.55rem; letter-spacing: 0.14em; text-transform: uppercase; color: #cdd6e1;
+    background: rgba(5, 8, 13, 0.55); border: 1px solid color-mix(in srgb, var(--accent) 35%, rgba(150, 200, 255, 0.12)); border-radius: 999px; padding: 5px 10px;
+  }
+  .dc-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--accent); box-shadow: 0 0 8px var(--accent); }
+  .dc-note { color: var(--accent); }
+  /* the title plate — a scrim so the title stays legible over ANY cover */
+  .dc-plate {
+    position: absolute; left: 0; right: 0; bottom: 0; z-index: 5; padding: clamp(16px, 2vw, 24px);
+    background: linear-gradient(0deg, rgba(3, 5, 9, 0.96) 0%, rgba(3, 5, 9, 0.82) 45%, rgba(3, 5, 9, 0.35) 75%, transparent 100%);
+  }
+  .dc-title {
+    font-family: "Space Grotesk Variable", "Space Grotesk", sans-serif; font-weight: 700;
+    letter-spacing: -0.03em; line-height: 0.95; font-size: clamp(1.7rem, 3.2vw, 2.7rem);
+    color: #fff; text-shadow: 0 2px 18px rgba(0, 0, 0, 0.6);
+  }
+  .dc-sub { margin-top: 0.5rem; font-size: clamp(0.92rem, 1.3vw, 1.05rem); line-height: 1.35; color: #d3dce6; max-width: 44ch; }
+  .dc-sig { position: relative; margin-top: 0.9rem; height: 12px; }
+  .dc-base { position: absolute; left: 0; right: 0; top: 50%; height: 1.5px; background: linear-gradient(90deg, color-mix(in srgb, var(--accent) 55%, transparent), transparent 70%); }
+  .dc-blip { position: absolute; left: 0; top: 50%; width: 8px; height: 8px; margin-top: -4px; border-radius: 50%; background: var(--accent); box-shadow: 0 0 10px var(--accent); opacity: 0; }
+  .dcard.swept .dc-blip { animation: dk-blip 0.6s ease; }
+  @keyframes dk-blip { 0% { opacity: 1; transform: translateX(0); } 100% { opacity: 0; transform: translateX(200px); } }
+  .dc-meta { margin-top: 0.9rem; display: flex; flex-wrap: wrap; gap: 0.5rem 1rem; align-items: center; font-family: ui-monospace, Menlo, monospace; font-size: 0.58rem; letter-spacing: 0.13em; text-transform: uppercase; color: #9aa6b3; }
+  .dc-tags { display: inline-flex; gap: 0.5rem; flex-wrap: wrap; }
+  .dc-tag { color: #b6c2cd; border: 1px solid color-mix(in srgb, var(--accent) 30%, rgba(150, 210, 255, 0.16)); border-radius: 999px; padding: 0.22rem 0.55rem; }
+  .dc-view { color: #fff; border-bottom: 2px solid var(--accent); padding-bottom: 0.25rem; }
+
+  /* Mobile / touch: the deck sheds its chassis and becomes plain project cards. */
   @media (max-width: 55.99rem) {
-    .windex { grid-template-columns: 1fr; gap: 0; }
-    .windex-preview { display: none; }
+    .deck { display: block; padding: 0; border: none; background: none; box-shadow: none; border-radius: 0; }
+    .deck::before, .deck::after, .dk-audio, .deck-card { display: none; }
+    .deck-rail { display: block; }
+    .node {
+      display: flex; flex-direction: column; align-items: stretch; gap: 0; min-height: 0;
+      padding: 1.4rem 0 1.7rem; border: none; border-bottom: 1px solid var(--line);
+      background: none; box-shadow: none; border-radius: 0;
+    }
+    .nd-ping, .nd-disc, .nd-no { display: none; }
+    .nd-cover {
+      display: block; order: -1; position: relative; width: 100%; aspect-ratio: 16 / 9;
+      background-size: cover; background-position: center; border: 1px solid var(--line);
+      filter: brightness(0.92); margin-bottom: 1rem;
+    }
+    .nd-mobile { display: block; }
+    .nd-m-name { display: block; font-family: "Space Grotesk Variable", "Space Grotesk", sans-serif; font-weight: 600; font-size: clamp(1.7rem, 8vw, 2.4rem); letter-spacing: -0.02em; line-height: 1.05; color: var(--text); }
+    .nd-m-pitch { display: block; margin-top: 0.55rem; font-size: 1.02rem; line-height: 1.4; color: color-mix(in srgb, var(--text) 86%, transparent); }
+    .nd-m-out { display: block; margin-top: 0.5rem; font-size: 0.86rem; line-height: 1.45; color: var(--muted); }
     .work-intro { max-width: 28ch; }
   }
   @media (prefers-reduced-motion: reduce) {
-    .pv { transition: opacity 0.2s ease; transform: none; }
-    .pv-eq span { animation: none; height: 55%; }
+    .dcard, .node, .nd-disc { transition: none; }
+    .node.pinging .nd-ping, .dcard.swept .dc-sweep, .dcard.swept .dc-blip { animation: none; }
   }
 
   .work-foot {
@@ -299,10 +496,3 @@ const works = [...allWorks].sort((a, b) => rankOf(a.slug) - rankOf(b.slug));
   }
 </style>
 
-<style is:global>
-  /* The one cross-component rule: dim the other rows while one is engaged.
-     References WorkEntry's .we-a, so it lives in a global block (namespaced
-     under .windex). Driven by the controller script's data-engaged + .is-active;
-     no :has, so it invalidates reliably on mouse and keyboard. */
-  .windex[data-engaged] .we-a:not(.is-active) { opacity: 0.32; }
-</style>

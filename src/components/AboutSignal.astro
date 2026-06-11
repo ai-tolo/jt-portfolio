@@ -86,6 +86,14 @@ const GLINTS = Array.from({ length: 40 }, () => ({
   ph: +(grnd() * 6.283).toFixed(2),                   // random twinkle phase
   f: +(52 + grnd() * 74).toFixed(1),                  // random twinkle RATE (per glint)
 }));
+
+// ── the PORTAL — a gateway / black-hole the comet drops STRAIGHT INTO at the end of
+// the fall. Viewed side-on, so the (circular) mouth foreshortens to a flat ELLIPSE;
+// it's centred on the comet's column, so the comet falls straight into the throat with
+// no lateral move (the tail stays vertical). Concentric accretion rings + a bright
+// event-horizon rim + a dark throat; the script grows it on approach (distant point →
+// grand gateway) and fires a cool core-glint as the comet is consumed. Mostly off-screen
+// (over half) by design. Drawn in markup (ellipses) — no build-time geometry needed.
 ---
 
 <section class="als" id="about" aria-label="About Jonathan Tollefson">
@@ -134,18 +142,6 @@ const GLINTS = Array.from({ length: 40 }, () => ({
            data-t0={b.t0} data-t1={b.t1} data-sp={b.sp} data-o={b.o}></i>
       ))}
       <div class="als-glow" aria-hidden="true"></div>
-
-      {/* the landing cradle — an open semi-circle catcher that EMITS gravity/sonic
-          pulses to catch + slow the comet as it lands. On capture, the two arcs close
-          from the left + right to MEET at top-centre, LOCK, then the (now-solid) capsule
-          transfers out. Pinned (fixed) + positioned/driven by the client script. */}
-      <svg class="als-cradle" viewBox="0 0 100 100" aria-hidden="true">
-        <circle class="als-cradle-pulse" cx="50" cy="50" r="33"></circle>
-        <circle class="als-cradle-pulse" cx="50" cy="50" r="33"></circle>
-        <path class="als-cradle-arc" data-side="l" d="M 50 90 A 40 40 0 0 0 50 10" pathLength="100"></path>
-        <path class="als-cradle-arc" data-side="r" d="M 50 90 A 40 40 0 0 1 50 10" pathLength="100"></path>
-        <circle class="als-cradle-lock" cx="50" cy="10" r="3.2"></circle>
-      </svg>
 
       {/* the playhead — a STAGE child (not a wave child) so it stays round while
           the wave scales up during the wake; positioned in screen space by JS */}
@@ -227,7 +223,7 @@ const GLINTS = Array.from({ length: 40 }, () => ({
     box-shadow: 0 0 12px 1px color-mix(in srgb, var(--accent) 60%, transparent);
   }
   .als-dot { display: none; }
-  .als-warp, .als-glow, .als-blip, .als-glint, .als-cradle { display: none; }
+  .als-warp, .als-glow, .als-blip, .als-glint { display: none; }
 
   /* the descriptors — stacked, each with its own identity */
   .als-beats {
@@ -312,11 +308,9 @@ const GLINTS = Array.from({ length: 40 }, () => ({
     display: block; position: absolute; left: 0; top: 0; z-index: 3;
     width: 15px; height: 15px; border-radius: 50%;
     background: radial-gradient(circle at 50% 38%,
-      color-mix(in srgb, #fff, #cfe6ff var(--cool-p, 0%)) 0%,
-      color-mix(in srgb, var(--accent), #4aa6ff var(--cool-p, 0%)) 55%,
-      color-mix(in srgb, var(--accent) 55%, #000) 100%);
+      #fff 0%, var(--accent) 55%, color-mix(in srgb, var(--accent) 55%, #000) 100%);
     box-shadow: 0 0 calc(20px + var(--cg, 0) * 60px) calc(5px + var(--cg, 0) * 16px)
-      color-mix(in srgb, color-mix(in srgb, var(--accent), #4aa6ff var(--cool-p, 0%)) 60%, transparent);
+      color-mix(in srgb, var(--accent) 60%, transparent);
     transform: translate(-50%, -50%) scale(var(--bs, 1)); opacity: 0;
     transition: transform 0.16s ease-out, box-shadow 0.2s ease;
     will-change: left, top, transform;
@@ -340,73 +334,6 @@ const GLINTS = Array.from({ length: 40 }, () => ({
     border: 2px solid var(--accent); pointer-events: none;
     opacity: var(--chg-o, 0); transform: scale(var(--chg-s, 1));
   }
-  /* The "catch & deliver" finale is driven by the client script (not a scroll
-     groove): the comet's tail collapses as it nears but it stays RED/warm; the scroll
-     CATCHES (locks down) when it lands in the cradle (caught = red); on click /
-     scroll-again the ball fades red→blue/white, the ring closes around it (aperture +
-     lock), it SEALS solid, then the capsule transfers out while the work is delivered +
-     the scroll unlocks. `--cool-p` (JS-driven) tints it blue — only at capture.
-
-     the CAUGHT ball is a focusable, clickable control that gently pulses (the
-     subtle affordance); scroll-again is the safety net so it's never a dead wall. */
-  .als-live .als-dot.caught {
-    pointer-events: auto; cursor: pointer;
-    animation: als-caught 1.5s ease-in-out infinite;
-  }
-  .als-live .als-dot.caught:focus-visible { outline: 2px solid #cfe6ff; outline-offset: 5px; }
-  /* caught = still RED/warm (the accent) — it cools to blue/white only at capture */
-  @keyframes als-caught {
-    0%, 100% { box-shadow: 0 0 16px 4px color-mix(in srgb, var(--accent) 55%, transparent); }
-    50%      { box-shadow: 0 0 30px 9px color-mix(in srgb, var(--accent) 75%, transparent); }
-  }
-
-  /* the landing cradle — an open semi-circle catcher (bottom-half ring, open top).
-     The script pins it (fixed) at the catch point, fades it in as the comet nears,
-     CLOSES the ring around the ball on capture (stroke-dasharray 50→100), flashes
-     the core on lock (--cradle-lock), then transfers it out. */
-  .als-live .als-cradle {
-    display: block; position: fixed; left: 0; top: 0; z-index: 2; pointer-events: none;
-    width: 84px; height: 84px; margin: -42px 0 0 -42px; opacity: 0;
-    overflow: visible; will-change: transform, opacity;
-  }
-  /* the two catching arcs (open cup → close from L + R to meet at top-centre); the
-     script drives their stroke-dasharray (50 open → 100 closed). */
-  .als-live .als-cradle-arc {
-    fill: none; stroke: var(--cradle-c, #7cc4ff); stroke-width: 4; stroke-linecap: round;
-    stroke-dasharray: 50 50; stroke-dashoffset: 0;
-  }
-  /* the lock latch at top-centre — flashes + swells when the arcs meet. */
-  .als-live .als-cradle-lock {
-    fill: #eaf4ff; opacity: var(--cradle-lock, 0);
-    transform-box: fill-box; transform-origin: center;
-    transform: scale(calc(0.4 + var(--cradle-lock, 0)));
-  }
-  /* gravity / sonic emitter pulses — concentric rings the cradle throws to catch +
-     slow the comet. Only run while the cradle is `emitting` (landing / caught). */
-  .als-live .als-cradle-pulse {
-    fill: none; stroke: var(--cradle-c, #5ab0ff); stroke-width: 1.6; opacity: 0;
-    transform-box: fill-box; transform-origin: center;
-  }
-  .als-live .als-cradle.emitting .als-cradle-pulse { animation: als-emit 1.7s ease-out infinite; }
-  .als-live .als-cradle.emitting .als-cradle-pulse:nth-of-type(2) { animation-delay: 0.85s; }
-  @keyframes als-emit {
-    0%   { transform: scale(0.4); opacity: 0; }
-    22%  { opacity: 0.5; }
-    100% { transform: scale(1.55); opacity: 0; }
-  }
-  /* once locked, the ball reads SOLID — a closed bead: a hard specular glint top-left,
-     a body that darkens to a deep navy edge (roundness), and ONLY a contact shadow —
-     NO emission glow (that's what separates a captured solid from the energy comet).
-     The comet's inner glow/ring/tail are zeroed by the script before the seal. The
-     quick background transition makes it "set" with a clunk at the lock. */
-  .als-live .als-dot.sealed {
-    background:
-      radial-gradient(circle at 36% 28%, #ffffff 0%, rgba(255,255,255,0.9) 7%, rgba(255,255,255,0) 24%),
-      radial-gradient(circle at 50% 44%, #dcebff 0%, #8ab6f0 30%, #3f74c6 68%, #224d8f 90%, #173968 100%);
-    box-shadow: 0 2px 6px rgba(12,22,52,0.5);
-    transition: background 0.12s ease, box-shadow 0.22s ease, transform 0.16s ease-out;
-  }
-
   /* the hyperspace warp — a stack of streak layers. Each is the speckle texture
      stretched tall (background-size) into vertical light streaks, MOVED BY
      TRANSFORM ONLY (the script translates each at its own speed, modulo its tile
@@ -587,10 +514,6 @@ const GLINTS = Array.from({ length: 40 }, () => ({
     // cache each glint's twinkle phase + rate once (avoid a per-frame dataset parse ×N)
     const glintPh = glints.map((el) => +(el.dataset.ph || 0));
     const glintF = glints.map((el) => +(el.dataset.f || 80));
-    const cradle = als.querySelector<HTMLElement>(".als-cradle");
-    const cradleArcs = Array.from(als.querySelectorAll<SVGElement>(".als-cradle-arc")) as unknown as HTMLElement[];
-    const cradleLock = als.querySelector<SVGElement>(".als-cradle-lock") as unknown as HTMLElement;
-    const setArcs = (v: string) => { for (const a of cradleArcs) a.style.strokeDasharray = v; };
     if (!track || !stage || !dot || !beats) return;
 
     // ── the wave's curve (matches the build-time path), for the ball to ride ──
@@ -621,12 +544,13 @@ const GLINTS = Array.from({ length: 40 }, () => ({
     const ENTER = 0.09;     // the ball starts sliding in from off the left
     const LIFT = 0.15;      // by here: name fully off-screen + wave docked + ball settled
     const FALL = 0.42;      // the ride ends, the ball begins its (long) comet fall
-    const ARRIVE = 0.90;    // the comet reaches the cradle; the scroll CATCHES here (locks down)
-    const WORK_RISE = 0.90; // the work stays tucked below until the catch; the capture DELIVERS it
-    const WORK_LAND = 1.0;  // the work fully landed at the track end (the capture auto-scrolls ARRIVE→here)
-    const CAP_MS = 2000;    // capture duration (cool → arcs close → lock → SEAL → held beat → transfer + delivery)
-    const CATCH_BEAT = 450; // ignore down-intent this long after catching (let flick-momentum settle)
-    const OFFV = 0.10;      // the work rests this far (× viewport) below the top (was 0.18 → 55%)
+    const ARRIVE = 0.88;    // the comet reaches the (rising, dark) device + is absorbed; the BOOT begins
+    const WORK_RISE = 0.78; // the device starts rising (dark, powered-off) BEFORE the comet arrives,
+                            // so it's risen into place to receive the signal
+    const WORK_LAND = 0.96; // the device finishes booting + the catalog is framed/live
+    const OFFV = 0.12;      // the work rests this far (× viewport) below the top — frames "Selected
+                            // work" in the upper third (with headroom below the nav), the whole
+                            // catalog composing in one arrival frame
     const BALL_OFF = 0.1;   // the ball's start x, fully off the left edge
     const BALL_REST = 0.06; // its resting x — fully visible, just inside the edge
     // warp streak depths: speed (× fall travel) + tile height (px) for the seamless
@@ -635,7 +559,6 @@ const GLINTS = Array.from({ length: 40 }, () => ({
     const STREAK_TH = [290, 420, 560, 700, 860];
     const STREAK_OP = [0.95, 0.8, 0.72, 0.62, 0.52];  // per-layer base brightness (near→far); JS shimmers it by scroll
     const GROWTH = 1.0;     // the comet's size growth over the fall (1 → 1+GROWTH at the park) — more dramatic
-    const DOCK_Y = 40;      // the cradle/catch sits this many px above the bottom (bottom-right corner)
 
     // ride x as [ride-progress, x] keyframes. Flat (x===x) spans are gravity wells
     // where the ball dwells on a node; the opening hold is the friction (it resists,
@@ -656,9 +579,7 @@ const GLINTS = Array.from({ length: 40 }, () => ({
     const reduce = window.matchMedia("(prefers-reduced-motion: reduce)");
     const coarse = window.matchMedia("(max-width: 55.99rem)");
 
-    let p = -1, active = -2, ticking = false, on = false, warpActive = false, workShown = false, bgScroll = false, glowActive = false, blipsActive = false, glintsActive = false, cradleShown = false, dnDir = true;
-    // the "catch & deliver" gate: none → caught (scroll locked) → capturing → done
-    let gate = "none", catchT = 0, catchY = 0, capStart = 0, capRAF = 0, twFrom = 0, twTo = 0;
+    let p = -1, active = -2, ticking = false, on = false, warpActive = false, workShown = false, bgScroll = false, glowActive = false, blipsActive = false, glintsActive = false, booted = -1;
     let io: IntersectionObserver | null = null;
     let scrollBound = false;
 
@@ -683,135 +604,9 @@ const GLINTS = Array.from({ length: 40 }, () => ({
       else link?.classList.remove("on");
     };
 
-    // ── "catch & deliver" finale ───────────────────────────────────────────────
-    const catchPX = () => 0.965 * window.innerWidth;       // the catch point in the
-    const catchPY = () => window.innerHeight - DOCK_Y;     // viewport corner (resize-safe)
-
-    // pin the cooled-blue ball (fixed) in the cradle at the catch point
-    const placeCaught = () => {
-      const px = catchPX(), py = catchPY();
-      dot.style.position = "fixed"; dot.style.transition = "none";
-      dot.style.left = px.toFixed(1) + "px"; dot.style.top = py.toFixed(1) + "px";
-      dot.style.transform = "translate(-50%,-50%) scale(1)"; dot.style.opacity = "1";
-      dot.style.setProperty("--bs", "1"); dot.style.setProperty("--cg", "0.45");
-      dot.style.setProperty("--cool-p", "0%"); dot.style.setProperty("--tail", "0px");   // stays RED while caught — cools only at capture
-      dot.style.setProperty("--chg-o", "0");
-      if (cradle) {
-        cradle.style.opacity = "1";
-        cradle.style.transform = "translate3d(" + px.toFixed(1) + "px," + py.toFixed(1) + "px,0) scale(1)";
-        cradle.classList.add("emitting");          // gravity/sonic pulses — catching + holding it
-        cradle.style.setProperty("--cradle-lock", "0");
-      }
-      setArcs("50 50");   // open cup
-    };
-
-    // CAPTURE: ring closes around the ball (aperture) + lock flash, capsule transfers
-    // out, and the WORK is DELIVERED (a scroll tween glides ARRIVE→WORK_LAND so it
-    // rises in). One time clock — a fast scroll can't rush or skip it.
-    const captureTick = () => {
-      if (gate !== "capturing") return;
-      const px = catchPX(), py = catchPY();
-      const t = clamp((performance.now() - capStart) / CAP_MS, 0, 1);
-      // stages: COOL (red → blue/white) → arcs CLOSE (meet at top-centre) → LOCK flash →
-      // SEAL (ball goes SOLID, comet hidden) → held BEAT → TRANSFER out (capsule leaves,
-      // work rises). The cool-to-blue lives HERE (the capture opening), not the descent.
-      const cool = ease(seg(t, 0, 0.26));                       // red → blue/white, at the very start
-      const close = seg(t, 0, 0.45), transfer = seg(t, 0.74, 1);   // seal at close=1 (t≈.45); hold; then transfer
-      const lockPulse = Math.sin(seg(t, 0.44, 0.6) * Math.PI);   // a single "locks in" flash
-      setArcs((50 + 50 * easeOut(close)).toFixed(1) + " " + (50 - 50 * easeOut(close)).toFixed(1));  // close from L+R, meet at top
-      if (cradle) {
-        cradle.classList.remove("emitting");   // stop the catching pulses; we're closing now
-        cradle.style.opacity = (1 - ease(transfer)).toFixed(3);
-        const cs = (1 + 0.08 * lockPulse) * (1 - 0.9 * transfer);   // small lock swell, then shrink away
-        cradle.style.transform = "translate3d(" + px.toFixed(1) + "px," + (py + transfer * 30).toFixed(1) + "px,0) scale(" + Math.max(0, cs).toFixed(3) + ")";
-        cradle.style.setProperty("--cradle-lock", lockPulse.toFixed(3));
-      }
-      dot.style.setProperty("--cool-p", (cool * 100).toFixed(1) + "%");   // fade red → blue/white as the arcs close
-      // SEAL: once the arcs have met, the ball reads SOLID (the comet/glow inside is gone)
-      if (close >= 1 && !dot.classList.contains("sealed")) dot.classList.add("sealed");
-      const bs = (1 + 0.08 * lockPulse) * (1 - transfer);
-      dot.style.left = px.toFixed(1) + "px"; dot.style.top = py.toFixed(1) + "px";
-      dot.style.transform = "translate(-50%,-50%) translateY(" + (transfer * 30).toFixed(1) + "px) scale(" + Math.max(0, bs).toFixed(3) + ")";
-      dot.style.opacity = (1 - ease(transfer)).toFixed(3);
-      dot.style.setProperty("--cg", ((1 - close) * 0.4 * (1 - transfer)).toFixed(3));   // comet glow fades to nothing by the seal
-      window.scrollTo(0, Math.round(twFrom + (twTo - twFrom) * ease(transfer)));   // deliver the work as the capsule leaves
-      if (t < 1) { capRAF = requestAnimationFrame(captureTick); }
-      else { gate = "done"; dot.style.opacity = "0"; if (cradle) cradle.style.opacity = "0"; }
-    };
-    const startCapture = () => {
-      if (gate !== "caught") return;
-      gate = "capturing"; capStart = performance.now();
-      dot.classList.remove("caught");
-      dot.removeAttribute("role"); dot.removeAttribute("tabindex"); dot.removeAttribute("aria-label");
-      twFrom = window.scrollY;
-      const r = track.getBoundingClientRect();
-      twTo = Math.round(r.top + window.scrollY + (r.height - window.innerHeight));   // p = WORK_LAND
-      capRAF = requestAnimationFrame(captureTick);
-    };
-    const doCatch = (sy: number) => {
-      gate = "caught"; catchT = performance.now(); catchY = sy;
-      placeCaught();
-      dot.classList.add("caught");
-      dot.setAttribute("role", "button"); dot.setAttribute("tabindex", "0");
-      dot.setAttribute("aria-label", "Open selected work");
-      try { dot.focus({ preventScroll: true } as any); } catch {}
-    };
-    const unCatch = () => {
-      if (gate === "none") return;
-      gate = "none";
-      if (capRAF) { cancelAnimationFrame(capRAF); capRAF = 0; }
-      dot.classList.remove("caught"); dot.classList.remove("sealed");
-      dot.removeAttribute("role"); dot.removeAttribute("tabindex"); dot.removeAttribute("aria-label");
-      dot.style.removeProperty("position"); dot.style.removeProperty("transition");
-      dot.style.removeProperty("transform"); dot.style.removeProperty("--cool-p");
-      if (cradle) { cradle.style.opacity = "0"; cradle.classList.remove("emitting"); cradle.style.setProperty("--cradle-lock", "0"); cradleShown = false; }
-      setArcs("50 50");
-    };
-
-    // the scroll-LOCK while caught/capturing. Never a dead wall: a DOWN gesture (after
-    // a beat) proceeds → capture; an UP gesture passes → render un-catches; click /
-    // Enter / Space proceed. Listeners are non-passive so they can block the scroll.
-    const proceedOnDown = () => { if (gate === "caught" && performance.now() - catchT > CATCH_BEAT) startCapture(); };
-    const onWheel = (e: WheelEvent) => {
-      if (gate === "caught") { if (e.deltaY > 0) { e.preventDefault(); proceedOnDown(); } }
-      else if (gate === "capturing") e.preventDefault();
-    };
-    let touchY = 0;
-    const onTouchStart = (e: TouchEvent) => { touchY = e.touches[0] ? e.touches[0].clientY : 0; };
-    const onTouchMove = (e: TouchEvent) => {
-      if (gate === "capturing") { e.preventDefault(); return; }
-      if (gate === "caught") {
-        const y = e.touches[0] ? e.touches[0].clientY : 0;
-        if (y < touchY) { e.preventDefault(); proceedOnDown(); }   // finger up = scroll down
-      }
-    };
-    const DOWN_KEYS = [" ", "Spacebar", "PageDown", "ArrowDown", "End"];
-    const onKey = (e: KeyboardEvent) => {
-      if (gate === "caught") {
-        if (e.key === "Enter") { e.preventDefault(); startCapture(); return; }
-        if (DOWN_KEYS.indexOf(e.key) !== -1) { e.preventDefault(); proceedOnDown(); }
-      } else if (gate === "capturing") {
-        if (DOWN_KEYS.indexOf(e.key) !== -1 || e.key === "ArrowUp" || e.key === "PageUp" || e.key === "Home") e.preventDefault();
-      }
-    };
-    const onDotClick = () => { if (gate === "caught") startCapture(); };
-    let lockBound = false;
-    const bindLock = () => {
-      if (lockBound) return; lockBound = true;
-      window.addEventListener("wheel", onWheel, { passive: false });
-      window.addEventListener("touchstart", onTouchStart, { passive: true });
-      window.addEventListener("touchmove", onTouchMove, { passive: false });
-      window.addEventListener("keydown", onKey);
-      dot.addEventListener("click", onDotClick);
-    };
-    const unbindLock = () => {
-      if (!lockBound) return; lockBound = false;
-      window.removeEventListener("wheel", onWheel);
-      window.removeEventListener("touchstart", onTouchStart);
-      window.removeEventListener("touchmove", onTouchMove);
-      window.removeEventListener("keydown", onKey);
-      dot.removeEventListener("click", onDotClick);
-    };
+    // where the comet lands — straight down the right edge, near the bottom, where the
+    // rising device meets it. Resize-safe (recomputed each frame). Screen px.
+    const dockY = () => window.innerHeight - Math.min(64, window.innerHeight * 0.085);
 
     const render = () => {
       ticking = false;
@@ -856,14 +651,16 @@ const GLINTS = Array.from({ length: 40 }, () => ({
       stage.style.setProperty("--sig-o", (seg(p, LIFT, LIFT + 0.03) * (1 - seg(fall, 0, 0.08))).toFixed(3));
 
       // ── the playhead ──
-      let bx: number, by: number, bs: number, bop: number, settled = false, chgO = 0, chgS = 1, comet = 0, charge = 0, tail = 0, coolP = 0;
+      let bx: number, by: number, bs: number, bop: number, settled = false, chgO = 0, chgS = 1, comet = 0, charge = 0, tail = 0;
       if (p < LIFT) {
-        // ENTRANCE: in from off the left → full view (big), then scale down + nudge
-        // slightly right to offset the shrink illusion; settles just inside the edge.
-        const slideP = seg(enter, 0, 0.62), scaleP = seg(enter, 0.5, 1), arrive = 0.05;
-        bx = -BALL_OFF + (arrive + BALL_OFF) * ease2(slideP) + (BALL_REST - arrive) * ease2(scaleP);
-        bs = 1 + 5 * (1 - ease2(scaleP));
-        bop = enter > 0 ? 1 : 0;
+        // ENTRANCE: a rightward TRANSLATION at constant size — the signal slides in
+        // from off the left and settles just inside the edge, flowing seamlessly into
+        // the ride (bx at LIFT == ballX(0) == BALL_REST, so there's no seam). No more
+        // big-then-shrink: scroll always maps to position, never scale.
+        const enterP = seg(enter, 0, 1);
+        bx = -BALL_OFF + (BALL_OFF + BALL_REST) * ease2(enterP);
+        bs = 1;
+        bop = ease(seg(enter, 0, 0.45));   // fades up as it slides into view
         by = waveY(Math.max(bx, 0), wy, wamp);
       } else if (p < FALL) {
         // RIDE: friction hold (charge → burst), then a gravity-weighted glide that
@@ -878,59 +675,36 @@ const GLINTS = Array.from({ length: 40 }, () => ({
         chgO = burst > 0 ? 0.85 * (1 - burst) : 0.85 * chg;
         chgS = burst > 0 ? 1 + burst * 4 : 1 + chg * 0.7;
       } else {
-        // COMET → CRADLE. Falls STRAIGHT DOWN the right edge, DECELERATING into the
-        // bottom-right corner. As it nears the cradle the tail COLLAPSES + the ball
-        // settles to size + an electric charge ring vibrates (all scroll-coupled) — but
-        // it stays RED/warm. The scroll then CATCHES; the cool-to-blue + SEAL happen only
-        // at capture (doCatch / captureTick are the gate).
+        // COMET → DEVICE. Falls STRAIGHT DOWN the right edge, DECELERATING to a near-hover
+        // just above the device, then SHOOTS in fast — the signal fired into the machine. It's
+        // gone inside before the device wakes (the boot starts a beat later). Scrubbable.
         const yTop = waveY(0.965, 0, 1);
-        const parkY = vh - DOCK_Y;   // the cradle (bottom-right corner)
-        const fallPos = fall * fall * (3 - 2 * fall);   // ease-in then OUT — decelerates into the cradle
-        const settle = seg(fall, 0.72, 1);   // late fall: COOLS to blue, tail COLLAPSES, ball settles to size
-        bx = 0.965;                  // STRAIGHT DOWN, just inside the right edge (fully visible)
-        by = yTop + (parkY - yTop) * fallPos;
-        bs = (1 + GROWTH * fall) * (1 - 0.5 * settle);   // grows, then settles to ~1 in the cradle
-        bop = 1;
-        comet = fall;
-        tail = comet * vh * 0.46 * (1 - settle);   // tail grows, then COLLAPSES to 0 at the cradle
-        // coolP holds at 0 here — the comet stays RED through the descent + catch; the
-        // cool-to-blue moved to the capture opening (captureTick).
-        charge = seg(fall, 0.55, 1);
+        const parkY = dockY();          // the device's input — where the comet shoots in
+        const hoverY = parkY - Math.min(96, vh * 0.12);   // decelerates to here, then darts in
+        const approach = easeOut(seg(fall, 0, 0.9));       // decelerate to the hover (anticipation)
+        const shootE = Math.pow(seg(fall, 0.9, 1), 3);     // then ACCELERATE the final dart into the input
+        const settle = seg(fall, 0.72, 0.9);   // tail collapses + ball settles BEFORE the dart
+        bx = 0.965;                  // STRAIGHT DOWN, no lateral move — the tail stays vertical
+        by = yTop + (hoverY - yTop) * approach + (parkY - hoverY) * shootE;
+        bs = (1 + GROWTH * Math.min(fall, 0.9)) * (1 - 0.62 * settle);   // grows, settles, holds into the dart
+        bop = 1 - ease(seg(fall, 0.965, 1));   // VISIBLE shooting in, then gone inside the device
+        comet = Math.min(fall, 0.9);
+        tail = comet * vh * 0.46 * (1 - settle) + shootE * vh * 0.34;   // streaks LONG as it darts in
+        charge = seg(fall, 0.55, 0.9);
         const buzz = Math.sin(fall * 42);          // scroll-coupled oscillation (electrical charge)
-        chgO = charge * (0.32 + 0.4 * (0.5 + 0.5 * buzz)) * (1 - settle);  // charge pulses, then fades as it cools
+        chgO = charge * (0.32 + 0.4 * (0.5 + 0.5 * buzz)) * (1 - settle);  // charge pulses, then fades
         chgS = 1 + 0.26 * charge * buzz;           // ring tightens / expands — vibrates
       }
-      // the dot is scroll-driven EXCEPT once caught/capturing — then the catch &
-      // capture functions own it.
-      if (gate === "none") {
-        dot.style.left = (bx * vw).toFixed(1) + "px";
-        dot.style.top = by.toFixed(1) + "px";
-        dot.style.setProperty("--bs", bs.toFixed(3));
-        dot.style.setProperty("--chg-o", chgO.toFixed(3));
-        dot.style.setProperty("--chg-s", chgS.toFixed(3));
-        dot.style.setProperty("--cg", comet.toFixed(3));
-        dot.style.setProperty("--tail", tail.toFixed(0) + "px");
-        dot.style.setProperty("--cool-p", coolP.toFixed(1) + "%");
-        dot.style.opacity = bop.toFixed(3);
-        dot.classList.toggle("settled", settled);
-      }
-
-      // CATCH: reaching the cradle going DOWN locks the scroll (the wheel/touch/key
-      // listeners); scroll back up into the descent to un-catch / re-arm.
-      if (gate === "none" && dnDir && rawP >= ARRIVE) {
-        if (glow) { glow.style.opacity = "0"; glowActive = false; }
-        // lock WHERE it caught — no backward snap (that was the awkward scroll gap).
-        // The per-frame render catches within a frame or two of crossing ARRIVE, so the
-        // overshoot is tiny; cap it only against a pathological one-frame jump.
-        const cap = Math.round(r.top + window.scrollY + (ARRIVE + 0.02) * span);
-        const cy = Math.min(window.scrollY, cap);
-        if (cy < window.scrollY) window.scrollTo(0, cy);
-        doCatch(cy);
-      } else if ((gate === "caught" || gate === "done") && rawP < ARRIVE - 0.05) {
-        unCatch();
-      } else if (gate === "caught" && window.scrollY > catchY + 1) {
-        window.scrollTo(0, catchY);   // backstop: hold the catch position (scrollbar / momentum slip)
-      }
+      // the dot is fully scroll-driven now — nothing catches or captures it.
+      dot.style.left = (bx * vw).toFixed(1) + "px";
+      dot.style.top = by.toFixed(1) + "px";
+      dot.style.setProperty("--bs", bs.toFixed(3));
+      dot.style.setProperty("--chg-o", chgO.toFixed(3));
+      dot.style.setProperty("--chg-s", chgS.toFixed(3));
+      dot.style.setProperty("--cg", comet.toFixed(3));
+      dot.style.setProperty("--tail", tail.toFixed(0) + "px");
+      dot.style.opacity = bop.toFixed(3);
+      dot.classList.toggle("settled", settled);
 
       // the trace is ALWAYS the ball's trail — clip it to the ball's x
       stage.style.setProperty("--q", Math.max(0, bx).toFixed(4));
@@ -952,7 +726,7 @@ const GLINTS = Array.from({ length: 40 }, () => ({
       // of lightspeed. Fades in over the fall, out as the work lands. ──
       // fade in over the start of the fall; hold LATE (so the deceleration is visible
       // at full brightness — the field coasts to a stop), then dissolve as the dot parks.
-      const warpO = seg(p, FALL, FALL + 0.1) * (1 - seg(p, 0.78, 0.9));   // fully cleared by the catch
+      const warpO = seg(p, FALL, FALL + 0.1) * (1 - seg(p, 0.72, 0.84));   // cleared before the catalog frames
       if (warpO > 0) {
         if (warp) {
           warp.classList.add("warping");
@@ -984,7 +758,7 @@ const GLINTS = Array.from({ length: 40 }, () => ({
       // the multi-hue bloom RIDES the comet during the fall (scroll-driven), growing
       // with it; at the park it's handed off to the cooling ember (faded above), so
       // skip it once cooling.
-      if (glow && gate === "none") {
+      if (glow) {
         if (comet > 0 && bop > 0) {
           glow.style.transform =
             "translate3d(" + (bx * vw).toFixed(1) + "px," + by.toFixed(1) + "px,0) scale(" + (0.7 + 0.85 * fall).toFixed(3) + ")";
@@ -1017,8 +791,8 @@ const GLINTS = Array.from({ length: 40 }, () => ({
       // up slightly with the motion and TWINKLE (scroll-coupled, brief sparse peaks),
       // like flecks of mica catching light. Texture, not pops; a pause is a frozen
       // shimmer. transform + opacity only. ──
-      if (fall > 0 && gate === "none") {
-        const gv = seg(p, FALL, FALL + 0.08) * (1 - seg(p, 0.82, 0.95));   // present through the lightspeed
+      if (fall > 0) {
+        const gv = seg(p, FALL, FALL + 0.08) * (1 - seg(p, 0.76, 0.86));   // cleared before the catalog frames
         const drift = (-fall * 26).toFixed(1);
         for (let i = 0; i < glints.length; i++) {
           const el = glints[i];
@@ -1034,29 +808,19 @@ const GLINTS = Array.from({ length: 40 }, () => ({
         glintsActive = false;
       }
 
-      // ── the CRADLE fades in EARLY (scroll-coupled) so the landing pad is legible as
-      // the comet descends toward it; the catch/capture then take it over. ──
-      if (cradle && gate === "none") {
-        const cradleO = seg(fall, 0.5, 0.78);
-        if (cradleO > 0) {
-          cradle.style.opacity = (cradleO * 0.9).toFixed(3);
-          cradle.style.transform = "translate3d(" + catchPX().toFixed(1) + "px," + catchPY().toFixed(1) + "px,0) scale(1)";
-          setArcs("50 50");
-          cradle.classList.add("emitting");   // gravity/sonic pulses as the comet approaches
-          cradleShown = true;
-        } else if (cradleShown) { cradle.style.opacity = "0"; cradle.classList.remove("emitting"); cradleShown = false; }
-      }
-
-      // ── the work LANDS in the groove: it rises (decelerating) over the END of the
-      // comet fall, settling AS the comet clears the bottom, then HOLDS in view (the
-      // rivet) until the work browse scrolls. The -(1-OFFV)×100svh margin releases
-      // it flush (no jump). ──
+      // ── the DEVICE rises over the end of the fall — DARK (powered-off) — then, as the
+      // comet is absorbed (≥ARRIVE), it BOOTS: --boot (0→1 over ARRIVE→WORK_LAND, scroll-
+      // coupled) drives the module's CSS to lift its power-veil, fade the screen up, and
+      // bring the colour glow online. Before ARRIVE the device is dark; at rest --boot=1.
+      // The -(1-OFFV)×100svh margin releases the device flush; it then HOLDS framed. ──
       if (work) {
         const off = OFFV * vh;
         const naturalTop = r.top + r.height - vh + off;
+        const boot = seg(p, ARRIVE + 0.012, WORK_LAND);   // a BEAT after the comet shoots in, the device wakes
+        if (boot !== booted) { work.style.setProperty("--boot", boot.toFixed(3)); booted = boot; }
         if (p >= WORK_RISE) {
           const desired = off + (vh - off) * (1 - easeOut(seg(p, WORK_RISE, WORK_LAND)));
-          // land on a WHOLE pixel so the held work is rock-solid (no sub-pixel shimmer)
+          // land on a WHOLE pixel so the held device is rock-solid (no sub-pixel shimmer)
           work.style.transform = "translateY(" + (Math.round(desired) - naturalTop).toFixed(2) + "px)";
           work.style.willChange = "transform";
           workShown = true;
@@ -1070,21 +834,14 @@ const GLINTS = Array.from({ length: 40 }, () => ({
         }
       }
     };
-    // track scroll DIRECTION — the cool-off only triggers when we reach the park going
-    // DOWN (so scrolling back up doesn't re-fire it). The old settle-on-pause mandate is
-    // gone: the cool-off is now a time-based animation, which a fast scroll can't skip.
-    let lastY = 0;
     const onScroll = () => {
       if (!ticking) { ticking = true; requestAnimationFrame(render); }
-      const y = window.scrollY; dnDir = y >= lastY; lastY = y;
     };
 
     const startLive = () => {
       als.classList.add("als-live");
       document.body.style.backgroundAttachment = "fixed";   // paper still through the about (no per-frame writes)
-      lastY = window.scrollY;
-      bindLock();   // the catch/capture scroll-lock listeners (no-op until caught)
-      if (work) work.style.marginTop = "-90svh";   // = -(1 - OFFV) × 100svh — releases flush at the offset
+      if (work) work.style.marginTop = "-88svh";   // = -(1 - OFFV) × 100svh — releases flush at the offset
       if (!io) {
         io = new IntersectionObserver((recs) => {
           for (const r of recs) {
@@ -1110,12 +867,10 @@ const GLINTS = Array.from({ length: 40 }, () => ({
       for (const v of ["--name-o", "--name-y", "--cue-o", "--wy", "--wamp", "--wlife", "--wo", "--q", "--sig-o"]) {
         stage.style.removeProperty(v);
       }
-      dot.classList.remove("settled"); dot.classList.remove("caught"); dot.classList.remove("sealed");
-      dot.removeAttribute("role"); dot.removeAttribute("tabindex"); dot.removeAttribute("aria-label");
-      unbindLock(); gate = "none"; if (capRAF) { cancelAnimationFrame(capRAF); capRAF = 0; }
-      dot.style.removeProperty("position"); dot.style.removeProperty("transition"); dot.style.removeProperty("transform");
+      dot.classList.remove("settled");
+      dot.style.removeProperty("transform");
       dot.style.opacity = "0";
-      for (const v of ["--bs", "--chg-o", "--chg-s", "--cg", "--tail", "--cool-p"]) dot.style.removeProperty(v);
+      for (const v of ["--bs", "--chg-o", "--chg-s", "--cg", "--tail"]) dot.style.removeProperty(v);
       link?.classList.remove("on");
       nodes.forEach((n) => n.classList.remove("lit"));
       beats.setAttribute("data-active", "-1");
@@ -1123,25 +878,30 @@ const GLINTS = Array.from({ length: 40 }, () => ({
       document.body.style.removeProperty("background-position-y");
       document.body.style.removeProperty("background-attachment");
       bgScroll = false;
-      warpActive = false; glowActive = false; blipsActive = false; glintsActive = false; cradleShown = false;
+      warpActive = false; glowActive = false; blipsActive = false; glintsActive = false;
       if (warp) warp.style.opacity = "0";
       streaks.forEach((s) => { s.style.removeProperty("transform"); s.style.removeProperty("opacity"); });
       if (glow) { glow.style.opacity = "0"; glow.style.removeProperty("transform"); }
-      if (cradle) { cradle.style.opacity = "0"; cradle.style.removeProperty("transform"); cradle.classList.remove("emitting"); cradle.style.removeProperty("--cradle-lock"); }
-      cradleArcs.forEach((a) => a.style.removeProperty("stroke-dasharray"));
       blips.forEach((b) => { b.style.opacity = "0"; b.style.removeProperty("transform"); });
       glints.forEach((g) => { g.style.opacity = "0"; g.style.removeProperty("transform"); });
-      if (work) { work.style.transform = ""; work.style.willChange = ""; work.style.marginTop = ""; }
+      if (work) { work.style.transform = ""; work.style.willChange = ""; work.style.marginTop = ""; work.style.removeProperty("--boot"); }
+      booted = -1;
       workShown = false;
     };
 
+    // the live choreography needs a minimally tall viewport. The arrival is now a
+    // now-spinning record (compact tracklist + a hero cover that SCALES to the viewport),
+    // so it composes in one frame at essentially any desktop height — only genuinely tiny
+    // windows fall through to the calm static about.
+    const short = window.matchMedia("(max-height: 36.99rem)");
     const setup = () => {
-      if (!reduce.matches && !coarse.matches) startLive();
+      if (!reduce.matches && !coarse.matches && !short.matches) startLive();
       else stopLive();
     };
     setup();
     reduce.addEventListener?.("change", setup);
     coarse.addEventListener?.("change", setup);
+    short.addEventListener?.("change", setup);
     window.addEventListener("resize", () => {
       if (on) { p = -1; render(); if (active >= 0) positionLink(active); }
     }, { passive: true });
