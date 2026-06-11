@@ -838,6 +838,16 @@ export interface WinnerVariant {
    *  king-round candidates so the UI can label them by reference (poles can
    *  repeat across the 3 candidates); null on ordinary axis winners. */
   reference?: string | null;
+  /** Final-bus integrated LUFS of this king variant. Drives the loudness match
+   *  in the king-triage compare so the louder king never wins on level alone.
+   *  Contract ask (2026-06-10): engine to populate on /mix/winners. Null until
+   *  then — the triage view falls back to unity + flags the match as off.
+   *  Engine guarantee (2026-06-10): all output_lufs/source_lufs come from one
+   *  BS.1770 pass on the RENDERED PCM. The UI match is RELATIVE (attenuate every
+   *  take to the quietest), and every take goes through the identical PCM→opus
+   *  transcode, so the uniform <0.3 dB opus offset cancels — a same-pass-as-source
+   *  guarantee is NOT required for the match to be unbiased. */
+  output_lufs?: number | null;
 }
 
 /** All winners for a single mix job, plus optional cross-axis champion. */
@@ -853,6 +863,13 @@ export interface WinnersJob {
   source_waveform_sha1: string | null;
   source_duration_seconds: number | null;
   source_audio_path: string | null;
+  /** Integrated LUFS of the unprocessed source. Lets an ORIGINAL king be
+   *  loudness-matched in the king-triage compare. Contract ask (2026-06-10):
+   *  engine to populate on /mix/winners; null until then (triage blocks the
+   *  prune rather than comparing at unity). From the same one BS.1770 pass on
+   *  rendered PCM as WinnerVariant.output_lufs; the relative match cancels the
+   *  uniform opus offset (see note there). */
+  source_lufs?: number | null;
   started_at: string;
   finished_at: string | null;
   /** 1 through 3; how many axes have a recorded winner. */
@@ -1022,4 +1039,113 @@ export interface CuriosityHistoryItem {
 export interface CuriosityHistoryResponse {
   total: number;
   items: CuriosityHistoryItem[];
+}
+
+// ── Pathway rounds (2026-06-10) ────────────────────────────────────────────
+// The Engineer's active-learning surface. Each round the orchestrator picks
+// the SINGLE most useful blind comparison (ranked by Beta-posterior variance of
+// the win-rate it touches), serves ONE round of 2–N blind, loudness-matched
+// takes on a shared transport, learns from Jon's vote, and serves the next.
+// Jon only listens + votes — he never instructs the engine. This generalizes
+// the old per-axis /mix/pairs A/B and the curiosity card into one round shape.
+
+export type MixPathwayType =
+  | "raw_vs_processed" // does my master beat your raw here?
+  | "section_dependence" // processed verse vs raw drop (a windowed region)
+  | "treatment_family" // two close treatment families head-to-head
+  | "champion_challenge" // a fresh candidate vs the crowned king
+  | "defect_confirm"; // is this harshness actually audible to you?
+
+/** Post-vote identity of a take. The UI must NOT surface any of this before the
+ *  curator votes — it's revealed only in the one-line reveal after submit. */
+export interface MixRoundTakeReveal {
+  /** source | master | king | candidate — what this take is, in plain terms. */
+  kind: string;
+  /** Human label for the reveal line, e.g. "your raw" / "master · Sienna". */
+  label: string;
+  /** Catalog reference the master aimed at (null on raw/source). */
+  reference: string | null;
+  pole: string | null;
+  /** The real variant id (null when the take is the unprocessed source), so the
+   *  vote can also emit the legacy variant_a/b ids for 2-take back-compat. */
+  variant_id: number | null;
+}
+
+/** One blind, loudness-matched take in a round. */
+export interface MixRoundTake {
+  /** Opaque id the vote references. Does NOT encode role/identity. */
+  take_id: string;
+  asset_path: string;
+  /** Integrated LUFS of THIS take. REQUIRED for the loudness match — every take
+   *  is attenuated to the quietest take's level so louder never wins. When null
+   *  (older renders) the card falls back to unity and flags the match as off. */
+  output_lufs: number | null;
+  /** True (inter-sample) peak in dBFS, for diagnostics only. */
+  true_peak_dbfs?: number | null;
+  /** Per-take waveform; the round picks one to draw under the shared transport. */
+  waveform_sha1?: string | null;
+  /** Identity — surfaced ONLY after the vote. */
+  reveal: MixRoundTakeReveal;
+}
+
+/** A single round the engine wants Jon to judge. */
+export interface MixRound {
+  /** Stable id for this served round; the vote + skip reference it (idempotent). */
+  round_id: string;
+  /** Soft counter for the footer ("Round 14"). */
+  round_index: number;
+  pathway_type: MixPathwayType;
+  /** Plain-language framing in the engine's first-person voice, e.g.
+   *  "Round 14: your raw keeps beating my masters here — which is better?" */
+  framing: string;
+  /** What a vote here teaches — drives the converging-game reveal line. */
+  stakes?: string | null;
+  source: {
+    asset_id: number;
+    display_name: string | null;
+    waveform_sha1: string | null;
+    duration_seconds: number | null;
+  };
+  /** Optional A/B region for section_dependence rounds. DISPLAY-ONLY: the engine
+   *  serves take audio already trimmed to this window, so the player just plays
+   *  the takes; `region.label` (e.g. "the drop") may be surfaced in the framing.
+   *  The UI must NOT try to clamp playback to start_s/end_s — that would assume
+   *  full-length takes the engine didn't send. (review L1) */
+  region?: { start_s: number; end_s: number; label: string | null } | null;
+  /** 2..N blind takes, presented in this order (already shuffled server-side;
+   *  the UI re-shuffles defensively so order can't leak identity either way). */
+  takes: MixRoundTake[];
+}
+
+export interface MixRoundResponse {
+  /** ready = a round is waiting · thinking = orchestrator is choosing, poll
+   *  again · none = nothing worth asking right now (engine asleep/idle). */
+  status: "ready" | "thinking" | "none";
+  round: MixRound | null;
+  detail: string | null;
+  /** On status=thinking: how long to wait before polling again. The framing-line
+   *  synthesis (claude -p) takes 10–60s; the engine sends ~6s. The UI honors this
+   *  when present, else falls back to 3.5s. (2026-06-10) */
+  retry_after_s?: number | null;
+}
+
+// ── Footer metric (the learning made visible) ──────────────────────────────
+/** The single progress signal that matters: how often the curator's master is
+ *  beating the raw across tracks, and which way it's trending. */
+export interface MixMetricHeadline {
+  /** e.g. "master beats raw". */
+  label: string;
+  num: number;
+  den: number;
+  /** e.g. "tracks". */
+  unit: string;
+  trend: "climbing" | "flat" | "slipping";
+}
+
+export interface MixMetricsResponse {
+  headline: MixMetricHeadline;
+  /** Soft round counter shown beside the headline. */
+  rounds_done: number;
+  /** Optional extra signals the footer can rotate through. */
+  secondary?: Array<{ label: string; num: number; den: number; trend: string }>;
 }
