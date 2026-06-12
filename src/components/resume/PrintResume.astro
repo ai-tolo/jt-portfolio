@@ -1,0 +1,210 @@
+---
+// The curated one-page PDF resume. Invisible on screen; in print it is the
+// ONLY thing on the page (the interactive sheet, header, and footer all hide).
+// This decouples the "Download PDF" path (window.print in ResumeShell) from
+// the Notion-driven screen content: edit src/lib/resume-print.ts to change
+// the PDF, edit Notion to change the screen.
+//
+// ATS contract (verified with headless Chrome + pypdf, do not regress):
+// - STATIC Geist, not the variable build. Chrome's PDF export of variable
+//   fonts compensates instanced advance widths with per-glyph offsets that
+//   text extractors read as spurious spaces ("m astering").
+// - No position:absolute/relative and no opacity<1 on text: both force a
+//   later paint phase and scramble the PDF text stream out of reading order.
+//   Bullets are normal-flow hanging indents (inline-block ::before marker
+//   with negative margin).
+// - letter-spacing on headings stays <= 0.12em; 0.15em tracking extracts
+//   with injected spaces and breaks ATS section-heading matching.
+// - Kerning/ligatures off: their advance adjustments also read back as
+//   spaces in extraction.
+import "@fontsource/geist/latin-400.css";
+import "@fontsource/geist/latin-500.css";
+import "@fontsource/geist/latin-600.css";
+import "@fontsource/geist/latin-700.css";
+import type { ResumeAST } from "../../lib/resumes";
+import { printContentFor } from "../../lib/resume-print";
+
+interface Props {
+  resume: ResumeAST;
+}
+
+const { resume } = Astro.props;
+const c = printContentFor(resume.slug);
+// A variant without its own curated entry prints the master one-pager but
+// keeps its "Tailored for" line so the targeting stays visible.
+const tailoredFor = resume.tailoredFor;
+
+const isUrl = (s: string) => /^[a-z0-9.-]+\.[a-z]{2,}(\/|$)/i.test(s) && !s.includes("@") && !/^\(/.test(s);
+---
+
+<div class:list={["print-resume", { "pr-has-tailored": !!tailoredFor }]} aria-hidden="true">
+  <header class="pr-header">
+    <div class="pr-name">{c.name}</div>
+    <div class="pr-role">{c.title}</div>
+    {tailoredFor && <div class="pr-tailored">Tailored for {tailoredFor}</div>}
+    <div class="pr-contact">
+      {c.contact.map((item, i) => (
+        <>
+          {i > 0 && " · "}
+          {isUrl(item) ? <a href={`https://${item}`}>{item}</a> : item}
+        </>
+      ))}
+    </div>
+  </header>
+
+  <section>
+    <h2>Summary</h2>
+    <div class="pr-summary">{c.summary}</div>
+  </section>
+
+  {[
+    { heading: "Selected Builds", entries: c.builds },
+    { heading: "Experience", entries: c.experience },
+  ].map(({ heading, entries }) => (
+    <section>
+      <h2>{heading}</h2>
+      {entries.map((e) => (
+        <div class="pr-entry">
+          <div class="pr-entry-head">
+            <div class="pr-org">{e.org}{e.pos && <span class="pr-pos"> · {e.pos}</span>}</div>
+            <div class="pr-dates">{e.dates}</div>
+          </div>
+          <ul>
+            {e.bullets.map((b) => <li>{b}</li>)}
+          </ul>
+          {e.link && (
+            <div class="pr-link">{e.link.label} <a href={e.link.href}>{e.link.text}</a></div>
+          )}
+        </div>
+      ))}
+    </section>
+  ))}
+
+  <section>
+    <h2>Education</h2>
+    <div class="pr-edu-grid">
+      {c.education.map((s) => (
+        <div class="pr-school">
+          <div class="pr-edu-head"><div class="pr-org pr-org-edu">{s.name}</div><div class="pr-dates">{s.dates}</div></div>
+          <div class="pr-deg">{s.degree}</div>
+          {s.honors && <div class="pr-hon">{s.honors}</div>}
+        </div>
+      ))}
+    </div>
+  </section>
+
+  <section>
+    <h2>Skills</h2>
+    <div class="pr-skills">
+      {c.skillRows.map((row) => (
+        <div>
+          {row.map((g, i) => (
+            <>
+              {i > 0 && <span class="pr-skill-sep">&nbsp;·&nbsp;</span>}
+              <span class="pr-skill-k">{g.label}:</span> {g.items}
+            </>
+          ))}
+        </div>
+      ))}
+    </div>
+  </section>
+
+  <div class="pr-outside"><span class="pr-outside-k">Outside</span><span set:html={c.outside} /></div>
+</div>
+
+<style is:global>
+  /* Visibility contract: the curated print sheet exists only in print; the
+     interactive experience (ResumeShell/.rs-root and all site chrome) exists
+     only on screen. @page must live in a global block (Astro can't scope it). */
+  @media screen {
+    .print-resume { display: none !important; }
+  }
+  @media print {
+    @page { size: letter; margin: 0.45in 0.6in; }
+    html, body { background: #ffffff !important; background-image: none !important; }
+    .site-header,
+    .footer,
+    .theme-toggle,
+    .cursor-dot,
+    .cursor-ring,
+    .resume-dl-cta,
+    .resume-page .rs-root {
+      display: none !important;
+    }
+    .resume-page { padding: 0 !important; margin: 0 !important; }
+    .print-resume { display: block !important; }
+  }
+</style>
+
+<style>
+  /* All selectors are prefixed with .print-resume so they out-rank the local
+     reset below (which would otherwise zero the li hanging indents and section
+     rhythm — the reset's :is() carries class specificity). */
+  .print-resume {
+    line-height: 1.38;
+    font-family: "Geist", -apple-system, "Segoe UI", Helvetica, Arial, sans-serif;
+    font-size: 10pt;
+    color: #222228;
+    font-kerning: none;
+    font-feature-settings: "kern" 0, "liga" 0;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+  /* local reset: keep the site's screen styles out of the print sheet */
+  .print-resume :is(div, section, header, ul, li, h2, a, span) {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+  }
+  .print-resume a { color: inherit; text-decoration: none; }
+
+  .print-resume .pr-header { border-bottom: 1.5pt solid #B33A2A; padding-bottom: 5pt; margin-bottom: 6pt; }
+  .print-resume .pr-name { font-size: 22pt; font-weight: 700; letter-spacing: -0.02em; line-height: 1; color: #16161c; }
+  .print-resume .pr-role { font-size: 11pt; font-weight: 600; color: #B33A2A; margin-top: 3.5pt; letter-spacing: 0.01em; }
+  .print-resume .pr-tailored { font-size: 8.5pt; color: #56565e; margin-top: 3pt; }
+  .print-resume .pr-contact { font-size: 8.75pt; color: #56565e; margin-top: 5pt; letter-spacing: 0.01em; }
+
+  .print-resume section { margin-bottom: 5pt; }
+  .print-resume h2 {
+    font-size: 8pt; font-weight: 700; text-transform: uppercase; letter-spacing: 0.12em;
+    color: #B33A2A; margin-bottom: 4pt; padding-bottom: 2pt;
+    border-bottom: 0.75pt solid #e3dfda;
+    line-height: 1.38;
+  }
+  .print-resume .pr-summary { font-size: 10pt; line-height: 1.42; }
+
+  .print-resume .pr-entry { margin-bottom: 5pt; }
+  .print-resume .pr-entry:last-child { margin-bottom: 0; }
+  .print-resume .pr-entry-head { display: flex; justify-content: space-between; align-items: baseline; gap: 12pt; }
+  .print-resume .pr-org { font-size: 10.5pt; font-weight: 700; letter-spacing: -0.005em; color: #16161c; }
+  .print-resume .pr-pos { font-weight: 500; color: #56565e; }
+  .print-resume .pr-dates { font-size: 8.5pt; color: #71717a; white-space: nowrap; font-variant-numeric: tabular-nums; }
+
+  .print-resume ul { list-style: none; margin-top: 2pt; }
+  .print-resume li { padding-left: 12pt; margin-bottom: 1.25pt; line-height: 1.36; }
+  .print-resume li:last-child { margin-bottom: 0; }
+  .print-resume li::before { content: "\203A"; display: inline-block; width: 12pt; margin-left: -12pt; color: #B33A2A; font-weight: 700; }
+  .print-resume .pr-link { font-size: 8.75pt; color: #56565e; margin-top: 4pt; }
+  .print-resume .pr-link a { color: #B33A2A; font-weight: 600; }
+
+  .print-resume .pr-edu-grid { display: grid; grid-template-columns: 1fr 1fr; column-gap: 26pt; }
+  .print-resume .pr-edu-head { display: flex; justify-content: space-between; align-items: baseline; gap: 8pt; }
+  .print-resume .pr-org-edu { font-size: 10pt; }
+  .print-resume .pr-deg { font-size: 9pt; color: #222228; margin-top: 1pt; }
+  .print-resume .pr-hon { font-size: 8.5pt; color: #56565e; margin-top: 1pt; }
+
+  .print-resume .pr-skills div { font-size: 9.25pt; line-height: 1.5; }
+  .print-resume .pr-skill-k { font-weight: 700; color: #16161c; }
+
+  .print-resume .pr-outside { font-size: 8.5pt; color: #56565e; margin-top: 6pt; padding-top: 4pt; border-top: 0.75pt solid #e3dfda; }
+
+  /* Tailored variants carry one extra header line ("Tailored for …"), so the
+     vertical rhythm tightens just enough to keep one page. Same content. */
+  .print-resume.pr-has-tailored .pr-header { padding-bottom: 4pt; margin-bottom: 5pt; }
+  .print-resume.pr-has-tailored section { margin-bottom: 4.25pt; }
+  .print-resume.pr-has-tailored .pr-entry { margin-bottom: 4.25pt; }
+  .print-resume.pr-has-tailored li { margin-bottom: 1pt; }
+  .print-resume.pr-has-tailored .pr-outside { margin-top: 4pt; }
+  .print-resume .pr-outside-k { font-weight: 700; color: #B33A2A; text-transform: uppercase; letter-spacing: 0.1em; font-size: 7.75pt; margin-right: 7pt; }
+  .print-resume .pr-outside :global(em) { font-style: italic; }
+</style>
