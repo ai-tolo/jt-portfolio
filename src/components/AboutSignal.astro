@@ -908,7 +908,14 @@ const GLINTS = Array.from({ length: 40 }, () => ({
         const naturalTop = r.top + r.height - vh + off;
         const boot = seg(p, ARRIVE + 0.012, WORK_LAND);   // a BEAT after the comet shoots in, the device wakes
         if (boot !== booted) { work.style.setProperty("--boot", boot.toFixed(3)); booted = boot; }
-        if (p >= WORK_RISE) {
+        if (p >= 1) {
+          // PAST the track: normal flow owns the page. The rise math lands the
+          // transform at ~0 exactly at the track end, so clearing here is seamless —
+          // and it MUST clear: a fast fling can overshoot hundreds of px between
+          // frames, and the change-gate above would otherwise freeze that overshoot
+          // into a permanent offset on #work (its foot then overlaps #signal below).
+          if (workShown) { work.style.transform = ""; work.style.willChange = ""; workShown = false; }
+        } else if (p >= WORK_RISE) {
           const desired = off + (vh - off) * (1 - riseE(seg(p, WORK_RISE, WORK_LAND)));
           // land on a WHOLE pixel so the held device is rock-solid (no sub-pixel shimmer)
           work.style.transform = "translateY(" + (Math.round(desired) - naturalTop).toFixed(2) + "px)";
