@@ -347,6 +347,7 @@
     .fills{display:flex;gap:9px;flex:1}
     .fillcard{position:relative;flex:1;border-radius:11px;overflow:hidden;cursor:ns-resize;touch-action:none;box-shadow:inset 0 0 0 1px rgba(0,0,0,.8),inset 0 3px 10px rgba(0,0,0,.7);border:1px solid rgba(150,190,240,.06);background:linear-gradient(180deg,#0e1620,#05090e)}
     .fillcard .fill{position:absolute;left:0;right:0;bottom:0;height:0%;background:linear-gradient(0deg,color-mix(in srgb,var(--fc) 60%,transparent),color-mix(in srgb,var(--fc) 18%,transparent));box-shadow:0 0 16px -1px var(--fc);transition:height .04s linear}
+    .fillcard.dragging .fill{transition:none}   /* the transition fights live pointermove updates — the bar rubber-bands behind the pointer */
     .fillcard .fill::before{content:"";position:absolute;left:0;right:0;top:0;height:2px;background:var(--fc);box-shadow:0 0 8px var(--fc)}
     .fillcard .fill.mt{box-shadow:none}
     .fillcard .fill.mt::before{opacity:0}
@@ -712,18 +713,25 @@ function makeEngine(ctx){
     tun.connect(tunDamp);tunDamp.connect(tunFb);tunFb.connect(tun);
     const tunG=mkSend();micGain.connect(tunG);tunG.connect(tun);tun.connect(bus);
     voc={bus,dryG,wets:{telephone:telG,hall:hallG,double:dblG,robot:robG,air:airG,tunnel:tunG},tun,rosc,treat:'dry',depth:0};}
+  /* dry law by effect CLASS: TELEPHONE/ROBOT/AIR TRANSFORM the voice (true crossfade —
+     leaked dry turns robot into mud); HALL/DOUBLE/TUNNEL ADD to it (dry stays nearly
+     full and the space rides on top — cutting dry made them hollow, "off"). */
+  const VOC_ADDITIVE={hall:1,double:1,tunnel:1};
   function setVocal(treat,depth){if(!voc)return;voc.treat=treat;voc.depth=clamp(depth,0,1);const t=ctx.currentTime;
     const wet=treat==='dry'?0:voc.depth;
-    voc.dryG.gain.setTargetAtTime(1-wet*.8,t,.05);
+    const dry=treat==='dry'?1:(VOC_ADDITIVE[treat]?1-wet*.25:1-wet);
+    voc.dryG.gain.setTargetAtTime(Math.max(0,dry),t,.05);
     Object.entries(voc.wets).forEach(([k,g])=>g.gain.setTargetAtTime(k===treat?wet:0,t,.05));}
   function micOn(){if(micStream)return Promise.resolve(true);if(micPromise)return micPromise;
-    micPromise=navigator.mediaDevices.getUserMedia({audio:{echoCancellation:true,noiseSuppression:true,autoGainControl:false}})
+    // music-app mic: ALL browser processing off — echoCancellation treats your own
+    // monitored voice as echo and eats it; noiseSuppression chews sustained tones.
+    micPromise=navigator.mediaDevices.getUserMedia({audio:{echoCancellation:false,noiseSuppression:false,autoGainControl:false}})
       .then(s=>{micStream=s;const src=ctx.createMediaStreamSource(s);const hp=ctx.createBiquadFilter();hp.type='highpass';hp.frequency.value=90;
         const comp=ctx.createDynamicsCompressor();comp.threshold.value=-18;comp.ratio.value=6;comp.attack.value=.003;comp.release.value=.15;
         micGain=ctx.createGain();micGain.gain.value=0;src.connect(hp);hp.connect(comp);comp.connect(micGain);
         micTap=ctx.createAnalyser();micTap.fftSize=256;micGain.connect(micTap);
         buildVocalRack();setVocal('dry',0);
-        micGain.gain.setTargetAtTime(0.7,ctx.currentTime,0.3);return true;})
+        micGain.gain.setTargetAtTime(0.6,ctx.currentTime,0.3);return true;})   // a notch lower now that AEC is off (feedback headroom)
       .catch(()=>false).finally(()=>{micPromise=null;});
     return micPromise;}
   function micOff(){if(micStream){micStream.getTracks().forEach(t=>t.stop());micStream=null;}
@@ -861,7 +869,7 @@ drawFilter();
 function makeKnob(el,init,onChange){let v=init;const dial=el.querySelector('.dial');function render(){dial.style.setProperty('--v',v.toFixed(3));}render();
   let sy=0,sv=0;el.addEventListener('pointerdown',e=>{if(!live)return;el.dataset.d='1';sy=e.clientY;sv=v;try{el.setPointerCapture(e.pointerId)}catch(_){}});
   el.addEventListener('pointermove',e=>{if(!el.dataset.d)return;v=clamp(sv+(sy-e.clientY)/160,0,1);render();onChange(v);});
-  el.addEventListener('pointerup',()=>el.dataset.d='');return{set:nv=>{v=nv;render();}};}
+  el.addEventListener('pointerup',()=>el.dataset.d='');el.addEventListener('pointercancel',()=>el.dataset.d='');return{set:nv=>{v=nv;render();}};}
 makeKnob($('#amtKnob'),0,v=>{if(eng){eng.fx.amount=v;eng.apply();}$('#amtNum').textContent=Math.round(v*100);
   $('#amtKnob').style.setProperty('--glowA',v.toFixed(2));if(v>0)startLfoAnim();});
 makeKnob($('#rateKnob'),0.75,v=>{if(!eng)return;if(eng.fx.rateMode==='sync'){const i=clamp(Math.round(v*(SYNCS.length-1)),0,SYNCS.length-1);eng.fx.syncDiv=SYNCS[i].v;$('#rateNum').textContent=SYNCS[i].l;}else{eng.fx.rateHz=+(0.1*Math.pow(120,v)).toFixed(2);$('#rateNum').textContent=eng.fx.rateHz.toFixed(1)+'Hz';}eng.apply();});
@@ -937,8 +945,9 @@ document.querySelectorAll('.gpad').forEach(p=>{const g=p.dataset.g;
 $('#fills').querySelectorAll('.fillcard').forEach(c=>{const key=c.dataset.key,def=key==='reverb'?.12:0;
   function set(v){v=clamp(v,0,1);const f=c.querySelector('.fill');f.style.height=(v*100).toFixed(0)+'%';f.classList.toggle('mt',v<=0.004);c.querySelector('.pc').textContent=Math.round(v*100);if(eng){eng.fx[key]=v;eng.apply();}}set(def);
   const at=e=>{const r=c.getBoundingClientRect();set(1-(e.clientY-r.top)/r.height);};
-  c.addEventListener('pointerdown',e=>{if(!live)return;c.dataset.drag='1';at(e);try{c.setPointerCapture(e.pointerId)}catch(_){}});
-  c.addEventListener('pointermove',e=>{if(c.dataset.drag)at(e);});c.addEventListener('pointerup',()=>c.dataset.drag='');});
+  const end=()=>{c.dataset.drag='';c.classList.remove('dragging');};
+  c.addEventListener('pointerdown',e=>{if(!live)return;c.dataset.drag='1';c.classList.add('dragging');at(e);try{c.setPointerCapture(e.pointerId)}catch(_){}});
+  c.addEventListener('pointermove',e=>{if(c.dataset.drag)at(e);});c.addEventListener('pointerup',end);c.addEventListener('pointercancel',end);});
 const SEGW={'4':'16px','8':'10px','8d':'13px','16':'5px'},CLOUDS={small:'5px',med:'10px',hall:'18px',vast:'30px'};
 $('#drate').querySelectorAll('b').forEach(b=>b.addEventListener('click',()=>{if(!live||!eng)return;$('#drate').querySelectorAll('b').forEach(x=>x.classList.remove('on'));b.classList.add('on');eng.fx.delayDiv=b.dataset.v;eng.apply();
   document.querySelector('.fillcard[data-key="delay"]').style.setProperty('--seg',SEGW[b.dataset.v]||'10px');}));
