@@ -2,6 +2,7 @@
 import Layout from "../layouts/Layout.astro";
 import Footer from "../components/Footer.astro";
 import AboutSignal from "../components/AboutSignal.astro";
+import SignalMachine from "../components/SignalMachine.astro";
 import { getCaseStudies } from "../lib/notion";
 
 export const prerender = true;
@@ -129,6 +130,11 @@ const deck = works.map((proj, i) => ({ proj, i, ...(DECK[proj.slug] ?? DECK_FALL
         </div>
       </div>
     </section>
+
+    {/* SIGNAL — the instrument. The site grammar: signals wake machines, and
+        machines make sound. Audio exists only after the power press; the boot
+        ceremony + standby rules live in the component. */}
+    <SignalMachine />
   </main>
 
   <Footer />
@@ -204,11 +210,23 @@ const deck = works.map((proj, i) => ({ proj, i, ...(DECK[proj.slug] ?? DECK_FALL
         if (!list.contains((e.relatedTarget as Node) ?? null)) release();
       });
 
+      // ONE sitewide sound consent (shared with the SIGNAL instrument below): the
+      // deck toggle reads/writes localStorage['jt-sound']; the instrument's first
+      // power-on sets it and announces via a window event, so a visitor who powers
+      // the machine walks back up and the hover plucks are already on.
       const soundBtn = list.querySelector<HTMLButtonElement>(".dk-audio");
+      const setSound = (on: boolean) => {
+        soundOn = on;
+        list.setAttribute("data-sound", on ? "on" : "off");
+        soundBtn?.setAttribute("aria-pressed", String(on));
+      };
+      try { if (localStorage.getItem("jt-sound") === "on") setSound(true); } catch {}
+      window.addEventListener("jt-sound", ((e: CustomEvent) => {
+        if (e.detail === "on" && !soundOn) setSound(true);
+      }) as EventListener);
       soundBtn?.addEventListener("click", () => {
-        soundOn = !soundOn;
-        list.setAttribute("data-sound", soundOn ? "on" : "off");
-        soundBtn.setAttribute("aria-pressed", String(soundOn));
+        setSound(!soundOn);
+        try { localStorage.setItem("jt-sound", soundOn ? "on" : "off"); } catch {}
         retrigger(soundBtn, "pulsing");
         if (soundOn) { try { ensureCtx().resume?.(); } catch {} }
       });
