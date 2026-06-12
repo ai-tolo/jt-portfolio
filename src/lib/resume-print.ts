@@ -6,9 +6,6 @@
 // one-pager. Edit THIS file to change the PDF; edit Notion to change the
 // screen. PrintResume.astro renders it under @media print only.
 //
-// Keyed by resume slug. Slugs without an entry fall back to the master
-// content; the variant's "Tailored for" line (from Notion) is still shown.
-//
 // Editorial guardrails (load-bearing, do not regress):
 // - Positioning is "Design Engineer".
 // - The judge story is a KNOWN failure mode (reward-model overoptimization),
@@ -65,7 +62,7 @@ export interface PrintResumeContent {
   outside: string;
 }
 
-const master: PrintResumeContent = {
+export const printContent: PrintResumeContent = {
   name: "Jonathan Tollefson",
   title: "Design Engineer",
   contact: [
@@ -161,9 +158,3 @@ const master: PrintResumeContent = {
   outside:
     "<em>Diary of a Soundbender</em>, a Substack on sound and product design. Track and field record holder, University of Minnesota.",
 };
-
-const bySlug: Record<string, PrintResumeContent> = { master };
-
-export function printContentFor(slug: string): PrintResumeContent {
-  return bySlug[slug] ?? master;
-}

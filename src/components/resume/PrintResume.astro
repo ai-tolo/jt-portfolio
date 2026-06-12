@@ -21,27 +21,15 @@ import "@fontsource/geist/latin-400.css";
 import "@fontsource/geist/latin-500.css";
 import "@fontsource/geist/latin-600.css";
 import "@fontsource/geist/latin-700.css";
-import type { ResumeAST } from "../../lib/resumes";
-import { printContentFor } from "../../lib/resume-print";
-
-interface Props {
-  resume: ResumeAST;
-}
-
-const { resume } = Astro.props;
-const c = printContentFor(resume.slug);
-// A variant without its own curated entry prints the master one-pager but
-// keeps its "Tailored for" line so the targeting stays visible.
-const tailoredFor = resume.tailoredFor;
+import { printContent as c } from "../../lib/resume-print";
 
 const isUrl = (s: string) => /^[a-z0-9.-]+\.[a-z]{2,}(\/|$)/i.test(s) && !s.includes("@") && !/^\(/.test(s);
 ---
 
-<div class:list={["print-resume", { "pr-has-tailored": !!tailoredFor }]} aria-hidden="true">
+<div class="print-resume" aria-hidden="true">
   <header class="pr-header">
     <div class="pr-name">{c.name}</div>
     <div class="pr-role">{c.title}</div>
-    {tailoredFor && <div class="pr-tailored">Tailored for {tailoredFor}</div>}
     <div class="pr-contact">
       {c.contact.map((item, i) => (
         <>
@@ -161,7 +149,6 @@ const isUrl = (s: string) => /^[a-z0-9.-]+\.[a-z]{2,}(\/|$)/i.test(s) && !s.incl
   .print-resume .pr-header { border-bottom: 1.5pt solid #B33A2A; padding-bottom: 5pt; margin-bottom: 6pt; }
   .print-resume .pr-name { font-size: 22pt; font-weight: 700; letter-spacing: -0.02em; line-height: 1; color: #16161c; }
   .print-resume .pr-role { font-size: 11pt; font-weight: 600; color: #B33A2A; margin-top: 3.5pt; letter-spacing: 0.01em; }
-  .print-resume .pr-tailored { font-size: 8.5pt; color: #56565e; margin-top: 3pt; }
   .print-resume .pr-contact { font-size: 8.75pt; color: #56565e; margin-top: 5pt; letter-spacing: 0.01em; }
 
   .print-resume section { margin-bottom: 5pt; }
@@ -197,14 +184,6 @@ const isUrl = (s: string) => /^[a-z0-9.-]+\.[a-z]{2,}(\/|$)/i.test(s) && !s.incl
   .print-resume .pr-skill-k { font-weight: 700; color: #16161c; }
 
   .print-resume .pr-outside { font-size: 8.5pt; color: #56565e; margin-top: 6pt; padding-top: 4pt; border-top: 0.75pt solid #e3dfda; }
-
-  /* Tailored variants carry one extra header line ("Tailored for …"), so the
-     vertical rhythm tightens just enough to keep one page. Same content. */
-  .print-resume.pr-has-tailored .pr-header { padding-bottom: 4pt; margin-bottom: 5pt; }
-  .print-resume.pr-has-tailored section { margin-bottom: 4.25pt; }
-  .print-resume.pr-has-tailored .pr-entry { margin-bottom: 4.25pt; }
-  .print-resume.pr-has-tailored li { margin-bottom: 1pt; }
-  .print-resume.pr-has-tailored .pr-outside { margin-top: 4pt; }
   .print-resume .pr-outside-k { font-weight: 700; color: #B33A2A; text-transform: uppercase; letter-spacing: 0.1em; font-size: 7.75pt; margin-right: 7pt; }
   .print-resume .pr-outside :global(em) { font-style: italic; }
 </style>
