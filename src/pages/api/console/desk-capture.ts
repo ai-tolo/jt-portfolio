@@ -24,6 +24,9 @@ export const POST: APIRoute = async ({ request }) => {
   }
   const text = String(body?.text ?? "").replace(/—/g, ", ").trim().slice(0, 2000);
   if (!text) return json({ error: "say something first" }, 400);
+  // Optional provenance label (e.g. "from the Figma cover note"); defaults to
+  // the Desk so the existing web capture bar is unaffected.
+  const source = (String(body?.source ?? "").replace(/—/g, ", ").trim().slice(0, 200)) || "captured from the Desk";
   if (!TOKEN) return json({ error: "NOTION_TOKEN not set" }, 500);
 
   try {
@@ -40,7 +43,7 @@ export const POST: APIRoute = async ({ request }) => {
               {
                 object: "block",
                 type: "paragraph",
-                paragraph: { rich_text: [{ type: "text", text: { content: "captured from the Desk" } }] },
+                paragraph: { rich_text: [{ type: "text", text: { content: source } }] },
               },
             ],
           },

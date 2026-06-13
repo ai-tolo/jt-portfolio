@@ -9,7 +9,7 @@
 //     beat outline. High-level, flexible, steerable.
 
 import { Client } from "@notionhq/client";
-import { readSavedState } from "./desk-state";
+import { readSavedState, type PieceStatus } from "./desk-state";
 
 // Arcs database (data source) under Content Inbox in the Claude KB.
 const ARCS_DATA_SOURCE = "8ca8c512-bb02-40d4-8afa-b88e08e8355d";
@@ -44,6 +44,8 @@ export interface DeskPiece {
   surface: Surface;
   lane: "Article" | "Notes" | "Post" | "Visual";
   text: string;
+  draft?: string; // a saved draft body, persisted across reloads (Article lane)
+  status?: PieceStatus; // undefined = not started; drafted = has a saved draft; shipped
 }
 
 export interface DeskWeek {
@@ -277,6 +279,8 @@ export async function getDeskPlan(): Promise<DeskPlan> {
   let onTheDesk = pickOnTheDesk(weeks);
   // Prefer a saved (tuned) plan for the current week if one exists; a stale
   // save (week has since advanced) is ignored and the arc default is used.
+  // Note: the weekKey === currentKey gate means a saved draft intentionally
+  // resets when the week rolls over (it belongs to that week's pieces).
   try {
     const saved = await readSavedState();
     const currentKey = onTheDesk[0]?.range ?? null;
@@ -290,6 +294,8 @@ export async function getDeskPlan(): Promise<DeskPlan> {
           surface: p.surface as Surface,
           lane: p.lane as DeskPiece["lane"],
           text: p.text,
+          draft: p.draft,
+          status: p.status,
         })),
       }));
     }

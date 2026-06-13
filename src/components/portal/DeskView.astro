@@ -33,7 +33,7 @@ const weeksForClient = plan.onTheDesk.map((w, i) => ({
   when: weekWhen(w, i),
   range: w.range,
   beat: w.beat,
-  pieces: w.pieces.map((p) => ({ surface: p.surface, lane: p.lane, text: p.text })),
+  pieces: w.pieces.map((p) => ({ surface: p.surface, lane: p.lane, text: p.text, draft: p.draft, status: p.status })),
 }));
 const weeksJson = JSON.stringify(weeksForClient).replace(/</g, "\\u003c");
 ---
@@ -109,7 +109,13 @@ const weeksJson = JSON.stringify(weeksForClient).replace(/</g, "\\u003c");
                     </div>
                     <h3 class="sub-title">{stripQuotes(article.text)}</h3>
                     <p class="sub-byline"><span class="avatar">T</span>Tolo<span class="byline-sep">·</span>Substack</p>
-                    <button type="button" class="draft-btn" data-action="draft" data-wi={i} data-lane="Article">✍ Draft this post</button>
+                    <div class="draft-row">
+                      <button type="button" class="draft-btn" data-action="draft" data-wi={i} data-lane="Article">{article.draft ? "✍ Continue draft" : "✍ Draft this post"}</button>
+                      {article.status === "drafted" && (
+                        <button type="button" class="ship-btn" data-action="mark-shipped" data-wi={i} data-lane="Article">Mark shipped</button>
+                      )}
+                      {article.status && <span class:list={["status-pill", article.status]}>{article.status}</span>}
+                    </div>
                   </article>
                 ) : (
                   <article class="post sub hero placeholder">
@@ -404,6 +410,21 @@ const weeksJson = JSON.stringify(weeksForClient).replace(/</g, "\\u003c");
     border-radius: 5px; padding: 6px 11px; cursor: pointer; transition: color 140ms ease, border-color 140ms ease;
   }
   .draft-btn:hover, .draft-btn:focus-visible { color: #ff8c42; border-color: #ff8c42; outline: none; }
+  .draft-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin: 2px 16px 16px; }
+  .draft-row .draft-btn { margin: 0; }
+  .ship-btn {
+    font: inherit; font-size: 11px; font-weight: 700; letter-spacing: 0.04em; color: var(--muted);
+    background: transparent; border: 1px solid var(--line); border-radius: 5px; padding: 6px 11px;
+    cursor: pointer; transition: color 140ms ease, border-color 140ms ease;
+  }
+  .ship-btn:hover, .ship-btn:focus-visible { color: #00ff4d; border-color: #00ff4d; outline: none; }
+  .status-pill {
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 9.5px; font-weight: 700;
+    letter-spacing: 0.14em; text-transform: uppercase; padding: 3px 8px; border-radius: 999px; border: 1px solid;
+  }
+  .status-pill.drafting { color: var(--muted); border-color: var(--line); }
+  .status-pill.drafted { color: #ff8c42; border-color: rgba(255,140,66,0.5); background: rgba(255,140,66,0.08); }
+  .status-pill.shipped { color: #00ff4d; border-color: rgba(0,255,77,0.4); background: rgba(0,255,77,0.08); }
   .draft-text { width: 100%; box-sizing: border-box; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12.5px; line-height: 1.5; min-height: 16rem; }
   .draft-stream {
     max-height: 22rem; overflow-y: auto; white-space: pre-wrap; word-break: break-word; margin: 0;
@@ -420,7 +441,7 @@ const weeksJson = JSON.stringify(weeksForClient).replace(/</g, "\\u003c");
     const desk = document.querySelector<HTMLElement>("[data-desk]");
     if (!desk) return;
 
-    type Piece = { surface: string; lane: string; text: string };
+    type Piece = { surface: string; lane: string; text: string; draft?: string; status?: string };
     type Week = { when: string; range: string; beat: string; pieces: Piece[] };
 
     const readWeeks = (): Week[] => {
@@ -433,6 +454,8 @@ const weeksJson = JSON.stringify(weeksForClient).replace(/</g, "\\u003c");
     // The last Tune/Draft action, so the error "Try again" button repeats the
     // right one (re-tune vs re-draft) instead of always reopening the tuner.
     let lastAction: (() => void) | null = null;
+    // Which piece the open draft panel belongs to, so "Save draft" writes back.
+    let draftTarget: { wi: number; lane: string } | null = null;
 
     // ── helpers mirroring the server render ──
     const esc = (s: string) => s.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]!));
@@ -440,6 +463,13 @@ const weeksJson = JSON.stringify(weeksForClient).replace(/</g, "\\u003c");
     const splitNotes = (s: string) => s.split(/\s+plus\s+/i).map(stripQ).filter(Boolean);
     const headline = (s: string) => s.replace(/^\s*\d+\.\s*/, "").replace(/^Beat\s*\d+:\s*/i, "").trim();
     const find = (w: Week, lane: string) => w.pieces.find((p) => p.lane === lane);
+    const pill = (s?: string) => (s ? `<span class="status-pill ${esc(s)}">${esc(s)}</span>` : "");
+    const draftRow = (p: Piece, wi: number): string =>
+      `<div class="draft-row">
+         <button type="button" class="draft-btn" data-action="draft" data-wi="${wi}" data-lane="Article">${p.draft ? "✍ Continue draft" : "✍ Draft this post"}</button>
+         ${p.status === "drafted" ? `<button type="button" class="ship-btn" data-action="mark-shipped" data-wi="${wi}" data-lane="Article">Mark shipped</button>` : ""}
+         ${pill(p.status)}
+       </div>`;
 
     const renderWeek = (w: Week, wi: number): string => {
       const article = find(w, "Article");
@@ -453,7 +483,7 @@ const weeksJson = JSON.stringify(weeksForClient).replace(/</g, "\\u003c");
              <div class="sub-audio" data-action="play" role="button" tabindex="0"><span class="play-glyph"></span><span class="scrub"><span class="scrub-fill"></span></span><span class="sub-dur">0:00</span></div>
              <h3 class="sub-title">${esc(stripQ(article.text))}</h3>
              <p class="sub-byline"><span class="avatar">T</span>Tolo<span class="byline-sep">·</span>Substack</p>
-             <button type="button" class="draft-btn" data-action="draft" data-wi="${wi}" data-lane="Article">✍ Draft this post</button>
+             ${draftRow(article, wi)}
            </article>`
         : `<article class="post sub hero placeholder"><p class="ph-label">No Substack article yet</p><p class="ph-hint">This is the week's headline slot.</p></article>`;
       const notesHtml = notes
@@ -583,18 +613,24 @@ const weeksJson = JSON.stringify(weeksForClient).replace(/</g, "\\u003c");
     const draftView = (text: string): string =>
       `<p class="tune-lead">Draft, in your voice. Edit freely, nothing is posted.</p>
        <textarea class="tune-input draft-text" data-draft-text rows="14">${esc(text)}</textarea>
-       <div class="tune-actions"><button type="button" class="tune-ghost" data-action="draft-copy">Copy</button><button type="button" class="tune-go" data-action="tune-close">Done</button></div>
-       <p class="tune-note">Drafted on request. Yours to take, not posted anywhere.</p>`;
+       <div class="tune-actions"><button type="button" class="tune-ghost" data-action="draft-copy">Copy</button><button type="button" class="tune-ghost" data-action="draft-save">Save draft</button><button type="button" class="tune-go" data-action="tune-close">Done</button></div>
+       <p class="tune-note" data-draft-note>Drafted on request. Save it and it waits for you here.</p>`;
     const draftStreamingView = (text: string): string =>
       `<p class="tune-status"><span class="dot"></span>Writing in your voice...</p>
        <pre class="draft-stream" data-draft-stream>${esc(text.replace(/—/g, ", "))}</pre>
        <p class="tune-note">Watching it appear. Nothing is posted.</p>`;
+    const pieceAt = (wi: number, lane: string): Piece | undefined =>
+      currentWeeks[wi]?.pieces.find((p) => p.lane === lane);
+
     async function draftPiece(wi: number, lane: string) {
       const week = currentWeeks[wi];
       const piece = week?.pieces.find((p) => p.lane === lane);
       if (!week || !piece) return;
+      draftTarget = { wi, lane };
       lastAction = () => void draftPiece(wi, lane);
       if (scrim) scrim.hidden = false;
+      // Continue a saved draft without re-streaming.
+      if (piece.draft) { setBody(draftView(piece.draft)); return; }
       warm();
       setBody(draftStreamingView(""));
       try {
@@ -608,6 +644,31 @@ const weeksJson = JSON.stringify(weeksForClient).replace(/</g, "\\u003c");
         );
         setBody(draftView(String(data.draft || "")));
       } catch (e) { setBody(errView(e instanceof Error ? e.message : "error")); }
+    }
+
+    // Persist the open draft onto its piece so it survives a reload, and
+    // advance the board's status pill in place (the workshop "it changed under
+    // my hands" feel). Mutates only draft/status, never week.range (the save
+    // key), so the saved state round-trips cleanly.
+    async function saveDraft() {
+      if (!draftTarget) return;
+      const ta = body?.querySelector<HTMLTextAreaElement>("[data-draft-text]");
+      const piece = pieceAt(draftTarget.wi, draftTarget.lane);
+      if (!ta || !piece) return;
+      piece.draft = ta.value;
+      if (piece.status !== "shipped") piece.status = "drafted";
+      await saveCurrent();
+      renderBoard(currentWeeks);
+      const note = body?.querySelector<HTMLElement>("[data-draft-note]");
+      if (note) note.textContent = "Saved. It will be here when you come back.";
+    }
+
+    async function markShipped(wi: number, lane: string) {
+      const piece = pieceAt(wi, lane);
+      if (!piece) return;
+      piece.status = "shipped";
+      await saveCurrent();
+      renderBoard(currentWeeks);
     }
 
     const rewritingView = (): string =>
@@ -697,6 +758,9 @@ const weeksJson = JSON.stringify(weeksForClient).replace(/</g, "\\u003c");
         if (ta && navigator.clipboard) { navigator.clipboard.writeText(ta.value).catch(() => {}); if (b) { b.textContent = "Copied"; window.setTimeout(() => { b.textContent = "Copy"; }, 1500); } }
         return;
       }
+      if (t.closest('[data-action="draft-save"]')) return void saveDraft();
+      const shipBtn = t.closest<HTMLElement>('[data-action="mark-shipped"]');
+      if (shipBtn) return void markShipped(parseInt(shipBtn.dataset.wi || "0", 10), shipBtn.dataset.lane || "Article");
       if (t.closest('[data-action="tune-react"]')) return void react();
       if (t.closest('[data-action="tune-answer"]')) return void answer(false);
       if (t.closest('[data-action="tune-skip"]')) return void answer(true);

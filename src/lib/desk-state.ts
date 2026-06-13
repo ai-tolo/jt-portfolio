@@ -9,7 +9,8 @@ const TOKEN =
 
 const notion = new Client({ auth: TOKEN });
 
-export interface SavedPiece { surface: string; lane: string; text: string }
+export type PieceStatus = "drafting" | "drafted" | "shipped";
+export interface SavedPiece { surface: string; lane: string; text: string; draft?: string; status?: PieceStatus }
 export interface SavedWeek { when: string; range: string; beat: string; pieces: SavedPiece[] }
 export interface SavedDeskState {
   weekKey: string | null; // the current week's range, so a stale save is ignored
