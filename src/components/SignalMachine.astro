@@ -28,9 +28,9 @@ import "@fontsource/orbitron/latin-500.css";   // amber outline-on-glass readout
               <span class="tbtn" id="shareBtn" role="button" tabindex="0" disabled>⤴ SHARE</span>
               <span class="iodiv" aria-hidden="true"></span>
               <span class="dicebtn" id="dice" role="button" tabindex="0" aria-label="Randomize sound" title="Randomize"><svg viewBox="0 0 24 24"><rect x="3.5" y="3.5" width="17" height="17" rx="4.5" fill="none" stroke="currentColor" stroke-width="1.7"/><circle cx="8" cy="8" r="1.5"/><circle cx="16" cy="8" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="8" cy="16" r="1.5"/><circle cx="16" cy="16" r="1.5"/></svg></span>
-              <!-- voice-loop pill: appears once a loop is captured; toggles the crop popover (lives in the abs-centered transport so it never changes the bar height) -->
-              <span class="hw looppill" id="loopPill" role="button" tabindex="0" aria-haspopup="true" aria-expanded="false" aria-label="Voice loop — crop and tone"><svg class="loopspark" viewBox="0 0 24 12" preserveAspectRatio="none" aria-hidden="true"><path id="loopsparkP" d="M0,6"></path></svg><span>loop</span><i class="cv" aria-hidden="true">⌄</i></span>
             </div>
+            <!-- voice-loop pill: appears beside the mic once a loop is captured; toggles the crop popover. In the bar flow — only re-flows horizontally, never changes the device height -->
+            <span class="hw looppill" id="loopPill" role="button" tabindex="0" aria-haspopup="true" aria-expanded="false" aria-label="Voice loop — crop and tone"><svg class="loopspark" viewBox="0 0 24 12" preserveAspectRatio="none" aria-hidden="true"><path id="loopsparkP" d="M0,6"></path></svg><span>loop</span><i class="cv" aria-hidden="true">⌄</i></span>
             <span class="micgrille" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></span><div class="micin sleeps" id="micin" role="button" tabindex="0" aria-pressed="false" aria-label="Voice in"><svg viewBox="0 0 24 24" aria-hidden="true"><rect class="mcap" x="8.5" y="3" width="7" height="11" rx="3.5"/><path class="myoke" d="M6 11 a6 6 0 0 0 12 0 M12 17 V20 M9 20 H15"/></svg><svg class="capring" id="capring" viewBox="0 0 52 52" aria-hidden="true"><rect class="capringP" id="capringP" x="4.5" y="4.5" width="43" height="43" rx="15" pathLength="100"></rect></svg><b class="capnum" id="capnum" aria-hidden="true"></b></div><i class="miclight" id="miclight" aria-hidden="true"></i>
             <span class="vstatus" id="vstatus" aria-live="polite"></span>
             <!-- voice loop: crop + tone — a popover anchored to the bar; paints OVER the console, never grows the device (replaces the old .vocalbar strip that reflowed the device + glitched the perimeter trace) -->
@@ -208,8 +208,6 @@ import "@fontsource/orbitron/latin-500.css";   // amber outline-on-glass readout
     </div>
 
     <p class="takeflag" id="takeflag"></p>
-
-    <p class="sgm-foot" id="micnudge">Sing a phrase — it records 2 bars on the next beat, then loops in time. Trim the ends, pick a tone, or ↺ re-record · nothing leaves your device.</p>
   </div>
 </section>
 
@@ -224,8 +222,6 @@ import "@fontsource/orbitron/latin-500.css";   // amber outline-on-glass readout
   .signal-sec{padding:clamp(2.25rem,5vh,3.75rem) 0 var(--space-16,4rem);--amber:#ff9a4a;--red:#ff5a5a;--sapphire:#0ec4fc;--green:#3ddc84}
   .signal-sec .inner{max-width:78rem}
   .sgm-intro{font-size:1rem;color:var(--muted,#9aa6b4);margin:0 0 1.2rem;letter-spacing:.01em}
-  .sgm-foot{display:none;font-family:ui-monospace,Menlo,monospace;font-size:.62rem;letter-spacing:.06em;color:#caa56a;margin:.7rem 0 0}
-  .sgm-foot.show{display:block}
   .sgm{position:relative;--green:#3ddc84;--red:#ff5a5a;--sapphire:#0ec4fc;--pink:#ff8fb0;--amber:#ff9a4a;--curve:#5ec8f0;
     --metal-hi:#3a4150;--metal:#222834;--metal-lo:#11151d;--ink:#070a0e}
   .sgm .sgm-trace{position:absolute;inset:0;width:100%;height:100%;z-index:9;pointer-events:none;opacity:0;transition:opacity .5s ease .15s}
@@ -464,7 +460,7 @@ import "@fontsource/orbitron/latin-500.css";   // amber outline-on-glass readout
     .micin.on .myoke{stroke:color-mix(in srgb,var(--sapphire) 70%,#7fd6f4)}
     /* the red record LED beside the mic */
     .miclight{width:6px;height:6px;border-radius:50%;flex:none;background:#3a1212;box-shadow:inset 0 0 0 1px rgba(0,0,0,.6);transition:background .25s,box-shadow .25s}
-    .io:has(.micin.on) .miclight{background:#ff3b30;box-shadow:0 0 9px #ff3b30,0 0 3px #ff8b85}
+    .io:has(.micin.loop) .miclight{background:var(--sapphire);box-shadow:0 0 8px color-mix(in srgb,var(--sapphire) 75%,transparent),0 0 2px #bfeeff}   /* a live voice loop = steady sapphire tally (red is recording-only, below) */
     /* mic-grille slits — milled directly into the carbon body (NO panel/background), like a premium metal-chassis synth's built-in mic port. Capsule-shaped (slits taper top/bottom). */
     .micgrille{position:relative;width:24px;height:30px;flex:none;display:flex;flex-direction:column;justify-content:center;gap:3px;opacity:.5}
     .micgrille i{display:block;height:1px;margin:0 auto;border-radius:1px;background:rgba(0,0,0,.6);box-shadow:0 1px 0 rgba(150,180,210,.06)}
@@ -483,8 +479,8 @@ import "@fontsource/orbitron/latin-500.css";   // amber outline-on-glass readout
     .micin .capnum{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;pointer-events:none;
       font-family:'Orbitron',ui-monospace,sans-serif;font-size:1.05rem;line-height:1;color:var(--amber);text-shadow:0 0 10px var(--amber),0 0 3px #ffd9ad;opacity:0;transition:opacity .15s ease}
     .micin.arming .capnum{opacity:1}
-    .micin.arming svg:not(.capring){opacity:.22}   /* the mic glyph dims so the count digit owns the cap while counting in */
-    .micin.rec svg:not(.capring){opacity:calc(.45 + var(--lv,0)*.55);transition:opacity .05s linear}   /* the glyph rides the input level while recording — "it's hearing me" */
+    .micin.arming svg:not(.capring),.micin.rec svg:not(.capring){opacity:.22}   /* the mic glyph dims so the count-in / beats-remaining digit owns the cap */
+    .micin.rec .capnum{opacity:1;color:#ff3b30;text-shadow:0 0 10px #ff3b30,0 0 3px #ff8b85}   /* recording: the digit counts the beats remaining, in record-red — so "it stops itself" is visible */
     .micin.arming{background:linear-gradient(180deg,#2a2410,#15110a);border-top-color:rgba(255,154,74,.3)}
     .capnum.pop{animation:capnumpop .13s ease}
     @keyframes capnumpop{0%{transform:scale(.65);opacity:.4}45%{transform:scale(1.16)}100%{transform:scale(1)}}
@@ -494,7 +490,7 @@ import "@fontsource/orbitron/latin-500.css";   // amber outline-on-glass readout
     @keyframes micpulse{0%,100%{opacity:.4}50%{opacity:1}}
     /* loop pill — appears in the (abs-centered) transport once a take exists; toggles the crop popover */
     .looppill{display:none;height:28px;gap:6px;align-items:center;padding:0 10px;font-size:.55rem;letter-spacing:.1em;text-transform:uppercase}
-    .iotransport .looppill.show{display:inline-flex}
+    .io .looppill.show{display:inline-flex}
     .looppill .loopspark{width:22px;height:11px;flex:none}
     .looppill .loopspark path{fill:none;stroke:var(--sapphire);stroke-width:1.4;vector-effect:non-scaling-stroke;filter:drop-shadow(0 0 3px color-mix(in srgb,var(--sapphire) 55%,transparent))}
     .looppill .cv{font-style:normal;font-size:.72rem;line-height:1;color:#9fb0c1;transition:transform .2s}
@@ -510,7 +506,7 @@ import "@fontsource/orbitron/latin-500.css";   // amber outline-on-glass readout
       box-shadow:0 18px 38px -10px rgba(0,0,0,.7),inset 0 1px 0 rgba(255,255,255,.06),0 0 18px -8px var(--sapphire)}
     .loopover.open{display:block;animation:loopoverIn .18s ease}
     @keyframes loopoverIn{from{opacity:0;transform:translateY(-5px)}to{opacity:1;transform:none}}
-    .loopover::before{content:"";position:absolute;top:-7px;right:44px;width:12px;height:12px;rotate:45deg;
+    .loopover::before{content:"";position:absolute;top:-7px;left:var(--caretX,78%);margin-left:-6px;width:12px;height:12px;rotate:45deg;
       background:#121a24;border-left:1px solid color-mix(in srgb,var(--sapphire) 24%,#000);border-top:1px solid color-mix(in srgb,var(--sapphire) 24%,#000)}   /* caret pointing up at the bar */
     .loopover .al{font-family:ui-monospace,Menlo,monospace;font-size:.54rem;letter-spacing:.16em;text-transform:uppercase;color:#9fb0c1;flex:none}
     .lo-head,.lo-tone,.lo-foot{display:flex;align-items:center;gap:9px}
@@ -936,7 +932,6 @@ import "@fontsource/orbitron/latin-500.css";   // amber outline-on-glass readout
     .piano .wkey:nth-child(10){--kc:#ff6b6b;--kdon:960ms;--kdoff:460ms}
     .piano.locked .bkey{opacity:.8}.piano.locked .bkey .ql{color:rgba(238,244,250,.72)}.piano.locked .bkey .nl{color:rgba(238,244,250,.26)}
   
-    .micnudge{display:none;font-family:ui-monospace,Menlo,monospace;font-size:.55rem;color:#ffd27d;margin-top:8px}.micnudge.show{display:block}
   
   }
   /* ── TAKE transport (record / play / share) ── */
@@ -1624,12 +1619,11 @@ function makeEngine(ctx){
     if(g||v){const t=ctx.currentTime;if(g)g.gain.setTargetAtTime(0,t,.02);if(v)v.bus.gain.setTargetAtTime(0,t,.025);
       setTimeout(()=>{try{g&&g.disconnect()}catch(e){}try{v&&(v.bus.disconnect(),v.rosc.stop())}catch(e){}},180);}clockStopIfIdle();}
   function loopBeatsN(){return loopBuf?Math.max(1,Math.round(loopBuf.duration/(60/(recTempo||fx.tempo)))):8;}   // the captured buffer is exactly L samples = bars*4 = 8 beats (quantizeWrap folds the crossfade tail in), so this is exact
-  function setLoopTrim(inF,outF,anchor){   // GRID-LOCKED crop: the selection LENGTH always snaps to whole beats. anchor 'in'/'out' = drag a handle (length steps in whole beats, the other edge holds); 'move' = slide the whole selection (length fixed, position free). Applies live at the next loop wrap, click-free.
+  function setLoopTrim(inF,outF,anchor){   // crop: the LOOP LENGTH snaps to whole beats; the loop POSITION drags freely (Jon's spec). Drag a handle → length steps in whole beats (the other edge holds its free position); drag the body → slide the selection anywhere. Live at the next loop wrap, click-free.
     const total=loopBeatsN();let i,o;
-    if(anchor==='move'){const len=Math.max(1,Math.round((loopOut-loopIn)*total));const s=clamp(inF*total,0,total-len);i=s/total;o=(s+len)/total;}
-    else{const len=clamp(Math.round((outF-inF)*total),1,total);
-      if(anchor==='in'){i=outF-len/total;if(i<0){i=0;o=len/total;}else o=outF;}
-      else{o=inF+len/total;if(o>1){o=1;i=1-len/total;}else i=inF;}}
+    if(anchor==='move'){const len=Math.max(1,Math.round((loopOut-loopIn)*total))/total;i=clamp(inF,0,1-len);o=i+len;}        // slide freely, hold the (whole-beat) length
+    else if(anchor==='in'){const len=clamp(Math.round((outF-inF)*total),1,total)/total;o=clamp(outF,len,1);i=o-len;}        // OUT edge stays free; IN moves so the SPAN is whole beats
+    else{const len=clamp(Math.round((outF-inF)*total),1,total)/total;i=clamp(inF,0,1-len);o=i+len;}                          // 'out': IN edge stays free; OUT moves so the SPAN is whole beats
     loopIn=clamp(i,0,1);loopOut=clamp(o,0,1);
     if(loopSrc&&loopBuf){const d=loopBuf.duration;loopSrc.loopStart=loopIn*d;loopSrc.loopEnd=loopOut*d;}}
 
@@ -1827,7 +1821,7 @@ function doPowerOff(){if(typeof REC!=='undefined'){if(REC.on)REC.stop();REC.stop
   $('#arpBtn').classList.remove('on');$('#arpBtn').dataset.on='0';$('#arpBtn').setAttribute('aria-pressed','false');
   $('#latchBtn').classList.remove('on');$('#latchBtn').dataset.on='0';$('#arpmod').classList.remove('armed');
   piano.querySelectorAll('.press,.latched').forEach(k=>k.classList.remove('press','latched'));
-  $('#micin').classList.remove('on');$('#micnudge').classList.remove('show');
+  $('#micin').classList.remove('on','rec','arming','loop');
   document.querySelectorAll('.gpad.on').forEach(p=>p.classList.remove('on'));
   const sp=$('#spill');if(sp)sp.classList.remove('on');
   vocalReset();readoutStop();if(jamOn){jamOn=false;jamReplaying=false;jamTimers.forEach(clearTimeout);jamTimers=[];}}   /* stop the readout + any jam loop when the device goes dark */
@@ -1968,10 +1962,11 @@ function capFrame(){
       if(capPhase!=='count'){capPhase='count';micin.classList.add('arming','on');micin.classList.remove('rec');micin.setAttribute('aria-pressed','true');capRingSet(0);}
       const left=Math.max(1,Math.min(ci.countBeats,Math.ceil((ci.startT-now)/ci.beat)));
       if(left!==lastCount){lastCount=left;capnum.textContent=left;capnum.classList.remove('pop');void capnum.offsetWidth;capnum.classList.add('pop');vstatus.textContent='counting in, '+left;}
-    }else{   // RECORDING — the ring fills; a full ring == the 2 bars are up (it stops on its own)
-      if(capPhase!=='rec'){capPhase='rec';micin.classList.remove('arming');micin.classList.add('rec','on');capnum.textContent='';vstatus.textContent='recording — sing now';}
+    }else{   // RECORDING — the ring fills AND a beats-remaining countdown ticks down, so "it stops on its own" is SEEN, not just implied
+      if(capPhase!=='rec'){capPhase='rec';lastCount=-1;micin.classList.remove('arming');micin.classList.add('rec','on');vstatus.textContent='recording — sing now, it stops itself';}
+      const left=Math.max(1,Math.ceil((ci.startT+ci.recDur-now)/ci.beat));
+      if(left!==lastCount){lastCount=left;capnum.textContent=left;capnum.classList.remove('pop');void capnum.offsetWidth;capnum.classList.add('pop');}
       capRingSet((now-ci.startT)/ci.recDur);
-      micin.style.setProperty('--lv',Math.min(1,eng.micLevel()*2.5).toFixed(2));
     }
     capRaf=requestAnimationFrame(capFrame);return;}
   if(eng.loopActive){onLoopReady();return;}        // capture finished → the loop is live
@@ -1981,28 +1976,31 @@ function startCap(){if(!capRaf)capRaf=requestAnimationFrame(capFrame);}
 function stopCap(){if(capRaf){cancelAnimationFrame(capRaf);capRaf=null;}micin.style.setProperty('--lv',0);}
 function dryTone(){vTreat='dry';vDepth=0;vDepthRender();vdepthEl.classList.add('inert');document.querySelectorAll('.vchip').forEach(x=>x.classList.toggle('on',x.dataset.v==='dry'));}
 function onLoopReady(){stopCap();capPhase='';lastCount=-1;
-  micin.classList.remove('arming','rec');micin.classList.add('on');micin.setAttribute('aria-pressed','true');capnum.textContent='';capRingSet(0);
+  micin.classList.remove('arming','rec');micin.classList.add('on','loop');micin.setAttribute('aria-pressed','true');micin.setAttribute('aria-label','Voice loop — tap to crop');capnum.textContent='';capRingSet(0);
   dryTone();loopBeatsUI=eng.loopBeats||8;trimIn=0;trimOut=1;
   drawWaveform(eng.loopBuf);drawSpark(eng.loopBuf);buildTicks();vtrimRender();
   loopPill.classList.add('show');
   vstatus.textContent='voice loop ready, '+lenLabel()+'. open it to crop or add a tone.';}
 async function recordVoice(){if(!live||!eng||eng.recActive||eng.loopActive)return;
-  closeLoopover();micin.classList.add('arming','on');micin.setAttribute('aria-pressed','true');capnum.textContent='';capRingSet(0);capPhase='';lastCount=-1;vstatus.textContent='getting ready';startCap();
+  closeLoopover();micin.classList.remove('loop');micin.classList.add('arming','on');micin.setAttribute('aria-pressed','true');micin.setAttribute('aria-label','Voice in');capnum.textContent='';capRingSet(0);capPhase='';lastCount=-1;vstatus.textContent='getting ready';startCap();
   const ok=await eng.capture(2);
   if(!ok){stopCap();capPhase='';micin.classList.remove('arming','rec','on');micin.setAttribute('aria-pressed','false');capnum.textContent='';vstatus.textContent='mic blocked — allow the mic, then tap voice in';statusline.textContent='allow the mic, then tap voice in';setTimeout(()=>{if(live)statusline.textContent='LIVE · press A S D F to play';},2800);}}
 function clearVoice(){if(eng)eng.clearLoop();stopCap();closeLoopover();capPhase='';lastCount=-1;
-  micin.classList.remove('on','rec','arming');micin.setAttribute('aria-pressed','false');capnum.textContent='';capRingSet(0);
+  micin.classList.remove('on','rec','arming','loop');micin.setAttribute('aria-pressed','false');micin.setAttribute('aria-label','Voice in');capnum.textContent='';capRingSet(0);
   loopPill.classList.remove('show');drawWaveform(null);drawSpark(null);dryTone();
   vstatus.textContent='voice loop cleared';if(live)statusline.textContent='LIVE · press A S D F to play';}
 function vocalReset(){stopCap();closeLoopover();capPhase='';lastCount=-1;
-  micin.classList.remove('on','rec','arming');micin.setAttribute('aria-pressed','false');capnum.textContent='';capRingSet(0);
+  micin.classList.remove('on','rec','arming','loop');micin.setAttribute('aria-pressed','false');micin.setAttribute('aria-label','Voice in');capnum.textContent='';capRingSet(0);
   loopPill.classList.remove('show');drawWaveform(null);drawSpark(null);dryTone();}
 /* capsule: record when idle; once a loop exists it TOGGLES the crop popover (non-destructive — clear is only via ✕) */
 micin.addEventListener('click',()=>{if(!live||!eng)return;if(eng.recActive)return;if(eng.loopActive)toggleLoopover();else recordVoice();});
 micin.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();e.stopPropagation();micin.click();}});
 
 /* ── crop popover open/close (anchored to the bar; paints over the console; never reflows the device) ── */
-function openLoopover(){if(!eng||!eng.loopActive)return;loopover.classList.add('open');loopPill.setAttribute('aria-expanded','true');buildTicks();vtrimRender();}
+function openLoopover(){if(!eng||!eng.loopActive)return;loopover.classList.add('open');loopPill.setAttribute('aria-expanded','true');
+  const pr=loopPill.getBoundingClientRect(),lr=loopover.getBoundingClientRect();   // point the caret at the pill that opened it
+  if(pr.width)loopover.style.setProperty('--caretX',clamp(pr.left+pr.width/2-lr.left,16,lr.width-16)+'px');
+  buildTicks();vtrimRender();}
 function closeLoopover(){loopover.classList.remove('open');loopPill.setAttribute('aria-expanded','false');}
 function toggleLoopover(){loopover.classList.contains('open')?closeLoopover():openLoopover();}
 loopPill.addEventListener('click',e=>{e.stopPropagation();if(!live||!eng||!eng.loopActive)return;toggleLoopover();});
@@ -2027,11 +2025,12 @@ function flashTicks(){if(window.matchMedia('(prefers-reduced-motion:reduce)').ma
   [...ts.children].forEach((el,idx)=>{const b=idx+1;el.classList.toggle('flash',b===inB||b===outB);});
   clearTimeout(flashTicks._t);flashTicks._t=setTimeout(()=>{[...ts.children].forEach(el=>el.classList.remove('flash'));},190);}
 function vtrimRender(){const i=$('#vtrimIn'),o=$('#vtrimOut'),ml=$('#vmaskl'),mr=$('#vmaskr'),bd=$('#loopBody'),vl=$('#vlen');
-  if(i){i.style.left=(trimIn*100)+'%';i.setAttribute('aria-valuenow',Math.round(trimIn*loopBeatsUI));}
-  if(o){o.style.left=(trimOut*100)+'%';o.setAttribute('aria-valuenow',Math.round(trimOut*loopBeatsUI));}
+  const inB=Math.round(trimIn*loopBeatsUI),outB=Math.round(trimOut*loopBeatsUI),sel=lenLabel();
+  if(i){i.style.left=(trimIn*100)+'%';i.setAttribute('aria-valuemax',loopBeatsUI);i.setAttribute('aria-valuenow',inB);i.setAttribute('aria-valuetext','loop start · beat '+inB+' · '+sel+' selected');}
+  if(o){o.style.left=(trimOut*100)+'%';o.setAttribute('aria-valuemax',loopBeatsUI);o.setAttribute('aria-valuenow',outB);o.setAttribute('aria-valuetext','loop end · beat '+outB+' · '+sel+' selected');}
   if(ml)ml.style.width=(trimIn*100)+'%';if(mr)mr.style.width=((1-trimOut)*100)+'%';
   if(bd){bd.style.left=(trimIn*100)+'%';bd.style.width=((trimOut-trimIn)*100)+'%';}
-  if(vl)vl.textContent=lenLabel();}
+  if(vl)vl.textContent=sel;}
 function applyTrim(rawIn,rawOut,anchor){if(!eng||!eng.loopActive)return;eng.setLoopTrim(rawIn,rawOut,anchor);const t=eng.loopTrim;trimIn=t[0];trimOut=t[1];vtrimRender();flashTicks();}
 (function(){const wave=$('#vwave');if(!wave)return;
   const frac=e=>{const r=wave.getBoundingClientRect();return clamp((e.clientX-r.left)/r.width,0,1);};
@@ -2456,7 +2455,7 @@ const COACH=(function(){
     sidechain:{a:'raise  SIDECHAIN',b:'the synth breathes with the kick'},
     bassint:{a:'push  BASS  up',b:'deep and clean, out to a buzz'},
     tempo:{a:'drag the  BPM  screen',b:'to change the speed'},
-    voicein:{a:'tap  VOICE IN  and sing',b:'it loops you back in time'},
+    voicein:{a:'tap  VOICE IN  and sing',b:'it grabs 2 bars on its own, then loops'},
     treat:{a:'singing a loop?',b:'add  TELEPHONE  or  ROBOT  to it'},
     dice:{a:'out of ideas? the  DICE',b:'rolls a whole new sound'},
   };
