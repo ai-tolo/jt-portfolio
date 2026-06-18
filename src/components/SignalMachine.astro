@@ -45,15 +45,12 @@ import "@fontsource/orbitron/latin-500.css";   // amber outline-on-glass readout
                 <span class="vtrim vout" id="vtrimOut" role="slider" tabindex="0" aria-label="Loop end" aria-valuemin="0" aria-valuemax="8" aria-valuenow="8"></span>
               </div>
               <div class="lo-tone">
-                <span class="al">tone</span>
-                <span class="hw vchip on" data-v="dry">dry</span>
-                <span class="hw vchip" data-v="telephone">telephone</span>
-                <span class="hw vchip" data-v="hall">hall</span>
-                <span class="hw vchip" data-v="double">double</span>
+                <div class="knob lo-int" id="vintKnob"><div class="dial"><div class="ptr"></div></div><span class="kl">INTENSITY</span></div>
+                <span class="hw vchip on" data-v="double">double</span>
                 <span class="hw vchip" data-v="robot">robot</span>
-                <span class="hw vchip" data-v="air">air</span>
                 <span class="hw vchip" data-v="tunnel">tunnel</span>
-                <span class="lo-depth"><span class="al">depth</span><div class="strack vdepth" id="vdepth"><span class="sfill" id="vdfill"></span><span class="shandle" id="vdhandle"></span></div></span>
+                <span class="hw vchip" data-v="hall">hall</span>
+                <span class="hw vchip" data-v="chorus">chorus</span>
               </div>
             </div>
           </div>
@@ -516,8 +513,12 @@ import "@fontsource/orbitron/latin-500.css";   // amber outline-on-glass readout
     .lo-tone,.lo-foot{margin-top:10px;flex-wrap:wrap}
     .loopover .vchip{height:28px;padding:0 11px;font-size:.55rem}
     .lo-tone .lo-depth{display:inline-flex;align-items:center;gap:7px;margin-left:auto}   /* #3: keep the "depth" label glued to its fader */
-    .loopover .vdepth{width:120px}
-    .loopover .vdepth.inert{opacity:.35;pointer-events:none}   /* DRY has no wet to mix — the slider says so */
+    .loopover .lo-int{flex:none;gap:4px;margin-right:6px;cursor:ns-resize}   /* INTENSITY knob — left of the effect toggles */
+    .loopover .lo-int .dial{width:44px;height:44px}
+    .loopover .lo-int .dial::before{inset:6px}
+    .loopover .lo-int .dial .ptr::after{top:6px;height:9px}
+    .loopover .lo-int .kl{font-size:.5rem;letter-spacing:.14em}
+    .device.live #vintKnob .dial{background:conic-gradient(from 225deg,var(--sapphire) 0 calc(var(--v,0)*270deg),#262c35 calc(var(--v,0)*270deg) 270deg,#0a0d12 270deg 360deg);box-shadow:0 0 9px -2px var(--sapphire),inset 0 0 0 1px rgba(0,0,0,.6),0 1px 2px rgba(0,0,0,.5)}
     .loopover .vctl{height:28px;padding:0 12px;font-size:.56rem;letter-spacing:.05em;gap:5px;text-transform:uppercase}
     /* the crop surface — 64px tall (the popover buys the vertical room a 48px bar can't give) */
     .loopover .vwave{position:relative;height:64px;border-radius:8px;overflow:hidden;touch-action:none;
@@ -1556,11 +1557,14 @@ function makeEngine(ctx){
     const tunFb=ctx.createGain();tunFb.gain.value=.55;
     tun.connect(tunDamp);tunDamp.connect(tunFb);tunFb.connect(tun);
     const tunG=mkSend();micGain.connect(tunG);tunG.connect(tun);tun.connect(bus);
-    voc={bus,dryG,wets:{telephone:telG,hall:hallG,double:dblG,robot:robG,air:airG,tunnel:tunG},tun,rosc,treat:'dry',depth:0};}
+    // CHORUS: a short LFO-modulated delay — lush thickening (additive, keeps the dry)
+    const chD=ctx.createDelay(.05);chD.delayTime.value=.016;const chLfo=ctx.createOscillator();chLfo.type='sine';chLfo.frequency.value=.55;const chDep=ctx.createGain();chDep.gain.value=.0016;chLfo.connect(chDep);chDep.connect(chD.delayTime);chLfo.start();
+    const chG=mkSend();micGain.connect(chG);chG.connect(chD);chD.connect(bus);
+    voc={bus,dryG,wets:{telephone:telG,hall:hallG,double:dblG,robot:robG,air:airG,tunnel:tunG,chorus:chG},tun,rosc,chLfo,treat:'dry',depth:0};}
   /* dry law by effect CLASS: TELEPHONE/ROBOT/AIR TRANSFORM the voice (true crossfade —
      leaked dry turns robot into mud); HALL/DOUBLE/TUNNEL ADD to it (dry stays nearly
      full and the space rides on top — cutting dry made them hollow, "off"). */
-  const VOC_ADDITIVE={hall:1,double:1,tunnel:1};
+  const VOC_ADDITIVE={hall:1,double:1,tunnel:1,chorus:1};
   function setVocal(treat,depth){if(!voc)return;voc.treat=treat;voc.depth=clamp(depth,0,1);const t=ctx.currentTime;
     const wet=treat==='dry'?0:voc.depth;
     const dry=treat==='dry'?1:(VOC_ADDITIVE[treat]?1-wet*.25:1-wet);
@@ -1585,7 +1589,7 @@ function makeEngine(ctx){
       if(g)g.gain.setTargetAtTime(0,t,.02);
       if(v)v.bus.gain.setTargetAtTime(0,t,.025);
       setTimeout(()=>{if(g){try{g.disconnect()}catch(e){}}
-        if(v){try{v.bus.disconnect()}catch(e){}try{v.rosc.stop()}catch(e){}}},180);}}
+        if(v){try{v.bus.disconnect()}catch(e){}try{v.rosc.stop()}catch(e){}try{v.chLfo&&v.chLfo.stop()}catch(e){}}},180);}}
   const micBuf=new Float32Array(256);
   function micLevel(){const tap=recActive?recTap:micTap;if(!tap)return 0;tap.getFloatTimeDomainData(micBuf);let m=0;for(let i=0;i<micBuf.length;i++){const a=Math.abs(micBuf[i]);if(a>m)m=a;}return m;}
   // ── VOCAL LOOPER (feedback-safe): RECORD (mic open, never monitored) -> CLOSE mic -> LOOP the buffer through the rack ──
@@ -1936,20 +1940,14 @@ $('#rsize').querySelectorAll('b').forEach(b=>b.addEventListener('click',()=>{if(
 $('#dtype').querySelectorAll('b').forEach(b=>b.addEventListener('click',()=>{if(!live||!eng)return;$('#dtype').querySelectorAll('b').forEach(x=>x.classList.remove('on'));b.classList.add('on');eng.fx.driveType=b.dataset.v;eng.apply();}));
 
 /* mic + vocal strip */
-const micin=$('#micin'),loopover=$('#loopover'),loopPill=$('#loopPill'),capnum=$('#capnum'),capringP=$('#capringP'),vstatus=$('#vstatus'),vdepthEl=$('#vdepth');
-const VDEF={dry:0,telephone:.8,hall:.45,double:.5,robot:.85,air:.6,tunnel:.5};   // per-treatment default depth
-let vTreat='dry',vDepth=0,micRaf=null;
-function vDepthRender(){$('#vdfill').style.width=(vDepth*100)+'%';$('#vdhandle').style.left=(vDepth*100)+'%';}
+const micin=$('#micin'),loopover=$('#loopover'),loopPill=$('#loopPill'),capnum=$('#capnum'),capringP=$('#capringP'),vstatus=$('#vstatus');
+let vTreat='double',vDepth=0,micRaf=null;   // INTENSITY knob drives vDepth (0 = dry); the effects are toggles, one always active
 function vApply(){if(eng)eng.setVocal(vTreat,vDepth);}
 document.querySelectorAll('.vchip').forEach(ch=>ch.addEventListener('click',()=>{if(!live||!eng)return;
-  if(ch.dataset.v===vTreat)return;   // re-clicking the active chip must not yank a dialed-in depth back to the preset
+  if(ch.dataset.v===vTreat)return;
   document.querySelectorAll('.vchip').forEach(x=>x.classList.remove('on'));ch.classList.add('on');
-  vTreat=ch.dataset.v;vDepth=VDEF[vTreat]!==undefined?VDEF[vTreat]:.5;vDepthRender();vApply();
-  vdepthEl.classList.toggle('inert',vTreat==='dry');}));
-(function(){function at(e){const r=vdepthEl.getBoundingClientRect();vDepth=clamp((e.clientX-r.left)/r.width,0,1);vDepthRender();vApply();}
-  vdepthEl.addEventListener('pointerdown',e=>{if(!live)return;vdepthEl.dataset.d='1';at(e);try{vdepthEl.setPointerCapture(e.pointerId)}catch(_){}});
-  vdepthEl.addEventListener('pointermove',e=>{if(vdepthEl.dataset.d)at(e);});vdepthEl.addEventListener('pointerup',()=>vdepthEl.dataset.d='');})();
-vDepthRender();
+  vTreat=ch.dataset.v;vApply();}));   // switch the effect; the INTENSITY knob holds the amount
+const vintKnob=makeKnob($('#vintKnob'),0,v=>{vDepth=v;vApply();});   // 0 = dry → turn up to bring the selected effect in
 /* ── VOICE IN lifecycle: one rAF paints the capture state ON the capsule (count-in digit, then a red ring
    that fills across the 2 bars) from the engine clock; when the take lands, a "loop" pill appears and opens
    the crop popover. The capsule + popover are out of .io's flow, so the device never reflows. ── */
@@ -1976,7 +1974,7 @@ function capFrame(){
   stopCap();}
 function startCap(){if(!capRaf)capRaf=requestAnimationFrame(capFrame);}
 function stopCap(){if(capRaf){cancelAnimationFrame(capRaf);capRaf=null;}micin.style.setProperty('--lv',0);}
-function dryTone(){vTreat='dry';vDepth=0;vDepthRender();vdepthEl.classList.add('inert');document.querySelectorAll('.vchip').forEach(x=>x.classList.toggle('on',x.dataset.v==='dry'));}
+function dryTone(){vTreat='double';vDepth=0;if(typeof vintKnob!=='undefined'&&vintKnob)vintKnob.set(0);document.querySelectorAll('.vchip').forEach(x=>x.classList.toggle('on',x.dataset.v==='double'));}   // reset: default effect armed but INTENSITY 0 = dry
 function onLoopReady(){stopCap();capPhase='';lastCount=-1;
   micin.classList.remove('arming','rec');micin.classList.add('on','loop');micin.setAttribute('aria-pressed','true');micin.setAttribute('aria-label','Voice loop — tap to crop');capnum.textContent='';capRingSet(1);   // keep the border fully drawn → it stays as the lit red loop-present glow
   dryTone();loopBeatsUI=eng.loopBeats||8;trimIn=0;trimOut=1;
