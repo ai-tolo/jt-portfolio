@@ -31,7 +31,7 @@ import "@fontsource/orbitron/latin-500.css";   // amber outline-on-glass readout
             </div>
             <!-- voice-loop pill: appears beside the mic once a loop is captured; toggles the crop popover. In the bar flow — only re-flows horizontally, never changes the device height -->
             <span class="hw looppill" id="loopPill" role="button" tabindex="0" aria-haspopup="true" aria-expanded="false" aria-label="Voice loop — crop and tone"><span class="loopplay" id="loopPlay" role="button" tabindex="0" aria-label="Play / pause the loop" title="Play / pause"><svg viewBox="0 0 14 14" aria-hidden="true"><path class="ic-play" d="M3.5 2.3 L11.7 7 L3.5 11.7 Z"/><g class="ic-pause"><rect x="3.4" y="2.3" width="3" height="9.4" rx=".6"/><rect x="7.6" y="2.3" width="3" height="9.4" rx=".6"/></g></svg></span><svg class="loopspark" viewBox="0 0 24 12" preserveAspectRatio="none" aria-hidden="true"><path id="loopsparkP" d="M0,6"></path></svg><span>loop</span><i class="cv" aria-hidden="true">⌄</i><span class="loopx" id="loopX" role="button" tabindex="0" aria-label="Clear the voice loop" title="Clear the loop">✕</span></span>
-            <span class="micgrille" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></span><div class="micin sleeps" id="micin" role="button" tabindex="0" aria-pressed="false" aria-label="Voice in"><svg viewBox="0 0 24 24" aria-hidden="true"><rect class="mcap" x="8.5" y="3" width="7" height="11" rx="3.5"/><path class="myoke" d="M6 11 a6 6 0 0 0 12 0 M12 17 V20 M9 20 H15"/></svg><svg class="capring" id="capring" viewBox="0 0 44 44" aria-hidden="true"><path class="capringP" id="capringP" d="M22 2 H31 A11 11 0 0 1 42 13 V31 A11 11 0 0 1 31 42 H13 A11 11 0 0 1 2 31 V13 A11 11 0 0 1 13 2 Z" pathLength="100"></path></svg><b class="capnum" id="capnum" aria-hidden="true"></b></div><i class="miclight" id="miclight" aria-hidden="true"></i>
+            <span class="micgrille" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></span><div class="micin sleeps" id="micin" role="button" tabindex="0" aria-pressed="false" aria-label="Voice in"><svg viewBox="0 0 24 24" aria-hidden="true"><rect class="mcap" x="8.5" y="3" width="7" height="11" rx="3.5"/><path class="myoke" d="M6 11 a6 6 0 0 0 12 0 M12 17 V20 M9 20 H15"/></svg><svg class="capring" id="capring" viewBox="0 0 44 44" aria-hidden="true"><path class="capringP" id="capringP" d="M22 2 H31 A11 11 0 0 1 42 13 V31 A11 11 0 0 1 31 42 H13 A11 11 0 0 1 2 31 V13 A11 11 0 0 1 13 2 Z"></path></svg><b class="capnum" id="capnum" aria-hidden="true"></b></div><i class="miclight" id="miclight" aria-hidden="true"></i>
             <span class="vstatus" id="vstatus" aria-live="polite"></span>
             <!-- voice loop: crop + tone — a popover anchored to the bar; paints OVER the console, never grows the device (replaces the old .vocalbar strip that reflowed the device + glitched the perimeter trace) -->
             <div class="loopover" id="loopover" role="dialog" aria-label="Crop the voice loop">
@@ -52,8 +52,10 @@ import "@fontsource/orbitron/latin-500.css";   // amber outline-on-glass readout
                 <span class="hw vchip" data-v="tunnel">tunnel</span>
                 <span class="hw vchip" data-v="hall">hall</span>
                 <span class="hw vchip" data-v="chorus">chorus</span>
-                <div class="knob lo-int lo-cov" id="vcovKnob"><div class="dial"><div class="ptr"></div></div><span class="kl">COVER</span></div>
+                <div class="knob lo-int lo-gain" id="vgainKnob"><div class="dial"><div class="ptr"></div></div><span class="kl">GAIN</span></div>
               </div>
+              <div class="coverslide vcover"><div class="ct"><span>COVER · LP</span><span class="cvv" id="vcovval">OPEN</span></div>
+                <div class="strack" id="vcovslide"><span class="sfill" id="vcovfill"></span><span class="shandle" id="vcovhandle"></span></div></div>
             </div>
           </div>
 
@@ -470,7 +472,7 @@ import "@fontsource/orbitron/latin-500.css";   // amber outline-on-glass readout
        grows a pixel when recording or cropping — which is what kept the perimeter trace from glitching. ── */
     /* count-in digit + progress ring: both out of flow over the 44px cap, never widen it (they paint in the 12px .io gap) */
     .micin .capring{position:absolute;inset:0;pointer-events:none;opacity:0;transition:opacity .25s ease;overflow:visible}
-    .micin .capring .capringP{fill:none;stroke:#3a4654;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;vector-effect:non-scaling-stroke;stroke-dasharray:100;stroke-dashoffset:100}   /* a PATH so pathLength is honored (it's IGNORED on <rect> → the old ring only drew ~half). dashoffset driven 100->0 in JS draws the FULL mic border. */
+    .micin .capring .capringP{fill:none;stroke:#3a4654;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;vector-effect:non-scaling-stroke}   /* dasharray + dashoffset are set in JS from the path's REAL getTotalLength — the boot-trace technique — so the FULL border draws (pathLength wasn't reliable) */
     .micin.arming .capring,.micin.rec .capring,.micin.loop .capring{opacity:1}
     .micin.rec .capring .capringP{stroke:#ff3b30;stroke-width:2.6;filter:drop-shadow(0 0 5px #ff3b30)}   /* recording: a glowing RED trace fills around the mic's border; one full lap == the 2 bars are done (it stops on its own) */
     .micin.loop .capring .capringP{stroke:#ff5a4a;stroke-width:2.4;filter:drop-shadow(0 0 6px #ff5a4a)}   /* a loop EXISTS: the border stays lit red — the capsule itself is the loop-present indicator */
@@ -527,8 +529,9 @@ import "@fontsource/orbitron/latin-500.css";   // amber outline-on-glass readout
     .loopover .lo-int .dial::before{inset:6px}
     .loopover .lo-int .dial .ptr::after{top:6px;height:9px}
     .loopover .lo-int .kl{font-size:.5rem;letter-spacing:.14em}
-    .loopover .lo-cov{margin-left:auto;margin-right:0}   /* COVER dial pushed to the right end, balancing INTENSITY on the left */
-    .device.live #vintKnob .dial,.device.live #vcovKnob .dial{background:conic-gradient(from 225deg,var(--sapphire) 0 calc(var(--v,0)*270deg),#262c35 calc(var(--v,0)*270deg) 270deg,#0a0d12 270deg 360deg);box-shadow:0 0 9px -2px var(--sapphire),inset 0 0 0 1px rgba(0,0,0,.6),0 1px 2px rgba(0,0,0,.5)}
+    .loopover .lo-gain{margin-left:auto;margin-right:0}   /* GAIN knob pushed to the right end, balancing INTENSITY on the left */
+    .loopover .coverslide{margin-top:11px}   /* #3: COVER is a drag-bar beneath the knob+fx row, drum-cover style */
+    .device.live #vintKnob .dial,.device.live #vgainKnob .dial{background:conic-gradient(from 225deg,var(--sapphire) 0 calc(var(--v,0)*270deg),#262c35 calc(var(--v,0)*270deg) 270deg,#0a0d12 270deg 360deg);box-shadow:0 0 9px -2px var(--sapphire),inset 0 0 0 1px rgba(0,0,0,.6),0 1px 2px rgba(0,0,0,.5)}
     .loopover .vctl{height:28px;padding:0 12px;font-size:.56rem;letter-spacing:.05em;gap:5px;text-transform:uppercase}
     /* the crop surface — 64px tall (the popover buys the vertical room a 48px bar can't give) */
     .loopover .vwave{position:relative;height:64px;border-radius:8px;overflow:hidden;touch-action:none;
@@ -1532,7 +1535,7 @@ function makeEngine(ctx){
 
   /* VOICE IN: its own treatment rack — parallel pre-built branches, crossfade gains only (never reconnect live).
      Routed into glue (so the voice gets the kick sidechain + LIFT) but NOT through the synth filter/drive. */
-  let micStream=null,micGain=null,micPromise=null,voc=null,micTap=null,recStream=null,capNode=null,silentSink=null,recTap=null,loopSrc=null,loopBuf=null,recTempo=0,captureStartFrame=0,recActive=false,loopActive=false,workletReady=false,loopIn=0,loopOut=1,capStartT=0,capRecDur=0,capCountBeats=0,loopPlaying=false,loopStartT=0;
+  let micStream=null,micGain=null,micPromise=null,voc=null,micTap=null,recStream=null,capNode=null,silentSink=null,recTap=null,loopSrc=null,loopBuf=null,recTempo=0,captureStartFrame=0,recActive=false,loopActive=false,workletReady=false,loopIn=0,loopOut=1,capStartT=0,capRecDur=0,capCountBeats=0,loopPlaying=false,loopStartT=0,loopGain=0.7;
   function buildVocalRack(){
     const bus=ctx.createGain();bus.gain.value=1;const loopLP=ctx.createBiquadFilter();loopLP.type='lowpass';loopLP.frequency.value=12000;loopLP.Q.value=0.6;bus.connect(loopLP);loopLP.connect(glue);   // COVER: a low-pass over the whole loop (muffle like a closed lid)
     const dryG=ctx.createGain();dryG.gain.value=1;micGain.connect(dryG);dryG.connect(bus);
@@ -1576,7 +1579,8 @@ function makeEngine(ctx){
      full and the space rides on top — cutting dry made them hollow, "off"). */
   const VOC_ADDITIVE={hall:1,double:1,tunnel:1,chorus:1};
   function setLoopCover(v){if(!voc||!voc.loopLP)return;voc.loopLP.frequency.setTargetAtTime(60*Math.pow(200,clamp(v,0,1)),ctx.currentTime,.05);}   // vocal-loop COVER (mirrors DRUM COVER): 1 = open (12kHz) … 0 = muffled (60Hz)
-  function setLoopPlay(on){if(!micGain)return;loopPlaying=!!on;micGain.gain.setTargetAtTime(on?0.6:0,ctx.currentTime,.02);}   // #5 play/pause: pause = mute (the source keeps looping, so resume stays in time)
+  function setLoopPlay(on){if(!micGain)return;loopPlaying=!!on;micGain.gain.setTargetAtTime(on?loopGain:0,ctx.currentTime,.02);}   // #5 play/pause: pause = mute (the source keeps looping, so resume stays in time)
+  function setLoopGain(v){loopGain=clamp(v,0,1);if(micGain&&loopPlaying)micGain.gain.setTargetAtTime(loopGain,ctx.currentTime,.05);}   // #4 loop volume (the cover KNOB repurposed)
   function loopPhase(){if(!loopSrc||!loopBuf||!loopStartT)return -1;const d=loopBuf.duration,rate=loopSrc.playbackRate.value||1,ls=loopSrc.loopStart,le=loopSrc.loopEnd||d,el=(ctx.currentTime-loopStartT)*rate;let pos;if(el<le)pos=el;else{const span=Math.max(le-ls,1e-4);pos=ls+((el-le)%span);}return clamp(pos/d,0,1);}   // #1 playback-head position, 0..1 over the buffer
   function setVocal(treat,depth){if(!voc)return;voc.treat=treat;voc.depth=clamp(depth,0,1);const t=ctx.currentTime;
     const wet=treat==='dry'?0:voc.depth;
@@ -1632,7 +1636,7 @@ function makeEngine(ctx){
     loopIn=0;loopOut=1;
     loopSrc=ctx.createBufferSource();loopSrc.buffer=buf;loopSrc.loop=true;loopSrc.loopStart=0;loopSrc.loopEnd=buf.duration;loopSrc.playbackRate.value=recTempo>0?fx.tempo/recTempo:1;loopSrc.connect(micGain);
     buildVocalRack();setVocal('dry',0);
-    const t0=nextBar();loopSrc.start(t0);loopStartT=t0;loopPlaying=true;micGain.gain.setTargetAtTime(0.6,t0,.004);}
+    const t0=nextBar();loopSrc.start(t0);loopStartT=t0;loopPlaying=true;micGain.gain.setTargetAtTime(loopGain,t0,.004);}
   function clearLoop(){loopActive=false;loopPlaying=false;loopStartT=0;if(loopSrc){try{loopSrc.stop()}catch(e){}try{loopSrc.disconnect()}catch(e){}loopSrc=null;}loopBuf=null;
     const g=micGain,v=voc;micGain=null;voc=null;micTap=null;
     if(g||v){const t=ctx.currentTime;if(g)g.gain.setTargetAtTime(0,t,.02);if(v)v.bus.gain.setTargetAtTime(0,t,.025);
@@ -1652,7 +1656,7 @@ function makeEngine(ctx){
     setBeat,onKick:cb=>{kickCb=cb;},setCover,setSidechain,setSwing,setDensity,setCharacter,setModMode,setBass,setBassMode,setBassRate,setBassGlide,setBassHeat,setBassWeight,setBassPluck,setRevSize,setBassStep,setBassSeqMult,setAccent,setPluck,onBassStep:cb=>{pluckStepCb=cb;},get drumCounts(){return {...counts};},get bassFreq(){return bassTarget;},get droneActive(){return !!droneParts;},get bassPluck(){return fx.bassPluck;},get bassMode(){return bassMode;},get bassRateSteps(){return bassPulseSteps;},get bassGlideTau(){return bassGlideStore;},get bassSeq(){return bassSeq;},get bassSeqMult(){return bassSeqMult;},
     get lfoRate(){return lfoHz();},lfoData:buf=>lfoTap.getFloatTimeDomainData(buf),
     gesture,get gestures(){return {...gst};},get liftHz(){return masterHP.frequency.value;},
-    micOff,setVocal,get vocal(){return voc?{treat:voc.treat,depth:voc.depth}:null;},micLevel,capture,clearLoop,setLoopTrim,setLoopCover,setLoopPlay,loopPhase,get loopPlaying(){return loopPlaying;},get loopBuf(){return loopBuf;},get loopTrim(){return [loopIn,loopOut];},get loopBeats(){return loopBeatsN();},get loopActive(){return loopActive;},get recActive(){return recActive;},get capInfo(){return recActive?{startT:capStartT,recDur:capRecDur,beat:60/(recTempo||fx.tempo),countBeats:capCountBeats}:null;},
+    micOff,setVocal,get vocal(){return voc?{treat:voc.treat,depth:voc.depth}:null;},micLevel,capture,clearLoop,setLoopTrim,setLoopCover,setLoopGain,setLoopPlay,loopPhase,get loopPlaying(){return loopPlaying;},get loopBuf(){return loopBuf;},get loopTrim(){return [loopIn,loopOut];},get loopBeats(){return loopBeatsN();},get loopActive(){return loopActive;},get recActive(){return recActive;},get capInfo(){return recActive?{startT:capStartT,recDur:capRecDur,beat:60/(recTempo||fx.tempo),countBeats:capCountBeats}:null;},
     kill:()=>{held.forEach(h=>{if(h&&h.vs)h.vs.forEach(v=>v.release());});held.clear();arpSet.clear();arpOn=false;latch=false;fx.beat=false;
       gestureReset();
       if(clockT){clearTimeout(clockT);clockT=null;}
@@ -1961,12 +1965,18 @@ document.querySelectorAll('.vchip').forEach(ch=>ch.addEventListener('click',()=>
   document.querySelectorAll('.vchip').forEach(x=>x.classList.remove('on'));ch.classList.add('on');
   vTreat=ch.dataset.v;vApply();}));   // switch the effect; the INTENSITY knob holds the amount
 const vintKnob=makeKnob($('#vintKnob'),0,v=>{vDepth=v;vApply();});   // 0 = dry → turn up to bring the selected effect in
-const vcovKnob=makeKnob($('#vcovKnob'),1,v=>{if(eng)eng.setLoopCover(v);});   // COVER: 1 = open … turn down to muffle the loop (low-pass)
+const vgainKnob=makeKnob($('#vgainKnob'),0.7,v=>{if(eng)eng.setLoopGain(v);});   // #4 GAIN: loop volume (repurposed from the cover knob)
+let vcovVal=1;
+function vcovRender(){const f=$('#vcovfill'),h=$('#vcovhandle'),vv=$('#vcovval');if(f)f.style.width=(vcovVal*100)+'%';if(h)h.style.left=(vcovVal*100)+'%';if(vv){const hz=Math.round(60*Math.pow(200,vcovVal));vv.textContent=vcovVal>=.97?'OPEN':vcovVal<=.04?'MUFFLED':(hz>=1000?(hz/1000).toFixed(1)+'k':hz+'Hz');}if(eng)eng.setLoopCover(vcovVal);}
+(function(){const sl=$('#vcovslide');if(!sl)return;function at(e){const r=sl.getBoundingClientRect();vcovVal=clamp((e.clientX-r.left)/r.width,0,1);vcovRender();}   // #3 COVER drag-bar (mirrors DRUM COVER)
+  sl.addEventListener('pointerdown',e=>{if(!live)return;sl.dataset.d='1';at(e);try{sl.setPointerCapture(e.pointerId)}catch(_){}});
+  sl.addEventListener('pointermove',e=>{if(sl.dataset.d)at(e);});sl.addEventListener('pointerup',()=>sl.dataset.d='');})();
+vcovRender();
 /* ── VOICE IN lifecycle: one rAF paints the capture state ON the capsule (count-in digit, then a red ring
    that fills across the 2 bars) from the engine clock; when the take lands, a "loop" pill appears and opens
    the crop popover. The capsule + popover are out of .io's flow, so the device never reflows. ── */
 let trimIn=0,trimOut=1,loopBeatsUI=8,capRaf=null,capPhase='',lastCount=-1;
-function capRingSet(p){if(capringP)capringP.style.strokeDashoffset=String(Math.round(100*(1-clamp(p,0,1))));}
+function capRingSet(p){if(!capringP)return;const L=capringP._L||(capringP._L=capringP.getTotalLength()||141);capringP.style.strokeDasharray=L;capringP.style.strokeDashoffset=(L*(1-clamp(p,0,1))).toFixed(1);}   // dasharray=full length → drawn fraction == p (no more half-draw)
 function lenLabel(){const b=Math.max(1,Math.round((trimOut-trimIn)*loopBeatsUI));return (b%4===0)?(b/4)+(b/4===1?' bar':' bars'):b+(b===1?' beat':' beats');}
 function capFrame(){
   if(!live||!eng){stopCap();return;}
@@ -1988,7 +1998,7 @@ function capFrame(){
   stopCap();}
 function startCap(){if(!capRaf)capRaf=requestAnimationFrame(capFrame);}
 function stopCap(){if(capRaf){cancelAnimationFrame(capRaf);capRaf=null;}micin.style.setProperty('--lv',0);}
-function dryTone(){vTreat='double';vDepth=0;if(typeof vintKnob!=='undefined'&&vintKnob)vintKnob.set(0);if(typeof vcovKnob!=='undefined'&&vcovKnob)vcovKnob.set(1);document.querySelectorAll('.vchip').forEach(x=>x.classList.toggle('on',x.dataset.v==='double'));}   // reset: default effect armed but INTENSITY 0 = dry
+function dryTone(){vTreat='double';vDepth=0;if(typeof vintKnob!=='undefined'&&vintKnob)vintKnob.set(0);if(typeof vgainKnob!=='undefined'&&vgainKnob)vgainKnob.set(0.7);if(typeof vcovRender==='function'){vcovVal=1;vcovRender();}document.querySelectorAll('.vchip').forEach(x=>x.classList.toggle('on',x.dataset.v==='double'));}   // reset: default effect armed but INTENSITY 0 = dry
 function onLoopReady(){stopCap();capPhase='';lastCount=-1;
   micin.classList.remove('arming','rec');micin.classList.add('on','loop');micin.setAttribute('aria-pressed','true');micin.setAttribute('aria-label','Voice loop — tap to crop');capnum.textContent='';capRingSet(1);   // keep the border fully drawn → it stays as the lit red loop-present glow
   dryTone();loopBeatsUI=eng.loopBeats||8;trimIn=0;trimOut=1;
