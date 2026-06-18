@@ -1830,9 +1830,9 @@ if(rateNumEl){rateNumEl.addEventListener('pointerdown',e=>e.stopPropagation());
     if(eng.fx.rateMode==='hz'){eng.fx.rateMode='sync';rateNumEl.classList.remove('hz');const i=Math.max(0,SYNCS.findIndex(x=>x.v===eng.fx.syncDiv));rateKnobObj.set(i/(SYNCS.length-1));}
     else{eng.fx.rateMode='hz';rateNumEl.classList.add('hz');rateKnobObj.set(vFromHz(eng.fx.rateHz));}
     rateRender(eng.fx.rateMode==='hz'?vFromHz(eng.fx.rateHz):Math.max(0,SYNCS.findIndex(x=>x.v===eng.fx.syncDiv))/(SYNCS.length-1));});}
-makeKnob($('#swingKnob'),0,v=>{if(eng)eng.setSwing(v);});
-makeKnob($('#densKnob'),0,v=>{if(eng)eng.setDensity(v);});
-makeKnob($('#gritKnob'),0,v=>{if(eng)eng.setCharacter(v);});
+const swingKnobObj=makeKnob($('#swingKnob'),0,v=>{if(eng)eng.setSwing(v);});   // captured so applySnapshot/presets can recall drum feel
+const densKnobObj=makeKnob($('#densKnob'),0,v=>{if(eng)eng.setDensity(v);});
+const gritKnobObj=makeKnob($('#gritKnob'),0,v=>{if(eng)eng.setCharacter(v);});
 $('#mmode').querySelectorAll('b').forEach(b=>b.addEventListener('click',()=>{if(!live||!eng)return;$('#mmode').querySelectorAll('b').forEach(x=>x.classList.remove('on'));b.classList.add('on');eng.setModMode(b.dataset.v);}));
 $('#shapeRow').querySelectorAll('.hw').forEach(b=>b.addEventListener('click',()=>{if(!live||!eng)return;$('#shapeRow').querySelectorAll('.hw').forEach(x=>x.classList.remove('on'));b.classList.add('on');eng.fx.shape=b.dataset.v;eng.apply();}));
 
@@ -2139,7 +2139,8 @@ function captureSnapshot(){return {
   shape:eng.fx.shape,rateMode:eng.fx.rateMode,syncDiv:eng.fx.syncDiv,rateHz:eng.fx.rateHz,tempo:eng.fx.tempo,
   drive:+eng.fx.drive.toFixed(3),delay:+eng.fx.delay.toFixed(3),reverb:+eng.fx.reverb.toFixed(3),revSize:eng.fx.revSize,delayDiv:eng.fx.delayDiv,
   pattern:eng.fx.pattern,bassHeat:+eng.fx.bassHeat.toFixed(3),bassWeight:+eng.fx.bassWeight.toFixed(3),bassPluck:+eng.fx.bassPluck.toFixed(3),bassMode:eng.bassMode,bassRate:bassRateIdx,bassGlide:+bassGlideV.toFixed(3),pluck:eng.bassMode==='pluck',bassSeqMult:eng.bassSeqMult,bassSeq:eng.bassSeq.map(c=>c&&c.v?{v:c.v,oct:c.oct||'base'}:0),drumCover:eng.fx.drumCover,arpDiv:eng.fx.arpDiv,gate:eng.fx.gate,
-  oct:octOff,key:keyRoot,mode:scaleMode,chord:chordMode,beat:$('#beat').classList.contains('on'),bass:$('#bassrow').classList.contains('on'),arp:$('#arpBtn').dataset.on==='1',latch:$('#latchBtn').dataset.on==='1'};}
+  oct:octOff,key:keyRoot,mode:scaleMode,chord:chordMode,beat:$('#beat').classList.contains('on'),bass:$('#bassrow').classList.contains('on'),arp:$('#arpBtn').dataset.on==='1',latch:$('#latchBtn').dataset.on==='1',
+  sidechain:+(eng.fx.sidechain||0).toFixed(3),swing:+(eng.fx.swing||0).toFixed(3),density:+(eng.fx.density||0).toFixed(3),grit:+(eng.fx.character||0).toFixed(3),mod:+(eng.fx.mod||0).toFixed(3),modMode:eng.fx.modMode||'chorus',driveType:eng.fx.driveType||'warm'};}   // extended: sidechain/drum-feel/mod/drive-flavor now round-trip (so SHARE + presets recall the WHOLE sound)
 function segOn(id,val){const seg=document.getElementById(id);if(seg)seg.querySelectorAll('b').forEach(b=>b.classList.toggle('on',b.dataset.v===val));}
 function fillSet(key,v){const c=document.querySelector('.fillcard[data-key="'+key+'"]'),f=c.querySelector('.fill');f.style.height=(v*100).toFixed(0)+'%';f.classList.toggle('mt',v<=0.004);c.querySelector('.pc').textContent=Math.round(v*100);eng.fx[key]=v;}
 function setToggleBeat(on){if($('#beat').classList.contains('on')===on)return;$('#beat').classList.toggle('on',on);eng.setBeat(on);}
@@ -2170,6 +2171,14 @@ function applySnapshot(s){
   if(Array.isArray(s.bassSeq)){for(let i=0;i<16;i++){const c=s.bassSeq[i];eng.setBassStep(i,c&&c.v?{v:clamp(c.v|0,1,3),oct:c.oct==='sub'?'sub':'base'}:0);}}
   if(s.bassSeqMult!=null){seqMultIdx=Math.max(0,SEQ_MULTS.findIndex(m=>m.v===s.bassSeqMult));if(seqMultIdx<0)seqMultIdx=1;eng.setBassSeqMult(SEQ_MULTS[seqMultIdx].v);if(seqBuilt){const seq=readoutEl.querySelector('.rdseq');seq&&seq.querySelectorAll('.rdrate b').forEach((b,i)=>b.classList.toggle('on',i===seqMultIdx));}}
   if(seqBuilt){for(let i=0;i<16;i++)rdRenderCell(i);rdUpdateMeta();}
+  // EXTENDED FX (snapshot-completeness) — mod / sidechain / drum-feel / drive-flavor, guarded + additive so older snapshots are safe
+  if(s.mod!=null)fillSet('mod',clamp(s.mod,0,1));
+  if(s.modMode){eng.setModMode(s.modMode);segOn('mmode',s.modMode);}
+  if(s.driveType){eng.fx.driveType=s.driveType;segOn('dtype',s.driveType);}
+  if(s.sidechain!=null){const _sc=clamp(s.sidechain,0,1);eng.setSidechain(_sc);$('#scfill').style.width=(_sc*100)+'%';$('#schandle').style.left=(_sc*100)+'%';$('#scval').textContent=_sc<.01?'OFF':Math.round(_sc*100)+'%';}
+  if(s.swing!=null){const _v=clamp(s.swing,0,1);eng.setSwing(_v);swingKnobObj.set(_v);}
+  if(s.density!=null){const _v=clamp(s.density,0,1);eng.setDensity(_v);densKnobObj.set(_v);}
+  if(s.grit!=null){const _v=clamp(s.grit,0,1);eng.setCharacter(_v);gritKnobObj.set(_v);}
   // MODE — prefer the explicit pluck flag (new); fall back to the legacy bassMode string
   setBassModeUI(s.bassMode==='glide'?'glide':'off');   // MOVE: pluck mode retired
   setOct(s.oct);setKey(s.key||0);scaleMode=s.mode||(s.lock===false?'chrom':'major');$('#lockseg').querySelectorAll('b').forEach(b=>b.classList.toggle('on',b.dataset.v===scaleMode));piano.classList.toggle('locked',scaleMode!=='chrom');setChordMode(!!s.chord);relabelKeys();
@@ -2421,223 +2430,319 @@ function bootSignature(){
   console.log('%cBuilt by Jon Tollefson · uxjon.com',dim);
 }
 
-/* 2 · READOUT COACH — thesis-driven, play-reactive guidance for the arp-bar strip.
-   Drop-in driver (handoff: ~/Desktop/signal-readout-handoff.md), replacing the MOCK cycler.
-   Self-wiring: installs its own 600ms poll + passive listeners in readoutStart(), tears them
-   down in readoutStop(). Edits NO other handler; reads engine getters + in-scope module state;
-   writes ONLY #readout. 3-line model: a = action (bright, ▸), b = plain anchor (mid),
-   c = next-step horizon (faint). Silent — text only — so it is fully verifiable headless.
-   Compat stubs: the PARKED PLUCK seq code (readoutSeqOpen/Close, ~L2115/2129) still references
-   the MOCK-era vars; kept inert here so those references stay safe no-ops. The `how`/"?" whisper
-   from the handoff was dropped — there is no ? panel (#engdisc/#lpoverlay) in this build. */
+/* 2 · READOUT — presets (default face) + tutorial ("learn this"). Replaces the retired live coach.
+   The big glass strip now does two jobs, sharing ONE screen:
+     • default = an 8-slot PRESET stepper (Jon's favorite sounds, recalled via applySnapshot).
+     • "learn this" = TUTORIAL: audio off (eng.kill), the device dims under a body-level overlay,
+       hovering/tapping any control spotlights it + tethers a plain explanation.
+   Self-wiring: installs in start() (finishPower->readoutStart), tears down in stop()
+   (doPowerOff->readoutStop). Writes ONLY #readout + a body-level #sgm-tut overlay; references
+   transport/voice IDs read-only (isolation — owns nothing in those regions).
+   PARKED-seq compat: the MOCK-era globals (readoutTimer/readoutI/readoutCoachOn/MOCK_TIPS/readoutSet)
+   stay defined as inert stubs so readoutSeqClose() (called on power-off) never throws. */
 let readoutTimer=null,readoutI=0,readoutCoachOn=false;const MOCK_TIPS=[];
 const readoutEl=$('#readout');
 
-(function injectCoachCss(){
-  if(document.getElementById('rd-coach-css'))return;
-  const s=document.createElement('style');s.id='rd-coach-css';
+(function injectReadoutCss(){
+  if(document.getElementById('rd-screen-css'))return;
+  const s=document.createElement('style');s.id='rd-screen-css';
   s.textContent=`
-  .sgm .readout .rdwrap{display:flex;flex-direction:column;justify-content:center;gap:1px;width:100%}
-  .sgm .readout .rdwrap .rl{font-family:ui-monospace,Menlo,monospace;font-size:.56rem;letter-spacing:.06em;line-height:1.3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;transition:opacity .5s ease,color .5s ease}
-  .sgm .device.live .readout .rdwrap .rl.a{color:#d2f1ff;font-weight:500;text-shadow:0 0 7px color-mix(in srgb,var(--sapphire) 48%,transparent)}
-  .sgm .device.live .readout .rdwrap .rl.b{color:#7fa8c4}
-  .sgm .device.live .readout .rdwrap .rl.c{color:#46586b}
-  .sgm .readout .rdwrap .rl.a::before{content:"▸ "}
-  .sgm .readout.rest .rdwrap .rl.a{color:#46586b;font-weight:400;text-shadow:none}`;
+  /* ── the readout screen now hosts the PRESET face (.rdface); keep the parked .rdseq hidden ── */
+  .sgm .readout:not([data-mode="seq"]) .rdseq{display:none}
+  .sgm .readout .rdface{display:grid;grid-template-columns:60px 1fr auto;align-items:center;column-gap:15px;width:100%;height:100%}
+  .sgm .readout .rdtip{display:none}                       /* legacy coach span — unused now */
+
+  /* ZONE 1 — PRESET label + etched Orbitron digit (cloned from the tempo recipe; sapphire, quieter than the amber heartbeat) */
+  .sgm .readout .rdslot{display:flex;flex-direction:column;justify-content:center;gap:3px;height:52px;border-right:1px solid rgba(120,160,200,.12);padding-right:13px}
+  .sgm .readout .rdsl{font-family:ui-monospace,Menlo,monospace;font-size:.4rem;font-weight:600;letter-spacing:.26em;color:#2b3744}
+  .sgm .device.live .readout .rdsl{color:#5f7a90}
+  .sgm .readout .rdnum{font-family:'Orbitron',ui-monospace,monospace;font-weight:500;font-size:1.55rem;line-height:1;color:transparent;-webkit-text-stroke:1.2px #1b2733;letter-spacing:.02em}
+  .sgm .device.live .readout .rdnum{-webkit-text-stroke:1.2px color-mix(in srgb,var(--sapphire) 72%,#bfe6f8);text-shadow:0 0 9px color-mix(in srgb,var(--sapphire) 24%,transparent)}
+
+  /* ZONE 2 — name + hint, both single-line ellipsis (never wrap → never grow the 80px box) */
+  .sgm .readout .rddesc{min-width:0;display:flex;flex-direction:column;justify-content:center;gap:4px}
+  .sgm .readout .rdname,.sgm .readout .rdhint{font-family:ui-monospace,Menlo,monospace;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;letter-spacing:.03em}
+  .sgm .readout .rdname{font-size:.66rem;color:#2a3542}
+  .sgm .device.live .readout .rdname{color:#a4c5dd}
+  .sgm .device.live .readout .rdface.yours .rdname{color:#6f8ba1}     /* diverged: dimmer, honest */
+  .sgm .readout .rdhint{font-size:.5rem;color:#202a34}
+  .sgm .device.live .readout .rdhint{color:#516577}
+
+  /* ZONE 3 — ◀ ▶ steppers + divider + "learn this" chip (sapphire-hairline pills, dark until power) */
+  .sgm .readout .rdctl{display:flex;align-items:center;gap:9px}
+  .sgm .readout .rdstep{display:flex;gap:6px}
+  .sgm .readout .rddiv{width:1px;height:30px;background:linear-gradient(180deg,transparent,rgba(120,160,200,.14),transparent)}
+  .sgm .readout .rdchip{font-family:ui-monospace,Menlo,monospace;font-size:.5rem;letter-spacing:.1em;color:#2f3c49;border:1px solid rgba(80,110,140,.16);border-radius:7px;padding:5px 8px;cursor:pointer;user-select:none;background:rgba(8,15,24,.5);transition:color .2s,border-color .2s,box-shadow .2s,transform .08s;-webkit-tap-highlight-color:transparent}
+  .sgm .device.live .readout .rdchip{color:#a4c5dd;border-color:rgba(14,196,252,.26)}
+  .sgm .device.live .readout .rdchip:hover{color:#eaffff;border-color:rgba(14,196,252,.62);box-shadow:inset 0 0 9px -3px var(--sapphire),0 0 7px -2px color-mix(in srgb,var(--sapphire) 55%,transparent)}
+  .sgm .readout .rdchip:active{transform:translateY(1px)}
+  .sgm .readout .rdarrow{padding:5px 10px;font-size:.6rem;letter-spacing:0}
+  .sgm .readout .rdlearn{letter-spacing:.14em}
+
+  /* ── TUTORIAL overlay — body-level + position:fixed (viewport coords ignore .device zoom; no full-page bleed) ── */
+  .sgm-tut{position:fixed;inset:0;z-index:9998;pointer-events:none;font-family:ui-monospace,Menlo,monospace}
+  .sgm-tut .tut-cap{position:fixed;pointer-events:auto;background:transparent;cursor:default}     /* capture layer over the device — eats control operation (learn-only) */
+  .sgm-tut .tut-scrim{position:fixed;background:rgba(4,6,11,.82);pointer-events:none;box-shadow:inset 0 0 60px -10px rgba(14,196,252,.05)}   /* faint sapphire wash = "learn", not "power-off" */
+  .sgm-tut .tut-ring{position:fixed;pointer-events:none;border-radius:9px;opacity:0;
+    box-shadow:0 0 0 1.5px #0ec4fc,0 0 15px -2px rgba(14,196,252,.6),inset 0 0 13px -4px rgba(14,196,252,.4);
+    transition:left .22s cubic-bezier(.4,.04,.12,1),top .22s cubic-bezier(.4,.04,.12,1),width .22s cubic-bezier(.4,.04,.12,1),height .22s cubic-bezier(.4,.04,.12,1),opacity .18s ease}
+  .sgm-tut .tut-cap2{position:fixed;pointer-events:none;max-width:236px;padding:9px 12px;border-radius:8px;opacity:0;
+    background:linear-gradient(180deg,rgba(10,17,26,.97),rgba(5,9,15,.98));
+    box-shadow:inset 0 0 0 1px rgba(14,196,252,.34),inset 0 1px 11px -4px rgba(14,196,252,.3),0 9px 24px -9px rgba(0,0,0,.85);
+    transition:opacity .18s ease,left .2s ease,top .2s ease}
+  .sgm-tut .tut-cap2 .tt{display:block;font-size:.52rem;font-weight:600;letter-spacing:.14em;color:#7fbbdb;margin-bottom:5px}
+  .sgm-tut .tut-cap2 .tb{display:block;font-size:.62rem;line-height:1.46;color:#dceef8;letter-spacing:.02em}
+  .sgm-tut .tut-banner{position:fixed;pointer-events:none;display:flex;align-items:center;gap:7px;padding:6px 11px;border-radius:8px;background:rgba(8,15,24,.9);box-shadow:inset 0 0 0 1px rgba(14,196,252,.32);font-size:.5rem;letter-spacing:.18em;color:#cfeaff}
+  .sgm-tut .tut-banner b{font-weight:600;letter-spacing:.22em;color:#7fbbdb}
+  .sgm-tut .tut-exit{position:fixed;pointer-events:auto;padding:7px 13px;border-radius:8px;font-size:.56rem;letter-spacing:.12em;color:#dff2ff;background:rgba(8,15,24,.94);box-shadow:inset 0 0 0 1px rgba(14,196,252,.4);cursor:pointer;transition:box-shadow .2s,transform .08s}
+  .sgm-tut .tut-exit:hover{box-shadow:inset 0 0 0 1px rgba(14,196,252,.72),0 0 11px -2px rgba(14,196,252,.55)}
+  .sgm-tut .tut-exit:active{transform:translateY(1px)}
+  @media (prefers-reduced-motion: reduce){ .sgm-tut .tut-ring,.sgm-tut .tut-cap2{transition:none} }`;
   document.head.appendChild(s);
 })();
 
-let _rdKey='';
-function coachRender(o){
-  if(!readoutEl)return;
-  o=o||{};const a=o.a||'',b=o.b||'',c=o.c||'';
-  const key=a+''+b+''+c+''+(o.rest?'1':'0');
-  if(key===_rdKey)return; _rdKey=key;                  // no-op guard — never rebuild identical text
-  readoutEl.classList.toggle('rest',!!o.rest);
-  let h='<span class="rdwrap">';
-  if(a)h+='<span class="rl a">'+a+'</span>';
-  if(b)h+='<span class="rl b">'+b+'</span>';
-  if(c)h+='<span class="rl c">'+c+'</span>';
-  readoutEl.innerHTML=h+'</span>';
-}
-/* back-compat single-line seam — anything calling readoutSet(text) still works */
-function readoutSet(text){coachRender(text?{a:text}:{rest:true});}
+function readoutSet(){}   /* retired: the live coach is gone. Stub kept so the parked bass-seq code (readoutSeqClose) stays a safe no-op. */
 
-const COACH=(function(){
-  const U={
-    orient:{a:'press  A S D F  to play',b:'every key is a note — try a few'},
-    chord:{a:'nice — now hold a few at once',b:'two or three keys makes a chord'},
-    groove:{a:'holding a chord? tap  SPACE',b:'it drops a beat under you'},
-    bass:{a:"beat's in — now tap  B",b:'the bass follows the notes you play'},
-    filter:{a:'drag the node in the big screen',b:'sideways opens it, down shaves the top'},
-    drift:{a:'drag inside the  DRIFT  pad',b:'it morphs the voice — bright to dark'},
-    towers:{a:'drag any tower up',b:'DRIVE  MOD  DELAY  REVERB'},
-    perform:{a:'hold  V  N  M  while you play',b:'lift · gate · dive — each bends the note'},
-    arp:{a:'flip  ARP  on, hold a chord',b:'it plays the chord for you, in time'},
-    rec:{a:'happy with it? hit  REC',b:'then play it back with  PLAY'},
-    jam:{a:"that's a take — hit  JAM",b:'it loops so you can play over it'},
-    share:{a:'like it?  SHARE',b:'copies a link to this exact take'},
-    mastery:{a:"you've got it",b:''},
-    key:{a:'set the  KEY',b:'every note stays in tune'},
-    octmove:{a:'hold a chord, then the arrows',b:'they  MOVE  the chord, not the octave'},
-    latch:{a:'arp on? tap  LATCH',b:'it holds the chord — hands free'},
-    pattern:{a:'tap a pattern',b:'FLOOR  BACK  HALF  BREAK'},
-    drumfeel:{a:'SWING  DENSITY  GRIT',b:'reshape the drum feel'},
-    cover:{a:'the  DRUM COVER  slider',b:'muffles the beat, like a closed lid'},
-    sidechain:{a:'raise  SIDECHAIN',b:'the synth breathes with the kick'},
-    bassint:{a:'push  BASS  up',b:'deep and clean, out to a buzz'},
-    tempo:{a:'drag the  BPM  screen',b:'to change the speed'},
-    voicein:{a:'tap  VOICE IN  and sing',b:'it grabs 2 bars on its own, then loops'},
-    treat:{a:'singing a loop?',b:'add  TELEPHONE  or  ROBOT  to it'},
-    dice:{a:'out of ideas? the  DICE',b:'rolls a whole new sound'},
-  };
-  const LADDER=[
-    {unit:'orient', need:'played',  pre:[]},
-    {unit:'chord',  need:'chord',   pre:['played']},
-    {unit:'groove', need:'beat',    pre:['chord']},
-    {unit:'bass',   need:'bass',    pre:['beat']},
-    {unit:'filter', need:'filter',  pre:['beat']},
-    {unit:'drift',  need:'drift',   pre:['beat']},
-    {unit:'towers', need:'fx',      pre:['beat']},
-    {unit:'perform',need:'gesture', pre:['beat','shaped']},
-    {unit:'arp',    need:'arp',     pre:['chord']},
-    {unit:'rec',    need:'rec',     pre:['beat','chord']},
-    {unit:'jam',    need:'jam',     pre:['rec']},
-    {unit:'share',  need:'share',   pre:['rec']},
-  ];
-  const WHISPERS=[
-    {unit:'octmove',  need:'octmove',  pre:['chord']},
-    {unit:'latch',    need:'latch',    pre:['arp']},
-    {unit:'pattern',  need:'pattern',  pre:['beat']},
-    {unit:'drumfeel', need:'drumfeel', pre:['beat']},
-    {unit:'cover',    need:'cover',    pre:['beat']},
-    {unit:'sidechain',need:'sidechain',pre:['beat','bass']},
-    {unit:'bassint',  need:'bassint',  pre:['bass']},
-    {unit:'tempo',    need:'tempo',    pre:['beat']},
-    {unit:'key',      need:'key',      pre:['played']},
-    {unit:'treat',    need:'treat',    pre:['voicein']},
-    {unit:'dice',     need:'dice',     pre:[]},
-    {unit:'voicein',  need:'voicein',  pre:[]},
-  ];
-  const CLICKS=[];
-  const NOTE_THR=0.015;
-  let L,seen,snap,now0,lastInput,lastPressN,curUnit,curAt,idleGate,whispers,terminal,started=false,pollId=null,presetSettleUntil=0;
+/* ── PRESET_BASE: a COMPLETE default snapshot. Every preset is baked as {...PRESET_BASE,...snap}
+      so applySnapshot never meets an undefined field (makeKnob's toFixed throws on undefined). ── */
+const PRESET_BASE={
+  vx:.42,vy:.4,cutoff:.6,res:0,amount:0,shape:'sine',rateMode:'sync',syncDiv:'8',rateHz:3,tempo:112,
+  drive:0,driveType:'warm',mod:0,modMode:'chorus',delay:.25,delayDiv:'8',reverb:.32,revSize:'med',
+  pattern:'floor',drumCover:12000,swing:0,density:0,grit:0,sidechain:.3,
+  bassHeat:.5,bassWeight:.5,bassPluck:0,bassMode:'off',bassRate:0,bassGlide:0,bassSeqMult:1,
+  bassSeq:new Array(16).fill(0),oct:0,key:0,mode:'major',chord:false,arpDiv:2,gate:.5,
+  beat:false,bass:false,arp:false,latch:false
+};
+const mkPreset=(name,hint,snap)=>({name,hint,snap:Object.assign({},PRESET_BASE,snap)});
 
+/* ── PRESETS — SEED set (placeholders). Replace with Jon's 8 favorites: dial a sound -> REC (even a
+      0-move take) -> SHARE -> paste the ?take= URLs into the intake doc; each decodes to a snapshot
+      we drop in here. These seeds are built from Jon's ear-tuned demo grooves + safe musical variants. ── */
+let PRESETS=[
+  mkPreset('warm room','full groove — beat + bass',{tempo:112,cutoff:.6,reverb:.32,pattern:'floor',beat:true,bass:true,bassHeat:.45,sidechain:.35}),
+  mkPreset('night drive','arp groove — hold a chord',{tempo:124,vx:.6,vy:.25,cutoff:.55,amount:.45,shape:'saw',pattern:'back',delay:.3,reverb:.26,beat:true,bass:true,arp:true,arpDiv:2,bassHeat:.5,sidechain:.4}),
+  mkPreset('slow hall','ambient — no beat, just play',{tempo:92,vx:.25,vy:.32,cutoff:.5,res:.1,amount:.22,reverb:.62,revSize:'hall',delay:.36,delayDiv:'4',beat:false,bass:false,bassHeat:.3}),
+  mkPreset('broken break','busy beat + crunch',{tempo:118,vx:.45,vy:.6,cutoff:.5,amount:.4,shape:'sqr',pattern:'break',drive:.3,driveType:'crunch',delay:.18,delayDiv:'16',reverb:.18,beat:true,bass:true,bassHeat:.6,drumCover:9000,sidechain:.45}),
+  mkPreset('deep pump','pumping — the kick breathes it',{tempo:122,vx:.4,vy:.5,cutoff:.5,reverb:.3,pattern:'floor',beat:true,bass:true,bassHeat:.4,bassWeight:.7,sidechain:.7}),
+  mkPreset('bright keys','clean + bright — solo keys',{tempo:108,vx:.72,vy:.15,cutoff:.78,reverb:.22,beat:false,bass:false}),
+  mkPreset('tape sway','swung groove — looser feel',{tempo:100,vx:.35,vy:.45,cutoff:.55,amount:.26,shape:'sine',pattern:'back',swing:.5,reverb:.4,beat:true,bass:true,bassHeat:.4,sidechain:.3}),
+  mkPreset('buzzsaw bass','bass-forward — gnarly low end',{tempo:128,vx:.5,vy:.6,cutoff:.6,drive:.35,driveType:'fuzz',pattern:'half',beat:true,bass:true,bassHeat:.85,bassWeight:.6,bassPluck:.5,sidechain:.4}),
+];
+
+/* ── TUTOR content map — control selector -> {title:'MODULE · thing', body:'plain, warm, lowercase'}.
+      Keyed on OUTER selectors (the same ones tutMatch walks up to); child hits resolve to their parent.
+      Covers every module. Voice mirrors the house coach copy. ── */
+const TUTOR={
+  '#pwr':       {title:'POWER',            body:'turns the instrument on and off. it stays dark and silent until you press it.'},
+  '#recBtn':    {title:'RECORD',           body:'hit rec, play something, hit it again to stop. it captures every move you make.'},
+  '#playBtn':   {title:'PLAY',             body:'plays your take back exactly as you performed it — the machine plays itself.'},
+  '#jamBtn':    {title:'JAM',              body:'loops your take so you can play new layers over the top, building it up pass by pass.'},
+  '#shareBtn':  {title:'SHARE',            body:'copies a link to this exact sound and take. paste it anywhere and it loads right up.'},
+  '#dice':      {title:'DICE',             body:'rolls a whole new sound at random — kept musical. a quick way to find a starting point.'},
+  '#micin':     {title:'VOICE IN',         body:'tap and sing. it grabs two bars on its own, then loops them so you can play over your own voice.'},
+  '#loopPill':  {title:'VOICE · your loop',body:'your recorded voice, looping. tap to crop it or add an effect; the ✕ clears it.'},
+  '#tempo':     {title:'TEMPO · bpm',      body:'drag up or down to change the speed. the beat, arp and delay all stay locked to it.'},
+  '#beat':      {title:'DRUMS · the beat', body:'it drops a beat under you. hit space to start it, and again to stop.'},
+  '#patSeg':    {title:'DRUMS · pattern',  body:'pick the groove — floor is steady four-on-the-floor, break is busy and broken up.'},
+  '#coverslide':{title:'DRUMS · cover',    body:'slide it to muffle the beat, like closing a lid — open is crisp, closed is distant.'},
+  '#swingKnob': {title:'DRUMS · swing',    body:'pushes the off-beats late for a looser, more human groove.'},
+  '#densKnob':  {title:'DRUMS · density',  body:'adds or thins out the hits — busier or sparser.'},
+  '#gritKnob':  {title:'DRUMS · grit',     body:'roughs up the drums, from clean to dirty.'},
+  '#scslide':   {title:'DRUMS · sidechain',body:'raise it and everything ducks under the kick — that pumping, breathing feel.'},
+  '#vpad':      {title:'VOICE · the morph pad',body:'drag around to reshape the voice — up brighter, down darker, left lush, right clean.'},
+  '#afilter':   {title:'FILTER · the node',body:'drag the node. sideways opens the sound up, down shaves the top off. it moves the whole sound at once.'},
+  '#amtKnob':   {title:'FILTER · motion',  body:'turn it up and the filter sweeps on its own, in time with the beat — closing down from your set tone, then opening back up.'},
+  '#shapeRow':  {title:'FILTER · shape',   body:'the shape of the sweep — a smooth wave, a ramp, or a hard square step.'},
+  '#rateKnob':  {title:'FILTER · rate',    body:'how fast the filter sweeps. it stays locked to the tempo so it never drifts.'},
+  '.fillcard[data-key="drive"]':{title:'EFFECTS · drive', body:'drag up for grit — a little warms it, a lot makes it bark. pick the flavor beside it.'},
+  '.fillcard[data-key="mod"]':  {title:'EFFECTS · mod',   body:'drag up to add movement and width — phaser, flanger, doubler or chorus.'},
+  '.fillcard[data-key="delay"]':{title:'EFFECTS · delay', body:'drag up for echoes that bounce in time with the beat. set the spacing beside it.'},
+  '.fillcard[data-key="reverb"]':{title:'EFFECTS · reverb',body:'drag up to add space, from a small room out to a vast hall.'},
+  '#dtype':     {title:'EFFECTS · drive flavor',body:'the character of the drive — warm, crunch, fuzz or a hard crush.'},
+  '#mmode':     {title:'EFFECTS · mod type',body:'the kind of movement — phaser, flanger, doubler or chorus.'},
+  '#drate':     {title:'EFFECTS · delay time',body:'the spacing of the echoes, in time with the beat.'},
+  '#rsize':     {title:'EFFECTS · reverb size',body:'how big the space is — small room up to a vast hall.'},
+  '#bassrow':   {title:'BASS',             body:'tap B to turn on a bass line that follows the lowest note you play.'},
+  '#bcharKnob': {title:'BASS · intensity', body:'from deep and clean down low, up to a buzzy, in-your-face growl.'},
+  '#bweightKnob':{title:'BASS · sub',      body:'how much pure low-end sits under it — the weight you feel more than hear.'},
+  '#bglideKnob':{title:'BASS · glide',     body:'how the bass slides between notes — snappy and separate, or smooth and slurred.'},
+  '#bpluckKnob':{title:'BASS · move',      body:'turn it up and the bass gets a slow wobble — its tone opens and closes in time, instead of sitting still.'},
+  '#octdn':     {title:'KEYS · octave',    body:'shift the whole keyboard down or up — go low for bass, high for melody.'},
+  '#octup':     {title:'KEYS · octave',    body:'shift the whole keyboard down or up — go low for bass, high for melody.'},
+  '#keyBtn':    {title:'KEYS · key',       body:'pick the home note. everything you play stays in tune with it.'},
+  '#lockseg':   {title:'KEYS · scale',     body:'major sounds bright, minor sounds moody. chrom unlocks every note.'},
+  '#chordBtn':  {title:'KEYS · chord',     body:'turn it on and one key plays a full chord instead of a single note.'},
+  '#arpBtn':    {title:'ARP · arpeggiator',body:'hold a chord and the arp plays its notes for you, one at a time, in time.'},
+  '#arpRateKnob':{title:'ARP · rate',      body:'how fast the arp ticks — slow quarter notes out to fast sixteenths.'},
+  '#lenKnob':   {title:'ARP · length',     body:'how long each arp note rings — short and plucky, or long and smeared.'},
+  '#latchBtn':  {title:'ARP · hold',       body:'play a few notes and let go — it keeps them ringing so your hands are free to turn knobs.'},
+  '.gpad.dive': {title:'PERFORM · dive',   body:'hold M while you play and the pitch sags like a tape stopping. let go to snap back.'},
+  '.gpad.gate': {title:'PERFORM · gate',   body:'hold Z X or C to chop the sound into a stutter — Z fastest, C slowest. great over a held chord.'},
+  '#piano':     {title:'KEYS · the keyboard',body:'type the letter keys, or click them — every key is a note. this is where you play.'},
+};
+
+/* ── RD: the readout controller (preset stepper + tutorial overlay) ── */
+const RD=(function(){
   const tnow=()=>performance.now();
-  function freshLedger(){const o={};['played','chord','beat','bass','filter','drift','motion','fx',
-    'gesture','arp','latch','rec','jam','share','key','octmove','pattern','drumfeel','cover',
-    'sidechain','bassint','tempo','voicein','treat','dice','demo','shaped'].forEach(k=>o[k]=0);return o;}
-  function mark(f){if(L[f])return false;L[f]=1;idleGate=2200;        // new discovery → faster help
-    if(f==='filter'||f==='drift'||f==='motion'||f==='fx')L.shaped=1;return true;}
-  const pre=a=>a.every(f=>L[f]);
-  function snapFx(){const f=eng.fx;return{cutoff:f.cutoff,res:f.res,vx:f.vx,vy:f.vy,reverb:f.reverb,tempo:f.tempo,pattern:f.pattern,bassHeat:f.bassHeat};}
-  const isRest=()=>readoutEl&&readoutEl.classList.contains('rest');
+  const reduce=()=>reduceMq.matches;
+  let face=null,pre=null,numEl,nameEl,hintEl;
+  let idx=0,presetState='browse';                     // 'browse' | 'loaded' | 'yours'
+  let pollId=null,settleUntil=0,baseline=null,diverged=false;
+  // tutorial
+  let tutOn=false,layer=null,capEl=null,scrims=[],ringEl=null,capt=null,exitEl=null,bannerEl=null;
+  let lastSel=null,lastEl=null;
 
-  /* performing? — recent ATTACK / held gesture / mic / replay. Never activeVoices/arpOn/.latched. */
-  function playing(){
-    if(!eng)return false;
-    if((tnow()-lastInput)<1200)return true;
-    const g=eng.gestures||{};if(g.lift||g.gate||g.dive)return true;
-    if(REC.replaying)return true;
-    if(eng.micLevel&&eng.micLevel()>NOTE_THR)return true;
-    return false;
+  function keyEnter(el,fn){el.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();fn();}});}
+
+  /* ---- DOM (built once, listeners persist across power cycles) ---- */
+  function ensureDom(){
+    if(face)return;
+    face=document.createElement('div');face.className='rdface';
+    face.innerHTML='<div class="rdslot"><span class="rdsl">PRESET</span><b class="rdnum">01</b></div>'+
+      '<div class="rddesc"><span class="rdname"></span><span class="rdhint"></span></div>'+
+      '<div class="rdctl"><div class="rdstep">'+
+        '<span class="rdchip rdarrow" data-d="-1" role="button" tabindex="0" aria-label="Previous preset">◀</span>'+
+        '<span class="rdchip rdarrow" data-d="1" role="button" tabindex="0" aria-label="Next preset">▶</span>'+
+      '</div><span class="rddiv"></span>'+
+      '<span class="rdchip rdlearn" role="button" tabindex="0" aria-label="Learn the controls">learn this</span></div>';
+    readoutEl.insertBefore(face,readoutEl.firstChild);     // sits BEFORE the parked .rdseq (left intact)
+    numEl=face.querySelector('.rdnum');nameEl=face.querySelector('.rdname');hintEl=face.querySelector('.rdhint');
+    face.querySelectorAll('.rdarrow').forEach(b=>{const go=()=>step(+b.dataset.d);b.addEventListener('click',go);keyEnter(b,go);});
+    const learn=face.querySelector('.rdlearn');learn.addEventListener('click',enterTutorial);keyEnter(learn,enterTutorial);
   }
-  function frozen(){
-    if(!inView)return true;
-    const ov=$('#lpoverlay');if(ov&&ov.classList.contains('show'))return true;
-    const ed=$('#engdisc');if(ed&&ed.getAttribute('aria-expanded')==='true')return true;
-    return false;
+
+  /* ---- presets ---- */
+  function renderPreset(){
+    if(!face)return;const p=PRESETS[idx]||{name:'',hint:''};
+    numEl.textContent=String(idx+1).padStart(2,'0');
+    nameEl.textContent=p.name||('preset '+(idx+1));
+    if(presetState==='browse')hintEl.textContent='◀ ▶ to hear it  ·  learn this →';
+    else if(presetState==='yours')hintEl.textContent='now yours  ·  ◀ ▶ for a preset';
+    else hintEl.textContent=p.hint||'';
+    face.classList.toggle('yours',presetState==='yours');
   }
-  function pollControls(){
-    if(REC.replaying||jamReplaying)return;                 // never credit replayed moves
-    if(tnow()<presetSettleUntil)return;                    // ignore dice/demo residual fx
-    const f=eng.fx,d=0.05;
-    if(Math.abs(f.cutoff-snap.cutoff)>d||Math.abs(f.res-snap.res)>d)mark('filter');
-    if(Math.abs(f.vx-snap.vx)>d||Math.abs(f.vy-snap.vy)>d)mark('drift');
-    if(f.amount>0.001)mark('motion');
-    if(f.drive>0.02||f.mod>0.02||f.delay>0.02||(f.reverb-snap.reverb)>0.05)mark('fx');
-    if(f.beat)mark('beat'); if(f.bass)mark('bass'); if(eng.arpOn)mark('arp');
-    if(f.sidechain>0.01)mark('sidechain');
-    if(Math.abs(f.tempo-snap.tempo)>0.5)mark('tempo');
-    if(f.pattern!==snap.pattern)mark('pattern');
-    if(Math.abs(f.bassHeat-snap.bassHeat)>d)mark('bassint');
-    if(keyRoot!==0||scaleMode!=='major')mark('key');
-    if(eng.vocal||eng.loopActive)mark('voicein');
-    if(eng.vocal&&eng.vocal.treat&&eng.vocal.treat!=='dry')mark('treat');
-    const g=eng.gestures||{};if(g.lift||g.gate||g.dive)mark('gesture');
+  function snapFx(){const f=eng.fx;return{cutoff:f.cutoff,res:f.res,vx:f.vx,vy:f.vy,amount:f.amount,drive:f.drive,delay:f.delay,reverb:f.reverb,tempo:f.tempo,sidechain:f.sidechain,bassHeat:f.bassHeat,swing:f.swing,density:f.density,grit:f.character,mod:f.mod,
+    beat:!!f.beat,bass:!!f.bass,arp:$('#arpBtn').dataset.on==='1',pattern:f.pattern,key:keyRoot,oct:octOff,mode:scaleMode};}
+  function divergedFrom(a,b){if(!a||!b)return false;
+    for(const f of ['cutoff','res','vx','vy','amount','drive','delay','reverb','sidechain','bassHeat','swing','density','grit','mod'])if(Math.abs((a[f]||0)-(b[f]||0))>0.04)return true;
+    if(Math.abs((a.tempo||0)-(b.tempo||0))>0.5)return true;
+    if(a.beat!==b.beat||a.bass!==b.bass||a.arp!==b.arp||a.pattern!==b.pattern||a.key!==b.key||a.oct!==b.oct||a.mode!==b.mode)return true;return false;}
+  function step(d){
+    if(!live||!eng)return;
+    if(presetState!=='browse')idx=(idx+(d<0?PRESETS.length-1:1))%PRESETS.length;  // first press from browse PLAYS the shown slot (don't skip past 01); after that, step normally
+    settleUntil=tnow()+700;
+    try{applySnapshot(PRESETS[idx].snap);}catch(e){/* one bad preset must not dead-end the stepper */}
+    baseline=snapFx();diverged=false;presetState='loaded';renderPreset();
   }
-  function ladderList(){const o=[];for(const r of LADDER)if(!L[r.need]&&pre(r.pre)&&!seen.has(r.unit))o.push(r.unit);return o;}
-  function nextWhisper(){for(const w of WHISPERS)if(!L[w.need]&&pre(w.pre)&&!seen.has(w.unit))return w.unit;return null;}
-  function masteryHit(){if(!(L.played&&L.chord&&L.beat))return false;
-    return [L.bass,L.shaped,L.gesture,L.arp,(L.rec||L.jam||L.share)].filter(Boolean).length>=3;}
-  function show(unitId,horizonId){const u=U[unitId];if(!u)return;
-    seen.add(unitId);curUnit=unitId;curAt=tnow();
-    coachRender({a:u.a,b:u.b,c:horizonId&&U[horizonId]?U[horizonId].a:''});}
-  function settle(){if(curUnit&&U[curUnit])coachRender({a:U[curUnit].a,b:U[curUnit].b,c:'',rest:true});}
-
-  function resolve(){
-    if(!live||!eng||!started)return;
-    const pn=piano.querySelectorAll('.press').length;       // any note on/off (key OR mouse) = activity
-    if(pn!==lastPressN){lastPressN=pn;lastInput=tnow();if(pn>=2)mark('chord');}
-    if(frozen()){pollControls();return;}                    // record silently, say nothing
-    pollControls();
-    if(playing()){settle();return;}                         // teach only in the gaps
-    if(terminal)return;
-    const dwell=reduceMq.matches?5000:3200;
-    const inDwell=curUnit&&!isRest()&&(tnow()-curAt)<dwell;
-
-    if(masteryHit()&&!seen.has('mastery')){if(!inDwell){show('mastery');terminal=true;}return;}
-
-    const lad=ladderList();
-    if(lad.length){
-      if(lad[0]==='orient'&&(tnow()-now0)<2200)return;      // a fast starter never sees orient
-      if(!inDwell)show(lad[0],lad[1]||null);                // bright = now, faint c = next step
-      return;
-    }
-    if(!inDwell&&(tnow()-curAt)>=idleGate){                 // idle discovery whisper, backed-off
-      const w=nextWhisper();
-      if(w&&whispers<8){whispers++;show(w);idleGate=Math.min(idleGate*2,20000);}
+  let wasAuto=false;
+  function poll(){
+    if(!live||!eng||!inView||tutOn)return;
+    const auto=REC.replaying||jamReplaying||jamOn;          // a demo/take/jam is driving fx — that's the machine, not the visitor
+    if(auto){wasAuto=true;return;}
+    if(wasAuto){wasAuto=false;if(presetState==='loaded'){baseline=snapFx();settleUntil=tnow()+700;}return;}  // re-baseline when the auto-player ends, so its leftover state isn't read as "now yours"
+    if(tnow()<settleUntil)return;
+    if(presetState==='loaded'&&!diverged&&baseline&&divergedFrom(snapFx(),baseline)){
+      diverged=true;presetState='yours';renderPreset();
     }
   }
 
-  /* ── passive listeners (additive; edit no existing handler) ── */
-  function onKeydown(e){
-    const k=(e.key||'').toLowerCase();
-    if(QO[k]!=null){lastInput=tnow();if(!REC.replaying)mark('played');return;}
-    if(e.code==='Space'||e.code==='KeyB'){lastInput=tnow();return;}   // beat/bass flags come from the poll
-    if(e.code==='KeyZ'||e.code==='KeyX'||e.code==='KeyC'||e.code==='KeyM'){lastInput=tnow();}
+  /* ---- tutorial ---- */
+  function enterTutorial(){
+    if(!live||!eng||tutOn)return;tutOn=true;
+    try{stopAll();}catch(e){}                               // honest UI: toggles off, notes released, auto-sound stopped
+    try{eng.kill();}catch(e){}                              // total silence incl. drone/mic/loop; transport0 reset, master un-ducked, engine still playable
+    // start the lesson from a clean device: close any open popover, and clear the now-silent loop pill so no caption describes a dead loop
+    try{const lo=document.getElementById('loopover');if(lo)lo.classList.remove('open');
+      const kp=document.getElementById('keyPop');if(kp)kp.classList.remove('open');
+      const lp=document.getElementById('loopPill');if(lp){lp.setAttribute('aria-expanded','false');lp.classList.remove('show','loop-paused');}}catch(e){}
+    buildOverlay();
+    document.addEventListener('keydown',onTutKey,true);
+    window.addEventListener('scroll',repositionAll,true);
+    window.addEventListener('resize',repositionAll);
+    lastSel=lastEl=null;dimWholeDevice();                   // nothing focused yet
   }
-  function clickFlag(sel,flag,preset){const el=$(sel);if(!el)return;
-    const h=()=>{if(REC.replaying)return;mark(flag);
-      if(preset){presetSettleUntil=tnow()+700;snap=snapFx();
-        ['filter','drift','motion','fx','pattern'].forEach(f=>{L[f]=1;});L.shaped=1;
-        ['filter','drift','towers'].forEach(id=>seen.add(id));}};
-    el.addEventListener('click',h);CLICKS.push([el,h]);}
+  function exitTutorial(){
+    if(!tutOn)return;tutOn=false;
+    document.removeEventListener('keydown',onTutKey,true);
+    window.removeEventListener('scroll',repositionAll,true);
+    window.removeEventListener('resize',repositionAll);
+    if(layer){layer.remove();layer=null;}
+    capEl=ringEl=capt=exitEl=bannerEl=null;scrims=[];lastSel=lastEl=null;
+    presetState='browse';renderPreset();                    // audio was killed → back to browse of the same slot
+  }
+  function onTutKey(e){if(e.key==='Escape'||e.key==='Esc'){e.preventDefault();exitTutorial();}}
+  function devRect(){return device.getBoundingClientRect();}
+  function rectStyle(s,l,t,w,h){s.style.cssText='display:block;left:'+l+'px;top:'+t+'px;width:'+Math.max(0,w)+'px;height:'+Math.max(0,h)+'px';}
 
+  function buildOverlay(){
+    layer=document.createElement('div');layer.className='sgm-tut';
+    capEl=document.createElement('div');capEl.className='tut-cap';
+    for(let i=0;i<4;i++){const s=document.createElement('div');s.className='tut-scrim';layer.appendChild(s);scrims.push(s);}
+    ringEl=document.createElement('div');ringEl.className='tut-ring';
+    capt=document.createElement('div');capt.className='tut-cap2';capt.innerHTML='<span class="tt"></span><span class="tb"></span>';
+    bannerEl=document.createElement('div');bannerEl.className='tut-banner';bannerEl.innerHTML='<b>LEARN</b><span>hover anything</span>';
+    exitEl=document.createElement('div');exitEl.className='tut-exit';exitEl.textContent='✕ done';exitEl.setAttribute('role','button');exitEl.tabIndex=0;
+    exitEl.addEventListener('click',exitTutorial);keyEnter(exitEl,exitTutorial);
+    layer.appendChild(capEl);layer.appendChild(ringEl);layer.appendChild(capt);layer.appendChild(bannerEl);layer.appendChild(exitEl);
+    document.body.appendChild(layer);
+    capEl.addEventListener('pointermove',onTutMove);
+    capEl.addEventListener('pointerdown',onTutMove);
+    sizeChrome();
+  }
+  function sizeChrome(){const d=devRect();rectStyle(capEl,d.left,d.top,d.width,d.height);
+    bannerEl.style.left=(d.left+12)+'px';bannerEl.style.top=(d.top+12)+'px';
+    exitEl.style.left=(d.right-exitEl.offsetWidth-12)+'px';exitEl.style.top=(d.top+12)+'px';}
+  function dimWholeDevice(){const d=devRect();rectStyle(scrims[0],d.left,d.top,d.width,d.height);
+    scrims[1].style.display='none';scrims[2].style.display='none';scrims[3].style.display='none';
+    ringEl.style.opacity='0';capt.style.opacity='0';}
+  function setScrims(c){const d=devRect();
+    const cl=Math.max(c.left,d.left),cr=Math.min(c.right,d.right),ct=Math.max(c.top,d.top),cb=Math.min(c.bottom,d.bottom);
+    rectStyle(scrims[0],d.left,d.top,d.width,ct-d.top);          // top
+    rectStyle(scrims[1],d.left,cb,d.width,d.bottom-cb);          // bottom
+    rectStyle(scrims[2],d.left,ct,cl-d.left,cb-ct);              // left
+    rectStyle(scrims[3],cr,ct,d.right-cr,cb-ct);                 // right
+  }
+  function placeRing(c){ringEl.style.left=(c.left-3)+'px';ringEl.style.top=(c.top-3)+'px';ringEl.style.width=(c.width+6)+'px';ringEl.style.height=(c.height+6)+'px';ringEl.style.opacity='1';}
+  function placeCaption(c){const d=devRect();const cw=capt.offsetWidth||224,chh=capt.offsetHeight||62,gap=11;
+    let left=c.left+c.width/2-cw/2;left=Math.max(d.left+4,Math.min(left,d.right-cw-4));
+    let top=c.top-chh-gap;if(top<8)top=c.bottom+gap;
+    capt.style.left=left+'px';capt.style.top=top+'px';capt.style.opacity='1';}
+  function focusEl(el,entry){const c=el.getBoundingClientRect();setScrims(c);placeRing(c);
+    capt.querySelector('.tt').textContent=entry.title;capt.querySelector('.tb').textContent=entry.body;placeCaption(c);}
+  function tutMatch(t){let el=t;while(el&&el!==device&&el!==document.body){for(const sel in TUTOR){if(el.matches&&el.matches(sel))return{sel,el,entry:TUTOR[sel]};}el=el.parentElement;}return null;}
+  function onTutMove(e){
+    capEl.style.pointerEvents='none';
+    const under=document.elementFromPoint(e.clientX,e.clientY);
+    capEl.style.pointerEvents='';
+    const m=tutMatch(under);
+    if(!m)return;                                            // between controls → keep the last caption pinned
+    if(m.sel===lastSel)return;
+    lastSel=m.sel;lastEl=m.el;focusEl(m.el,m.entry);
+  }
+  function repositionAll(){if(!tutOn)return;sizeChrome();
+    if(lastEl&&document.contains(lastEl)){const c=lastEl.getBoundingClientRect();setScrims(c);placeRing(c);placeCaption(c);}
+    else dimWholeDevice();}
+
+  /* ---- lifecycle (the two seams) ---- */
   function start(){
-    if(started||!eng)return;started=true;
-    L=freshLedger();seen=new Set();terminal=false;whispers=0;idleGate=2200;
-    now0=lastInput=tnow();presetSettleUntil=0;curUnit=null;curAt=0;
-    lastPressN=piano.querySelectorAll('.press').length;snap=snapFx();
-    coachRender({rest:true});                               // resting only — teach nothing on power-on
-    window.addEventListener('keydown',onKeydown,true);
-    clickFlag('#recBtn','rec');clickFlag('#jamBtn','jam');clickFlag('#shareBtn','share');
-    clickFlag('#latchBtn','latch');clickFlag('#dice','dice',true);
-    pollId=setInterval(resolve,600);
+    if(!live)return;
+    ensureDom();
+    idx=0;presetState='browse';diverged=false;baseline=null;
+    readoutEl.dataset.mode='preset';
+    renderPreset();
+    if(!pollId)pollId=setInterval(poll,600);
   }
   function stop(){
     if(pollId){clearInterval(pollId);pollId=null;}
-    window.removeEventListener('keydown',onKeydown,true);
-    CLICKS.forEach(([el,h])=>el.removeEventListener('click',h));CLICKS.length=0;
-    started=false;curUnit=null;_rdKey='';
-    if(readoutEl){readoutEl.classList.remove('rest');readoutEl.innerHTML='';}
+    if(tutOn)exitTutorial();                                 // safety: power-off while in tutorial
+    presetState='browse';diverged=false;baseline=null;
   }
-  return{start,stop};
+  return{start,stop,_enter:enterTutorial,_exit:exitTutorial,get tutOn(){return tutOn;}};
 })();
 
-/* the three seam names finishPower()/doPowerOff() already call */
-function readoutStart(){if(touchStance)return;COACH.start();}   // touch: coach owns nothing (amber bar + Halo do)
-function readoutStop(){COACH.stop();if(typeof readoutSeqClose==='function')readoutSeqClose(true);}   // preserve power-off PLUCK reset (parked); guard if that code is ever removed
+/* the two seam names finishPower()/doPowerOff() already call */
+function readoutStart(){RD.start();}
+function readoutStop(){RD.stop();if(typeof readoutSeqClose==='function')readoutSeqClose(true);}   // RD.start() re-asserts data-mode='preset' on next power-on, so the parked seq's 'coach' reset is harmless
 
 /* ── BASS STEP SEQUENCER — takes over the readout when PLUCK is armed ── */
 const SEQ_MULTS=[{l:'×½',v:.5},{l:'×1',v:1},{l:'×2',v:2}];
