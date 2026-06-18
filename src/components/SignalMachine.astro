@@ -62,8 +62,8 @@ import "@fontsource/orbitron/latin-500.css";   // amber outline-on-glass readout
             <!-- take crop popover: same bar-anchored, absolute, zero-height-contribution pattern as the voice loop's. The strip is a picture of the recorded control events (a contour of the notes), not audio — crop it and the looped slice changes. -->
             <div class="loopover takeover" id="takeover" role="dialog" aria-label="Crop the take">
               <div class="lo-head"><span class="al">drag to crop · snaps to the beat</span><b class="vlen" id="tklen">2 bars</b></div>
-              <div class="vwave takewave" id="tkwave" title="Drag the ends to crop, drag the middle to slide — the loop length stays on the beat">
-                <svg viewBox="0 0 100 40" preserveAspectRatio="none" aria-hidden="true"><path class="tkctrlP" id="tkctrlP" d=""></path><path class="tkstickP" id="tkstickP" d=""></path></svg>
+              <div class="vwave takewave" id="tkwave" title="Each block is a note — when it plays and for how long. Drag the ends to crop, drag the middle to slide — the loop length stays on the beat">
+                <svg viewBox="0 0 100 40" preserveAspectRatio="none" aria-hidden="true"><path class="tkctrlP" id="tkctrlP" d=""></path><path class="tknoteP" id="tknoteP" d=""></path></svg>
                 <span class="vticks" id="tkticks" aria-hidden="true"></span>
                 <span class="vmask vmaskl" id="tkmaskl"></span><span class="vmask vmaskr" id="tkmaskr"></span>
                 <span class="vbody" id="tkbody" role="button" tabindex="0" aria-label="Move the selection"></span>
@@ -71,7 +71,13 @@ import "@fontsource/orbitron/latin-500.css";   // amber outline-on-glass readout
                 <span class="vtrim vout" id="tktrimOut" role="slider" tabindex="0" aria-label="Loop end" aria-valuemin="0" aria-valuemax="8" aria-valuenow="8"></span>
                 <span class="vhead" id="tkhead" aria-hidden="true"></span>
               </div>
-              <div class="lo-foot"><span class="al" id="tkhint">loops under you — play over it</span><span class="vctl hw tkshare" id="tkshare" role="button" tabindex="0" title="Copy a link to this take">⤴ share</span></div>
+              <div class="lo-tone">
+                <div class="knob lo-int tkgain" id="tkgainKnob"><div class="dial"><div class="ptr"></div></div><span class="kl">GAIN</span></div>
+                <span class="al" id="tkhint">loops under you — play over it</span>
+                <span class="vctl hw tkshare" id="tkshare" role="button" tabindex="0" title="Copy a link to this take">⤴ share</span>
+              </div>
+              <div class="coverslide tkcoverslide"><div class="ct"><span>COVER · LP</span><span class="cvv" id="tkcovval">OPEN</span></div>
+                <div class="strack" id="tkcovslide"><span class="sfill" id="tkcovfill"></span><span class="shandle" id="tkcovhandle"></span></div></div>
             </div>
           </div>
 
@@ -585,11 +591,16 @@ import "@fontsource/orbitron/latin-500.css";   // amber outline-on-glass readout
     .takepill .loopx{display:inline-flex;align-items:center;justify-content:center;width:21px;height:21px;border-radius:6px;font-size:.74rem;color:#9fb0c1;background:rgba(255,90,74,.08);box-shadow:inset 0 0 0 1px rgba(0,0,0,.45);cursor:pointer;transition:background .15s,color .15s}
     .takepill .loopx:hover{background:rgba(255,90,74,.9);color:#fff}
     /* the crop popover reuses .loopover/.vwave/.vtrim/.vhead/.vmask/.vticks; its strip is an event contour, not a waveform */
-    .takeover .tkstickP{fill:none;stroke:var(--sapphire);stroke-width:1.5;stroke-linecap:round;vector-effect:non-scaling-stroke;filter:drop-shadow(0 0 3px color-mix(in srgb,var(--sapphire) 45%,transparent))}
-    .takeover .tkctrlP{fill:none;stroke:color-mix(in srgb,var(--sapphire) 38%,transparent);stroke-width:1;stroke-linecap:round;vector-effect:non-scaling-stroke}
-    .lo-foot{margin-top:11px}
-    .lo-foot .tkshare{margin-left:auto;cursor:pointer;color:#bfe6f8;border-radius:7px}
-    .lo-foot .tkshare:hover{color:#fff;box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--sapphire) 40%,#000),0 0 10px -3px var(--sapphire)}
+    .takeover .tknoteP{fill:var(--sapphire);opacity:.9;filter:drop-shadow(0 0 2px color-mix(in srgb,var(--sapphire) 50%,transparent))}   /* mini piano-roll: each block = a note — x is when it hits, width is how long, y is pitch */
+    .takeover .tkctrlP{fill:none;stroke:color-mix(in srgb,var(--sapphire) 34%,transparent);stroke-width:1;stroke-linecap:round;vector-effect:non-scaling-stroke}   /* faint control-event ticks along the floor */
+    .takeover .lo-tone{margin-top:11px;gap:10px}
+    .takeover .lo-tone .al{flex:1;text-align:left;white-space:nowrap}
+    .device.live #tkgainKnob .dial{background:conic-gradient(from 225deg,var(--sapphire) 0 calc(var(--v,0)*270deg),#262c35 calc(var(--v,0)*270deg) 270deg,#0a0d12 270deg 360deg);box-shadow:0 0 9px -2px var(--sapphire),inset 0 0 0 1px rgba(0,0,0,.6),0 1px 2px rgba(0,0,0,.5)}
+    .lo-tone .tkshare{cursor:pointer;color:#bfe6f8;border-radius:7px}
+    .lo-tone .tkshare:hover{color:#fff;box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--sapphire) 40%,#000),0 0 10px -3px var(--sapphire)}
+    /* recording in progress: the cap shows a climbing bar counter (red), the REC label tucks away */
+    .tbtn.rec.recording .reccount{opacity:1;font-size:.8rem;color:#ff8275;text-shadow:0 0 8px var(--red)}
+    .tbtn.rec.recording .reclabel{opacity:.1}
     /* count-in digit on the REC cap (count-in, then record-until-you-stop) */
     .tbtn.rec{position:relative}
     .tbtn.rec .reccount{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;pointer-events:none;font-family:'Orbitron',ui-monospace,sans-serif;font-size:.95rem;line-height:1;color:var(--amber);text-shadow:0 0 9px var(--amber),0 0 3px #ffd9ad;opacity:0;transition:opacity .12s}
@@ -1217,6 +1228,16 @@ function makeEngine(ctx){
   const fx={vx:.5,vy:.82,cutoff:.62,res:0,amount:0,shape:'sine',rateMode:'sync',syncDiv:'8',rateHz:3,
             drive:0,delay:0,reverb:.12,revSize:'med',delayDiv:'8',beat:false,pattern:'floor',bass:false,drumCover:848,bassHeat:.5,bassWeight:.5,bassPluck:0,tempo:96,arpDiv:2,gate:.5,sidechain:.3,swing:0,density:0,character:0,mod:0,modMode:'chorus',driveType:'warm'};
   const inG=ctx.createGain();inG.gain.value=.9;
+  // TAKE-LOOP sub-bus: replayed (ghost) note voices route through their OWN gain + low-pass so the recorded loop
+  // can be turned down / muffled to sit UNDER your live playing (live notes stay on inG, untouched). Note voices only —
+  // arp/bass/drum generators are global. Built lazily on first replay.
+  let loopBusG=null,loopBusLP=null,replayRoute=false,takeMix=1,takeCoverHz=20000;
+  function ensureLoopBus(){if(loopBusG)return;loopBusG=ctx.createGain();loopBusG.gain.value=takeMix;
+    loopBusLP=ctx.createBiquadFilter();loopBusLP.type='lowpass';loopBusLP.frequency.value=takeCoverHz;loopBusLP.Q.value=.6;
+    loopBusG.connect(loopBusLP);loopBusLP.connect(inG);}
+  function setReplayRoute(on){if(on)ensureLoopBus();replayRoute=!!on;}
+  function setTakeGain(v){takeMix=clamp(v,0,1);if(loopBusG)loopBusG.gain.setTargetAtTime(takeMix,ctx.currentTime,.03);}
+  function setTakeCover(v){takeCoverHz=(v>=.97)?20000:60*Math.pow(200,clamp(v,0,1));if(loopBusLP)loopBusLP.frequency.setTargetAtTime(takeCoverHz,ctx.currentTime,.05);}   // 0 = muffled (60Hz) … ≥.97 = open (transparent); matches the OPEN label threshold
   const moveFilt=ctx.createBiquadFilter();moveFilt.type='lowpass';moveFilt.frequency.value=xToF(fx.cutoff);moveFilt.Q.value=QFor(fx.res);
   const ampTrem=ctx.createGain();ampTrem.gain.value=1;
   const shaper=ctx.createWaveShaper();shaper.curve=driveCurve(0);
@@ -1318,7 +1339,7 @@ function makeEngine(ctx){
   function nearest2(){const ds=VOICES.map((v,i)=>({i,d:Math.hypot(v.lm.x-fx.vx,v.lm.y-fx.vy)})).sort((a,b)=>a.d-b.d);const a=ds[0],b=ds[1],wa=1/(a.d+.05),wb=1/(b.d+.05),s=wa+wb;return{list:[{i:a.i,w:wa/s},{i:b.i,w:wb/s}],near:a.i};}
   let active=[];const MAXV=16;
   function buildNote(freq,vel,when,stacc){const t=when||ctx.currentTime+0.02,bl=nearest2().list,bright=Math.pow(2,(.5-fx.vy)*1.6),wide=1-fx.vx;
-    const grp=ctx.createGain();grp.gain.value=0;grp.connect(inG);const oscs=[];
+    const grp=ctx.createGain();grp.gain.value=0;grp.connect((replayRoute&&loopBusG)?loopBusG:inG);const oscs=[];   // replay note voices go through the take-loop gain/cover bus; live notes straight to inG
     bl.forEach(b=>{const V=VOICES[b.i];const vg=ctx.createGain();
       if(V.f){const bf=ctx.createBiquadFilter();bf.type=V.f.t;bf.frequency.value=clamp(V.f.hz*bright,80,16000);bf.Q.value=V.f.q;vg.connect(bf);bf.connect(grp);}else vg.connect(grp);
       const list=V.o.slice();if(wide>.6)list.push({t:V.o[0].t,d:(wide-.6)*30});vg.gain.value=b.w/Math.sqrt(list.length);
@@ -1709,8 +1730,8 @@ function makeEngine(ctx){
     setBeat,onKick:cb=>{kickCb=cb;},setCover,setSidechain,setSwing,setDensity,setCharacter,setModMode,setBass,setBassMode,setBassRate,setBassGlide,setBassHeat,setBassWeight,setBassPluck,setRevSize,setBassStep,setBassSeqMult,setAccent,setPluck,onBassStep:cb=>{pluckStepCb=cb;},get drumCounts(){return {...counts};},get bassFreq(){return bassTarget;},get droneActive(){return !!droneParts;},get bassPluck(){return fx.bassPluck;},get bassMode(){return bassMode;},get bassRateSteps(){return bassPulseSteps;},get bassGlideTau(){return bassGlideStore;},get bassSeq(){return bassSeq;},get bassSeqMult(){return bassSeqMult;},
     get lfoRate(){return lfoHz();},lfoData:buf=>lfoTap.getFloatTimeDomainData(buf),
     gesture,get gestures(){return {...gst};},get liftHz(){return masterHP.frequency.value;},
-    micOff,setVocal,get vocal(){return voc?{treat:voc.treat,depth:voc.depth}:null;},micLevel,capture,clearLoop,setLoopTrim,setLoopCover,setLoopGain,setLoopPlay,loopPhase,get loopPlaying(){return loopPlaying;},get loopBuf(){return loopBuf;},get loopTrim(){return [loopIn,loopOut];},get loopBeats(){return loopBeatsN();},get loopActive(){return loopActive;},get recActive(){return recActive;},get capInfo(){return recActive?{startT:capStartT,recDur:capRecDur,beat:60/(recTempo||fx.tempo),countBeats:capCountBeats}:null;},
-    kill:()=>{held.forEach(h=>{if(h&&h.vs)h.vs.forEach(v=>v.release());});held.clear();arpSet.clear();arpOn=false;latch=false;fx.beat=false;
+    micOff,setVocal,get vocal(){return voc?{treat:voc.treat,depth:voc.depth}:null;},micLevel,capture,clearLoop,setLoopTrim,setLoopCover,setLoopGain,setLoopPlay,loopPhase,setReplayRoute,setTakeGain,setTakeCover,get loopPlaying(){return loopPlaying;},get loopBuf(){return loopBuf;},get loopTrim(){return [loopIn,loopOut];},get loopBeats(){return loopBeatsN();},get loopActive(){return loopActive;},get recActive(){return recActive;},get capInfo(){return recActive?{startT:capStartT,recDur:capRecDur,beat:60/(recTempo||fx.tempo),countBeats:capCountBeats}:null;},
+    kill:()=>{replayRoute=false;held.forEach(h=>{if(h&&h.vs)h.vs.forEach(v=>v.release());});held.clear();arpSet.clear();arpOn=false;latch=false;fx.beat=false;
       gestureReset();
       if(clockT){clearTimeout(clockT);clockT=null;}
       const t=ctx.currentTime;duck.gain.cancelScheduledValues(t);duck.gain.setTargetAtTime(1,t,.05);
@@ -2257,7 +2278,9 @@ function applySnapshot(s){
 function isGhostReplay(){return REC.replaying||jamReplaying;}   // the take loops UNDER the player — replayed moves get dim glints, never the full live press state
 function ghostKey(q,on){const el=keyEl(q);if(el)el.classList.toggle('glint',on);}
 function reflect(ev){const type=ev[1],ghost=isGhostReplay();
-  if(type==='noteOn'){const id=ev[2],q=id.slice(1);eng.noteOn(id,ev[3]);if(ghost){ghostKey(q,true);ghostNotes.add(id);}else{lightKey(q,true);const o=QO[q];if(o!=null)showNote(snapOffset(o));spillKey(q);}refreshLatch();}
+  if(type==='noteOn'){const id=ev[2],q=id.slice(1);if(ghost&&eng.setReplayRoute)eng.setReplayRoute(true);
+    try{eng.noteOn(id,ev[3]);}finally{if(ghost&&eng.setReplayRoute)eng.setReplayRoute(false);}   // finally: never leave the loop-bus route latched on (a leaked true would misroute the next LIVE note through the loop gain/cover)
+    if(ghost){ghostKey(q,true);ghostNotes.add(id);}else{lightKey(q,true);const o=QO[q];if(o!=null)showNote(snapOffset(o));spillKey(q);}refreshLatch();}
   else if(type==='noteOff'){const id=ev[2],q=id.slice(1);
     if(ghost){ghostNotes.delete(id);ghostKey(q,false);const el=keyEl(q);if(!(el&&el.classList.contains('press')))eng.noteOff(id);}   // shared voice id: never strip the user's LIVE press or kill their voice mid-hold
     else{eng.noteOff(id);lightKey(q,false);}refreshLatch();}
@@ -2327,15 +2350,38 @@ setVoiceDisplay();
 
 /* ════════ TAKE pill + crop popover — mirrors the voice-loop pill/popover; the strip is the event stand-in ════════ */
 takePill=$('#takePill');takeover=$('#takeover');takePlay=$('#takePlay');takeX=$('#takeX');
+let recProgRaf=null,tkcovVal=1;
+const tkgainKnob=makeKnob($('#tkgainKnob'),1,v=>{if(eng&&eng.setTakeGain)eng.setTakeGain(v);});   // recorded-loop volume — turn it down to sit the loop UNDER your live playing
+function tkcovRender(){const f=$('#tkcovfill'),h=$('#tkcovhandle'),vv=$('#tkcovval');if(f)f.style.width=(tkcovVal*100)+'%';if(h)h.style.left=(tkcovVal*100)+'%';if(vv){const hz=Math.round(60*Math.pow(200,tkcovVal));vv.textContent=tkcovVal>=.97?'OPEN':tkcovVal<=.04?'MUFFLED':(hz>=1000?(hz/1000).toFixed(1)+'k':hz+'Hz');}if(eng&&eng.setTakeCover)eng.setTakeCover(tkcovVal);}   // low-pass "cover" — muffle the loop like a closed lid (mirrors DRUM/VOICE COVER)
+(function(){const sl=$('#tkcovslide');if(!sl)return;function at(e){const r=sl.getBoundingClientRect();tkcovVal=clamp((e.clientX-r.left)/r.width,0,1);tkcovRender();}
+  sl.addEventListener('pointerdown',e=>{if(!live)return;sl.dataset.d='1';at(e);try{sl.setPointerCapture(e.pointerId)}catch(_){}});
+  sl.addEventListener('pointermove',e=>{if(sl.dataset.d)at(e);});sl.addEventListener('pointerup',()=>sl.dataset.d='');sl.addEventListener('pointercancel',()=>sl.dataset.d='');})();
+function tkToneReset(){if(tkgainKnob)tkgainKnob.set(1);if(eng&&eng.setTakeGain)eng.setTakeGain(1);tkcovVal=1;tkcovRender();}   // fresh take starts at full / open
+function recProgress(){if(!REC.on){recBtn.classList.remove('recording');const rc=$('#reccount');if(rc&&!recCounting)rc.textContent='';recProgRaf=null;recProgress._last=0;return;}
+  const beat=60/((eng&&eng.fx.tempo)||120)*1000,bar=Math.floor((performance.now()-REC.t0)/(beat*4))+1;   // elapsed bar count, ticking up
+  if(bar!==recProgress._last){recProgress._last=bar;const rc=$('#reccount');if(rc){rc.textContent=bar;rc.classList.remove('pop');void rc.offsetWidth;rc.classList.add('pop');}
+    tkSet('<b>● recording</b> · '+bar+(bar===1?' bar':' bars')+' · tap REC to stop');}
+  recProgRaf=requestAnimationFrame(recProgress);}
+function startRecProgress(){recProgress._last=0;recBtn.classList.add('recording');if(!recProgRaf)recProgRaf=requestAnimationFrame(recProgress);}
 function takeBeatsOf(take){const tempo=(take&&take.snap&&take.snap.tempo)||120;return Math.max(1,Math.round(((take&&take.dur)||0)/(60000/tempo)));}
 function tkLenLabel(){const b=Math.max(1,Math.round((tkTrimOut-tkTrimIn)*takeBeatsUI));return (b%4===0)?(b/4)+(b/4===1?' bar':' bars'):b+(b===1?' beat':' beats');}
-/* the event stand-in: a contour of the recorded control events — note sticks (height = pitch) + faint control ticks at the floor. A picture of the SCRIPT; cropping it changes the looped slice. */
-function drawTakeStrip(take){const stick=$('#tkstickP'),ctrl=$('#tkctrlP');if(!stick||!ctrl)return;
-  if(!take||!take.events||!take.events.length||!take.dur){stick.setAttribute('d','');ctrl.setAttribute('d','');return;}
-  const dur=take.dur,evs=take.events,notes=evs.filter(e=>e[1]==='noteOn'&&e[3]>0);
-  let lo=Infinity,hi=-Infinity;notes.forEach(e=>{const f=Math.log2(e[3]);if(f<lo)lo=f;if(f>hi)hi=f;});const span=(hi-lo)||1;
-  let sd='';notes.forEach(e=>{const x=clamp(e[0]/dur,0,1)*100,norm=(hi>lo)?((Math.log2(e[3])-lo)/span):0.55,h=6+norm*26;sd+='M'+x.toFixed(2)+',36 L'+x.toFixed(2)+','+(36-h).toFixed(2)+' ';});
-  stick.setAttribute('d',sd);
+/* the event stand-in = a mini PIANO-ROLL of the recorded notes: each block's x is when the note hits, its
+   width is how long it's held, its y is pitch. Pairs noteOn/noteOff (incl. chord-extension '~i' voices); faint
+   control-event ticks run along the floor. A picture of the SCRIPT; cropping it changes the looped slice. */
+function drawTakeStrip(take){const np=$('#tknoteP'),ctrl=$('#tkctrlP');if(!np||!ctrl)return;
+  const blank=()=>{np.setAttribute('d','');ctrl.setAttribute('d','');};
+  if(!take||!take.events||!take.events.length||!take.dur){blank();return;}
+  const dur=take.dur,evs=take.events,open={},segs=[];
+  evs.forEach(e=>{if(e[1]==='noteOn'&&e[3]>0){(open[e[2]]=open[e[2]]||[]).push({on:e[0],semi:12*Math.log2(e[3]/261.63)});}
+    else if(e[1]==='noteOff'&&open[e[2]]&&open[e[2]].length){const s=open[e[2]].shift();s.off=e[0];segs.push(s);}});
+  Object.keys(open).forEach(k=>open[k].forEach(s=>{s.off=dur;segs.push(s);}));   // unclosed notes ring to the end
+  if(!segs.length){blank();return;}
+  let lo=Infinity,hi=-Infinity;segs.forEach(s=>{if(s.semi<lo)lo=s.semi;if(s.semi>hi)hi=s.semi;});const span=(hi-lo)||1;
+  const top=3,nh=3.6,usable=29-nh;   // notes occupy y∈[3,32]; control ticks live below at 37..40
+  let d='';segs.sort((a,b)=>a.on-b.on).forEach(s=>{const x=clamp(s.on/dur,0,1)*100,w=Math.max(0.9,clamp((s.off-s.on)/dur,0,1)*100-0.25);
+    const norm=hi>lo?(s.semi-lo)/span:0.5,y=top+(1-norm)*usable;
+    d+='M'+x.toFixed(2)+','+y.toFixed(2)+'h'+w.toFixed(2)+'v'+nh+'h-'+w.toFixed(2)+'z ';});   // a filled rectangle per note (sharp blocks, reliable single path)
+  np.setAttribute('d',d);
   let cd='';evs.forEach(e=>{const ty=e[1];if(ty==='noteOn'||ty==='noteOff')return;const x=clamp(e[0]/dur,0,1)*100;cd+='M'+x.toFixed(2)+',37 L'+x.toFixed(2)+',40 ';});
   ctrl.setAttribute('d',cd);}
 function drawTakeSpark(take){const el=$('#takesparkP');if(!el)return;const notes=take&&take.events?take.events.filter(e=>e[1]==='noteOn'&&e[3]>0):[];if(!notes.length){el.setAttribute('d','M0,6');return;}
@@ -2370,9 +2416,9 @@ function openTakeover(){if(!currentTake)return;if(typeof closeLoopover==='functi
   buildTkTicks();tkTrimRender();startTkHead();}
 function closeTakeover(){if(!takeover)return;takeover.classList.remove('open');if(takePill)takePill.setAttribute('aria-expanded','false');}
 function toggleTakeover(){takeover.classList.contains('open')?closeTakeover():openTakeover();}
-function prepTakeUI(){if(!currentTake||!takePill)return;takeBeatsUI=takeBeatsOf(currentTake);tkTrimIn=0;tkTrimOut=1;drawTakeStrip(currentTake);drawTakeSpark(currentTake);buildTkTicks();tkTrimRender();takePill.classList.add('show');takePill.classList.add('loop-paused');}
+function prepTakeUI(){if(!currentTake||!takePill)return;takeBeatsUI=takeBeatsOf(currentTake);tkTrimIn=0;tkTrimOut=1;tkToneReset();drawTakeStrip(currentTake);drawTakeSpark(currentTake);buildTkTicks();tkTrimRender();takePill.classList.add('show');takePill.classList.add('loop-paused');}
 function onTakeReady(){if(!currentTake)return;prepTakeUI();takePill.classList.remove('loop-paused');jamStart(currentTake);startTkHead();tkSet('<b>take</b> · '+takeBeatsUI+' beats · looping — play over it, drag  ⌄  to crop');}
-function takeReset(){cancelCountIn();if(tkHeadRaf){cancelAnimationFrame(tkHeadRaf);tkHeadRaf=null;}closeTakeover();if(takePill)takePill.classList.remove('show','loop-paused');if(typeof device!=='undefined'&&device)device.classList.remove('ghosting');ghostNotes.clear();ghostGest.clear();}
+function takeReset(){cancelCountIn();if(recProgRaf){cancelAnimationFrame(recProgRaf);recProgRaf=null;}recBtn.classList.remove('recording');if(tkHeadRaf){cancelAnimationFrame(tkHeadRaf);tkHeadRaf=null;}closeTakeover();if(takePill)takePill.classList.remove('show','loop-paused');if(typeof device!=='undefined'&&device)device.classList.remove('ghosting');ghostNotes.clear();ghostGest.clear();}
 function clearTake(){if(jamOn)jamStop();currentTake=null;closeTakeover();if(takePill)takePill.classList.remove('show','loop-paused');drawTakeStrip(null);drawTakeSpark(null);tkTrimIn=0;tkTrimOut=1;if(tkHeadRaf){cancelAnimationFrame(tkHeadRaf);tkHeadRaf=null;}refreshTransport();tkSet('take cleared');}
 /* count-in (option a): count you in on the REC cap, then record until you stop */
 function cancelCountIn(){if(!recCounting)return;recCounting=false;if(recCountRaf){cancelAnimationFrame(recCountRaf);recCountRaf=null;}recBtn.classList.remove('counting');const rc=$('#reccount');if(rc)rc.textContent='';}
@@ -2380,7 +2426,7 @@ function recCountIn(){if(!live||!eng||REC.on||recCounting)return;if(jamOn)jamSto
   recCounting=true;const beat=60/(eng.fx.tempo||120),startT=eng.getCtx().currentTime+beat*4;
   recBtn.classList.add('counting');let lastN=-1;const rc=$('#reccount');
   (function tick(){if(!recCounting)return;const now=eng.getCtx().currentTime;
-    if(now>=startT||!live){recCounting=false;recCountRaf=null;recBtn.classList.remove('counting');if(rc)rc.textContent='';if(live&&!REC.on)REC.start();return;}
+    if(now>=startT||!live){recCounting=false;recCountRaf=null;recBtn.classList.remove('counting');if(rc)rc.textContent='';if(live&&!REC.on){REC.start();startRecProgress();}return;}
     const left=Math.max(1,Math.min(4,Math.ceil((startT-now)/beat)));
     if(left!==lastN){lastN=left;if(rc){rc.textContent=left;rc.classList.remove('pop');void rc.offsetWidth;rc.classList.add('pop');}}
     recCountRaf=requestAnimationFrame(tick);})();}
