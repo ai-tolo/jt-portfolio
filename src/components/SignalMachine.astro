@@ -30,7 +30,7 @@ import "@fontsource/orbitron/latin-500.css";   // amber outline-on-glass readout
               <span class="dicebtn" id="dice" role="button" tabindex="0" aria-label="Randomize sound" title="Randomize"><svg viewBox="0 0 24 24"><rect x="3.5" y="3.5" width="17" height="17" rx="4.5" fill="none" stroke="currentColor" stroke-width="1.7"/><circle cx="8" cy="8" r="1.5"/><circle cx="16" cy="8" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="8" cy="16" r="1.5"/><circle cx="16" cy="16" r="1.5"/></svg></span>
             </div>
             <!-- voice-loop pill: appears beside the mic once a loop is captured; toggles the crop popover. In the bar flow — only re-flows horizontally, never changes the device height -->
-            <span class="hw looppill" id="loopPill" role="button" tabindex="0" aria-haspopup="true" aria-expanded="false" aria-label="Voice loop — crop and tone"><svg class="loopspark" viewBox="0 0 24 12" preserveAspectRatio="none" aria-hidden="true"><path id="loopsparkP" d="M0,6"></path></svg><span>loop</span><i class="cv" aria-hidden="true">⌄</i><span class="loopx" id="loopX" role="button" tabindex="0" aria-label="Clear the voice loop" title="Clear the loop">✕</span></span>
+            <span class="hw looppill" id="loopPill" role="button" tabindex="0" aria-haspopup="true" aria-expanded="false" aria-label="Voice loop — crop and tone"><span class="loopplay" id="loopPlay" role="button" tabindex="0" aria-label="Play / pause the loop" title="Play / pause"><svg viewBox="0 0 14 14" aria-hidden="true"><path class="ic-play" d="M3.5 2.3 L11.7 7 L3.5 11.7 Z"/><g class="ic-pause"><rect x="3.4" y="2.3" width="3" height="9.4" rx=".6"/><rect x="7.6" y="2.3" width="3" height="9.4" rx=".6"/></g></svg></span><svg class="loopspark" viewBox="0 0 24 12" preserveAspectRatio="none" aria-hidden="true"><path id="loopsparkP" d="M0,6"></path></svg><span>loop</span><i class="cv" aria-hidden="true">⌄</i><span class="loopx" id="loopX" role="button" tabindex="0" aria-label="Clear the voice loop" title="Clear the loop">✕</span></span>
             <span class="micgrille" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></span><div class="micin sleeps" id="micin" role="button" tabindex="0" aria-pressed="false" aria-label="Voice in"><svg viewBox="0 0 24 24" aria-hidden="true"><rect class="mcap" x="8.5" y="3" width="7" height="11" rx="3.5"/><path class="myoke" d="M6 11 a6 6 0 0 0 12 0 M12 17 V20 M9 20 H15"/></svg><svg class="capring" id="capring" viewBox="0 0 44 44" aria-hidden="true"><path class="capringP" id="capringP" d="M22 2 H31 A11 11 0 0 1 42 13 V31 A11 11 0 0 1 31 42 H13 A11 11 0 0 1 2 31 V13 A11 11 0 0 1 13 2 Z" pathLength="100"></path></svg><b class="capnum" id="capnum" aria-hidden="true"></b></div><i class="miclight" id="miclight" aria-hidden="true"></i>
             <span class="vstatus" id="vstatus" aria-live="polite"></span>
             <!-- voice loop: crop + tone — a popover anchored to the bar; paints OVER the console, never grows the device (replaces the old .vocalbar strip that reflowed the device + glitched the perimeter trace) -->
@@ -43,6 +43,7 @@ import "@fontsource/orbitron/latin-500.css";   // amber outline-on-glass readout
                 <span class="vbody" id="loopBody" role="button" tabindex="0" aria-label="Move the selection"></span>
                 <span class="vtrim vin" id="vtrimIn" role="slider" tabindex="0" aria-label="Loop start" aria-valuemin="0" aria-valuemax="8" aria-valuenow="0"></span>
                 <span class="vtrim vout" id="vtrimOut" role="slider" tabindex="0" aria-label="Loop end" aria-valuemin="0" aria-valuemax="8" aria-valuenow="8"></span>
+                <span class="vhead" id="vhead" aria-hidden="true"></span>
               </div>
               <div class="lo-tone">
                 <div class="knob lo-int" id="vintKnob"><div class="dial"><div class="ptr"></div></div><span class="kl">INTENSITY</span></div>
@@ -489,6 +490,13 @@ import "@fontsource/orbitron/latin-500.css";   // amber outline-on-glass readout
     .looppill{display:none;height:34px;gap:8px;align-items:center;padding:0 7px 0 13px;font-size:.58rem;letter-spacing:.1em;text-transform:uppercase}
     .looppill .loopx{display:inline-flex;align-items:center;justify-content:center;width:21px;height:21px;border-radius:6px;font-size:.74rem;color:#9fb0c1;background:rgba(255,90,74,.08);box-shadow:inset 0 0 0 1px rgba(0,0,0,.45);cursor:pointer;transition:background .15s,color .15s}
     .looppill .loopx:hover{background:rgba(255,90,74,.9);color:#fff}   /* X clears the loop (the mic then records a fresh one) */
+    .looppill .loopplay{display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;flex:none;cursor:pointer;color:var(--sapphire)}
+    .looppill .loopplay svg{width:13px;height:13px}
+    .looppill .loopplay .ic-play,.looppill .loopplay .ic-pause rect{fill:currentColor}
+    .looppill .loopplay .ic-play{display:none}.looppill.loop-paused .loopplay .ic-play{display:block}   /* paused → show ▶ (tap to play) */
+    .looppill .loopplay .ic-pause{display:block}.looppill.loop-paused .loopplay .ic-pause{display:none}   /* playing → show ❚❚ (tap to pause) */
+    .looppill.loop-paused{opacity:.82}
+    .vwave .vhead{position:absolute;top:0;bottom:0;left:0;width:2px;margin-left:-1px;background:#eafaff;box-shadow:0 0 7px var(--sapphire),0 0 2px #fff;pointer-events:none;z-index:4;display:none;transition:opacity .15s}   /* #1 playback head — sweeps the waveform while the loop plays, freezes (dim) when paused */
     .io .looppill.show{display:inline-flex}
     .looppill .loopspark{width:22px;height:11px;flex:none}
     .looppill .loopspark path{fill:none;stroke:var(--sapphire);stroke-width:1.4;vector-effect:non-scaling-stroke;filter:drop-shadow(0 0 3px color-mix(in srgb,var(--sapphire) 55%,transparent))}
@@ -1524,7 +1532,7 @@ function makeEngine(ctx){
 
   /* VOICE IN: its own treatment rack — parallel pre-built branches, crossfade gains only (never reconnect live).
      Routed into glue (so the voice gets the kick sidechain + LIFT) but NOT through the synth filter/drive. */
-  let micStream=null,micGain=null,micPromise=null,voc=null,micTap=null,recStream=null,capNode=null,silentSink=null,recTap=null,loopSrc=null,loopBuf=null,recTempo=0,captureStartFrame=0,recActive=false,loopActive=false,workletReady=false,loopIn=0,loopOut=1,capStartT=0,capRecDur=0,capCountBeats=0;
+  let micStream=null,micGain=null,micPromise=null,voc=null,micTap=null,recStream=null,capNode=null,silentSink=null,recTap=null,loopSrc=null,loopBuf=null,recTempo=0,captureStartFrame=0,recActive=false,loopActive=false,workletReady=false,loopIn=0,loopOut=1,capStartT=0,capRecDur=0,capCountBeats=0,loopPlaying=false,loopStartT=0;
   function buildVocalRack(){
     const bus=ctx.createGain();bus.gain.value=1;const loopLP=ctx.createBiquadFilter();loopLP.type='lowpass';loopLP.frequency.value=12000;loopLP.Q.value=0.6;bus.connect(loopLP);loopLP.connect(glue);   // COVER: a low-pass over the whole loop (muffle like a closed lid)
     const dryG=ctx.createGain();dryG.gain.value=1;micGain.connect(dryG);dryG.connect(bus);
@@ -1568,6 +1576,8 @@ function makeEngine(ctx){
      full and the space rides on top — cutting dry made them hollow, "off"). */
   const VOC_ADDITIVE={hall:1,double:1,tunnel:1,chorus:1};
   function setLoopCover(v){if(!voc||!voc.loopLP)return;voc.loopLP.frequency.setTargetAtTime(60*Math.pow(200,clamp(v,0,1)),ctx.currentTime,.05);}   // vocal-loop COVER (mirrors DRUM COVER): 1 = open (12kHz) … 0 = muffled (60Hz)
+  function setLoopPlay(on){if(!micGain)return;loopPlaying=!!on;micGain.gain.setTargetAtTime(on?0.6:0,ctx.currentTime,.02);}   // #5 play/pause: pause = mute (the source keeps looping, so resume stays in time)
+  function loopPhase(){if(!loopSrc||!loopBuf||!loopStartT)return -1;const d=loopBuf.duration,rate=loopSrc.playbackRate.value||1,ls=loopSrc.loopStart,le=loopSrc.loopEnd||d,el=(ctx.currentTime-loopStartT)*rate;let pos;if(el<le)pos=el;else{const span=Math.max(le-ls,1e-4);pos=ls+((el-le)%span);}return clamp(pos/d,0,1);}   // #1 playback-head position, 0..1 over the buffer
   function setVocal(treat,depth){if(!voc)return;voc.treat=treat;voc.depth=clamp(depth,0,1);const t=ctx.currentTime;
     const wet=treat==='dry'?0:voc.depth;
     const dry=treat==='dry'?1:(VOC_ADDITIVE[treat]?1-wet*.25:1-wet);
@@ -1585,7 +1595,7 @@ function makeEngine(ctx){
         micGain.gain.setTargetAtTime(0.6,ctx.currentTime,0.3);return true;})   // a notch lower now that AEC is off (feedback headroom)
       .catch(()=>false).finally(()=>{micPromise=null;});
     return micPromise;}
-  function micOff(){if(loopSrc){try{loopSrc.stop()}catch(e){}try{loopSrc.disconnect()}catch(e){}loopSrc=null;loopBuf=null;}loopActive=false;closeMicCapture();recActive=false;if(micStream){micStream.getTracks().forEach(t=>t.stop());micStream=null;}
+  function micOff(){if(loopSrc){try{loopSrc.stop()}catch(e){}try{loopSrc.disconnect()}catch(e){}loopSrc=null;loopBuf=null;}loopActive=false;loopPlaying=false;loopStartT=0;closeMicCapture();recActive=false;if(micStream){micStream.getTracks().forEach(t=>t.stop());micStream=null;}
     // fade THEN disconnect (the droneOff pattern) — an instant cut clicks and chops reverb/echo tails
     const g=micGain,v=voc;micGain=null;voc=null;micTap=null;
     if(g||v){const t=ctx.currentTime;
@@ -1622,8 +1632,8 @@ function makeEngine(ctx){
     loopIn=0;loopOut=1;
     loopSrc=ctx.createBufferSource();loopSrc.buffer=buf;loopSrc.loop=true;loopSrc.loopStart=0;loopSrc.loopEnd=buf.duration;loopSrc.playbackRate.value=recTempo>0?fx.tempo/recTempo:1;loopSrc.connect(micGain);
     buildVocalRack();setVocal('dry',0);
-    const t0=nextBar();loopSrc.start(t0);micGain.gain.setTargetAtTime(0.6,t0,.004);}
-  function clearLoop(){loopActive=false;if(loopSrc){try{loopSrc.stop()}catch(e){}try{loopSrc.disconnect()}catch(e){}loopSrc=null;}loopBuf=null;
+    const t0=nextBar();loopSrc.start(t0);loopStartT=t0;loopPlaying=true;micGain.gain.setTargetAtTime(0.6,t0,.004);}
+  function clearLoop(){loopActive=false;loopPlaying=false;loopStartT=0;if(loopSrc){try{loopSrc.stop()}catch(e){}try{loopSrc.disconnect()}catch(e){}loopSrc=null;}loopBuf=null;
     const g=micGain,v=voc;micGain=null;voc=null;micTap=null;
     if(g||v){const t=ctx.currentTime;if(g)g.gain.setTargetAtTime(0,t,.02);if(v)v.bus.gain.setTargetAtTime(0,t,.025);
       setTimeout(()=>{try{g&&g.disconnect()}catch(e){}try{v&&(v.bus.disconnect(),v.rosc.stop())}catch(e){}},180);}clockStopIfIdle();}
@@ -1642,7 +1652,7 @@ function makeEngine(ctx){
     setBeat,onKick:cb=>{kickCb=cb;},setCover,setSidechain,setSwing,setDensity,setCharacter,setModMode,setBass,setBassMode,setBassRate,setBassGlide,setBassHeat,setBassWeight,setBassPluck,setRevSize,setBassStep,setBassSeqMult,setAccent,setPluck,onBassStep:cb=>{pluckStepCb=cb;},get drumCounts(){return {...counts};},get bassFreq(){return bassTarget;},get droneActive(){return !!droneParts;},get bassPluck(){return fx.bassPluck;},get bassMode(){return bassMode;},get bassRateSteps(){return bassPulseSteps;},get bassGlideTau(){return bassGlideStore;},get bassSeq(){return bassSeq;},get bassSeqMult(){return bassSeqMult;},
     get lfoRate(){return lfoHz();},lfoData:buf=>lfoTap.getFloatTimeDomainData(buf),
     gesture,get gestures(){return {...gst};},get liftHz(){return masterHP.frequency.value;},
-    micOff,setVocal,get vocal(){return voc?{treat:voc.treat,depth:voc.depth}:null;},micLevel,capture,clearLoop,setLoopTrim,setLoopCover,get loopBuf(){return loopBuf;},get loopTrim(){return [loopIn,loopOut];},get loopBeats(){return loopBeatsN();},get loopActive(){return loopActive;},get recActive(){return recActive;},get capInfo(){return recActive?{startT:capStartT,recDur:capRecDur,beat:60/(recTempo||fx.tempo),countBeats:capCountBeats}:null;},
+    micOff,setVocal,get vocal(){return voc?{treat:voc.treat,depth:voc.depth}:null;},micLevel,capture,clearLoop,setLoopTrim,setLoopCover,setLoopPlay,loopPhase,get loopPlaying(){return loopPlaying;},get loopBuf(){return loopBuf;},get loopTrim(){return [loopIn,loopOut];},get loopBeats(){return loopBeatsN();},get loopActive(){return loopActive;},get recActive(){return recActive;},get capInfo(){return recActive?{startT:capStartT,recDur:capRecDur,beat:60/(recTempo||fx.tempo),countBeats:capCountBeats}:null;},
     kill:()=>{held.forEach(h=>{if(h&&h.vs)h.vs.forEach(v=>v.release());});held.clear();arpSet.clear();arpOn=false;latch=false;fx.beat=false;
       gestureReset();
       if(clockT){clearTimeout(clockT);clockT=null;}
@@ -1983,8 +1993,15 @@ function onLoopReady(){stopCap();capPhase='';lastCount=-1;
   micin.classList.remove('arming','rec');micin.classList.add('on','loop');micin.setAttribute('aria-pressed','true');micin.setAttribute('aria-label','Voice loop — tap to crop');capnum.textContent='';capRingSet(1);   // keep the border fully drawn → it stays as the lit red loop-present glow
   dryTone();loopBeatsUI=eng.loopBeats||8;trimIn=0;trimOut=1;
   drawWaveform(eng.loopBuf);drawSpark(eng.loopBuf);buildTicks();vtrimRender();
-  loopPill.classList.add('show');
+  loopPill.classList.remove('loop-paused');loopPill.classList.add('show');
   vstatus.textContent='voice loop ready, '+lenLabel()+'. open it to crop or add a tone.';}
+let headRaf=null;
+function headFrame(){if(!loopover.classList.contains('open')||!eng||!eng.loopActive){headRaf=null;return;}
+  const vh=$('#vhead');if(vh){vh.style.display='block';if(eng.loopPlaying){const p=eng.loopPhase();if(p>=0){vh.style.left=(p*100).toFixed(2)+'%';vh.style.opacity='1';}}else vh.style.opacity='.4';}
+  headRaf=requestAnimationFrame(headFrame);}
+function startHead(){if(!headRaf)headRaf=requestAnimationFrame(headFrame);}
+$('#loopPlay')&&$('#loopPlay').addEventListener('click',e=>{e.stopPropagation();if(!live||!eng||!eng.loopActive)return;const next=!eng.loopPlaying;eng.setLoopPlay(next);loopPill.classList.toggle('loop-paused',!next);});
+$('#loopPlay')&&$('#loopPlay').addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();e.stopPropagation();$('#loopPlay').click();}});
 async function recordVoice(){if(!live||!eng||eng.recActive||eng.loopActive)return;
   closeLoopover();micin.classList.remove('loop');micin.classList.add('arming','on');micin.setAttribute('aria-pressed','true');micin.setAttribute('aria-label','Voice in');capnum.textContent='';capRingSet(0);capPhase='';lastCount=-1;vstatus.textContent='getting ready';startCap();
   const ok=await eng.capture(2);
@@ -2004,7 +2021,7 @@ micin.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventD
 function openLoopover(){if(!eng||!eng.loopActive)return;loopover.classList.add('open');loopPill.setAttribute('aria-expanded','true');
   const pr=loopPill.getBoundingClientRect(),lr=loopover.getBoundingClientRect();   // point the caret at the pill that opened it
   if(pr.width)loopover.style.setProperty('--caretX',clamp(pr.left+pr.width/2-lr.left,16,lr.width-16)+'px');
-  buildTicks();vtrimRender();}
+  buildTicks();vtrimRender();startHead();}
 function closeLoopover(){loopover.classList.remove('open');loopPill.setAttribute('aria-expanded','false');}
 function toggleLoopover(){loopover.classList.contains('open')?closeLoopover():openLoopover();}
 loopPill.addEventListener('click',e=>{e.stopPropagation();if(!live||!eng||!eng.loopActive)return;toggleLoopover();});
