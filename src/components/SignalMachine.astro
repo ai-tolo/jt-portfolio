@@ -53,8 +53,7 @@ import "@fontsource/orbitron/latin-500.css";   // amber outline-on-glass readout
                 <span class="hw vchip" data-v="robot">robot</span>
                 <span class="hw vchip" data-v="air">air</span>
                 <span class="hw vchip" data-v="tunnel">tunnel</span>
-                <span class="al" style="margin-left:auto">depth</span>
-                <div class="strack vdepth" id="vdepth"><span class="sfill" id="vdfill"></span><span class="shandle" id="vdhandle"></span></div>
+                <span class="lo-depth"><span class="al">depth</span><div class="strack vdepth" id="vdepth"><span class="sfill" id="vdfill"></span><span class="shandle" id="vdhandle"></span></div></span>
               </div>
               <div class="lo-foot"><span class="hw vctl" id="vredo" role="button" tabindex="0" title="Re-record the loop">↺ re-record</span><span class="hw vctl" id="vclear" role="button" tabindex="0" title="Clear the voice loop">✕ clear</span></div>
             </div>
@@ -479,8 +478,8 @@ import "@fontsource/orbitron/latin-500.css";   // amber outline-on-glass readout
     .micin .capnum{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;pointer-events:none;
       font-family:'Orbitron',ui-monospace,sans-serif;font-size:1.05rem;line-height:1;color:var(--amber);text-shadow:0 0 10px var(--amber),0 0 3px #ffd9ad;opacity:0;transition:opacity .15s ease}
     .micin.arming .capnum{opacity:1}
-    .micin.arming svg:not(.capring),.micin.rec svg:not(.capring){opacity:.22}   /* the mic glyph dims so the count-in / beats-remaining digit owns the cap */
-    .micin.rec .capnum{opacity:1;color:#ff3b30;text-shadow:0 0 10px #ff3b30,0 0 3px #ff8b85}   /* recording: the digit counts the beats remaining, in record-red — so "it stops itself" is visible */
+    .micin.arming svg:not(.capring){opacity:.22}   /* count-in: the mic glyph dims so the count digit owns the cap */
+    .micin.rec .capnum{opacity:0}   /* batch: recording shows progress via the filling RED RING only — the number was unreadable behind it */
     .micin.arming{background:linear-gradient(180deg,#2a2410,#15110a);border-top-color:rgba(255,154,74,.3)}
     .capnum.pop{animation:capnumpop .13s ease}
     @keyframes capnumpop{0%{transform:scale(.65);opacity:.4}45%{transform:scale(1.16)}100%{transform:scale(1)}}
@@ -514,6 +513,7 @@ import "@fontsource/orbitron/latin-500.css";   // amber outline-on-glass readout
     .lo-head .vlen{margin-left:auto;font-family:ui-monospace,Menlo,monospace;font-size:.62rem;letter-spacing:.13em;color:#bfe6f8;text-shadow:0 0 7px color-mix(in srgb,var(--sapphire) 55%,transparent)}
     .lo-tone,.lo-foot{margin-top:10px;flex-wrap:wrap}
     .loopover .vchip{height:28px;padding:0 11px;font-size:.55rem}
+    .lo-tone .lo-depth{display:inline-flex;align-items:center;gap:7px;margin-left:auto}   /* #3: keep the "depth" label glued to its fader */
     .loopover .vdepth{width:120px}
     .loopover .vdepth.inert{opacity:.35;pointer-events:none}   /* DRY has no wet to mix — the slider says so */
     .loopover .vctl{height:28px;padding:0 12px;font-size:.56rem;letter-spacing:.05em;gap:5px;text-transform:uppercase}
@@ -2067,7 +2067,7 @@ const REC={on:false,replaying:false,t0:0,events:[],lastFx:{},lastCapT:0,timers:[
     recBtn.classList.add('armed');playBtn.setAttribute('disabled','');shareBtn.setAttribute('disabled','');tkSet('REC ● — playing is recording');},
   stop(){if(!this.on)return;this.on=false;const dur=Math.round(performance.now()-this.t0);
     currentTake={snap:this.snap,events:this.events,dur};recBtn.classList.remove('armed');
-    playBtn.removeAttribute('disabled');shareBtn.removeAttribute('disabled');tkSet('<b>take</b> · '+(dur/1000).toFixed(1)+'s · '+this.events.length+' moves');},
+    playBtn.removeAttribute('disabled');shareBtn.removeAttribute('disabled');refreshTransport();tkSet('<b>take</b> · '+(dur/1000).toFixed(1)+'s · '+this.events.length+' moves · ∞ JAM to loop it');},   // #6: refreshTransport surfaces JAM (was staying hidden/disabled after a take → looked like REC did nothing)
   play(take){if(!take)return;if(!live||!eng){typeStatus('press power first');return;}this.stopPlay();this.replaying=true;
     applySnapshot(take.snap);take.events.forEach(ev=>this.timers.push(setTimeout(()=>reflect(ev),ev[0])));
     this.timers.push(setTimeout(()=>this.stopPlay(true),take.dur+250));
