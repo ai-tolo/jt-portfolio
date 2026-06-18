@@ -31,7 +31,7 @@ import "@fontsource/orbitron/latin-500.css";   // amber outline-on-glass readout
             </div>
             <!-- voice-loop pill: appears beside the mic once a loop is captured; toggles the crop popover. In the bar flow — only re-flows horizontally, never changes the device height -->
             <span class="hw looppill" id="loopPill" role="button" tabindex="0" aria-haspopup="true" aria-expanded="false" aria-label="Voice loop — crop and tone"><svg class="loopspark" viewBox="0 0 24 12" preserveAspectRatio="none" aria-hidden="true"><path id="loopsparkP" d="M0,6"></path></svg><span>loop</span><i class="cv" aria-hidden="true">⌄</i></span>
-            <span class="micgrille" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></span><div class="micin sleeps" id="micin" role="button" tabindex="0" aria-pressed="false" aria-label="Voice in"><svg viewBox="0 0 24 24" aria-hidden="true"><rect class="mcap" x="8.5" y="3" width="7" height="11" rx="3.5"/><path class="myoke" d="M6 11 a6 6 0 0 0 12 0 M12 17 V20 M9 20 H15"/></svg><svg class="capring" id="capring" viewBox="0 0 52 52" aria-hidden="true"><rect class="capringP" id="capringP" x="4.5" y="4.5" width="43" height="43" rx="15" pathLength="100"></rect></svg><b class="capnum" id="capnum" aria-hidden="true"></b></div><i class="miclight" id="miclight" aria-hidden="true"></i>
+            <span class="micgrille" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></span><div class="micin sleeps" id="micin" role="button" tabindex="0" aria-pressed="false" aria-label="Voice in"><svg viewBox="0 0 24 24" aria-hidden="true"><rect class="mcap" x="8.5" y="3" width="7" height="11" rx="3.5"/><path class="myoke" d="M6 11 a6 6 0 0 0 12 0 M12 17 V20 M9 20 H15"/></svg><svg class="capring" id="capring" viewBox="0 0 44 44" aria-hidden="true"><path class="capringP" id="capringP" d="M22 2 H31 A11 11 0 0 1 42 13 V31 A11 11 0 0 1 31 42 H13 A11 11 0 0 1 2 31 V13 A11 11 0 0 1 13 2 Z" pathLength="100"></path></svg><b class="capnum" id="capnum" aria-hidden="true"></b></div><i class="miclight" id="miclight" aria-hidden="true"></i>
             <span class="vstatus" id="vstatus" aria-live="polite"></span>
             <!-- voice loop: crop + tone — a popover anchored to the bar; paints OVER the console, never grows the device (replaces the old .vocalbar strip that reflowed the device + glitched the perimeter trace) -->
             <div class="loopover" id="loopover" role="dialog" aria-label="Crop the voice loop">
@@ -471,10 +471,11 @@ import "@fontsource/orbitron/latin-500.css";   // amber outline-on-glass readout
        the crop+tone UI in a bar-anchored popover. Neither is in .io's flow, so the device never
        grows a pixel when recording or cropping — which is what kept the perimeter trace from glitching. ── */
     /* count-in digit + progress ring: both out of flow over the 44px cap, never widen it (they paint in the 12px .io gap) */
-    .micin .capring{position:absolute;inset:-3px;pointer-events:none;opacity:0;transition:opacity .22s ease;overflow:visible}
-    .micin .capring .capringP{fill:none;stroke:#3a4654;stroke-width:2.4;stroke-linecap:round;vector-effect:non-scaling-stroke;stroke-dasharray:100;stroke-dashoffset:100}   /* dashoffset driven 100->0 in JS — the same stroke-dashoffset draw the perimeter trace uses (no conic-mask support gamble) */
-    .micin.arming .capring,.micin.rec .capring{opacity:1}
-    .micin.rec .capring .capringP{stroke:#ff3b30;stroke-width:3;filter:drop-shadow(0 0 4px #ff3b30)}   /* red sweep == recording; the ring filling all the way == the 2 bars are done (it stops itself) */
+    .micin .capring{position:absolute;inset:0;pointer-events:none;opacity:0;transition:opacity .25s ease;overflow:visible}
+    .micin .capring .capringP{fill:none;stroke:#3a4654;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;vector-effect:non-scaling-stroke;stroke-dasharray:100;stroke-dashoffset:100}   /* a PATH so pathLength is honored (it's IGNORED on <rect> → the old ring only drew ~half). dashoffset driven 100->0 in JS draws the FULL mic border. */
+    .micin.arming .capring,.micin.rec .capring,.micin.loop .capring{opacity:1}
+    .micin.rec .capring .capringP{stroke:#ff3b30;stroke-width:2.6;filter:drop-shadow(0 0 5px #ff3b30)}   /* recording: a glowing RED trace fills around the mic's border; one full lap == the 2 bars are done (it stops on its own) */
+    .micin.loop .capring .capringP{stroke:#ff5a4a;stroke-width:2.4;filter:drop-shadow(0 0 6px #ff5a4a)}   /* a loop EXISTS: the border stays lit red — the capsule itself is the loop-present indicator */
     .micin .capnum{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;pointer-events:none;
       font-family:'Orbitron',ui-monospace,sans-serif;font-size:1.05rem;line-height:1;color:var(--amber);text-shadow:0 0 10px var(--amber),0 0 3px #ffd9ad;opacity:0;transition:opacity .15s ease}
     .micin.arming .capnum{opacity:1}
@@ -1976,7 +1977,7 @@ function startCap(){if(!capRaf)capRaf=requestAnimationFrame(capFrame);}
 function stopCap(){if(capRaf){cancelAnimationFrame(capRaf);capRaf=null;}micin.style.setProperty('--lv',0);}
 function dryTone(){vTreat='dry';vDepth=0;vDepthRender();vdepthEl.classList.add('inert');document.querySelectorAll('.vchip').forEach(x=>x.classList.toggle('on',x.dataset.v==='dry'));}
 function onLoopReady(){stopCap();capPhase='';lastCount=-1;
-  micin.classList.remove('arming','rec');micin.classList.add('on','loop');micin.setAttribute('aria-pressed','true');micin.setAttribute('aria-label','Voice loop — tap to crop');capnum.textContent='';capRingSet(0);
+  micin.classList.remove('arming','rec');micin.classList.add('on','loop');micin.setAttribute('aria-pressed','true');micin.setAttribute('aria-label','Voice loop — tap to crop');capnum.textContent='';capRingSet(1);   // keep the border fully drawn → it stays as the lit red loop-present glow
   dryTone();loopBeatsUI=eng.loopBeats||8;trimIn=0;trimOut=1;
   drawWaveform(eng.loopBuf);drawSpark(eng.loopBuf);buildTicks();vtrimRender();
   loopPill.classList.add('show');
