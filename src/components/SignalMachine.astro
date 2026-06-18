@@ -30,7 +30,7 @@ import "@fontsource/orbitron/latin-500.css";   // amber outline-on-glass readout
               <span class="dicebtn" id="dice" role="button" tabindex="0" aria-label="Randomize sound" title="Randomize"><svg viewBox="0 0 24 24"><rect x="3.5" y="3.5" width="17" height="17" rx="4.5" fill="none" stroke="currentColor" stroke-width="1.7"/><circle cx="8" cy="8" r="1.5"/><circle cx="16" cy="8" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="8" cy="16" r="1.5"/><circle cx="16" cy="16" r="1.5"/></svg></span>
             </div>
             <!-- voice-loop pill: appears beside the mic once a loop is captured; toggles the crop popover. In the bar flow — only re-flows horizontally, never changes the device height -->
-            <span class="hw looppill" id="loopPill" role="button" tabindex="0" aria-haspopup="true" aria-expanded="false" aria-label="Voice loop — crop and tone"><svg class="loopspark" viewBox="0 0 24 12" preserveAspectRatio="none" aria-hidden="true"><path id="loopsparkP" d="M0,6"></path></svg><span>loop</span><i class="cv" aria-hidden="true">⌄</i></span>
+            <span class="hw looppill" id="loopPill" role="button" tabindex="0" aria-haspopup="true" aria-expanded="false" aria-label="Voice loop — crop and tone"><svg class="loopspark" viewBox="0 0 24 12" preserveAspectRatio="none" aria-hidden="true"><path id="loopsparkP" d="M0,6"></path></svg><span>loop</span><i class="cv" aria-hidden="true">⌄</i><span class="loopx" id="loopX" role="button" tabindex="0" aria-label="Clear the voice loop" title="Clear the loop">✕</span></span>
             <span class="micgrille" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></span><div class="micin sleeps" id="micin" role="button" tabindex="0" aria-pressed="false" aria-label="Voice in"><svg viewBox="0 0 24 24" aria-hidden="true"><rect class="mcap" x="8.5" y="3" width="7" height="11" rx="3.5"/><path class="myoke" d="M6 11 a6 6 0 0 0 12 0 M12 17 V20 M9 20 H15"/></svg><svg class="capring" id="capring" viewBox="0 0 44 44" aria-hidden="true"><path class="capringP" id="capringP" d="M22 2 H31 A11 11 0 0 1 42 13 V31 A11 11 0 0 1 31 42 H13 A11 11 0 0 1 2 31 V13 A11 11 0 0 1 13 2 Z" pathLength="100"></path></svg><b class="capnum" id="capnum" aria-hidden="true"></b></div><i class="miclight" id="miclight" aria-hidden="true"></i>
             <span class="vstatus" id="vstatus" aria-live="polite"></span>
             <!-- voice loop: crop + tone — a popover anchored to the bar; paints OVER the console, never grows the device (replaces the old .vocalbar strip that reflowed the device + glitched the perimeter trace) -->
@@ -55,7 +55,6 @@ import "@fontsource/orbitron/latin-500.css";   // amber outline-on-glass readout
                 <span class="hw vchip" data-v="tunnel">tunnel</span>
                 <span class="lo-depth"><span class="al">depth</span><div class="strack vdepth" id="vdepth"><span class="sfill" id="vdfill"></span><span class="shandle" id="vdhandle"></span></div></span>
               </div>
-              <div class="lo-foot"><span class="hw vctl" id="vredo" role="button" tabindex="0" title="Re-record the loop">↺ re-record</span><span class="hw vctl" id="vclear" role="button" tabindex="0" title="Clear the voice loop">✕ clear</span></div>
             </div>
           </div>
 
@@ -489,7 +488,9 @@ import "@fontsource/orbitron/latin-500.css";   // amber outline-on-glass readout
     .io:has(.micin.rec) .miclight{background:#ff3b30;box-shadow:0 0 11px #ff3b30,0 0 4px #ff8b85;animation:none}
     @keyframes micpulse{0%,100%{opacity:.4}50%{opacity:1}}
     /* loop pill — appears in the (abs-centered) transport once a take exists; toggles the crop popover */
-    .looppill{display:none;height:28px;gap:6px;align-items:center;padding:0 10px;font-size:.55rem;letter-spacing:.1em;text-transform:uppercase}
+    .looppill{display:none;height:34px;gap:8px;align-items:center;padding:0 7px 0 13px;font-size:.58rem;letter-spacing:.1em;text-transform:uppercase}
+    .looppill .loopx{display:inline-flex;align-items:center;justify-content:center;width:21px;height:21px;border-radius:6px;font-size:.74rem;color:#9fb0c1;background:rgba(255,90,74,.08);box-shadow:inset 0 0 0 1px rgba(0,0,0,.45);cursor:pointer;transition:background .15s,color .15s}
+    .looppill .loopx:hover{background:rgba(255,90,74,.9);color:#fff}   /* X clears the loop (the mic then records a fresh one) */
     .io .looppill.show{display:inline-flex}
     .looppill .loopspark{width:22px;height:11px;flex:none}
     .looppill .loopspark path{fill:none;stroke:var(--sapphire);stroke-width:1.4;vector-effect:non-scaling-stroke;filter:drop-shadow(0 0 3px color-mix(in srgb,var(--sapphire) 55%,transparent))}
@@ -2050,9 +2051,8 @@ function applyTrim(rawIn,rawOut,anchor){if(!eng||!eng.loopActive)return;eng.setL
     body.addEventListener('pointerup',()=>body.dataset.d='');body.addEventListener('pointercancel',()=>body.dataset.d='');
     body.addEventListener('keydown',e=>{if(e.key!=='ArrowLeft'&&e.key!=='ArrowRight')return;e.preventDefault();e.stopPropagation();const s=1/loopBeatsUI;applyTrim(trimIn+(e.key==='ArrowLeft'?-s:s),trimOut,'move');});}
 })();
-$('#vredo')&&$('#vredo').addEventListener('click',e=>{e.stopPropagation();if(!live||!eng)return;eng.clearLoop();loopPill.classList.remove('show');closeLoopover();recordVoice();});
-$('#vclear')&&$('#vclear').addEventListener('click',e=>{e.stopPropagation();clearVoice();});
-['#vredo','#vclear'].forEach(s=>{const b=$(s);if(b)b.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();e.stopPropagation();b.click();}});});
+$('#loopX')&&$('#loopX').addEventListener('click',e=>{e.stopPropagation();if(!live||!eng)return;clearVoice();});   // X on the pill clears the loop; tapping the mic then starts a fresh recording
+$('#loopX')&&$('#loopX').addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();e.stopPropagation();$('#loopX').click();}});
 
 /* ════════ TAKE: record · play · share ════════ */
 const FXFIELDS=['cutoff','res','amount','tempo'];
