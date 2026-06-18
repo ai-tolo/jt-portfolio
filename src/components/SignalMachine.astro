@@ -22,42 +22,41 @@ import "@fontsource/orbitron/latin-500.css";   // amber outline-on-glass readout
             <span class="nameplate" hidden><b>SIGNAL</b> · MK-XI<span class="st" id="statusline">STANDBY · press power</span></span>
             <div class="spacer"></div>
             <div class="transport iotransport">
-              <span class="demogrp"><span class="democar iodemocar" id="democar" aria-hidden="true"></span><span class="xbtn demo iodemo" id="demoBtn" role="button" tabindex="0" title="Play a demo">demo</span></span>
-              <span class="iodiv" aria-hidden="true"></span>
               <span class="tbtn rec" id="recBtn" role="button" tabindex="0"><span class="dotr"></span>REC</span>
               <span class="tbtn" id="playBtn" role="button" tabindex="0" disabled>▶ PLAY</span>
               <span class="tbtn jam" id="jamBtn" role="button" tabindex="0" disabled>∞ JAM</span>
               <span class="tbtn" id="shareBtn" role="button" tabindex="0" disabled>⤴ SHARE</span>
               <span class="iodiv" aria-hidden="true"></span>
               <span class="dicebtn" id="dice" role="button" tabindex="0" aria-label="Randomize sound" title="Randomize"><svg viewBox="0 0 24 24"><rect x="3.5" y="3.5" width="17" height="17" rx="4.5" fill="none" stroke="currentColor" stroke-width="1.7"/><circle cx="8" cy="8" r="1.5"/><circle cx="16" cy="8" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="8" cy="16" r="1.5"/><circle cx="16" cy="16" r="1.5"/></svg></span>
+              <!-- voice-loop pill: appears once a loop is captured; toggles the crop popover (lives in the abs-centered transport so it never changes the bar height) -->
+              <span class="hw looppill" id="loopPill" role="button" tabindex="0" aria-haspopup="true" aria-expanded="false" aria-label="Voice loop — crop and tone"><svg class="loopspark" viewBox="0 0 24 12" preserveAspectRatio="none" aria-hidden="true"><path id="loopsparkP" d="M0,6"></path></svg><span>loop</span><i class="cv" aria-hidden="true">⌄</i></span>
             </div>
-            <span class="micgrille" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></span><div class="micin sleeps" id="micin" role="button" tabindex="0" aria-pressed="false" aria-label="Voice in"><svg viewBox="0 0 24 24" aria-hidden="true"><rect class="mcap" x="8.5" y="3" width="7" height="11" rx="3.5"/><path class="myoke" d="M6 11 a6 6 0 0 0 12 0 M12 17 V20 M9 20 H15"/></svg></div><i class="miclight" id="miclight" aria-hidden="true"></i>
-          </div>
-
-          <!-- VOICE treatment strip (appears when VOICE IN is live) -->
-          <div class="vocalbar" id="vocalbar">
-            <div class="vbrow vbtrim">
-              <span class="al">Loop <i class="vu" id="micvu"></i></span>
-              <div class="vwave" id="vwave" title="Drag the handles to trim the loop in / out">
+            <span class="micgrille" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></span><div class="micin sleeps" id="micin" role="button" tabindex="0" aria-pressed="false" aria-label="Voice in"><svg viewBox="0 0 24 24" aria-hidden="true"><rect class="mcap" x="8.5" y="3" width="7" height="11" rx="3.5"/><path class="myoke" d="M6 11 a6 6 0 0 0 12 0 M12 17 V20 M9 20 H15"/></svg><svg class="capring" id="capring" viewBox="0 0 52 52" aria-hidden="true"><rect class="capringP" id="capringP" x="4.5" y="4.5" width="43" height="43" rx="15" pathLength="100"></rect></svg><b class="capnum" id="capnum" aria-hidden="true"></b></div><i class="miclight" id="miclight" aria-hidden="true"></i>
+            <span class="vstatus" id="vstatus" aria-live="polite"></span>
+            <!-- voice loop: crop + tone — a popover anchored to the bar; paints OVER the console, never grows the device (replaces the old .vocalbar strip that reflowed the device + glitched the perimeter trace) -->
+            <div class="loopover" id="loopover" role="dialog" aria-label="Crop the voice loop">
+              <div class="lo-head"><span class="al">drag to crop · snaps to the beat</span><b class="vlen" id="vlen">2 bars</b></div>
+              <div class="vwave" id="vwave" title="Drag the ends to crop, drag the middle to slide — the loop length stays on the beat">
                 <svg viewBox="0 0 100 40" preserveAspectRatio="none" aria-hidden="true"><path class="vwpath" id="vwpath" d="M0,20"></path></svg>
+                <span class="vticks" id="vticks" aria-hidden="true"></span>
                 <span class="vmask vmaskl" id="vmaskl"></span><span class="vmask vmaskr" id="vmaskr"></span>
-                <span class="vtrim vin" id="vtrimIn" role="slider" tabindex="0" aria-label="Loop start"></span>
-                <span class="vtrim vout" id="vtrimOut" role="slider" tabindex="0" aria-label="Loop end"></span>
+                <span class="vbody" id="loopBody" role="button" tabindex="0" aria-label="Move the selection"></span>
+                <span class="vtrim vin" id="vtrimIn" role="slider" tabindex="0" aria-label="Loop start" aria-valuemin="0" aria-valuemax="8" aria-valuenow="0"></span>
+                <span class="vtrim vout" id="vtrimOut" role="slider" tabindex="0" aria-label="Loop end" aria-valuemin="0" aria-valuemax="8" aria-valuenow="8"></span>
               </div>
-              <span class="hw vctl" id="vredo" role="button" tabindex="0" title="Re-record the loop">↺</span>
-              <span class="hw vctl" id="vclear" role="button" tabindex="0" title="Clear the voice loop">✕</span>
-            </div>
-            <div class="vbrow vbtreat">
-              <span class="al">Tone</span>
-              <span class="hw vchip on" data-v="dry">DRY</span>
-              <span class="hw vchip" data-v="telephone">TELEPHONE</span>
-              <span class="hw vchip" data-v="hall">HALL</span>
-              <span class="hw vchip" data-v="double">DOUBLE</span>
-              <span class="hw vchip" data-v="robot">ROBOT</span>
-              <span class="hw vchip" data-v="air">AIR</span>
-              <span class="hw vchip" data-v="tunnel">TUNNEL</span>
-              <span class="al" style="margin-left:auto">Depth</span>
-              <div class="strack vdepth" id="vdepth"><span class="sfill" id="vdfill"></span><span class="shandle" id="vdhandle"></span></div>
+              <div class="lo-tone">
+                <span class="al">tone</span>
+                <span class="hw vchip on" data-v="dry">dry</span>
+                <span class="hw vchip" data-v="telephone">telephone</span>
+                <span class="hw vchip" data-v="hall">hall</span>
+                <span class="hw vchip" data-v="double">double</span>
+                <span class="hw vchip" data-v="robot">robot</span>
+                <span class="hw vchip" data-v="air">air</span>
+                <span class="hw vchip" data-v="tunnel">tunnel</span>
+                <span class="al" style="margin-left:auto">depth</span>
+                <div class="strack vdepth" id="vdepth"><span class="sfill" id="vdfill"></span><span class="shandle" id="vdhandle"></span></div>
+              </div>
+              <div class="lo-foot"><span class="hw vctl" id="vredo" role="button" tabindex="0" title="Re-record the loop">↺ re-record</span><span class="hw vctl" id="vclear" role="button" tabindex="0" title="Clear the voice loop">✕ clear</span></div>
             </div>
           </div>
 
@@ -70,13 +69,13 @@ import "@fontsource/orbitron/latin-500.css";   // amber outline-on-glass readout
                 <div class="cmdgroup">
                   <div class="kick" id="beat"><span class="pbtn"></span><span class="kl">DRUMS</span><span class="kh"><svg class="khico" viewBox="0 0 14 14" aria-hidden="true"><path class="ic-play" d="M3.5 2.3 L11.7 7 L3.5 11.7 Z"/><g class="ic-pause"><rect x="3.4" y="2.3" width="3" height="9.4" rx=".6"/><rect x="7.6" y="2.3" width="3" height="9.4" rx=".6"/></g></svg>SPACE</span></div>
                   <div class="seg patseg" id="patSeg"><b class="on" data-v="floor">FLOOR</b><b data-v="back">BACK</b><b data-v="half">HALF</b><b data-v="break">BREAK</b></div>
+                  <div class="coverslide"><div class="ct"><span>DRUM COVER · LP</span><span class="cvv" id="coverval">OPEN</span></div>
+                    <div class="strack" id="coverslide"><span class="sfill" id="coverfill"></span><span class="shandle" id="coverhandle"></span></div></div>
                   <div class="drumfx">
                     <div class="knob sm" id="swingKnob"><div class="dial"><div class="ptr"></div></div><span class="kl">SWING</span></div>
                     <div class="knob sm" id="densKnob"><div class="dial"><div class="ptr"></div></div><span class="kl">DENSITY</span></div>
                     <div class="knob sm" id="gritKnob"><div class="dial"><div class="ptr"></div></div><span class="kl">GRIT</span></div>
                   </div>
-                  <div class="coverslide"><div class="ct"><span>DRUM COVER · LP</span><span class="cvv" id="coverval">OPEN</span></div>
-                    <div class="strack" id="coverslide"><span class="sfill" id="coverfill"></span><span class="shandle" id="coverhandle"></span></div></div>
                   <div class="coverslide"><div class="ct"><span>SIDECHAIN · KICK DUCK</span><span class="cvv" id="scval">30%</span></div>
                     <div class="strack" id="scslide"><span class="sfill" id="scfill"></span><span class="shandle" id="schandle"></span></div></div>
                 </div>
@@ -86,10 +85,10 @@ import "@fontsource/orbitron/latin-500.css";   // amber outline-on-glass readout
             <!-- VOICE -->
             <div class="zone z-voice">
               <div class="zbody"><div class="pad screen sleeps" id="vpad" style="--pc:#0ec4fc">
-                <div class="padband"><b id="vnreadout">DRIFT</b></div>
                 <div class="padfield" id="vfield" role="application" aria-label="Voice morph field">
                   <span class="grid"></span><span class="cross"></span>
                   <span class="ax t">BRIGHT</span><span class="ax b">DARK</span><span class="ax l">LUSH</span><span class="ax r">CLEAN</span>
+                  <div class="padband"><b id="vnreadout">SONAR</b></div>
                   <span class="puck" id="vpuck"></span>
                 </div>
               </div></div>
@@ -152,11 +151,12 @@ import "@fontsource/orbitron/latin-500.css";   // amber outline-on-glass readout
             </div>
             <div class="cmdgroup bassgroup">
               <div class="drumfx">
+                <div class="kick basskick" id="bassrow" role="button" tabindex="0" aria-label="Bass on/off"><span class="bl">BASS</span><span class="kh kh-b">B</span></div>
                 <div class="knob sm" id="bcharKnob"><div class="dial"><div class="ptr"></div></div><span class="kl">INTENSITY</span></div>
                 <div class="knob sm" id="bweightKnob"><div class="dial"><div class="ptr"></div></div><span class="kl">SUB</span></div>
-                <div class="kick basskick" id="bassrow" role="button" tabindex="0" aria-label="Bass on/off"><span class="pbtn"></span><span class="kh kh-b">B</span></div>
+                <div class="knobdiv"></div>
                 <div class="knob sm" id="bglideKnob"><div class="dial"><div class="ptr"></div></div><span class="kl">GLIDE</span></div>
-                <div class="knob sm" id="bpluckKnob"><div class="dial"><div class="ptr"></div></div><span class="kl">PLUCK</span></div>
+                <div class="knob sm" id="bpluckKnob"><div class="dial"><div class="ptr"></div></div><span class="kl">MOVE</span></div>
               </div>
             </div>
           </div>
@@ -168,13 +168,19 @@ import "@fontsource/orbitron/latin-500.css";   // amber outline-on-glass readout
               <div class="phsec">
                 <div class="keywrap"><div class="ohscreen keyscreen" id="keyBtn" role="button" tabindex="0" aria-label="Key root"><b id="keyval">C</b><small>KEY</small></div><div class="keypop" id="keyPop"></div></div>
                 <div class="seg lockseg" id="lockseg" style="--acc:#0ec4fc"><b class="on" data-v="major">MAJ</b><b data-v="minor">MIN</b><b data-v="chrom">CHROM</b></div>
+                <!-- batch7b: CHORD moved here, right of CHROM (divider between) — a play-mode toggle (held keys → triads), independent of the arp -->
+                <div class="arpdiv"></div>
+                <span class="hw chordtog" id="chordBtn" data-on="0" role="button" tabindex="0" aria-pressed="false" style="--acc:#7d8fa3"><i class="led"></i>CHORD</span>
               </div>
               <div class="arpmod" id="arpmod">
+                <!-- batch7b: HOLD │ ARPEGGIATOR · RATE · LENGTH (CHORD moved up next to CHROM) -->
+                <div class="arpsec">
+                  <!-- HOLD (was LATCH): stand-alone sustain — holds whatever you're playing, hands-free. Not tied to the arp. -->
+                  <span class="hw" id="latchBtn" data-on="0" role="button" tabindex="0" aria-pressed="false" aria-label="Hold / sustain on/off"><i class="led"></i>HOLD</span>
+                </div>
+                <div class="arpdiv"></div>
                 <div class="arpsec">
                   <span class="hw arptog" id="arpBtn" data-on="0" role="button" tabindex="0" aria-pressed="false" aria-label="Arpeggiator on/off"><i class="led"></i>ARPEGGIATOR</span>
-                  <!-- CHORD: a plain on/off toggle (no bloom). On = held keys + arp steps play scale triads (strum), not single notes. Drives chordMode. -->
-                  <span class="hw chordtog" id="chordBtn" data-on="0" role="button" tabindex="0" aria-pressed="false" style="--acc:#7d8fa3"><i class="led"></i>CHORD</span>
-                  <span class="hw" id="latchBtn" data-on="0"><i class="led"></i>LATCH</span>
                 </div>
                 <div class="arpsec ratesec">
                   <div class="knob sm" id="arpRateKnob"><div class="dial"><div class="ptr"></div></div><span class="kl">RATE</span><span class="kn" id="arpRateNum">1/8</span></div>
@@ -287,7 +293,7 @@ import "@fontsource/orbitron/latin-500.css";   // amber outline-on-glass readout
     /* sapphire signal screens (voice-morph pad + auto-filter) glow blue from within when lit */
     .device.live .screen.pad,.device.live .screen.afilter,.screen.pad.wk,.screen.afilter.wk{box-shadow:inset 0 0 0 1px rgba(255,255,255,.05),inset 0 3px 12px rgba(0,0,0,.72),inset 0 0 44px 10px rgba(0,0,0,.5)}
     /* #B: the LFO inner screen's border lights ONLY once .device.live lands (= the startup outer-border trace has finished) — sapphire inner outline */
-    .device.live .screen.afilter,.screen.afilter.wk{border-color:color-mix(in srgb,var(--sapphire) 26%,rgba(155,167,187,.16));box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--sapphire) 24%,transparent),inset 0 3px 12px rgba(0,0,0,.72),inset 0 0 44px 10px rgba(0,0,0,.5)}
+    .device.live .screen.pad,.device.live .screen.afilter,.screen.pad.wk,.screen.afilter.wk{border-color:color-mix(in srgb,var(--sapphire) 26%,rgba(155,167,187,.16));box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--sapphire) 24%,transparent),inset 0 3px 12px rgba(0,0,0,.72),inset 0 0 44px 10px rgba(0,0,0,.5)}   /* batch4 #3: voice matrix gets the SAME sapphire glass border as the filter so the LFO/voice pair reads unified */
     /* proud tactile keycap (the locked .pk recipe): top highlight + inner bottom shadow + side wall + drop shadow */
     .hw{position:relative;border:none;border-radius:9px;cursor:pointer;font-family:ui-monospace,Menlo,monospace;font-size:.56rem;letter-spacing:.06em;color:#b3bdc9;
       background:linear-gradient(180deg,#464e5c 0%,#2c333f 47%,#1f2630 100%);
@@ -466,29 +472,72 @@ import "@fontsource/orbitron/latin-500.css";   // amber outline-on-glass readout
     .micgrille i:nth-child(2),.micgrille i:nth-child(4){width:80%}
     .micgrille i:nth-child(3){width:96%}
   
-    /* VOICE treatment strip — hidden until the mic is live */
-    .vocalbar{display:none;flex-direction:column;align-items:stretch;gap:8px;padding:10px 14px;border-radius:11px;
-      background:linear-gradient(180deg,#121a24,#0a0f15);border:1px solid color-mix(in srgb,var(--sapphire) 22%,#000);
-      box-shadow:inset 0 1px 0 rgba(255,255,255,.06),inset 0 2px 6px rgba(0,0,0,.5),0 0 16px -8px var(--sapphire)}
-    .vocalbar.show{display:flex}
-    .vocalbar .vbrow{display:flex;align-items:center;gap:9px}
-    .vocalbar .al{font-family:ui-monospace,Menlo,monospace;font-size:.54rem;letter-spacing:.16em;text-transform:uppercase;color:#9fb0c1;flex:none}
-    .vocalbar .vchip{height:30px;padding:0 13px;font-size:.58rem}
-    .vocalbar .vu{display:inline-block;width:7px;height:7px;border-radius:50%;vertical-align:middle;margin-left:4px;
-      background:color-mix(in srgb,var(--sapphire) calc(var(--lv,0)*100%),#28323d);box-shadow:0 0 calc(var(--lv,0)*9px) var(--sapphire)}
-    .vocalbar .vdepth{width:150px}
-    .vocalbar .vdepth.inert{opacity:.35;pointer-events:none}   /* DRY has no wet to mix — the slider says so */
-    /* voice-loop in/out trim: a waveform with two draggable handles → loopStart/loopEnd */
-    .vocalbar .vwave{position:relative;flex:1;min-width:0;height:42px;border-radius:7px;overflow:hidden;touch-action:none;
+    /* ── VOICE IN: the capture state lives ON the mic capsule (a count-in digit + a recording ring),
+       the crop+tone UI in a bar-anchored popover. Neither is in .io's flow, so the device never
+       grows a pixel when recording or cropping — which is what kept the perimeter trace from glitching. ── */
+    /* count-in digit + progress ring: both out of flow over the 44px cap, never widen it (they paint in the 12px .io gap) */
+    .micin .capring{position:absolute;inset:-3px;pointer-events:none;opacity:0;transition:opacity .22s ease;overflow:visible}
+    .micin .capring .capringP{fill:none;stroke:#3a4654;stroke-width:2.4;stroke-linecap:round;vector-effect:non-scaling-stroke;stroke-dasharray:100;stroke-dashoffset:100}   /* dashoffset driven 100->0 in JS — the same stroke-dashoffset draw the perimeter trace uses (no conic-mask support gamble) */
+    .micin.arming .capring,.micin.rec .capring{opacity:1}
+    .micin.rec .capring .capringP{stroke:#ff3b30;stroke-width:3;filter:drop-shadow(0 0 4px #ff3b30)}   /* red sweep == recording; the ring filling all the way == the 2 bars are done (it stops itself) */
+    .micin .capnum{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;pointer-events:none;
+      font-family:'Orbitron',ui-monospace,sans-serif;font-size:1.05rem;line-height:1;color:var(--amber);text-shadow:0 0 10px var(--amber),0 0 3px #ffd9ad;opacity:0;transition:opacity .15s ease}
+    .micin.arming .capnum{opacity:1}
+    .micin.arming svg:not(.capring){opacity:.22}   /* the mic glyph dims so the count digit owns the cap while counting in */
+    .micin.rec svg:not(.capring){opacity:calc(.45 + var(--lv,0)*.55);transition:opacity .05s linear}   /* the glyph rides the input level while recording — "it's hearing me" */
+    .micin.arming{background:linear-gradient(180deg,#2a2410,#15110a);border-top-color:rgba(255,154,74,.3)}
+    .capnum.pop{animation:capnumpop .13s ease}
+    @keyframes capnumpop{0%{transform:scale(.65);opacity:.4}45%{transform:scale(1.16)}100%{transform:scale(1)}}
+    /* the record tally dot (#miclight) reads the capsule state: amber pulse while counting in, solid red while recording, steady red while a loop plays */
+    .io:has(.micin.arming) .miclight{background:var(--amber);box-shadow:0 0 9px var(--amber),0 0 3px #ffd9ad;animation:micpulse .5s ease-in-out infinite}
+    .io:has(.micin.rec) .miclight{background:#ff3b30;box-shadow:0 0 11px #ff3b30,0 0 4px #ff8b85;animation:none}
+    @keyframes micpulse{0%,100%{opacity:.4}50%{opacity:1}}
+    /* loop pill — appears in the (abs-centered) transport once a take exists; toggles the crop popover */
+    .looppill{display:none;height:28px;gap:6px;align-items:center;padding:0 10px;font-size:.55rem;letter-spacing:.1em;text-transform:uppercase}
+    .iotransport .looppill.show{display:inline-flex}
+    .looppill .loopspark{width:22px;height:11px;flex:none}
+    .looppill .loopspark path{fill:none;stroke:var(--sapphire);stroke-width:1.4;vector-effect:non-scaling-stroke;filter:drop-shadow(0 0 3px color-mix(in srgb,var(--sapphire) 55%,transparent))}
+    .looppill .cv{font-style:normal;font-size:.72rem;line-height:1;color:#9fb0c1;transition:transform .2s}
+    .looppill[aria-expanded="true"] .cv{transform:rotate(180deg);color:var(--sapphire)}
+    .looppill[aria-expanded="true"]{box-shadow:inset 0 1.5px 0.5px rgba(255,255,255,.2),inset 0 -3px 5px rgba(0,0,0,.5),0 2px 0 #0a0d12,0 3px 5px rgba(0,0,0,.6),0 0 14px -4px var(--sapphire)}
+    /* visually-hidden live region — announces the capture state to screen readers */
+    .vstatus{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0}
+    /* ── crop + tone popover: anchored to the bar (.io is position:relative), paints OVER the console
+       (position:absolute → contributes 0 to height), mirrors the keypop pattern ── */
+    .loopover{position:absolute;top:calc(100% + 10px);right:2px;z-index:50;display:none;width:min(560px,calc(100vw - 28px));
+      padding:13px 15px 14px;border-radius:12px;background:linear-gradient(180deg,#121a24,#0a0f15);
+      border:1px solid color-mix(in srgb,var(--sapphire) 24%,#000);
+      box-shadow:0 18px 38px -10px rgba(0,0,0,.7),inset 0 1px 0 rgba(255,255,255,.06),0 0 18px -8px var(--sapphire)}
+    .loopover.open{display:block;animation:loopoverIn .18s ease}
+    @keyframes loopoverIn{from{opacity:0;transform:translateY(-5px)}to{opacity:1;transform:none}}
+    .loopover::before{content:"";position:absolute;top:-7px;right:44px;width:12px;height:12px;rotate:45deg;
+      background:#121a24;border-left:1px solid color-mix(in srgb,var(--sapphire) 24%,#000);border-top:1px solid color-mix(in srgb,var(--sapphire) 24%,#000)}   /* caret pointing up at the bar */
+    .loopover .al{font-family:ui-monospace,Menlo,monospace;font-size:.54rem;letter-spacing:.16em;text-transform:uppercase;color:#9fb0c1;flex:none}
+    .lo-head,.lo-tone,.lo-foot{display:flex;align-items:center;gap:9px}
+    .lo-head{margin-bottom:9px}
+    .lo-head .vlen{margin-left:auto;font-family:ui-monospace,Menlo,monospace;font-size:.62rem;letter-spacing:.13em;color:#bfe6f8;text-shadow:0 0 7px color-mix(in srgb,var(--sapphire) 55%,transparent)}
+    .lo-tone,.lo-foot{margin-top:10px;flex-wrap:wrap}
+    .loopover .vchip{height:28px;padding:0 11px;font-size:.55rem}
+    .loopover .vdepth{width:120px}
+    .loopover .vdepth.inert{opacity:.35;pointer-events:none}   /* DRY has no wet to mix — the slider says so */
+    .loopover .vctl{height:28px;padding:0 12px;font-size:.56rem;letter-spacing:.05em;gap:5px;text-transform:uppercase}
+    /* the crop surface — 64px tall (the popover buys the vertical room a 48px bar can't give) */
+    .loopover .vwave{position:relative;height:64px;border-radius:8px;overflow:hidden;touch-action:none;
       background:linear-gradient(180deg,#0a0f14,#070b10);box-shadow:inset 0 1px 3px rgba(0,0,0,.7),inset 0 0 0 1px rgba(0,0,0,.5)}
-    .vocalbar .vwave svg{position:absolute;inset:0;width:100%;height:100%;display:block}
-    .vocalbar .vwpath{fill:color-mix(in srgb,var(--sapphire) 46%,transparent);stroke:none}
-    .vocalbar .vmask{position:absolute;top:0;bottom:0;background:rgba(6,9,13,.74);pointer-events:none;z-index:1}
-    .vocalbar .vmaskl{left:0}.vocalbar .vmaskr{right:0}
-    .vocalbar .vtrim{position:absolute;top:0;bottom:0;width:16px;margin-left:-8px;z-index:2;cursor:ew-resize;touch-action:none}
-    .vocalbar .vtrim::before{content:"";position:absolute;top:0;bottom:0;left:7px;width:2px;background:var(--sapphire);box-shadow:0 0 6px var(--sapphire)}
-    .vocalbar .vtrim::after{content:"";position:absolute;top:50%;left:3px;width:10px;height:15px;transform:translateY(-50%);border-radius:3px;background:linear-gradient(180deg,#cfd9e3,#8b95a2);box-shadow:0 1px 3px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.5)}
-    .vocalbar .vctl{height:30px;min-width:32px;padding:0;display:inline-flex;align-items:center;justify-content:center;font-size:.82rem;flex:none}
+    .loopover .vwave>svg{position:absolute;inset:0;width:100%;height:100%;display:block}
+    .loopover .vwpath{fill:color-mix(in srgb,var(--sapphire) 46%,transparent);stroke:none}
+    .vticks{position:absolute;inset:0;pointer-events:none;z-index:1}
+    .vticks i{position:absolute;top:0;bottom:0;width:1px;background:color-mix(in srgb,var(--sapphire) 18%,transparent)}
+    .vticks i.bar{background:color-mix(in srgb,var(--sapphire) 36%,transparent)}
+    .vticks i.flash{background:color-mix(in srgb,var(--sapphire) 85%,transparent);box-shadow:0 0 6px var(--sapphire);transition:background .05s,box-shadow .05s}
+    .loopover .vmask{position:absolute;top:0;bottom:0;background:rgba(6,9,13,.72);pointer-events:none;z-index:2}
+    .loopover .vmaskl{left:0}.loopover .vmaskr{right:0}
+    .vbody{position:absolute;top:0;bottom:0;z-index:3;cursor:grab;touch-action:none}
+    .vbody:active{cursor:grabbing}
+    .loopover .vtrim{position:absolute;top:0;bottom:0;width:18px;margin-left:-9px;z-index:4;cursor:ew-resize;touch-action:none}
+    .loopover .vtrim::before{content:"";position:absolute;top:0;bottom:0;left:8px;width:2px;background:var(--sapphire);box-shadow:0 0 6px var(--sapphire)}
+    .loopover .vtrim::after{content:"";position:absolute;top:50%;left:3px;width:12px;height:22px;transform:translateY(-50%);border-radius:3px;background:linear-gradient(180deg,#cfd9e3,#8b95a2);box-shadow:0 1px 3px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.5)}
+    @media (prefers-reduced-motion:reduce){.capnum.pop,.loopover.open,.io:has(.micin.arming) .miclight{animation:none}.vticks i.flash{transition:none}}
   
     /* HEIGHT REMODEL: 4-col x 2-row grid. RHYTHM moved to the rightmost column, spanning BOTH rows (full height). VOICE/SHAPE/EFFECTS sit in row 1 at their natural short height; the readout fills row 2 across the 3 left columns instead of adding its own full-height row below the console. Zones keep their DOM order — grid-area reorders them visually (grid-area overrides source order). */
     .console{display:grid;grid-template-columns:minmax(188px,1fr) minmax(360px,1.5fr) 202px 268px;grid-template-areas:"voice shape effects rhythm";gap:16px;padding-top:4px;align-items:stretch}
@@ -497,6 +546,10 @@ import "@fontsource/orbitron/latin-500.css";   // amber outline-on-glass readout
     .zone.z-voice{grid-area:voice}
     .zone.z-shape{grid-area:shape}
     .zone.z-effects{grid-area:effects}
+    /* batch6 #1: fuse the VOICE matrix + LFO housing into ONE unit — pull the afz left to butt against the voice's right edge (eat the 16px grid gap, keep the gap to effects), square the afz, drop its left border so the voice's right border is the single shared seam line, and match the afz outline to the voice's sapphire border. */
+    .console .z-shape .afz{box-sizing:border-box;margin-left:-16px;width:calc(100% + 16px);border-radius:0;border-left:none}
+    .screen.pad{border-top-right-radius:0;border-bottom-right-radius:0}
+    .device.live .z-shape .afz{border-color:color-mix(in srgb,var(--sapphire) 26%,rgba(155,167,187,.16))}
     /* the readout wrapper is now a grid item in row 2 (was a sibling below .console). Kept as .arpbar so every `.arpbar .readout` selector still matches. */
     .zbody{flex:1;display:flex;gap:12px}
   
@@ -541,6 +594,12 @@ import "@fontsource/orbitron/latin-500.css";   // amber outline-on-glass readout
     .kick.on .pbtn,.crow.on .pbtn{box-shadow:0 0 0 1.5px color-mix(in srgb,var(--amber) 48%,#000),inset 0 1px 1px rgba(255,255,255,.1),inset 0 -2px 4px rgba(0,0,0,.5),0 2px 3px rgba(0,0,0,.5),0 0 13px -2px var(--amber)}
     .kick.on .pbtn::after,.crow.on .pbtn::after{background:radial-gradient(circle at 50% 36%,#ffe2b0,#d98c2a 72%);box-shadow:inset 0 0 5px rgba(40,24,0,.45),0 0 7px rgba(217,140,42,.7)}
     .kick.hit .pbtn::after{background:radial-gradient(circle at 50% 36%,#fff2d8,#ffb84d 72%);box-shadow:inset 0 0 5px rgba(40,24,0,.4),0 0 16px 2px var(--amber)}
+    /* DRUMS button redesign (2026-06-18): the whole #beat strip is one bold orange bar — DRUMS label sits dark/inset on the left, the ▶/❚❚ + SPACE shortcut bright on the right; reads as a single "press space to play" control. ON adds the lit pbtn + pause icon + the panel amber glow (.cmdgroup:has(#beat.on)). Scoped to #beat so the bass .basskick strip is untouched. */
+    .device.live #beat{background:linear-gradient(180deg,#f3934d,#dd6420 58%,#bd4f15);box-shadow:inset 0 1px 1px rgba(255,224,198,.42),inset 0 -3px 7px rgba(120,42,0,.42),0 1px 3px rgba(0,0,0,.5)}
+    .device.live #beat .kl{color:#3c1805!important;text-shadow:0 1px 0 rgba(255,206,160,.4)}
+    .device.live #beat .kh{margin-left:auto;min-width:auto;padding:0;background:none!important;border:none!important;box-shadow:none!important;color:#fff7f0!important}
+    .device.live #beat.on{background:linear-gradient(180deg,#ffab63,#ec7024 56%,#cb550f)}
+    .device.live #beat.on .kl{color:#2a1003!important}
     .patseg{--acc:var(--sapphire)}
     .patseg b{font-size:.5rem;letter-spacing:.04em;padding:5px 0}
   
@@ -561,6 +620,8 @@ import "@fontsource/orbitron/latin-500.css";   // amber outline-on-glass readout
     .device.live .cmdgroup.bassgroup:has(#bassrow.on){border-color:color-mix(in srgb,#7a4fe0 58%,#000);box-shadow:inset 0 1px 0 rgba(255,255,255,.06),inset 0 0 0 1px color-mix(in srgb,#7a4fe0 44%,#000),inset 0 2px 9px rgba(0,0,0,.5),inset 0 0 22px -6px #7a4fe0}
     /* the B keycap mirrors the drums SPACE keycap but compact ("B", no transport icon); violet on-state */
     .kh-b{min-width:46px!important;letter-spacing:.04em}
+    .basskick .bl{font-family:ui-monospace,Menlo,monospace;font-size:.56rem;letter-spacing:.18em;color:#9aa6b4;transition:color .2s}   /* batch6 #4: BASS label replaces the on/off dot left of B */
+    .basskick.on .bl{color:#d9ccff;text-shadow:0 0 8px color-mix(in srgb,#7a4fe0 55%,transparent)}
     .basskick.on .kl{color:#ece6ff;text-shadow:0 0 8px color-mix(in srgb,#7a4fe0 60%,transparent)}
     .basskick.on .kh{color:#fff;background:linear-gradient(180deg,#9a7bff,#5a2bf0 55%,#3a14b0);border-color:#b7a0ff;box-shadow:inset 0 1px 1px rgba(255,255,255,.4),inset 0 -2px 5px rgba(20,8,60,.5),0 0 16px -2px #7a4fe0,0 0 5px rgba(154,123,255,.85)}
     .basskick.on .pbtn{box-shadow:0 0 0 1.5px #8b6bff,inset 0 1px 1px rgba(255,255,255,.25),inset 0 -2px 4px rgba(0,0,0,.5),0 2px 3px rgba(0,0,0,.5),0 0 16px -1px #6a3fe0}
@@ -582,8 +643,9 @@ import "@fontsource/orbitron/latin-500.css";   // amber outline-on-glass readout
   
     /* the VOICE matrix is ONE glass screen: a readout band across the top + the morph field below */
     .pad{flex:1;min-height:300px;display:flex;flex-direction:column;border:1px solid rgba(160,172,190,.17);box-shadow:inset 0 0 0 1px rgba(0,0,0,.7),inset 0 2px 10px rgba(0,0,0,.6),inset 0 -1px 0 rgba(255,255,255,.03),0 1px 0 rgba(255,255,255,.05),0 2px 6px rgba(0,0,0,.42)}
-    .padband{flex:none;position:relative;display:flex;align-items:center;justify-content:center;height:40px;background:linear-gradient(180deg,rgba(0,0,0,.44),rgba(0,0,0,.15));border-bottom:1px solid rgba(0,0,0,.7);box-shadow:inset 0 -1px 0 rgba(255,255,255,.05)}
-    .padband::after{content:"";position:absolute;inset:0;pointer-events:none;opacity:0;background:repeating-linear-gradient(0deg,rgba(120,200,240,.05) 0 1px,transparent 1px 2px);transition:opacity .5s}
+    /* #2: the voice readout is a small dark chip CENTERED in the field (was a top band) — the matrix grid now fills full height */
+    .padband{position:absolute;left:50%;top:50%;z-index:3;transform:translate(-50%,-50%);display:flex;align-items:center;justify-content:center;padding:5px 15px;border-radius:4px;background:radial-gradient(130% 130% at 50% 0%,rgba(8,14,22,.92),rgba(4,6,11,.8));box-shadow:inset 0 0 0 1px rgba(0,0,0,.6),0 2px 9px rgba(0,0,0,.55);pointer-events:none}
+    .padband::after{content:"";position:absolute;inset:0;border-radius:4px;pointer-events:none;opacity:0;background:repeating-linear-gradient(0deg,rgba(120,200,240,.06) 0 1px,transparent 1px 2px);transition:opacity .5s}
     .device.live .padband::after{opacity:1}
     .padband .pnl{font-family:ui-monospace,Menlo,monospace;font-size:.4rem;letter-spacing:.26em;color:#52606f}
     .padband b{position:relative;z-index:1;font-family:ui-monospace,Menlo,monospace;font-size:.8rem;letter-spacing:.2em;color:#bfe6f8;text-shadow:0 0 8px color-mix(in srgb,var(--sapphire) 70%,transparent);opacity:0;transition:opacity .55s ease}
@@ -693,8 +755,8 @@ import "@fontsource/orbitron/latin-500.css";   // amber outline-on-glass readout
     .lfostrip .knob .kn{position:relative;margin-top:3px;padding:5px 12px;border-radius:6px;letter-spacing:.06em;width:104px;box-sizing:border-box;white-space:nowrap;text-align:center;font-size:1.08rem;line-height:1;color:#5a5040;
       cursor:pointer;}   /* #rateNum doubles as the SYNC/FREQ toggle — tap to flip; the sapphire underline marks it tappable */
     /* batch4 #2: the SYNC/FREQ toggle hint is now an always-on amber dot on the right edge (was an ugly sapphire underline); brighter in Hz mode */
-    .device.live #rateNum::after{content:"";position:absolute;right:7px;top:50%;transform:translateY(-50%);width:5px;height:5px;border-radius:50%;background:var(--amber);box-shadow:0 0 6px color-mix(in srgb,var(--amber) 80%,transparent);opacity:.85;transition:opacity .25s,box-shadow .25s}
-    .device.live #rateNum.hz::after{opacity:1;box-shadow:0 0 9px var(--amber),0 0 3px #ffd9ad}
+    .device.live #rateNum::after{content:"";position:absolute;left:7px;top:50%;transform:translateY(-50%);width:5px;height:5px;border-radius:50%;background:var(--amber);box-shadow:0 0 6px color-mix(in srgb,var(--amber) 80%,transparent);opacity:.85;transition:opacity .25s,box-shadow .25s,left .3s ease}   /* batch7 #1: dot sits LEFT in sync/rate mode … */
+    .device.live #rateNum.hz::after{left:calc(100% - 12px);opacity:1;box-shadow:0 0 9px var(--amber),0 0 3px #ffd9ad}   /* … and slides to the RIGHT in freq/Hz mode, so the toggle visibly alternates */
     .lfostrip .knob .kn._x{
       background:radial-gradient(120% 120% at 50% 0%,#140d05,#0a0703 85%);
       box-shadow:inset 0 0 0 1px rgba(0,0,0,.8),inset 0 1px 3px rgba(0,0,0,.7);transition:color .4s,text-shadow .4s,background .4s}
@@ -732,13 +794,13 @@ import "@fontsource/orbitron/latin-500.css";   // amber outline-on-glass readout
     .fxstrip{flex:1;min-width:0;display:flex;flex-direction:column;gap:7px}
     .fxstrip .fillcard{min-height:210px}
     .coachband{display:flex;align-items:stretch;gap:14px;margin-top:15px}   /* #2: more separation from the console (effects) above */
-    .coachband .bassgroup{flex:none;width:386px;flex-direction:row;align-items:center;justify-content:space-between;gap:12px;padding:8px 16px}   /* #1: wider so the B + 4 knobs fit with margin (readout shrinks to fit) */
+    .coachband .bassgroup{flex:none;width:432px;flex-direction:row;align-items:center;justify-content:space-between;gap:12px;padding:8px 16px}   /* #1: wider so the BASS label + B + 4 knobs fit with margin (readout shrinks to fit) */
     .coachband .bassgroup .basskick{flex:none;padding:2px 4px;gap:11px;background:none;box-shadow:none;border:none}   /* #2: drop the inner bezel — dot + BASS + B read as loose elements on the module */
-    .coachband .bassgroup .kh-b{min-width:30px!important;padding:12px 11px;font-size:.74rem}   /* #2: taller, bolder B keycap */
+    .coachband .bassgroup .kh-b{min-width:56px!important;padding:13px 24px;font-size:.78rem;border-radius:9px}   /* batch6 #5: wider B keycap */
     .coachband .bassgroup .knobdiv{flex:none;width:1px;align-self:stretch;margin:7px 1px;background:linear-gradient(180deg,transparent,rgba(255,255,255,.13),transparent)}   /* #3: hairline divider between SUB and GLIDE */
-    .coachband .bassgroup .drumfx{flex:none;padding:0;gap:8px}
+    .coachband .bassgroup .drumfx{flex:1;padding:0;gap:8px}   /* #1: fill the wider module so B…PLUCK spread (space-between), not left-packed */
     .coachband .arpbar{flex:1;min-width:0}
-    .fxsub{flex:none;height:92px;display:flex;flex-direction:column;justify-content:flex-start}
+    .fxsub{flex:none;height:104px;display:flex;flex-direction:column;justify-content:flex-start}   /* batch6 #2: tall enough to hold all 4 sub-buttons so their bottom sits on the voice/LFO bottom line (was 92 → buttons overflowed 13px below); the meter above shortens to compensate */
     .modknobs{display:flex;flex-direction:column;align-items:center;gap:10px;padding-top:3px}
     .modknobs .knob .dial{width:26px;height:26px}
     .modknobs .knob .kl{font-size:.4rem;letter-spacing:.07em}
@@ -762,7 +824,6 @@ import "@fontsource/orbitron/latin-500.css";   // amber outline-on-glass readout
     /* batch3 #2: when the arp is ARMED, its knobs fill with sapphire — matching the LED on the ARP/LATCH buttons */
     .device.live .arpmod.armed #lenKnob .dial,.device.live .arpmod.armed #arpRateKnob .dial{background:conic-gradient(from 225deg,var(--sapphire) 0 calc(var(--v,0)*270deg),#262c35 calc(var(--v,0)*270deg) 270deg,#0a0d12 270deg 360deg);box-shadow:0 0 8px -2px var(--sapphire),inset 0 0 0 1px rgba(0,0,0,.6),0 1px 2px rgba(0,0,0,.5)}
     /* dependent arp controls sit recessed until the arp is armed (auto-arms on touch — see armArp) */
-    .device.live .arpmod:not(.armed) #latchBtn,
     .device.live .arpmod:not(.armed) .arpsec:has(.seg),
     .device.live .arpmod:not(.armed) .arpsec:has(#lenKnob),
     .device.live .arpmod:not(.armed) .arpsec.ratesec{opacity:.42;transition:opacity .35s ease}   /* batch3 #2: LENGTH arpsec now dims with RATE when the arp is off */
@@ -774,7 +835,7 @@ import "@fontsource/orbitron/latin-500.css";   // amber outline-on-glass readout
     .device.live .cmdgroup:has(#beat:not(.on)) .drumfx{opacity:.6;transition:opacity .35s ease}
     .device.live .cmdgroup:has(#beat:not(.on)) .drumfx .dial{background:conic-gradient(from 225deg,#48515f 0 calc(var(--v,0)*270deg),#262c35 calc(var(--v,0)*270deg) 270deg,#0a0d12 270deg 360deg)}
     /* BASS off: the knob row dims + INTENSITY/SUB/GLIDE fills go gray — mirrors the DRUMS-off behavior */
-    .device.live .cmdgroup.bassgroup:has(#bassrow:not(.on)) .drumfx{opacity:.6;transition:opacity .35s ease}
+    .device.live .cmdgroup.bassgroup:has(#bassrow:not(.on)) .drumfx .knob{opacity:.6;transition:opacity .35s ease}   /* batch6 #3: dim only the knobs when bass is off — the BASS label + B keycap stay full */
     .device.live .bassgroup:has(#bassrow:not(.on)) #bcharKnob .dial,
     .device.live .bassgroup:has(#bassrow:not(.on)) #bweightKnob .dial,
     .device.live .bassgroup:has(#bassrow:not(.on)) #bglideKnob .dial,
@@ -793,7 +854,8 @@ import "@fontsource/orbitron/latin-500.css";   // amber outline-on-glass readout
     .device.live .cmdgroup:has(#beat:not(.on)) .sfill::after{background:rgba(140,160,185,.26);box-shadow:none}
     .arpmod .al{font-family:ui-monospace,Menlo,monospace;font-size:.54rem;letter-spacing:.07em;text-transform:uppercase;color:#9fb0c1}
     .arpsec,.phsec{display:flex;align-items:center;gap:11px}
-    .arpmod .hw{height:28px;padding:0 14px;font-size:.55rem}
+    .arpmod .hw,.pianohead .chordtog{height:28px;padding:0 14px;font-size:.55rem}
+    .pianohead .arpdiv{flex:none;align-self:stretch;width:1px;margin:3px 0;background:linear-gradient(180deg,transparent,rgba(255,255,255,.16) 22%,rgba(255,255,255,.16) 78%,transparent)}   /* batch7/7b: vertical dividers — CHROM │ CHORD (left) and HOLD │ ARPEGGIATOR (right) */
     .arpmod .seg{width:176px}
     .arpmod .seg b{font-size:.54rem;padding:6px 0;letter-spacing:0}
     /* #4 ARP+CHORD: NOTE/CHORD is the inline split toggle right of the 'Arpeggiator' label. It is NOT arp-dependent (manual chord play works with the arp OFF), so it opts out of the .arpsec:has(.seg) dim and stays full-opacity even when the arp isn't armed. */
@@ -809,7 +871,7 @@ import "@fontsource/orbitron/latin-500.css";   // amber outline-on-glass readout
     .chordsplit.split{gap:4px}
     .chordsplit.split .csp{max-width:0;padding-left:0;padding-right:0;opacity:0;pointer-events:none}
   
-    .pianohead{display:flex;align-items:center;gap:18px;font-family:ui-monospace,Menlo,monospace;font-size:.5rem;letter-spacing:.16em;text-transform:uppercase;color:#7d8a99;margin-bottom:9px;padding:8px 12px;border-radius:11px;background:radial-gradient(130% 130% at 50% 0%,#121a26,#080c12 86%);border:1px solid rgba(255,255,255,.05);box-shadow:inset 0 1px 0 rgba(255,255,255,.05),inset 0 0 0 1px rgba(0,0,0,.6),inset 0 3px 11px rgba(0,0,0,.56)}
+    .pianohead{position:relative;z-index:5;display:flex;align-items:center;gap:18px;font-family:ui-monospace,Menlo,monospace;font-size:.5rem;letter-spacing:.16em;text-transform:uppercase;color:#7d8a99;margin-bottom:3px;padding:8px 12px;border-radius:11px;background:radial-gradient(130% 130% at 50% 0%,#121a26,#080c12 86%);border:1px solid rgba(255,255,255,.05);box-shadow:inset 0 1px 0 rgba(255,255,255,.05),inset 0 0 0 1px rgba(0,0,0,.6),inset 0 3px 11px rgba(0,0,0,.56)}   /* batch8 #1: tighter gap to the keys (was 9px) + own stacking layer (z-5, opaque bg) so the keys' play-glow can't bleed up into this panel */
     .transport{display:flex;align-items:center}
     .transport .tbtn{height:30px;padding:0 12px;font-size:.55rem;border-radius:8px;box-shadow:inset 0 1.2px 0.4px rgba(255,255,255,.2),inset 0 -4px 6px rgba(0,0,0,.5),0 3px 0 #0a0d12,0 4px 7px rgba(0,0,0,.55)}
     /* transport relocated into the top bar — centered between spacers, dimmed until power */
@@ -844,7 +906,7 @@ import "@fontsource/orbitron/latin-500.css";   // amber outline-on-glass readout
     .keypop .kp.on{color:#06222b;background:linear-gradient(180deg,#bdeffd,#5fcdee);box-shadow:0 0 8px -2px var(--sapphire)}
     .octhint{font-size:.42rem;letter-spacing:.1em;color:#566b80}
     .lockseg{width:auto}
-    .piano{position:relative;height:112px;border-radius:12px;padding:8px 8px 0;background:linear-gradient(180deg,#0a0d12,#05070a);border:1px solid rgba(0,0,0,.65);box-shadow:inset 0 3px 12px rgba(0,0,0,.7),inset 0 0 0 1px rgba(90,120,160,.05);display:flex;gap:5px;user-select:none;touch-action:none;margin-top:4px}
+    .piano{position:relative;height:112px;border-radius:12px;padding:8px 8px 0;background:linear-gradient(180deg,#0a0d12,#05070a);border:1px solid rgba(0,0,0,.65);box-shadow:inset 0 3px 12px rgba(0,0,0,.7),inset 0 0 0 1px rgba(90,120,160,.05);display:flex;gap:5px;user-select:none;touch-action:none;margin-top:0}
     /* tron keys: near-black, white outline + letters, a soft per-key colorful glow (below) */
     .wkey{position:relative;flex:1;border-radius:0 0 7px 7px;cursor:pointer;background:linear-gradient(180deg,#222c39 0%,#141b25 55%,#0c121b 100%);border:1px solid rgba(255,255,255,.34);border-top:none;box-shadow:inset 0 7px 11px -7px rgba(255,255,255,.16),inset 0 -7px 11px -6px rgba(0,0,0,.55),0 2px 4px rgba(0,0,0,.5);display:flex;flex-direction:column;justify-content:flex-end;align-items:center;padding-bottom:9px;transition:background .08s,box-shadow .12s}
     .wkey .ql{font-family:ui-monospace,Menlo,monospace;font-size:.95rem;font-weight:700;letter-spacing:.02em;color:#f3f8fc;text-shadow:0 0 4px rgba(0,0,0,.6)}
@@ -915,7 +977,9 @@ import "@fontsource/orbitron/latin-500.css";   // amber outline-on-glass readout
   .arpbar .dicebtn:active{transform:translateY(2px)}
   .arpbar .dicebtn:hover{color:#fff;box-shadow:inset 0 1.5px 1px rgba(255,255,255,.16),inset 0 -3px 5px rgba(0,0,0,.62),inset 0 0 11px -3px var(--pink),0 3px 0 #0a0d12,0 4px 7px rgba(0,0,0,.55)}
   .dicebtn svg{width:18px;height:18px;fill:currentColor;transition:transform .5s cubic-bezier(.4,1.7,.4,1)}
-  .io .dicebtn{width:30px;height:30px;border-radius:50%;flex:none;display:flex;align-items:center;justify-content:center;cursor:pointer;user-select:none;color:#cdb8ff;margin-right:5px;background:radial-gradient(circle at 50% 32%,#2e2742,#15111f 76%);box-shadow:inset 0 1.5px 1px rgba(255,255,255,.08),inset 0 -3px 5px rgba(0,0,0,.6),0 1px 0 rgba(255,255,255,.04)}
+  .io .dicebtn{width:40px;height:40px;border-radius:50%;flex:none;display:flex;align-items:center;justify-content:center;cursor:pointer;user-select:none;color:#cdb8ff;margin-right:5px;background:radial-gradient(circle at 50% 32%,#2e2742,#15111f 76%);box-shadow:inset 0 1.5px 1px rgba(255,255,255,.08),inset 0 -3px 5px rgba(0,0,0,.6),0 1px 0 rgba(255,255,255,.04)}   /* batch9 #6: bigger dice */
+  .io .dicebtn svg{width:23px;height:23px}
+  #jamBtn[disabled],#shareBtn[disabled]{display:none}   /* batch9 #4: JAM/SHARE only appear once a take exists (after REC) — hidden until then */
   .io .dicebtn:active{transform:translateY(2px)}
   .io .dicebtn:hover{color:#fff;box-shadow:inset 0 1.5px 1px rgba(255,255,255,.16),inset 0 -3px 5px rgba(0,0,0,.62),inset 0 0 11px -3px var(--pink),0 1px 0 rgba(255,255,255,.04)}
   .sgm .device:not(.live) .io .dicebtn{opacity:.4}
@@ -1183,7 +1247,7 @@ function makeEngine(ctx){
     modPhMix.gain.setTargetAtTime(modPh?fx.mod*0.9:0,t,.03);
     if(voc)voc.tun.delayTime.setTargetAtTime((60/fx.tempo)*.75,t,.1);}   // TUNNEL stays tempo-synced
   function delayTime(){const beat=60/fx.tempo,m={'4':1,'8':.5,'8d':.75,'16':.25}[fx.delayDiv]||.5;return clamp(beat*m,.02,.98);}
-  function apply(){applyMotion();applyFx();}
+  function apply(){applyMotion();applyFx();applyBassMove();}
   function setRevSize(key){fx.revSize=key;const s=REVSIZES[key]||REVSIZES.med;const t=ctx.currentTime;
     rev.taps.forEach(tp=>{tp.d.delayTime.setTargetAtTime(tp.base*s.m,t,.08);tp.f.gain.setTargetAtTime(s.fb,t,.08);});}
 
@@ -1198,7 +1262,7 @@ function makeEngine(ctx){
     const A=VOICES[bl[0].i].a,R=clamp(VOICES[bl[0].i].r,.14,.9),PEAK=0.2*(vel||1),SUS=PEAK*0.7;
     const susT=stacc?(0.025+clamp(fx.gate,.06,1.3)*0.13):0.16;   // arp notes: the PEAK->SUS decay scales with LENGTH so SHORT is a real pluck (held notes keep .16)
     grp.gain.setValueAtTime(0,t);grp.gain.linearRampToValueAtTime(PEAK,t+A+.006);grp.gain.linearRampToValueAtTime(SUS,t+A+susT);
-    const v={grp,oscs,R,heldNote:false,released:false,release(){if(v.released)return;v.released=true;const rt=ctx.currentTime+0.015;
+    const v={grp,oscs,R,heldNote:false,released:false,baseF:freq,retune(nf){if(!nf||!v.baseF||v.released)return;const rr=nf/v.baseF;v.baseF=nf;v.oscs.forEach(o=>{try{o.frequency.setTargetAtTime(o.frequency.value*rr,ctx.currentTime,.03)}catch(e){}});},release(){if(v.released)return;v.released=true;const rt=ctx.currentTime+0.015;
       if(grp.gain.cancelAndHoldAtTime)grp.gain.cancelAndHoldAtTime(rt);else{grp.gain.cancelScheduledValues(rt);grp.gain.setValueAtTime(Math.max(grp.gain.value,0.0001),rt);}
       grp.gain.linearRampToValueAtTime(0,rt+v.R);oscs.forEach(o=>{try{o.stop(rt+v.R+.05)}catch(e){}});if(oscs[0])oscs[0].onended=()=>{try{grp.disconnect()}catch(e){}const k=active.indexOf(v);if(k>=0)active.splice(k,1);};}};
     active.push(v);
@@ -1215,15 +1279,17 @@ function makeEngine(ctx){
     if(arpOn){
       if(latch&&arpSet.has(id)){arpSet.delete(id);held.set(id,{vs:null,freq});recomputeBass();return;}   // tap-again removes
       arpSet.set(id,freq);held.set(id,{vs:null,freq});recomputeBass(true);return;}
-    if(held.has(id))return;apply();
+    if(held.has(id)){if(latch){releaseHeldVoices(held.get(id));held.delete(id);recomputeBass();}return;}   // #1: with HOLD on, tapping a sustained note again removes it
+    apply();
     const vs=[buildNote(freq,0.9)];vs.forEach(v=>v.heldNote=true);held.set(id,{vs,freq});recomputeBass(true);}
   function noteOff(id){const h=held.get(id);
     if(arpOn){held.delete(id);if(!latch)arpSet.delete(id);releaseHeldVoices(h);recomputeBass();return;}
+    if(latch&&h&&h.vs){return;}   // #1: HOLD = standalone sustain — keep the voice ringing on key-release (tap-again or HOLD-off stops it)
     releaseHeldVoices(h);held.delete(id);recomputeBass();}
   function setArp(on){
     if(on&&!arpOn){held.forEach((h,id)=>{releaseHeldVoices(h);if(h&&h.freq!=null)arpSet.set(id,h.freq);});arpOn=true;arpIdx=0;nextArpT=gridNext(60/fx.tempo/fx.arpDiv);apply();clockEnsure();recomputeBass();}
     else if(!on&&arpOn){arpOn=false;arpSet.clear();held.forEach(h=>releaseHeldVoices(h));held.clear();clockStopIfIdle();recomputeBass();}}
-  function setLatch(on){latch=on;if(!on){[...arpSet.keys()].forEach(k=>{if(!held.has(k))arpSet.delete(k);});recomputeBass();}}   // latch-off can empty the bass source → recompute so PLUCK fades a now-unheld drone (no hang)
+  function setLatch(on){latch=on;if(!on){if(arpOn){[...arpSet.keys()].forEach(k=>{if(!held.has(k))arpSet.delete(k);});}else{held.forEach(h=>releaseHeldVoices(h));held.clear();}recomputeBass();}}   // HOLD off: arp → drop now-unheld arp notes; standalone → release every sustained voice (no hang)
 
   /* ── performance gestures (momentary; all release paths click-free) ── */
   const gst={lift:false,gate:false,throw:false,fill:false,dive:false};
@@ -1338,13 +1404,10 @@ function makeEngine(ctx){
       while(gateNextT<now+LOOK){const t=gateNextT;gateChop(ampTrem.gain,t,sd);gateChop(bassGate.gain,t,sd);gateNextT+=sd;}}
     if(fx.bass&&bassMode==='pluck'&&!fx.beat){const sd=60/fx.tempo/4,eff=Math.max(1,Math.round(bassPulseSteps/bassSeqMult)),interval=sd*eff;   // PLUCK + drums off: steady root pulse at RATE÷mult (grid-locked via nextBassPulseT so it stays phase-aligned when drums later engage); offBassStep walks the 16-step pattern
       while(nextBassPulseT<now+LOOK){bassSeqFire(offBassStep++,nextBassPulseT);nextBassPulseT+=interval;}}
-    if(fx.bass&&fx.bassPluck>0&&bassVoiced()){const intv=bassPluckInterval();   // PLUCK KNOB: rhythmic re-pluck of the held root, rate+intensity from fx.bassPluck
-      if(nextBassPluckT<=0||nextBassPluckT<now)nextBassPluckT=gridNext(intv);   // grid-locked to the shared transport so plucks lock to the kick/arp/gate instead of free-running from the press
-      while(nextBassPluckT<now+LOOK){bassPluckHit(nextBassPluckT);nextBassPluckT+=intv;}}
-    else nextBassPluckT=0;
+    nextBassPluckT=0;   // MOVE replaced the re-pluck — the bass wobble is a continuous filter LFO (applyBassMove), nothing retriggers here
     clockT=setTimeout(clockTick,25);}
-  function clockEnsure(){if(!clockT&&(fx.beat||arpOn||gst.gate||(fx.bass&&bassMode==='pluck')||(fx.bass&&fx.bassPluck>0&&bassVoiced())))clockTick();}
-  function clockStopIfIdle(){if(clockT&&!fx.beat&&!arpOn&&!gst.gate&&!loopActive&&!(fx.bass&&bassMode==='pluck')&&!(fx.bass&&fx.bassPluck>0&&bassVoiced())){clearTimeout(clockT);clockT=null;transport0=null;}}
+  function clockEnsure(){if(!clockT&&(fx.beat||arpOn||gst.gate))clockTick();}   // bass drone + MOVE wobble are continuous nodes — they don't need the transport clock
+  function clockStopIfIdle(){if(clockT&&!fx.beat&&!arpOn&&!gst.gate&&!loopActive){clearTimeout(clockT);clockT=null;transport0=null;}}
   function setBeat(on){fx.beat=on;
     if(on){const sd=60/fx.tempo/4;nextDrumT=gridNext(sd);drumStep=Math.round((nextDrumT-transport0)/sd);clockEnsure();}
     else{clockStopIfIdle();const t=ctx.currentTime;duck.gain.cancelScheduledValues(t);duck.gain.setTargetAtTime(1,t,.05);}}
@@ -1367,6 +1430,11 @@ function makeEngine(ctx){
   const bassSine=w=>0.45+clamp(w,0,1)*0.75;                                        // sub-octave sine level: tight → fat
   bassDrive.curve=driveCurve(bassDrv(fx.bassHeat));
   const bassLP=ctx.createBiquadFilter();bassLP.type='lowpass';bassLP.frequency.value=bassLPf(fx.bassHeat);bassLP.Q.value=0.7;
+  // MOVE — tempo-synced wobble: a sine LFO on the bass filter cutoff (detune, in cents) + a touch of resonance as it opens. Depth = fx.bassPluck (the MOVE knob). The drone stays sustained, so nothing retriggers and it never spits.
+  const bassLfo=ctx.createOscillator();bassLfo.type='sine';bassLfo.frequency.value=(fx.tempo/60)*2;
+  const bassLfoAmt=ctx.createGain();bassLfoAmt.gain.value=0;
+  bassLfo.connect(bassLfoAmt);bassLfoAmt.connect(bassLP.detune);bassLfo.start();
+  function applyBassMove(){if(!bassLfoAmt)return;const d=clamp(fx.bassPluck,0,1);bassLfoAmt.gain.setTargetAtTime(d*d*2600,ctx.currentTime,.07);bassLP.Q.setTargetAtTime(0.7+d*4.5,ctx.currentTime,.07);bassLfo.frequency.setTargetAtTime(Math.max(.05,(fx.tempo/60)*2),ctx.currentTime,.1);}
   const bassOut=ctx.createGain();bassOut.gain.value=.85;
   const bassGate=ctx.createGain();bassGate.gain.value=1;   // GATE gesture chops this in sync with ampTrem, so the bass gates too
   bassDrive.connect(bassLP);bassLP.connect(bassOut);bassOut.connect(bassGate);bassGate.connect(glue);
@@ -1377,7 +1445,7 @@ function makeEngine(ctx){
   const DRONE_LV=0.2;   // the sustained drone amp level (the value droneOn settles to). PLUCK scales the steady level + adds the per-onset envelope.
   let prevRoot=0,wasVoiced=false;   // PLUCK state: re-strike only on a genuinely NEW root, release-fade only on a true voiced→empty transition (not on mode/dice re-spins)
   const bassVoiced=()=>!!((arpOn&&arpSet.size)||[...held.values()].some(h=>h&&h.freq));
-  const bassSteady=()=>fx.bassPluck<=0?DRONE_LV:0;   // PLUCK 0 = full sustained drone (hangs, by design) · PLUCK>0 = drone silent (the rhythmic plucks carry the bass, no hang)
+  const bassSteady=()=>DRONE_LV;   // MOVE: the bass drone is always sustained; the knob wobbles its filter, never silences it
   /* STEP SEQUENCER (PLUCK): bassSeq[i] = 0 (silent) | {v:1|2|3, oct:'base'|'sub'}. v→velocity ghost/hit/accent. bassSeqMult scales the whole pattern clock (×½ ·×1 ·×2). accentScale tops the accent envelope. */
   let bassSeq=(()=>{const s=new Array(16).fill(0);s[0]={v:3,oct:'base'};s[4]={v:2,oct:'base'};s[8]={v:2,oct:'base'};s[12]={v:2,oct:'base'};return s;})(),bassSeqMult=1,accentScale=1,offBassStep=0,pluckStepCb=null;   // seeded four-on-the-floor so arming PLUCK is immediately audible (not silent until cells are tapped); offBassStep = the drums-off pulse's own step counter, drums-on derives its index from drumStep
   const VEL_PEAK={1:.35,2:.75,3:1.0};   // ghost · hit · accent peak gains (accent ×accentScale)
@@ -1388,8 +1456,6 @@ function makeEngine(ctx){
   function recomputeBass(onset){const c=(arpOn&&arpSet.size)?[...arpSet.values()]:[...held.values()].map(h=>h&&h.freq).filter(Boolean);
     const voiced=c.length>0;bassTarget=foldBass(voiced?Math.min(...c):lastNoteF);
     if(droneParts)droneParts.forEach(p=>p.o.frequency.setTargetAtTime(bassTarget*(p.o._mul||1),ctx.currentTime,bassGlideTau));
-    if(fx.bassPluck>0){if(onset&&voiced&&(bassTarget!==prevRoot||!wasVoiced)){nextBassPluckT=gridNext(bassPluckInterval());clockEnsure();}   // new root → (re)start the rhythmic pulse, grid-locked (stacking a chord upward doesn't re-trigger)
-      else if(!voiced&&wasVoiced)clockStopIfIdle();}                                                  // released everything → let the clock idle (plucks self-decay, no hang)
     prevRoot=bassTarget;wasVoiced=voiced;}
   function bassFollow(freq){lastNoteF=freq;recomputeBass();}
   /* bassHit(t[, step]) — step optional {velocity:1|2|3, octave:'base'|'sub'}. No step = today's sound (back-compat): full hit, base octave. */
@@ -1426,17 +1492,20 @@ function makeEngine(ctx){
      (punchier attack, tighter decay). Each pluck is a fresh enveloped sub voice through the bass chain; the drone
      itself goes silent at PLUCK>0 so the plucks carry the bass. No hang (plucks self-decay; drone at 0). */
   function bassGHold(t){const g=droneGain.gain;if(g.cancelAndHoldAtTime)g.cancelAndHoldAtTime(t);else{g.cancelScheduledValues(t);g.setValueAtTime(Math.max(g.value,.0001),t);}return g;}
-  function setBassPluck(v){const was=fx.bassPluck;fx.bassPluck=clamp(v,0,1);
-    if(droneParts){const t=ctx.currentTime,g=bassGHold(t);g.setTargetAtTime(bassSteady(),t,.15);}   // morph the sustained drone in (PLUCK 0) / out (PLUCK>0)
-    if(fx.bass&&fx.bassPluck>0&&bassVoiced()){if(was<=0)nextBassPluckT=gridNext(bassPluckInterval());clockEnsure();}
-    else if(fx.bassPluck<=0)clockStopIfIdle();}   // PLUCK dialed back to 0 → drone resumes; let the transport clock idle if nothing else needs it (no forever-tick)
+  function setBassPluck(v){fx.bassPluck=clamp(v,0,1);applyBassMove();}   // MOVE: set the wobble depth — no retrigger, the drone stays sustained
   function bassPluckInterval(){return 60/fx.tempo*(2*Math.pow(0.125,clamp(fx.bassPluck,0,1)));}   // PLUCK 0+→~2 beats (slow, basic) … 1→0.25 beat (1/16, fast)
   function bassPluckHit(t){if(!fx.bass||fx.bassPluck<=0)return;counts.b++;const p=fx.bassPluck,intv=bassPluckInterval();
     const len=Math.min(intv*(0.62-0.34*p),clamp(60/fx.tempo*0.5,.1,.5));   // long ring at low PLUCK (basic), tight staccato at high; always < interval so plucks don't stack
-    const peak=0.5*(0.62+0.7*p);   // intensity rises with the knob
-    const env=ctx.createGain();env.gain.setValueAtTime(.0001,t);env.gain.exponentialRampToValueAtTime(Math.max(.02,peak),t+.012);env.gain.exponentialRampToValueAtTime(.01,t+len);env.gain.linearRampToValueAtTime(0,t+len+.02);
-    env.connect(bassDrive);const base=gst.dive?bassTarget/4:bassTarget;
-    BASS_OSCS.forEach(s=>{const o=ctx.createOscillator();o.type=s[0];o.frequency.value=base*s[1];o.detune.value=s[2];const g=ctx.createGain();g.gain.value=s[0]==='sine'?bassSine(fx.bassWeight):bassSaw(fx.bassHeat);o.connect(g);g.connect(env);o.start(t);o.stop(t+len+.05);});}
+    const peak=0.46*(0.6+0.62*p);   // intensity rises with the knob (slightly lower than before so the drive stops spitting on the transient)
+    const base=gst.dive?bassTarget/4:bassTarget;
+    /* AMP env: soft 18ms attack (no click), exp body, gentle tail — kills the old hard-transient "fart" */
+    const env=ctx.createGain();env.gain.setValueAtTime(.0001,t);env.gain.exponentialRampToValueAtTime(Math.max(.02,peak),t+.018);env.gain.exponentialRampToValueAtTime(.012,t+len*0.92);env.gain.linearRampToValueAtTime(0,t+len+.03);
+    /* FILTER env: open bright on the attack, fall back to a round low cutoff → a real plucked "pock", not a static buzz. Q + brightness scale with the knob. */
+    const pf=ctx.createBiquadFilter();pf.type='lowpass';pf.Q.value=1.4+4.5*p;
+    const fOpen=clamp(base*(9+12*p),700,4800),fClose=clamp(base*2.2,150,520);
+    pf.frequency.setValueAtTime(fOpen,t);pf.frequency.exponentialRampToValueAtTime(fClose,t+Math.min(len*0.5,.16));
+    pf.connect(env);env.connect(bassDrive);
+    BASS_OSCS.forEach(s=>{const o=ctx.createOscillator();o.type=s[0];o.frequency.value=base*s[1];o.detune.value=s[2];const g=ctx.createGain();g.gain.value=s[0]==='sine'?bassSine(fx.bassWeight):bassSaw(fx.bassHeat);o.connect(g);g.connect(pf);o.start(t);o.stop(t+len+.05);});}
   function setBassRate(idx){bassPulseSteps=PULSE_MULT[clamp(idx|0,0,3)];}   // PLUCK pulse subdivision (idx 0..3 → 1/4·1/8d·1/8·1/16)
   function setBassGlide(tau){bassGlideStore=clamp(tau,0.008,0.30);          // GLIDE slur time; floor lowered to 8ms so a 0 GLIDE knob truly snaps. Remembered across mode switches
     if(bassMode==='glide'){bassGlideTau=bassGlideStore;
@@ -1446,7 +1515,7 @@ function makeEngine(ctx){
   function setBassSeqMult(m){bassSeqMult=(m===0.5||m===2)?m:1;}              // pattern-clock ×½ ·×1 ·×2 (3 detents)
   function setAccent(a){accentScale=clamp(a,0,1.6);}
   function setPluck(on){setBassMode(on?'pluck':(bassGlideStore>0.012?'glide':'off'));}   // PLUCK toggle → mode; off restores drone from the glide amount
-  function setBassMode(mode){if(mode!=='off'&&mode!=='glide'&&mode!=='pluck')return;
+  function setBassMode(mode){if(mode==='pluck')mode='off';if(mode!=='off'&&mode!=='glide')return;   // 'pluck' mode retired (it tore down the drone); coerce to 'off' so the sustained sub never drops
     bassMode=mode;bassGlideTau=mode==='glide'?bassGlideStore:0.008;   // glide=slur (the user's stored time), off/pluck=snap
     if(!fx.bass)return;                                      // master off → nothing to spin up
     if(mode==='pluck'){droneOff();offBassStep=0;nextBassPulseT=gridNext(60/fx.tempo/4*bassPulseSteps);clockEnsure();}   // tear down the sustained sub, start the beat-locked pulse
@@ -1455,7 +1524,7 @@ function makeEngine(ctx){
 
   /* VOICE IN: its own treatment rack — parallel pre-built branches, crossfade gains only (never reconnect live).
      Routed into glue (so the voice gets the kick sidechain + LIFT) but NOT through the synth filter/drive. */
-  let micStream=null,micGain=null,micPromise=null,voc=null,micTap=null,recStream=null,capNode=null,silentSink=null,recTap=null,loopSrc=null,loopBuf=null,recTempo=0,captureStartFrame=0,recActive=false,loopActive=false,workletReady=false,loopIn=0,loopOut=1;
+  let micStream=null,micGain=null,micPromise=null,voc=null,micTap=null,recStream=null,capNode=null,silentSink=null,recTap=null,loopSrc=null,loopBuf=null,recTempo=0,captureStartFrame=0,recActive=false,loopActive=false,workletReady=false,loopIn=0,loopOut=1,capStartT=0,capRecDur=0,capCountBeats=0;
   function buildVocalRack(){
     const bus=ctx.createGain();bus.gain.value=1;bus.connect(glue);
     const dryG=ctx.createGain();dryG.gain.value=1;micGain.connect(dryG);dryG.connect(bus);
@@ -1537,7 +1606,8 @@ function makeEngine(ctx){
     recStream=stream;const src=ctx.createMediaStreamSource(stream);const hp=ctx.createBiquadFilter();hp.type='highpass';hp.frequency.value=90;
     const comp=ctx.createDynamicsCompressor();comp.threshold.value=-18;comp.ratio.value=6;comp.attack.value=.003;comp.release.value=.15;
     src.connect(hp);hp.connect(comp);recTap=ctx.createAnalyser();recTap.fftSize=256;comp.connect(recTap);
-    const t0=Math.max(nextBar(),ctx.currentTime+0.09);captureStartFrame=Math.round(t0*sr);
+    const beat=60/fx.tempo,COUNT=4;const arm=gridNext(beat);const t0=Math.max(arm+beat*COUNT,ctx.currentTime+0.12);   // COUNT-IN: ~4 beats from the next grid beat (lines up with the drums if running), then record — recording always begins on a beat
+    captureStartFrame=Math.round(t0*sr);capStartT=t0;capRecDur=L/sr;capCountBeats=COUNT;   // exposed via capInfo so the UI can paint the count-in + 2-bar progress from ctx.currentTime each frame
     silentSink=ctx.createGain();silentSink.gain.value=0;silentSink.connect(ctx.destination);
     capNode=new AudioWorkletNode(ctx,'cap-proc');
     capNode.port.onmessage=e=>{if(e.data&&e.data.cmd==='done'&&recActive){recActive=false;onCaptured(new Float32Array(e.data.buf),L,x);}};
@@ -1553,16 +1623,23 @@ function makeEngine(ctx){
     const g=micGain,v=voc;micGain=null;voc=null;micTap=null;
     if(g||v){const t=ctx.currentTime;if(g)g.gain.setTargetAtTime(0,t,.02);if(v)v.bus.gain.setTargetAtTime(0,t,.025);
       setTimeout(()=>{try{g&&g.disconnect()}catch(e){}try{v&&(v.bus.disconnect(),v.rosc.stop())}catch(e){}},180);}clockStopIfIdle();}
-  function setLoopTrim(inF,outF){loopIn=clamp(inF,0,.96);loopOut=clamp(outF,loopIn+.04,1);   // live in/out trim — set loopStart/loopEnd on the playing source; applies at the next loop wrap, click-free
+  function loopBeatsN(){return loopBuf?Math.max(1,Math.round(loopBuf.duration/(60/(recTempo||fx.tempo)))):8;}   // the captured buffer is exactly L samples = bars*4 = 8 beats (quantizeWrap folds the crossfade tail in), so this is exact
+  function setLoopTrim(inF,outF,anchor){   // GRID-LOCKED crop: the selection LENGTH always snaps to whole beats. anchor 'in'/'out' = drag a handle (length steps in whole beats, the other edge holds); 'move' = slide the whole selection (length fixed, position free). Applies live at the next loop wrap, click-free.
+    const total=loopBeatsN();let i,o;
+    if(anchor==='move'){const len=Math.max(1,Math.round((loopOut-loopIn)*total));const s=clamp(inF*total,0,total-len);i=s/total;o=(s+len)/total;}
+    else{const len=clamp(Math.round((outF-inF)*total),1,total);
+      if(anchor==='in'){i=outF-len/total;if(i<0){i=0;o=len/total;}else o=outF;}
+      else{o=inF+len/total;if(o>1){o=1;i=1-len/total;}else i=inF;}}
+    loopIn=clamp(i,0,1);loopOut=clamp(o,0,1);
     if(loopSrc&&loopBuf){const d=loopBuf.duration;loopSrc.loopStart=loopIn*d;loopSrc.loopEnd=loopOut*d;}}
 
-  return {fx,apply,getCtx:()=>ctx,nearestVoice:()=>nearest2().near,noteOn,noteOff,retune:(map)=>{for(const id in map){if(arpSet.has(id))arpSet.set(id,map[id]);const h=held.get(id);if(h)h.freq=map[id];}recomputeBass();},
+  return {fx,apply,getCtx:()=>ctx,nearestVoice:()=>nearest2().near,noteOn,noteOff,retune:(map)=>{for(const id in map){if(arpSet.has(id))arpSet.set(id,map[id]);const h=held.get(id);if(h){h.freq=map[id];if(h.vs)h.vs.forEach(v=>v.retune&&v.retune(map[id]));}}recomputeBass();},
     setArp,setLatch,setArpChord:on=>{arpChord=!!on;},onArpChord:fn=>{arpChordFn=fn;},get arpOn(){return arpOn;},get arpNotes(){return arpSet.size;},get activeVoices(){return active.length;},
-    get latchedIds(){return (arpOn&&latch)?[...arpSet.keys()]:[];},onArp:cb=>{arpBeat=cb;},
+    get latchedIds(){return latch?(arpOn?[...arpSet.keys()]:[...held.keys()]):[];},onArp:cb=>{arpBeat=cb;},
     setBeat,onKick:cb=>{kickCb=cb;},setCover,setSidechain,setSwing,setDensity,setCharacter,setModMode,setBass,setBassMode,setBassRate,setBassGlide,setBassHeat,setBassWeight,setBassPluck,setRevSize,setBassStep,setBassSeqMult,setAccent,setPluck,onBassStep:cb=>{pluckStepCb=cb;},get drumCounts(){return {...counts};},get bassFreq(){return bassTarget;},get droneActive(){return !!droneParts;},get bassPluck(){return fx.bassPluck;},get bassMode(){return bassMode;},get bassRateSteps(){return bassPulseSteps;},get bassGlideTau(){return bassGlideStore;},get bassSeq(){return bassSeq;},get bassSeqMult(){return bassSeqMult;},
     get lfoRate(){return lfoHz();},lfoData:buf=>lfoTap.getFloatTimeDomainData(buf),
     gesture,get gestures(){return {...gst};},get liftHz(){return masterHP.frequency.value;},
-    micOff,setVocal,get vocal(){return voc?{treat:voc.treat,depth:voc.depth}:null;},micLevel,capture,clearLoop,setLoopTrim,get loopBuf(){return loopBuf;},get loopTrim(){return [loopIn,loopOut];},get loopActive(){return loopActive;},get recActive(){return recActive;},
+    micOff,setVocal,get vocal(){return voc?{treat:voc.treat,depth:voc.depth}:null;},micLevel,capture,clearLoop,setLoopTrim,get loopBuf(){return loopBuf;},get loopTrim(){return [loopIn,loopOut];},get loopBeats(){return loopBeatsN();},get loopActive(){return loopActive;},get recActive(){return recActive;},get capInfo(){return recActive?{startT:capStartT,recDur:capRecDur,beat:60/(recTempo||fx.tempo),countBeats:capCountBeats}:null;},
     kill:()=>{held.forEach(h=>{if(h&&h.vs)h.vs.forEach(v=>v.release());});held.clear();arpSet.clear();arpOn=false;latch=false;fx.beat=false;
       gestureReset();
       if(clockT){clearTimeout(clockT);clockT=null;}
@@ -1791,7 +1868,7 @@ const GLIDE_DEAD=0.03;    // dead-zone near 0 → treat as snap (mode 'off')
 const bglideKnob=makeKnob($('#bglideKnob'),0,v=>{if(!eng)return;bassGlideV=v;const tau=glideTauFromV(v);eng.setBassGlide(tau);
   if(eng.bassMode!=='pluck'){const want=v>GLIDE_DEAD?'glide':'off';if(eng.bassMode!==want){eng.setBassMode(want);}}   // guard mode-churn: only switch on an actual change, dead-zone near 0 snaps
 });
-/* PLUCK knob — bass amp envelope: 0 = sustained drone, up = each note plucks + decays so releasing the keys fades the sub (no hang), full = tight percussive pluck. */
+/* MOVE knob — tempo-synced bass filter wobble (was PLUCK): 0 = clean sustained sub · up = rhythmic filter movement, deepening to a wub. Drives fx.bassPluck → applyBassMove (field name kept to preserve save/share snapshots). */
 const bpluckKnob=makeKnob($('#bpluckKnob'),0,v=>{if(eng)eng.setBassPluck(v);});
 /* PLUCK step-sequencer PARKED (Jon 2026-06-15): all wiring below + the readout-seq driver + the engine bassSeq are intact but NOT reachable in the live UI. Revive = flip PLUCK_ENABLED to true and drop `hidden` on #pluckBtn. */
 const PLUCK_ENABLED=false;
@@ -1819,7 +1896,7 @@ const scslide=$('#scslide');
    "just work" instead of silently doing nothing (discoverability). */
 function armArp(){if($('#arpBtn').dataset.on!=='1'){setToggleArp(true);refreshTransport();}}
 $('#arpBtn').addEventListener('click',()=>{if(!live||!eng)return;const on=$('#arpBtn').dataset.on!=='1';$('#arpBtn').dataset.on=on?'1':'0';$('#arpBtn').classList.toggle('on',on);$('#arpBtn').setAttribute('aria-pressed',on?'true':'false');$('#arpmod').classList.toggle('armed',on);eng.setArp(on);refreshLatch();refreshTransport();});
-$('#latchBtn').addEventListener('click',()=>{if(!live||!eng)return;armArp();const on=$('#latchBtn').dataset.on!=='1';$('#latchBtn').dataset.on=on?'1':'0';$('#latchBtn').classList.toggle('on',on);eng.setLatch(on);refreshLatch();});
+$('#latchBtn').addEventListener('click',()=>{if(!live||!eng)return;const on=$('#latchBtn').dataset.on!=='1';$('#latchBtn').dataset.on=on?'1':'0';$('#latchBtn').classList.toggle('on',on);eng.setLatch(on);refreshLatch();});   // #1: HOLD no longer auto-arms the arp — it sustains on its own
 /* arp RATE knob — 8 stepped divisions baked across the dial's 0..1 travel (was a 4-button seg). arpDiv = subdivisions per quarter beat: tickDur=60/tempo/arpDiv. The knob position picks an index into ARP_DIVS; the chosen division shows in the in-label .kn (knob position carries it too). */
 const ARP_DIVS=[{l:'1/2',v:.5},{l:'1/4',v:1},{l:'1/4T',v:1.5},{l:'1/8',v:2},{l:'1/8T',v:3},{l:'1/16',v:4},{l:'1/16T',v:6},{l:'1/32',v:8}];
 const arpDivIdxFromV=v=>clamp(Math.round(v*(ARP_DIVS.length-1)),0,ARP_DIVS.length-1);
@@ -1828,7 +1905,7 @@ const arpRateKnobObj=makeKnob($('#arpRateKnob'),3/(ARP_DIVS.length-1),v=>{if(!li
 const lenKnob=makeKnob($('#lenKnob'),.355,v=>{if(eng)eng.fx.gate=0.06+v*1.24;armArp();});   // arp note LENGTH — converted slider→knob to free arp-bar width for the readout (Jon 2026-06-15)
 
 /* performance gestures (hold) — Z/X/C=GATE at 1/8·1/16·1/32, M=DIVE. The three gate keys drive ONE shared gate gesture at different chop rates (last-press wins). B toggles BASS (see keydown below). LIFT/THROW/FILL retired. */
-const GMAP={KeyZ:{g:'gate',rate:2},KeyX:{g:'gate',rate:4},KeyC:{g:'gate',rate:8},KeyM:{g:'dive'}};
+const GMAP={KeyZ:{g:'gate',rate:8},KeyX:{g:'gate',rate:4},KeyC:{g:'gate',rate:2},KeyM:{g:'dive'}};   // batch4 #5: keyboard rates match the swapped UI (Z=1/32, X=1/16, C=1/8)
 const gpadFor=g=>document.querySelector('.gpad[data-g="'+g+'"]');
 const gpadRate=rate=>document.querySelector('.gpad.gate[data-rate="'+rate+'"]');
 function refreshPat(){if(!eng)return;const p=eng.fx.pattern;$('#patSeg').querySelectorAll('b').forEach(b=>b.classList.toggle('on',b.dataset.v===p));}
@@ -1863,7 +1940,7 @@ $('#rsize').querySelectorAll('b').forEach(b=>b.addEventListener('click',()=>{if(
 $('#dtype').querySelectorAll('b').forEach(b=>b.addEventListener('click',()=>{if(!live||!eng)return;$('#dtype').querySelectorAll('b').forEach(x=>x.classList.remove('on'));b.classList.add('on');eng.fx.driveType=b.dataset.v;eng.apply();}));
 
 /* mic + vocal strip */
-const micin=$('#micin'),vocalbar=$('#vocalbar'),micvu=$('#micvu'),vdepthEl=$('#vdepth');
+const micin=$('#micin'),loopover=$('#loopover'),loopPill=$('#loopPill'),capnum=$('#capnum'),capringP=$('#capringP'),vstatus=$('#vstatus'),vdepthEl=$('#vdepth');
 const VDEF={dry:0,telephone:.8,hall:.45,double:.5,robot:.85,air:.6,tunnel:.5};   // per-treatment default depth
 let vTreat='dry',vDepth=0,micRaf=null;
 function vDepthRender(){$('#vdfill').style.width=(vDepth*100)+'%';$('#vdhandle').style.left=(vDepth*100)+'%';}
@@ -1877,43 +1954,105 @@ document.querySelectorAll('.vchip').forEach(ch=>ch.addEventListener('click',()=>
   vdepthEl.addEventListener('pointerdown',e=>{if(!live)return;vdepthEl.dataset.d='1';at(e);try{vdepthEl.setPointerCapture(e.pointerId)}catch(_){}});
   vdepthEl.addEventListener('pointermove',e=>{if(vdepthEl.dataset.d)at(e);});vdepthEl.addEventListener('pointerup',()=>vdepthEl.dataset.d='');})();
 vDepthRender();
-function micFrame(){if(!live||!eng||(!micin.classList.contains('on')&&!micin.classList.contains('rec'))){stopMicMeter();return;}
-  if(micin.classList.contains('rec')&&eng.loopActive){micin.classList.remove('rec');vTreat='dry';vDepth=0;vDepthRender();vdepthEl.classList.add('inert');document.querySelectorAll('.vchip').forEach(x=>x.classList.toggle('on',x.dataset.v==='dry'));drawWaveform(eng.loopBuf);trimIn=0;trimOut=1;vtrimRender();vocalbar.classList.add('show');$('#micnudge').classList.remove('show');statusline.textContent='VOICE LOOP · drag to trim · ✕ clears';}
-  micvu.style.setProperty('--lv',Math.min(1,eng.micLevel()*2.5).toFixed(2));micRaf=requestAnimationFrame(micFrame);}
-function startMicMeter(){if(!micRaf)micRaf=requestAnimationFrame(micFrame);}
-function stopMicMeter(){if(micRaf){cancelAnimationFrame(micRaf);micRaf=null;}micvu.style.setProperty('--lv',0);}
-function vocalReset(){vTreat='dry';vDepth=0;vDepthRender();vdepthEl.classList.add('inert');
-  document.querySelectorAll('.vchip').forEach(x=>x.classList.toggle('on',x.dataset.v==='dry'));
-  vocalbar.classList.remove('show');stopMicMeter();
-  micin.setAttribute('aria-pressed','false');}
-async function recordVoice(){if(!live||!eng)return;
-  micin.classList.add('rec','on');micin.setAttribute('aria-pressed','true');vocalbar.classList.remove('show');$('#micnudge').classList.add('show');statusline.textContent='● REC — sing now (2 bars)';startMicMeter();
+/* ── VOICE IN lifecycle: one rAF paints the capture state ON the capsule (count-in digit, then a red ring
+   that fills across the 2 bars) from the engine clock; when the take lands, a "loop" pill appears and opens
+   the crop popover. The capsule + popover are out of .io's flow, so the device never reflows. ── */
+let trimIn=0,trimOut=1,loopBeatsUI=8,capRaf=null,capPhase='',lastCount=-1;
+function capRingSet(p){if(capringP)capringP.style.strokeDashoffset=String(Math.round(100*(1-clamp(p,0,1))));}
+function lenLabel(){const b=Math.max(1,Math.round((trimOut-trimIn)*loopBeatsUI));return (b%4===0)?(b/4)+(b/4===1?' bar':' bars'):b+(b===1?' beat':' beats');}
+function capFrame(){
+  if(!live||!eng){stopCap();return;}
+  const ci=eng.capInfo;
+  if(ci){const now=eng.getCtx().currentTime;
+    if(now<ci.startT){   // COUNT-IN — the capsule becomes a clock
+      if(capPhase!=='count'){capPhase='count';micin.classList.add('arming','on');micin.classList.remove('rec');micin.setAttribute('aria-pressed','true');capRingSet(0);}
+      const left=Math.max(1,Math.min(ci.countBeats,Math.ceil((ci.startT-now)/ci.beat)));
+      if(left!==lastCount){lastCount=left;capnum.textContent=left;capnum.classList.remove('pop');void capnum.offsetWidth;capnum.classList.add('pop');vstatus.textContent='counting in, '+left;}
+    }else{   // RECORDING — the ring fills; a full ring == the 2 bars are up (it stops on its own)
+      if(capPhase!=='rec'){capPhase='rec';micin.classList.remove('arming');micin.classList.add('rec','on');capnum.textContent='';vstatus.textContent='recording — sing now';}
+      capRingSet((now-ci.startT)/ci.recDur);
+      micin.style.setProperty('--lv',Math.min(1,eng.micLevel()*2.5).toFixed(2));
+    }
+    capRaf=requestAnimationFrame(capFrame);return;}
+  if(eng.loopActive){onLoopReady();return;}        // capture finished → the loop is live
+  if(eng.recActive){capRaf=requestAnimationFrame(capFrame);return;}   // armed, awaiting the scheduled start (mic permission / count not set yet)
+  stopCap();}
+function startCap(){if(!capRaf)capRaf=requestAnimationFrame(capFrame);}
+function stopCap(){if(capRaf){cancelAnimationFrame(capRaf);capRaf=null;}micin.style.setProperty('--lv',0);}
+function dryTone(){vTreat='dry';vDepth=0;vDepthRender();vdepthEl.classList.add('inert');document.querySelectorAll('.vchip').forEach(x=>x.classList.toggle('on',x.dataset.v==='dry'));}
+function onLoopReady(){stopCap();capPhase='';lastCount=-1;
+  micin.classList.remove('arming','rec');micin.classList.add('on');micin.setAttribute('aria-pressed','true');capnum.textContent='';capRingSet(0);
+  dryTone();loopBeatsUI=eng.loopBeats||8;trimIn=0;trimOut=1;
+  drawWaveform(eng.loopBuf);drawSpark(eng.loopBuf);buildTicks();vtrimRender();
+  loopPill.classList.add('show');
+  vstatus.textContent='voice loop ready, '+lenLabel()+'. open it to crop or add a tone.';}
+async function recordVoice(){if(!live||!eng||eng.recActive||eng.loopActive)return;
+  closeLoopover();micin.classList.add('arming','on');micin.setAttribute('aria-pressed','true');capnum.textContent='';capRingSet(0);capPhase='';lastCount=-1;vstatus.textContent='getting ready';startCap();
   const ok=await eng.capture(2);
-  if(!ok){micin.classList.remove('rec','on');micin.setAttribute('aria-pressed','false');stopMicMeter();$('#micnudge').classList.remove('show');statusline.textContent='MIC BLOCKED — allow the mic, then tap VOICE IN';setTimeout(()=>{if(live)statusline.textContent='LIVE · press A S D F to play';},2800);}}
-function clearVoice(){if(eng)eng.clearLoop();micin.classList.remove('on','rec');micin.setAttribute('aria-pressed','false');$('#micnudge').classList.remove('show');drawWaveform(null);vocalReset();if(live)statusline.textContent='LIVE · press A S D F to play';}
-micin.addEventListener('click',()=>{if(!live||!eng)return;if(eng.loopActive||eng.recActive)clearVoice();else recordVoice();});
-micin.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();micin.click();}});
-/* ── VOICE LOOP: waveform draw + in/out trim handles (→ eng.setLoopTrim) ── */
-let trimIn=0,trimOut=1;
+  if(!ok){stopCap();capPhase='';micin.classList.remove('arming','rec','on');micin.setAttribute('aria-pressed','false');capnum.textContent='';vstatus.textContent='mic blocked — allow the mic, then tap voice in';statusline.textContent='allow the mic, then tap voice in';setTimeout(()=>{if(live)statusline.textContent='LIVE · press A S D F to play';},2800);}}
+function clearVoice(){if(eng)eng.clearLoop();stopCap();closeLoopover();capPhase='';lastCount=-1;
+  micin.classList.remove('on','rec','arming');micin.setAttribute('aria-pressed','false');capnum.textContent='';capRingSet(0);
+  loopPill.classList.remove('show');drawWaveform(null);drawSpark(null);dryTone();
+  vstatus.textContent='voice loop cleared';if(live)statusline.textContent='LIVE · press A S D F to play';}
+function vocalReset(){stopCap();closeLoopover();capPhase='';lastCount=-1;
+  micin.classList.remove('on','rec','arming');micin.setAttribute('aria-pressed','false');capnum.textContent='';capRingSet(0);
+  loopPill.classList.remove('show');drawWaveform(null);drawSpark(null);dryTone();}
+/* capsule: record when idle; once a loop exists it TOGGLES the crop popover (non-destructive — clear is only via ✕) */
+micin.addEventListener('click',()=>{if(!live||!eng)return;if(eng.recActive)return;if(eng.loopActive)toggleLoopover();else recordVoice();});
+micin.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();e.stopPropagation();micin.click();}});
+
+/* ── crop popover open/close (anchored to the bar; paints over the console; never reflows the device) ── */
+function openLoopover(){if(!eng||!eng.loopActive)return;loopover.classList.add('open');loopPill.setAttribute('aria-expanded','true');buildTicks();vtrimRender();}
+function closeLoopover(){loopover.classList.remove('open');loopPill.setAttribute('aria-expanded','false');}
+function toggleLoopover(){loopover.classList.contains('open')?closeLoopover():openLoopover();}
+loopPill.addEventListener('click',e=>{e.stopPropagation();if(!live||!eng||!eng.loopActive)return;toggleLoopover();});
+loopPill.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();e.stopPropagation();loopPill.click();}});
+document.addEventListener('pointerdown',e=>{if(!loopover.classList.contains('open'))return;if(loopover.contains(e.target)||loopPill.contains(e.target)||micin.contains(e.target))return;closeLoopover();});
+window.addEventListener('keydown',e=>{if(e.key==='Escape'&&loopover.classList.contains('open')){closeLoopover();}});
+
+/* ── waveform + grid-locked crop ── */
 function drawWaveform(buf){const el=$('#vwpath');if(!el)return;if(!buf){el.setAttribute('d','M0,20');return;}
-  const data=buf.getChannelData(0),N=110,block=Math.max(1,Math.floor(data.length/N));let top='M0,20',bot='';
+  const data=buf.getChannelData(0),N=140,block=Math.max(1,Math.floor(data.length/N));let top='M0,20',bot='';
   for(let i=0;i<N;i++){let mx=0;const s=i*block;for(let j=0;j<block;j++){const a=Math.abs(data[s+j]||0);if(a>mx)mx=a;}
     const h=Math.min(19,mx*19*1.5),x=(i/(N-1))*100;top+=' L'+x.toFixed(2)+','+(20-h).toFixed(2);bot=' L'+x.toFixed(2)+','+(20+h).toFixed(2)+bot;}
   el.setAttribute('d',top+bot+' Z');}
-function vtrimRender(){const i=$('#vtrimIn'),o=$('#vtrimOut'),ml=$('#vmaskl'),mr=$('#vmaskr');
-  if(i)i.style.left=(trimIn*100)+'%';if(o)o.style.left=(trimOut*100)+'%';
-  if(ml)ml.style.width=(trimIn*100)+'%';if(mr)mr.style.width=((1-trimOut)*100)+'%';}
+function drawSpark(buf){const el=$('#loopsparkP');if(!el)return;if(!buf){el.setAttribute('d','M0,6');return;}
+  const data=buf.getChannelData(0),N=22,block=Math.max(1,Math.floor(data.length/N));let d='M0,6';
+  for(let i=0;i<N;i++){let mx=0;const s=i*block;for(let j=0;j<block;j+=7){const a=Math.abs(data[s+j]||0);if(a>mx)mx=a;}
+    const h=Math.min(5,mx*5*1.7),x=(i/(N-1))*24;d+=' L'+x.toFixed(1)+','+(6-h).toFixed(1);}
+  el.setAttribute('d',d);}
+function buildTicks(){const t=$('#vticks');if(!t)return;let h='';for(let i=1;i<loopBeatsUI;i++){h+='<i class="'+(i%4===0?'bar':'')+'" style="left:'+((i/loopBeatsUI)*100).toFixed(3)+'%"></i>';}t.innerHTML=h;}
+function flashTicks(){if(window.matchMedia('(prefers-reduced-motion:reduce)').matches)return;const ts=$('#vticks');if(!ts)return;
+  const inB=Math.round(trimIn*loopBeatsUI),outB=Math.round(trimOut*loopBeatsUI);
+  [...ts.children].forEach((el,idx)=>{const b=idx+1;el.classList.toggle('flash',b===inB||b===outB);});
+  clearTimeout(flashTicks._t);flashTicks._t=setTimeout(()=>{[...ts.children].forEach(el=>el.classList.remove('flash'));},190);}
+function vtrimRender(){const i=$('#vtrimIn'),o=$('#vtrimOut'),ml=$('#vmaskl'),mr=$('#vmaskr'),bd=$('#loopBody'),vl=$('#vlen');
+  if(i){i.style.left=(trimIn*100)+'%';i.setAttribute('aria-valuenow',Math.round(trimIn*loopBeatsUI));}
+  if(o){o.style.left=(trimOut*100)+'%';o.setAttribute('aria-valuenow',Math.round(trimOut*loopBeatsUI));}
+  if(ml)ml.style.width=(trimIn*100)+'%';if(mr)mr.style.width=((1-trimOut)*100)+'%';
+  if(bd){bd.style.left=(trimIn*100)+'%';bd.style.width=((trimOut-trimIn)*100)+'%';}
+  if(vl)vl.textContent=lenLabel();}
+function applyTrim(rawIn,rawOut,anchor){if(!eng||!eng.loopActive)return;eng.setLoopTrim(rawIn,rawOut,anchor);const t=eng.loopTrim;trimIn=t[0];trimOut=t[1];vtrimRender();flashTicks();}
 (function(){const wave=$('#vwave');if(!wave)return;
-  const bind=(el,which)=>{if(!el)return;
-    const at=e=>{const r=wave.getBoundingClientRect();const f=clamp((e.clientX-r.left)/r.width,0,1);
-      if(which==='in')trimIn=Math.min(f,trimOut-0.04);else trimOut=Math.max(f,trimIn+0.04);vtrimRender();if(eng)eng.setLoopTrim(trimIn,trimOut);};
-    el.addEventListener('pointerdown',e=>{if(!live||!eng||!eng.loopActive)return;el.dataset.d='1';at(e);try{el.setPointerCapture(e.pointerId)}catch(_){}});
-    el.addEventListener('pointermove',e=>{if(el.dataset.d)at(e);});
-    el.addEventListener('pointerup',()=>el.dataset.d='');el.addEventListener('pointercancel',()=>el.dataset.d='');};
-  bind($('#vtrimIn'),'in');bind($('#vtrimOut'),'out');})();
-$('#vredo')&&$('#vredo').addEventListener('click',()=>{if(!live||!eng)return;eng.clearLoop();vocalbar.classList.remove('show');recordVoice();});
-$('#vclear')&&$('#vclear').addEventListener('click',()=>clearVoice());
-['#vredo','#vclear'].forEach(s=>{const b=$(s);if(b)b.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();b.click();}});});
+  const frac=e=>{const r=wave.getBoundingClientRect();return clamp((e.clientX-r.left)/r.width,0,1);};
+  const bindHandle=(el,which)=>{if(!el)return;
+    const move=e=>{if(!el.dataset.d)return;which==='in'?applyTrim(frac(e),trimOut,'in'):applyTrim(trimIn,frac(e),'out');};
+    el.addEventListener('pointerdown',e=>{if(!eng||!eng.loopActive)return;e.stopPropagation();el.dataset.d='1';move(e);try{el.setPointerCapture(e.pointerId)}catch(_){}});
+    el.addEventListener('pointermove',move);
+    el.addEventListener('pointerup',()=>el.dataset.d='');el.addEventListener('pointercancel',()=>el.dataset.d='');
+    el.addEventListener('keydown',e=>{if(e.key!=='ArrowLeft'&&e.key!=='ArrowRight')return;e.preventDefault();e.stopPropagation();const s=1/loopBeatsUI;   // stopPropagation: don't let the global Arrow=octave handler also fire
+      if(e.key==='ArrowLeft')which==='in'?applyTrim(trimIn-s,trimOut,'in'):applyTrim(trimIn,trimOut-s,'out');else which==='in'?applyTrim(trimIn+s,trimOut,'in'):applyTrim(trimIn,trimOut+s,'out');});};
+  bindHandle($('#vtrimIn'),'in');bindHandle($('#vtrimOut'),'out');
+  const body=$('#loopBody');if(body){let sx=0,sIn=0;
+    const move=e=>{if(!body.dataset.d)return;applyTrim(sIn+(frac(e)-sx),trimOut,'move');};
+    body.addEventListener('pointerdown',e=>{if(!eng||!eng.loopActive)return;e.stopPropagation();body.dataset.d='1';sx=frac(e);sIn=trimIn;try{body.setPointerCapture(e.pointerId)}catch(_){}});
+    body.addEventListener('pointermove',move);
+    body.addEventListener('pointerup',()=>body.dataset.d='');body.addEventListener('pointercancel',()=>body.dataset.d='');
+    body.addEventListener('keydown',e=>{if(e.key!=='ArrowLeft'&&e.key!=='ArrowRight')return;e.preventDefault();e.stopPropagation();const s=1/loopBeatsUI;applyTrim(trimIn+(e.key==='ArrowLeft'?-s:s),trimOut,'move');});}
+})();
+$('#vredo')&&$('#vredo').addEventListener('click',e=>{e.stopPropagation();if(!live||!eng)return;eng.clearLoop();loopPill.classList.remove('show');closeLoopover();recordVoice();});
+$('#vclear')&&$('#vclear').addEventListener('click',e=>{e.stopPropagation();clearVoice();});
+['#vredo','#vclear'].forEach(s=>{const b=$(s);if(b)b.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();e.stopPropagation();b.click();}});});
 
 /* ════════ TAKE: record · play · share ════════ */
 const FXFIELDS=['cutoff','res','amount','tempo'];
@@ -2001,7 +2140,7 @@ function applySnapshot(s){
   if(s.bassSeqMult!=null){seqMultIdx=Math.max(0,SEQ_MULTS.findIndex(m=>m.v===s.bassSeqMult));if(seqMultIdx<0)seqMultIdx=1;eng.setBassSeqMult(SEQ_MULTS[seqMultIdx].v);if(seqBuilt){const seq=readoutEl.querySelector('.rdseq');seq&&seq.querySelectorAll('.rdrate b').forEach((b,i)=>b.classList.toggle('on',i===seqMultIdx));}}
   if(seqBuilt){for(let i=0;i<16;i++)rdRenderCell(i);rdUpdateMeta();}
   // MODE — prefer the explicit pluck flag (new); fall back to the legacy bassMode string
-  setBassModeUI(s.pluck?'pluck':(s.bassMode==='pluck'?'pluck':s.bassMode||'off'));
+  setBassModeUI(s.bassMode==='glide'?'glide':'off');   // MOVE: pluck mode retired
   setOct(s.oct);setKey(s.key||0);scaleMode=s.mode||(s.lock===false?'chrom':'major');$('#lockseg').querySelectorAll('b').forEach(b=>b.classList.toggle('on',b.dataset.v===scaleMode));piano.classList.toggle('locked',scaleMode!=='chrom');setChordMode(!!s.chord);relabelKeys();
   setToggleBeat(s.beat);setToggleBass(s.bass);setToggleArp(s.arp);setToggleLatch(s.latch);
   eng.apply();drawFilter();setVoiceDisplay();$('#vpuck').style.left=(s.vx*100)+'%';$('#vpuck').style.top=(s.vy*100)+'%';startPulse();if(s.amount>0)startLfoAnim();refreshTransport();}
@@ -2050,13 +2189,11 @@ function diceRandom(){if(!live||!eng)return;demoTakeover();const pick=a=>a[Math.
     if(i%2===0)return ch(.55)?{v:2,oct:ch(.12)?'sub':'base'}:0;       // 8th → often a hit
     return ch(.3)?{v:1,oct:'base'}:0;                                  // 16th offbeat → occasional ghost
   });
-  applySnapshot({vx:r(.06,.94),vy:r(.06,.94),cutoff:r(.3,.92),res:r(0,.55),amount:r(0,.85),shape:pick(['sine','sawi','saw','sqr']),rateMode:'sync',syncDiv:pick(SYNCS).v,rateHz:eng.fx.rateHz,drive:r(0,.55),delay:r(0,.55),delayDiv:pick(['4','8','8d','16']),reverb:r(.05,.7),revSize:pick(['small','med','hall','vast']),tempo:ri(84,138),beat:ch(.7),pattern:pick(['floor','back','half','break']),drumCover:Math.round(60*Math.pow(200,r(.15,1))),bass:ch(.7),bassHeat:r(.1,.9),bassWeight:r(.3,.85),bassPluck:ch(.5)?r(.3,.9):0,pluck:wantPluck,bassMode:wantPluck?'pluck':pick(['off','off','glide']),bassRate:ri(0,3),bassSeqMult:pick([.5,1,1,2]),bassSeq:seq,bassGlide:r(0,1),oct:octOff,key:ri(0,11),mode:pick(['major','major','minor','minor','chrom']),lock:true,arp:ch(.3),arpDiv:pick([1,1.5,2,2,3,4,4,6,8]),gate:r(.15,1.05),latch:false});}
-(function(){const car=$('#democar');DEMOS.forEach(()=>car.appendChild(document.createElement('i')));
-  function updCar(){car.querySelectorAll('i').forEach((d,i)=>d.classList.toggle('on',i===demoIdx));}
-  $('#demoBtn').addEventListener('click',()=>{if(!live||!eng){typeStatus('press power first');return;}if(jamOn)jamStop();demoIdx=(demoIdx+1)%DEMOS.length;currentTake=DEMOS[demoIdx];updCar();playBtn.removeAttribute('disabled');shareBtn.removeAttribute('disabled');REC.play(currentTake);});
+  applySnapshot({vx:r(.06,.94),vy:r(.06,.94),cutoff:r(.3,.92),res:r(0,.55),amount:r(0,.85),shape:pick(['sine','sawi','saw','sqr']),rateMode:'sync',syncDiv:pick(SYNCS).v,rateHz:eng.fx.rateHz,drive:r(0,.55),delay:r(0,.55),delayDiv:pick(['4','8','8d','16']),reverb:r(.05,.7),revSize:pick(['small','med','hall','vast']),tempo:ri(84,138),beat:ch(.7),pattern:pick(['floor','back','half','break']),drumCover:Math.round(60*Math.pow(200,r(.15,1))),bass:ch(.7),bassHeat:r(.1,.9),bassWeight:r(.3,.85),bassPluck:ch(.55)?r(.2,.8):0,pluck:false,bassMode:pick(['off','off','glide']),bassRate:ri(0,3),bassSeqMult:pick([.5,1,1,2]),bassSeq:seq,bassGlide:r(0,1),oct:octOff,key:ri(0,11),mode:pick(['major','major','minor','minor','chrom']),lock:true,arp:ch(.3),arpDiv:pick([1,1.5,2,2,3,4,4,6,8]),gate:r(.15,1.05),latch:false});}
+(function(){
   $('#dice').addEventListener('click',()=>{if(!live||!eng){typeStatus('press power first');return;}diceRandom();const d=$('#dice');d.classList.remove('roll');void d.offsetWidth;d.classList.add('roll');});
   device.addEventListener('pointerdown',e=>{if(REC.replaying&&!e.target.closest('.transport'))demoTakeover();},true);
-  ['#demoBtn','#dice','#recBtn','#playBtn','#jamBtn','#shareBtn'].forEach(function(sel){const b=$(sel);if(b)b.addEventListener('keydown',function(e){if(e.key==='Enter'||e.key===' '){e.preventDefault();b.click();}});});})();
+  ['#dice','#recBtn','#playBtn','#jamBtn','#shareBtn'].forEach(function(sel){const b=$(sel);if(b)b.addEventListener('keydown',function(e){if(e.key==='Enter'||e.key===' '){e.preventDefault();b.click();}});});})();
 let urlTakeShown=false;
 function takeFromUrl(){const sp=new URLSearchParams(location.search).get('take');if(sp)return sp;const m=(location.hash||'').match(/take=([^&]+)/);return m?m[1]:null;}
 function loadIncomingTake(){if(urlTakeShown)return;const raw=takeFromUrl();if(!raw)return;const t=decodeTake(raw);if(!t)return;urlTakeShown=true;currentTake=t;
@@ -2089,6 +2226,17 @@ function buildTrace(){const w=device.clientWidth,h=device.clientHeight;if(!w||!h
   trL.setAttribute('d','M'+(w/2)+' 1 H'+r+' A'+r+' '+r+' 0 0 0 1 '+r+' V'+(h-r)+' A'+r+' '+r+' 0 0 0 '+r+' '+(h-1)+' H'+(w/2));
   [trL,trR].forEach(p=>{const L=p.getTotalLength();p.style.transition='none';p.style.strokeDasharray=String(L);p.style.strokeDashoffset=String(L);});
   return true;}
+/* re-fit the SETTLED steady outline to the current device box (geometry only, keeps it fully drawn) — heals
+   a late layout/font-load reflow and self-corrects any future resize, so the perimeter can never drift off the
+   casing the way the old reflowing .vocalbar made it. Never runs mid draw/un-draw (guards on .settled). */
+function rebakeTrace(){if(!traceSvg.classList.contains('settled'))return;
+  const w=device.clientWidth,h=device.clientHeight;if(!w||!h)return;
+  const r=Math.max(2,Math.min(22,Math.min(w,h)/2-1));
+  traceSvg.setAttribute('viewBox','0 0 '+w+' '+h);
+  trR.setAttribute('d','M'+(w/2)+' 1 H'+(w-r)+' A'+r+' '+r+' 0 0 1 '+(w-1)+' '+r+' V'+(h-r)+' A'+r+' '+r+' 0 0 1 '+(w-r)+' '+(h-1)+' H'+(w/2));
+  trL.setAttribute('d','M'+(w/2)+' 1 H'+r+' A'+r+' '+r+' 0 0 0 1 '+r+' V'+(h-r)+' A'+r+' '+r+' 0 0 0 '+r+' '+(h-1)+' H'+(w/2));
+  [trL,trR].forEach(function(p){const L=p.getTotalLength();p.style.transition='none';p.style.strokeDasharray=String(L);p.style.strokeDashoffset='0';});}
+if(window.ResizeObserver){new ResizeObserver(function(){clearTimeout(rebakeTrace._t);rebakeTrace._t=setTimeout(rebakeTrace,100);}).observe(device);}
 /* device-perimeter trace: same dashoffset draw as the screens, on the casing edge — power on/off ONLY, then fades out (never a steady casing glow, per the locked language). reverse=true un-draws for power-down. (Jon 2026-06-15) */
 function tracePerimeter(reverse){if(!buildTrace())return;   // buildTrace sets viewBox+paths, dasharray=L, dashoffset=L (undrawn), transition none
   traceSvg.classList.remove('settled');traceSvg.classList.add('drawing');   // full-brightness while it draws/un-draws
@@ -2193,7 +2341,7 @@ function traceScreen(el,reverse){const w=el.clientWidth,h=el.clientHeight;if(!w|
   paths.forEach(function(p){p.style.transition='';p.style.strokeDashoffset=reverse?String(p._L):'0';});}
 function clearScreenTraces(){sgm.querySelectorAll('.scrn-trace').forEach(function(s){s.remove();});}
 function igniteScreenTraces(onDone){clearScreenTraces();tracePerimeter(false);sgm.querySelectorAll('.tempo,.pad,.afz,.readout').forEach(function(el){traceScreen(el,false);});
-  setTimeout(function(){if(onDone)onDone();sgm.querySelectorAll('.scrn-trace').forEach(function(s){s.classList.add('settled');});traceSvg.classList.remove('drawing');traceSvg.classList.add('settled');},TRACEMS);}
+  setTimeout(function(){if(onDone)onDone();sgm.querySelectorAll('.scrn-trace').forEach(function(s){s.classList.add('settled');});traceSvg.classList.remove('drawing');traceSvg.classList.add('settled');rebakeTrace();},TRACEMS);}   /* rebakeTrace: re-fit the now-settled outline to the device's final (font-loaded) height */
 function reverseScreenTraces(onDone){
   /* power-down: RETRACT — un-draw the EXISTING settled (dim) borders by animating their dashoffset back to full length, so the lit line withdraws at its dim live appearance. The exact reverse of the power-on draw — no clear+re-trace, no re-brighten, no opacity fade. */
   if(reduceMq.matches){
@@ -2311,7 +2459,6 @@ const COACH=(function(){
     voicein:{a:'tap  VOICE IN  and sing',b:'it loops you back in time'},
     treat:{a:'singing a loop?',b:'add  TELEPHONE  or  ROBOT  to it'},
     dice:{a:'out of ideas? the  DICE',b:'rolls a whole new sound'},
-    demo:{a:'tap  DEMO  for a groove',b:'touch a key to take over'},
   };
   const LADDER=[
     {unit:'orient', need:'played',  pre:[]},
@@ -2338,7 +2485,6 @@ const COACH=(function(){
     {unit:'tempo',    need:'tempo',    pre:['beat']},
     {unit:'key',      need:'key',      pre:['played']},
     {unit:'treat',    need:'treat',    pre:['voicein']},
-    {unit:'demo',     need:'demo',     pre:[]},
     {unit:'dice',     need:'dice',     pre:[]},
     {unit:'voicein',  need:'voicein',  pre:[]},
   ];
@@ -2445,7 +2591,7 @@ const COACH=(function(){
     coachRender({rest:true});                               // resting only — teach nothing on power-on
     window.addEventListener('keydown',onKeydown,true);
     clickFlag('#recBtn','rec');clickFlag('#jamBtn','jam');clickFlag('#shareBtn','share');
-    clickFlag('#latchBtn','latch');clickFlag('#dice','dice',true);clickFlag('#demoBtn','demo',true);
+    clickFlag('#latchBtn','latch');clickFlag('#dice','dice',true);
     pollId=setInterval(resolve,600);
   }
   function stop(){
