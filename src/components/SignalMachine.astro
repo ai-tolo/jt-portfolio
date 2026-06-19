@@ -219,8 +219,8 @@ import "@fontsource/orbitron/latin-500.css";   // amber outline-on-glass readout
             <span class="gl">Performance · hold</span>
             <span class="gategroup">
               <span class="ggl">GATE</span>
-              <span class="gpad gate" data-g="gate" data-rate="8"><b>Z</b>1/32</span>
-              <span class="gpad gate" data-g="gate" data-rate="4"><b>X</b>1/16</span>
+              <span class="gpad gate" data-g="gate" data-rate="4"><b>Z</b>1/16</span>
+              <span class="gpad gate" data-g="gate" data-rate="3"><b>X</b>1/8T</span>
               <span class="gpad gate" data-g="gate" data-rate="2"><b>C</b>1/8</span>
             </span>
             <span class="gpad dive" data-g="dive"><b>M</b>DIVE</span>
@@ -921,7 +921,7 @@ import "@fontsource/orbitron/latin-500.css";   // amber outline-on-glass readout
     .device.live .arpmod:not(.armed) #arpRateKnob .dial{background:conic-gradient(from 225deg,#48515f 0 calc(var(--v,0)*270deg),#262c35 calc(var(--v,0)*270deg) 270deg,#0a0d12 270deg 360deg);box-shadow:inset 0 0 0 1px rgba(0,0,0,.6),0 1px 2px rgba(0,0,0,.5)}
 
     /* ════ #3 TEMPTATION — in the OFF state the toggle keycap fills with a vibrant color (deep orange for DRUMS/SPACE, deep green for BASS/B) to entice a press; turning the effect ON reverts the keycap to normal and lights the panel border instead. ════ */
-    .device.live .cmdgroup:has(#beat:not(.on)) .kick .kh{color:#ffe7d4;background:radial-gradient(circle at 50% 30%,#db7a40,#9c481c);border-color:rgba(0,0,0,.5);box-shadow:inset 0 1px 1px rgba(255,255,255,.2),inset 0 -2px 4px rgba(0,0,0,.32),0 0 10px -5px #db7a40}
+    /* (removed: the drums-OFF dark box around SPACE + the play head — a remnant; the whole #beat bar is already orange, so #beat .kh stays box-free in every state) */
     .device.live .cmdgroup.bassgroup:has(#bassrow:not(.on)) .basskick .kh{color:#ece9ff;background:linear-gradient(180deg,#6a4ae0,#3914c0 58%,#210a72);border-color:rgba(0,0,0,.5);box-shadow:inset 0 1px 1px rgba(255,255,255,.2),inset 0 -2px 4px rgba(16,6,58,.32),0 0 10px -5px #3914c0}
     /* #4: an effect's mode sub-buttons dim when its fader is at zero (the .fill goes .mt/muted) — irrelevant until the effect is turned up */
     .device.live .fxstrip:has(.fill.mt) .fxsub{opacity:.4;transition:opacity .35s ease}
@@ -1996,7 +1996,7 @@ const arpRateKnobObj=makeKnob($('#arpRateKnob'),3/(ARP_DIVS.length-1),v=>{if(!li
 const lenKnob=makeKnob($('#lenKnob'),.355,v=>{if(eng)eng.fx.gate=0.06+v*1.24;armArp();});   // arp note LENGTH — converted slider→knob to free arp-bar width for the readout (Jon 2026-06-15)
 
 /* performance gestures (hold) — Z/X/C=GATE at 1/8·1/16·1/32, M=DIVE. The three gate keys drive ONE shared gate gesture at different chop rates (last-press wins). B toggles BASS (see keydown below). LIFT/THROW/FILL retired. */
-const GMAP={KeyZ:{g:'gate',rate:8},KeyX:{g:'gate',rate:4},KeyC:{g:'gate',rate:2},KeyM:{g:'dive'}};   // batch4 #5: keyboard rates match the swapped UI (Z=1/32, X=1/16, C=1/8)
+const GMAP={KeyZ:{g:'gate',rate:4},KeyX:{g:'gate',rate:3},KeyC:{g:'gate',rate:2},KeyM:{g:'dive'}};   // keyboard rates match the UI: Z=1/16, X=1/8T (triplet), C=1/8
 const gpadFor=g=>document.querySelector('.gpad[data-g="'+g+'"]');
 const gpadRate=rate=>document.querySelector('.gpad.gate[data-rate="'+rate+'"]');
 function refreshPat(){if(!eng)return;const p=eng.fx.pattern;$('#patSeg').querySelectorAll('b').forEach(b=>b.classList.toggle('on',b.dataset.v===p));}
@@ -2674,42 +2674,50 @@ const readoutEl=$('#readout');
   if(document.getElementById('rd-screen-css'))return;
   const s=document.createElement('style');s.id='rd-screen-css';
   s.textContent=`
-  /* ── the readout screen now hosts the PRESET face (.rdface); keep the parked .rdseq hidden ── */
+  /* the readout now splits: PRESET stepper (left) · COACH feedback (right) · ? (far right). Parked .rdseq stays hidden. */
   .sgm .readout:not([data-mode="seq"]) .rdseq{display:none}
-  .sgm .readout .rdface{display:grid;grid-template-columns:60px 1fr auto;align-items:center;column-gap:15px;width:100%;height:100%}
-  .sgm .readout .rdtip{display:none}                       /* legacy coach span — unused now */
+  .sgm .readout .rdtip{display:none}
+  .sgm .readout .rdface{display:flex;align-items:stretch;width:100%;height:100%}
 
-  /* ZONE 1 — PRESET label + etched Orbitron digit (cloned from the tempo recipe; sapphire, quieter than the amber heartbeat) */
-  .sgm .readout .rdslot{display:flex;flex-direction:column;justify-content:center;gap:3px;height:52px;border-right:1px solid rgba(120,160,200,.12);padding-right:13px}
+  /* LEFT — PRESET stepper: label + etched Orbitron digit + digital ▲▼ + name. Drag vertically (or ↑↓) to step. */
+  .sgm .readout .rdpreset{flex:none;width:250px;display:flex;align-items:center;gap:13px;padding-right:16px;border-right:1px solid rgba(120,160,200,.12);cursor:ns-resize;-webkit-tap-highlight-color:transparent;touch-action:none;transition:opacity .3s}
+  .sgm .readout .rdpreset.dragging{cursor:grabbing}
+  .sgm .device.live .readout .rdpreset.yours{opacity:.55}                 /* off-preset: dimmed, honest (no text line) */
+  .sgm .readout .rdslot{display:flex;flex-direction:column;justify-content:center;gap:3px;flex:none}
   .sgm .readout .rdsl{font-family:ui-monospace,Menlo,monospace;font-size:.4rem;font-weight:600;letter-spacing:.26em;color:#2b3744}
   .sgm .device.live .readout .rdsl{color:#5f7a90}
-  .sgm .readout .rdnum{font-family:'Orbitron',ui-monospace,monospace;font-weight:500;font-size:1.55rem;line-height:1;color:transparent;-webkit-text-stroke:1.2px #1b2733;letter-spacing:.02em}
+  .sgm .readout .rdnumrow{display:flex;align-items:center;gap:8px}
+  .sgm .readout .rdnum{font-family:'Orbitron',ui-monospace,monospace;font-weight:500;font-size:1.5rem;line-height:1;color:transparent;-webkit-text-stroke:1.2px #1b2733;letter-spacing:.02em}
   .sgm .device.live .readout .rdnum{-webkit-text-stroke:1.2px color-mix(in srgb,var(--sapphire) 72%,#bfe6f8);text-shadow:0 0 9px color-mix(in srgb,var(--sapphire) 24%,transparent)}
-
-  /* ZONE 2 — name + hint, both single-line ellipsis (never wrap → never grow the 80px box) */
-  .sgm .readout .rddesc{min-width:0;display:flex;flex-direction:column;justify-content:center;gap:4px}
-  .sgm .readout .rdname,.sgm .readout .rdhint{font-family:ui-monospace,Menlo,monospace;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;letter-spacing:.03em}
-  .sgm .readout .rdname{font-size:.66rem;color:#2a3542}
+  .sgm .readout .rdspin{display:flex;flex-direction:column;gap:3px}
+  .sgm .readout .rdspin span{font-size:.52rem;line-height:.7;color:#26313d;cursor:pointer;user-select:none;padding:1px 3px;border-radius:3px;transition:color .15s,text-shadow .15s,background .15s}
+  .sgm .device.live .readout .rdspin span{color:#6f93ad}
+  .sgm .device.live .readout .rdspin span:hover{color:#eaffff;text-shadow:0 0 6px var(--sapphire);background:rgba(14,196,252,.09)}
+  .sgm .readout .rdspin span:active{transform:translateY(.5px)}
+  .sgm .readout .rdname{font-family:ui-monospace,Menlo,monospace;font-size:.64rem;letter-spacing:.03em;color:#2a3542;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1;min-width:0}
   .sgm .device.live .readout .rdname{color:#a4c5dd}
-  .sgm .device.live .readout .rdface.yours .rdname{color:#6f8ba1}     /* diverged: dimmer, honest */
-  .sgm .readout .rdhint{font-size:.5rem;color:#202a34}
-  .sgm .device.live .readout .rdhint{color:#516577}
 
-  /* ZONE 3 — ◀ ▶ steppers + divider + "learn this" chip (sapphire-hairline pills, dark until power) */
-  .sgm .readout .rdctl{display:flex;align-items:center;gap:9px}
-  .sgm .readout .rdstep{display:flex;gap:6px}
-  .sgm .readout .rddiv{width:1px;height:30px;background:linear-gradient(180deg,transparent,rgba(120,160,200,.14),transparent)}
-  .sgm .readout .rdchip{font-family:ui-monospace,Menlo,monospace;font-size:.5rem;letter-spacing:.1em;color:#2f3c49;border:1px solid rgba(80,110,140,.16);border-radius:7px;padding:5px 8px;cursor:pointer;user-select:none;background:rgba(8,15,24,.5);transition:color .2s,border-color .2s,box-shadow .2s,transform .08s;-webkit-tap-highlight-color:transparent}
-  .sgm .device.live .readout .rdchip{color:#a4c5dd;border-color:rgba(14,196,252,.26)}
-  .sgm .device.live .readout .rdchip:hover{color:#eaffff;border-color:rgba(14,196,252,.62);box-shadow:inset 0 0 9px -3px var(--sapphire),0 0 7px -2px color-mix(in srgb,var(--sapphire) 55%,transparent)}
-  .sgm .readout .rdchip:active{transform:translateY(1px)}
-  .sgm .readout .rdarrow{padding:5px 10px;font-size:.6rem;letter-spacing:0}
-  .sgm .readout .rdlearn{letter-spacing:.14em}
+  /* RIGHT — COACH feedback (the revived guidance, a/b/c lines) */
+  .sgm .readout .rdcoach{flex:1;min-width:0;display:flex;align-items:center;padding:0 17px}
+  .sgm .readout .rdcoach .rdwrap{display:flex;flex-direction:column;justify-content:center;gap:2px;width:100%}
+  .sgm .readout .rdcoach .rl{font-family:ui-monospace,Menlo,monospace;font-size:.58rem;letter-spacing:.05em;line-height:1.32;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;transition:opacity .5s ease,color .5s ease}
+  .sgm .device.live .readout .rdcoach .rl.a{color:#d2f1ff;font-weight:500;text-shadow:0 0 7px color-mix(in srgb,var(--sapphire) 48%,transparent)}
+  .sgm .device.live .readout .rdcoach .rl.b{color:#7fa8c4}
+  .sgm .device.live .readout .rdcoach .rl.c{color:#46586b}
+  .sgm .readout .rdcoach .rl.a::before{content:"▸ "}
+  .sgm .device.live .readout .rdcoach.rest .rl.a{color:#46586b;font-weight:400;text-shadow:none}
 
-  /* ── TUTORIAL overlay — body-level + position:fixed (viewport coords ignore .device zoom; no full-page bleed) ── */
+  /* FAR RIGHT — ? button: enter learn mode */
+  .sgm .readout .rdq{flex:none;align-self:center;margin:0 13px;width:27px;height:27px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:ui-monospace,Menlo,monospace;font-size:.82rem;font-weight:600;color:#2f3c49;border:1px solid rgba(80,110,140,.18);background:rgba(8,15,24,.5);cursor:pointer;user-select:none;transition:color .2s,border-color .2s,box-shadow .2s,transform .08s}
+  .sgm .device.live .readout .rdq{color:#a4c5dd;border-color:rgba(14,196,252,.3)}
+  .sgm .device.live .readout .rdq:hover{color:#eaffff;border-color:rgba(14,196,252,.72);box-shadow:inset 0 0 9px -3px var(--sapphire),0 0 8px -2px color-mix(in srgb,var(--sapphire) 55%,transparent)}
+  .sgm .readout .rdq:active{transform:translateY(1px)}
+
+  /* ── TUTORIAL overlay (body-level, viewport-fixed) — scrim + spotlight ring + tethered caption + LEARN-MODE panel over the readout ── */
+  .sgm-tut,.sgm-tut *{box-sizing:border-box}   /* body-level overlay is outside .sgm's reset — make explicit widths include padding (the LEARN plate) */
   .sgm-tut{position:fixed;inset:0;z-index:9998;pointer-events:none;font-family:ui-monospace,Menlo,monospace}
-  .sgm-tut .tut-cap{position:fixed;pointer-events:auto;background:transparent;cursor:default}     /* capture layer over the device — eats control operation (learn-only) */
-  .sgm-tut .tut-scrim{position:fixed;background:rgba(4,6,11,.82);pointer-events:none;box-shadow:inset 0 0 60px -10px rgba(14,196,252,.05)}   /* faint sapphire wash = "learn", not "power-off" */
+  .sgm-tut .tut-cap{position:fixed;pointer-events:auto;background:transparent;cursor:default}
+  .sgm-tut .tut-scrim{position:fixed;background:rgba(4,6,11,.82);pointer-events:none;box-shadow:inset 0 0 60px -10px rgba(14,196,252,.05)}
   .sgm-tut .tut-ring{position:fixed;pointer-events:none;border-radius:9px;opacity:0;
     box-shadow:0 0 0 1.5px #0ec4fc,0 0 15px -2px rgba(14,196,252,.6),inset 0 0 13px -4px rgba(14,196,252,.4);
     transition:left .22s cubic-bezier(.4,.04,.12,1),top .22s cubic-bezier(.4,.04,.12,1),width .22s cubic-bezier(.4,.04,.12,1),height .22s cubic-bezier(.4,.04,.12,1),opacity .18s ease}
@@ -2719,16 +2727,36 @@ const readoutEl=$('#readout');
     transition:opacity .18s ease,left .2s ease,top .2s ease}
   .sgm-tut .tut-cap2 .tt{display:block;font-size:.52rem;font-weight:600;letter-spacing:.14em;color:#7fbbdb;margin-bottom:5px}
   .sgm-tut .tut-cap2 .tb{display:block;font-size:.62rem;line-height:1.46;color:#dceef8;letter-spacing:.02em}
-  .sgm-tut .tut-banner{position:fixed;pointer-events:none;display:flex;align-items:center;gap:7px;padding:6px 11px;border-radius:8px;background:rgba(8,15,24,.9);box-shadow:inset 0 0 0 1px rgba(14,196,252,.32);font-size:.5rem;letter-spacing:.18em;color:#cfeaff}
-  .sgm-tut .tut-banner b{font-weight:600;letter-spacing:.22em;color:#7fbbdb}
-  .sgm-tut .tut-exit{position:fixed;pointer-events:auto;padding:7px 13px;border-radius:8px;font-size:.56rem;letter-spacing:.12em;color:#dff2ff;background:rgba(8,15,24,.94);box-shadow:inset 0 0 0 1px rgba(14,196,252,.4);cursor:pointer;transition:box-shadow .2s,transform .08s}
-  .sgm-tut .tut-exit:hover{box-shadow:inset 0 0 0 1px rgba(14,196,252,.72),0 0 11px -2px rgba(14,196,252,.55)}
-  .sgm-tut .tut-exit:active{transform:translateY(1px)}
+  /* the readout transforms into a big LEARN MODE plate with a big digital X (replaces the old banner + done chip) */
+  .sgm-tut .tut-learnpanel{position:fixed;pointer-events:none;display:flex;align-items:center;gap:18px;padding:0 22px;
+    background:linear-gradient(180deg,#071520,#02080e);
+    box-shadow:inset 0 0 0 1px rgba(14,196,252,.45),inset 0 2px 16px rgba(0,0,0,.6),inset 0 0 30px -6px rgba(14,196,252,.28)}
+  .sgm-tut .tut-learnpanel .lm{font-family:'Orbitron',ui-monospace,monospace;font-weight:500;font-size:1.4rem;letter-spacing:.34em;white-space:nowrap;color:transparent;-webkit-text-stroke:1.3px color-mix(in srgb,var(--sapphire,#0ec4fc) 78%,#bfe6f8);text-shadow:0 0 12px rgba(14,196,252,.35)}
+  .sgm-tut .tut-learnpanel .lsub{flex:1;font-size:.56rem;letter-spacing:.16em;color:#5e7e95;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .sgm-tut .tut-learnpanel .lx{pointer-events:auto;flex:none;width:40px;height:40px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:1.45rem;line-height:1;color:#dff2ff;border:1px solid rgba(14,196,252,.5);background:rgba(8,18,28,.6);cursor:pointer;transition:box-shadow .2s,transform .08s}
+  .sgm-tut .tut-learnpanel .lx:hover{box-shadow:inset 0 0 0 1px rgba(14,196,252,.85),0 0 14px -2px rgba(14,196,252,.6)}
+  .sgm-tut .tut-learnpanel .lx:active{transform:translateY(1px)}
   @media (prefers-reduced-motion: reduce){ .sgm-tut .tut-ring,.sgm-tut .tut-cap2{transition:none} }`;
   document.head.appendChild(s);
 })();
 
-function readoutSet(){}   /* retired: the live coach is gone. Stub kept so the parked bass-seq code (readoutSeqClose) stays a safe no-op. */
+/* ── coachRender / readoutSet — the revived coach writes its a/b/c feedback into the RIGHT half (.rdcoach) ── */
+let _rdKey='';
+const coachEl=()=>document.querySelector('#readout .rdcoach');
+function coachRender(o){
+  const el=coachEl();if(!el)return;
+  o=o||{};const a=o.a||'',b=o.b||'',c=o.c||'';
+  const key=a+'|'+b+'|'+c+'|'+(o.rest?'1':'0');
+  if(key===_rdKey)return; _rdKey=key;                       // no-op guard — never rebuild identical text
+  el.classList.toggle('rest',!!o.rest);
+  let h='<span class="rdwrap">';
+  if(a)h+='<span class="rl a">'+a+'</span>';
+  if(b)h+='<span class="rl b">'+b+'</span>';
+  if(c)h+='<span class="rl c">'+c+'</span>';
+  el.innerHTML=h+'</span>';
+}
+/* back-compat single-line seam — the parked bass-seq code may still call readoutSet(text) */
+function readoutSet(text){coachRender(text?{a:text}:{rest:true});}
 
 /* ── PRESET_BASE: a COMPLETE default snapshot. Every preset is baked as {...PRESET_BASE,...snap}
       so applySnapshot never meets an undefined field (makeKnob's toFixed throws on undefined). ── */
@@ -2807,44 +2835,226 @@ const TUTOR={
 };
 
 /* ── RD: the readout controller (preset stepper + tutorial overlay) ── */
+/* ── COACH — the revived guidance feedback. Same driver as before, but it now renders into the RIGHT
+      half (.rdcoach) and shows the first invite on boot (so the screen never reads blank). ── */
+const COACH=(function(){
+  const U={
+    orient:{a:'press  A S D F  to play',b:'every key is a note — try a few'},
+    chord:{a:'nice — now hold a few at once',b:'two or three keys makes a chord'},
+    groove:{a:'holding a chord? tap  SPACE',b:'it drops a beat under you'},
+    bass:{a:"beat's in — now tap  B",b:'the bass follows the notes you play'},
+    filter:{a:'drag the node in the big screen',b:'sideways opens it, down shaves the top'},
+    drift:{a:'drag inside the  VOICE  pad',b:'it morphs the voice — bright to dark'},
+    towers:{a:'drag any tower up',b:'DRIVE  MOD  DELAY  REVERB'},
+    perform:{a:'hold  Z X C  or  M  while you play',b:'gate chops it · dive bends the pitch'},
+    arp:{a:'flip  ARP  on, hold a chord',b:'it plays the chord for you, in time'},
+    rec:{a:'happy with it? hit  REC',b:'it counts you in, then records'},
+    jam:{a:"that's a take — it's looping",b:'play over it · drag  ⌄  to crop'},
+    share:{a:'like it? open  ⌄  and  SHARE',b:'copies a link to this exact take'},
+    mastery:{a:"you've got it",b:''},
+    key:{a:'set the  KEY',b:'every note stays in tune'},
+    octmove:{a:'hold a chord, then the arrows',b:'they  MOVE  the chord, not the octave'},
+    latch:{a:'arp on? tap  HOLD',b:'it holds the chord — hands free'},
+    pattern:{a:'tap a pattern',b:'FLOOR  BACK  HALF  BREAK'},
+    drumfeel:{a:'SWING  DENSITY  GRIT',b:'reshape the drum feel'},
+    cover:{a:'the  DRUM COVER  slider',b:'muffles the beat, like a closed lid'},
+    sidechain:{a:'raise  SIDECHAIN',b:'the synth breathes with the kick'},
+    bassint:{a:'push  BASS  up',b:'deep and clean, out to a buzz'},
+    tempo:{a:'drag the  BPM  screen',b:'to change the speed'},
+    voicein:{a:'tap  VOICE IN  and sing',b:'it grabs 2 bars on its own, then loops'},
+    treat:{a:'singing a loop?',b:'add  TELEPHONE  or  ROBOT  to it'},
+    dice:{a:'out of ideas? the  DICE',b:'rolls a whole new sound'},
+  };
+  const LADDER=[
+    {unit:'orient', need:'played',  pre:[]},
+    {unit:'chord',  need:'chord',   pre:['played']},
+    {unit:'groove', need:'beat',    pre:['chord']},
+    {unit:'bass',   need:'bass',    pre:['beat']},
+    {unit:'filter', need:'filter',  pre:['beat']},
+    {unit:'drift',  need:'drift',   pre:['beat']},
+    {unit:'towers', need:'fx',      pre:['beat']},
+    {unit:'perform',need:'gesture', pre:['beat','shaped']},
+    {unit:'arp',    need:'arp',     pre:['chord']},
+    {unit:'rec',    need:'rec',     pre:['beat','chord']},
+    {unit:'jam',    need:'jam',     pre:['rec']},
+    {unit:'share',  need:'share',   pre:['rec']},
+  ];
+  const WHISPERS=[
+    {unit:'octmove',  need:'octmove',  pre:['chord']},
+    {unit:'latch',    need:'latch',    pre:['arp']},
+    {unit:'pattern',  need:'pattern',  pre:['beat']},
+    {unit:'drumfeel', need:'drumfeel', pre:['beat']},
+    {unit:'cover',    need:'cover',    pre:['beat']},
+    {unit:'sidechain',need:'sidechain',pre:['beat','bass']},
+    {unit:'bassint',  need:'bassint',  pre:['bass']},
+    {unit:'tempo',    need:'tempo',    pre:['beat']},
+    {unit:'key',      need:'key',      pre:['played']},
+    {unit:'treat',    need:'treat',    pre:['voicein']},
+    {unit:'dice',     need:'dice',     pre:[]},
+    {unit:'voicein',  need:'voicein',  pre:[]},
+  ];
+  const CLICKS=[];
+  const NOTE_THR=0.015;
+  let L,seen,snap,now0,lastInput,lastPressN,curUnit,curAt,idleGate,whispers,terminal,started=false,pollId=null,presetSettleUntil=0;
+
+  const tnow=()=>performance.now();
+  function freshLedger(){const o={};['played','chord','beat','bass','filter','drift','motion','fx',
+    'gesture','arp','latch','rec','jam','share','key','octmove','pattern','drumfeel','cover',
+    'sidechain','bassint','tempo','voicein','treat','dice','demo','shaped'].forEach(k=>o[k]=0);return o;}
+  function mark(f){if(L[f])return false;L[f]=1;idleGate=2200;
+    if(f==='filter'||f==='drift'||f==='motion'||f==='fx')L.shaped=1;return true;}
+  const pre=a=>a.every(f=>L[f]);
+  function snapFx(){const f=eng.fx;return{cutoff:f.cutoff,res:f.res,vx:f.vx,vy:f.vy,reverb:f.reverb,tempo:f.tempo,pattern:f.pattern,bassHeat:f.bassHeat};}
+  function isRest(){const e=coachEl();return e&&e.classList.contains('rest');}
+
+  function playing(){
+    if(!eng)return false;
+    if((tnow()-lastInput)<1200)return true;
+    const g=eng.gestures||{};if(g.lift||g.gate||g.dive)return true;
+    if(REC.replaying)return true;
+    if(eng.micLevel&&eng.micLevel()>NOTE_THR)return true;
+    return false;
+  }
+  function frozen(){
+    if(!inView)return true;
+    if(RD&&RD.tutOn)return true;                            // paused while learn mode covers the screen
+    return false;
+  }
+  function pollControls(){
+    if(REC.replaying||jamReplaying)return;
+    if(tnow()<presetSettleUntil)return;
+    const f=eng.fx,d=0.05;
+    if(Math.abs(f.cutoff-snap.cutoff)>d||Math.abs(f.res-snap.res)>d)mark('filter');
+    if(Math.abs(f.vx-snap.vx)>d||Math.abs(f.vy-snap.vy)>d)mark('drift');
+    if(f.amount>0.001)mark('motion');
+    if(f.drive>0.02||f.mod>0.02||f.delay>0.02||(f.reverb-snap.reverb)>0.05)mark('fx');
+    if(f.beat)mark('beat'); if(f.bass)mark('bass'); if(eng.arpOn)mark('arp');
+    if(f.sidechain>0.01)mark('sidechain');
+    if(Math.abs(f.tempo-snap.tempo)>0.5)mark('tempo');
+    if(f.pattern!==snap.pattern)mark('pattern');
+    if(Math.abs(f.bassHeat-snap.bassHeat)>d)mark('bassint');
+    if(keyRoot!==0||scaleMode!=='major')mark('key');
+    if(eng.vocal||eng.loopActive)mark('voicein');
+    if(eng.vocal&&eng.vocal.treat&&eng.vocal.treat!=='dry')mark('treat');
+    const g=eng.gestures||{};if(g.lift||g.gate||g.dive)mark('gesture');
+  }
+  function ladderList(){const o=[];for(const r of LADDER)if(!L[r.need]&&pre(r.pre)&&!seen.has(r.unit))o.push(r.unit);return o;}
+  function nextWhisper(){for(const w of WHISPERS)if(!L[w.need]&&pre(w.pre)&&!seen.has(w.unit))return w.unit;return null;}
+  function masteryHit(){if(!(L.played&&L.chord&&L.beat))return false;
+    return [L.bass,L.shaped,L.gesture,L.arp,(L.rec||L.jam||L.share)].filter(Boolean).length>=3;}
+  function show(unitId,horizonId){const u=U[unitId];if(!u)return;
+    seen.add(unitId);curUnit=unitId;curAt=tnow();
+    coachRender({a:u.a,b:u.b,c:horizonId&&U[horizonId]?U[horizonId].a:''});}
+  function settle(){if(curUnit&&U[curUnit])coachRender({a:U[curUnit].a,b:U[curUnit].b,c:'',rest:true});}
+
+  function resolve(){
+    if(!live||!eng||!started)return;
+    const pn=piano.querySelectorAll('.press').length;
+    if(pn!==lastPressN){lastPressN=pn;lastInput=tnow();if(pn>=2)mark('chord');}
+    if(frozen()){pollControls();return;}
+    pollControls();
+    if(playing()){settle();return;}
+    if(terminal)return;
+    const dwell=reduceMq.matches?5000:3200;
+    const inDwell=curUnit&&!isRest()&&(tnow()-curAt)<dwell;
+
+    if(masteryHit()&&!seen.has('mastery')){if(!inDwell){show('mastery');terminal=true;}return;}
+
+    const lad=ladderList();
+    if(lad.length){
+      if(!inDwell)show(lad[0],lad[1]||null);
+      return;
+    }
+    if(!L.played)return;                                    // on boot, hold the 'press A S D F' invite — don't idle-whisper before they've played
+    if(!inDwell&&(tnow()-curAt)>=idleGate){
+      const w=nextWhisper();
+      if(w&&whispers<8){whispers++;show(w);idleGate=Math.min(idleGate*2,20000);}
+    }
+  }
+
+  function onKeydown(e){
+    const k=(e.key||'').toLowerCase();
+    if(QO[k]!=null){lastInput=tnow();if(!REC.replaying)mark('played');if(jamOn)mark('jam');return;}
+    if(e.code==='Space'||e.code==='KeyB'){lastInput=tnow();return;}
+    if(e.code==='KeyZ'||e.code==='KeyX'||e.code==='KeyC'||e.code==='KeyM'){lastInput=tnow();}
+  }
+  function clickFlag(sel,flag,preset){const el=$(sel);if(!el)return;
+    const h=()=>{if(REC.replaying)return;mark(flag);
+      if(preset){presetSettleUntil=tnow()+700;snap=snapFx();
+        ['filter','drift','motion','fx','pattern'].forEach(f=>{L[f]=1;});L.shaped=1;
+        ['filter','drift','towers'].forEach(id=>seen.add(id));}};
+    el.addEventListener('click',h);CLICKS.push([el,h]);}
+
+  function start(){
+    if(started||!eng)return;started=true;
+    L=freshLedger();seen=new Set();terminal=false;whispers=0;idleGate=2200;
+    now0=lastInput=tnow();presetSettleUntil=0;curUnit=null;curAt=0;
+    lastPressN=piano.querySelectorAll('.press').length;snap=snapFx();
+    show('orient','chord');                                 // boot: invite straight away (the screen is never blank)
+    window.addEventListener('keydown',onKeydown,true);
+    clickFlag('#recBtn','rec');clickFlag('#takePlay','jam');clickFlag('#tkshare','share');
+    clickFlag('#latchBtn','latch');clickFlag('#dice','dice',true);
+    pollId=setInterval(resolve,600);
+  }
+  function stop(){
+    if(pollId){clearInterval(pollId);pollId=null;}
+    window.removeEventListener('keydown',onKeydown,true);
+    CLICKS.forEach(([el,h])=>el.removeEventListener('click',h));CLICKS.length=0;
+    started=false;curUnit=null;_rdKey='';
+    const e=coachEl();if(e){e.classList.remove('rest');e.innerHTML='';}
+  }
+  return{start,stop};
+})();
+
+/* ── RD — the PRESET stepper (left) + the ? / learn-mode (right of the coach). ── */
 const RD=(function(){
   const tnow=()=>performance.now();
-  const reduce=()=>reduceMq.matches;
-  let face=null,pre=null,numEl,nameEl,hintEl;
-  let idx=0,presetState='browse';                     // 'browse' | 'loaded' | 'yours'
-  let pollId=null,settleUntil=0,baseline=null,diverged=false;
-  // tutorial
-  let tutOn=false,layer=null,capEl=null,scrims=[],ringEl=null,capt=null,exitEl=null,bannerEl=null;
+  let face=null,numEl,nameEl;
+  let idx=0,presetState='browse';                          // 'browse' | 'loaded' | 'yours'
+  let pollId=null,settleUntil=0,baseline=null,diverged=false,wasAuto=false,keyH=null;
+  // learn mode
+  let tutOn=false,layer=null,capEl=null,scrims=[],ringEl=null,capt=null,learnP=null;
   let lastSel=null,lastEl=null;
 
   function keyEnter(el,fn){el.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();fn();}});}
 
-  /* ---- DOM (built once, listeners persist across power cycles) ---- */
   function ensureDom(){
     if(face)return;
     face=document.createElement('div');face.className='rdface';
-    face.innerHTML='<div class="rdslot"><span class="rdsl">PRESET</span><b class="rdnum">01</b></div>'+
-      '<div class="rddesc"><span class="rdname"></span><span class="rdhint"></span></div>'+
-      '<div class="rdctl"><div class="rdstep">'+
-        '<span class="rdchip rdarrow" data-d="-1" role="button" tabindex="0" aria-label="Previous preset">◀</span>'+
-        '<span class="rdchip rdarrow" data-d="1" role="button" tabindex="0" aria-label="Next preset">▶</span>'+
-      '</div><span class="rddiv"></span>'+
-      '<span class="rdchip rdlearn" role="button" tabindex="0" aria-label="Learn the controls">learn this</span></div>';
-    readoutEl.insertBefore(face,readoutEl.firstChild);     // sits BEFORE the parked .rdseq (left intact)
-    numEl=face.querySelector('.rdnum');nameEl=face.querySelector('.rdname');hintEl=face.querySelector('.rdhint');
-    face.querySelectorAll('.rdarrow').forEach(b=>{const go=()=>step(+b.dataset.d);b.addEventListener('click',go);keyEnter(b,go);});
-    const learn=face.querySelector('.rdlearn');learn.addEventListener('click',enterTutorial);keyEnter(learn,enterTutorial);
+    face.innerHTML=
+      '<div class="rdpreset" role="group" aria-label="Presets — drag, or use the up and down arrow keys">'+
+        '<div class="rdslot"><span class="rdsl">PRESET</span>'+
+          '<span class="rdnumrow"><b class="rdnum">01</b>'+
+            '<span class="rdspin"><span class="rdup" role="button" tabindex="0" aria-label="Next preset">▲</span><span class="rddn" role="button" tabindex="0" aria-label="Previous preset">▼</span></span>'+
+          '</span>'+
+        '</div>'+
+        '<span class="rdname"></span>'+
+      '</div>'+
+      '<div class="rdcoach" aria-live="polite"></div>'+
+      '<span class="rdq" role="button" tabindex="0" aria-label="Learn the controls">?</span>';
+    readoutEl.insertBefore(face,readoutEl.firstChild);      // sits BEFORE the parked .rdseq (left intact)
+    numEl=face.querySelector('.rdnum');nameEl=face.querySelector('.rdname');
+    const up=face.querySelector('.rdup'),dn=face.querySelector('.rddn');
+    up.addEventListener('click',e=>{e.stopPropagation();step(1);});keyEnter(up,()=>step(1));
+    dn.addEventListener('click',e=>{e.stopPropagation();step(-1);});keyEnter(dn,()=>step(-1));
+    up.addEventListener('pointerdown',e=>e.stopPropagation());   // a tap on an arrow must not start a drag
+    dn.addEventListener('pointerdown',e=>e.stopPropagation());
+    const q=face.querySelector('.rdq');q.addEventListener('click',enterTutorial);keyEnter(q,enterTutorial);
+    installDrag(face.querySelector('.rdpreset'));
+  }
+  function installDrag(el){                                 // vertical drag steps presets, like the BPM field
+    let dragging=false,accum=0,sy=0;
+    el.addEventListener('pointerdown',e=>{if(!live||!eng)return;dragging=true;accum=0;sy=e.clientY;try{el.setPointerCapture(e.pointerId)}catch(_){}el.classList.add('dragging');});
+    el.addEventListener('pointermove',e=>{if(!dragging)return;accum+=(sy-e.clientY);sy=e.clientY;while(accum>=16){accum-=16;step(1);}while(accum<=-16){accum+=16;step(-1);}});
+    const end=()=>{dragging=false;el.classList.remove('dragging');};
+    el.addEventListener('pointerup',end);el.addEventListener('pointercancel',end);
   }
 
-  /* ---- presets ---- */
   function renderPreset(){
-    if(!face)return;const p=PRESETS[idx]||{name:'',hint:''};
+    if(!face)return;const p=PRESETS[idx]||{name:''};
     numEl.textContent=String(idx+1).padStart(2,'0');
     nameEl.textContent=p.name||('preset '+(idx+1));
-    if(presetState==='browse')hintEl.textContent='◀ ▶ to hear it  ·  learn this →';
-    else if(presetState==='yours')hintEl.textContent='now yours  ·  ◀ ▶ for a preset';
-    else hintEl.textContent=p.hint||'';
-    face.classList.toggle('yours',presetState==='yours');
+    face.querySelector('.rdpreset').classList.toggle('yours',presetState==='yours');
   }
   function snapFx(){const f=eng.fx;return{cutoff:f.cutoff,res:f.res,vx:f.vx,vy:f.vy,amount:f.amount,drive:f.drive,delay:f.delay,reverb:f.reverb,tempo:f.tempo,sidechain:f.sidechain,bassHeat:f.bassHeat,swing:f.swing,density:f.density,grit:f.character,mod:f.mod,
     beat:!!f.beat,bass:!!f.bass,arp:$('#arpBtn').dataset.on==='1',pattern:f.pattern,key:keyRoot,oct:octOff,mode:scaleMode};}
@@ -2854,38 +3064,39 @@ const RD=(function(){
     if(a.beat!==b.beat||a.bass!==b.bass||a.arp!==b.arp||a.pattern!==b.pattern||a.key!==b.key||a.oct!==b.oct||a.mode!==b.mode)return true;return false;}
   function step(d){
     if(!live||!eng)return;
-    if(presetState!=='browse')idx=(idx+(d<0?PRESETS.length-1:1))%PRESETS.length;  // first press from browse PLAYS the shown slot (don't skip past 01); after that, step normally
+    if(presetState!=='browse')idx=(idx+(d<0?PRESETS.length-1:1))%PRESETS.length;   // first press from browse plays the shown slot
     settleUntil=tnow()+700;
     try{applySnapshot(PRESETS[idx].snap);}catch(e){/* one bad preset must not dead-end the stepper */}
     baseline=snapFx();diverged=false;presetState='loaded';renderPreset();
   }
-  let wasAuto=false;
   function poll(){
     if(!live||!eng||!inView||tutOn)return;
-    const auto=REC.replaying||jamReplaying||jamOn;          // a demo/take/jam is driving fx — that's the machine, not the visitor
+    const auto=REC.replaying||jamReplaying||jamOn;
     if(auto){wasAuto=true;return;}
-    if(wasAuto){wasAuto=false;if(presetState==='loaded'){baseline=snapFx();settleUntil=tnow()+700;}return;}  // re-baseline when the auto-player ends, so its leftover state isn't read as "now yours"
+    if(wasAuto){wasAuto=false;if(presetState==='loaded'){baseline=snapFx();settleUntil=tnow()+700;}return;}
     if(tnow()<settleUntil)return;
-    if(presetState==='loaded'&&!diverged&&baseline&&divergedFrom(snapFx(),baseline)){
-      diverged=true;presetState='yours';renderPreset();
-    }
+    if(presetState==='loaded'&&!diverged&&baseline&&divergedFrom(snapFx(),baseline)){diverged=true;presetState='yours';renderPreset();}
+  }
+  function onArrowKey(e){
+    if(!live||!inView||tutOn)return;
+    if(e.code==='ArrowUp'){e.preventDefault();step(1);}
+    else if(e.code==='ArrowDown'){e.preventDefault();step(-1);}
   }
 
-  /* ---- tutorial ---- */
+  /* ---- learn mode ---- */
   function enterTutorial(){
     if(!live||!eng||tutOn)return;tutOn=true;
-    try{stopAll();}catch(e){}                               // honest UI: toggles off, notes released, auto-sound stopped
-    try{eng.kill();}catch(e){}                              // total silence incl. drone/mic/loop; transport0 reset, master un-ducked, engine still playable
-    // start the lesson from a clean device: close any open popover, and clear the now-silent loop pill so no caption describes a dead loop
+    try{stopAll();}catch(e){}
+    try{eng.kill();}catch(e){}
     try{const lo=document.getElementById('loopover');if(lo)lo.classList.remove('open');
-      const to=document.getElementById('takeover');if(to)to.classList.remove('open');   // rec-looper crop popover
+      const to=document.getElementById('takeover');if(to)to.classList.remove('open');
       const kp=document.getElementById('keyPop');if(kp)kp.classList.remove('open');
       const lp=document.getElementById('loopPill');if(lp){lp.setAttribute('aria-expanded','false');lp.classList.remove('show','loop-paused');}}catch(e){}
     buildOverlay();
     document.addEventListener('keydown',onTutKey,true);
     window.addEventListener('scroll',repositionAll,true);
     window.addEventListener('resize',repositionAll);
-    lastSel=lastEl=null;dimWholeDevice();                   // nothing focused yet
+    lastSel=lastEl=null;dimWholeDevice();
   }
   function exitTutorial(){
     if(!tutOn)return;tutOn=false;
@@ -2893,8 +3104,8 @@ const RD=(function(){
     window.removeEventListener('scroll',repositionAll,true);
     window.removeEventListener('resize',repositionAll);
     if(layer){layer.remove();layer=null;}
-    capEl=ringEl=capt=exitEl=bannerEl=null;scrims=[];lastSel=lastEl=null;
-    presetState='browse';renderPreset();                    // audio was killed → back to browse of the same slot
+    capEl=ringEl=capt=learnP=null;scrims=[];lastSel=lastEl=null;
+    presetState='browse';renderPreset();
   }
   function onTutKey(e){if(e.key==='Escape'||e.key==='Esc'){e.preventDefault();exitTutorial();}}
   function devRect(){return device.getBoundingClientRect();}
@@ -2906,27 +3117,27 @@ const RD=(function(){
     for(let i=0;i<4;i++){const s=document.createElement('div');s.className='tut-scrim';layer.appendChild(s);scrims.push(s);}
     ringEl=document.createElement('div');ringEl.className='tut-ring';
     capt=document.createElement('div');capt.className='tut-cap2';capt.innerHTML='<span class="tt"></span><span class="tb"></span>';
-    bannerEl=document.createElement('div');bannerEl.className='tut-banner';bannerEl.innerHTML='<b>LEARN</b><span>hover anything</span>';
-    exitEl=document.createElement('div');exitEl.className='tut-exit';exitEl.textContent='✕ done';exitEl.setAttribute('role','button');exitEl.tabIndex=0;
-    exitEl.addEventListener('click',exitTutorial);keyEnter(exitEl,exitTutorial);
-    layer.appendChild(capEl);layer.appendChild(ringEl);layer.appendChild(capt);layer.appendChild(bannerEl);layer.appendChild(exitEl);
+    learnP=document.createElement('div');learnP.className='tut-learnpanel';
+    learnP.innerHTML='<span class="lm">LEARN MODE</span><span class="lsub">hover any control to learn it</span><span class="lx" role="button" tabindex="0" aria-label="Exit learn mode">✕</span>';
+    learnP.querySelector('.lx').addEventListener('click',exitTutorial);keyEnter(learnP.querySelector('.lx'),exitTutorial);
+    layer.appendChild(capEl);layer.appendChild(ringEl);layer.appendChild(capt);layer.appendChild(learnP);
     document.body.appendChild(layer);
     capEl.addEventListener('pointermove',onTutMove);
     capEl.addEventListener('pointerdown',onTutMove);
     sizeChrome();
   }
   function sizeChrome(){const d=devRect();rectStyle(capEl,d.left,d.top,d.width,d.height);
-    bannerEl.style.left=(d.left+12)+'px';bannerEl.style.top=(d.top+12)+'px';
-    exitEl.style.left=(d.right-exitEl.offsetWidth-12)+'px';exitEl.style.top=(d.top+12)+'px';}
+    const r=readoutEl.getBoundingClientRect();   // LEARN-MODE plate sits exactly over the readout (position only — keep its display:flex)
+    learnP.style.left=r.left+'px';learnP.style.top=r.top+'px';learnP.style.width=r.width+'px';learnP.style.height=r.height+'px';}
   function dimWholeDevice(){const d=devRect();rectStyle(scrims[0],d.left,d.top,d.width,d.height);
     scrims[1].style.display='none';scrims[2].style.display='none';scrims[3].style.display='none';
     ringEl.style.opacity='0';capt.style.opacity='0';}
   function setScrims(c){const d=devRect();
     const cl=Math.max(c.left,d.left),cr=Math.min(c.right,d.right),ct=Math.max(c.top,d.top),cb=Math.min(c.bottom,d.bottom);
-    rectStyle(scrims[0],d.left,d.top,d.width,ct-d.top);          // top
-    rectStyle(scrims[1],d.left,cb,d.width,d.bottom-cb);          // bottom
-    rectStyle(scrims[2],d.left,ct,cl-d.left,cb-ct);              // left
-    rectStyle(scrims[3],cr,ct,d.right-cr,cb-ct);                 // right
+    rectStyle(scrims[0],d.left,d.top,d.width,ct-d.top);
+    rectStyle(scrims[1],d.left,cb,d.width,d.bottom-cb);
+    rectStyle(scrims[2],d.left,ct,cl-d.left,cb-ct);
+    rectStyle(scrims[3],cr,ct,d.right-cr,cb-ct);
   }
   function placeRing(c){ringEl.style.left=(c.left-3)+'px';ringEl.style.top=(c.top-3)+'px';ringEl.style.width=(c.width+6)+'px';ringEl.style.height=(c.height+6)+'px';ringEl.style.opacity='1';}
   function placeCaption(c){const d=devRect();const cw=capt.offsetWidth||224,chh=capt.offsetHeight||62,gap=11;
@@ -2941,7 +3152,7 @@ const RD=(function(){
     const under=document.elementFromPoint(e.clientX,e.clientY);
     capEl.style.pointerEvents='';
     const m=tutMatch(under);
-    if(!m)return;                                            // between controls → keep the last caption pinned
+    if(!m)return;
     if(m.sel===lastSel)return;
     lastSel=m.sel;lastEl=m.el;focusEl(m.el,m.entry);
   }
@@ -2949,26 +3160,25 @@ const RD=(function(){
     if(lastEl&&document.contains(lastEl)){const c=lastEl.getBoundingClientRect();setScrims(c);placeRing(c);placeCaption(c);}
     else dimWholeDevice();}
 
-  /* ---- lifecycle (the two seams) ---- */
   function start(){
-    if(!live)return;
-    ensureDom();
+    if(!live)return;ensureDom();
     idx=0;presetState='browse';diverged=false;baseline=null;
-    readoutEl.dataset.mode='preset';
-    renderPreset();
+    readoutEl.dataset.mode='preset';renderPreset();
     if(!pollId)pollId=setInterval(poll,600);
+    if(!keyH){keyH=onArrowKey;window.addEventListener('keydown',keyH);}
   }
   function stop(){
     if(pollId){clearInterval(pollId);pollId=null;}
-    if(tutOn)exitTutorial();                                 // safety: power-off while in tutorial
+    if(keyH){window.removeEventListener('keydown',keyH);keyH=null;}
+    if(tutOn)exitTutorial();
     presetState='browse';diverged=false;baseline=null;
   }
-  return{start,stop,_enter:enterTutorial,_exit:exitTutorial,get tutOn(){return tutOn;}};
+  return{start,stop,get tutOn(){return tutOn;}};
 })();
 
-/* the two seam names finishPower()/doPowerOff() already call */
-function readoutStart(){RD.start();}
-function readoutStop(){RD.stop();if(typeof readoutSeqClose==='function')readoutSeqClose(true);}   // RD.start() re-asserts data-mode='preset' on next power-on, so the parked seq's 'coach' reset is harmless
+/* the two seam names finishPower()/doPowerOff() already call — now start/stop BOTH presets and the coach */
+function readoutStart(){RD.start();COACH.start();}
+function readoutStop(){RD.stop();COACH.stop();if(typeof readoutSeqClose==='function')readoutSeqClose(true);}
 
 /* ── BASS STEP SEQUENCER — takes over the readout when PLUCK is armed ── */
 const SEQ_MULTS=[{l:'×½',v:.5},{l:'×1',v:1},{l:'×2',v:2}];
