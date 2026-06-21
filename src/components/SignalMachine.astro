@@ -1403,26 +1403,48 @@ function makeEngine(ctx){
   const drumLP1=ctx.createBiquadFilter();drumLP1.type='lowpass';drumLP1.frequency.value=fx.drumCover;drumLP1.Q.value=0.6;
   const drumLP2=ctx.createBiquadFilter();drumLP2.type='lowpass';drumLP2.frequency.value=fx.drumCover;drumLP2.Q.value=0.6;
   const drumShape=ctx.createWaveShaper();drumShape.oversample='2x';   // GRIT: clean (null curve) until character>0
+  const drumGlue=ctx.createDynamicsCompressor();drumGlue.threshold.value=-8;drumGlue.knee.value=12;drumGlue.ratio.value=1.8;drumGlue.attack.value=.006;drumGlue.release.value=.15;   // GENTLE bus glue: only catches the loud peaks (light ratio, high threshold) so the hits read as ONE kit without inflating RMS — drums bypass the synth 'glue' comp, so they get their own
+  const drumWarm=ctx.createWaveShaper();drumWarm.curve=(()=>{const n=256,c=new Float32Array(n);for(let i=0;i<n;i++){const x=i/(n-1)*2-1;c[i]=Math.tanh(x*1.18);}return c;})();drumWarm.oversample='2x';   // always-on console warmth — near-unity tanh soft-clip (adds harmonic glue, ~level-neutral) so the kit sounds produced even at GRIT 0
   const drumTrim=ctx.createGain();drumTrim.gain.value=1;              // level compensation — saturation boosts loudness, trim pulls it back
-  drumLP1.connect(drumLP2);drumLP2.connect(drumShape);drumShape.connect(drumTrim);drumTrim.connect(drumBus);
+  drumLP1.connect(drumLP2);drumLP2.connect(drumShape);drumShape.connect(drumGlue);drumGlue.connect(drumWarm);drumWarm.connect(drumTrim);drumTrim.connect(drumBus);
+  /* drumSat — fixed pre-cover saturation for the SYNTHESIZED tonal bodies (kick body+sub, snare modes). Adds weight + harmonics; the noise layers stay crisp (straight to drumLP1). */
+  const drumSat=ctx.createWaveShaper();drumSat.curve=(()=>{const n=256,c=new Float32Array(n);for(let i=0;i<n;i++){const x=i/(n-1)*2-1;c[i]=Math.tanh(x*1.4);}return c;})();drumSat.oversample='2x';drumSat.connect(drumLP1);   // gentle soft-clip (center slope ~1.4, peak ~-1dB): adds harmonics/weight to the tonal bodies WITHOUT the huge makeup a driveCurve would give
   const counts={k:0,s:0,h:0,b:0};
   function noiseBurst(t,filterType,filterHz,q,peak,dur){if(peak<.0008)return;const nb=ctx.createBufferSource();nb.buffer=nbuf;if(dur>.14)nb.loop=true;
     const nf=ctx.createBiquadFilter();nf.type=filterType;nf.frequency.value=filterHz;nf.Q.value=q;
     const ng=ctx.createGain();ng.gain.setValueAtTime(peak,t);ng.gain.exponentialRampToValueAtTime(.002,t+dur);ng.gain.linearRampToValueAtTime(0,t+dur+.008);
     nb.connect(nf);nf.connect(ng);ng.connect(drumLP1);nb.start(t);nb.stop(t+dur+.02);}
   function kick(t,vel=1){if(vel<.02)return;counts.k++;
-    const o=ctx.createOscillator();o.type='sine';o.frequency.setValueAtTime(150,t);o.frequency.exponentialRampToValueAtTime(44,t+.11);   // start a touch lower (150) so the pitch transient ticks less
-    const g=ctx.createGain();g.gain.setValueAtTime(.0001,t);g.gain.exponentialRampToValueAtTime(.9*vel,t+.009);g.gain.exponentialRampToValueAtTime(.02*vel,t+.18);g.gain.linearRampToValueAtTime(0,t+.205);   // 9ms attack (was 5ms) — softens the click that survives the cover
-    o.connect(g);g.connect(drumLP1);o.start(t);o.stop(t+.22);
-    noiseBurst(t,'bandpass',2400,0.7,.1*vel,.018);}   // beater transient: quieter (.1 was .3) + lower (2.4k was 3.4k) + shorter — tames the open click
+    // BODY — punchy pitch sweep (165->48) into the saturator: the attack thump + its harmonics
+    const o=ctx.createOscillator();o.type='sine';o.frequency.setValueAtTime(165,t);o.frequency.exponentialRampToValueAtTime(48,t+.085);
+    const g=ctx.createGain();g.gain.setValueAtTime(.0001,t);g.gain.exponentialRampToValueAtTime(.86*vel,t+.009);g.gain.exponentialRampToValueAtTime(.02*vel,t+.17);g.gain.linearRampToValueAtTime(0,t+.2);   // 9ms attack keeps it click-free through the cover
+    o.connect(g);g.connect(drumSat);o.start(t);o.stop(t+.22);
+    // SUB TAIL — a lower, longer sine under the body for weight/boom
+    const s=ctx.createOscillator();s.type='sine';s.frequency.setValueAtTime(82,t);s.frequency.exponentialRampToValueAtTime(43,t+.06);
+    const sg=ctx.createGain();sg.gain.setValueAtTime(.0001,t);sg.gain.exponentialRampToValueAtTime(.28*vel,t+.012);sg.gain.exponentialRampToValueAtTime(.02*vel,t+.18);sg.gain.linearRampToValueAtTime(0,t+.21);
+    s.connect(sg);sg.connect(drumSat);s.start(t);s.stop(t+.24);
+    noiseBurst(t,'bandpass',2400,0.7,.1*vel,.018);}   // beater transient stays crisp (direct to drumLP1)
   function snare(t,vel=1){if(vel<.02)return;counts.s++;
-    noiseBurst(t,'bandpass',1800,0.9,.5*vel,.11);
-    const o=ctx.createOscillator();o.type='triangle';o.frequency.setValueAtTime(190,t);o.frequency.exponentialRampToValueAtTime(130,t+.08);
-    const g=ctx.createGain();g.gain.setValueAtTime(.28*vel,t);g.gain.exponentialRampToValueAtTime(.005,t+.1);g.gain.linearRampToValueAtTime(0,t+.11);
-    o.connect(g);g.connect(drumLP1);o.start(t);o.stop(t+.12);}
-  function hat(t,vel=1){counts.h++;noiseBurst(t,'highpass',7200,0.7,.16*vel,.035);}
-  function clap(t,vel=1){[0,.009,.019,.032].forEach((d,i)=>noiseBurst(t+d,'bandpass',1250,1.3,(i===3?.5:.3)*vel,.04));}
-  function openhat(t,vel=1){noiseBurst(t,'highpass',7000,0.7,.13*vel,.17);}
+    // TONAL BODY — two detuned modes (~185 + ~331) through the saturator: the snare's pitched "crack"
+    const tone=(f,lv,dec,det)=>{const o=ctx.createOscillator();o.type='triangle';o.detune.value=det;o.frequency.setValueAtTime(f,t);o.frequency.exponentialRampToValueAtTime(f*.82,t+dec*.8);
+      const g=ctx.createGain();g.gain.setValueAtTime(.0001,t);g.gain.exponentialRampToValueAtTime(lv*vel,t+.004);g.gain.exponentialRampToValueAtTime(.004,t+dec);g.gain.linearRampToValueAtTime(0,t+dec+.012);
+      o.connect(g);g.connect(drumSat);o.start(t);o.stop(t+dec+.04);};
+    tone(185,.17,.085,-7);tone(331,.1,.06,7);
+    noiseBurst(t,'bandpass',1900,0.8,.38*vel,.12);    // the snares — body of the noise
+    noiseBurst(t,'highpass',3600,0.7,.26*vel,.055);}  // snap / sizzle on top — the crack
+  const HAT_PART=[2,3,4.16,5.43,6.79,8.21];   // inharmonic ratios → a metallic (square-osc) hat ring, the way an 808 hat is built
+  function metalHat(t,vel,dec,lv){   // band of inharmonic squares → highpass+bandpass, tight env = the "tsss" metal character
+    const hp=ctx.createBiquadFilter();hp.type='highpass';hp.frequency.value=6200;hp.Q.value=0.7;
+    const bp=ctx.createBiquadFilter();bp.type='bandpass';bp.frequency.value=9200;bp.Q.value=0.8;
+    const g=ctx.createGain();g.gain.setValueAtTime(.0001,t);g.gain.exponentialRampToValueAtTime(Math.max(.0008,lv*vel),t+.002);g.gain.exponentialRampToValueAtTime(.0006,t+dec);g.gain.linearRampToValueAtTime(0,t+dec+.006);
+    hp.connect(bp);bp.connect(g);g.connect(drumLP1);
+    HAT_PART.forEach(r=>{const o=ctx.createOscillator();o.type='square';o.frequency.value=1150*r;o.connect(hp);o.start(t);o.stop(t+dec+.02);});}
+  function hat(t,vel=1){counts.h++;
+    metalHat(t,vel*.6,.035,.075);                       // metallic ring (closed)
+    noiseBurst(t,'highpass',8200,0.7,.11*vel,.03);}     // airy noise top
+  function clap(t,vel=1){[0,.008,.017,.028].forEach((d,i)=>noiseBurst(t+d,'bandpass',1450,1.1,(i===3?.42:.3)*vel,.035));
+    noiseBurst(t+.028,'bandpass',1250,0.8,.16*vel,.13);}  // diffuse tail = the room/spread
+  function openhat(t,vel=1){metalHat(t,vel*.55,.18,.07);noiseBurst(t,'highpass',7800,0.7,.1*vel,.17);}
   function perc(t,vel=1){noiseBurst(t,'highpass',5400,0.9,.11*vel,.02);}
   function crash(t,vel=1){noiseBurst(t,'highpass',5200,0.5,.2*vel,.6);}
   const ACCENT=[1,.5,.72,.5,.92,.5,.72,.5,.9,.5,.72,.5,.94,.5,.78,.55];   // per-16th-step velocity weight (downbeats loud, 16ths soft)
@@ -1516,10 +1538,11 @@ function makeEngine(ctx){
   const bassLfoAmt=ctx.createGain();bassLfoAmt.gain.value=0;
   bassLfo.connect(bassLfoAmt);bassLfoAmt.connect(bassLP.detune);bassLfo.start();
   function applyBassMove(){if(!bassLfoAmt)return;const d=clamp(fx.bassPluck,0,1);bassLfoAmt.gain.setTargetAtTime(d*d*2600,ctx.currentTime,.07);bassLP.Q.setTargetAtTime(0.7+d*4.5,ctx.currentTime,.07);bassLfo.frequency.setTargetAtTime(Math.max(.05,(fx.tempo/60)*2),ctx.currentTime,.1);}
-  const bassOut=ctx.createGain();bassOut.gain.value=.85;
+  const bassOut=ctx.createGain();bassOut.gain.value=.8;
   const bassGate=ctx.createGain();bassGate.gain.value=1;   // GATE gesture chops this in sync with ampTrem, so the bass gates too
   bassDrive.connect(bassLP);bassLP.connect(bassOut);bassOut.connect(bassGate);bassGate.connect(glue);
-  const BASS_OSCS=[['sawtooth',1,0],['sawtooth',1,8],['sine',.5,0]];   // [type, freq multiple, detune¢]
+  const BASS_OSCS=[['sawtooth',1,-11,'saw'],['sawtooth',1,11,'saw'],['square',1,0,'sqr'],['sine',.5,0,'sub']];   // [type, freq×, detune¢, role] — detuned saw pair (movement) + a square (odd-harmonic bite) + a sub sine an octave down (weight)
+  const bassOscGain=role=>role==='sub'?bassSine(fx.bassWeight):role==='sqr'?bassSaw(fx.bassHeat)*.5:bassSaw(fx.bassHeat);   // sub=WEIGHT · saw+square blend in with INTENSITY (square at half the saw level)
   let bassTarget=65.4,lastNoteF=261.63; // C2 default
   const foldBass=f=>{f=f/2;while(f>115)f/=2;while(f<45)f*=2;return f;};
   let droneParts=null,droneGain=null,bassMode='off',bassGlideTau=0.008,nextBassPulseT=0,bassPulseSteps=2,bassGlideStore=0.12;
@@ -1546,14 +1569,15 @@ function makeEngine(ctx){
     env.connect(bassDrive);
     let base=gst.dive?bassTarget/4:bassTarget;if(step&&step.octave==='sub')base*=0.5;   // sub-octave step folds an extra octave down
     BASS_OSCS.forEach(s=>{const o=ctx.createOscillator();o.type=s[0];o.frequency.value=base*s[1];o.detune.value=s[2];o._bd=s[2];
-      const g=ctx.createGain();g.gain.value=s[0]==='sine'?bassSine(fx.bassWeight):bassSaw(fx.bassHeat);o.connect(g);g.connect(env);o.start(t);o.stop(t+len+.04);});}
+      const g=ctx.createGain();g.gain.value=bassOscGain(s[3]);o.connect(g);g.connect(env);o.start(t);o.stop(t+len+.04);});}
   /* fire one sequencer cell at time t for grid index seqIdx (0..15). Silent cell → no hit, but the playhead still lights. */
   function bassSeqFire(seqIdx,t){seqIdx=((seqIdx%16)+16)%16;const cell=bassSeq[seqIdx];
     if(cell&&cell.v)bassHit(t,{velocity:cell.v,octave:cell.oct});
     if(pluckStepCb)visAt(t,()=>pluckStepCb(seqIdx,!!(cell&&cell.v)));}
   function droneOn(){if(droneParts)return;droneGain=ctx.createGain();droneGain.gain.value=0;droneGain.connect(bassDrive);
-    droneParts=BASS_OSCS.map(s=>{const o=ctx.createOscillator();o.type=s[0];o.frequency.value=bassTarget*s[1];o._mul=s[1];o.detune.value=s[2]+(gst.dive?-2400:0);o._bd=s[2];
-      const g=ctx.createGain();g.gain.value=s[0]==='sine'?bassSine(fx.bassWeight):bassSaw(fx.bassHeat);o.connect(g);g.connect(droneGain);o.start();return {o,g,saw:s[0]==='sawtooth'};});
+    droneParts=BASS_OSCS.map(s=>{const o=ctx.createOscillator();o.type=s[0];o.frequency.value=bassTarget*s[1];o._mul=s[1];
+      const det=s[2]+(s[3]==='saw'?(Math.random()*6-3):0);o.detune.value=det+(gst.dive?-2400:0);o._bd=det;   // a touch of analog detune drift on the saws
+      const g=ctx.createGain();g.gain.value=bassOscGain(s[3]);o.connect(g);g.connect(droneGain);o.start();return {o,g,role:s[3]};});
     droneGain.gain.setTargetAtTime(bassSteady(),ctx.currentTime,.25);   // PLUCK 0 = today's .2 drone; PLUCK>0 = silent (plucks carry it)
     prevRoot=bassTarget;wasVoiced=bassVoiced();
     if(fx.bass&&fx.bassPluck>0&&wasVoiced){nextBassPluckT=gridNext(bassPluckInterval());clockEnsure();}}   // enabling BASS while a note is held kicks off the rhythmic pluck (grid-locked)
@@ -1565,9 +1589,9 @@ function makeEngine(ctx){
   function setBassHeat(v){fx.bassHeat=clamp(v,0,1);const t=ctx.currentTime,c=fx.bassHeat;
     bassLP.frequency.setTargetAtTime(bassLPf(c),t,.04);
     bassDrive.curve=driveCurve(bassDrv(c));
-    if(droneParts)droneParts.forEach(p=>{if(p.saw)p.g.gain.setTargetAtTime(bassSaw(c),t,.05);});}
+    if(droneParts)droneParts.forEach(p=>{if(p.role==='saw'||p.role==='sqr')p.g.gain.setTargetAtTime(bassOscGain(p.role),t,.05);});}
   function setBassWeight(w){fx.bassWeight=clamp(w,0,1);const t=ctx.currentTime;
-    if(droneParts)droneParts.forEach(p=>{if(!p.saw)p.g.gain.setTargetAtTime(bassSine(fx.bassWeight),t,.05);});}
+    if(droneParts)droneParts.forEach(p=>{if(p.role==='sub')p.g.gain.setTargetAtTime(bassSine(fx.bassWeight),t,.05);});}
   /* PLUCK (fx.bassPluck) — a HYBRID rhythmic pluck on the held root, separate from the parked step-sequencer.
      0 = sustained drone (today). Turning up raises BOTH the RATE (slow ~½-note → fast 1/16) and the INTENSITY
      (punchier attack, tighter decay). Each pluck is a fresh enveloped sub voice through the bass chain; the drone
@@ -1586,7 +1610,7 @@ function makeEngine(ctx){
     const fOpen=clamp(base*(9+12*p),700,4800),fClose=clamp(base*2.2,150,520);
     pf.frequency.setValueAtTime(fOpen,t);pf.frequency.exponentialRampToValueAtTime(fClose,t+Math.min(len*0.5,.16));
     pf.connect(env);env.connect(bassDrive);
-    BASS_OSCS.forEach(s=>{const o=ctx.createOscillator();o.type=s[0];o.frequency.value=base*s[1];o.detune.value=s[2];const g=ctx.createGain();g.gain.value=s[0]==='sine'?bassSine(fx.bassWeight):bassSaw(fx.bassHeat);o.connect(g);g.connect(pf);o.start(t);o.stop(t+len+.05);});}
+    BASS_OSCS.forEach(s=>{const o=ctx.createOscillator();o.type=s[0];o.frequency.value=base*s[1];o.detune.value=s[2];const g=ctx.createGain();g.gain.value=bassOscGain(s[3]);o.connect(g);g.connect(pf);o.start(t);o.stop(t+len+.05);});}
   function setBassRate(idx){bassPulseSteps=PULSE_MULT[clamp(idx|0,0,3)];}   // PLUCK pulse subdivision (idx 0..3 → 1/4·1/8d·1/8·1/16)
   function setBassGlide(tau){bassGlideStore=clamp(tau,0.008,0.30);          // GLIDE slur time; floor lowered to 8ms so a 0 GLIDE knob truly snaps. Remembered across mode switches
     if(bassMode==='glide'){bassGlideTau=bassGlideStore;
