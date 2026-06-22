@@ -1201,6 +1201,7 @@ import "@fontsource/orbitron/latin-500.css";   // amber outline-on-glass readout
 </style>
 
 <script>
+import { DRUMKIT } from './signal-drumkit';   // acoustic sample kit (AAC base64), decoded on power-on
 
 const clamp=(v,a,b)=>Math.min(b,Math.max(a,v));
 const $=s=>document.querySelector(s);
@@ -1445,8 +1446,7 @@ function makeEngine(ctx){
     releaseGate(t);
     masterHP.frequency.setTargetAtTime(20,t,.05);masterHP.Q.setTargetAtTime(.707,t,.05);}
 
-  /* drums: kick + snare + hat → 2-stage LP cover → drumBus */
-  const nbuf=(()=>{const len=Math.floor(ctx.sampleRate*0.15),b=ctx.createBuffer(1,len,ctx.sampleRate),d=b.getChannelData(0);for(let i=0;i<len;i++)d[i]=Math.random()*2-1;return b;})();
+  /* drums: ACOUSTIC SAMPLE KIT (real organic one-shots) → 2-stage LP cover → TEXTURE bus → drumBus */
   const drumLP1=ctx.createBiquadFilter();drumLP1.type='lowpass';drumLP1.frequency.value=fx.drumCover;drumLP1.Q.value=0.6;
   const drumLP2=ctx.createBiquadFilter();drumLP2.type='lowpass';drumLP2.frequency.value=fx.drumCover;drumLP2.Q.value=0.6;
   /* TEXTURE engine — a PARALLEL wet branch (driven, oversampled, post-filtered) blended UNDER the dry kit so
@@ -1463,46 +1463,24 @@ function makeEngine(ctx){
   drumLP2.connect(drumDry);drumDry.connect(drumGlue);
   drumLP2.connect(drumWet);drumWet.connect(texShaper);texShaper.connect(texLP);texLP.connect(drumGlue);
   drumGlue.connect(drumWarm);drumWarm.connect(drumTrim);drumTrim.connect(drumBus);
-  /* drumSat — fixed pre-cover saturation for the SYNTHESIZED tonal bodies (kick body+sub, snare modes). Adds weight + harmonics; the noise layers stay crisp (straight to drumLP1). */
-  const drumSat=ctx.createWaveShaper();drumSat.curve=(()=>{const n=256,c=new Float32Array(n);for(let i=0;i<n;i++){const x=i/(n-1)*2-1;c[i]=Math.tanh(x*1.4);}return c;})();drumSat.oversample='2x';drumSat.connect(drumLP1);   // gentle soft-clip (center slope ~1.4, peak ~-1dB): adds harmonics/weight to the tonal bodies WITHOUT the huge makeup a driveCurve would give
   const counts={k:0,s:0,h:0,b:0};
-  function noiseBurst(t,filterType,filterHz,q,peak,dur){if(peak<.0008)return;const nb=ctx.createBufferSource();nb.buffer=nbuf;if(dur>.14)nb.loop=true;
-    const nf=ctx.createBiquadFilter();nf.type=filterType;nf.frequency.value=filterHz;nf.Q.value=q;
-    const ng=ctx.createGain();ng.gain.setValueAtTime(peak,t);ng.gain.exponentialRampToValueAtTime(.002,t+dur);ng.gain.linearRampToValueAtTime(0,t+dur+.008);
-    nb.connect(nf);nf.connect(ng);ng.connect(drumLP1);nb.start(t);nb.stop(t+dur+.02);}
-  function kick(t,vel=1){if(vel<.02)return;counts.k++;
-    // BODY — punchy pitch sweep (165->48) into the saturator: the attack thump + its harmonics
-    const o=ctx.createOscillator();o.type='sine';o.frequency.setValueAtTime(165,t);o.frequency.exponentialRampToValueAtTime(48,t+.085);
-    const g=ctx.createGain();g.gain.setValueAtTime(.0001,t);g.gain.exponentialRampToValueAtTime(.86*vel,t+.009);g.gain.exponentialRampToValueAtTime(.02*vel,t+.17);g.gain.linearRampToValueAtTime(0,t+.2);   // 9ms attack keeps it click-free through the cover
-    o.connect(g);g.connect(drumSat);o.start(t);o.stop(t+.22);
-    // SUB TAIL — a lower, longer sine under the body for weight/boom
-    const s=ctx.createOscillator();s.type='sine';s.frequency.setValueAtTime(82,t);s.frequency.exponentialRampToValueAtTime(43,t+.06);
-    const sg=ctx.createGain();sg.gain.setValueAtTime(.0001,t);sg.gain.exponentialRampToValueAtTime(.28*vel,t+.012);sg.gain.exponentialRampToValueAtTime(.02*vel,t+.18);sg.gain.linearRampToValueAtTime(0,t+.21);
-    s.connect(sg);sg.connect(drumSat);s.start(t);s.stop(t+.24);
-    noiseBurst(t,'bandpass',2400,0.7,.1*vel,.018);}   // beater transient stays crisp (direct to drumLP1)
-  function snare(t,vel=1){if(vel<.02)return;counts.s++;
-    // TONAL BODY — two detuned modes (~185 + ~331) through the saturator: the snare's pitched "crack"
-    const tone=(f,lv,dec,det)=>{const o=ctx.createOscillator();o.type='triangle';o.detune.value=det;o.frequency.setValueAtTime(f,t);o.frequency.exponentialRampToValueAtTime(f*.82,t+dec*.8);
-      const g=ctx.createGain();g.gain.setValueAtTime(.0001,t);g.gain.exponentialRampToValueAtTime(lv*vel,t+.004);g.gain.exponentialRampToValueAtTime(.004,t+dec);g.gain.linearRampToValueAtTime(0,t+dec+.012);
-      o.connect(g);g.connect(drumSat);o.start(t);o.stop(t+dec+.04);};
-    tone(185,.17,.085,-7);tone(331,.1,.06,7);
-    noiseBurst(t,'bandpass',1900,0.8,.38*vel,.12);    // the snares — body of the noise
-    noiseBurst(t,'highpass',3600,0.7,.26*vel,.055);}  // snap / sizzle on top — the crack
-  const HAT_PART=[2,3,4.16,5.43,6.79,8.21];   // inharmonic ratios → a metallic (square-osc) hat ring, the way an 808 hat is built
-  function metalHat(t,vel,dec,lv){   // band of inharmonic squares → highpass+bandpass, tight env = the "tsss" metal character
-    const hp=ctx.createBiquadFilter();hp.type='highpass';hp.frequency.value=6200;hp.Q.value=0.7;
-    const bp=ctx.createBiquadFilter();bp.type='bandpass';bp.frequency.value=9200;bp.Q.value=0.8;
-    const g=ctx.createGain();g.gain.setValueAtTime(.0001,t);g.gain.exponentialRampToValueAtTime(Math.max(.0008,lv*vel),t+.002);g.gain.exponentialRampToValueAtTime(.0006,t+dec);g.gain.linearRampToValueAtTime(0,t+dec+.006);
-    hp.connect(bp);bp.connect(g);g.connect(drumLP1);
-    HAT_PART.forEach(r=>{const o=ctx.createOscillator();o.type='square';o.frequency.value=1150*r;o.connect(hp);o.start(t);o.stop(t+dec+.02);});}
-  function hat(t,vel=1){counts.h++;
-    metalHat(t,vel*.6,.035,.075);                       // metallic ring (closed)
-    noiseBurst(t,'highpass',8200,0.7,.11*vel,.03);}     // airy noise top
-  function clap(t,vel=1){[0,.008,.017,.028].forEach((d,i)=>noiseBurst(t+d,'bandpass',1450,1.1,(i===3?.42:.3)*vel,.035));
-    noiseBurst(t+.028,'bandpass',1250,0.8,.16*vel,.13);}  // diffuse tail = the room/spread
-  function openhat(t,vel=1){metalHat(t,vel*.55,.18,.07);noiseBurst(t,'highpass',7800,0.7,.1*vel,.17);}
-  function perc(t,vel=1){noiseBurst(t,'highpass',5400,0.9,.11*vel,.02);}
-  function crash(t,vel=1){noiseBurst(t,'highpass',5200,0.5,.2*vel,.6);}
+  /* ACOUSTIC SAMPLE KIT — real organic one-shots (DRUMKIT base64) decoded async on engine creation; ready well
+     before the boot ceremony ends. Each plays through the DRUM COVER + the TEXTURE bus, so the cover slider and
+     the TAPE/CRUSH flavors process the real kit. Per-hit pitch+gain humanize avoids the machine-gun feel; the
+     per-drum gains balance the kit (samples are individually peak-normalized, so hats/perc ride lower than k/s). */
+  const kitBuf={};let kitN=0;const KITTOT=Object.keys(DRUMKIT).length,KITGAIN=0.50;   // master kit trim → matches the prior drum level so the kit sits right under the bass/keys
+  (function(){for(const k in DRUMKIT){const bin=atob(DRUMKIT[k]);const ab=new ArrayBuffer(bin.length),u8=new Uint8Array(ab);for(let i=0;i<bin.length;i++)u8[i]=bin.charCodeAt(i);ctx.decodeAudioData(ab).then(function(b){kitBuf[k]=b;kitN++;}).catch(function(){});}})();
+  function playSample(buf,t,vel,gain,rate){if(!buf||vel<.02)return;const s=ctx.createBufferSource();s.buffer=buf;
+    s.playbackRate.value=(rate||1)*(1+(Math.random()*2-1)*0.012);                       // subtle pitch drift = real, non-mechanical
+    const g=ctx.createGain();g.gain.value=vel*(gain||1)*KITGAIN*(1+(Math.random()*2-1)*0.05);   // velocity + master kit trim + a touch of level wiggle
+    s.connect(g);g.connect(drumLP1);s.start(t);try{s.stop(t+buf.duration+.05);}catch(e){}}
+  function kick(t,vel=1){if(vel<.02)return;counts.k++;playSample(kitBuf.kick,t,vel,1.0);}
+  function snare(t,vel=1){if(vel<.02)return;counts.s++;playSample(kitBuf.snare,t,vel,.92);}
+  function hat(t,vel=1){counts.h++;playSample(kitBuf.hat,t,vel,.34);}
+  function clap(t,vel=1){playSample(kitBuf.clap,t,vel,.72);}
+  function openhat(t,vel=1){playSample(kitBuf.openhat,t,vel,.42);}
+  function perc(t,vel=1){playSample(kitBuf.shaker,t,vel,.4);}
+  function crash(t,vel=1){playSample(kitBuf.openhat,t,vel,.9,.8);}   // no crash sample — open hat pitched down as a cymbal swell
   const ACCENT=[1,.5,.72,.5,.92,.5,.72,.5,.9,.5,.72,.5,.94,.5,.78,.55];   // per-16th-step velocity weight (downbeats loud, 16ths soft)
   const hum=()=>(Math.random()*2-1);
   function duckHit(t){if(fx.sidechain<.01)return;const beat=60/fx.tempo;
@@ -1807,7 +1785,7 @@ function makeEngine(ctx){
   return {fx,apply,getCtx:()=>ctx,nearestVoice:()=>nearest2().near,noteOn,noteOff,retune:(map)=>{for(const id in map){if(arpSet.has(id))arpSet.set(id,map[id]);const h=held.get(id);if(h){h.freq=map[id];if(h.vs)h.vs.forEach(v=>v.retune&&v.retune(map[id]));}}recomputeBass();},
     setArp,setLatch,setArpChord:on=>{arpChord=!!on;},onArpChord:fn=>{arpChordFn=fn;},get arpOn(){return arpOn;},get arpNotes(){return arpSet.size;},get activeVoices(){return active.length;},
     get latchedIds(){return latch?(arpOn?[...arpSet.keys()]:[...held.keys()]):[];},onArp:cb=>{arpBeat=cb;},
-    setBeat,onKick:cb=>{kickCb=cb;},setCover,setSidechain,setSwing,setDensity,setCharacter,setModMode,setBass,setBassMode,setBassRate,setBassGlide,setBassHeat,setBassWeight,setBassPluck,setRevSize,setBassStep,setBassSeqMult,setAccent,setPluck,onBassStep:cb=>{pluckStepCb=cb;},get drumCounts(){return {...counts};},get bassFreq(){return bassTarget;},get droneActive(){return !!droneParts;},get bassPluck(){return fx.bassPluck;},get bassMode(){return bassMode;},get bassRateSteps(){return bassPulseSteps;},get bassGlideTau(){return bassGlideStore;},get bassSeq(){return bassSeq;},get bassSeqMult(){return bassSeqMult;},
+    setBeat,onKick:cb=>{kickCb=cb;},setCover,setSidechain,setSwing,setDensity,setCharacter,setModMode,setBass,setBassMode,setBassRate,setBassGlide,setBassHeat,setBassWeight,setBassPluck,setRevSize,setBassStep,setBassSeqMult,setAccent,setPluck,onBassStep:cb=>{pluckStepCb=cb;},get drumCounts(){return {...counts};},get kitLoaded(){return kitN>=KITTOT;},get bassFreq(){return bassTarget;},get droneActive(){return !!droneParts;},get bassPluck(){return fx.bassPluck;},get bassMode(){return bassMode;},get bassRateSteps(){return bassPulseSteps;},get bassGlideTau(){return bassGlideStore;},get bassSeq(){return bassSeq;},get bassSeqMult(){return bassSeqMult;},
     get lfoRate(){return lfoHz();},lfoData:buf=>lfoTap.getFloatTimeDomainData(buf),
     gesture,get gestures(){return {...gst};},get liftHz(){return masterHP.frequency.value;},
     micOff,setVocal,get vocal(){return voc?{treat:voc.treat,depth:voc.depth}:null;},micLevel,capture,clearLoop,setLoopTrim,setLoopCover,setLoopGain,setLoopPlay,loopPhase,setReplayRoute,setTakeGain,setTakeCover,get loopPlaying(){return loopPlaying;},get loopBuf(){return loopBuf;},get loopTrim(){return [loopIn,loopOut];},get loopBeats(){return loopBeatsN();},get loopActive(){return loopActive;},get recActive(){return recActive;},get capInfo(){return recActive?{startT:capStartT,recDur:capRecDur,beat:60/(recTempo||fx.tempo),countBeats:capCountBeats}:null;},
