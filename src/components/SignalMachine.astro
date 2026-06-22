@@ -97,7 +97,7 @@ import "@fontsource/orbitron/latin-500.css";   // amber outline-on-glass readout
                     <div class="knob sm" id="densKnob"><div class="dial"><div class="ptr"></div></div><span class="kl">DENSITY</span></div>
                     <div class="knob sm" id="gritKnob"><div class="dial"><div class="ptr"></div></div><span class="kl">TEXTURE</span></div>
                   </div>
-                  <div class="seg texseg" id="dtex" style="--acc:#ff7a3c"><b class="on" data-v="tape">TAPE</b><b data-v="crush">CRUSH</b></div>
+                  <div class="seg texseg" id="dtex" style="--acc:#ff7a3c"><b class="on" data-v="tape">TAPE</b><b data-v="drive">DRIVE</b></div>
                   <div class="coverslide"><div class="ct"><span>SIDECHAIN · KICK DUCK</span><span class="cvv" id="scval">30%</span></div>
                     <div class="strack" id="scslide"><span class="sfill" id="scfill"></span><span class="shandle" id="schandle"></span></div></div>
                 </div>
@@ -1248,7 +1248,7 @@ function driveTypeCurve(type,a){const n=256,c=new Float32Array(n),k=a*a;
 /* DRUM TEXTURE flavors — curves for the PARALLEL wet path (blended under the dry kit so transients survive). Mirrors driveTypeCurve in spirit. */
 function drumTexCurve(flavor,a){const n=512,c=new Float32Array(n),k=a*a;
   for(let i=0;i<n;i++){const x=i/(n-1)*2-1;
-    if(flavor==='crush'){const lv=2+Math.round((1-k)*14);const q=Math.round(x*lv)/lv;c[i]=Math.max(-1,Math.min(1,(1-k*.55)*q+k*.55*Math.tanh(x*5)));}   // bit-reduction crossfading toward a hard fuzz as amount rises = aggressive digital
+    if(flavor==='drive'){const kp=k*7,kn=k*3;c[i]=x>=0?(1+kp)*x/(1+kp*x):(1+kn)*x/(1-kn*x);}   // asymmetric tube OVERDRIVE — warm grit (even+odd harmonics), saturation not bit-crush, so it never farts the low end
     else{const d=1+a*3.4;c[i]=Math.tanh((x+0.16*a*x*x)*d);}                                                                                          // TAPE: asymmetric (x² → even harmonics) warm soft-clip, gradual, peak<1 (minimal makeup)
   }return c;}
 function softCurve(){const n=1024,c=new Float32Array(n);for(let i=0;i<n;i++){const x=i/(n-1)*2-1;c[i]=Math.tanh(x*1.12);}return c;}
@@ -1455,7 +1455,7 @@ function makeEngine(ctx){
   const drumLP2=ctx.createBiquadFilter();drumLP2.type='lowpass';drumLP2.frequency.value=fx.drumCover;drumLP2.Q.value=0.6;
   /* TEXTURE engine — a PARALLEL wet branch (driven, oversampled, post-filtered) blended UNDER the dry kit so
      transients/punch survive and it dirties GRADUALLY (the fix for GRIT's instant-sloppy distortion). FLAVOR =
-     fx.drumTex (tape/crush); AMOUNT = fx.character. Dry always passes; wet sums into drumGlue. */
+     fx.drumTex (tape/drive); AMOUNT = fx.character. Dry always passes; wet sums into drumGlue. */
   const drumDry=ctx.createGain();drumDry.gain.value=1;
   const drumWet=ctx.createGain();drumWet.gain.value=0;
   const texShaper=ctx.createWaveShaper();texShaper.oversample='4x';   // 4× oversample = the 'musical onset' DRIVE has (no harsh aliasing fizz)
@@ -1470,7 +1470,7 @@ function makeEngine(ctx){
   const counts={k:0,s:0,h:0,b:0};
   /* ACOUSTIC SAMPLE KIT — real organic one-shots (DRUMKIT base64). Decode is kicked off at power-PRESS (see
      decodeKit + powerToggle) into a shared cache, so the buffers are ready by the time the engine is built. Each
-     plays through the DRUM COVER + the TEXTURE bus, so the cover slider and the TAPE/CRUSH flavors process the real
+     plays through the DRUM COVER + the TEXTURE bus, so the cover slider and the TAPE/DRIVE flavors process the real
      kit. Per-hit pitch+gain humanize avoids the machine-gun feel; the per-drum gains balance the kit (samples are
      individually peak-normalized, so hats/perc ride lower than k/s). */
   const kitBuf=decodeKit(ctx);const KITTOT=Object.keys(DRUMKIT).length,KITGAIN=0.50;   // master kit trim → matches the prior drum level so the kit sits right under the bass/keys
@@ -1509,24 +1509,22 @@ function makeEngine(ctx){
   function gridNext(stepDur){if(transport0==null)transport0=ctx.currentTime+0.05;const floor=ctx.currentTime+0.02;return transport0>=floor?transport0:transport0+Math.ceil((floor-transport0)/stepDur)*stepDur;}
   function clockTick(){const now=ctx.currentTime;
     if(fx.beat){const stepDur=60/fx.tempo/4;
-      while(nextDrumT<now+LOOK){const t=nextDrumT,P=PATTERNS[fx.pattern]||PATTERNS.floor,st=drumStep%16,bar=Math.floor(drumStep/16);
+      while(nextDrumT<now+LOOK){const t=nextDrumT,P=PATTERNS[fx.pattern]||PATTERNS.floor,st=drumStep%16;
         // swing: delay offbeat subdivisions toward a shuffle (kick + downbeats stay dead on grid)
         let sw=0;if(fx.swing>0){if(st%4===2)sw=fx.swing*0.66*stepDur;else if(st%2===1)sw=fx.swing*0.5*stepDur;}
         const tt=t+sw+hum()*0.005,acc=ACCENT[st],vh=()=>1+hum()*0.08;   // tt = swing + light timing humanize; vh = per-hit velocity wiggle
-        const fill=(bar%4===3)&&st>=12;                                  // auto-fill: last beat of every 4th bar
+        // steady loop — every pattern repeats identically bar to bar (auto-fill + phrase-crash REMOVED, Jon 2026-06-22); only swing + the subtle per-hit humanize vary
         if(P.k.includes(st)){kick(t,0.96*vh());duckHit(t);visAt(t,kickCb);}   // kick is the anchor — never swung/jittered
-        if(P.s.includes(st)&&!fill)snare(tt,(0.85+acc*0.15)*vh());
+        if(P.s.includes(st))snare(tt,(0.85+acc*0.15)*vh());
         const hbase=clamp(fx.density/0.18,0,1);   // the pattern's OWN hats bloom in over density 0->0.18, so density 0 = bare kick (+ snare); the d8/d16 layers stack above
-        if(P.h.includes(st)&&!fill&&hbase>0)hat(tt,(0.45+acc*0.55)*hbase*vh());
-        if(!fill){const d8=clamp((fx.density-0.18)/0.32,0,1),d16=clamp((fx.density-0.5)/0.3,0,1),dpc=clamp((fx.density-0.62)/0.38,0,1);
+        if(P.h.includes(st)&&hbase>0)hat(tt,(0.45+acc*0.55)*hbase*vh());
+        {const d8=clamp((fx.density-0.18)/0.32,0,1),d16=clamp((fx.density-0.5)/0.3,0,1),dpc=clamp((fx.density-0.62)/0.38,0,1);   // density layers play EVERY bar — steady, not a transition
           if(d8>0&&st%4===2&&!P.h.includes(st))hat(tt,(0.3+acc*0.2)*d8*vh());          // density: fill in the 8th hats
           if(d8>0&&(st===4||st===12))clap(tt,0.4*d8*vh());                              // density: clap layered on the backbeat
           if(d16>0&&st%2===1)hat(tt,0.26*d16*vh());                                     // density: 16th hats
           if(d16>0&&(st===6||st===14)&&!P.s.includes(st))snare(tt,0.16*d16*vh());       // density: ghost snares
           if(dpc>0&&st%2===1)perc(tt,0.28*dpc*vh());                                     // density: shaker on the offbeats
           if(dpc>0&&st===14)openhat(tt,0.5*dpc*vh());}                                   // density: open hat lifting into the "1"
-        if(fill){snare(tt,(0.4+(st-12)/3*0.5)*vh());if(st===15)openhat(tt,0.5);}        // fill: rising snare roll + open-hat lead-in
-        if(bar>0&&bar%4===0&&st===0)crash(t,0.5);                                        // crash on the "1" after each 4-bar phrase
         if(fx.bass&&bassMode==='pluck'){const eff=Math.max(1,Math.round(bassPulseSteps/bassSeqMult));   // effective 16th-steps per pluck (RATE ÷ seq-mult); the sequencer indexes by how many plucks have elapsed
           if(drumStep%eff===0)bassSeqFire(Math.floor(drumStep/eff),t);}   // PLUCK reads the 16-step pattern on the shared grid — phase-locked, kick stays the visual anchor
         drumStep++;nextDrumT+=stepDur;}}
@@ -2338,7 +2336,7 @@ function applySnapshot(s){
   if(s.mod!=null)fillSet('mod',clamp(s.mod,0,1));
   if(s.modMode){eng.setModMode(s.modMode);segOn('mmode',s.modMode);}
   if(s.driveType){eng.fx.driveType=s.driveType;segOn('dtype',s.driveType);}
-  {const _dt=s.drumTex||'tape';eng.fx.drumTex=_dt;segOn('dtex',_dt);}   // default to TAPE when absent (old SHARE links / presets)
+  {let _dt=s.drumTex||'tape';if(_dt==='crush')_dt='drive';eng.fx.drumTex=_dt;segOn('dtex',_dt);}   // default TAPE when absent; map retired 'crush' → DRIVE (old SHARE links)
   if(s.sidechain!=null){const _sc=clamp(s.sidechain,0,1);eng.setSidechain(_sc);$('#scfill').style.width=(_sc*100)+'%';$('#schandle').style.left=(_sc*100)+'%';$('#scval').textContent=_sc<.01?'OFF':Math.round(_sc*100)+'%';}
   if(s.swing!=null){const _v=clamp(s.swing,0,1);eng.setSwing(_v);swingKnobObj.set(_v);}
   if(s.density!=null){const _v=clamp(s.density,0,1);eng.setDensity(_v);densKnobObj.set(_v);}
@@ -2407,7 +2405,7 @@ function diceRandom(){if(!live||!eng)return;demoTakeover();const pick=a=>a[Math.
     if(i%2===0)return ch(.55)?{v:2,oct:ch(.12)?'sub':'base'}:0;       // 8th → often a hit
     return ch(.3)?{v:1,oct:'base'}:0;                                  // 16th offbeat → occasional ghost
   });
-  applySnapshot({vx:r(.06,.94),vy:r(.06,.94),cutoff:r(.3,.92),res:r(0,.55),amount:r(0,.85),shape:pick(['sine','sawi','saw','sqr']),rateMode:'sync',syncDiv:pick(SYNCS).v,rateHz:eng.fx.rateHz,drive:r(0,.55),delay:r(0,.55),delayDiv:pick(['4','8','8d','16']),reverb:r(.05,.7),revSize:pick(['small','med','hall','vast']),tempo:ri(84,138),beat:ch(.7),pattern:pick(['floor','back','half','break']),drumCover:Math.round(60*Math.pow(200,r(.15,1))),drumTex:pick(['tape','crush']),bass:ch(.7),bassHeat:r(.1,.9),bassWeight:r(.3,.85),bassPluck:ch(.55)?r(.2,.8):0,pluck:false,bassMode:pick(['off','off','glide']),bassRate:ri(0,3),bassSeqMult:pick([.5,1,1,2]),bassSeq:seq,bassGlide:r(0,1),oct:octOff,key:ri(0,11),mode:pick(['major','major','minor','minor','chrom']),lock:true,arp:ch(.3),arpDiv:pick([1,1.5,2,2,3,4,4,6,8]),gate:r(.15,1.05),latch:false});}
+  applySnapshot({vx:r(.06,.94),vy:r(.06,.94),cutoff:r(.3,.92),res:r(0,.55),amount:r(0,.85),shape:pick(['sine','sawi','saw','sqr']),rateMode:'sync',syncDiv:pick(SYNCS).v,rateHz:eng.fx.rateHz,drive:r(0,.55),delay:r(0,.55),delayDiv:pick(['4','8','8d','16']),reverb:r(.05,.7),revSize:pick(['small','med','hall','vast']),tempo:ri(84,138),beat:ch(.7),pattern:pick(['floor','back','half','break']),drumCover:Math.round(60*Math.pow(200,r(.15,1))),drumTex:pick(['tape','drive']),bass:ch(.7),bassHeat:r(.1,.9),bassWeight:r(.3,.85),bassPluck:ch(.55)?r(.2,.8):0,pluck:false,bassMode:pick(['off','off','glide']),bassRate:ri(0,3),bassSeqMult:pick([.5,1,1,2]),bassSeq:seq,bassGlide:r(0,1),oct:octOff,key:ri(0,11),mode:pick(['major','major','minor','minor','chrom']),lock:true,arp:ch(.3),arpDiv:pick([1,1.5,2,2,3,4,4,6,8]),gate:r(.15,1.05),latch:false});}
 (function(){
   $('#dice').addEventListener('click',()=>{if(!live||!eng){typeStatus('press power first');return;}diceRandom();const d=$('#dice');d.classList.remove('roll');void d.offsetWidth;d.classList.add('roll');});
   device.addEventListener('pointerdown',e=>{if(REC.replaying&&!e.target.closest('.transport'))demoTakeover();},true);
@@ -2864,7 +2862,7 @@ const TUTOR={
   '#swingKnob': {title:'DRUMS · swing',    body:'pushes the off-beats late for a looser, more human groove.'},
   '#densKnob':  {title:'DRUMS · density',  body:'adds or thins out the hits — busier or sparser.'},
   '#gritKnob':  {title:'DRUMS · texture',  body:'how much character the drums take on — clean up to dirty. it eases in, never just harsh.'},
-  '#dtex':      {title:'DRUMS · texture flavor',body:'the kind of texture — TAPE is warm and analog, CRUSH is gritty and digital.'},
+  '#dtex':      {title:'DRUMS · texture flavor',body:'the kind of texture — TAPE is warm and analog, DRIVE is a dirtier overdrive.'},
   '#scslide':   {title:'DRUMS · sidechain',body:'raise it and everything ducks under the kick — that pumping, breathing feel.'},
   '#vpad':      {title:'VOICE · the morph pad',body:'drag around to reshape the voice — up brighter, down darker, left lush, right clean.'},
   '#afilter':   {title:'FILTER · the node',body:'drag the node. sideways opens the sound up, down shaves the top off. it moves the whole sound at once.'},
