@@ -1268,6 +1268,10 @@ function biquadMagDb(type,f0,Q,f){const fs=44100,w0=2*Math.PI*f0/fs,cw=Math.cos(
   const nr=b0+b1*c1+b2*c2,ni=-(b1*s1+b2*s2),dr=1+a1*c1+a2*c2,di=-(a1*s1+a2*s2);
   const mag=Math.sqrt((nr*nr+ni*ni)/(dr*dr+di*di));return 20*Math.log10(Math.max(mag,1e-5));}
 
+/* Decode the acoustic kit ONCE into a shared cache. Kicked off at power-PRESS (before the ~1.4s boot trace, see
+   powerToggle) so the buffers are ready by the time finishPower builds the engine — a real head-start. Idempotent. */
+let _kitCache=null;
+function decodeKit(ctx){if(_kitCache)return _kitCache;_kitCache={};for(const k in DRUMKIT){const bin=atob(DRUMKIT[k]),ab=new ArrayBuffer(bin.length),u8=new Uint8Array(ab);for(let i=0;i<bin.length;i++)u8[i]=bin.charCodeAt(i);ctx.decodeAudioData(ab).then(function(b){_kitCache[k]=b;}).catch(function(){});}return _kitCache;}
 function makeEngine(ctx){
   const fx={vx:.5,vy:.82,cutoff:.62,res:0,amount:0,shape:'sine',rateMode:'sync',syncDiv:'8',rateHz:3,
             drive:0,delay:0,reverb:.12,revSize:'med',delayDiv:'8',beat:false,pattern:'floor',bass:false,drumCover:848,bassHeat:.5,bassWeight:.5,bassPluck:0,tempo:96,arpDiv:2,gate:.5,sidechain:.3,swing:0,density:0,character:0,mod:0,modMode:'chorus',driveType:'warm',drumTex:'tape'};
@@ -1464,12 +1468,12 @@ function makeEngine(ctx){
   drumLP2.connect(drumWet);drumWet.connect(texShaper);texShaper.connect(texLP);texLP.connect(drumGlue);
   drumGlue.connect(drumWarm);drumWarm.connect(drumTrim);drumTrim.connect(drumBus);
   const counts={k:0,s:0,h:0,b:0};
-  /* ACOUSTIC SAMPLE KIT — real organic one-shots (DRUMKIT base64) decoded async on engine creation; ready well
-     before the boot ceremony ends. Each plays through the DRUM COVER + the TEXTURE bus, so the cover slider and
-     the TAPE/CRUSH flavors process the real kit. Per-hit pitch+gain humanize avoids the machine-gun feel; the
-     per-drum gains balance the kit (samples are individually peak-normalized, so hats/perc ride lower than k/s). */
-  const kitBuf={};let kitN=0;const KITTOT=Object.keys(DRUMKIT).length,KITGAIN=0.50;   // master kit trim → matches the prior drum level so the kit sits right under the bass/keys
-  (function(){for(const k in DRUMKIT){const bin=atob(DRUMKIT[k]);const ab=new ArrayBuffer(bin.length),u8=new Uint8Array(ab);for(let i=0;i<bin.length;i++)u8[i]=bin.charCodeAt(i);ctx.decodeAudioData(ab).then(function(b){kitBuf[k]=b;kitN++;}).catch(function(){});}})();
+  /* ACOUSTIC SAMPLE KIT — real organic one-shots (DRUMKIT base64). Decode is kicked off at power-PRESS (see
+     decodeKit + powerToggle) into a shared cache, so the buffers are ready by the time the engine is built. Each
+     plays through the DRUM COVER + the TEXTURE bus, so the cover slider and the TAPE/CRUSH flavors process the real
+     kit. Per-hit pitch+gain humanize avoids the machine-gun feel; the per-drum gains balance the kit (samples are
+     individually peak-normalized, so hats/perc ride lower than k/s). */
+  const kitBuf=decodeKit(ctx);const KITTOT=Object.keys(DRUMKIT).length,KITGAIN=0.50;   // master kit trim → matches the prior drum level so the kit sits right under the bass/keys
   function playSample(buf,t,vel,gain,rate){if(!buf||vel<.02)return;const s=ctx.createBufferSource();s.buffer=buf;
     s.playbackRate.value=(rate||1)*(1+(Math.random()*2-1)*0.012);                       // subtle pitch drift = real, non-mechanical
     const g=ctx.createGain();g.gain.value=vel*(gain||1)*KITGAIN*(1+(Math.random()*2-1)*0.05);   // velocity + master kit trim + a touch of level wiggle
@@ -1785,7 +1789,7 @@ function makeEngine(ctx){
   return {fx,apply,getCtx:()=>ctx,nearestVoice:()=>nearest2().near,noteOn,noteOff,retune:(map)=>{for(const id in map){if(arpSet.has(id))arpSet.set(id,map[id]);const h=held.get(id);if(h){h.freq=map[id];if(h.vs)h.vs.forEach(v=>v.retune&&v.retune(map[id]));}}recomputeBass();},
     setArp,setLatch,setArpChord:on=>{arpChord=!!on;},onArpChord:fn=>{arpChordFn=fn;},get arpOn(){return arpOn;},get arpNotes(){return arpSet.size;},get activeVoices(){return active.length;},
     get latchedIds(){return latch?(arpOn?[...arpSet.keys()]:[...held.keys()]):[];},onArp:cb=>{arpBeat=cb;},
-    setBeat,onKick:cb=>{kickCb=cb;},setCover,setSidechain,setSwing,setDensity,setCharacter,setModMode,setBass,setBassMode,setBassRate,setBassGlide,setBassHeat,setBassWeight,setBassPluck,setRevSize,setBassStep,setBassSeqMult,setAccent,setPluck,onBassStep:cb=>{pluckStepCb=cb;},get drumCounts(){return {...counts};},get kitLoaded(){return kitN>=KITTOT;},get bassFreq(){return bassTarget;},get droneActive(){return !!droneParts;},get bassPluck(){return fx.bassPluck;},get bassMode(){return bassMode;},get bassRateSteps(){return bassPulseSteps;},get bassGlideTau(){return bassGlideStore;},get bassSeq(){return bassSeq;},get bassSeqMult(){return bassSeqMult;},
+    setBeat,onKick:cb=>{kickCb=cb;},setCover,setSidechain,setSwing,setDensity,setCharacter,setModMode,setBass,setBassMode,setBassRate,setBassGlide,setBassHeat,setBassWeight,setBassPluck,setRevSize,setBassStep,setBassSeqMult,setAccent,setPluck,onBassStep:cb=>{pluckStepCb=cb;},get drumCounts(){return {...counts};},get kitLoaded(){return Object.keys(kitBuf).length>=KITTOT;},get bassFreq(){return bassTarget;},get droneActive(){return !!droneParts;},get bassPluck(){return fx.bassPluck;},get bassMode(){return bassMode;},get bassRateSteps(){return bassPulseSteps;},get bassGlideTau(){return bassGlideStore;},get bassSeq(){return bassSeq;},get bassSeqMult(){return bassSeqMult;},
     get lfoRate(){return lfoHz();},lfoData:buf=>lfoTap.getFloatTimeDomainData(buf),
     gesture,get gestures(){return {...gst};},get liftHz(){return masterHP.frequency.value;},
     micOff,setVocal,get vocal(){return voc?{treat:voc.treat,depth:voc.depth}:null;},micLevel,capture,clearLoop,setLoopTrim,setLoopCover,setLoopGain,setLoopPlay,loopPhase,setReplayRoute,setTakeGain,setTakeCover,get loopPlaying(){return loopPlaying;},get loopBuf(){return loopBuf;},get loopTrim(){return [loopIn,loopOut];},get loopBeats(){return loopBeatsN();},get loopActive(){return loopActive;},get recActive(){return recActive;},get capInfo(){return recActive?{startT:capStartT,recDur:capRecDur,beat:60/(recTempo||fx.tempo),countBeats:capCountBeats}:null;},
@@ -2689,7 +2693,7 @@ function powerToggle(){
     reverseScreenTraces(function(){device.classList.remove('live');piano.classList.remove('lit');sgm.dataset.state='standby';clearGlassFade();clearScreenTraces();sgm.querySelectorAll('.wk').forEach(function(el){el.classList.remove('wk');});booting=false;});   // keys fade off only after the border reverse completes (with --kdoff); clearGlassFade hands the screens back to the steady .device:not(.live) cascade
     return;}
   // POWER ON: unlock audio in the gesture, fire the boot sound on the PRESS (not after the ~1.4s trace), trace the dark screens, THEN finishPower lights them
-  try{const c=getCtx();if(c.resume)c.resume();}catch(e){}
+  try{const c=getCtx();if(c.resume)c.resume();decodeKit(c);}catch(e){}   // decodeKit on the PRESS → the acoustic kit is ready before the ~1.4s trace finishes
   bootPluck();   // moved out of finishPower so it initiates the instant the button is hit (Jon 2026-06-15)
   sgm.dataset.state='boot';booting=true;piano.classList.add('lit');fadeGlass(true);   // #3: start the keyboard rainbow + glass cross-fade to lit at boot-START (in lockstep with the border traces)
   igniteScreenTraces(function(){finishPower();booting=false;});}
