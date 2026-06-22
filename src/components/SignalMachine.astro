@@ -158,7 +158,7 @@ import "@fontsource/orbitron/latin-500.css";   // amber outline-on-glass readout
                   </div>
                   <div class="fxstrip">
                     <div class="fillcard" data-key="reverb" style="--fc:#8af0bf"><span class="fill"></span><span class="fl">REVERB</span><span class="pc">0</span></div>
-                    <div class="seg vseg fxsub" id="rsize" style="--acc:#8af0bf"><b data-v="small">SM</b><b class="on" data-v="med">MED</b><b data-v="hall">HALL</b><b data-v="vast">VAST</b></div>
+                    <div class="seg vseg fxsub" id="rsize" style="--acc:#8af0bf"><b class="on" data-v="small">SM</b><b data-v="med">MED</b><b data-v="hall">HALL</b><b data-v="vast">VAST</b></div>
                   </div>
                 </div>
               </div></div>
@@ -1248,8 +1248,8 @@ function driveTypeCurve(type,a){const n=256,c=new Float32Array(n),k=a*a;
 /* DRUM TEXTURE flavors — curves for the PARALLEL wet path (blended under the dry kit so transients survive). Mirrors driveTypeCurve in spirit. */
 function drumTexCurve(flavor,a){const n=512,c=new Float32Array(n),k=a*a;
   for(let i=0;i<n;i++){const x=i/(n-1)*2-1;
-    if(flavor==='drive'){const kp=k*7,kn=k*3;c[i]=x>=0?(1+kp)*x/(1+kp*x):(1+kn)*x/(1-kn*x);}   // asymmetric tube OVERDRIVE — warm grit (even+odd harmonics), saturation not bit-crush, so it never farts the low end
-    else{const d=1+a*3.4;c[i]=Math.tanh((x+0.16*a*x*x)*d);}                                                                                          // TAPE: asymmetric (x² → even harmonics) warm soft-clip, gradual, peak<1 (minimal makeup)
+    if(flavor==='drive'){const kp=k*7+k*k*12,kn=k*3+k*k*5;c[i]=x>=0?(1+kp)*x/(1+kp*x):(1+kn)*x/(1-kn*x);}   // asymmetric tube OVERDRIVE — back-loaded so the max is much harder/more intense; saturation not bit-crush so no low-end fart
+    else{const d=1+a*3.4+a*a*5;c[i]=Math.tanh((x+0.16*a*x*x)*d);}                                                                                    // TAPE: asymmetric (x² → even harmonics) warm soft-clip; back-loaded so the max is much more saturated
   }return c;}
 function softCurve(){const n=1024,c=new Float32Array(n);for(let i=0;i<n;i++){const x=i/(n-1)*2-1;c[i]=Math.tanh(x*1.12);}return c;}
 function makeReverb(ctx){const i=ctx.createGain(),o=ctx.createGain();const taps=[];[0.029,0.041,0.057,0.073].forEach(tt=>{const d=ctx.createDelay(1);d.delayTime.value=tt;const f=ctx.createGain();f.gain.value=.72;i.connect(d);d.connect(f);f.connect(d);d.connect(o);taps.push({d,f,base:tt});});return{input:i,output:o,taps};}
@@ -1273,8 +1273,8 @@ function biquadMagDb(type,f0,Q,f){const fs=44100,w0=2*Math.PI*f0/fs,cw=Math.cos(
 let _kitCache=null;
 function decodeKit(ctx){if(_kitCache)return _kitCache;_kitCache={};for(const k in DRUMKIT){const bin=atob(DRUMKIT[k]),ab=new ArrayBuffer(bin.length),u8=new Uint8Array(ab);for(let i=0;i<bin.length;i++)u8[i]=bin.charCodeAt(i);ctx.decodeAudioData(ab).then(function(b){_kitCache[k]=b;}).catch(function(){});}return _kitCache;}
 function makeEngine(ctx){
-  const fx={vx:.5,vy:.82,cutoff:.62,res:0,amount:0,shape:'sine',rateMode:'sync',syncDiv:'8',rateHz:3,
-            drive:0,delay:0,reverb:.12,revSize:'med',delayDiv:'8',beat:false,pattern:'floor',bass:false,drumCover:848,bassHeat:.5,bassWeight:.5,bassPluck:0,tempo:96,arpDiv:2,gate:.5,sidechain:.3,swing:0,density:0,character:0,mod:0,modMode:'chorus',driveType:'warm',drumTex:'tape'};
+  const fx={vx:.5,vy:.82,cutoff:.48,res:0,amount:0,shape:'sine',rateMode:'sync',syncDiv:'8',rateHz:3,
+            drive:.6,delay:0,reverb:.22,revSize:'small',delayDiv:'8',beat:false,pattern:'floor',bass:false,drumCover:848,bassHeat:.5,bassWeight:.5,bassPluck:0,tempo:96,arpDiv:2,gate:.5,sidechain:.3,swing:0,density:0,character:0,mod:.85,modMode:'chorus',driveType:'warm',drumTex:'tape'};   // DEFAULT load state (Jon's screenshot 2026-06-22): cutoff a bit closed, DRIVE .6/warm, MOD .85/chorus, DELAY off, REVERB .22/small
   const inG=ctx.createGain();inG.gain.value=.9;
   // TAKE-LOOP sub-bus: replayed (ghost) note voices route through their OWN gain + low-pass so the recorded loop
   // can be turned down / muffled to sit UNDER your live playing (live notes stay on inG, untouched). Note voices only —
@@ -1383,6 +1383,7 @@ function makeEngine(ctx){
   function apply(){applyMotion();applyFx();applyBassMove();applyDrumTex();}
   function setRevSize(key){fx.revSize=key;const s=REVSIZES[key]||REVSIZES.med;const t=ctx.currentTime;
     rev.taps.forEach(tp=>{tp.d.delayTime.setTargetAtTime(tp.base*s.m,t,.08);tp.f.gain.setTargetAtTime(s.fb,t,.08);});}
+  setRevSize(fx.revSize);   // apply the default reverb size on construction (mirrors setModMode; apply() doesn't cover revSize)
 
   function nearest2(){const ds=VOICES.map((v,i)=>({i,d:Math.hypot(v.lm.x-fx.vx,v.lm.y-fx.vy)})).sort((a,b)=>a.d-b.d);const a=ds[0],b=ds[1],wa=1/(a.d+.05),wb=1/(b.d+.05),s=wa+wb;return{list:[{i:a.i,w:wa/s},{i:b.i,w:wb/s}],near:a.i};}
   let active=[];const MAXV=16;
@@ -1557,9 +1558,9 @@ function makeEngine(ctx){
   let curTexAmt=-1,curTexFlav='';
   function applyDrumTex(){const v=fx.character,fl=fx.drumTex||'tape',t=ctx.currentTime;
     if(v!==curTexAmt||fl!==curTexFlav){texShaper.curve=v<.01?null:drumTexCurve(fl,v);curTexAmt=v;curTexFlav=fl;}   // rebuild on change only — swapping the curve per-drag zippers
-    drumWet.gain.setTargetAtTime(v<.01?0:clamp(v*0.92,0,1),t,.03);                                   // parallel grit blend (dry stays full) — continuous from 0, so it bites gradually
-    texLP.frequency.setTargetAtTime(v<.01?18000:clamp(17000-v*10500,5200,17000),t,.05);              // close a touch as it dirties → tames the fizz
-    drumTrim.gain.setTargetAtTime(1/(1+v*0.6),t,.03);}                                               // compensate the parallel energy add (loudness-match)
+    drumWet.gain.setTargetAtTime(v<.01?0:clamp(v*0.7+v*v*0.9,0,1.5),t,.03);                          // parallel grit blend (dry stays full) — back-loaded so the TOP goes wet-LOUDER-than-dry = much more intense max
+    texLP.frequency.setTargetAtTime(v<.01?18000:clamp(17000-v*6500,9000,17000),t,.05);              // close only a little → lets the grit/fizz through at high TEXTURE
+    drumTrim.gain.setTargetAtTime(1/(1+v*0.45),t,.03);}                                              // lighter compensation → the max stays hot/crazy (glue + limiter catch peaks)
   function setCharacter(v){fx.character=clamp(v,0,1);applyDrumTex();}   // TEXTURE amount; flavor = fx.drumTex (set via the seg + apply)
 
   /* bass — follows the last played note */
@@ -1821,7 +1822,8 @@ function chordActive(){return !!(live&&eng&&(eng.arpNotes>0||piano.querySelector
 function updOctScreen(){const moved=chordActive()&&chordShift!==0;$('#octval').textContent=moved?((chordShift>0?'+':'')+chordShift):((octOff>0?'+':'')+octOff);const lbl=$('#octlbl');if(lbl)lbl.textContent=moved?'MOVE':'OCTAVE';}
 function transposeChord(dir){if(!live||!eng)return;chordShift=clamp(chordShift+dir,-14,14);const map={};let top=null;
   // retune from STABLE sources (physical pressed keys + the engine's latched ids), reading each key's ORIGINAL offset — so the .latched highlight can be moved purely visually without double-applying chordShift
-  const add=q=>{const el=keyEl(q);if(!el)return;const off=stepOffset(+el.dataset.o,chordShift);map['k'+q]=freqForOffset(off);if(top==null||off>top)top=off;};
+  const add=q=>{const el=keyEl(q);if(!el)return;const off=stepOffset(+el.dataset.o,chordShift);map['k'+q]=freqForOffset(off);if(top==null||off>top)top=off;
+    if(chordMode)triadOffsets(off).slice(1).forEach((eo,i)=>{map['k'+q+'~'+i]=freqForOffset(eo);});};   // CHORD: also retune the held triad extensions (kq~i) so arrow-transpose moves the WHOLE chord, not just the root, when arp is OFF (mirrors retuneActive)
   piano.querySelectorAll('.press').forEach(el=>add(el.dataset.q));
   (eng.latchedIds||[]).forEach(id=>{if(id.indexOf('~')<0)add(id.slice(1));});
   eng.retune(map);if(top!=null)showNote(top);updOctScreen();refreshLatch();}   // refreshLatch slides the lit keys to the transposed positions
@@ -2077,7 +2079,7 @@ document.querySelectorAll('.gpad').forEach(p=>{const g=p.dataset.g,rate=p.datase
   p.addEventListener('pointerup',()=>setGesture(g,false,rate));p.addEventListener('pointercancel',()=>setGesture(g,false,rate));});
 
 /* effects */
-$('#fills').querySelectorAll('.fillcard').forEach(c=>{const key=c.dataset.key,def=key==='reverb'?.12:0;
+$('#fills').querySelectorAll('.fillcard').forEach(c=>{const key=c.dataset.key,def={drive:.6,mod:.85,reverb:.22}[key]||0;   // default load state — matches the engine fx defaults (Jon's screenshot)
   function set(v){v=clamp(v,0,1);const f=c.querySelector('.fill');f.style.height=(v*100).toFixed(0)+'%';f.classList.toggle('mt',v<=0.004);c.querySelector('.pc').textContent=Math.round(v*100);if(eng){eng.fx[key]=v;eng.apply();}}set(def);
   const at=e=>{const r=c.getBoundingClientRect();set(1-(e.clientY-r.top)/r.height);};
   const end=()=>{c.dataset.drag='';c.classList.remove('dragging');};
