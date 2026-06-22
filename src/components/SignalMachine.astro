@@ -95,8 +95,9 @@ import "@fontsource/orbitron/latin-500.css";   // amber outline-on-glass readout
                   <div class="drumfx">
                     <div class="knob sm" id="swingKnob"><div class="dial"><div class="ptr"></div></div><span class="kl">SWING</span></div>
                     <div class="knob sm" id="densKnob"><div class="dial"><div class="ptr"></div></div><span class="kl">DENSITY</span></div>
-                    <div class="knob sm" id="gritKnob"><div class="dial"><div class="ptr"></div></div><span class="kl">GRIT</span></div>
+                    <div class="knob sm" id="gritKnob"><div class="dial"><div class="ptr"></div></div><span class="kl">TEXTURE</span></div>
                   </div>
+                  <div class="seg texseg" id="dtex" style="--acc:#ff7a3c"><b class="on" data-v="tape">TAPE</b><b data-v="crush">CRUSH</b></div>
                   <div class="coverslide"><div class="ct"><span>SIDECHAIN · KICK DUCK</span><span class="cvv" id="scval">30%</span></div>
                     <div class="strack" id="scslide"><span class="sfill" id="scfill"></span><span class="shandle" id="schandle"></span></div></div>
                 </div>
@@ -713,6 +714,8 @@ import "@fontsource/orbitron/latin-500.css";   // amber outline-on-glass readout
     .device.live #beat.on .kl{color:#2a1003!important}
     .patseg{--acc:var(--sapphire)}
     .patseg b{font-size:.5rem;letter-spacing:.04em;padding:5px 0}
+    .texseg{--acc:#ff7a3c;margin:-1px 0 1px}   /* DRUMS texture flavor — orange (drum-character) accent, compact to fit the rhythm column */
+    .texseg b{font-size:.5rem;letter-spacing:.04em;padding:4px 0}
   
     .coverslide{display:flex;flex-direction:column;gap:4px;border-radius:9px;padding:6px 12px;background:linear-gradient(180deg,#222934,#12161d);border:1px solid rgba(0,0,0,.55);box-shadow:inset 0 1px 0 rgba(255,255,255,.07)}
     .coverslide .ct{display:flex;justify-content:space-between;font-family:ui-monospace,Menlo,monospace;font-size:.5rem;letter-spacing:.1em;color:#9aa6b4}.coverslide .ct .cvv{color:#dbe6f0}
@@ -1241,6 +1244,12 @@ function driveTypeCurve(type,a){const n=256,c=new Float32Array(n),k=a*a;
     else if(type==='crush'){const lv=2+Math.round((1-k)*16);c[i]=(1-k)*x+k*(Math.round(x*lv)/lv);}     // bit-reduction — stepped lo-fi
     else{const kk=k*9;c[i]=(1+kk)*x/(1+kk*Math.abs(x));}                                                 // warm tape soft-clip (default)
   }return c;}
+/* DRUM TEXTURE flavors — curves for the PARALLEL wet path (blended under the dry kit so transients survive). Mirrors driveTypeCurve in spirit. */
+function drumTexCurve(flavor,a){const n=512,c=new Float32Array(n),k=a*a;
+  for(let i=0;i<n;i++){const x=i/(n-1)*2-1;
+    if(flavor==='crush'){const lv=2+Math.round((1-k)*14);const q=Math.round(x*lv)/lv;c[i]=Math.max(-1,Math.min(1,(1-k*.55)*q+k*.55*Math.tanh(x*5)));}   // bit-reduction crossfading toward a hard fuzz as amount rises = aggressive digital
+    else{const d=1+a*3.4;c[i]=Math.tanh((x+0.16*a*x*x)*d);}                                                                                          // TAPE: asymmetric (x² → even harmonics) warm soft-clip, gradual, peak<1 (minimal makeup)
+  }return c;}
 function softCurve(){const n=1024,c=new Float32Array(n);for(let i=0;i<n;i++){const x=i/(n-1)*2-1;c[i]=Math.tanh(x*1.12);}return c;}
 function makeReverb(ctx){const i=ctx.createGain(),o=ctx.createGain();const taps=[];[0.029,0.041,0.057,0.073].forEach(tt=>{const d=ctx.createDelay(1);d.delayTime.value=tt;const f=ctx.createGain();f.gain.value=.72;i.connect(d);d.connect(f);f.connect(d);d.connect(o);taps.push({d,f,base:tt});});return{input:i,output:o,taps};}
 const REVSIZES={small:{m:.55,fb:.6},med:{m:1,fb:.72},hall:{m:1.8,fb:.8},vast:{m:2.9,fb:.86}};
@@ -1260,7 +1269,7 @@ function biquadMagDb(type,f0,Q,f){const fs=44100,w0=2*Math.PI*f0/fs,cw=Math.cos(
 
 function makeEngine(ctx){
   const fx={vx:.5,vy:.82,cutoff:.62,res:0,amount:0,shape:'sine',rateMode:'sync',syncDiv:'8',rateHz:3,
-            drive:0,delay:0,reverb:.12,revSize:'med',delayDiv:'8',beat:false,pattern:'floor',bass:false,drumCover:848,bassHeat:.5,bassWeight:.5,bassPluck:0,tempo:96,arpDiv:2,gate:.5,sidechain:.3,swing:0,density:0,character:0,mod:0,modMode:'chorus',driveType:'warm'};
+            drive:0,delay:0,reverb:.12,revSize:'med',delayDiv:'8',beat:false,pattern:'floor',bass:false,drumCover:848,bassHeat:.5,bassWeight:.5,bassPluck:0,tempo:96,arpDiv:2,gate:.5,sidechain:.3,swing:0,density:0,character:0,mod:0,modMode:'chorus',driveType:'warm',drumTex:'tape'};
   const inG=ctx.createGain();inG.gain.value=.9;
   // TAKE-LOOP sub-bus: replayed (ghost) note voices route through their OWN gain + low-pass so the recorded loop
   // can be turned down / muffled to sit UNDER your live playing (live notes stay on inG, untouched). Note voices only —
@@ -1364,9 +1373,9 @@ function makeEngine(ctx){
     const modPh=fx.modMode==='phaser';
     modMix.gain.setTargetAtTime(modPh?0:fx.mod*0.9,t,.03);
     modPhMix.gain.setTargetAtTime(modPh?fx.mod*0.9:0,t,.03);
-    if(voc)voc.tun.delayTime.setTargetAtTime((60/fx.tempo)*.75,t,.1);}   // TUNNEL stays tempo-synced
+    if(voc)voc.tun.delayTime.setTargetAtTime(Math.min(1.49,(60/fx.tempo)*.75),t,.1);}   // TUNNEL stays tempo-synced (clamped under the 1.5s node max — at <30bpm the dotted-8th would overrun)
   function delayTime(){const beat=60/fx.tempo,m={'4':1,'8':.5,'8d':.75,'16':.25}[fx.delayDiv]||.5;return clamp(beat*m,.02,.98);}
-  function apply(){applyMotion();applyFx();applyBassMove();}
+  function apply(){applyMotion();applyFx();applyBassMove();applyDrumTex();}
   function setRevSize(key){fx.revSize=key;const s=REVSIZES[key]||REVSIZES.med;const t=ctx.currentTime;
     rev.taps.forEach(tp=>{tp.d.delayTime.setTargetAtTime(tp.base*s.m,t,.08);tp.f.gain.setTargetAtTime(s.fb,t,.08);});}
 
@@ -1440,11 +1449,20 @@ function makeEngine(ctx){
   const nbuf=(()=>{const len=Math.floor(ctx.sampleRate*0.15),b=ctx.createBuffer(1,len,ctx.sampleRate),d=b.getChannelData(0);for(let i=0;i<len;i++)d[i]=Math.random()*2-1;return b;})();
   const drumLP1=ctx.createBiquadFilter();drumLP1.type='lowpass';drumLP1.frequency.value=fx.drumCover;drumLP1.Q.value=0.6;
   const drumLP2=ctx.createBiquadFilter();drumLP2.type='lowpass';drumLP2.frequency.value=fx.drumCover;drumLP2.Q.value=0.6;
-  const drumShape=ctx.createWaveShaper();drumShape.oversample='2x';   // GRIT: clean (null curve) until character>0
+  /* TEXTURE engine — a PARALLEL wet branch (driven, oversampled, post-filtered) blended UNDER the dry kit so
+     transients/punch survive and it dirties GRADUALLY (the fix for GRIT's instant-sloppy distortion). FLAVOR =
+     fx.drumTex (tape/crush); AMOUNT = fx.character. Dry always passes; wet sums into drumGlue. */
+  const drumDry=ctx.createGain();drumDry.gain.value=1;
+  const drumWet=ctx.createGain();drumWet.gain.value=0;
+  const texShaper=ctx.createWaveShaper();texShaper.oversample='4x';   // 4× oversample = the 'musical onset' DRIVE has (no harsh aliasing fizz)
+  const texLP=ctx.createBiquadFilter();texLP.type='lowpass';texLP.frequency.value=18000;texLP.Q.value=0.5;   // closes a touch as TEXTURE rises → tames the high fizz
   const drumGlue=ctx.createDynamicsCompressor();drumGlue.threshold.value=-8;drumGlue.knee.value=12;drumGlue.ratio.value=1.8;drumGlue.attack.value=.006;drumGlue.release.value=.15;   // GENTLE bus glue: only catches the loud peaks (light ratio, high threshold) so the hits read as ONE kit without inflating RMS — drums bypass the synth 'glue' comp, so they get their own
-  const drumWarm=ctx.createWaveShaper();drumWarm.curve=(()=>{const n=256,c=new Float32Array(n);for(let i=0;i<n;i++){const x=i/(n-1)*2-1;c[i]=Math.tanh(x*1.18);}return c;})();drumWarm.oversample='2x';   // always-on console warmth — near-unity tanh soft-clip (adds harmonic glue, ~level-neutral) so the kit sounds produced even at GRIT 0
-  const drumTrim=ctx.createGain();drumTrim.gain.value=1;              // level compensation — saturation boosts loudness, trim pulls it back
-  drumLP1.connect(drumLP2);drumLP2.connect(drumShape);drumShape.connect(drumGlue);drumGlue.connect(drumWarm);drumWarm.connect(drumTrim);drumTrim.connect(drumBus);
+  const drumWarm=ctx.createWaveShaper();drumWarm.curve=(()=>{const n=256,c=new Float32Array(n);for(let i=0;i<n;i++){const x=i/(n-1)*2-1;c[i]=Math.tanh(x*1.18);}return c;})();drumWarm.oversample='2x';   // always-on console warmth — near-unity tanh soft-clip (adds harmonic glue, ~level-neutral) so the kit sounds produced even at TEXTURE 0
+  const drumTrim=ctx.createGain();drumTrim.gain.value=1;              // level compensation — the parallel wet adds energy; trim pulls it back (loudness-match)
+  drumLP1.connect(drumLP2);
+  drumLP2.connect(drumDry);drumDry.connect(drumGlue);
+  drumLP2.connect(drumWet);drumWet.connect(texShaper);texShaper.connect(texLP);texLP.connect(drumGlue);
+  drumGlue.connect(drumWarm);drumWarm.connect(drumTrim);drumTrim.connect(drumBus);
   /* drumSat — fixed pre-cover saturation for the SYNTHESIZED tonal bodies (kick body+sub, snare modes). Adds weight + harmonics; the noise layers stay crisp (straight to drumLP1). */
   const drumSat=ctx.createWaveShaper();drumSat.curve=(()=>{const n=256,c=new Float32Array(n);for(let i=0;i<n;i++){const x=i/(n-1)*2-1;c[i]=Math.tanh(x*1.4);}return c;})();drumSat.oversample='2x';drumSat.connect(drumLP1);   // gentle soft-clip (center slope ~1.4, peak ~-1dB): adds harmonics/weight to the tonal bodies WITHOUT the huge makeup a driveCurve would give
   const counts={k:0,s:0,h:0,b:0};
@@ -1556,9 +1574,13 @@ function makeEngine(ctx){
   function setSidechain(v){fx.sidechain=clamp(v,0,1);if(fx.sidechain<.01){const t=ctx.currentTime;duck.gain.cancelScheduledValues(t);duck.gain.setTargetAtTime(1,t,.04);}}   // kick -> instrument duck depth (the pump)
   function setSwing(v){fx.swing=clamp(v,0,1);}
   function setDensity(v){fx.density=clamp(v,0,1);}
-  function setCharacter(v){fx.character=clamp(v,0,1);const t=ctx.currentTime;
-    if(v<.01){drumShape.curve=null;drumTrim.gain.setTargetAtTime(1,t,.02);}                              // clean bypass
-    else{drumShape.curve=driveCurve(v*v*0.55);drumTrim.gain.setTargetAtTime(1/(1+v*1.3),t,.02);}}        // squared = gentle low end; trim compensates loudness
+  let curTexAmt=-1,curTexFlav='';
+  function applyDrumTex(){const v=fx.character,fl=fx.drumTex||'tape',t=ctx.currentTime;
+    if(v!==curTexAmt||fl!==curTexFlav){texShaper.curve=v<.01?null:drumTexCurve(fl,v);curTexAmt=v;curTexFlav=fl;}   // rebuild on change only — swapping the curve per-drag zippers
+    drumWet.gain.setTargetAtTime(v<.01?0:clamp(v*0.92,0,1),t,.03);                                   // parallel grit blend (dry stays full) — continuous from 0, so it bites gradually
+    texLP.frequency.setTargetAtTime(v<.01?18000:clamp(17000-v*10500,5200,17000),t,.05);              // close a touch as it dirties → tames the fizz
+    drumTrim.gain.setTargetAtTime(1/(1+v*0.6),t,.03);}                                               // compensate the parallel energy add (loudness-match)
+  function setCharacter(v){fx.character=clamp(v,0,1);applyDrumTex();}   // TEXTURE amount; flavor = fx.drumTex (set via the seg + apply)
 
   /* bass — follows the last played note */
   /* bass voice: sub sine always; detuned saws BLEND IN with INTENSITY (heat), which also opens the LP.
@@ -1697,7 +1719,7 @@ function makeEngine(ctx){
     const airSh=ctx.createBiquadFilter();airSh.type='highshelf';airSh.frequency.value=4500;airSh.gain.value=9;
     const airG=mkOut();micGain.connect(airHP);airHP.connect(airSh);airSh.connect(airG);
     // TUNNEL: tempo-synced dotted-8th feedback delay, damped (send-side crossfade, see above)
-    const tun=ctx.createDelay(1.5);tun.delayTime.value=(60/fx.tempo)*.75;
+    const tun=ctx.createDelay(1.5);tun.delayTime.value=Math.min(1.49,(60/fx.tempo)*.75);
     const tunDamp=ctx.createBiquadFilter();tunDamp.type='lowpass';tunDamp.frequency.value=2000;
     const tunFb=ctx.createGain();tunFb.gain.value=.55;
     tun.connect(tunDamp);tunDamp.connect(tunFb);tunFb.connect(tun);
@@ -1994,7 +2016,7 @@ padDrag(vfield,$('#vpuck'),(x,y)=>{if(!eng)return;eng.fx.vx=x;eng.fx.vy=y;setVoi
 
 /* command */
 const tempoEl=$('#tempo'),bpmEl=$('#bpm');
-(function(){let dy=0,st=0;function set(v){v=clamp(Math.round(v),70,170);bpmEl.textContent=v;if(eng){eng.fx.tempo=v;eng.apply();}if(live)startPulse();}
+(function(){let dy=0,st=0;function set(v){v=clamp(Math.round(v),20,220);bpmEl.textContent=v;if(eng){eng.fx.tempo=v;eng.apply();}if(live)startPulse();}
   tempoEl.addEventListener('pointerdown',e=>{if(!live)return;tempoEl.dataset.d='1';dy=e.clientY;st=eng?eng.fx.tempo:112;try{tempoEl.setPointerCapture(e.pointerId)}catch(_){}});
   tempoEl.addEventListener('pointermove',e=>{if(tempoEl.dataset.d)set(st+(dy-e.clientY)*0.5);});tempoEl.addEventListener('pointerup',()=>tempoEl.dataset.d='');})();
 $('#beat').addEventListener('click',()=>{if(!live||!eng)return;const on=!$('#beat').classList.contains('on');$('#beat').classList.toggle('on',on);eng.setBeat(on);refreshTransport();});
@@ -2087,6 +2109,7 @@ $('#drate').querySelectorAll('b').forEach(b=>b.addEventListener('click',()=>{if(
 $('#rsize').querySelectorAll('b').forEach(b=>b.addEventListener('click',()=>{if(!live||!eng)return;$('#rsize').querySelectorAll('b').forEach(x=>x.classList.remove('on'));b.classList.add('on');eng.setRevSize(b.dataset.v);
   document.querySelector('.fillcard[data-key="reverb"]').style.setProperty('--cloud',CLOUDS[b.dataset.v]||'10px');}));
 $('#dtype').querySelectorAll('b').forEach(b=>b.addEventListener('click',()=>{if(!live||!eng)return;$('#dtype').querySelectorAll('b').forEach(x=>x.classList.remove('on'));b.classList.add('on');eng.fx.driveType=b.dataset.v;eng.apply();}));
+$('#dtex').querySelectorAll('b').forEach(b=>b.addEventListener('click',()=>{if(!live||!eng)return;$('#dtex').querySelectorAll('b').forEach(x=>x.classList.remove('on'));b.classList.add('on');eng.fx.drumTex=b.dataset.v;eng.apply();}));   // DRUMS texture flavor (mirrors #dtype)
 
 /* mic + vocal strip */
 const micin=$('#micin'),loopover=$('#loopover'),loopPill=$('#loopPill'),capnum=$('#capnum'),capringP=$('#capringP'),vstatus=$('#vstatus');
@@ -2298,7 +2321,7 @@ function captureSnapshot(){return {
   drive:+eng.fx.drive.toFixed(3),delay:+eng.fx.delay.toFixed(3),reverb:+eng.fx.reverb.toFixed(3),revSize:eng.fx.revSize,delayDiv:eng.fx.delayDiv,
   pattern:eng.fx.pattern,bassHeat:+eng.fx.bassHeat.toFixed(3),bassWeight:+eng.fx.bassWeight.toFixed(3),bassPluck:+eng.fx.bassPluck.toFixed(3),bassMode:eng.bassMode,bassRate:bassRateIdx,bassGlide:+bassGlideV.toFixed(3),pluck:eng.bassMode==='pluck',bassSeqMult:eng.bassSeqMult,bassSeq:eng.bassSeq.map(c=>c&&c.v?{v:c.v,oct:c.oct||'base'}:0),drumCover:eng.fx.drumCover,arpDiv:eng.fx.arpDiv,gate:eng.fx.gate,
   oct:octOff,key:keyRoot,mode:scaleMode,chord:chordMode,beat:$('#beat').classList.contains('on'),bass:$('#bassrow').classList.contains('on'),arp:$('#arpBtn').dataset.on==='1',latch:$('#latchBtn').dataset.on==='1',
-  sidechain:+(eng.fx.sidechain||0).toFixed(3),swing:+(eng.fx.swing||0).toFixed(3),density:+(eng.fx.density||0).toFixed(3),grit:+(eng.fx.character||0).toFixed(3),mod:+(eng.fx.mod||0).toFixed(3),modMode:eng.fx.modMode||'chorus',driveType:eng.fx.driveType||'warm'};}   // extended: sidechain/drum-feel/mod/drive-flavor now round-trip (so SHARE + presets recall the WHOLE sound)
+  sidechain:+(eng.fx.sidechain||0).toFixed(3),swing:+(eng.fx.swing||0).toFixed(3),density:+(eng.fx.density||0).toFixed(3),grit:+(eng.fx.character||0).toFixed(3),mod:+(eng.fx.mod||0).toFixed(3),modMode:eng.fx.modMode||'chorus',driveType:eng.fx.driveType||'warm',drumTex:eng.fx.drumTex||'tape'};}   // extended: sidechain/drum-feel/mod/drive-flavor now round-trip (so SHARE + presets recall the WHOLE sound)
 function segOn(id,val){const seg=document.getElementById(id);if(seg)seg.querySelectorAll('b').forEach(b=>b.classList.toggle('on',b.dataset.v===val));}
 function fillSet(key,v){const c=document.querySelector('.fillcard[data-key="'+key+'"]'),f=c.querySelector('.fill');f.style.height=(v*100).toFixed(0)+'%';f.classList.toggle('mt',v<=0.004);c.querySelector('.pc').textContent=Math.round(v*100);eng.fx[key]=v;}
 function setToggleBeat(on){if($('#beat').classList.contains('on')===on)return;$('#beat').classList.toggle('on',on);eng.setBeat(on);}
@@ -2333,6 +2356,7 @@ function applySnapshot(s){
   if(s.mod!=null)fillSet('mod',clamp(s.mod,0,1));
   if(s.modMode){eng.setModMode(s.modMode);segOn('mmode',s.modMode);}
   if(s.driveType){eng.fx.driveType=s.driveType;segOn('dtype',s.driveType);}
+  {const _dt=s.drumTex||'tape';eng.fx.drumTex=_dt;segOn('dtex',_dt);}   // default to TAPE when absent (old SHARE links / presets)
   if(s.sidechain!=null){const _sc=clamp(s.sidechain,0,1);eng.setSidechain(_sc);$('#scfill').style.width=(_sc*100)+'%';$('#schandle').style.left=(_sc*100)+'%';$('#scval').textContent=_sc<.01?'OFF':Math.round(_sc*100)+'%';}
   if(s.swing!=null){const _v=clamp(s.swing,0,1);eng.setSwing(_v);swingKnobObj.set(_v);}
   if(s.density!=null){const _v=clamp(s.density,0,1);eng.setDensity(_v);densKnobObj.set(_v);}
@@ -2401,7 +2425,7 @@ function diceRandom(){if(!live||!eng)return;demoTakeover();const pick=a=>a[Math.
     if(i%2===0)return ch(.55)?{v:2,oct:ch(.12)?'sub':'base'}:0;       // 8th → often a hit
     return ch(.3)?{v:1,oct:'base'}:0;                                  // 16th offbeat → occasional ghost
   });
-  applySnapshot({vx:r(.06,.94),vy:r(.06,.94),cutoff:r(.3,.92),res:r(0,.55),amount:r(0,.85),shape:pick(['sine','sawi','saw','sqr']),rateMode:'sync',syncDiv:pick(SYNCS).v,rateHz:eng.fx.rateHz,drive:r(0,.55),delay:r(0,.55),delayDiv:pick(['4','8','8d','16']),reverb:r(.05,.7),revSize:pick(['small','med','hall','vast']),tempo:ri(84,138),beat:ch(.7),pattern:pick(['floor','back','half','break']),drumCover:Math.round(60*Math.pow(200,r(.15,1))),bass:ch(.7),bassHeat:r(.1,.9),bassWeight:r(.3,.85),bassPluck:ch(.55)?r(.2,.8):0,pluck:false,bassMode:pick(['off','off','glide']),bassRate:ri(0,3),bassSeqMult:pick([.5,1,1,2]),bassSeq:seq,bassGlide:r(0,1),oct:octOff,key:ri(0,11),mode:pick(['major','major','minor','minor','chrom']),lock:true,arp:ch(.3),arpDiv:pick([1,1.5,2,2,3,4,4,6,8]),gate:r(.15,1.05),latch:false});}
+  applySnapshot({vx:r(.06,.94),vy:r(.06,.94),cutoff:r(.3,.92),res:r(0,.55),amount:r(0,.85),shape:pick(['sine','sawi','saw','sqr']),rateMode:'sync',syncDiv:pick(SYNCS).v,rateHz:eng.fx.rateHz,drive:r(0,.55),delay:r(0,.55),delayDiv:pick(['4','8','8d','16']),reverb:r(.05,.7),revSize:pick(['small','med','hall','vast']),tempo:ri(84,138),beat:ch(.7),pattern:pick(['floor','back','half','break']),drumCover:Math.round(60*Math.pow(200,r(.15,1))),drumTex:pick(['tape','crush']),bass:ch(.7),bassHeat:r(.1,.9),bassWeight:r(.3,.85),bassPluck:ch(.55)?r(.2,.8):0,pluck:false,bassMode:pick(['off','off','glide']),bassRate:ri(0,3),bassSeqMult:pick([.5,1,1,2]),bassSeq:seq,bassGlide:r(0,1),oct:octOff,key:ri(0,11),mode:pick(['major','major','minor','minor','chrom']),lock:true,arp:ch(.3),arpDiv:pick([1,1.5,2,2,3,4,4,6,8]),gate:r(.15,1.05),latch:false});}
 (function(){
   $('#dice').addEventListener('click',()=>{if(!live||!eng){typeStatus('press power first');return;}diceRandom();const d=$('#dice');d.classList.remove('roll');void d.offsetWidth;d.classList.add('roll');});
   device.addEventListener('pointerdown',e=>{if(REC.replaying&&!e.target.closest('.transport'))demoTakeover();},true);
@@ -2820,7 +2844,7 @@ function readoutSet(text){coachRender(text?{a:text}:{rest:true});}
 const PRESET_BASE={
   vx:.42,vy:.4,cutoff:.6,res:0,amount:0,shape:'sine',rateMode:'sync',syncDiv:'8',rateHz:3,tempo:112,
   drive:0,driveType:'warm',mod:0,modMode:'chorus',delay:.25,delayDiv:'8',reverb:.32,revSize:'med',
-  pattern:'floor',drumCover:12000,swing:0,density:0,grit:0,sidechain:.3,
+  pattern:'floor',drumCover:12000,swing:0,density:0,grit:0,drumTex:'tape',sidechain:.3,
   bassHeat:.5,bassWeight:.5,bassPluck:0,bassMode:'off',bassRate:0,bassGlide:0,bassSeqMult:1,
   bassSeq:new Array(16).fill(0),oct:0,key:0,mode:'major',chord:false,arpDiv:2,gate:.5,
   beat:false,bass:false,arp:false,latch:false
@@ -2857,7 +2881,8 @@ const TUTOR={
   '#coverslide':{title:'DRUMS · cover',    body:'slide it to muffle the beat, like closing a lid — open is crisp, closed is distant.'},
   '#swingKnob': {title:'DRUMS · swing',    body:'pushes the off-beats late for a looser, more human groove.'},
   '#densKnob':  {title:'DRUMS · density',  body:'adds or thins out the hits — busier or sparser.'},
-  '#gritKnob':  {title:'DRUMS · grit',     body:'roughs up the drums, from clean to dirty.'},
+  '#gritKnob':  {title:'DRUMS · texture',  body:'how much character the drums take on — clean up to dirty. it eases in, never just harsh.'},
+  '#dtex':      {title:'DRUMS · texture flavor',body:'the kind of texture — TAPE is warm and analog, CRUSH is gritty and digital.'},
   '#scslide':   {title:'DRUMS · sidechain',body:'raise it and everything ducks under the kick — that pumping, breathing feel.'},
   '#vpad':      {title:'VOICE · the morph pad',body:'drag around to reshape the voice — up brighter, down darker, left lush, right clean.'},
   '#afilter':   {title:'FILTER · the node',body:'drag the node. sideways opens the sound up, down shaves the top off. it moves the whole sound at once.'},
