@@ -1578,7 +1578,8 @@ function makeEngine(ctx){
   const bassLfo=ctx.createOscillator();bassLfo.type='sine';bassLfo.frequency.value=(fx.tempo/60)*2;
   const bassLfoAmt=ctx.createGain();bassLfoAmt.gain.value=0;
   bassLfo.connect(bassLfoAmt);bassLfoAmt.connect(bassLP.detune);bassLfo.start();
-  function applyBassMove(){if(!bassLfoAmt)return;const d=clamp(fx.bassPluck,0,1);bassLfoAmt.gain.setTargetAtTime(d*d*2600,ctx.currentTime,.07);bassLP.Q.setTargetAtTime(0.7+d*4.5,ctx.currentTime,.07);bassLfo.frequency.setTargetAtTime(Math.max(.05,(fx.tempo/60)*2),ctx.currentTime,.1);}
+  function applyBassMove(){if(!bassLfoAmt)return;const d=clamp(fx.bassPluck,0,1);   // MOVE: tasteful tempo-synced filter movement (was a fast/deep/resonant wobble = "silly"). Now slower (1/4-note), much shallower, barely resonant — a gentle musical pulse. (Temporary on the synth bass; gets redefined when the bass is resampled.)
+    bassLfoAmt.gain.setTargetAtTime(d*d*750,ctx.currentTime,.07);bassLP.Q.setTargetAtTime(0.7+d*1.3,ctx.currentTime,.07);bassLfo.frequency.setTargetAtTime(Math.max(.05,(fx.tempo/60)),ctx.currentTime,.1);}
   const bassOut=ctx.createGain();bassOut.gain.value=.8;
   const bassGate=ctx.createGain();bassGate.gain.value=1;   // GATE gesture chops this in sync with ampTrem, so the bass gates too
   bassDrive.connect(bassLP);bassLP.connect(bassOut);bassOut.connect(bassGate);bassGate.connect(glue);
