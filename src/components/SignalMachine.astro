@@ -1801,7 +1801,7 @@ function makeEngine(ctx){
 }
 
 /* ════════ WIRING ════════ */
-const device=$('#device');let eng=null,live=false;
+const device=$('#device');let eng=null,live=false;let gateHeld=[];   // rates of currently-held GATE keys → live-pad feel (last-press-wins; releasing one falls back to a still-held rate instead of cutting the gate)
 
 /* piano */
 const WK=[{q:'a',o:0},{q:'s',o:2},{q:'d',o:4},{q:'f',o:5},{q:'g',o:7},{q:'h',o:9},{q:'j',o:11},{q:'k',o:12},{q:'l',o:14}];
@@ -1982,7 +1982,7 @@ function doPowerOff(){if(typeof REC!=='undefined'){if(REC.on)REC.stop();REC.stop
   $('#latchBtn').classList.remove('on');$('#latchBtn').dataset.on='0';$('#arpmod').classList.remove('armed');
   piano.querySelectorAll('.press,.latched,.glint').forEach(k=>k.classList.remove('press','latched','glint'));
   $('#micin').classList.remove('on','rec','arming','loop');
-  document.querySelectorAll('.gpad.on,.gpad.ghost').forEach(p=>p.classList.remove('on','ghost'));
+  gateHeld=[];document.querySelectorAll('.gpad.on,.gpad.ghost').forEach(p=>p.classList.remove('on','ghost'));
   const sp=$('#spill');if(sp)sp.classList.remove('on');
   vocalReset();takeReset();readoutStop();if(jamOn){jamOn=false;jamReplaying=false;jamTimers.forEach(clearTimeout);jamTimers=[];}}   /* stop the readout + any jam loop + reset the take pill when the device goes dark */
 pwr.addEventListener('click',()=>powerToggle());
@@ -2064,13 +2064,21 @@ const gpadFor=g=>document.querySelector('.gpad[data-g="'+g+'"]');
 const gpadRate=rate=>document.querySelector('.gpad.gate[data-rate="'+rate+'"]');
 function refreshPat(){if(!eng)return;const p=eng.fx.pattern;$('#patSeg').querySelectorAll('b').forEach(b=>b.classList.toggle('on',b.dataset.v===p));}
 /* g = gesture name; rate (optional) = gate chop divisor. Lights the active gate-rate keycap (or the single lift/dive pad). */
-function setGesture(g,on,rate){if(!live||!eng)return;eng.gesture(g,on,rate);const lit=on&&eng.gestures[g];
-  if(g==='gate'){document.querySelectorAll('.gpad.gate').forEach(p=>p.classList.remove('on'));if(lit){const _p=gpadRate(rate);if(_p)_p.classList.add('on');}}
-  else{const _p=gpadFor(g);if(_p)_p.classList.toggle('on',!!lit);}
+function setGesture(g,on,rate){if(!live||!eng)return;
+  if(g==='gate'){   // live-pad GATE: track the stack of held rates so holding Z then C switches to C, and RELEASING C falls back to Z (still held) instead of cutting the gate
+    gateHeld=gateHeld.filter(r=>r!==rate);
+    if(on){gateHeld.push(rate);eng.gesture('gate',true,rate);}
+    else if(gateHeld.length)eng.gesture('gate',true,gateHeld[gateHeld.length-1]);   // another gate key still down → switch back to it (no interruption)
+    else eng.gesture('gate',false,rate);
+    document.querySelectorAll('.gpad.gate').forEach(p=>p.classList.remove('on'));
+    if(gateHeld.length){const _p=gpadRate(gateHeld[gateHeld.length-1]);if(_p)_p.classList.add('on');}
+    return;}
+  eng.gesture(g,on,rate);const lit=on&&eng.gestures[g];
+  const _p=gpadFor(g);if(_p)_p.classList.toggle('on',!!lit);
   if(g==='fill')refreshPat();}
 window.addEventListener('keydown',e=>{const m=GMAP[e.code];if(!m||e.repeat||!inView)return;setGesture(m.g,true,m.rate);});
 window.addEventListener('keyup',e=>{const m=GMAP[e.code];if(!m)return;setGesture(m.g,false,m.rate);});
-window.addEventListener('blur',()=>{if(!eng)return;Object.values(GMAP).forEach(m=>{if(eng.gestures[m.g])setGesture(m.g,false,m.rate);});});
+window.addEventListener('blur',()=>{if(!eng)return;gateHeld=[];Object.values(GMAP).forEach(m=>{if(eng.gestures[m.g])setGesture(m.g,false,m.rate);});});
 /* drop controls — bring in the groove from the keyboard while holding a chord (Jon 2026-06-15): SPACE toggles DRUMS, B toggles BASS (mirrors the #bassrow on-screen click exactly). */
 window.addEventListener('keydown',e=>{if(!live||!eng||!inView||e.repeat)return;
   if(e.code==='Space'){e.preventDefault();const on=!$('#beat').classList.contains('on');$('#beat').classList.toggle('on',on);eng.setBeat(on);refreshTransport();}
