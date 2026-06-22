@@ -134,7 +134,21 @@ const deck = works.map((proj, i) => ({ proj, i, ...(DECK[proj.slug] ?? DECK_FALL
     {/* SIGNAL — the instrument. The site grammar: signals wake machines, and
         machines make sound. Audio exists only after the power press; the boot
         ceremony + standby rules live in the component. */}
-    <SignalMachine />
+    {/* SIGNAL is keyboard-only. On touch / no-fine-pointer devices (where the
+        instrument refuses to play) the homepage swaps it for the self-contained
+        /more audio exhibit — same predicate the component uses (pointer:fine). */}
+    <div class="sig-desktop">
+      <SignalMachine />
+    </div>
+    <div class="sig-mobile">
+      <iframe class="sig-mobile-frame" data-src="/more/index.html" title="Interactive audio exhibit" loading="lazy" allow="autoplay"></iframe>
+    </div>
+    <script is:inline>
+      if (!window.matchMedia("(pointer: fine)").matches) {
+        const f = document.querySelector(".sig-mobile-frame");
+        if (f && !f.src) f.src = f.getAttribute("data-src");
+      }
+    </script>
   </main>
 
   <Footer />
@@ -248,6 +262,17 @@ const deck = works.map((proj, i) => ({ proj, i, ...(DECK[proj.slug] ?? DECK_FALL
        masthead in the live stage and sets its own padding in the static
        fallback, so main adds none here. */
     padding-top: 0;
+  }
+
+  /* SIGNAL is keyboard-only; on touch devices show the /more exhibit instead.
+     Mirrors the component's own !matchMedia('(pointer: fine)') test, so the swap
+     lands on exactly the devices where the instrument won't play. */
+  .sig-desktop { display: none; }
+  .sig-mobile { display: block; }
+  .sig-mobile-frame { display: block; width: 100%; height: 100dvh; border: 0; background: #080b10; }
+  @media (pointer: fine) {
+    .sig-desktop { display: block; }
+    .sig-mobile { display: none; }
   }
 
   /* Generic section — no rules between sections; the page flows. */
