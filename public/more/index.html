@@ -1,0 +1,442 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1, user-scalable=no" />
+<title>more</title>
+<style>
+  :root{
+    --carbon:#080b10; --raised:#0e1319; --panel:rgba(255,255,255,0.045);
+    --line:rgba(255,255,255,0.10); --line2:rgba(255,255,255,0.20);
+    --sapphire:#0ec4fc; --amber:#ff9a4a; --ink:#e9eff6; --muted:#7e8c9b; --dim:#54616f;
+    --mono:ui-monospace,"SF Mono","JetBrains Mono",Menlo,monospace;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{height:100%;margin:0;overflow:hidden;background:var(--carbon);color:var(--ink);
+    font-family:var(--mono);-webkit-user-select:none;user-select:none}
+  #app{height:100dvh;display:flex;flex-direction:column;position:relative}
+  button{font-family:var(--mono);cursor:pointer;color:inherit}
+  .fade{animation:fade .5s ease both}@keyframes fade{from{opacity:0}to{opacity:1}}
+  .rise{animation:rise .55s ease both}@keyframes rise{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+
+  /* cold open */
+  .open{position:absolute;inset:0;z-index:40;background:radial-gradient(130% 90% at 50% 10%,#10161e,var(--carbon) 72%);
+    display:flex;flex-direction:column;align-items:center;justify-content:center;gap:24px;padding:34px;text-align:center}
+  .open .t{font-size:60px;font-weight:500;letter-spacing:-.03em;line-height:.9}
+  .open .t b{color:var(--amber);font-weight:500}
+  .open .lede{font-size:15px;line-height:1.65;color:var(--muted);max-width:24em}
+  .open .lede b{color:var(--ink);font-weight:500}
+  .go{font-size:15px;letter-spacing:.05em;color:var(--carbon);background:var(--sapphire);border:0;border-radius:999px;padding:15px 36px}
+  .go:active{transform:scale(.96)}
+  .fine{font-size:12px;color:var(--dim);letter-spacing:.08em}
+
+  /* rounds / play surface */
+  .stage{flex:1;display:flex;flex-direction:column;min-height:0;
+    padding:calc(env(safe-area-inset-top) + 20px) 18px calc(env(safe-area-inset-bottom) + 18px)}
+  .constel{display:flex;align-items:center;justify-content:center;gap:11px;height:22px;margin-bottom:6px}
+  .constel i{width:7px;height:7px;border-radius:50%;background:rgba(255,255,255,.13);transition:background .5s,box-shadow .5s,transform .4s}
+  .constel i.on{background:var(--sapphire);box-shadow:0 0 9px var(--sapphire);transform:scale(1.18)}
+  .prompt{text-align:center;font-size:17px;margin:14px 0 3px;font-weight:500}
+  .sub{text-align:center;font-size:12px;color:var(--muted);min-height:16px;letter-spacing:.02em}
+  .sub b{color:var(--sapphire);font-weight:500}
+
+  .wave{position:relative;flex:1;min-height:90px;margin:14px 0 12px;border:1px solid var(--line);border-radius:14px;
+    background:var(--raised);overflow:hidden;touch-action:none}
+  .wave canvas{position:absolute;inset:0;width:100%;height:100%}
+  .wave .ph{position:absolute;top:0;bottom:0;width:2px;background:var(--ink);box-shadow:0 0 10px var(--sapphire);transform:translateX(-1px);pointer-events:none}
+  .wave .scrubhint{position:absolute;left:12px;bottom:8px;font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--dim);pointer-events:none}
+  .wave .busy{position:absolute;inset:0;display:none;align-items:center;justify-content:center;background:rgba(8,11,16,.78);
+    font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:var(--muted)}
+  .wave .busy.on{display:flex}
+
+  .cards{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .opt{border:1px solid var(--line);border-radius:13px;background:var(--panel);padding:15px 10px;text-align:center}
+  .opt .k{font-size:21px;font-weight:500;line-height:1.05}
+  .opt .s{font-size:10px;letter-spacing:.15em;text-transform:uppercase;color:var(--dim);margin-top:7px}
+  .opt.live{border-color:var(--sapphire);background:rgba(14,196,252,.09)}
+  .opt.live .s{color:var(--sapphire)}
+  .opt:active{transform:scale(.985)}
+  .primary{margin-top:10px;width:100%;font-size:15px;letter-spacing:.02em;color:var(--carbon);background:var(--amber);border:0;border-radius:13px;padding:16px}
+  .primary:active{transform:scale(.99)}
+  .ghost{display:block;width:100%;margin-top:9px;background:none;border:0;color:var(--muted);font-size:12px;letter-spacing:.08em}
+  .ghost:active{color:var(--ink)}
+
+  /* turn */
+  .turn{position:absolute;inset:0;z-index:45;background:var(--carbon);display:flex;flex-direction:column;
+    align-items:center;justify-content:center;gap:16px;padding:40px;text-align:center}
+  .turn .l{font-size:22px;font-weight:500;line-height:1.3;opacity:0}
+  .turn .l.show{animation:rise .7s ease forwards}
+  .turn .l.dim{color:var(--muted)}
+  .turn .play{opacity:0}.turn .play.show{animation:fade .6s ease forwards}
+
+  /* result */
+  .result{position:absolute;inset:0;z-index:46;background:radial-gradient(130% 90% at 50% 8%,#10161e,var(--carbon) 74%);
+    display:flex;flex-direction:column;padding:calc(env(safe-area-inset-top) + 26px) 22px calc(env(safe-area-inset-bottom) + 22px);overflow-y:auto}
+  .beat{display:none;flex:1;flex-direction:column}
+  .beat.on{display:flex}
+  .eyebrow{font-size:11px;letter-spacing:.2em;text-transform:uppercase;color:var(--muted)}
+  .tapnext{margin-top:auto;font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--dim);text-align:center;padding-top:18px}
+
+  /* signature card */
+  .sig{border:1px solid var(--line2);border-radius:18px;background:linear-gradient(180deg,rgba(255,154,74,.06),rgba(14,196,252,.04));
+    padding:26px 22px;margin-top:14px}
+  .sig .lab{font-size:11px;letter-spacing:.24em;text-transform:uppercase;color:var(--muted)}
+  .sig .name{font-size:30px;font-weight:500;letter-spacing:-.01em;color:var(--amber);margin:8px 0 12px;line-height:1.05}
+  .sig .line{font-size:15px;line-height:1.55;color:var(--ink)}
+  .sig .stat{font-size:13px;line-height:1.5;color:var(--muted);margin-top:14px;border-top:1px solid var(--line);padding-top:12px}
+
+  .hero{font-size:23px;font-weight:500;line-height:1.32;margin:10px 0}
+  .hero .q{color:var(--sapphire)}
+  .absolve{font-size:14px;line-height:1.6;color:var(--muted);margin:8px 0}
+  .absolve b{color:var(--ink);font-weight:500}
+  .evidence{margin-top:16px}
+  .evidence .cap{font-size:11px;letter-spacing:.06em;color:var(--muted);margin-bottom:8px}
+  .evidence .cap b{color:var(--amber);font-weight:500}
+  .waves{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .wcol{position:relative;height:70px;border:1px solid var(--line);border-radius:11px;overflow:hidden;background:var(--raised)}
+  .wcol canvas{position:absolute;inset:0;width:100%;height:100%}
+  .wcol .cl{position:absolute;left:9px;top:7px;font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
+  .wcol.mine .cl{color:var(--amber)}
+
+  .rel{font-size:17px;line-height:1.5;font-weight:500}
+  .rel .d{color:var(--muted);font-weight:400;font-size:14px;margin-top:10px}
+  .thesis{font-size:15px;line-height:1.6;color:var(--ink);margin-top:20px;border-left:2px solid var(--amber);padding-left:14px}
+  .nametag{margin-top:14px;font-size:12px;color:var(--sapphire);background:none;border:0;letter-spacing:.04em}
+
+  .closer{font-size:22px;font-weight:500;line-height:1.35;margin-top:8px}
+  .doors{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:auto}
+  .doors button{font-size:14px;border-radius:12px;padding:15px;border:1px solid var(--line2);background:var(--panel)}
+  .doors button.save{background:var(--ink);color:var(--carbon);border:0}
+  .doors button:active{transform:scale(.98)}
+
+  /* save-your-ear chromeless frame */
+  body.saved .result>*{display:none}
+  body.saved .savedcard{display:flex}
+  .savedcard{display:none;position:absolute;inset:0;z-index:60;background:var(--carbon);flex-direction:column;align-items:center;justify-content:center;padding:34px}
+  .savedcard .tap{position:absolute;bottom:24px;font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--dim)}
+</style>
+</head>
+<body>
+  <div id="app"></div>
+  <script src="./core.js"></script>
+  <script>
+  function createApp(host, appEl){
+    const AC=window.AECore, ctx=host.audioCtx;
+    const CLIP=AC.softClipCurve(1.0,0.18,8192);
+    const AXES=['tilt','comp','sat','drive'];
+    const CLEAN={tilt:0.10,comp:0.16,sat:0.10,drive:0.14};
+    const OVER ={tilt:0.95,comp:0.84,sat:0.90,drive:0.94};
+    const MATCH=-16, DUR=12, CEIL=-1.0, STEP=0.34, TOTAL=6;
+    const READ_MORE={tilt:'Nice ear. You went for air and edge.',comp:'Good call. You like it thick and full.',
+      sat:'You reached for a little heat — heard.',drive:'Noted. You like it loud and forward.'};
+    const SIGS={
+      tilt:{n:'the bright maximalist',l:'You chased air and edge, and you committed — you hear the top of a mix before anyone else in the room does.'},
+      comp:{n:'the density hunter',l:'You went for weight and wall-to-wall energy — you want a mix that never lets go, and you knew it every time.'},
+      sat:{n:'the heat seeker',l:'You reached for warmth and grit — you like a master with blood in it, the kind that sounds like it was pushed through something real.'},
+      drive:{n:'the loud-and-forward',l:'You wanted it loud, present, in your face — a producer’s instinct for impact, and you trusted it on every call.'},
+      steady:{n:'the steady hand',l:'Rare ear: you kept reaching for restraint when almost everyone reaches for more. You held your ground when the easy move was to push.'},
+      balanced:{n:'the balanced ear',l:'You spread your attention across the whole mix — brightness, weight, warmth, level — a generalist’s ear that won’t be fooled by one trick.'}
+    };
+
+    let master, app=appEl;
+    let g=Object.assign({},CLEAN), visits={tilt:0,comp:0,sat:0,drive:0}, rewards={tilt:1,comp:1,sat:1,drive:1};
+    let rounds=0, moreCount=0, seed=(Math.random()*1e9)|0, lastAxis=null;
+    let earlyMaster=null, builtMaster=null, songPos=0, blindPickedOriginal=false;
+
+    const el=h=>{const d=document.createElement('div');d.innerHTML=h.trim();return d.firstChild;};
+    const setStage=h=>{ app.innerHTML=''; app.appendChild(el(h)); };
+
+    // ---------- engine: genome -> real mastering chain ----------
+    async function renderGenome(gg,seconds){
+      const dur=Math.min(seconds||DUR, master.duration);
+      const rendered=await host.bake((oc)=>{
+        const C=(a,b)=>{a.connect(b);return b;};
+        const src=oc.createBufferSource(); src.buffer=master;
+        const low=oc.createBiquadFilter(); low.type='lowshelf'; low.frequency.value=150; low.gain.value=-gg.tilt*3.5;
+        const pres=oc.createBiquadFilter(); pres.type='peaking'; pres.frequency.value=3200; pres.Q.value=1.1; pres.gain.value=gg.tilt*5.0;
+        const high=oc.createBiquadFilter(); high.type='highshelf'; high.frequency.value=5800; high.gain.value=gg.tilt*11.0;
+        const band=(input,type,f1,f2)=>{ let n=input;
+          if(type==='low'){const lp=oc.createBiquadFilter();lp.type='lowpass';lp.frequency.value=f1;n=C(n,lp);}
+          else if(type==='high'){const hp=oc.createBiquadFilter();hp.type='highpass';hp.frequency.value=f1;n=C(n,hp);}
+          else{const hp=oc.createBiquadFilter();hp.type='highpass';hp.frequency.value=f1;const lp=oc.createBiquadFilter();lp.type='lowpass';lp.frequency.value=f2;n=C(C(n,hp),lp);}
+          const comp=oc.createDynamicsCompressor(); comp.threshold.value=-18-gg.comp*22; comp.ratio.value=2+gg.comp*8;
+          comp.attack.value=0.003; comp.release.value=0.18-gg.comp*0.12; comp.knee.value=6; return C(n,comp); };
+        const eq=C(C(C(src,low),pres),high), sum=oc.createGain(); sum.gain.value=1;
+        band(eq,'low',180).connect(sum); band(eq,'mid',180,3200).connect(sum); band(eq,'high',3200).connect(sum);
+        const sat=oc.createWaveShaper(); sat.curve=AC.satCurve(1+gg.sat*9); sat.oversample='2x';
+        const mk=oc.createGain(); mk.gain.value=Math.pow(10,(gg.drive*11)/20);
+        const clip=oc.createWaveShaper(); clip.curve=CLIP; clip.oversample='2x';
+        C(C(C(sum,sat),mk),clip).connect(oc.destination); src.start();
+      }, dur);
+      return host.limitBuffer(rendered,{ceilingDb:CEIL,lookaheadMs:2.0,relFastMs:60,relSlowMs:300});
+    }
+    function chooseAxis(){ const total=rounds+1,K=0.9; let best=null,bs=-1e9;
+      for(const a of AXES){ const m=rewards[a]/(visits[a]+1); const ucb=m+K*Math.sqrt(Math.log(total+1)/(visits[a]+1));
+        const j=(AC.mulberry32(seed+rounds*7+AXES.indexOf(a))()-0.5)*0.05; const s=ucb+j; if(s>bs){bs=s;best=a;} } return best; }
+    function neighbors(){ const ax=chooseAxis(); lastAxis=ax;
+      const hi=Object.assign({},g); hi[ax]=Math.min(1,g[ax]+STEP);
+      const lo=Object.assign({},g); lo[ax]=Math.max(0,g[ax]-STEP); return {ax,hi,lo}; }
+    function fidelity(){ let d=0; for(const a of AXES){const t=(g[a]-CLEAN[a])/(OVER[a]-CLEAN[a]); d+=Math.max(0,Math.min(1,t));} return Math.max(0,1-d/AXES.length); }
+
+    // ---------- scrubbable blind dual-buffer player ----------
+    function makePlayer(bufX,bufY,sd){
+      const gX=host.matchGain(bufX,MATCH), gY=host.matchGain(bufY,MATCH);
+      const flip=AC.mulberry32(sd)()<0.5;
+      const s1d=flip?{buf:bufY,g:gY,id:'Y'}:{buf:bufX,g:gX,id:'X'};
+      const s2d=flip?{buf:bufX,g:gX,id:'X'}:{buf:bufY,g:gY,id:'Y'};
+      const dur=Math.min(s1d.buf.duration,s2d.buf.duration);
+      let s1,s2,g1,g2,sel=1,playing=false,bT=0,bP=0;
+      function build(at){ const t=ctx.currentTime+0.02;
+        s1=ctx.createBufferSource();s1.buffer=s1d.buf;s1.loop=true; s2=ctx.createBufferSource();s2.buffer=s2d.buf;s2.loop=true;
+        g1=ctx.createGain();g2=ctx.createGain();
+        g1.gain.setValueAtTime(0,t);g1.gain.linearRampToValueAtTime(s1d.g*(sel===1?1:0),t+0.008);
+        g2.gain.setValueAtTime(0,t);g2.gain.linearRampToValueAtTime(s2d.g*(sel===2?1:0),t+0.008);
+        s1.connect(g1).connect(host.master); s2.connect(g2).connect(host.master);
+        s1.start(t,at%dur); s2.start(t,at%dur); bT=t; bP=at%dur; }
+      return { duration:dur, get sel(){return sel;},
+        play(at){ if(playing)return; build((((at||0)%dur)+dur)%dur); playing=true; },
+        stop(){ if(!playing)return; try{s1.stop();s2.stop();}catch(e){} playing=false; },
+        pos(){ return playing?(((bP+(ctx.currentTime-bT))%dur)+dur)%dur:bP; },
+        seek(p){ if(playing){try{s1.stop();s2.stop();}catch(e){}} build((((p%dur)+dur)%dur)); playing=true; },
+        select(s){ sel=s; if(!playing)return; const t=ctx.currentTime,tc=.012;
+          g1.gain.setTargetAtTime(s1d.g*(sel===1?1:0),t,tc); g2.gain.setTargetAtTime(s2d.g*(sel===2?1:0),t,tc); },
+        whichIs(s){ return s===1?s1d.id:s2d.id; } };
+    }
+
+    // ---------- waveform (full-clip env + live playhead) ----------
+    let fullEnv=null;
+    function buildEnv(buf,cols){ const L=buf.getChannelData(0),R=buf.numberOfChannels>1?buf.getChannelData(1):L,n=buf.length;
+      const out=new Float32Array(cols),per=Math.floor(n/cols);
+      for(let c=0;c<cols;c++){let pk=0;const s=c*per,e=Math.min(n,s+per);for(let i=s;i<e;i++){const a=Math.max(Math.abs(L[i]),Math.abs(R[i]));if(a>pk)pk=a;}out[c]=pk;} return out; }
+    function drawWave(canvas,frac){ if(!canvas||!fullEnv)return; const dpr=Math.min(2,window.devicePixelRatio||1),r=canvas.getBoundingClientRect();
+      if(canvas.width!==(r.width*dpr|0)){canvas.width=r.width*dpr|0;canvas.height=r.height*dpr|0;}
+      const gx=canvas.getContext('2d'),W=canvas.width,H=canvas.height,mid=H/2,colW=W/fullEnv.length,head=frac*fullEnv.length;
+      gx.clearRect(0,0,W,H);
+      for(let i=0;i<fullEnv.length;i++){const v=fullEnv[i],x=i*colW,h=Math.max(1,Math.min(1,v)*mid*.94);
+        gx.fillStyle=i<=head?'rgba(14,196,252,.9)':'rgba(14,196,252,.2)'; gx.fillRect(x,mid-h,Math.max(1,colW+.5),h*2);} }
+
+    // ---------- generic play surface (cards + scrub + primary) ----------
+    let player=null, surfRaf=0;
+    function bindSurface(scope, bufX, bufY, sd, opts){
+      const wave=scope.querySelector('.wave'), canvas=scope.querySelector('canvas'), ph=scope.querySelector('.ph');
+      const cards=[...scope.querySelectorAll('.opt')], primary=scope.querySelector('.primary');
+      if(player)player.stop(); cancelAnimationFrame(surfRaf);
+      player=makePlayer(bufX,bufY,sd);
+      if(!fullEnv) fullEnv=buildEnv(master, 360);
+      const labels=opts.labels||{A:'A',B:'B'};
+      function setSel(s){ player.select(s); cards.forEach(c=>{const on=+c.dataset.slot===s;c.classList.toggle('live',on);
+        c.querySelector('.s').textContent=on?'now playing':'tap to hear';}); }
+      cards[0].querySelector('.k').textContent=labels.A; cards[1].querySelector('.k').textContent=labels.B;
+      cards.forEach(c=>c.onclick=()=>setSel(+c.dataset.slot));
+      primary.textContent=opts.primaryText||'this one ▸';
+      primary.onclick=()=>{ songPos=player.pos(); opts.onPrimary(player.sel, player.whichIs(player.sel)); };
+      // scrub
+      const fx=cx=>{const r=wave.getBoundingClientRect();return Math.max(0,Math.min(1,(cx-r.left)/r.width));};
+      let drag=false;
+      wave.onpointerdown=e=>{drag=true;wave.setPointerCapture(e.pointerId);const f=fx(e.clientX);ph.style.left=(f*100)+'%';drawWave(canvas,f);};
+      wave.onpointermove=e=>{if(drag){const f=fx(e.clientX);ph.style.left=(f*100)+'%';drawWave(canvas,f);}};
+      const rel=e=>{if(!drag)return;drag=false;const f=fx(e.clientX);songPos=f*player.duration;player.seek(songPos);};
+      wave.onpointerup=rel; wave.onpointercancel=rel;
+      player.play(songPos); setSel(1);
+      (function loop(){ const f=player.pos()/player.duration; drawWave(canvas,f); ph.style.left=(f*100)+'%'; surfRaf=requestAnimationFrame(loop); })();
+    }
+    const SURFACE=`<div class="wave"><canvas></canvas><div class="ph"></div><div class="scrubhint">drag to scrub</div><div class="busy">tuning to your taste</div></div>
+      <div class="cards"><div class="opt live" data-slot="1"><div class="k">A</div><div class="s">now playing</div></div>
+      <div class="opt" data-slot="2"><div class="k">B</div><div class="s">tap to hear</div></div></div>
+      <button class="primary">this one ▸</button>`;
+
+    // ---------- ROUNDS ----------
+    function showRounds(){
+      setStage(`<div class="stage fade">
+        <div class="constel" id="constel"></div>
+        <div class="prompt" id="prompt">Which one sounds better?</div>
+        <div class="sub" id="sub"></div>
+        ${SURFACE}
+        <button class="ghost" id="cmp" style="display:none">where you started ▸</button>
+      </div>`);
+      const cc=app.querySelector('#constel'); for(let i=0;i<TOTAL;i++)cc.appendChild(el('<i></i>'));
+      app.querySelector('#cmp').onclick=()=>openCompare(true);
+      startRound();
+    }
+    function paintConstel(){ const dots=[...app.querySelectorAll('#constel i')]; dots.forEach((d,i)=>d.classList.toggle('on',i<rounds)); }
+    async function startRound(){
+      const busy=app.querySelector('.busy'); busy&&busy.classList.add('on');
+      const {ax,hi,lo}=neighbors();
+      const candHi=await renderGenome(hi), candLo=await renderGenome(lo);
+      curRound={ax,hi,lo};
+      app.querySelector('#prompt').textContent = rounds>=3 ? 'Which sounds better right now?' : 'Which one sounds better?';
+      app.querySelector('#sub').textContent = rounds===5 ? 'last call — it’s very sure of you now' : '';
+      app.querySelector('#cmp').style.display = rounds>=4 ? 'block' : 'none';
+      paintConstel();
+      busy&&busy.classList.remove('on');
+      // forced compare entering round 4 (rounds===3), once
+      if(rounds===3 && !did4){ did4=true; await openCompare(false, ()=>loadVote(candHi,candLo,ax)); return; }
+      loadVote(candHi,candLo,ax);
+    }
+    let curRound=null, did4=false;
+    function loadVote(candHi,candLo,ax){
+      bindSurface(app.querySelector('.stage'), candHi, candLo, seed+rounds, {
+        labels:{A:'A',B:'B'}, primaryText:'this one ▸',
+        onPrimary:(slot,id)=>commit(id,ax)
+      });
+    }
+    function commit(pickedId,ax){
+      visits[ax]++;
+      if(pickedId==='X'){ g=Object.assign({},curRound.hi); rewards[ax]+=1; moreCount++; app.querySelector('#sub').innerHTML='<b>'+READ_MORE[ax]+'</b>'; }
+      else { g=Object.assign({},curRound.lo); rewards[ax]+=0.15; app.querySelector('#sub').innerHTML='<b>Restraint — you kept it clean and open.</b>'; }
+      rounds++;
+      paintConstel();
+      const after=async()=>{ if(rounds===1){ earlyMaster=await renderGenome(g, DUR); }
+        if(rounds>=TOTAL){ if(player)player.stop(); cancelAnimationFrame(surfRaf); goTurn(); } else startRound(); };
+      // brief beat so the "read on you" line registers
+      setTimeout(after, 650);
+    }
+    // the "where you started vs now" compare (forced @r4, repeatable @5-6)
+    async function openCompare(repeat, done){
+      const busy=app.querySelector('.busy'); busy&&busy.classList.add('on');
+      const current=await renderGenome(g, DUR);
+      const early=earlyMaster||current;
+      app.querySelector('#prompt').textContent = 'Hear how far it’s drifted.';
+      app.querySelector('#sub').innerHTML = '<span style="color:var(--muted)">same loudness — three rounds ago, vs now</span>';
+      busy&&busy.classList.remove('on');
+      bindSurface(app.querySelector('.stage'), early, current, seed+900, {
+        labels:{A:'where you started',B:'now'}, primaryText: repeat?'back to picking ▸':'keep going ▸',
+        onPrimary:()=>{ app.querySelector('#sub').textContent=''; if(repeat){ // reload current round's vote
+            startRound(); } else { app.querySelector('#prompt').textContent='Which sounds better right now?'; done&&done(); } }
+      });
+    }
+
+    // ---------- THE TURN ----------
+    function goTurn(){
+      setStage(`<div class="turn">
+        <div class="l" id="l1">You picked better, six times.</div>
+        <div class="l dim" id="l2">Here’s what six betters sound like —</div>
+        <div class="l dim" id="l3">…next to where you started.</div>
+        <button class="go play" id="play">play them</button>
+      </div>`);
+      const t=[['#l1',300],['#l2',1500],['#l3',2700]];
+      t.forEach(([s,d])=>setTimeout(()=>app.querySelector(s).classList.add('show'),d));
+      setTimeout(()=>app.querySelector('#play').classList.add('show'),4100);
+      app.querySelector('#play').onclick=goBlind;
+    }
+
+    // ---------- MOMENT OF TRUTH (blind) ----------
+    async function goBlind(){
+      setStage(`<div class="stage fade">
+        <div class="prompt">Same loudness. No labels.</div>
+        <div class="sub">which one would you actually listen to?</div>
+        ${SURFACE}
+      </div>`);
+      const busy=app.querySelector('.busy'); busy&&busy.classList.add('on');
+      builtMaster=await renderGenome(g, master.duration);
+      busy&&busy.classList.remove('on');
+      songPos=0;
+      bindSurface(app.querySelector('.stage'), builtMaster, master, seed+9999, {
+        labels:{A:'A',B:'B'}, primaryText:'this one ▸',
+        onPrimary:(slot,id)=>{ blindPickedOriginal=(id==='Y'); // Y=original, X=built
+          if(player)player.stop(); cancelAnimationFrame(surfRaf);
+          app.querySelector('.prompt').textContent='…'; app.querySelector('.sub').textContent='';
+          app.querySelector('.cards').style.opacity='.3'; app.querySelector('.primary').style.display='none';
+          setTimeout(showResult, 1200); }  // held silence before the reveal
+      });
+    }
+
+    // ---------- RESULT (4 beats) ----------
+    function sigKey(){ const push={}; AXES.forEach(a=>push[a]=Math.max(0,Math.min(1,(g[a]-CLEAN[a])/(OVER[a]-CLEAN[a]))));
+      const sorted=AXES.slice().sort((a,b)=>push[b]-push[a]); const top=sorted[0];
+      const spread=push[sorted[0]]-push[sorted[1]];
+      if(moreCount<=2 || fidelity()>0.7) return 'steady';
+      if(spread<0.16 || push[top]<0.33) return 'balanced';
+      return top; }
+    function statLine(key){
+      if(key==='steady') return 'You held the line on '+(TOTAL-moreCount)+' of '+TOTAL+' calls — restraint most ears don’t have.';
+      if(key==='balanced') return 'You spread your picks across every axis — no single trick pulled you.';
+      return 'You reached for more on '+moreCount+' of '+TOTAL+' calls — a decisive ear most people can’t name in themselves.';
+    }
+    function showResult(){
+      const key=sigKey(), sig=SIGS[key];
+      const co=AC.meter.crest(AC.meter.buffChannels(master)), cm=AC.meter.crest(AC.meter.buffChannels(builtMaster));
+      const lost=Math.max(0,co.crestDb-cm.crestDb).toFixed(1);
+      const heroA='<span class="q">“Sounds better right now”</span> and “is actually better” are not the same thing. You just felt the gap.';
+      const heroB='Your ear <span class="q">held the line</span> — most people don’t. Here’s the gap most people walk straight into.';
+      setStage(`<div class="result">
+        <div class="beat on fade" data-b="0">
+          <div class="eyebrow">your ear</div>
+          <div class="sig"><div class="lab">signature</div><div class="name">${sig.n}</div>
+            <div class="line">${sig.l}</div><div class="stat">${statLine(key)}</div></div>
+          <div class="tapnext">tap to continue</div>
+        </div>
+        <div class="beat" data-b="1">
+          <div class="hero">${blindPickedOriginal?heroA:heroB}</div>
+          <div class="absolve">Your ear was right <b>every single time</b>. The AI optimized the only thing it could measure — your pick — not the song. That’s the trap, and your taste was never part of it.</div>
+          <div class="evidence"><div class="cap">the cost of more — your master vs where you started: <b>−${lost} dB</b> of breathing room</div>
+            <div class="waves"><div class="wcol"><canvas id="wO"></canvas><div class="cl">original</div></div>
+            <div class="wcol mine"><canvas id="wM"></canvas><div class="cl">your master</div></div></div></div>
+          <div class="tapnext">tap to continue</div>
+        </div>
+        <div class="beat" data-b="2">
+          <div class="rel">It’s why Spotify gets louder every year.<br>Why photos get more saturated.<br>Why feeds get angrier.
+            <div class="d">Each step wins the click and loses the point.</div></div>
+          <div class="thesis">It’s one of the hardest open problems in training AI — and it was never the optimizer, or the DSP. It’s choosing a goal worth optimizing. That’s the whole job.</div>
+          <button class="nametag" id="nametag">the name for what you just felt ▸</button>
+          <div class="tapnext">tap to continue</div>
+        </div>
+        <div class="beat" data-b="3">
+          <div class="eyebrow">that’s it</div>
+          <div class="closer">Most people never feel that gap.<br>You just did — in under two minutes.</div>
+          <div class="doors"><button id="again">hear the gap again</button><button class="save" id="save">save your ear</button></div>
+        </div>
+        <div class="savedcard"><div class="sig" style="max-width:340px"><div class="lab">your ear</div><div class="name">${sig.n}</div><div class="line">${sig.l}</div></div><div class="tap">screenshot this</div></div>
+      </div>`);
+      // draw evidence waveforms (fixed resolution so they never measure 0)
+      drawStatic(app.querySelector('#wO'), buildEnv(master,300), false);
+      drawStatic(app.querySelector('#wM'), buildEnv(builtMaster,300), true);
+      let b=0; const beats=[...app.querySelectorAll('.beat')];
+      const adv=()=>{ if(b>=beats.length-1)return; beats[b].classList.remove('on'); b++; beats[b].classList.add('on','fade'); };
+      beats.forEach((be,i)=>{ if(i<beats.length-1) be.onclick=(e)=>{ if(e.target.id==='nametag')return; adv(); }; });
+      app.querySelector('#nametag').onclick=(e)=>{ e.stopPropagation(); e.target.textContent='reward overoptimization — Goodhart’s law'; e.target.disabled=true; };
+      app.querySelector('#again').onclick=replayGap;
+      app.querySelector('#save').onclick=()=>document.body.classList.add('saved');
+      document.querySelector('.savedcard').onclick=()=>document.body.classList.remove('saved');
+    }
+    function drawStatic(canvas,env,amber){ const W=600,H=170;canvas.width=W;canvas.height=H;
+      const g2=canvas.getContext('2d'),mid=H/2,ceil=Math.pow(10,CEIL/20),colW=W/env.length; g2.clearRect(0,0,W,H);
+      for(let i=0;i<env.length;i++){const v=env[i],x=i*colW,h=Math.max(1,Math.min(1,v)*mid*.94);const pin=amber&&v>=ceil*.985;
+        g2.fillStyle=pin?'rgba(255,93,99,.95)':(amber?'rgba(255,154,74,.72)':'rgba(14,196,252,.8)'); g2.fillRect(x,mid-h,Math.max(1,colW+.5),h*2);} }
+    function replayGap(){
+      setStage(`<div class="stage fade"><div class="prompt">your master, vs where you started</div><div class="sub">same loudness — just listen</div>${SURFACE}<button class="ghost" id="back">done ▸</button></div>`);
+      bindSurface(app.querySelector('.stage'), builtMaster, master, seed+9999, {labels:{A:'your master',B:'original'},primaryText:'done ▸',onPrimary:()=>{ if(player)player.stop();cancelAnimationFrame(surfRaf); showResult(); }});
+      app.querySelector('#back').style.display='none';
+    }
+
+    return {
+      mount(){ showOpen(); },
+      async enter(){ master=host.asset('master'); showRounds(); },
+      leave(){ if(player)player.stop(); cancelAnimationFrame(surfRaf); }
+    };
+    function showOpen(){
+      setStage(`<div class="open fade">
+        <div class="t">m<b>o</b>re</div>
+        <div class="lede">You’re the judge. Two masters of one song — pick the one that sounds better. Keep picking, and an <b>AI learns your taste</b> and gives you more of what you like.</div>
+        <button class="go" id="begin">I’m listening</button>
+        <div class="fine">headphones up</div>
+      </div>`);
+      app.querySelector('#begin').onclick=async ()=>{ if(!host.asset('master')){app.querySelector('.lede').textContent='audio failed to load.';return;}
+        host.unlock(); const o=app.querySelector('.open'); o.style.transition='opacity .45s';o.style.opacity='0';
+        await ex.enter(); };
+    }
+  }
+
+  let ex=null;
+  (async function(){
+    const params=new URLSearchParams(location.search);
+    const ASSET=params.get('asset')||'./master.mp3';
+    const host=await window.AECore.createHost({assetUrls:{master:ASSET}, masterGain: params.get('mute')==='1'?0:0.9});
+    const app=document.getElementById('app');
+    ex=createApp(host, app); ex.mount();
+    if(params.get('debug')==='1') window.__of={host,ex};
+    window.addEventListener('pagehide',()=>{try{ex.leave();host.destroy&&host.destroy();}catch(e){}});
+  })();
+  </script>
+</body>
+</html>
