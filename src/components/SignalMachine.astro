@@ -210,6 +210,9 @@ import "@fontsource/orbitron/latin-500.css";   // amber outline-on-glass readout
                 <div class="arpsec">
                   <div class="knob sm" id="lenKnob"><div class="dial"><div class="ptr"></div></div><span class="kl">LENGTH</span></div>
                 </div>
+                <div class="arpsec">
+                  <div class="knob sm" id="grooveKnob"><div class="dial"><div class="ptr"></div></div><span class="kl">GROOVE</span></div>
+                </div>
               </div>
             </div>
             <div class="piano locked" id="piano"><i class="spill" id="spill"></i></div>
@@ -927,18 +930,19 @@ import "@fontsource/orbitron/latin-500.css";   // amber outline-on-glass readout
     /* #5: arp module in the pianohead — DE-FRAMED so OFF/LATCH/Rate/LENGTH read as loose buttons that belong to the keyboard bar (no panel bg/border/glow); default (sapphire) accent so it matches the MAJOR/MINOR seg */
     .arpmod{display:flex;align-items:center;gap:15px;padding:6px 0;transition:opacity .2s}
     .pianohead .arpmod{margin-left:auto}   /* push it to the right end of the keyboard control bar */
-    #lenKnob .dial,#arpRateKnob .dial{width:40px;height:40px}
+    #lenKnob .dial,#arpRateKnob .dial,#grooveKnob .dial{width:40px;height:40px}
     #arpRateNum{display:none}   /* #4.1: drop the RATE readout so RATE + LENGTH knobs are symmetrical (JS still sets it, harmlessly hidden) */
     #arpBtn{min-width:46px}   /* #4.2: fix width so OFF/ON never resize the button */
-    #lenKnob .kl,#arpRateKnob .kl{font-size:.5rem;letter-spacing:.12em}
+    #lenKnob .kl,#arpRateKnob .kl,#grooveKnob .kl{font-size:.5rem;letter-spacing:.12em}
     /* arp RATE: in-label division readout — small steel LCD chip under the dial (matches the LENGTH/RATE knob family, no separate seg) */
     #arpRateKnob .kn{font-size:.52rem;letter-spacing:.06em}
-    .device.live #lenKnob .dial,.device.live #arpRateKnob .dial{background:conic-gradient(from 225deg,#48515f 0 calc(var(--v,0)*270deg),#262c35 calc(var(--v,0)*270deg) 270deg,#0a0d12 270deg 360deg);box-shadow:inset 0 0 0 1px rgba(0,0,0,.6),0 1px 2px rgba(0,0,0,.5)}   /* #5: LENGTH + arp RATE knobs fill with the default steel UI color, not magenta */
+    .device.live #lenKnob .dial,.device.live #arpRateKnob .dial,.device.live #grooveKnob .dial{background:conic-gradient(from 225deg,#48515f 0 calc(var(--v,0)*270deg),#262c35 calc(var(--v,0)*270deg) 270deg,#0a0d12 270deg 360deg);box-shadow:inset 0 0 0 1px rgba(0,0,0,.6),0 1px 2px rgba(0,0,0,.5)}   /* #5: LENGTH + arp RATE knobs fill with the default steel UI color, not magenta */
     /* batch3 #2: when the arp is ARMED, its knobs fill with sapphire — matching the LED on the ARP/LATCH buttons */
-    .device.live .arpmod.armed #lenKnob .dial,.device.live .arpmod.armed #arpRateKnob .dial{background:conic-gradient(from 225deg,var(--sapphire) 0 calc(var(--v,0)*270deg),#262c35 calc(var(--v,0)*270deg) 270deg,#0a0d12 270deg 360deg);box-shadow:0 0 8px -2px var(--sapphire),inset 0 0 0 1px rgba(0,0,0,.6),0 1px 2px rgba(0,0,0,.5)}
+    .device.live .arpmod.armed #lenKnob .dial,.device.live .arpmod.armed #arpRateKnob .dial,.device.live .arpmod.armed #grooveKnob .dial{background:conic-gradient(from 225deg,var(--sapphire) 0 calc(var(--v,0)*270deg),#262c35 calc(var(--v,0)*270deg) 270deg,#0a0d12 270deg 360deg);box-shadow:0 0 8px -2px var(--sapphire),inset 0 0 0 1px rgba(0,0,0,.6),0 1px 2px rgba(0,0,0,.5)}
     /* dependent arp controls sit recessed until the arp is armed (auto-arms on touch — see armArp) */
     .device.live .arpmod:not(.armed) .arpsec:has(.seg),
     .device.live .arpmod:not(.armed) .arpsec:has(#lenKnob),
+    .device.live .arpmod:not(.armed) .arpsec:has(#grooveKnob),
     .device.live .arpmod:not(.armed) .arpsec.ratesec{opacity:.42;transition:opacity .35s ease}   /* batch3 #2: LENGTH arpsec now dims with RATE when the arp is off */
 
     /* ════ #2 CONTEXTUAL DIMMING — when an effect's parent toggle is OFF, its dependent controls recede + knob fills desaturate to gray (same idea as the arp dim above), so irrelevant effects stop competing for attention. ════ */
@@ -955,7 +959,8 @@ import "@fontsource/orbitron/latin-500.css";   // amber outline-on-glass readout
     .device.live .bassgroup:has(#bassrow:not(.on)) #bpluckKnob .dial{background:conic-gradient(from 225deg,#48515f 0 calc(var(--v,0)*270deg),#262c35 calc(var(--v,0)*270deg) 270deg,#0a0d12 270deg 360deg);box-shadow:inset 0 0 0 1px rgba(0,0,0,.6),0 1px 2px rgba(0,0,0,.5)}
     /* ARP off: LENGTH + RATE knob fills go gray (the .arpsec wrappers also dim via the opacity rule above) */
     .device.live .arpmod:not(.armed) #lenKnob .dial,
-    .device.live .arpmod:not(.armed) #arpRateKnob .dial{background:conic-gradient(from 225deg,#48515f 0 calc(var(--v,0)*270deg),#262c35 calc(var(--v,0)*270deg) 270deg,#0a0d12 270deg 360deg);box-shadow:inset 0 0 0 1px rgba(0,0,0,.6),0 1px 2px rgba(0,0,0,.5)}
+    .device.live .arpmod:not(.armed) #arpRateKnob .dial,
+    .device.live .arpmod:not(.armed) #grooveKnob .dial{background:conic-gradient(from 225deg,#48515f 0 calc(var(--v,0)*270deg),#262c35 calc(var(--v,0)*270deg) 270deg,#0a0d12 270deg 360deg);box-shadow:inset 0 0 0 1px rgba(0,0,0,.6),0 1px 2px rgba(0,0,0,.5)}
 
     /* ════ #3 TEMPTATION — in the OFF state the toggle keycap fills with a vibrant color (deep orange for DRUMS/SPACE, deep green for BASS/B) to entice a press; turning the effect ON reverts the keycap to normal and lights the panel border instead. ════ */
     /* (removed: the drums-OFF dark box around SPACE + the play head — a remnant; the whole #beat bar is already orange, so #beat .kh stays box-free in every state) */
@@ -1274,7 +1279,7 @@ let _kitCache=null;
 function decodeKit(ctx){if(_kitCache)return _kitCache;_kitCache={};for(const k in DRUMKIT){const bin=atob(DRUMKIT[k]),ab=new ArrayBuffer(bin.length),u8=new Uint8Array(ab);for(let i=0;i<bin.length;i++)u8[i]=bin.charCodeAt(i);ctx.decodeAudioData(ab).then(function(b){_kitCache[k]=b;}).catch(function(){});}return _kitCache;}
 function makeEngine(ctx){
   const fx={vx:.5,vy:.82,cutoff:.48,res:0,amount:0,shape:'sine',rateMode:'sync',syncDiv:'8',rateHz:3,
-            drive:.6,delay:0,reverb:.22,revSize:'small',delayDiv:'8',beat:false,pattern:'floor',bass:false,drumCover:848,bassHeat:.5,bassWeight:.5,bassPluck:0,tempo:96,arpDiv:2,gate:.5,sidechain:.3,swing:0,density:0,character:0,mod:.85,modMode:'chorus',driveType:'warm',drumTex:'tape'};   // DEFAULT load state (Jon's screenshot 2026-06-22): cutoff a bit closed, DRIVE .6/warm, MOD .85/chorus, DELAY off, REVERB .22/small
+            drive:.6,delay:0,reverb:.22,revSize:'small',delayDiv:'8',beat:false,pattern:'floor',bass:false,drumCover:848,bassHeat:.5,bassWeight:.5,bassPluck:0,tempo:96,arpDiv:2,gate:.5,sidechain:.3,swing:0,groove:0,density:0,character:0,mod:.85,modMode:'chorus',driveType:'warm',drumTex:'tape'};   // DEFAULT load state (Jon's screenshot 2026-06-22): cutoff a bit closed, DRIVE .6/warm, MOD .85/chorus, DELAY off, REVERB .22/small
   const inG=ctx.createGain();inG.gain.value=.9;
   // TAKE-LOOP sub-bus: replayed (ghost) note voices route through their OWN gain + low-pass so the recorded loop
   // can be turned down / muffled to sit UNDER your live playing (live notes stay on inG, untouched). Note voices only —
@@ -1529,17 +1534,47 @@ function makeEngine(ctx){
         if(fx.bass&&bassMode==='pluck'){const eff=Math.max(1,Math.round(bassPulseSteps/bassSeqMult));   // effective 16th-steps per pluck (RATE ÷ seq-mult); the sequencer indexes by how many plucks have elapsed
           if(drumStep%eff===0)bassSeqFire(Math.floor(drumStep/eff),t);}   // PLUCK reads the 16-step pattern on the shared grid — phase-locked, kick stays the visual anchor
         drumStep++;nextDrumT+=stepDur;}}
-    if(arpOn){const tickDur=60/fx.tempo/fx.arpDiv;
-      while(nextArpT<now+LOOK){const t=nextArpT,roots=[...arpSet.entries()].filter(e=>e[0].indexOf('~')<0).map(e=>e[1]).sort((a,b)=>a-b);   // arp sequences ROOTS only; chord tones are derived live below, never cycled
-        if(roots.length){const life=tickDur*1000*clamp(fx.gate,.06,1.3);
-          if(arpChord){   // CHORD: each step STRUMS the live triad of every held root (recomputed from the root freq via arpChordFn, so it works regardless of latch/toggle order AND follows transpose), NOT single-note cycling
-            const block=[];roots.forEach(rf=>{(arpChordFn?arpChordFn(rf):[rf]).forEach(cf=>{if(cf>0&&!block.some(b=>Math.abs(b-cf)<0.5))block.push(cf);});});
-            const cv=clamp(0.92/Math.sqrt(block.length||1),.32,.9);   // per-voice vel scaled by total stacked voices so a chord stays under clip
-            block.sort((a,b)=>a-b).forEach((cf,bi)=>pluck(cf,cv,life,t+Math.min(bi*0.008,tickDur*0.45)));}   // tiny strum stagger, low→high (capped so it never bleeds into the next step at fast rates)
-          else{const f=roots[arpIdx%roots.length];pluck(f,0.9,life,t);arpIdx++;}   // NOTE mode: cycle one held root per step
-          visAt(t,arpBeat);}
+    if(arpOn){
+      const beatLen=60/fx.tempo,sixteenth=beatLen/4,tickDur=60/fx.tempo/fx.arpDiv;
+      const groove=(fx.groove||0),G=groove>0&&transport0!=null,step=G?sixteenth:tickDur;
+      // ── neo-soul GROOVE figures on the 16th grid. NOTE = dense rolling hook (always voices the chord); CHORD = sparse syncopated stabs. ──
+      const HITn=[1,0,1,1,1,0,1,1,1,0,1,0,1,1,1,0],SWn=[0,0,.10,.16,0,0,.10,.16,0,0,.10,0,0,.08,.10,0],
+            VELn=[1.00,1,.55,.42,1.00,1,.62,.45,.95,1,.58,1,1.00,.50,.66,1],LENn=[1.05,1,.70,.62,1.10,1,.72,.62,.95,1,.70,1,1.10,.66,.72,1];
+      const HITcA=[0,0,0,1,0,0,1,0,0,0,1,1,0,0,1,0],HITcB=[0,0,0,1,0,0,0,0,0,0,1,0,0,0,1,0],HITcC=[0,0,0,0,0,0,1,0,0,0,1,1,0,0,1,0],
+            LEANc=[0,0,0,.20,0,0,.30,0,0,0,.25,.35,0,0,.40,0],VELc=[1,1,1,.85,1,1,1.00,1,1,1,.78,.55,1,1,.92,1],LENc=[1,1,1,.58,1,1,.70,1,1,1,.82,.50,1,1,.80,1];
+      while(nextArpT<now+LOOK){const t=nextArpT,roots=[...arpSet.entries()].filter(e=>e[0].indexOf('~')<0).map(e=>e[1]).sort((a,b)=>a-b);
+        if(roots.length){const life=step*1000*clamp(fx.gate,.06,1.3);
+          if(!G){   // groove off → legacy even arp (byte-identical)
+            if(arpChord){const block=[];roots.forEach(rf=>{(arpChordFn?arpChordFn(rf):[rf]).forEach(cf=>{if(cf>0&&!block.some(b=>Math.abs(b-cf)<0.5))block.push(cf);});});
+              const cv=clamp(0.92/Math.sqrt(block.length||1),.32,.9);
+              block.sort((a,b)=>a-b).forEach((cf,bi)=>pluck(cf,cv,life,t+Math.min(bi*0.008,tickDur*0.45)));}
+            else{const f=roots[arpIdx%roots.length];pluck(f,0.9,life,t);arpIdx++;}
+            visAt(t,arpBeat);
+          } else {   // GROOVE: walk the 16th grid, fire the mode figure (additive floor, never a mute)
+            const A=clamp(groove,0,1),s=((Math.round((t-transport0)/sixteenth))%16+16)%16,barIdx=Math.floor((t-transport0)/(beatLen*4));
+            const hsh=((((barIdx*16+s)>>>0)*2654435761)>>>0),r2=(((hsh^0x9e3779b9)>>>0)%1000)/1000,sel=[0,0,1,0,0,0,1,2][((barIdx%8)+8)%8];
+            const HIT=arpChord?(sel===1?HITcB:sel===2?HITcC:HITcA):HITn,dv=fx.arpDiv;
+            let hit=HIT[s]===1,ghost16=false;
+            if(dv<=1)hit=hit&&(s%4===0);
+            if(dv>=4&&!hit){hit=(s%2===1);ghost16=true;}
+            if(dv>=8&&!hit){hit=true;ghost16=true;}
+            if(hit){
+              const offMs=(arpChord?LEANc[s]:SWn[s])*sixteenth*1000*(0.30+0.70*A)+(arpChord?14:8)*A+(r2-0.5)*2*A*6;
+              const when=clamp(t+offMs/1000,ctx.currentTime+0.002,t+0.45*sixteenth);
+              let vBase=arpChord?VELc[s]:VELn[s];if(ghost16)vBase=Math.min(vBase,0.30);
+              const vMul=(1+(vBase-1)*A)*(1+hum()*0.05*A);
+              let lBase=arpChord?LENc[s]:LENn[s];if(ghost16)lBase=Math.min(lBase,0.55);
+              const grooveLife=Math.max(arpChord?34:40,life*(1+(lBase-1)*A));
+              if(arpChord){const block=[];roots.forEach(rf=>{(arpChordFn?arpChordFn(rf):[rf]).forEach(cf=>{if(cf>0&&!block.some(b=>Math.abs(b-cf)<0.5))block.push(cf);});});
+                const cv=clamp(0.92/Math.sqrt(block.length||1),.32,.9);
+                block.sort((a,b)=>a-b).forEach((cf,bi)=>pluck(cf,clamp(cv*vMul,0.06,1),grooveLife,when+Math.min(bi*0.008,sixteenth*0.45)));}
+              else{const f=roots[arpIdx%roots.length];pluck(f,clamp(0.9*vMul,0.06,1),grooveLife,when);arpIdx++;}
+              visAt(t,arpBeat);
+            }
+          }
+        }
         else arpIdx=0;
-        nextArpT+=tickDur;}}
+        nextArpT+=step;}}
     if(gst.gate){const sd=60/fx.tempo/gateRate;   // GATE: chops the held chord AND the bass at the active subdivision (1/4..1/32), scheduled ahead, grid-locked
       while(gateNextT<now+LOOK){const t=gateNextT;gateChop(ampTrem.gain,t,sd);gateChop(bassGate.gain,t,sd);gateNextT+=sd;}}
     if(fx.bass&&bassMode==='pluck'&&!fx.beat){const sd=60/fx.tempo/4,eff=Math.max(1,Math.round(bassPulseSteps/bassSeqMult)),interval=sd*eff;   // PLUCK + drums off: steady root pulse at RATE÷mult (grid-locked via nextBassPulseT so it stays phase-aligned when drums later engage); offBassStep walks the 16-step pattern
@@ -1554,6 +1589,7 @@ function makeEngine(ctx){
   function setCover(hz){fx.drumCover=hz;const t=ctx.currentTime;drumLP1.frequency.setTargetAtTime(hz,t,.03);drumLP2.frequency.setTargetAtTime(hz,t,.03);}
   function setSidechain(v){fx.sidechain=clamp(v,0,1);if(fx.sidechain<.01){const t=ctx.currentTime;duck.gain.cancelScheduledValues(t);duck.gain.setTargetAtTime(1,t,.04);}}   // kick -> instrument duck depth (the pump)
   function setSwing(v){fx.swing=clamp(v,0,1);}
+  function setGroove(v){fx.groove=clamp(v,0,1);}
   function setDensity(v){fx.density=clamp(v,0,1);}
   let curTexAmt=-1,curTexFlav='';
   function applyDrumTex(){const v=fx.character,fl=fx.drumTex||'tape',t=ctx.currentTime;
@@ -1789,7 +1825,7 @@ function makeEngine(ctx){
   return {fx,apply,getCtx:()=>ctx,nearestVoice:()=>nearest2().near,noteOn,noteOff,retune:(map)=>{for(const id in map){if(arpSet.has(id))arpSet.set(id,map[id]);const h=held.get(id);if(h){h.freq=map[id];if(h.vs)h.vs.forEach(v=>v.retune&&v.retune(map[id]));}}recomputeBass();},
     setArp,setLatch,setArpChord:on=>{arpChord=!!on;},onArpChord:fn=>{arpChordFn=fn;},get arpOn(){return arpOn;},get arpNotes(){return arpSet.size;},get activeVoices(){return active.length;},
     get latchedIds(){return latch?(arpOn?[...arpSet.keys()]:[...held.keys()]):[];},onArp:cb=>{arpBeat=cb;},
-    setBeat,onKick:cb=>{kickCb=cb;},setCover,setSidechain,setSwing,setDensity,setCharacter,setModMode,setBass,setBassMode,setBassRate,setBassGlide,setBassHeat,setBassWeight,setBassPluck,setRevSize,setBassStep,setBassSeqMult,setAccent,setPluck,onBassStep:cb=>{pluckStepCb=cb;},get drumCounts(){return {...counts};},get kitLoaded(){return Object.keys(kitBuf).length>=KITTOT;},get bassFreq(){return bassTarget;},get droneActive(){return !!droneParts;},get bassPluck(){return fx.bassPluck;},get bassMode(){return bassMode;},get bassRateSteps(){return bassPulseSteps;},get bassGlideTau(){return bassGlideStore;},get bassSeq(){return bassSeq;},get bassSeqMult(){return bassSeqMult;},
+    setBeat,onKick:cb=>{kickCb=cb;},setCover,setSidechain,setSwing,setGroove,setDensity,setCharacter,setModMode,setBass,setBassMode,setBassRate,setBassGlide,setBassHeat,setBassWeight,setBassPluck,setRevSize,setBassStep,setBassSeqMult,setAccent,setPluck,onBassStep:cb=>{pluckStepCb=cb;},get drumCounts(){return {...counts};},get kitLoaded(){return Object.keys(kitBuf).length>=KITTOT;},get bassFreq(){return bassTarget;},get droneActive(){return !!droneParts;},get bassPluck(){return fx.bassPluck;},get bassMode(){return bassMode;},get bassRateSteps(){return bassPulseSteps;},get bassGlideTau(){return bassGlideStore;},get bassSeq(){return bassSeq;},get bassSeqMult(){return bassSeqMult;},
     get lfoRate(){return lfoHz();},lfoData:buf=>lfoTap.getFloatTimeDomainData(buf),
     gesture,get gestures(){return {...gst};},get liftHz(){return masterHP.frequency.value;},
     micOff,setVocal,get vocal(){return voc?{treat:voc.treat,depth:voc.depth}:null;},micLevel,capture,clearLoop,setLoopTrim,setLoopCover,setLoopGain,setLoopPlay,loopPhase,setReplayRoute,setTakeGain,setTakeCover,get loopPlaying(){return loopPlaying;},get loopBuf(){return loopBuf;},get loopTrim(){return [loopIn,loopOut];},get loopBeats(){return loopBeatsN();},get loopActive(){return loopActive;},get recActive(){return recActive;},get capInfo(){return recActive?{startT:capStartT,recDur:capRecDur,beat:60/(recTempo||fx.tempo),countBeats:capCountBeats}:null;},
@@ -2056,7 +2092,8 @@ const ARP_DIVS=[{l:'1/2',v:.5},{l:'1/4',v:1},{l:'1/4T',v:1.5},{l:'1/8',v:2},{l:'
 const arpDivIdxFromV=v=>clamp(Math.round(v*(ARP_DIVS.length-1)),0,ARP_DIVS.length-1);
 const arpDivIdxFromVal=val=>{let bi=0,bd=Infinity;ARP_DIVS.forEach((d,i)=>{const dd=Math.abs(d.v-val);if(dd<bd){bd=dd;bi=i;}});return bi;};
 const arpRateKnobObj=makeKnob($('#arpRateKnob'),3/(ARP_DIVS.length-1),v=>{if(!live||!eng)return;const d=ARP_DIVS[arpDivIdxFromV(v)];eng.fx.arpDiv=d.v;$('#arpRateNum').textContent=d.l;armArp();});
-const lenKnob=makeKnob($('#lenKnob'),.355,v=>{if(eng)eng.fx.gate=0.06+v*1.24;armArp();});   // arp note LENGTH — converted slider→knob to free arp-bar width for the readout (Jon 2026-06-15)
+const lenKnob=makeKnob($('#lenKnob'),.355,v=>{if(eng)eng.fx.gate=0.06+v*1.24;armArp();});
+const grooveKnobObj=makeKnob($('#grooveKnob'),0,v=>{if(eng)eng.setGroove(v);armArp();});   // arp GROOVE intensity — swing+accent/ghost+articulation; 0 = straight   // arp note LENGTH — converted slider→knob to free arp-bar width for the readout (Jon 2026-06-15)
 
 /* performance gestures (hold) — Z/X/C=GATE at 1/8·1/16·1/32, M=DIVE. The three gate keys drive ONE shared gate gesture at different chop rates (last-press wins). B toggles BASS (see keydown below). LIFT/THROW/FILL retired. */
 const GMAP={KeyZ:{g:'gate',rate:4},KeyX:{g:'gate',rate:3},KeyC:{g:'gate',rate:2},KeyM:{g:'dive'}};   // keyboard rates match the UI: Z=1/16, X=1/8T (triplet), C=1/8
@@ -2312,7 +2349,7 @@ function captureSnapshot(){return {
   drive:+eng.fx.drive.toFixed(3),delay:+eng.fx.delay.toFixed(3),reverb:+eng.fx.reverb.toFixed(3),revSize:eng.fx.revSize,delayDiv:eng.fx.delayDiv,
   pattern:eng.fx.pattern,bassHeat:+eng.fx.bassHeat.toFixed(3),bassWeight:+eng.fx.bassWeight.toFixed(3),bassPluck:+eng.fx.bassPluck.toFixed(3),bassMode:eng.bassMode,bassRate:bassRateIdx,bassGlide:+bassGlideV.toFixed(3),pluck:eng.bassMode==='pluck',bassSeqMult:eng.bassSeqMult,bassSeq:eng.bassSeq.map(c=>c&&c.v?{v:c.v,oct:c.oct||'base'}:0),drumCover:eng.fx.drumCover,arpDiv:eng.fx.arpDiv,gate:eng.fx.gate,
   oct:octOff,key:keyRoot,mode:scaleMode,chord:chordMode,beat:$('#beat').classList.contains('on'),bass:$('#bassrow').classList.contains('on'),arp:$('#arpBtn').dataset.on==='1',latch:$('#latchBtn').dataset.on==='1',
-  sidechain:+(eng.fx.sidechain||0).toFixed(3),swing:+(eng.fx.swing||0).toFixed(3),density:+(eng.fx.density||0).toFixed(3),grit:+(eng.fx.character||0).toFixed(3),mod:+(eng.fx.mod||0).toFixed(3),modMode:eng.fx.modMode||'chorus',driveType:eng.fx.driveType||'warm',drumTex:eng.fx.drumTex||'tape'};}   // extended: sidechain/drum-feel/mod/drive-flavor now round-trip (so SHARE + presets recall the WHOLE sound)
+  sidechain:+(eng.fx.sidechain||0).toFixed(3),swing:+(eng.fx.swing||0).toFixed(3),density:+(eng.fx.density||0).toFixed(3),grit:+(eng.fx.character||0).toFixed(3),mod:+(eng.fx.mod||0).toFixed(3),modMode:eng.fx.modMode||'chorus',driveType:eng.fx.driveType||'warm',groove:+(eng.fx.groove||0).toFixed(3),drumTex:eng.fx.drumTex||'tape'};}   // extended: sidechain/drum-feel/mod/drive-flavor now round-trip (so SHARE + presets recall the WHOLE sound)
 function segOn(id,val){const seg=document.getElementById(id);if(seg)seg.querySelectorAll('b').forEach(b=>b.classList.toggle('on',b.dataset.v===val));}
 function fillSet(key,v){const c=document.querySelector('.fillcard[data-key="'+key+'"]'),f=c.querySelector('.fill');f.style.height=(v*100).toFixed(0)+'%';f.classList.toggle('mt',v<=0.004);c.querySelector('.pc').textContent=Math.round(v*100);eng.fx[key]=v;}
 function setToggleBeat(on){if($('#beat').classList.contains('on')===on)return;$('#beat').classList.toggle('on',on);eng.setBeat(on);}
@@ -2350,6 +2387,7 @@ function applySnapshot(s){
   {let _dt=s.drumTex||'tape';if(_dt==='crush')_dt='drive';eng.fx.drumTex=_dt;segOn('dtex',_dt);}   // default TAPE when absent; map retired 'crush' → DRIVE (old SHARE links)
   if(s.sidechain!=null){const _sc=clamp(s.sidechain,0,1);eng.setSidechain(_sc);$('#scfill').style.width=(_sc*100)+'%';$('#schandle').style.left=(_sc*100)+'%';$('#scval').textContent=_sc<.01?'OFF':Math.round(_sc*100)+'%';}
   if(s.swing!=null){const _v=clamp(s.swing,0,1);eng.setSwing(_v);swingKnobObj.set(_v);}
+  if(s.groove!=null){const _v=clamp(s.groove,0,1);eng.setGroove(_v);grooveKnobObj.set(_v);}
   if(s.density!=null){const _v=clamp(s.density,0,1);eng.setDensity(_v);densKnobObj.set(_v);}
   if(s.grit!=null){const _v=clamp(s.grit,0,1);eng.setCharacter(_v);gritKnobObj.set(_v);}
   // MODE — prefer the explicit pluck flag (new); fall back to the legacy bassMode string
@@ -2839,7 +2877,7 @@ function readoutSet(text){coachRender(text?{a:text}:{rest:true});}
 const PRESET_BASE={
   vx:.42,vy:.4,cutoff:.6,res:0,amount:0,shape:'sine',rateMode:'sync',syncDiv:'8',rateHz:3,tempo:112,
   drive:0,driveType:'warm',mod:0,modMode:'chorus',delay:.25,delayDiv:'8',reverb:.32,revSize:'med',
-  pattern:'floor',drumCover:12000,swing:0,density:0,grit:0,drumTex:'tape',sidechain:.3,
+  pattern:'floor',drumCover:12000,swing:0,groove:0,density:0,grit:0,drumTex:'tape',sidechain:.3,
   bassHeat:.5,bassWeight:.5,bassPluck:0,bassMode:'off',bassRate:0,bassGlide:0,bassSeqMult:1,
   bassSeq:new Array(16).fill(0),oct:0,key:0,mode:'major',chord:false,arpDiv:2,gate:.5,
   beat:false,bass:false,arp:false,latch:false
@@ -2906,6 +2944,7 @@ const TUTOR={
   "#arpBtn": {title:"ARP · auto-player", tag:"AUTO-PLAY", plain:"hold a key and it keeps re-tapping that note, in time.", doing:"hold keys and it taps them out for you, one at a time.", why:"a steady stream runs itself while your hands move.", tryThis:"turn it on, hold one key, add a second."},
   "#arpRateKnob": {title:"ARP · rate", tag:"SPEED", plain:"the speed dial for the auto-repeats, locked to the drummer.", doing:"right is busier, left is calmer; some settings make it tumble.", why:"the stream feels too frantic or too sleepy.", tryThis:"with a key held, turn left, then right."},
   "#lenKnob": {title:"ARP · length", tag:"NOTE LENGTH", plain:"how long each repeated note rings — a tap versus a lean.", doing:"down clips each note short, up lets them run together.", why:"the repeats feel too choppy, or too run-together.", tryThis:"with ARP running, drag down, then up."},
+  "#grooveKnob": {title:"ARP · groove", tag:"FEEL", plain:"turns a stiff arp into a neo-soul pocket — bouncy and syncopated as you turn it up.", doing:"on single notes it swings the run with accents and ghost notes; on a held chord it spaces the stabs out, behind the beat. zero is straight.", why:"a wall of even notes can't groove — swing, space and dynamics are the feel.", tryThis:"hold a 3-note chord, ARP + drums on, turn it past halfway — every note still sounds, it just bounces."},
   "#latchBtn": {title:"ARP · hold", tag:"HOLD", plain:"the notes keep ringing after you lift your fingers.", doing:"tap a key and it sustains; tap again, or switch off, to drop it.", why:"free both hands while the pattern holds itself.", tryThis:"turn on, tap a key, let go, tap again."},
   ".gpad.dive": {title:"PERFORM · dive", tag:"PITCH (low/high)", plain:"a tape machine slowing to a stop, then springing back.", doing:"hold M and everything sags down; let go to snap back.", why:"adds a dramatic dip before resuming.", tryThis:"play a few keys, hold M, then let go."},
   ".gpad.gate": {title:"PERFORM · gate", tag:"RHYTHM (chop)", plain:"a hand flicking a light switch fast — sound chopped into even bursts.", doing:"hold Z, X, or C to chop on the beat — Z chops fastest.", why:"turn a held note into a rhythmic pulse.", tryThis:"hold a few keys, then hold Z."},
