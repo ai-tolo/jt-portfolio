@@ -5153,8 +5153,10 @@ function stemSoloUrls(sf) {
         const target = finite.length >= 2 ? Math.min.apply(null, finite) : null;
         takes.forEach((t, i) => {
           const L = lufs[i];
-          if (target === null || L === null) { t.audio.volume = 1; return; }
-          t.audio.volume = Math.min(1, Math.max(0, Math.pow(10, (target - L) / 20)));
+          if (target === null || L === null) { t.audio.volume = 1; t.gain = 1; return; }
+          const g = Math.min(1, Math.max(0, Math.pow(10, (target - L) / 20)));
+          t.audio.volume = g;
+          t.gain = g; // remember the matched target so a crossfade can't corrupt it
         });
         // `matched` means EVERY take was actually attenuated — not just "some
         // pair was." A null-LUFS take (e.g. the raw source, or an un-measured
@@ -5306,8 +5308,13 @@ function stemSoloUrls(sf) {
           timeEl.textContent = fmt(a ? a.currentTime : 0) + " / " + (dur && isFinite(dur) ? fmt(dur) : "—:—");
         }
         if (playhead && a) {
-          const dur = a.duration;
-          const frac = dur && a.currentTime > 0 ? Math.max(0, Math.min(1, a.currentTime / dur)) : 0;
+          // The waveform PNG is the SOURCE track's, and swapTo carries raw
+          // currentTime between takes — so the playhead must map against ONE
+          // stable timeline, not whichever take is active. Differing-length
+          // raw-vs-master takes otherwise jump the playhead on every swap.
+          const ref = takes[0] && takes[0].audio;
+          const refDur = ref && isFinite(ref.duration) && ref.duration > 0 ? ref.duration : a.duration;
+          const frac = refDur && a.currentTime > 0 ? Math.max(0, Math.min(1, a.currentTime / refDur)) : 0;
           playhead.style.left = frac * 100 + "%";
           playhead.removeAttribute("hidden");
         }
@@ -5320,14 +5327,34 @@ function stemSoloUrls(sf) {
       }
       function startTick() { if (rafId == null) rafId = requestAnimationFrame(tick); }
 
-      // Switch to take i, carrying the playhead — the sync'd-compare swap.
+      // The element still fading out when a switch interrupts the previous fade —
+      // we owe it a pause + volume restore so rapid switches can't leave a take
+      // stuck mid-volume (which would corrupt the loudness match). (vote integrity)
+      let fadeRaf = null;
+      let fadingOut = null; // { el, gain }
+      function settleFade() {
+        if (fadeRaf != null) { cancelAnimationFrame(fadeRaf); fadeRaf = null; }
+        if (fadingOut) {
+          try { fadingOut.el.pause(); fadingOut.el.volume = fadingOut.gain; } catch (e) {}
+          fadingOut = null;
+        }
+      }
+      const gainOf = (t) =>
+        t && typeof t.gain === "number" ? t.gain : (t && t.audio ? t.audio.volume : 1);
+
+      // Switch to take i, carrying the playhead — crossfaded so the swap is
+      // click-free. A hard pause()/play() stepped the amplitude to/from silence
+      // mid-waveform on every switch → the pop. Ramp volumes over ~18ms (below
+      // the perceptual gap threshold, so the compare still feels instant).
       function swapTo(i, play) {
         if (i < 0 || i >= takes.length) return;
-        const prev = active();
+        settleFade(); // finalize any in-flight fade before starting another
+        const prevTake = takes[activeIndex];
+        const prev = prevTake ? prevTake.audio : null;
         const t = prev ? prev.currentTime : 0;
-        if (prev && !prev.paused) prev.pause();
         activeIndex = i;
-        const next = active();
+        const nextTake = takes[activeIndex];
+        const next = nextTake ? nextTake.audio : null;
         if (next) {
           try { next.currentTime = t; } catch (e) {}
           // If the target take hasn't loaded its metadata yet, currentTime may not
@@ -5337,7 +5364,29 @@ function stemSoloUrls(sf) {
             next.addEventListener("loadedmetadata", restore, { once: true });
           }
         }
-        if (play && next) { claim(); next.play().then(startTick).catch(() => {}); }
+        if (play && next) {
+          claim();
+          const nextGain = gainOf(nextTake);
+          const prevGain = gainOf(prevTake);
+          const crossfade = prev && prev !== next && !prev.paused;
+          if (crossfade) { next.volume = 0; fadingOut = { el: prev, gain: prevGain }; }
+          next.play().then(startTick).catch(() => {});
+          if (crossfade) {
+            const DUR = 18, t0 = performance.now();
+            const stepFade = (now) => {
+              const k = Math.min(1, (now - t0) / DUR);
+              try { next.volume = nextGain * k; } catch (e) {}
+              try { prev.volume = prevGain * (1 - k); } catch (e) {}
+              if (k < 1) { fadeRaf = requestAnimationFrame(stepFade); }
+              else { fadeRaf = null; fadingOut = null; try { prev.pause(); prev.volume = prevGain; } catch (e) {} }
+            };
+            fadeRaf = requestAnimationFrame(stepFade);
+          } else {
+            try { next.volume = nextGain; } catch (e) {}
+          }
+        } else if (prev && prev !== next && !prev.paused) {
+          try { prev.pause(); } catch (e) {} // switching while paused: no fade needed
+        }
         renderState();
       }
       function toggle() {
@@ -5348,9 +5397,15 @@ function stemSoloUrls(sf) {
         renderState();
       }
       function seekFrac(frac) {
-        const a = active();
-        if (!a || !a.duration || !isFinite(a.duration)) return;
-        const nt = frac * a.duration;
+        // Map the click against the SAME reference timeline the playhead uses
+        // (take 0), then seek every take to that absolute time — so click
+        // position and playhead agree even when takes differ in length.
+        const ref = takes[0] && takes[0].audio;
+        const refDur = ref && isFinite(ref.duration) && ref.duration > 0
+          ? ref.duration
+          : (active() && active().duration);
+        if (!refDur || !isFinite(refDur)) return;
+        const nt = frac * refDur;
         takes.forEach((t) => { try { t.audio.currentTime = nt; } catch (e) {} });
         renderState();
       }
