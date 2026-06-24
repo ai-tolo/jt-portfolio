@@ -341,7 +341,7 @@ function stemSoloUrls(sf) {
               ~2× the pairwise signal per audition. Never required; the "better"
               vote above stands on its own if you skip it. (BWS, 2026-06-24) */}
           <div class="round-worst" data-round-worst hidden>
-            <span class="round-worst-label">…and the <strong>weakest</strong>? <span class="round-worst-opt">optional · Shift+number</span></span>
+            <span class="round-worst-label">👎 <strong>weakest</strong> take? <span class="round-worst-opt">optional — tap a number to mark it, tap again to clear</span></span>
             <div class="round-worst-btns" data-round-worst-btns role="group" aria-label="Optionally mark the weakest take"></div>
           </div>
 
@@ -5326,6 +5326,19 @@ function stemSoloUrls(sf) {
 
       const active = () => (takes[activeIndex] ? takes[activeIndex].audio : null);
 
+      // Position reference for the playhead + seek: the SOURCE take's duration.
+      // The waveform PNG is the source's, but the display order is shuffled AND
+      // the shown masters rotate, so takes[0] is NOT reliably the source —
+      // anchoring to it drifted/froze the playhead. (glitch fix 2026-06-24)
+      function srcDurSec() {
+        const s = takes.find((t) => t.reveal && t.reveal.kind === "source");
+        const aud = (s && s.audio) || (takes[0] && takes[0].audio);
+        if (aud && isFinite(aud.duration) && aud.duration > 0) return aud.duration;
+        if (round && round.source && round.source.duration_seconds) return round.source.duration_seconds;
+        const a = active();
+        return a && isFinite(a.duration) && a.duration > 0 ? a.duration : 0;
+      }
+
       function silence() {
         const a = active();
         if (a && !a.paused) a.pause();
@@ -5347,12 +5360,9 @@ function stemSoloUrls(sf) {
           timeEl.textContent = fmt(a ? a.currentTime : 0) + " / " + (dur && isFinite(dur) ? fmt(dur) : "—:—");
         }
         if (playhead && a) {
-          // The waveform PNG is the SOURCE track's, and swapTo carries raw
-          // currentTime between takes — so the playhead must map against ONE
-          // stable timeline, not whichever take is active. Differing-length
-          // raw-vs-master takes otherwise jump the playhead on every swap.
-          const ref = takes[0] && takes[0].audio;
-          const refDur = ref && isFinite(ref.duration) && ref.duration > 0 ? ref.duration : a.duration;
+          // Map the carried currentTime against the SOURCE's duration (which the
+          // waveform PNG is drawn from) — see srcDurSec(). (playhead glitch fix)
+          const refDur = srcDurSec();
           const frac = refDur && a.currentTime > 0 ? Math.max(0, Math.min(1, a.currentTime / refDur)) : 0;
           playhead.style.left = frac * 100 + "%";
           playhead.removeAttribute("hidden");
@@ -5436,13 +5446,9 @@ function stemSoloUrls(sf) {
         renderState();
       }
       function seekFrac(frac) {
-        // Map the click against the SAME reference timeline the playhead uses
-        // (take 0), then seek every take to that absolute time — so click
-        // position and playhead agree even when takes differ in length.
-        const ref = takes[0] && takes[0].audio;
-        const refDur = ref && isFinite(ref.duration) && ref.duration > 0
-          ? ref.duration
-          : (active() && active().duration);
+        // Map the click against the SAME reference the playhead uses — the
+        // SOURCE's duration (srcDurSec) — so click position and playhead agree.
+        const refDur = srcDurSec();
         if (!refDur || !isFinite(refDur)) return;
         const nt = frac * refDur;
         takes.forEach((t) => { try { t.audio.currentTime = nt; } catch (e) {} });
@@ -5764,14 +5770,6 @@ function stemSoloUrls(sf) {
         if (tag === "input" || tag === "textarea") return;
         if (!Stage || Stage.active !== SECTION) return;
         if (root.hidden || voting) return;
-        // Shift+number flags that take as the weakest (BWS). Uses e.code so it
-        // survives the shifted symbol (Shift+1 = "!"), and runs before the plain
-        // digit/audition branch.
-        if (e.shiftKey && /^Digit[1-9]$/.test(e.code)) {
-          const wi = Number(e.code.slice(5)) - 1;
-          if (wi < takes.length) { e.preventDefault(); setWorst(wi); }
-          return;
-        }
         const k = e.key;
         if (/^[1-9]$/.test(k)) { const i = Number(k) - 1; if (i < takes.length) { e.preventDefault(); swapTo(i, true); } }
         else if (k === " ") { e.preventDefault(); toggle(); }
