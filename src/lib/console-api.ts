@@ -1045,6 +1045,10 @@ export function postRoundVote(body: {
   variant_b_id?: number | null;
   chosen_variant_id?: number | null;
   chose_original?: boolean;
+  // Best-Worst elicitation (2026-06-24): optional weakest take. "src" = raw,
+  // "v{id}" = that master. The engine turns best+worst into implied pairwise
+  // comparisons (a 3-take round yields the full ranking from one listen).
+  worst_take_id?: string | null;
 }): Promise<ApiResult<MixJudgementResponse>> {
   return _post<MixJudgementResponse>("/mix/judgement", body);
 }

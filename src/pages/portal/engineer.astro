@@ -336,6 +336,15 @@ function stemSoloUrls(sf) {
             <button type="button" class="round-skip" data-round-skip-q>ask me something else</button>
           </div>
 
+          {/* Best-Worst: optionally also flag the WEAKEST take. A 3-take round
+              then yields the full ranking (best ▸ mid ▸ worst) from one listen —
+              ~2× the pairwise signal per audition. Never required; the "better"
+              vote above stands on its own if you skip it. (BWS, 2026-06-24) */}
+          <div class="round-worst" data-round-worst hidden>
+            <span class="round-worst-label">…and the <strong>weakest</strong>? <span class="round-worst-opt">optional · Shift+number</span></span>
+            <div class="round-worst-btns" data-round-worst-btns role="group" aria-label="Optionally mark the weakest take"></div>
+          </div>
+
           {/* Optional, never-required "why" — voting works without it. */}
           <details class="round-why" data-round-why-wrap>
             <summary><span class="round-why-caret" aria-hidden="true">▾</span> add a note (optional)</summary>
@@ -882,6 +891,33 @@ function stemSoloUrls(sf) {
   .round-reveal[hidden] { display: none; }
   .round-reveal-next { color: rgba(245, 241, 232, 0.5); }
   .round-reveal-warn { color: #ff9d6b; }
+  .round-reveal-worst { color: #ff9d6b; }
+
+  /* Best-Worst: the optional "weakest" picker — deliberately quieter than the
+     cyan "better" button so it never competes with the primary vote. (BWS) */
+  .round-worst { display: flex; align-items: center; gap: 12px; margin: 2px 0; flex-wrap: wrap; }
+  .round-worst[hidden] { display: none; }
+  .round-worst-label { font-size: 13px; color: rgba(245, 241, 232, 0.5); }
+  .round-worst-label strong { color: #ffb892; font-weight: 700; }
+  .round-worst-opt { font-size: 11px; opacity: .6; margin-left: 4px; }
+  .round-worst-btns { display: inline-flex; gap: 8px; }
+  .round-worst-btn {
+    min-width: 30px; padding: 4px 10px; border-radius: 8px; cursor: pointer;
+    border: 1px solid rgba(255, 157, 107, 0.30); background: rgba(255, 157, 107, 0.06);
+    color: rgba(245, 241, 232, 0.7); font: inherit; font-size: 13px; font-weight: 600;
+    transition: background .12s ease, border-color .12s ease, color .12s ease;
+  }
+  .round-worst-btn:hover { background: rgba(255, 157, 107, 0.14); border-color: rgba(255, 157, 107, 0.5); color: #ffd9c4; }
+  .round-worst-btn.is-worst {
+    background: linear-gradient(180deg, rgba(255, 130, 90, 0.32), rgba(255, 130, 90, 0.16));
+    border-color: rgba(255, 130, 90, 0.7); color: #fff0e8;
+  }
+  /* A chip the curator flagged weakest gets a small down-badge so the mark is
+     visible on the take itself, not only on the picker row. */
+  .ab-side[data-worst="true"]::after {
+    content: "▾"; position: absolute; top: 1px; right: 4px; font-size: 11px;
+    color: #ff9d6b; line-height: 1; pointer-events: none; z-index: 2;
+  }
 
   /* ── Footer: the learning made visible ─────────────────────────────────── */
   .round-footer {
@@ -5272,12 +5308,15 @@ function stemSoloUrls(sf) {
       const skipBtn = root.querySelector("[data-round-skip-q]");
       const noteEl = root.querySelector("[data-round-note]");
       const revealEl = root.querySelector("[data-round-reveal]");
+      const worstWrap = root.querySelector("[data-round-worst]");
+      const worstBtnsEl = root.querySelector("[data-round-worst-btns]");
       const claim = () => { if (Stage) Stage.claim(SECTION); };
 
       let round = null;
       let takes = [];          // [{ take_id, reveal, audio, lufs, chip, n }]
       let order = [];          // take_ids in presented order
       let activeIndex = 0;
+      let worstIndex = -1;     // BWS: index into takes[] flagged weakest, or -1
       let rafId = null;
       let voting = false;
       let roundMatched = false; // true only when ALL takes are loudness-matched
@@ -5424,6 +5463,9 @@ function stemSoloUrls(sf) {
         takes = [];
         order = [];
         activeIndex = 0;
+        worstIndex = -1;
+        if (worstBtnsEl) worstBtnsEl.innerHTML = "";
+        if (worstWrap) worstWrap.hidden = true;
         if (takesEl) takesEl.innerHTML = "";
         if (rafId != null) { cancelAnimationFrame(rafId); rafId = null; }
       }
@@ -5453,6 +5495,47 @@ function stemSoloUrls(sf) {
         });
         chip.addEventListener("pointerleave", cancel);
         chip.addEventListener("pointercancel", cancel);
+      }
+
+      // BWS picker: a quiet, optional "which is weakest?" control. Marking a
+      // worst take never submits — the existing best-vote carries it along.
+      function renderWorst() {
+        if (worstBtnsEl) {
+          worstBtnsEl.querySelectorAll("[data-worst-idx]").forEach((b) => {
+            const i = Number(b.getAttribute("data-worst-idx"));
+            b.classList.toggle("is-worst", i === worstIndex);
+            b.setAttribute("aria-pressed", i === worstIndex ? "true" : "false");
+          });
+        }
+        takes.forEach((t, i) => {
+          if (i === worstIndex) t.chip.setAttribute("data-worst", "true");
+          else t.chip.removeAttribute("data-worst");
+        });
+      }
+      function setWorst(i) {
+        if (voting || i < 0 || i >= takes.length) return;
+        worstIndex = i === worstIndex ? -1 : i; // click/key again clears it
+        renderWorst();
+      }
+      function buildWorstPicker() {
+        if (!worstBtnsEl || !worstWrap) return;
+        worstBtnsEl.innerHTML = "";
+        // Worst only adds signal with 3+ takes — with 2, "not the winner" already
+        // names the loser, so the picker would be redundant. Hide it.
+        if (takes.length < 3) { worstWrap.hidden = true; return; }
+        takes.forEach((t, i) => {
+          const b = document.createElement("button");
+          b.type = "button";
+          b.className = "round-worst-btn";
+          b.setAttribute("data-worst-idx", String(i));
+          b.setAttribute("aria-pressed", "false");
+          b.title = "Flag take " + (i + 1) + " as the weakest (optional)";
+          b.textContent = String(i + 1);
+          b.addEventListener("click", () => { claim(); setWorst(i); });
+          worstBtnsEl.appendChild(b);
+        });
+        worstWrap.hidden = false;
+        renderWorst();
       }
 
       function buildTakes() {
@@ -5516,6 +5599,8 @@ function stemSoloUrls(sf) {
               : "loudness match unavailable on these renders — skip this round";
         }
         activeIndex = 0;
+        worstIndex = -1;
+        buildWorstPicker();
         renderState();
       }
 
@@ -5566,6 +5651,9 @@ function stemSoloUrls(sf) {
         if (voteBtn) voteBtn.disabled = true;
         for (const t of takes) { try { t.audio.pause(); } catch (e) {} }
         const chosen = takes[idx];
+        // BWS: carry the flagged-weakest take, but never if it IS the winner
+        // (the backend also guards wk !== tk). -1 = no worst marked.
+        const wIdx = (worstIndex >= 0 && worstIndex !== idx && takes[worstIndex]) ? worstIndex : -1;
         // A round must carry its source id or the vote can't be recorded — the
         // proxy 400s on a non-finite source_asset_id and we'd silently drop the
         // training signal. Bail visibly instead of losing the vote. (review M2)
@@ -5608,6 +5696,8 @@ function stemSoloUrls(sf) {
           variant_b_id: takes[1] ? vidOf(takes[1]) : null,
           chosen_variant_id: vidOf(chosen),
           chose_original: isSource(chosen),
+          // Optional best-worst signal; null when no weakest take was flagged.
+          worst_take_id: wIdx >= 0 ? takes[wIdx].take_id : null,
         };
         let ok = false;
         try {
@@ -5625,7 +5715,8 @@ function stemSoloUrls(sf) {
           if (ok) {
             const parts = takes.map((t, i) => {
               const lab = (t.reveal && t.reveal.label) || (isSource(t) ? "your raw" : "master");
-              return (i + 1) + " = " + esc(lab) + (i === idx ? " ✓" : "");
+              const mark = i === idx ? " ✓" : (i === wIdx ? ' <span class="round-reveal-worst">✗</span>' : "");
+              return (i + 1) + " = " + esc(lab) + mark;
             });
             revealEl.innerHTML = parts.join("  ·  ") + '<span class="round-reveal-next"> — next round…</span>';
           } else {
@@ -5673,6 +5764,14 @@ function stemSoloUrls(sf) {
         if (tag === "input" || tag === "textarea") return;
         if (!Stage || Stage.active !== SECTION) return;
         if (root.hidden || voting) return;
+        // Shift+number flags that take as the weakest (BWS). Uses e.code so it
+        // survives the shifted symbol (Shift+1 = "!"), and runs before the plain
+        // digit/audition branch.
+        if (e.shiftKey && /^Digit[1-9]$/.test(e.code)) {
+          const wi = Number(e.code.slice(5)) - 1;
+          if (wi < takes.length) { e.preventDefault(); setWorst(wi); }
+          return;
+        }
         const k = e.key;
         if (/^[1-9]$/.test(k)) { const i = Number(k) - 1; if (i < takes.length) { e.preventDefault(); swapTo(i, true); } }
         else if (k === " ") { e.preventDefault(); toggle(); }

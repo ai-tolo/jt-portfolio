@@ -67,6 +67,8 @@ export const POST: APIRoute = async ({ request }) => {
     variant_b_id: numOrNull(p.variant_b_id),
     chosen_variant_id: numOrNull(p.chosen_variant_id),
     chose_original: p.chose_original === true,
+    // Optional best-worst signal: the weakest take, if the curator marked one.
+    worst_take_id: typeof p.worst_take_id === "string" ? p.worst_take_id : null,
   });
 
   if (!result.ok) {
