@@ -60,10 +60,31 @@ const dateInfo = (() => {
   return { primary, year, relative, stamped, daysAbs };
 })();
 
-const tagList = (item.tags ?? "")
+const allTags = (item.tags ?? "")
   .split(",")
   .map((t) => t.trim())
-  .filter(Boolean)
+  .filter(Boolean);
+
+// SIGNAL Studio sample slots. A catalog row armed with `sig:<slot>` shows up in
+// the studio's library sidebar under that slot (DRUMS/KEYS/BASS) and can be
+// dropped onto the matching module. The studio selects them via
+// GET /buckets?tags=sig:<slot>; we write them through the same full-replacement
+// /items/tags path the tag chips use (see the studio-arm handler in
+// [bucket].astro). Multi-select — a sample can live in more than one slot.
+const STUDIO_SLOTS = [
+  { id: "drums", label: "DRUMS", emoji: "🥁" },
+  { id: "keys", label: "KEYS", emoji: "🎹" },
+  { id: "bass", label: "BASS", emoji: "🎸" },
+] as const;
+const studioSlots = STUDIO_SLOTS
+  .filter((s) => allTags.some((t) => t.toLowerCase() === `sig:${s.id}`))
+  .map((s) => s.id);
+
+// Slot tags are represented by the dedicated Studio control below, so keep them
+// OUT of the generic tag-chip strip — otherwise they'd render twice and a chip ×
+// could clobber the studio state. Other sig:* tags (e.g. sig:idea) still show.
+const tagList = allTags
+  .filter((t) => !/^sig:(drums|keys|bass)$/i.test(t))
   .slice(0, 8);
 
 const BUCKET_LABEL: Record<BucketName, string> = {
@@ -255,6 +276,21 @@ const hasExpanded = true;
             ↑ Print of {(item.print_of_display_name ?? item.print_of_filename ?? "project").replace(/\.als$/i, "")}
           </a>
         )}
+        {/* SIGNAL Studio arm-state badge. Shown only when the row carries a
+            sig:<slot> tag — at-a-glance "this sample is live in the studio."
+            Links to the studio so the curator can jump over and play it. JS
+            keeps it in sync as slots toggle (data-studio-badge). */}
+        <a
+          class="flag-chip flag-studio"
+          data-studio-badge
+          href="http://localhost:4400/"
+          target="_blank"
+          rel="noopener"
+          hidden={studioSlots.length === 0}
+          title={studioSlots.length
+            ? `In SIGNAL Studio: ${studioSlots.map((s) => s.toUpperCase()).join(", ")}. Click to open the studio.`
+            : undefined}
+        >◆ STUDIO <span class="flag-studio-slots" data-studio-badge-slots>{studioSlots.map((s) => s[0].toUpperCase()).join("·")}</span></a>
       </h3>
 
       <div class="wave-row">
@@ -468,6 +504,44 @@ const hasExpanded = true;
             data-path={item.path}
             title="Add a new tag"
           >+ add</button>
+        </dd>
+        {/* ── Send to SIGNAL Studio ────────────────────────────────────────
+            One gesture arms this sample into the studio's sample library under
+            a slot. Writes `sig:<slot>` through the same full-replacement
+            /items/tags path the tag chips use; the studio surfaces it via
+            GET /buckets?tags=sig:<slot>. Multi-select. See studio-arm in
+            [bucket].astro. */}
+        <dt class="exp-studio-dt">Studio</dt>
+        <dd class="exp-studio">
+          <div class="studio-slots" role="group" aria-label="Send this sample to a SIGNAL Studio slot">
+            {STUDIO_SLOTS.map((s) => {
+              const on = studioSlots.includes(s.id);
+              return (
+                <button
+                  type="button"
+                  class:list={["studio-btn", `slot-${s.id}`, { active: on }]}
+                  data-action="studio-arm"
+                  data-slot={s.id}
+                  data-path={item.path}
+                  aria-pressed={on ? "true" : "false"}
+                  title={on
+                    ? `In your studio ${s.label} library — click to remove`
+                    : `Send to your studio ${s.label} library`}
+                >
+                  <span class="studio-emoji" aria-hidden="true">{s.emoji}</span>
+                  <span class="studio-label">{s.label}</span>
+                  <span class="studio-check" aria-hidden="true">✓</span>
+                </button>
+              );
+            })}
+          </div>
+          <p class="studio-hint">
+            <span data-studio-hint>{studioSlots.length
+              ? `In your studio ${studioSlots.map((s) => s.toUpperCase()).join(" + ")} library.`
+              : "Drops this sample straight into the studio's sample library."}</span>
+            {" "}
+            <a class="studio-open" href="http://localhost:4400/" target="_blank" rel="noopener">Open studio →</a>
+          </p>
         </dd>
         {(item.bpm || item.key) && (
           <>
@@ -1071,6 +1145,64 @@ const hasExpanded = true;
     text-overflow: ellipsis;
     white-space: nowrap;
   }
+  /* SIGNAL Studio arm badge — emerald, signals the sample is live in the
+     studio's sample library. Mirrors .flag-chip sizing. */
+  .flag-studio {
+    color: #34e0a0;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+  }
+  .flag-studio[hidden] { display: none; }
+  .flag-studio:hover,
+  .flag-studio:focus-visible { color: #6df0c2; border-color: #6df0c2; }
+  .flag-studio-slots { font-size: 8px; letter-spacing: 0.06em; opacity: 0.85; }
+
+  /* ── Send-to-studio control (expanded panel) ──────────────────────────
+     A compact 3-way multi-select. Each slot is an independent toggle that
+     writes/removes sig:<slot>. Active = the sample is in that studio crate.
+     Per-slot accents mirror the SIGNAL module map (drums orange, keys emerald,
+     bass blue-violet). */
+  .exp-studio { display: block; }
+  .studio-slots { display: inline-flex; gap: 6px; flex-wrap: wrap; }
+  .studio-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 4px 9px;
+    border: 1px solid rgba(245, 241, 232, 0.22);
+    border-radius: 3px;
+    background: rgba(245, 241, 232, 0.03);
+    color: rgba(245, 241, 232, 0.62);
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: color 160ms ease, border-color 160ms ease, background 160ms ease;
+  }
+  .studio-btn .studio-emoji { font-size: 12px; filter: grayscale(0.6); opacity: 0.7; }
+  .studio-btn .studio-check { display: none; font-size: 11px; }
+  .studio-btn:hover,
+  .studio-btn:focus-visible {
+    color: #f5f1e8;
+    border-color: rgba(245, 241, 232, 0.5);
+    outline: none;
+  }
+  .studio-btn.active .studio-emoji { filter: none; opacity: 1; }
+  .studio-btn.active .studio-check { display: inline; }
+  .studio-btn.slot-drums.active { color: #ff9d42; border-color: rgba(255, 157, 66, 0.7); background: rgba(255, 157, 66, 0.1); }
+  .studio-btn.slot-keys.active  { color: #34e0a0; border-color: rgba(52, 224, 160, 0.7); background: rgba(52, 224, 160, 0.1); }
+  .studio-btn.slot-bass.active  { color: #8a7dff; border-color: rgba(138, 125, 255, 0.7); background: rgba(138, 125, 255, 0.1); }
+  .studio-hint {
+    margin: 6px 0 0;
+    font-size: 10.5px;
+    color: rgba(245, 241, 232, 0.5);
+    line-height: 1.5;
+  }
+  .studio-hint .studio-open { color: #34e0a0; text-decoration: none; white-space: nowrap; }
+  .studio-hint .studio-open:hover { text-decoration: underline; }
 
   /* Inline copies-group panel rendered next to / below the title row. Renders
      the group as a tight list with the kept (★) copy marked. Never auto-shown —

@@ -438,15 +438,41 @@ const BUCKET_TITLE: Record<BucketView, string> = {
       }
     };
 
+    // ── SIGNAL Studio slots (sig:<slot>) ─────────────────────────────────
+    // The studio reads GET /buckets?tags=sig:<slot> to fill its DRUMS/KEYS/BASS
+    // library. /items/tags is full-replacement keyed by path, so EVERY tag write
+    // (generic chip OR studio toggle) must resend the COMPLETE set — generic
+    // chips plus every active slot — or it clobbers the row's other tags. Slot
+    // tags are not rendered as chips, so collectCardTags omits them; we re-add
+    // them here. composeAllTags is the single source of truth for a save.
+    const dedupeTags = (arr: string[]): string[] => {
+      const seen = new Set<string>();
+      const out: string[] = [];
+      for (const t of arr) {
+        const k = t.toLowerCase();
+        if (k && !seen.has(k)) { seen.add(k); out.push(t); }
+      }
+      return out;
+    };
+    const activeStudioSlots = (card: HTMLElement): string[] =>
+      Array.from(card.querySelectorAll<HTMLElement>(".studio-btn.active[data-slot]"))
+        .map((b) => b.dataset.slot ?? "")
+        .filter(Boolean);
+    const studioSlotTags = (card: HTMLElement): string[] =>
+      activeStudioSlots(card).map((s) => `sig:${s}`);
+    const composeAllTags = (card: HTMLElement): string[] =>
+      dedupeTags([...collectCardTags(card), ...studioSlotTags(card)]);
+
     const removeTag = async (card: HTMLElement, xBtn: HTMLElement) => {
       const tag = xBtn.dataset.tag;
       if (!tag) return;
       const chip = xBtn.closest<HTMLElement>(".chip-tag");
       const current = collectCardTags(card);
       const next = current.filter((t) => t !== tag);
-      // Optimistic remove. Hide the chip; restore on error.
+      // Optimistic remove. Hide the chip; restore on error. Re-attach the
+      // active studio slots so a generic remove never clobbers them.
       if (chip) chip.style.display = "none";
-      const ok = await persistTags(card, next);
+      const ok = await persistTags(card, dedupeTags([...next, ...studioSlotTags(card)]));
       if (!ok && chip) chip.style.display = "";
       else if (chip) chip.remove();
     };
@@ -485,7 +511,8 @@ const BUCKET_TITLE: Record<BucketView, string> = {
           xb.textContent = "×";
           chip.appendChild(xb);
           addBtn.parentElement?.insertBefore(chip, addBtn);
-          persistTags(card, [...current, clean]).then((ok) => {
+          // Re-attach active studio slots so adding a generic tag never drops them.
+          persistTags(card, dedupeTags([...current, ...studioSlotTags(card), clean])).then((ok) => {
             if (!ok) chip.remove();
           });
         }
@@ -502,6 +529,60 @@ const BUCKET_TITLE: Record<BucketView, string> = {
         }
       });
       input.addEventListener("blur", () => finish(input.value || null), { once: true });
+    };
+
+    // ── Send-to-studio toggle ────────────────────────────────────────────
+    // Each slot button is an independent toggle. Flip it, recompose the FULL
+    // tag list (generic + every active slot), and persist. The studio's library
+    // sidebar reads GET /buckets?tags=sig:<slot>, so once this save lands the
+    // sample is in that crate (the studio refreshes on reload / focus-sheet
+    // close — no live poll yet).
+    const updateStudioBadge = (card: HTMLElement) => {
+      const badge = card.querySelector<HTMLElement>("[data-studio-badge]");
+      if (!badge) return;
+      const slots = activeStudioSlots(card);
+      const slotsEl = badge.querySelector<HTMLElement>("[data-studio-badge-slots]");
+      if (slots.length) {
+        badge.hidden = false;
+        if (slotsEl) slotsEl.textContent = slots.map((s) => s[0].toUpperCase()).join("·");
+        badge.title = `In SIGNAL Studio: ${slots.map((s) => s.toUpperCase()).join(", ")}. Click to open the studio.`;
+      } else {
+        badge.hidden = true;
+      }
+    };
+    const updateStudioHint = (card: HTMLElement) => {
+      const hint = card.querySelector<HTMLElement>("[data-studio-hint]");
+      if (!hint) return;
+      const slots = activeStudioSlots(card);
+      hint.textContent = slots.length
+        ? `In your studio ${slots.map((s) => s.toUpperCase()).join(" + ")} library.`
+        : "Drops this sample straight into the studio's sample library.";
+    };
+    const armStudio = async (card: HTMLElement, btn: HTMLElement) => {
+      const slot = btn.dataset.slot;
+      if (!slot) return;
+      const wasActive = btn.classList.contains("active");
+      const willActive = !wasActive;
+      // Optimistic toggle — composeAllTags reads the new state from the DOM.
+      btn.classList.toggle("active", willActive);
+      btn.setAttribute("aria-pressed", String(willActive));
+      updateStudioBadge(card);
+      updateStudioHint(card);
+      const ok = await persistTags(card, composeAllTags(card));
+      if (!ok) {
+        btn.classList.toggle("active", wasActive);
+        btn.setAttribute("aria-pressed", String(wasActive));
+        updateStudioBadge(card);
+        updateStudioHint(card);
+        return;
+      }
+      setStatus(
+        card,
+        willActive
+          ? `Now in your studio ${slot.toUpperCase()} library →`
+          : `Removed from studio ${slot.toUpperCase()}`,
+        willActive ? "ok" : "",
+      );
     };
 
     // ── Dup-group reveal ─────────────────────────────────────────────────
@@ -2030,6 +2111,9 @@ const BUCKET_TITLE: Record<BucketView, string> = {
           break;
         case "tag-add":
           startAddTag(card, btn);
+          break;
+        case "studio-arm":
+          armStudio(card, btn);
           break;
         case "promote-to-live":
           promoteToLive(card);
