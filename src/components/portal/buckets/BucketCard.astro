@@ -65,26 +65,28 @@ const allTags = (item.tags ?? "")
   .map((t) => t.trim())
   .filter(Boolean);
 
-// SIGNAL Studio sample slots. A catalog row armed with `sig:<slot>` shows up in
-// the studio's library sidebar under that slot (DRUMS/KEYS/BASS) and can be
-// dropped onto the matching module. The studio selects them via
-// GET /buckets?tags=sig:<slot>; we write them through the same full-replacement
-// /items/tags path the tag chips use (see the studio-arm handler in
-// [bucket].astro). Multi-select — a sample can live in more than one slot.
-const STUDIO_SLOTS = [
-  { id: "drums", label: "DRUMS", emoji: "🥁" },
-  { id: "keys", label: "KEYS", emoji: "🎹" },
-  { id: "bass", label: "BASS", emoji: "🎸" },
-] as const;
-const studioSlots = STUDIO_SLOTS
-  .filter((s) => allTags.some((t) => t.toLowerCase() === `sig:${s.id}`))
-  .map((s) => s.id);
+// SIGNAL Studio membership. Sending a sample from the portal drops it into the
+// studio's INBOX (sig:inbox) — the holding area where the curator auditions it
+// before filing it under DRUMS/KEYS/BASS (that slotting happens INSIDE the
+// studio, which rewrites sig:inbox → sig:<slot>). So a row is "in the studio"
+// if it carries sig:inbox OR any sig:<slot>. The studio reads its inbox via
+// GET /buckets?tags=sig:inbox and its slot lists via GET /buckets?tags=sig:<slot>.
+// We stash that exact membership set on the card (data-studio-tags) so generic
+// tag edits re-attach it and never clobber it. Writes go through the same
+// full-replacement /items/tags path the tag chips use (see studio-arm in
+// [bucket].astro).
+const STUDIO_TAG_RE = /^sig:(inbox|drums|keys|bass)$/i;
+const studioTags = allTags.filter((t) => STUDIO_TAG_RE.test(t));
+const studioSlots = studioTags
+  .map((t) => t.toLowerCase().slice(4))
+  .filter((s) => s !== "inbox");
+const inStudio = studioTags.length > 0;
 
-// Slot tags are represented by the dedicated Studio control below, so keep them
-// OUT of the generic tag-chip strip — otherwise they'd render twice and a chip ×
-// could clobber the studio state. Other sig:* tags (e.g. sig:idea) still show.
+// Studio tags are represented by the dedicated Studio control below, so keep
+// them OUT of the generic tag-chip strip — otherwise they'd render twice and a
+// chip × could clobber the studio state. Other sig:* tags (e.g. sig:idea) still show.
 const tagList = allTags
-  .filter((t) => !/^sig:(drums|keys|bass)$/i.test(t))
+  .filter((t) => !STUDIO_TAG_RE.test(t))
   .slice(0, 8);
 
 const BUCKET_LABEL: Record<BucketName, string> = {
@@ -232,6 +234,7 @@ const hasExpanded = true;
   data-quality={String(item.quality_star)}
   data-parent-id={item.parent_id ? String(item.parent_id) : ""}
   data-path={item.path}
+  data-studio-tags={studioTags.join(",")}
   data-filename={filename}
   data-duration-seconds={String(item.duration_seconds ?? "")}
   data-bpm={item.bpm != null ? String(item.bpm) : ""}
@@ -276,21 +279,24 @@ const hasExpanded = true;
             ↑ Print of {(item.print_of_display_name ?? item.print_of_filename ?? "project").replace(/\.als$/i, "")}
           </a>
         )}
-        {/* SIGNAL Studio arm-state badge. Shown only when the row carries a
-            sig:<slot> tag — at-a-glance "this sample is live in the studio."
-            Links to the studio so the curator can jump over and play it. JS
-            keeps it in sync as slots toggle (data-studio-badge). */}
+        {/* SIGNAL Studio membership badge. Shown when the row is in the studio
+            inbox (sig:inbox) OR filed under a slot (sig:<slot>) — at-a-glance
+            "this sample is in the studio." Sub-label reads INBOX until it's
+            filed, then the slot letters. Links to the studio; JS keeps it in
+            sync as the control toggles (data-studio-badge). */}
         <a
           class="flag-chip flag-studio"
           data-studio-badge
           href="http://localhost:4400/"
           target="_blank"
           rel="noopener"
-          hidden={studioSlots.length === 0}
-          title={studioSlots.length
-            ? `In SIGNAL Studio: ${studioSlots.map((s) => s.toUpperCase()).join(", ")}. Click to open the studio.`
+          hidden={!inStudio}
+          title={inStudio
+            ? (studioSlots.length
+                ? `In SIGNAL Studio: ${studioSlots.map((s) => s.toUpperCase()).join(", ")}. Click to open the studio.`
+                : "In your SIGNAL Studio inbox — audition it, then file it under a slot. Click to open the studio.")
             : undefined}
-        >◆ STUDIO <span class="flag-studio-slots" data-studio-badge-slots>{studioSlots.map((s) => s[0].toUpperCase()).join("·")}</span></a>
+        >◆ STUDIO <span class="flag-studio-slots" data-studio-badge-slots>{studioSlots.length ? studioSlots.map((s) => s[0].toUpperCase()).join("·") : "INBOX"}</span></a>
       </h3>
 
       <div class="wave-row">
@@ -506,39 +512,37 @@ const hasExpanded = true;
           >+ add</button>
         </dd>
         {/* ── Send to SIGNAL Studio ────────────────────────────────────────
-            One gesture arms this sample into the studio's sample library under
-            a slot. Writes `sig:<slot>` through the same full-replacement
-            /items/tags path the tag chips use; the studio surfaces it via
-            GET /buckets?tags=sig:<slot>. Multi-select. See studio-arm in
+            One gesture drops this sample into the studio's INBOX (sig:inbox) —
+            the holding area you audition before filing under DRUMS/KEYS/BASS
+            (filing happens inside the studio). Writes through the same
+            full-replacement /items/tags path the tag chips use; the studio
+            reads its inbox via GET /buckets?tags=sig:inbox. See studio-arm in
             [bucket].astro. */}
         <dt class="exp-studio-dt">Studio</dt>
         <dd class="exp-studio">
-          <div class="studio-slots" role="group" aria-label="Send this sample to a SIGNAL Studio slot">
-            {STUDIO_SLOTS.map((s) => {
-              const on = studioSlots.includes(s.id);
-              return (
-                <button
-                  type="button"
-                  class:list={["studio-btn", `slot-${s.id}`, { active: on }]}
-                  data-action="studio-arm"
-                  data-slot={s.id}
-                  data-path={item.path}
-                  aria-pressed={on ? "true" : "false"}
-                  title={on
-                    ? `In your studio ${s.label} library — click to remove`
-                    : `Send to your studio ${s.label} library`}
-                >
-                  <span class="studio-emoji" aria-hidden="true">{s.emoji}</span>
-                  <span class="studio-label">{s.label}</span>
-                  <span class="studio-check" aria-hidden="true">✓</span>
-                </button>
-              );
-            })}
-          </div>
+          <button
+            type="button"
+            class:list={["studio-send", { active: inStudio }]}
+            data-action="studio-arm"
+            data-path={item.path}
+            aria-pressed={inStudio ? "true" : "false"}
+            title={inStudio
+              ? "In your SIGNAL Studio — click to remove"
+              : "Send this sample to your SIGNAL Studio inbox"}
+          >
+            <span class="studio-send-icon" aria-hidden="true">◆</span>
+            <span class="studio-send-label" data-studio-send-label>{inStudio
+              ? (studioSlots.length
+                  ? `In studio · ${studioSlots.map((s) => s.toUpperCase()).join(" + ")}`
+                  : "In studio inbox")
+              : "Send to Studio"}</span>
+          </button>
           <p class="studio-hint">
-            <span data-studio-hint>{studioSlots.length
-              ? `In your studio ${studioSlots.map((s) => s.toUpperCase()).join(" + ")} library.`
-              : "Drops this sample straight into the studio's sample library."}</span>
+            <span data-studio-hint>{inStudio
+              ? (studioSlots.length
+                  ? `Filed in your studio ${studioSlots.map((s) => s.toUpperCase()).join(" + ")} library.`
+                  : "Waiting in your studio inbox — audition it there, then file it under DRUMS/KEYS/BASS.")
+              : "Drops this sample into your studio inbox to try out."}</span>
             {" "}
             <a class="studio-open" href="http://localhost:4400/" target="_blank" rel="noopener">Open studio →</a>
           </p>
@@ -1160,41 +1164,39 @@ const hasExpanded = true;
   .flag-studio-slots { font-size: 8px; letter-spacing: 0.06em; opacity: 0.85; }
 
   /* ── Send-to-studio control (expanded panel) ──────────────────────────
-     A compact 3-way multi-select. Each slot is an independent toggle that
-     writes/removes sig:<slot>. Active = the sample is in that studio crate.
-     Per-slot accents mirror the SIGNAL module map (drums orange, keys emerald,
-     bass blue-violet). */
+     One gesture drops the sample into the studio INBOX (sig:inbox). Filing
+     under DRUMS/KEYS/BASS happens inside the studio. Emerald active state
+     mirrors the studio membership badge. */
   .exp-studio { display: block; }
-  .studio-slots { display: inline-flex; gap: 6px; flex-wrap: wrap; }
-  .studio-btn {
+  .studio-send {
     display: inline-flex;
     align-items: center;
-    gap: 5px;
-    padding: 4px 9px;
+    gap: 7px;
+    padding: 5px 12px;
     border: 1px solid rgba(245, 241, 232, 0.22);
-    border-radius: 3px;
+    border-radius: 4px;
     background: rgba(245, 241, 232, 0.03);
     color: rgba(245, 241, 232, 0.62);
-    font-size: 10px;
+    font-size: 10.5px;
     font-weight: 700;
     letter-spacing: 0.12em;
     text-transform: uppercase;
     cursor: pointer;
     transition: color 160ms ease, border-color 160ms ease, background 160ms ease;
   }
-  .studio-btn .studio-emoji { font-size: 12px; filter: grayscale(0.6); opacity: 0.7; }
-  .studio-btn .studio-check { display: none; font-size: 11px; }
-  .studio-btn:hover,
-  .studio-btn:focus-visible {
+  .studio-send .studio-send-icon { font-size: 11px; opacity: 0.55; transition: opacity 160ms ease; }
+  .studio-send:hover,
+  .studio-send:focus-visible {
     color: #f5f1e8;
     border-color: rgba(245, 241, 232, 0.5);
     outline: none;
   }
-  .studio-btn.active .studio-emoji { filter: none; opacity: 1; }
-  .studio-btn.active .studio-check { display: inline; }
-  .studio-btn.slot-drums.active { color: #ff9d42; border-color: rgba(255, 157, 66, 0.7); background: rgba(255, 157, 66, 0.1); }
-  .studio-btn.slot-keys.active  { color: #34e0a0; border-color: rgba(52, 224, 160, 0.7); background: rgba(52, 224, 160, 0.1); }
-  .studio-btn.slot-bass.active  { color: #8a7dff; border-color: rgba(138, 125, 255, 0.7); background: rgba(138, 125, 255, 0.1); }
+  .studio-send.active {
+    color: #34e0a0;
+    border-color: rgba(52, 224, 160, 0.7);
+    background: rgba(52, 224, 160, 0.1);
+  }
+  .studio-send.active .studio-send-icon { opacity: 1; }
   .studio-hint {
     margin: 6px 0 0;
     font-size: 10.5px;
@@ -2418,6 +2420,47 @@ const hasExpanded = true;
   }
   .stem-progress[data-tone="ok"] { color: #00ff4d; }
   .stem-progress[data-tone="err"] { color: #ff6e21; }
+
+  /* Per-stem "send to studio inbox" row, rendered right after a split so the
+     fresh stems are reachable without hunting for them in the catalog. */
+  .stem-sends {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px;
+    margin-top: 7px;
+  }
+  .stem-sends-label {
+    font-size: 9.5px;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: rgba(245, 241, 232, 0.45);
+  }
+  .stem-send-btn {
+    padding: 3px 9px;
+    border: 1px solid rgba(52, 224, 160, 0.4);
+    border-radius: 3px;
+    background: rgba(52, 224, 160, 0.06);
+    color: #34e0a0;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    cursor: pointer;
+    transition: background 140ms ease, border-color 140ms ease, opacity 140ms ease;
+  }
+  .stem-send-btn:hover,
+  .stem-send-btn:focus-visible {
+    background: rgba(52, 224, 160, 0.16);
+    border-color: rgba(52, 224, 160, 0.7);
+    outline: none;
+  }
+  .stem-send-btn.sent {
+    color: rgba(245, 241, 232, 0.55);
+    border-color: rgba(245, 241, 232, 0.2);
+    background: rgba(245, 241, 232, 0.04);
+    cursor: default;
+  }
 
   /* Engineer button mirrors stem-btn vocabulary but in a warmer hue so the
      send-to-pipeline action reads as a separate cognitive step from the

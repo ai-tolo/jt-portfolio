@@ -454,14 +454,19 @@ const BUCKET_TITLE: Record<BucketView, string> = {
       }
       return out;
     };
-    const activeStudioSlots = (card: HTMLElement): string[] =>
-      Array.from(card.querySelectorAll<HTMLElement>(".studio-btn.active[data-slot]"))
-        .map((b) => b.dataset.slot ?? "")
+    // The portal stashes the row's studio-membership tags (sig:inbox + any
+    // sig:<slot> the studio has filed it under) on the card as data-studio-tags.
+    // The studio control toggles sig:inbox in/out of that stash; generic-tag
+    // edits re-attach the stash so a chip add/remove never clobbers studio
+    // state. Slot tags (sig:<slot>) are owned by the studio app — the portal
+    // only preserves them, never invents them.
+    const studioMembershipTags = (card: HTMLElement): string[] =>
+      (card.dataset.studioTags ?? "")
+        .split(",")
+        .map((t) => t.trim())
         .filter(Boolean);
-    const studioSlotTags = (card: HTMLElement): string[] =>
-      activeStudioSlots(card).map((s) => `sig:${s}`);
     const composeAllTags = (card: HTMLElement): string[] =>
-      dedupeTags([...collectCardTags(card), ...studioSlotTags(card)]);
+      dedupeTags([...collectCardTags(card), ...studioMembershipTags(card)]);
 
     const removeTag = async (card: HTMLElement, xBtn: HTMLElement) => {
       const tag = xBtn.dataset.tag;
@@ -472,7 +477,7 @@ const BUCKET_TITLE: Record<BucketView, string> = {
       // Optimistic remove. Hide the chip; restore on error. Re-attach the
       // active studio slots so a generic remove never clobbers them.
       if (chip) chip.style.display = "none";
-      const ok = await persistTags(card, dedupeTags([...next, ...studioSlotTags(card)]));
+      const ok = await persistTags(card, dedupeTags([...next, ...studioMembershipTags(card)]));
       if (!ok && chip) chip.style.display = "";
       else if (chip) chip.remove();
     };
@@ -511,8 +516,8 @@ const BUCKET_TITLE: Record<BucketView, string> = {
           xb.textContent = "×";
           chip.appendChild(xb);
           addBtn.parentElement?.insertBefore(chip, addBtn);
-          // Re-attach active studio slots so adding a generic tag never drops them.
-          persistTags(card, dedupeTags([...current, ...studioSlotTags(card), clean])).then((ok) => {
+          // Re-attach studio-membership tags so adding a generic tag never drops them.
+          persistTags(card, dedupeTags([...current, ...studioMembershipTags(card), clean])).then((ok) => {
             if (!ok) chip.remove();
           });
         }
@@ -537,51 +542,69 @@ const BUCKET_TITLE: Record<BucketView, string> = {
     // sidebar reads GET /buckets?tags=sig:<slot>, so once this save lands the
     // sample is in that crate (the studio refreshes on reload / focus-sheet
     // close — no live poll yet).
+    const studioSlotsOf = (tags: string[]): string[] =>
+      tags.map((t) => t.toLowerCase().slice(4)).filter((s) => s !== "inbox");
     const updateStudioBadge = (card: HTMLElement) => {
       const badge = card.querySelector<HTMLElement>("[data-studio-badge]");
       if (!badge) return;
-      const slots = activeStudioSlots(card);
+      const tags = studioMembershipTags(card);
+      const slots = studioSlotsOf(tags);
       const slotsEl = badge.querySelector<HTMLElement>("[data-studio-badge-slots]");
-      if (slots.length) {
+      if (tags.length) {
         badge.hidden = false;
-        if (slotsEl) slotsEl.textContent = slots.map((s) => s[0].toUpperCase()).join("·");
-        badge.title = `In SIGNAL Studio: ${slots.map((s) => s.toUpperCase()).join(", ")}. Click to open the studio.`;
+        if (slotsEl) slotsEl.textContent = slots.length
+          ? slots.map((s) => s[0].toUpperCase()).join("·")
+          : "INBOX";
+        badge.title = slots.length
+          ? `In SIGNAL Studio: ${slots.map((s) => s.toUpperCase()).join(", ")}. Click to open the studio.`
+          : "In your SIGNAL Studio inbox — audition it, then file it under a slot. Click to open the studio.";
       } else {
         badge.hidden = true;
       }
     };
-    const updateStudioHint = (card: HTMLElement) => {
+    const updateStudioControl = (card: HTMLElement) => {
+      const tags = studioMembershipTags(card);
+      const slots = studioSlotsOf(tags);
+      const inStudio = tags.length > 0;
+      const btn = card.querySelector<HTMLElement>('[data-action="studio-arm"]');
+      if (btn) {
+        btn.classList.toggle("active", inStudio);
+        btn.setAttribute("aria-pressed", String(inStudio));
+        btn.title = inStudio
+          ? "In your SIGNAL Studio — click to remove"
+          : "Send this sample to your SIGNAL Studio inbox";
+        const label = btn.querySelector<HTMLElement>("[data-studio-send-label]");
+        if (label) label.textContent = inStudio
+          ? (slots.length ? `In studio · ${slots.map((s) => s.toUpperCase()).join(" + ")}` : "In studio inbox")
+          : "Send to Studio";
+      }
       const hint = card.querySelector<HTMLElement>("[data-studio-hint]");
-      if (!hint) return;
-      const slots = activeStudioSlots(card);
-      hint.textContent = slots.length
-        ? `In your studio ${slots.map((s) => s.toUpperCase()).join(" + ")} library.`
-        : "Drops this sample straight into the studio's sample library.";
+      if (hint) hint.textContent = inStudio
+        ? (slots.length
+            ? `Filed in your studio ${slots.map((s) => s.toUpperCase()).join(" + ")} library.`
+            : "Waiting in your studio inbox — audition it there, then file it under DRUMS/KEYS/BASS.")
+        : "Drops this sample into your studio inbox to try out.";
     };
-    const armStudio = async (card: HTMLElement, btn: HTMLElement) => {
-      const slot = btn.dataset.slot;
-      if (!slot) return;
-      const wasActive = btn.classList.contains("active");
-      const willActive = !wasActive;
-      // Optimistic toggle — composeAllTags reads the new state from the DOM.
-      btn.classList.toggle("active", willActive);
-      btn.setAttribute("aria-pressed", String(willActive));
+    const armStudio = async (card: HTMLElement, _btn: HTMLElement) => {
+      const prev = card.dataset.studioTags ?? "";
+      const wasIn = studioMembershipTags(card).length > 0;
+      // Toggle: OFF → drop into the studio inbox (sig:inbox). ON → pull out of
+      // the studio entirely (clears the inbox tag + any slot the studio filed
+      // it under). Optimistic — composeAllTags reads the new stash.
+      card.dataset.studioTags = wasIn ? "" : "sig:inbox";
+      updateStudioControl(card);
       updateStudioBadge(card);
-      updateStudioHint(card);
       const ok = await persistTags(card, composeAllTags(card));
       if (!ok) {
-        btn.classList.toggle("active", wasActive);
-        btn.setAttribute("aria-pressed", String(wasActive));
+        card.dataset.studioTags = prev;
+        updateStudioControl(card);
         updateStudioBadge(card);
-        updateStudioHint(card);
         return;
       }
       setStatus(
         card,
-        willActive
-          ? `Now in your studio ${slot.toUpperCase()} library →`
-          : `Removed from studio ${slot.toUpperCase()}`,
-        willActive ? "ok" : "",
+        wasIn ? "Removed from your studio" : "Sent to your studio inbox →",
+        wasIn ? "" : "ok",
       );
     };
 
@@ -1842,6 +1865,61 @@ const BUCKET_TITLE: Record<BucketView, string> = {
       }
     };
 
+    // Fresh stems aren't standalone cards in the catalog (they're excluded from
+    // /buckets until sig-tagged), so right after a split we render a one-click
+    // "send to studio inbox" per stem. Tagging is path-keyed; sig:inbox drops
+    // the stem into the studio's inbox just like the Studio control does for a
+    // normal sample. A fresh stem carries no user tags, so a flat write is safe.
+    const sendStemToInbox = async (btn: HTMLButtonElement, path: string) => {
+      if (btn.dataset.done === "1" || btn.dataset.busy === "1") return;
+      btn.dataset.busy = "1";
+      try {
+        const res = await fetch("/api/console/items-tags", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ path, tags: ["sig:inbox"] }),
+        });
+        if (res.ok) {
+          btn.dataset.done = "1";
+          btn.classList.add("sent");
+          btn.textContent = `✓ ${btn.dataset.name ?? "stem"}`;
+          btn.title = "In your studio inbox";
+        } else {
+          btn.title = `Couldn't send (HTTP ${res.status})`;
+        }
+      } catch {
+        btn.title = "Couldn't send (network)";
+      } finally {
+        btn.dataset.busy = "";
+      }
+    };
+    const renderStemSends = (
+      card: HTMLElement,
+      stems: { path: string; name: string }[],
+    ) => {
+      const span = card.querySelector<HTMLElement>("[data-stem-progress]");
+      if (!span) return;
+      card.querySelector(".stem-sends")?.remove();
+      const wrap = document.createElement("div");
+      wrap.className = "stem-sends";
+      const label = document.createElement("span");
+      label.className = "stem-sends-label";
+      label.textContent = "→ Studio inbox:";
+      wrap.appendChild(label);
+      for (const st of stems) {
+        const b = document.createElement("button");
+        b.type = "button";
+        b.className = "stem-send-btn";
+        b.dataset.action = "stem-send";
+        b.dataset.path = st.path;
+        b.dataset.name = st.name;
+        b.textContent = st.name;
+        b.title = `Send the ${st.name} stem to your studio inbox`;
+        wrap.appendChild(b);
+      }
+      span.insertAdjacentElement("afterend", wrap);
+    };
+
     const pollStemJob = async (card: HTMLElement, jobId: number) => {
       try {
         const res = await fetch(
@@ -1856,6 +1934,7 @@ const BUCKET_TITLE: Record<BucketView, string> = {
           progress?: number;
           error?: string;
           stem_asset_ids?: number[];
+          stems?: { asset_id: number; path: string; name: string }[];
         };
         if (data.status === "running") {
           const pct = typeof data.progress === "number"
@@ -1880,6 +1959,7 @@ const BUCKET_TITLE: Record<BucketView, string> = {
           card.querySelectorAll<HTMLButtonElement>('[data-action="split-stems"]')
             .forEach((b) => { b.dataset.busy = ""; });
           card.removeAttribute("data-stem-job-id");
+          if (data.stems?.length) renderStemSends(card, data.stems);
         } else if (data.status === "failed") {
           stopStemPoll(card);
           setStemProgress(card, `Failed: ${data.error ?? "unknown"}`, "err");
@@ -2115,6 +2195,11 @@ const BUCKET_TITLE: Record<BucketView, string> = {
         case "studio-arm":
           armStudio(card, btn);
           break;
+        case "stem-send": {
+          const path = btn.dataset.path;
+          if (path) sendStemToInbox(btn as HTMLButtonElement, path);
+          break;
+        }
         case "promote-to-live":
           promoteToLive(card);
           break;
