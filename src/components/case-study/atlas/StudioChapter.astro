@@ -1,0 +1,578 @@
+---
+// CH 2 · PLAY, DON'T FIDDLE — Signal Studio, told as what it actually is: the
+// homepage instrument that refused to stay a toy. One DOM, two states: the page
+// scrolls the compact instrument into view and the workspace GROWS around it —
+// sidebar library slides out, the view tabs appear, one panel becomes three
+// engine towers. Then the found sound gets to work: drag "head to toe" from the
+// LIBRARY onto DRUMS / KEYS / BASS and each engine enters the groove ON THE
+// NEXT BAR — one Web Audio clock, three looping lanes, per-lane mute — until
+// the junk-drawer memo is playing as a band. Every waveform is the real
+// geometry of the real render (waves.ts); the renders were made by the studio's
+// own samplers. No autoplay: sound starts only from the first drop. Claims the
+// page-wide audio stage (bench:play). Honors reduced-motion (morph is instant,
+// playheads stay — they are information).
+import { WAVE_LOOP, WAVE_DRUMS, WAVE_KEYS, WAVE_BASS, DRUM_STEPS } from "./waves";
+
+const CLIP = "/case-studies/the-console/studio";
+const TOWERS = [
+  { mode: "drums", label: "DRUMS", file: `${CLIP}/drums.mp3`, wave: WAVE_DRUMS, did: "the same loop, chopped into a kit" },
+  { mode: "keys",  label: "KEYS",  file: `${CLIP}/keys.mp3`,  wave: WAVE_KEYS,  did: "the same loop, repitched into chords" },
+  { mode: "bass",  label: "BASS",  file: `${CLIP}/bass.mp3`,  wave: WAVE_BASS,  did: "the same loop, sunk into a bassline" },
+];
+const CHORDS = ["C", "Am", "F", "G"];
+const KEYCAPS = ["a", "s", "d", "f", "g", "h", "j", "k"];
+const GEAR = ["Bass Station II", "MODX", "TR-8S"];
+---
+
+<section class="sx cs-bleed" aria-label="Signal Studio — arm the found sound and build the groove">
+  <p class="sx-origin">Built first as the instrument on this site's homepage — then it refused to stay a toy.</p>
+
+  <div class="sx-frame" data-sx>
+    <!-- sidebar: hidden while a toy; slides out when the workspace grows -->
+    <aside class="sx-side" aria-label="library">
+      <span class="sx-side-h">library</span>
+      <button type="button" class="sx-chip" draggable="true" aria-label="head to toe, the found loop — carry it to an engine">
+        <span class="sx-chip-was" aria-hidden="true">Audio 14.m4a</span>
+        <svg class="sx-chip-wave" viewBox="0 0 72 40" preserveAspectRatio="none" aria-hidden="true"><path d={WAVE_LOOP} /></svg>
+        <span class="sx-chip-name">head to toe</span>
+      </button>
+      <button type="button" class="sx-cue" aria-label="hear the loop, untouched">
+        <svg class="c-play" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5 v14 l11 -7 z"/></svg>
+        <svg class="c-stop" viewBox="0 0 24 24" aria-hidden="true"><path d="M6.5 6.5 h11 v11 h-11 z"/></svg>
+        <span>the loop · 0:04</span>
+      </button>
+      <span class="sx-side-hint" aria-hidden="true">drag it onto an engine</span>
+      <a class="sx-side-eng" href="#engineer">engineer ↗</a>
+    </aside>
+
+    <div class="sx-main">
+      <!-- topbar: appears with the workspace -->
+      <div class="sx-top" aria-hidden="true">
+        <span class="sx-tab on">signal</span><span class="sx-tab">stream</span><span class="sx-tab">arrange</span>
+        <span class="sx-brand" data-role="brand">the homepage instrument</span>
+      </div>
+
+      <div class="sx-towers">
+        {TOWERS.map((t) => (
+          <div class={`sx-tower tw-${t.mode}`} data-mode={t.mode}>
+            <button type="button" class="sx-node" data-node aria-label={`${t.label} — drop the loop here`}>
+              <span class="sx-node-empty" aria-hidden="true">drop</span>
+              <span class="sx-node-name" aria-hidden="true">head to toe</span>
+            </button>
+            <span class="sx-tower-name">{t.label}</span>
+            <span class="sx-screen">
+              <svg class="sx-wave" viewBox="0 0 72 40" preserveAspectRatio="none" aria-hidden="true"><path d={t.wave} /></svg>
+              <span class="sx-playhead" aria-hidden="true"></span>
+            </span>
+            {t.mode === "drums" && (
+              <span class="sx-mech sx-mech-drums" aria-hidden="true">{DRUM_STEPS.map((v) => <i style={`--e:${v}`}></i>)}</span>
+            )}
+            {t.mode === "keys" && (
+              <span class="sx-mech sx-mech-keys" aria-hidden="true">{CHORDS.map((c) => <i>{c}</i>)}</span>
+            )}
+            {t.mode === "bass" && (
+              <span class="sx-mech sx-mech-bass" aria-hidden="true"><i class="sx-sub"></i><em>sub</em></span>
+            )}
+            <button type="button" class="sx-mute" data-mute aria-label={`mute ${t.label}`} aria-pressed="false">mute</button>
+            {/* the toy face — keycaps live in the keys tower and retire when the studio grows */}
+            {t.mode === "keys" && (
+              <span class="sx-toyface" aria-hidden="true">
+                {KEYCAPS.map((k) => <i class="sx-keycap">{k}</i>)}
+              </span>
+            )}
+          </div>
+        ))}
+      </div>
+
+      <!-- transport: one clock, everything enters on the bar -->
+      <div class="sx-transport">
+        <button type="button" class="sx-play" data-play aria-label="play or stop the groove" disabled>
+          <svg class="c-play" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5 v14 l11 -7 z"/></svg>
+          <svg class="c-stop" viewBox="0 0 24 24" aria-hidden="true"><path d="M6.5 6.5 h11 v11 h-11 z"/></svg>
+        </button>
+        <span class="sx-bar" data-role="bar">drop the loop to start</span>
+        <span class="sx-bpm">120 bpm</span>
+      </div>
+    </div>
+  </div>
+
+  <p class="sx-plate" data-role="plate" aria-live="polite"></p>
+
+  <!-- the hardware truth, one line + the actual gear as voice cartridges -->
+  <div class="sx-gear">
+    <p>The same engines sample my real synths into playable voices — the hardware feeds the same loop.</p>
+    <div class="sx-gear-row" aria-hidden="true">
+      {GEAR.map((g) => (
+        <span class="sx-cart"><i></i>{g}</span>
+      ))}
+    </div>
+  </div>
+
+  <!-- the handoff: what the studio is FOR -->
+  <p class="sx-handoff">
+    Four bars I'd keep — an idea that now deserves finishing.
+    <a href="#engineer">send it to the engineer ↓</a>
+  </p>
+
+  <audio class="sx-audio" data-mode="loop" preload="none" src={`${CLIP}/loop.mp3`}></audio>
+</section>
+
+<style>
+  .sx { --v: #8b6bff; position: relative; padding: 8px 24px 24px; }
+
+  .sx-origin {
+    max-width: 52ch; margin: 0 auto 26px; text-align: center;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-style: italic;
+    font-size: clamp(13.5px, 1.6vw, 16px); line-height: 1.6; color: rgba(245, 241, 232, 0.66);
+  }
+
+  /* ── the frame: one object, two lives ── */
+  .sx-frame {
+    display: flex; gap: 0; max-width: 1060px; margin: 0 auto;
+    border-radius: 16px; border: 1px solid rgba(0, 0, 0, 0.6); isolation: isolate; overflow: hidden;
+    background: radial-gradient(80% 60% at 50% 12%, rgba(139, 107, 255, 0.08), transparent 72%),
+      linear-gradient(162deg, #221f2d 0%, #16131e 48%, #0d0b12 100%);
+    box-shadow: 0 60px 110px -46px rgba(0, 0, 0, 0.92), inset 0 2px 0 rgba(255, 255, 255, 0.09), inset 0 -5px 12px rgba(0, 0, 0, 0.55);
+    transition: max-width 0.9s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  .sx-frame:not(.grown) { max-width: 560px; }
+
+  /* sidebar */
+  .sx-side {
+    flex: 0 0 176px; display: flex; flex-direction: column; gap: 12px;
+    padding: 18px 14px; border-right: 1px solid rgba(245, 241, 232, 0.08);
+    background: rgba(0, 0, 0, 0.22);
+    transition: margin-left 0.9s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.6s ease 0.25s;
+  }
+  .sx-frame:not(.grown) .sx-side { margin-left: -177px; opacity: 0; }
+  .sx-side-h { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 9.5px; letter-spacing: 0.28em; text-transform: uppercase; color: rgba(245, 241, 232, 0.45); }
+  .sx-chip {
+    display: flex; flex-direction: column; align-items: center; gap: 7px;
+    padding: 12px 12px 10px; border-radius: 10px; cursor: grab; color: var(--v);
+    background: linear-gradient(160deg, #241f31, #14111b); border: 1px solid rgba(139, 107, 255, 0.42);
+    box-shadow: 0 0 20px -10px var(--v), inset 0 1px 0 rgba(255, 255, 255, 0.06);
+    transition: transform 0.14s ease, box-shadow 0.25s ease;
+  }
+  .sx-chip:hover { transform: translateY(-2px); box-shadow: 0 0 26px -6px var(--v); }
+  .sx-chip:active { cursor: grabbing; }
+  .sx-chip.carry { transform: translateY(-2px) scale(1.03); box-shadow: 0 0 30px -4px var(--v); }
+  .sx-chip.dragging { opacity: 0.4; }
+  .sx-chip:focus-visible { outline: 2px solid var(--v); outline-offset: 3px; }
+  .sx-chip-was { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 9px; color: rgba(245, 241, 232, 0.34);
+    text-decoration: line-through; text-decoration-color: rgba(255, 90, 60, 0.55); }
+  .sx-chip-wave { width: 100%; height: 26px; fill: rgba(139, 107, 255, 0.45); }
+  .sx-chip-name { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; color: #f5f1e8; }
+  .sx-cue {
+    display: inline-flex; align-items: center; justify-content: center; gap: 7px; padding: 6px 10px; border-radius: 999px; cursor: pointer;
+    background: rgba(255, 255, 255, 0.025); border: 1px solid rgba(139, 107, 255, 0.28); color: rgba(245, 241, 232, 0.6);
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 10px; letter-spacing: 0.05em;
+    transition: color 0.18s, border-color 0.18s;
+  }
+  .sx-cue:hover, .sx-cue.on { color: var(--v); border-color: var(--v); }
+  .sx-cue:focus-visible { outline: 2px solid var(--v); outline-offset: 3px; }
+  .sx-cue svg { width: 10px; height: 10px; fill: currentColor; flex: 0 0 auto; }
+  .sx-cue .c-stop { display: none; }
+  .sx-cue.on .c-play { display: none; }
+  .sx-cue.on .c-stop { display: block; }
+  .sx-cue span { white-space: nowrap; }
+  .sx-side-hint { margin-top: auto; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 9.5px; line-height: 1.5; color: rgba(245, 241, 232, 0.35); }
+  /* the real sidebar pins ENGINEER at the very bottom — so does the diorama */
+  .sx-side-eng { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase;
+    color: rgba(0, 255, 77, 0.55); text-decoration: none; padding-top: 10px; border-top: 1px solid rgba(245, 241, 232, 0.08); transition: color 0.18s; }
+  .sx-side-eng:hover { color: var(--brand-green); }
+
+  /* main column */
+  .sx-main { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; }
+  .sx-top {
+    display: flex; align-items: center; height: 40px; padding: 0 16px 0 0;
+    border-bottom: 1px solid rgba(245, 241, 232, 0.08);
+    transition: opacity 0.5s ease 0.35s;
+  }
+  .sx-frame:not(.grown) .sx-top .sx-tab { opacity: 0; pointer-events: none; }
+  .sx-tab {
+    padding: 0 16px; height: 100%; display: inline-flex; align-items: center;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase;
+    color: rgba(245, 241, 232, 0.4); border-right: 1px solid rgba(245, 241, 232, 0.06);
+    transition: opacity 0.5s ease 0.4s;
+  }
+  .sx-tab.on { color: #f5f1e8; box-shadow: inset 0 -2px 0 var(--v); }
+  .sx-brand { margin-left: auto; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 9.5px; letter-spacing: 0.22em; text-transform: uppercase; color: rgba(245, 241, 232, 0.38); }
+
+  /* towers */
+  .sx-towers { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; padding: 18px 18px 6px; }
+  .sx-tower {
+    --tw: var(--v);
+    position: relative; display: flex; flex-direction: column; gap: 10px; padding: 12px 12px 12px;
+    border-radius: 12px; background: rgba(255, 255, 255, 0.015); border: 1px solid rgba(245, 241, 232, 0.12);
+    transition: opacity 0.55s ease, transform 0.55s ease, border-color 0.25s ease, box-shadow 0.3s ease;
+  }
+  /* the studio's own module colors — drums yellow, keys cyan, bass magenta */
+  .tw-drums { --tw: #ffd24a; }
+  .tw-keys { --tw: #17c4fc; }
+  .tw-bass { --tw: #c05dff; }
+  /* toy state: only the keys tower shows, as the compact instrument */
+  .sx-frame:not(.grown) .tw-drums, .sx-frame:not(.grown) .tw-bass { opacity: 0; transform: scale(0.92); pointer-events: none; }
+  .sx-frame:not(.grown) .sx-towers { grid-template-columns: 0fr 1fr 0fr; gap: 0; }
+  .sx-frame:not(.grown) .tw-keys .sx-node, .sx-frame:not(.grown) .sx-mute, .sx-frame:not(.grown) .sx-mech, .sx-frame:not(.grown) .sx-screen, .sx-frame:not(.grown) .sx-tower-name { opacity: 0; height: 0; padding: 0; margin: 0; overflow: hidden; border: none; }
+  .sx-frame:not(.grown) .sx-toyface { display: flex; }
+
+  .sx-toyface { display: none; gap: 6px; justify-content: center; padding: 18px 4px 14px; }
+  .sx-frame.grown .sx-toyface { display: none; }
+  .sx-keycap {
+    width: 34px; height: 34px; border-radius: 8px; display: grid; place-items: center; font-style: normal;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 11px; color: rgba(245, 241, 232, 0.75);
+    background: linear-gradient(180deg, #262233, #171420); border: 1px solid rgba(0, 0, 0, 0.55);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.07), 0 3px 0 #0a0810;
+  }
+
+  .sx-node {
+    position: relative; height: 34px; border-radius: 8px; cursor: pointer;
+    border: 1px dashed rgba(245, 241, 232, 0.25); background: rgba(0, 0, 0, 0.2); color: var(--tw);
+    display: grid; place-items: center;
+    transition: border-color 0.2s ease, background 0.2s ease, box-shadow 0.25s ease, opacity 0.4s ease;
+  }
+  .sx-node:focus-visible { outline: 2px solid var(--tw); outline-offset: 2px; }
+  .sx.carrying .sx-node:not(.armed) { border-color: var(--tw); background: color-mix(in srgb, var(--tw) 7%, transparent); }
+  .sx-node.over { border-style: solid; border-color: var(--tw); background: color-mix(in srgb, var(--tw) 10%, transparent); }
+  .sx-node.armed { border-style: solid; border-color: var(--tw); box-shadow: 0 0 18px -8px var(--tw); }
+  .sx-node-empty { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 8.5px; letter-spacing: 0.3em; text-transform: uppercase; color: rgba(245, 241, 232, 0.3); }
+  .sx-node-name { display: none; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 10.5px; color: var(--tw); }
+  .sx-node.armed .sx-node-empty { display: none; }
+  .sx-node.armed .sx-node-name { display: block; }
+  .sx-node.pending .sx-node-name { animation: sx-blink 0.5s ease-in-out infinite; }
+  @keyframes sx-blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.35; } }
+
+  .sx-tower-name {
+    font-family: "Space Grotesk Variable", "Space Grotesk", ui-sans-serif, system-ui, sans-serif;
+    font-weight: 700; font-size: 13px; letter-spacing: 0.06em; text-align: center; color: #cfcbd8;
+  }
+  .sx-tower.live .sx-tower-name { color: var(--tw); }
+
+  .sx-screen { position: relative; height: 44px; border-radius: 7px; overflow: hidden;
+    background: rgba(0, 0, 0, 0.35); box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.5); }
+  .sx-wave { position: absolute; inset: 4px 2px; width: calc(100% - 4px); height: 36px; fill: currentColor; color: var(--tw); opacity: 0; transition: opacity 0.4s ease; }
+  .sx-tower.live .sx-wave { opacity: 0.9; }
+  .sx-tower.live.muted .sx-wave { opacity: 0.25; }
+  .sx-playhead { position: absolute; top: 2px; bottom: 2px; left: 0; width: 1.5px; background: #f5f1e8; box-shadow: 0 0 6px rgba(245, 241, 232, 0.8); opacity: 0; }
+  .sx-tower.live:not(.muted) .sx-playhead { opacity: 0.9; }
+
+  .sx-mech { display: flex; gap: 3px; height: 13px; align-items: stretch; color: var(--tw); }
+  .sx-mech-drums i { flex: 1; border-radius: 2px; background: currentColor; opacity: calc(0.08 + var(--e) * 0.14); transition: opacity 0.1s; }
+  .sx-tower.live .sx-mech-drums i { opacity: calc(0.12 + var(--e) * 0.26); }
+  .sx-mech-drums i.hit { opacity: 1; box-shadow: 0 0 8px var(--tw); }
+  .sx-mech-keys { gap: 4px; }
+  .sx-mech-keys i { flex: 1; display: grid; place-items: center; border-radius: 3px; font-style: normal;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 8px; letter-spacing: 0.08em;
+    color: rgba(245, 241, 232, 0.35); background: color-mix(in srgb, var(--tw) 12%, transparent); transition: background 0.15s, color 0.15s; }
+  .sx-mech-keys i.hit { background: var(--tw); color: #0e0c14; box-shadow: 0 0 8px var(--tw); }
+  .sx-mech-bass { position: relative; align-items: center; }
+  .sx-mech-bass .sx-sub { position: relative; flex: 1; height: 6px; border-radius: 3px; background: rgba(255, 255, 255, 0.06); overflow: hidden; }
+  .sx-mech-bass .sx-sub::after { content: ""; position: absolute; inset: 0; width: calc(var(--p, 0) * 100%);
+    background: currentColor; border-radius: 3px; box-shadow: 0 0 8px var(--tw); }
+  .sx-mech-bass em { font-style: normal; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 8px; letter-spacing: 0.18em; text-transform: uppercase; color: rgba(245, 241, 232, 0.34); margin-left: 6px; }
+
+  .sx-mute {
+    align-self: center; padding: 4px 12px; border-radius: 999px; cursor: pointer;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 9px; letter-spacing: 0.14em; text-transform: uppercase;
+    color: rgba(245, 241, 232, 0.45); background: transparent; border: 1px solid rgba(245, 241, 232, 0.14);
+    opacity: 0; pointer-events: none; transition: opacity 0.3s ease, color 0.18s, border-color 0.18s;
+  }
+  .sx-tower.live .sx-mute { opacity: 1; pointer-events: auto; }
+  .sx-mute:hover { color: #f5f1e8; border-color: rgba(245, 241, 232, 0.4); }
+  .sx-mute:focus-visible { outline: 2px solid var(--tw); outline-offset: 2px; }
+  .sx-tower.muted .sx-mute { color: var(--tw); border-color: var(--tw); }
+
+  /* transport */
+  .sx-transport {
+    display: flex; align-items: center; gap: 14px; padding: 10px 18px 16px;
+    transition: opacity 0.5s ease 0.4s;
+  }
+  .sx-frame:not(.grown) .sx-transport { opacity: 0; pointer-events: none; }
+  .sx-play {
+    width: 38px; height: 38px; border-radius: 50%; cursor: pointer; display: grid; place-items: center;
+    background: color-mix(in srgb, var(--v) 16%, transparent); border: 1px solid color-mix(in srgb, var(--v) 55%, transparent); color: var(--v);
+    transition: background 0.18s, opacity 0.2s;
+  }
+  .sx-play:disabled { opacity: 0.35; cursor: default; }
+  .sx-play:not(:disabled):hover { background: color-mix(in srgb, var(--v) 26%, transparent); }
+  .sx-play:focus-visible { outline: 2px solid var(--v); outline-offset: 3px; }
+  .sx-play svg { width: 15px; height: 15px; fill: currentColor; }
+  .sx-play .c-stop { display: none; }
+  .sx.playing .sx-play .c-play { display: none; }
+  .sx.playing .sx-play .c-stop { display: block; }
+  .sx-bar { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 11px; letter-spacing: 0.05em; color: rgba(245, 241, 232, 0.55); font-variant-numeric: tabular-nums; }
+  .sx-bpm { margin-left: auto; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase; color: rgba(245, 241, 232, 0.35); }
+
+  .sx-plate { text-align: center; margin: 18px auto 0; font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 12px; letter-spacing: 0.06em; color: rgba(245, 241, 232, 0.42); min-height: 1.4em; }
+
+  /* gear cartridges */
+  .sx-gear { max-width: 640px; margin: 44px auto 0; text-align: center; }
+  .sx-gear p { margin: 0 0 14px; font-family: "Space Grotesk Variable", "Space Grotesk", ui-sans-serif, system-ui, sans-serif;
+    font-size: clamp(14px, 1.6vw, 17px); line-height: 1.55; color: rgba(245, 241, 232, 0.6); }
+  .sx-gear-row { display: flex; justify-content: center; flex-wrap: wrap; gap: 10px; }
+  .sx-cart {
+    display: inline-flex; align-items: center; gap: 8px; padding: 8px 14px; border-radius: 8px;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 11px; letter-spacing: 0.08em; color: rgba(245, 241, 232, 0.75);
+    background: linear-gradient(160deg, #1d1a26, #110f17); border: 1px solid rgba(139, 107, 255, 0.28);
+  }
+  .sx-cart i { width: 7px; height: 7px; border-radius: 2px; background: var(--v); box-shadow: 0 0 7px rgba(139, 107, 255, 0.7); }
+
+  /* handoff */
+  .sx-handoff {
+    max-width: 46ch; margin: 44px auto 0; text-align: center;
+    font-family: "Space Grotesk Variable", "Space Grotesk", ui-sans-serif, system-ui, sans-serif;
+    font-size: clamp(15px, 1.8vw, 19px); line-height: 1.6; color: rgba(245, 241, 232, 0.85);
+  }
+  .sx-handoff a {
+    display: inline-block; margin-left: 10px; color: var(--brand-green); text-decoration: none;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; letter-spacing: 0.1em;
+    border-bottom: 1px solid rgba(0, 255, 77, 0.35); transition: border-color 0.18s;
+  }
+  .sx-handoff a:hover { border-color: var(--brand-green); }
+
+  @media (max-width: 760px) {
+    .sx { padding: 8px 14px 20px; }
+    .sx-frame, .sx-frame:not(.grown) { max-width: 100%; flex-direction: column; }
+    .sx-side { flex: none; flex-direction: row; align-items: center; border-right: none; border-bottom: 1px solid rgba(245, 241, 232, 0.08); padding: 12px 14px; }
+    .sx-frame:not(.grown) .sx-side { margin-left: 0; margin-top: -92px; opacity: 0; }
+    .sx-chip { flex-direction: row; gap: 10px; padding: 8px 12px; }
+    .sx-chip-wave { width: 64px; height: 20px; }
+    .sx-side-hint { display: none; }
+    .sx-side-h { display: none; }
+    .sx-towers { gap: 8px; padding: 12px 12px 4px; }
+    .sx-tower { padding: 9px 8px 10px; }
+    .sx-keycap { width: 26px; height: 26px; font-size: 10px; }
+    .sx-mech-keys i { font-size: 7px; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .sx-frame, .sx-side, .sx-tower, .sx-tab, .sx-transport, .sx-top { transition: none; }
+    .sx-node.pending .sx-node-name { animation: none; }
+  }
+</style>
+
+<script>
+  document.querySelectorAll(".sx").forEach((root) => {
+    const frame = root.querySelector("[data-sx]");
+    const brand = root.querySelector('[data-role="brand"]');
+    const chip = root.querySelector(".sx-chip");
+    const cueBtn = root.querySelector(".sx-cue");
+    const cueAudio = root.querySelector('.sx-audio[data-mode="loop"]');
+    const towers = Array.from(root.querySelectorAll(".sx-tower"));
+    const playBtn = root.querySelector("[data-play]");
+    const barEl = root.querySelector('[data-role="bar"]');
+    const plate = root.querySelector('[data-role="plate"]');
+    const DID = {
+      drums: "drums — the same loop, chopped into a kit",
+      keys: "keys — the same loop, repitched into chords",
+      bass: "bass — the same loop, sunk into a bassline",
+    };
+    const FILES = {
+      drums: "/case-studies/the-console/studio/drums.mp3",
+      keys: "/case-studies/the-console/studio/keys.mp3",
+      bass: "/case-studies/the-console/studio/bass.mp3",
+    };
+    // per-lane gains, measured so the sum stays clean: drums anchor at -21.1
+    // LUFS, bass -2 LU under, keys -3 LU under; summed = -18.6 LUFS, -1.3 dBTP
+    const GAINS = { drums: 0.8035, keys: 0.4842, bass: 0.4842 };
+    const LOOP = 8;      // seconds — all three renders are exactly 8.000s, verified
+    const BAR = 2;       // 120bpm, 4/4 → 2s per bar, 4 bars per loop
+
+    // ── the grow moment: the toy becomes the workspace, once ──
+    const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const grow = () => {
+      if (frame.classList.contains("grown")) return;
+      frame.classList.add("grown");
+      if (brand) brand.textContent = "SIGNAL STUDIO";
+    };
+    if (reduce) grow();
+    else if ("IntersectionObserver" in window) {
+      const io = new IntersectionObserver((es) => es.forEach((e) => {
+        if (e.isIntersecting) { setTimeout(grow, 550); io.disconnect(); }
+      }), { threshold: 0.55 });
+      io.observe(frame);
+    } else grow();
+
+    // ── one clock, three looping lanes ──
+    let ctx = null, t0 = 0, raf = 0;
+    const lanes = {};      // mode → {gain, source, buffer, live, muted, pendingAt}
+    let started = false;
+
+    const claimStage = () => document.dispatchEvent(new CustomEvent("bench:play", { detail: { source: root } }));
+
+    async function ensureCtx() {
+      if (!ctx) ctx = new (window.AudioContext || window.webkitAudioContext)();
+      if (ctx.state === "suspended") await ctx.resume();
+    }
+    async function loadLane(mode) {
+      if (lanes[mode]) return lanes[mode];
+      const res = await fetch(FILES[mode]);
+      const buf = await ctx.decodeAudioData(await res.arrayBuffer());
+      const gain = ctx.createGain();
+      gain.gain.value = 0;
+      gain.connect(ctx.destination);
+      lanes[mode] = { gain, buffer: buf, source: null, live: false, muted: false, pendingAt: 0 };
+      return lanes[mode];
+    }
+    function startSource(l, when) {
+      if (l.source) { try { l.source.stop(); } catch (e) {} }
+      const s = ctx.createBufferSource();
+      s.buffer = l.buffer; s.loop = true; s.loopStart = 0; s.loopEnd = LOOP;
+      s.connect(l.gain);
+      // start at the grid-consistent offset so every lane shares one clock
+      const offset = ((when - t0) % LOOP + LOOP) % LOOP;
+      s.start(when, offset);
+      l.source = s;
+    }
+    function startClock() {
+      t0 = ctx.currentTime + 0.06;
+      Object.values(lanes).forEach((l) => startSource(l, t0));
+      started = true;
+      root.classList.add("playing");
+      tick();
+    }
+    const nextBar = () => t0 + Math.ceil((ctx.currentTime - t0 + 0.02) / BAR) * BAR;
+
+    async function arm(mode) {
+      await ensureCtx();
+      claimStage();
+      const l = await loadLane(mode);
+      const tower = towers.find((t) => t.dataset.mode === mode);
+      const node = tower.querySelector("[data-node]");
+      node.classList.add("armed");
+      if (!started) {
+        // the first drop starts the clock — this lane enters immediately
+        startClock();
+        l.gain.gain.setValueAtTime(GAINS[mode], t0);
+        l.live = true;
+        tower.classList.add("live");
+      } else {
+        // everyone after enters ON THE BAR — the DAW feel
+        if (!l.source) startSource(l, ctx.currentTime + 0.03);
+        const at = nextBar();
+        l.pendingAt = at;
+        node.classList.add("pending");
+        l.gain.gain.setValueAtTime(GAINS[mode], at);
+        l.live = true;
+      }
+      if (plate) plate.textContent = DID[mode] || "";
+      if (playBtn) playBtn.disabled = false;
+      setCarry(false);
+    }
+
+    function stopAllLanes() {
+      Object.values(lanes).forEach((l) => { if (l.source) { try { l.source.stop(); } catch (e) {} l.source = null; } });
+      started = false;
+      root.classList.remove("playing");
+      cancelAnimationFrame(raf);
+      towers.forEach((t) => {
+        t.querySelectorAll(".sx-mech i").forEach((c) => c.classList.remove("hit"));
+        const sub = t.querySelector(".sx-sub"); if (sub) sub.style.setProperty("--p", "0");
+        const ph = t.querySelector(".sx-playhead"); if (ph) ph.style.left = "0%";
+      });
+      if (barEl) barEl.textContent = "stopped — press play";
+    }
+    function resume() {
+      claimStage();
+      t0 = ctx.currentTime + 0.06;
+      Object.values(lanes).forEach((l) => { if (l.live) startSource(l); });
+      started = true;
+      root.classList.add("playing");
+      tick();
+    }
+
+    function tick() {
+      if (!started || !ctx) return;
+      const now = ctx.currentTime;
+      if (now >= t0) {
+        const pos = ((now - t0) % LOOP) / LOOP;             // 0..1 through the 4 bars
+        const bar = Math.floor(((now - t0) % LOOP) / BAR) + 1;
+        if (barEl) barEl.textContent = `bar ${bar} · 4`;
+        towers.forEach((t) => {
+          const mode = t.dataset.mode;
+          const l = lanes[mode];
+          if (!l || !l.live) return;
+          const node = t.querySelector("[data-node]");
+          if (l.pendingAt && now >= l.pendingAt) { l.pendingAt = 0; node.classList.remove("pending"); t.classList.add("live"); }
+          if (!t.classList.contains("live")) return;
+          const ph = t.querySelector(".sx-playhead");
+          if (ph) ph.style.left = (pos * 100).toFixed(2) + "%";
+          if (mode === "drums") {
+            const i = Math.min(15, Math.floor(pos * 16));
+            t.querySelectorAll(".sx-mech-drums i").forEach((c, k) => c.classList.toggle("hit", k === i && !l.muted));
+          } else if (mode === "keys") {
+            const i = Math.min(3, Math.floor(pos * 4));
+            t.querySelectorAll(".sx-mech-keys i").forEach((c, k) => c.classList.toggle("hit", k === i && !l.muted));
+          } else if (mode === "bass") {
+            const sub = t.querySelector(".sx-sub");
+            if (sub) sub.style.setProperty("--p", l.muted ? "0" : pos.toFixed(3));
+          }
+        });
+      }
+      raf = requestAnimationFrame(tick);
+    }
+
+    // ── carry / drop ──
+    let carrying = false;
+    function setCarry(on) { carrying = on; if (chip) chip.classList.toggle("carry", on); root.classList.toggle("carrying", on); }
+    if (chip) {
+      chip.addEventListener("dragstart", (e) => {
+        chip.classList.add("dragging");
+        if (e.dataTransfer) { e.dataTransfer.setData("text/plain", "src"); e.dataTransfer.effectAllowed = "copy"; }
+      });
+      chip.addEventListener("dragend", () => chip.classList.remove("dragging"));
+      chip.addEventListener("click", () => setCarry(!carrying));
+    }
+    towers.forEach((tower) => {
+      const node = tower.querySelector("[data-node]");
+      const mode = tower.dataset.mode;
+      node.addEventListener("dragover", (e) => { e.preventDefault(); node.classList.add("over"); });
+      node.addEventListener("dragleave", () => node.classList.remove("over"));
+      node.addEventListener("drop", (e) => { e.preventDefault(); node.classList.remove("over"); arm(mode); });
+      node.addEventListener("click", () => { if (carrying) arm(mode); });
+      const mute = tower.querySelector("[data-mute]");
+      mute.addEventListener("click", () => {
+        const l = lanes[mode];
+        if (!l || !ctx) return;
+        l.muted = !l.muted;
+        l.gain.gain.setTargetAtTime(l.muted ? 0 : GAINS[mode], ctx.currentTime, 0.015);
+        tower.classList.toggle("muted", l.muted);
+        mute.setAttribute("aria-pressed", String(l.muted));
+      });
+    });
+
+    if (playBtn) playBtn.addEventListener("click", async () => {
+      await ensureCtx();
+      if (started) stopAllLanes();
+      else resume();
+    });
+
+    // ── the sidebar cue: hear the untouched loop ──
+    if (cueBtn && cueAudio) {
+      cueAudio.volume = 0.9;
+      cueBtn.addEventListener("click", () => {
+        if (!cueAudio.paused) { cueAudio.pause(); cueAudio.currentTime = 0; return; }
+        if (started) stopAllLanes();
+        claimStage();
+        cueAudio.currentTime = 0;
+        const p = cueAudio.play(); if (p && p.catch) p.catch(() => {});
+      });
+      cueAudio.addEventListener("play", () => cueBtn.classList.add("on"));
+      cueAudio.addEventListener("pause", () => cueBtn.classList.remove("on"));
+      cueAudio.addEventListener("ended", () => cueBtn.classList.remove("on"));
+    }
+
+    // one audio stage page-wide: yield to anyone else
+    document.addEventListener("bench:play", (e) => {
+      if (!e.detail || e.detail.source === root) return;
+      if (started) stopAllLanes();
+      if (cueAudio && !cueAudio.paused) cueAudio.pause();
+    });
+    // leaving the chapter stops the band
+    if ("IntersectionObserver" in window) {
+      new IntersectionObserver((es) => es.forEach((e) => {
+        if (!e.isIntersecting && started) stopAllLanes();
+      }), { threshold: 0.05 }).observe(root);
+    }
+  });
+</script>

@@ -48,6 +48,10 @@ type Rec = {
   /** Source filename this record was forged from — shown struck-through beside
       the title so the rename (a date and a number becomes a title) is explicit. */
   from?: string;
+  /** Public URL of the take itself. When set, the card's waveform IS the play
+      surface (the real BucketCard law) — the first hearing of the found sound
+      happens inside the catalog record, not in a separate player. */
+  audio?: string;
   duration: string; rel: string; stamped: string; days: string;
   summary: { t?: string; b?: string }[];
   txLabel: string; txCount: string; tx: Seg[];
@@ -77,6 +81,7 @@ const RECORDS: Record<string, Rec> = {
     tier: "Track", kind: "tracks",
     title: SONG_TITLE,
     from: FILES[1].name,
+    audio: "/case-studies/the-console/source/arc-01-original-rough.mp3",
     keeper: "★ 1 keeper", duration: "3:48", rel: "2y", stamped: "02-14-2024", days: "845d",
     summary: [
       { t: "A phone memo, recorded once at 2am, never re-recorded. The audio is rough and it does not matter: " },
@@ -121,7 +126,6 @@ const ORDER = ["46", "47", "48"];
       <!-- chassis decoration: the whole console is one device, "AudioDex" -->
       <span class="ft-devplate" aria-hidden="true">AudioDex</span>
       <span class="ft-devports" aria-hidden="true"><span class="ft-port-jack"></span><span class="ft-port-usb"></span></span>
-      <span class="ft-chassis-serial" aria-hidden="true">MK·I · FOUND</span>
       <span class="ft-chassis-vents" aria-hidden="true"></span>
       <span class="ft-bolt ft-bolt-tl" aria-hidden="true"></span><span class="ft-bolt ft-bolt-tr" aria-hidden="true"></span>
       <span class="ft-bolt ft-bolt-bl" aria-hidden="true"></span><span class="ft-bolt ft-bolt-br" aria-hidden="true"></span>
@@ -197,7 +201,7 @@ const ORDER = ["46", "47", "48"];
             <div class="ft-scan" aria-hidden="true"></div>
           </div>
         </div>
-        <div class="dev-foot"><span class="dev-grille" aria-hidden="true"></span><span class="dev-tag">SRC-01 · how the Mac sees it</span></div>
+        <div class="dev-foot"><span class="dev-grille" aria-hidden="true"></span><span class="dev-tag">how the Mac sees it</span></div>
       </div>
 
       <!-- ── KILN engine (the control) ── -->
@@ -361,9 +365,20 @@ const ORDER = ["46", "47", "48"];
                 </header>
                 <div class="ft-wave-row">
                   <span class="ft-duration" aria-label="Length">{r.duration}</span>
-                  <div class="ft-wave-card">
-                    {r.bars.map((h, i) => <span class="ft-bar" style={`--h:${h}%; --i:${i}`}></span>)}
-                  </div>
+                  {r.audio ? (
+                    <button type="button" class="ft-wave-card ft-wave-play" data-ft-play aria-label="Play an excerpt of the raw take — the sound this record was forged from">
+                      <span class="ft-playglyph" aria-hidden="true">
+                        <svg class="g-play" viewBox="0 0 24 24"><path d="M8 5 v14 l11 -7 z"/></svg>
+                        <svg class="g-pause" viewBox="0 0 24 24"><path d="M7 5 h4 v14 h-4 z M13 5 h4 v14 h-4 z"/></svg>
+                      </span>
+                      {r.bars.map((h, i) => <span class="ft-bar" style={`--h:${h}%; --i:${i}`}></span>)}
+                      <audio class="ft-card-audio" preload="none" src={r.audio}></audio>
+                    </button>
+                  ) : (
+                    <div class="ft-wave-card">
+                      {r.bars.map((h, i) => <span class="ft-bar" style={`--h:${h}%; --i:${i}`}></span>)}
+                    </div>
+                  )}
                 </div>
                 <button type="button" class="ft-date" data-ft-cardtoggle aria-expanded="true" aria-label="Collapse or expand this entry">
                   <span class="ft-date-rel">{r.rel}</span><span class="ft-date-bracket"> [</span><span class="ft-date-stamped">{r.stamped}</span><span class="ft-date-bracket">]</span><span class="ft-date-sep"> · </span><span class="ft-date-days">{r.days}</span><span class="ft-date-chev" aria-hidden="true">▾</span>
@@ -400,7 +415,7 @@ const ORDER = ["46", "47", "48"];
             );
           })}
         </div>
-        <div class="dev-foot"><span class="dev-grille" aria-hidden="true"></span><span class="dev-tag">DEX-01 · what the catalog understands</span></div>
+        <div class="dev-foot"><span class="dev-grille" aria-hidden="true"></span><span class="dev-tag">what the catalog understands</span></div>
       </div>
       </div>
     </div>
@@ -445,6 +460,31 @@ const ORDER = ["46", "47", "48"];
     fire?.addEventListener("click", run);
 
     root.querySelectorAll<HTMLElement>(".ft-card").forEach((card) => {
+      // the keeper's waveform is the play surface — bars light as the take speaks
+      const playBtn = card.querySelector<HTMLButtonElement>("[data-ft-play]");
+      const audio = card.querySelector<HTMLAudioElement>(".ft-card-audio");
+      if (playBtn && audio) {
+        const bars = [...playBtn.querySelectorAll<HTMLElement>(".ft-bar")];
+        let raf = 0;
+        audio.volume = 0.9;
+        const paint = () => {
+          const n = audio.duration ? Math.floor((audio.currentTime / audio.duration) * bars.length) : 0;
+          bars.forEach((b, i) => b.classList.toggle("played", i < n));
+          if (!audio.paused) raf = requestAnimationFrame(paint);
+        };
+        playBtn.addEventListener("click", () => {
+          if (audio.paused) {
+            document.dispatchEvent(new CustomEvent("bench:play", { detail: { source: card } }));
+            const p = audio.play(); if (p && p.catch) p.catch(() => {});
+          } else audio.pause();
+        });
+        audio.addEventListener("play", () => { card.dataset.playing = "true"; raf = requestAnimationFrame(paint); });
+        audio.addEventListener("pause", () => { card.dataset.playing = "false"; cancelAnimationFrame(raf); });
+        audio.addEventListener("ended", () => { card.dataset.playing = "false"; cancelAnimationFrame(raf); bars.forEach((b) => b.classList.remove("played")); });
+        document.addEventListener("bench:play", (e) => {
+          if ((e as CustomEvent).detail?.source !== card && !audio.paused) audio.pause();
+        });
+      }
       const cardToggle = card.querySelector<HTMLButtonElement>("[data-ft-cardtoggle]");
       cardToggle?.addEventListener("click", () => {
         const open = card.dataset.open !== "false";
@@ -886,6 +926,22 @@ const ORDER = ["46", "47", "48"];
   .ft-wave-row { display: flex; align-items: center; gap: 12px; min-width: 0; }
   .ft-duration { flex: 0 0 auto; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-style: italic; font-size: 16px; font-weight: 700; color: #ff3b6e; font-feature-settings: "tnum"; line-height: 1; letter-spacing: 0.04em; min-width: 3.6em; text-align: right; text-shadow: 0 0 4px rgba(255, 59, 110, 0.65), 0 0 10px rgba(255, 59, 110, 0.35); }
   .ft-wave-card { flex: 1 1 auto; display: flex; align-items: center; gap: 1px; height: 46px; padding: 0 3px; background: #07060c; border-radius: 4px; overflow: hidden; }
+  /* the keeper's waveform doubles as the play surface — button reset + a quiet
+     glyph that strengthens on hover and flips to pause while the take speaks */
+  .ft-wave-play { position: relative; border: none; cursor: pointer; }
+  .ft-wave-play:focus-visible { outline: 2px solid var(--brand-cyan); outline-offset: 2px; }
+  .ft-wave-play:hover .ft-bar { filter: brightness(1.25); }
+  .ft-playglyph { position: absolute; left: 8px; top: 50%; transform: translateY(-50%); z-index: 1;
+    width: 26px; height: 26px; border-radius: 50%; display: grid; place-items: center;
+    background: rgba(7, 6, 12, 0.72); border: 1px solid rgba(14, 196, 252, 0.55); color: var(--brand-cyan);
+    opacity: 0.75; transition: opacity 0.15s, transform 0.15s; }
+  .ft-wave-play:hover .ft-playglyph { opacity: 1; transform: translateY(-50%) scale(1.06); }
+  .ft-playglyph svg { width: 12px; height: 12px; fill: currentColor; }
+  .ft-playglyph .g-pause { display: none; }
+  .ft-card[data-playing="true"] .g-play { display: none; }
+  .ft-card[data-playing="true"] .g-pause { display: block; }
+  .ft-wave-play .ft-bar.played { filter: brightness(1.7); }
+  .ft-card-audio { display: none; }
   .ft-bar { flex: 1 1 0; height: 8%; align-self: center; border-radius: 1px; background: linear-gradient(180deg, rgba(14, 196, 252, 0.66), rgba(14, 196, 252, 0.24)); transition: height 480ms cubic-bezier(0.22, 1, 0.36, 1); transition-delay: calc(var(--i) * 4ms); }
   .ft-card[data-kind="field"] .ft-bar { background: linear-gradient(180deg, rgba(0, 255, 77, 0.6), rgba(0, 255, 77, 0.2)); }
   .ft-card[data-kind="inbox"] .ft-bar { background: linear-gradient(180deg, rgba(245, 241, 232, 0.5), rgba(245, 241, 232, 0.18)); }

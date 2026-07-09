@@ -1,28 +1,50 @@
 ---
-// RESOLUTION · the payoff as a real A/B. The same eighteen seconds, before and
-// after: the degraded 2 a.m. take against the finished master, flipped at the
-// same instant so you hear the whole distance in one toggle — and SEE it: both
-// waveforms are the real geometry of the real files, drawn on a shared scale
-// (waves.ts), so the master visibly fills the frame the rough take only sketched.
-// One controlled player — play/pause, scrub (click or arrow keys), time. Then
-// one closing line, and the same POWER keycap that opened the page closes it:
-// press it and the bench goes dark, leaving the two ways out lit. No autoplay;
-// claims the page's one audio stage (bench:play). Honors reduced-motion.
+// EPILOGUE · the distance, then the destination. One flip: the 2 a.m. phone
+// memo against the finished master at the same instant — both waveforms real
+// geometry on a SHARED scale, so the master visibly fills the frame the rough
+// take only sketched. Then the point of the whole system: KEEP LISTENING — the
+// player opens into the full finished side (3:30, real measured peaks), because
+// a song that plays out is what "finishable" means. One controlled player,
+// no autoplay, claims the page audio stage (bench:play), reduced-motion safe.
 import { WAVE_ARC01, WAVE_ARC04 } from "./waves";
+import peaksFile from "../../../../public/case-studies/the-console/master/head-to-toe-side-a.peaks.json";
+
 const BEFORE = "/case-studies/the-console/source/arc-01-original-rough.mp3";
 const AFTER = "/case-studies/the-console/source/arc-04-master-final.mp3";
+const FULL = "/case-studies/the-console/master/head-to-toe-side-a.mp3";
+const FULL_DUR = Math.round((peaksFile as { duration_s: number }).duration_s);
+
+// pool the measured side-A envelope (~1500 buckets) down to 96 and draw the
+// same mirrored fill path the other waves use (viewBox 0 0 96 40)
+const raw = (peaksFile as { buckets: number[] }).buckets;
+const N = 96;
+const pooled = Array.from({ length: N }, (_, i) => {
+  const a = Math.floor((i * raw.length) / N);
+  const b = Math.max(a + 1, Math.floor(((i + 1) * raw.length) / N));
+  let m = 0;
+  for (let j = a; j < b; j++) m = Math.max(m, raw[j]);
+  return m;
+});
+const top = pooled.map((v, i) => `${i === 0 ? "M" : "L"}${i},${(20 - v * 18).toFixed(1)}`).join(" ");
+const bot = [...pooled].reverse().map((v, i) => `L${N - 1 - i},${(20 + v * 18).toFixed(1)}`).join(" ");
+const WAVE_FULL = `${top} ${bot} Z`;
 ---
-<section class="fin" aria-label="before and after">
+<section class="fin" aria-label="before, after, and the finished song">
   <div class="fin-stage">
     <div class="fin-ab">
-      <div class="fin-toggle" role="tablist" aria-label="before or after">
+      <div class="fin-toggle" role="tablist" aria-label="before or after" data-fin-tabs>
         <button type="button" class="fin-tab on" data-side="before" role="tab" aria-selected="true">before · the 2 a.m. take</button>
         <button type="button" class="fin-tab" data-side="after" role="tab" aria-selected="false">after · the finished master</button>
+      </div>
+      <div class="fin-fulllabel" data-fin-fulllabel hidden>
+        <button type="button" class="fin-back" data-fin-back aria-label="back to the before and after">←</button>
+        <span>head to toe · the finished side</span>
       </div>
 
       <div class="fin-wavebox" data-fin-wave aria-hidden="true">
         <svg class="fin-wave fin-wave-before" viewBox="0 0 96 40" preserveAspectRatio="none"><path d={WAVE_ARC01} /></svg>
         <svg class="fin-wave fin-wave-after" viewBox="0 0 96 40" preserveAspectRatio="none"><path d={WAVE_ARC04} /></svg>
+        <svg class="fin-wave fin-wave-full" viewBox="0 0 96 40" preserveAspectRatio="none"><path d={WAVE_FULL} /></svg>
         <span class="fin-playhead"></span>
       </div>
 
@@ -34,14 +56,14 @@ const AFTER = "/case-studies/the-console/source/arc-04-master-final.mp3";
         <div class="fin-bar" role="slider" tabindex="0" aria-label="seek" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><span class="fin-fill"></span></div>
         <span class="fin-time"><span class="fin-cur">0:00</span> / <span class="fin-dur">0:00</span></span>
       </div>
+
+      <button type="button" class="fin-keep" data-fin-keep>
+        keep listening — the whole side · {Math.floor(FULL_DUR / 60)}:{String(FULL_DUR % 60).padStart(2, "0")}
+      </button>
     </div>
 
-    <p class="fin-line">Found, made, and judged by one pair of hands — and it never touched a note.</p>
-
-    <button type="button" class="fin-power" aria-label="power down" aria-pressed="false">
-      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2.5 v9" /><path d="M6.8 6 a7.5 7.5 0 1 0 10.4 0" /></svg>
-    </button>
-    <span class="fin-power-label" aria-hidden="true">power</span>
+    <p class="fin-line">Found in a junk drawer. Played like a band. Judged blind. Finished.</p>
+    <p class="fin-line fin-line-quiet">The system never made a note — it just kept this one alive long enough to become a song.</p>
 
     <div class="fin-out-row">
       <a class="fin-out fin-out-back" href="/#work">← selected work</a>
@@ -50,6 +72,7 @@ const AFTER = "/case-studies/the-console/source/arc-04-master-final.mp3";
 
     <audio class="fin-before" preload="metadata" src={BEFORE}></audio>
     <audio class="fin-after" preload="metadata" src={AFTER}></audio>
+    <audio class="fin-full" preload="none" src={FULL}></audio>
   </div>
 </section>
 
@@ -59,22 +82,32 @@ const AFTER = "/case-studies/the-console/source/arc-04-master-final.mp3";
     display: flex; flex-direction: column; align-items: center; gap: 24px; }
 
   .fin-ab { width: 100%; display: flex; flex-direction: column; gap: 14px;
-    padding: 20px; border-radius: 14px; background: rgba(255, 255, 255, 0.02); border: 1px solid rgba(255, 179, 71, 0.18);
-    transition: opacity 0.7s ease, filter 0.7s ease; }
+    padding: 20px; border-radius: 14px; background: rgba(255, 255, 255, 0.02); border: 1px solid rgba(255, 179, 71, 0.18); }
   .fin-toggle { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; padding: 4px; border-radius: 10px; background: rgba(0, 0, 0, 0.3); }
+  .fin-toggle[hidden] { display: none; }
   .fin-tab { cursor: pointer; padding: 10px 8px; border-radius: 7px; border: none; background: transparent;
     font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 11px; letter-spacing: 0.02em; color: rgba(245, 241, 232, 0.55); transition: background 0.18s, color 0.18s; }
   .fin-tab.on { background: color-mix(in srgb, var(--gold) 18%, transparent); color: var(--gold); }
 
-  /* the distance, visible: both real waveforms on one shared scale */
+  .fin-fulllabel { display: flex; align-items: center; gap: 12px; padding: 6px 4px;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 11.5px; letter-spacing: 0.04em; color: var(--gold); }
+  .fin-fulllabel[hidden] { display: none; }
+  .fin-back { cursor: pointer; width: 28px; height: 28px; border-radius: 50%; display: grid; place-items: center;
+    background: transparent; border: 1px solid rgba(245, 241, 232, 0.2); color: rgba(245, 241, 232, 0.6); font-size: 13px;
+    transition: color 0.18s, border-color 0.18s; }
+  .fin-back:hover { color: #f5f1e8; border-color: rgba(245, 241, 232, 0.5); }
+
+  /* the distance, visible: real waveforms on one shared scale */
   .fin-wavebox { position: relative; height: 64px; border-radius: 8px; overflow: hidden;
     background: rgba(0, 0, 0, 0.35); box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.5); cursor: pointer; }
-  .fin-wave { position: absolute; inset: 5px 4px; width: calc(100% - 8px); height: 54px;
-    transition: opacity 0.35s ease; }
+  .fin-wave { position: absolute; inset: 5px 4px; width: calc(100% - 8px); height: 54px; transition: opacity 0.35s ease; }
   .fin-wave-before { fill: rgba(245, 241, 232, 0.34); opacity: 1; }
   .fin-wave-after { fill: var(--gold); opacity: 0; }
+  .fin-wave-full { fill: var(--gold); opacity: 0; }
   .fin.side-after .fin-wave-before { opacity: 0; }
   .fin.side-after .fin-wave-after { opacity: 0.92; }
+  .fin.mode-full .fin-wave-before, .fin.mode-full .fin-wave-after { opacity: 0; }
+  .fin.mode-full .fin-wave-full { opacity: 0.92; }
   .fin-playhead { position: absolute; top: 3px; bottom: 3px; left: 0; width: 1.5px;
     background: #f5f1e8; box-shadow: 0 0 6px rgba(245, 241, 232, 0.8); opacity: 0; }
   .fin.playing .fin-playhead { opacity: 0.9; }
@@ -92,24 +125,18 @@ const AFTER = "/case-studies/the-console/source/arc-04-master-final.mp3";
   .fin-fill { position: absolute; left: 0; top: 0; bottom: 0; width: 0; border-radius: 3px; background: var(--gold); box-shadow: 0 0 8px color-mix(in srgb, var(--gold) 60%, transparent); }
   .fin-time { flex: 0 0 auto; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 11px; font-variant-numeric: tabular-nums; color: rgba(245, 241, 232, 0.55); }
 
-  .fin-line { text-align: center; max-width: 40ch; margin: 4px 0 0; text-wrap: balance;
-    font-family: "Space Grotesk Variable", "Space Grotesk", ui-sans-serif, system-ui, sans-serif; font-weight: 500; font-size: clamp(16px, 2.4vw, 22px); line-height: 1.45; color: #e9e6de;
-    transition: opacity 0.7s ease; }
+  .fin-keep { align-self: center; cursor: pointer; padding: 8px 16px; border-radius: 999px;
+    background: transparent; border: 1px solid rgba(255, 179, 71, 0.35); color: rgba(255, 179, 71, 0.8);
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 11px; letter-spacing: 0.05em;
+    transition: background 0.18s, color 0.18s, border-color 0.18s; }
+  .fin-keep:hover { background: rgba(255, 179, 71, 0.08); color: var(--gold); border-color: var(--gold); }
+  .fin.mode-full .fin-keep { display: none; }
 
-  /* the closing POWER keycap — the twin of the one that opened the page */
-  .fin-power { margin-top: 4px; width: 58px; height: 58px; border-radius: 14px; cursor: pointer; display: grid; place-items: center;
-    background: linear-gradient(180deg, #202a1a, #131a10); border: 1px solid rgba(0, 255, 77, 0.35);
-    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06), 0 4px 0 #0a0708, 0 8px 18px -6px #000; transition: transform 0.1s, border-color 0.4s; }
-  .fin-power svg { width: 23px; height: 23px; fill: none; stroke: #24e284; stroke-width: 2; stroke-linecap: round; filter: drop-shadow(0 0 6px rgba(36, 226, 132, 0.7)); transition: stroke 0.4s, filter 0.4s; }
-  .fin-power:hover { transform: translateY(1px); }
-  .fin-power-label { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 9px; letter-spacing: 0.28em; text-transform: uppercase; color: rgba(245, 241, 232, 0.4); margin-top: -14px; }
-  .fin.off .fin-power { border-color: rgba(255, 60, 70, 0.3); }
-  .fin.off .fin-power svg { stroke: #ff3c46; filter: drop-shadow(0 0 5px rgba(255, 60, 70, 0.5)); }
+  .fin-line { text-align: center; max-width: 44ch; margin: 4px 0 0; text-wrap: balance;
+    font-family: "Space Grotesk Variable", "Space Grotesk", ui-sans-serif, system-ui, sans-serif; font-weight: 500; font-size: clamp(16px, 2.4vw, 22px); line-height: 1.45; color: #e9e6de; }
+  .fin-line-quiet { font-size: clamp(13px, 1.7vw, 16px); font-weight: 400; color: rgba(245, 241, 232, 0.55); margin-top: 0; }
 
-  /* powered down: the bench sleeps, the ways out stay lit */
-  .fin.off .fin-ab, .fin.off .fin-line { opacity: 0.16; filter: saturate(0.2); pointer-events: none; }
-
-  .fin-out-row { display: flex; gap: 12px; flex-wrap: wrap; justify-content: center; }
+  .fin-out-row { display: flex; gap: 12px; flex-wrap: wrap; justify-content: center; margin-top: 8px; }
   .fin-out { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 11px; letter-spacing: 0.2em; text-transform: uppercase; color: var(--gold);
     text-decoration: none; border: 1px solid rgba(255, 179, 71, 0.5); border-radius: 3px; padding: 9px 18px; transition: background 0.2s, color 0.2s, border-color 0.2s; }
   .fin-out:hover { background: rgba(255, 179, 71, 0.1); color: #fff; }
@@ -117,7 +144,7 @@ const AFTER = "/case-studies/the-console/source/arc-04-master-final.mp3";
   .fin-out-back:hover { color: #f5f1e8; border-color: rgba(245, 241, 232, 0.5); background: rgba(245, 241, 232, 0.05); }
 
   @media (prefers-reduced-motion: reduce) {
-    .fin-ab, .fin-line, .fin-wave { transition: none; }
+    .fin-wave { transition: none; }
   }
 </style>
 
@@ -125,6 +152,7 @@ const AFTER = "/case-studies/the-console/source/arc-04-master-final.mp3";
   document.querySelectorAll(".fin").forEach((root) => {
     const before = root.querySelector(".fin-before");
     const after = root.querySelector(".fin-after");
+    const full = root.querySelector(".fin-full");
     const play = root.querySelector(".fin-play");
     const bar = root.querySelector(".fin-bar");
     const fill = root.querySelector(".fin-fill");
@@ -132,66 +160,104 @@ const AFTER = "/case-studies/the-console/source/arc-04-master-final.mp3";
     const dur = root.querySelector(".fin-dur");
     const wavebox = root.querySelector("[data-fin-wave]");
     const playhead = root.querySelector(".fin-playhead");
-    const power = root.querySelector(".fin-power");
+    const tabsRow = root.querySelector("[data-fin-tabs]");
+    const fullLabel = root.querySelector("[data-fin-fulllabel]");
+    const keepBtn = root.querySelector("[data-fin-keep]");
+    const backBtn = root.querySelector("[data-fin-back]");
     const tabs = Array.from(root.querySelectorAll(".fin-tab"));
-    if (!before || !after) return;
+    if (!before || !after || !full) return;
+
+    let mode = "ab";       // "ab" (the flip) or "full" (the finished side)
     let side = "before";
     let raf = 0;
     const fmt = (s) => { if (!isFinite(s)) return "0:00"; const m = Math.floor(s / 60), ss = Math.floor(s % 60); return m + ":" + String(ss).padStart(2, "0"); };
-    function applyVol() { before.volume = side === "before" ? 1 : 0; after.volume = side === "after" ? 1 : 0; root.classList.toggle("side-after", side === "after"); }
+    const lead = () => (mode === "full" ? full : before);
+    const pauseAll = () => { before.pause(); after.pause(); full.pause(); };
+
+    function applyVol() {
+      before.volume = mode === "ab" && side === "before" ? 1 : 0;
+      after.volume = mode === "ab" && side === "after" ? 1 : 0;
+      root.classList.toggle("side-after", side === "after");
+      root.classList.toggle("mode-full", mode === "full");
+    }
     applyVol();
 
+    const setDur = () => { if (dur) dur.textContent = fmt(lead().duration); };
+    if (before.readyState >= 1) setDur();
+    before.addEventListener("loadedmetadata", () => { if (mode === "ab") setDur(); });
+    full.addEventListener("loadedmetadata", () => { if (mode === "full") setDur(); });
+
     const paintLoop = () => {
-      const pct = before.duration ? (before.currentTime / before.duration) * 100 : 0;
+      const a = lead();
+      const pct = a.duration ? (a.currentTime / a.duration) * 100 : 0;
       if (fill) fill.style.width = pct + "%";
       if (playhead) playhead.style.left = pct + "%";
-      if (cur) cur.textContent = fmt(before.currentTime);
+      if (cur) cur.textContent = fmt(a.currentTime);
       if (bar) bar.setAttribute("aria-valuenow", String(Math.round(pct)));
-      if (!before.paused) raf = requestAnimationFrame(paintLoop);
+      if (!a.paused) raf = requestAnimationFrame(paintLoop);
     };
 
-    play.addEventListener("click", () => {
-      if (before.paused) {
-        document.dispatchEvent(new CustomEvent("bench:play", { detail: { source: root } }));
+    function startPlayback() {
+      document.dispatchEvent(new CustomEvent("bench:play", { detail: { source: root } }));
+      if (mode === "ab") {
         after.currentTime = before.currentTime;
-        const p1 = before.play(), p2 = after.play(); [p1, p2].forEach((p) => p && p.catch && p.catch(() => {}));
-      } else { before.pause(); after.pause(); }
-    });
-    // someone else claimed the stage — this player yields
-    document.addEventListener("bench:play", (e) => {
-      if (e.detail && e.detail.source !== root && !before.paused) { before.pause(); after.pause(); }
-    });
+        const p1 = before.play(), p2 = after.play();
+        [p1, p2].forEach((p) => p && p.catch && p.catch(() => {}));
+      } else {
+        const p = full.play(); if (p && p.catch) p.catch(() => {});
+      }
+    }
+    play.addEventListener("click", () => { lead().paused ? startPlayback() : pauseAll(); });
 
-    before.addEventListener("play", () => { root.classList.add("playing"); raf = requestAnimationFrame(paintLoop); });
-    before.addEventListener("pause", () => { root.classList.remove("playing"); cancelAnimationFrame(raf); });
-    before.addEventListener("ended", () => { root.classList.remove("playing"); after.pause(); cancelAnimationFrame(raf); if (fill) fill.style.width = "0%"; });
-    // set duration now if metadata beat us to the listener, else on the event
-    const setDur = () => { if (dur) dur.textContent = fmt(before.duration); };
-    if (before.readyState >= 1) setDur();
-    before.addEventListener("loadedmetadata", setDur);
+    const onPlay = () => { root.classList.add("playing"); raf = requestAnimationFrame(paintLoop); };
+    const onPause = () => { root.classList.remove("playing"); cancelAnimationFrame(raf); };
+    [before, full].forEach((a) => {
+      a.addEventListener("play", onPlay);
+      a.addEventListener("pause", onPause);
+    });
+    before.addEventListener("ended", () => { after.pause(); if (fill) fill.style.width = "0%"; });
+
     tabs.forEach((t) => t.addEventListener("click", () => {
       side = t.dataset.side; applyVol();
       tabs.forEach((x) => { const on = x === t; x.classList.toggle("on", on); x.setAttribute("aria-selected", String(on)); });
     }));
 
-    const seekTo = (frac) => { if (before.duration) { before.currentTime = frac * before.duration; after.currentTime = before.currentTime; paintLoop(); } };
+    // keep listening: the flip opens into the whole finished side
+    function setMode(m) {
+      pauseAll();
+      mode = m;
+      applyVol();
+      if (tabsRow) tabsRow.hidden = m === "full";
+      if (fullLabel) fullLabel.hidden = m !== "full";
+      if (fill) fill.style.width = "0%";
+      if (cur) cur.textContent = "0:00";
+      setDur();
+    }
+    if (keepBtn) keepBtn.addEventListener("click", () => { setMode("full"); startPlayback(); });
+    if (backBtn) backBtn.addEventListener("click", () => setMode("ab"));
+
+    const seekTo = (frac) => {
+      const a = lead();
+      if (!a.duration) return;
+      a.currentTime = frac * a.duration;
+      if (mode === "ab") after.currentTime = a.currentTime;
+      paintLoop();
+    };
     const seekEvt = (e) => { const el = e.currentTarget; const r = el.getBoundingClientRect(); seekTo(Math.min(1, Math.max(0, (e.clientX - r.left) / r.width))); };
     bar.addEventListener("click", seekEvt);
     if (wavebox) wavebox.addEventListener("click", seekEvt);
     bar.addEventListener("keydown", (e) => {
       if (e.key !== "ArrowLeft" && e.key !== "ArrowRight") return;
       e.preventDefault();
-      const d = before.duration || 0;
-      if (!d) return;
-      const step = 2 * (e.key === "ArrowLeft" ? -1 : 1);
-      seekTo(Math.min(1, Math.max(0, (before.currentTime + step) / d)));
+      const a = lead();
+      if (!a.duration) return;
+      const step = (mode === "full" ? 10 : 2) * (e.key === "ArrowLeft" ? -1 : 1);
+      seekTo(Math.min(1, Math.max(0, (a.currentTime + step) / a.duration)));
     });
 
-    // power down: the bench sleeps, the ways out stay lit; press again to wake
-    if (power) power.addEventListener("click", () => {
-      const off = root.classList.toggle("off");
-      power.setAttribute("aria-pressed", String(off));
-      if (off) { before.pause(); after.pause(); }
+    // one audio stage page-wide — yield when anything else starts
+    document.addEventListener("bench:play", (e) => {
+      if (e.detail && e.detail.source !== root && (!before.paused || !full.paused)) pauseAll();
     });
   });
 </script>

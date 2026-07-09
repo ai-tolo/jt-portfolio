@@ -9,9 +9,9 @@
 // scroll-timeline firing (the preview throttles those). Static + fully visible
 // with no JS, and under prefers-reduced-motion.
 export interface Props {
-  index: string;            // "01"
-  phase: string;            // "split it into parts"
-  belief: string;           // the hypothesis going in
+  index?: string;           // optional "01" — omit to drop the round header entirely
+  phase?: string;           // optional heading next to the number
+  belief: string;           // the hypothesis going in — one plain italic line
   overturn: string;         // default reveal line after the verdict
   overturnOriginal?: string;// shown if they crowned the untouched original
   overturnLouder?: string;  // shown if they crowned the hotter take (louder flag or gain > 1)
@@ -27,11 +27,13 @@ const { index, phase, belief, overturn, overturnOriginal, overturnLouder, verdic
   data-overturn-original={overturnOriginal ?? ""}
   data-overturn-louder={overturnLouder ?? ""}
 >
-  <header class="rf-head">
-    <span class="rf-num">Round {index}</span>
-    <span class="rf-phase">{phase}</span>
-  </header>
-  <p class="rf-belief"><span class="rf-belief-tag">the bet</span>{belief}</p>
+  {(index || phase) && (
+    <header class="rf-head">
+      {index && <span class="rf-num">Round {index}</span>}
+      {phase && <span class="rf-phase">{phase}</span>}
+    </header>
+  )}
+  <p class="rf-belief">{belief}</p>
 
   <div class="rf-bench"><slot /></div>
 
@@ -73,13 +75,9 @@ const { index, phase, belief, overturn, overturnOriginal, overturnLouder, verdic
   }
   .rf-belief {
     font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-    font-size: 13.5px; line-height: 1.6; color: rgba(245, 241, 232, 0.82);
+    font-style: italic;
+    font-size: 14px; line-height: 1.6; color: rgba(245, 241, 232, 0.82);
     margin: 0 0 16px; max-width: 64ch;
-  }
-  .rf-belief-tag {
-    display: inline-block; margin-right: 9px;
-    font-size: 9px; font-weight: 700; letter-spacing: 0.2em; text-transform: uppercase;
-    color: rgba(245, 241, 232, 0.4); vertical-align: 1px;
   }
   .rf-bench { margin: 0 0 4px; }
 
