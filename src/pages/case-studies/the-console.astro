@@ -19,144 +19,55 @@
 // ─────────────────────────────────────────────────────────────────────────
 import CSLayout from "../../components/case-study/CSLayout.astro";
 import CSSection from "../../components/case-study/CSSection.astro";
-import CSPullquote from "../../components/case-study/CSPullquote.astro";
-import CSLiveDemo from "../../components/case-study/CSLiveDemo.astro";
-import CSJar from "../../components/case-study/CSJar.astro";
-import CSCodeBlock from "../../components/case-study/CSCodeBlock.astro";
 import AtlasHero from "../../components/case-study/atlas/AtlasHero.astro";
 import ChaosToBuckets from "../../components/case-study/atlas/ChaosToBuckets.astro";
 import FileTransform from "../../components/case-study/atlas/FileTransform.astro";
-import RichardReveal from "../../components/case-study/atlas/RichardReveal.astro";
 import TheBench from "../../components/case-study/atlas/TheBench.astro";
+import SignalStudio from "../../components/case-study/atlas/SignalStudio.astro";
+import EngineDial from "../../components/case-study/atlas/EngineDial.astro";
+import Finale from "../../components/case-study/atlas/Finale.astro";
+import ColdOpen from "../../components/case-study/atlas/ColdOpen.astro";
+import AudioTransport from "../../components/case-study/atlas/AudioTransport.astro";
 import RoundFrame from "../../components/case-study/atlas/RoundFrame.astro";
-import TasteTrial from "../../components/case-study/atlas/TasteTrial.astro";
-import LiveFrontier from "../../components/case-study/atlas/LiveFrontier.astro";
-import VerdictLedger from "../../components/case-study/atlas/VerdictLedger.astro";
 import Movement from "../../components/case-study/atlas/Movement.astro";
-import SecretDoor from "../../components/case-study/atlas/SecretDoor.astro";
 
-// Movement II — "You are the judge" round audio. take1/2/3 are real masters of
-// "head to toe" (the case-study song = SONG_TITLE in FileTransform.astro, synced as the
-// literal source: below + in SecretDoor.astro BUCKETS[0]). The untouched-original slot
-// reuses a take as a PLACEHOLDER until the real raw render is dropped in.
-const REN = "/case-studies/the-console/renditions";
-const round1 = {
-  id: "r1-stems", source: "head to toe", tag: "blind",
-  takes: [
-    { label: "the engine's master", file: `${REN}/take1.mp3`, ref: "split into stems, processed, glued back" },
-    { label: "the untouched original", file: `${REN}/take3.mp3`, ref: "do nothing at all", isOriginal: true },
-  ],
-};
+// JUDGED — the three blind, loudness-matched rounds. Real FabFilter renders of
+// "head to toe" from the intent-space engine on the M1 (public/.../judge/).
+const JDG = "/case-studies/the-console/judge";
 const round2 = {
   id: "r2-loudness", source: "head to toe", tag: "the same master, two levels",
   takes: [
-    { label: "at reference level", file: `${REN}/take2.mp3`, ref: "the master, matched to a set loudness" },
-    { label: "a few dB hotter", file: `${REN}/take2.mp3`, gain: 1.7, ref: "the very same master, just louder" },
-  ],
-};
-const round3 = {
-  id: "r3-fulltrack", source: "head to toe", tag: "blind · loudness-matched",
-  loudnessNote: "All matched to one loudness, so you judge the mix, not the level.",
-  takes: [
-    { label: "bright · forward", file: `${REN}/take1.mp3`, ref: "matched toward a never-harsh top end" },
-    { label: "warm · intimate", file: `${REN}/take2.mp3`, ref: "matched toward a recessed, in-the-room vocal" },
-    { label: "open · unhyped", file: `${REN}/take3.mp3`, ref: "matched toward a big, open low end" },
+    { label: "at reference level", file: `${JDG}/judge-r2-matched.mp3`, ref: "the master, matched to a set loudness" },
+    // louder:true routes the crown to the overturnLouder line (RoundFrame)
+    { label: "a few dB hotter", file: `${JDG}/judge-r2-loud.mp3`, ref: "the very same master, just louder", louder: true },
   ],
 };
 
-// ── real code excerpts surfaced in the jars (engineer-mode reveals) ──
-// TheBench's in-browser crossfade graph (verbatim-condensed from TheBench.astro).
-const benchCode = `// decode every distinct clip once; the louder take reuses one file at two gains
-const cache = {};
-const decode = (file) => {
-  if (!cache[file]) cache[file] = fetch(file).then(r => r.arrayBuffer()).then(ab => ctx.decodeAudioData(ab));
-  return cache[file];
-};
-buffers = await Promise.all(TAKES.map(t => decode(t.file)));
-loopDur = Math.min(...buffers.map(b => b.duration));   // lock every take to the shortest loop
-
-// one persistent gain node per take, all summed into the master
-chainGains = buffers.map((_, i) => {
-  const g = ctx.createGain();
-  g.gain.value = i === active ? TAKES[i].gain : 0;
-  g.connect(master);
-  return g;
-});
-
-// switch takes: ramp the chosen take up, the rest down, on the same running sources
-chainGains.forEach((g, idx) =>
-  g.gain.setTargetAtTime(idx === i ? TAKES[idx].gain : 0, now, 0.04));`;
-
-// The engine's planning step (condensed from engineer/planner.py on the M1).
-const plannerCode = `def make_plan(analysis, axis, pole, feedback_text=None, judgement_history=None):
-    """Ask the model for a mastering plan, reasoning over the song and every past verdict."""
-    personality   = PERSONALITY_PROMPTS[(axis, pole)]
-    history_block = _format_feedback_history(judgement_history)          # past crowns, rolled in
-    anchors       = format_for_prompt(closest_references(analysis, n=3)) # records this track sits near
-
-    user_msg = (
-        _SYSTEM_PROMPT
-        + "\\n\\nReply with ONLY a JSON object matching this schema:\\n" + json.dumps(_PLAN_SCHEMA)
-        + f"\\n\\nPHILOSOPHY ({axis} = {pole}):\\n{personality}"
-        + history_block + anchors
-        + f"\\n\\nMIX ANALYSIS:\\n{_format_analysis_for_prompt(analysis)}\\n"
-    )
-
-    proc = subprocess.run([CLAUDE_BIN, "-p", user_msg],
-                          capture_output=True, text=True, timeout=CLAUDE_TIMEOUT_S)
-    plan = _extract_json(proc.stdout)   # ordered moves per stem, per section, each with its reasoning
-    plan.setdefault("bus", {"moves": [], "target_lufs": -14.0})
-    return plan`;
+// (engineer-mode code jars retired — the engine is now shown in EngineDial, not quoted)
 
 export const prerender = true;
 ---
 
 <CSLayout
-  title="The Lathe · Jon Tollefson"
-  description="The Lathe. Eight years of scattered sound, swept into one place that knows what it has and hands it back to you, smarter. A live, interactive case study about building an honest audio engine: blind, loudness-matched, inside your own library."
+  title="Found, Made, Judged · Jon Tollefson"
+  description="One sound, followed end to end through a workshop built by one person: found in a junk drawer of twenty thousand files, made into an instrument by hand, and judged blind on your own ears. A live, interactive case study about building an honest audio engine — blind, loudness-matched, inside your own library."
   ogImage="/case-studies/the-console/cover.jpg"
 >
+  <ColdOpen />
+
   <AtlasHero
     eyebrow="It makes my own music finishable. It never makes a note."
-    title="The Lathe"
-    subtitle="Eight years of scattered sound. One place that knows what it has, and hands it back to you, smarter."
-    capability="<b>Two machines, built end to end.</b> One reads twenty thousand files and knows what each one is. One masters a whole track by ear, blind and loudness matched, and proves what it changed."
+    title="Found, Made, Judged"
+    subtitle="Eight years of scattered sound. One workshop that finds it, makes it, and judges it — built end to end by one person."
+    capability="<b>One sound, the whole way.</b> Found in a junk drawer of twenty thousand files. Made into an instrument by hand. Judged blind, on your own ears. Three stations, one builder, no handoff."
     meta={[
       { label: "Role", value: "Designer, builder, sole engineer" },
       { label: "Timeline", value: "May 2026 to present" },
-      { label: "Stack", value: "Astro · FastAPI · Python · Pedalboard · Whisper · Claude" },
+      { label: "Stack", value: "Astro · Python · Pedalboard · FabFilter · Whisper · Claude" },
     ]}
-    glossary={{
-      term: "lathe",
-      ipa: "/leɪð/",
-      pos: "noun",
-      senses: [
-        {
-          tag: "the cutting lathe",
-          text: "The machine that writes sound into matter. A heated sapphire rides the master and carves it live, one pass, no undo, as a single unbroken spiral valley in lacquer. Every swell, every transient, every held breath transcribed into a groove a needle can later re-sing. The last physical act of mastering: the moment a mix stops being a file and becomes a thing you can hold to the light.",
-        },
-        {
-          tag: "the workshop root",
-          text: "The oldest machine on the bench. It spins a rough piece against one fixed edge and turns it down to a true, symmetrical form. Chaos in, shape out.",
-        },
-      ],
-      etymology: "Middle English, of Scandinavian root: a frame that holds the work, and turns it true.",
-    }}
   />
 
-  {/* ─────── 01 · THE WISH / THE MESS ─────── */}
-  <CSSection
-    title="Sit down to make something"
-    deck="The blank session waits. You half-remember a vocal you sang into your phone last Tuesday. You open Finder. iCloud hasn't downloaded the file yet. By the time it shows up, the idea is gone."
-    noTopRule
-  >
-    <div class="prose-block">
-      <p>That moment, repeated a thousand times across eight years of writing music, is the gap this whole thing closes. Twenty thousand audio files: every voice memo, every jam, every bounce, every sample I've ever touched, scattered across four drives and iCloud and my desktop and friends' DMs. None of it findable. <span class="k-pink">Most of it never heard again.</span></p>
-      <p>So I built a machine to <span class="k-cyan">sweep it all into one place</span>. Scroll.</p>
-    </div>
-  </CSSection>
-
-  {/* ─────── ACT 1 + 2 · CHAOS → THE SWEEP (theater) ─────── */}
+  {/* ─────── FOUND · the chaos, swept (theater carries it — no prose) ─────── */}
   <ChaosToBuckets />
 
   {/* ═══════ MOVEMENT I · AUDIODEX (the index) ═══════ */}
@@ -172,22 +83,28 @@ export const prerender = true;
   {/* the AudioDex module — fired straight off the Movement headline */}
   <div class="cs-bleed ft-mount"><FileTransform /></div>
 
-  {/* ─────── the catalog knows what it has · beneath the module ─────── */}
-  <CSSection
-    title="It fills in its own entries"
-    deck="Before AudioDex, every one of these was a dead name in a folder: a date and a number iOS picked. You just watched the kiln read one and write its own entry."
-    noTopRule
-  >
-    <div class="prose-block">
-      <p>That's <em>one</em> entry, the hardest kind. The other twenty thousand got the same treatment, most with no help from me: an auto-classifier reads each row's content, source, and length and files it: <strong>Jams</strong> and <strong>Field</strong> sort themselves (the first run filed 1,389 field rows and 329 jams untouched), <strong>Loops</strong> and <strong>Tracks</strong> stay curator-picked, <strong>Inbox</strong> holds the residue.</p>
-      <p>Whisper hears the words, Claude <span class="k-cyan">titles and summarizes</span>, librosa stamps BPM and key. A date-and-a-number becomes a title, a sentence, and a searchable transcript. The pile becomes a thing that knows what it's holding.</p>
-      <p>This is the opposite of a sample manager. Algonaut&nbsp;Atlas, Waves&nbsp;Cosmos: they organize clean one-shots you already chose to keep, by how they sound (<em>find me a kick</em>). <span class="adx">AudioDex</span> starts from the other end of the mess: twenty thousand unnamed, half-finished files, and the one question that blocks me: <strong>what do I even have, and what's worth finishing?</strong></p>
-    </div>
-  </CSSection>
+  {/* the discovery payoff — hear the found file under its new name; the rename
+      just happened on the kiln's catalog screen above */}
+  <div style="padding: 10px 24px 0;">
+    <AudioTransport src="/case-studies/the-console/source/arc-01-original-rough.mp3" label="“head to toe” — the raw take, found" accent="#17c4fc" />
+  </div>
 
-  {/* ═══════ MOVEMENT II · RICHARD (the engineer) ═══════ */}
+  {/* ═══════ MOVEMENT II · SIGNAL STUDIO (the studio) — the making ═══════ */}
   <Movement
     index="II"
+    kicker="the studio"
+    name="Signal Studio"
+    tagline="Where a found sound becomes an instrument."
+    accent="violet"
+    flush
+  />
+
+  {/* the studio module — the drop table (interactive) + the voice-capture demo */}
+  <SignalStudio />
+
+  {/* ═══════ MOVEMENT III · RICHARD (the engineer) ═══════ */}
+  <Movement
+    index="III"
     kicker="the engineer"
     name="Richard"
     tagline="I stopped trying to build an engineer that learns me. I built a test honest enough to prove me wrong."
@@ -195,31 +112,10 @@ export const prerender = true;
     mark="richard"
   />
 
-  {/* ─────── ACT 3 · THE COMPANION ─────── */}
-  <CSSection title="Send it over" deck="Zoom all the way in on one row in Tracks: a finished song, mixed rough, on headphones, at 2 a.m. The next step was always the lonely one: master it, A/B it against records you love, decide if it's done. So I built someone to do it with.">
-    <RichardReveal />
-
-    {/* jars: the agent loop, made legible. Collapsed by default; artist-mode scrolls past. */}
-    <div class="jar-stack">
-      <CSJar summary="Behind the speech bubble, Richard runs a loop, not a button." accent="green">
-        <p class="jar-lead">He reads the song section by section, plans a different master for each taste axis while carrying every past verdict as state, renders six variants, then writes how each will sound on a phone, in a car, in a club. The winner he never picks himself. That is the blind vote below, by design.</p>
-        <figure class="jar-fig">
-          <img src="/case-studies/the-console/diagram-engineer-flow.svg" alt="Richard's pipeline: source to analyzer to planner to renderer to translator" loading="lazy" />
-          <figcaption>This diagram is an earlier plan. Two of its bets, stems-first and learning by taste, are the ones the rounds below go on to test, and one I tore down and rebuilt. The part that held is the loop itself.</figcaption>
-        </figure>
-      </CSJar>
-
-      <CSJar summary="Read one real step the engine plans." accent="green">
-        <p class="jar-lead">The planner is handed the song's structure, the records it sits nearest, and every past verdict on this track, and it returns an ordered set of moves per stem and per section, each with its own reasoning. This is the step that reasons over state.</p>
-        <CSCodeBlock file="engineer/planner.py · make_plan()" lang="py" caption="The real planning call on the M1. Its output feeds the renderer; the winner is still chosen by the blind vote, not here.">{plannerCode}</CSCodeBlock>
-      </CSJar>
-    </div>
-  </CSSection>
-
-  {/* ─────── ACT 4 · YOU ARE THE JUDGE (the engineer's evolution, lived) ─────── */}
+  {/* ─────── JUDGED · you are the judge · the rounds carry it (no prose lead) ─────── */}
   <CSSection
     title="You are the judge"
-    deck="Every idea I had about this engine had to survive one test: blind, loudness-matched, hold a number to crown your pick. Most of my ideas didn't survive it. Run it yourself and watch what your own ears do."
+    deck="Crown the one that sounds better. Blind, loudness-matched. Watch what your own ears do."
     noTopRule
   >
     <div class="cs-bleed">
@@ -229,154 +125,60 @@ export const prerender = true;
       <span class="jc-conduit" aria-hidden="true"></span>
       <span class="jc-led" aria-hidden="true"></span>
       <span class="jc-brand" aria-hidden="true">RICHARD · BENCH</span>
-      <span class="jc-serial" aria-hidden="true">MK·II · THE LATHE</span>
+      <span class="jc-serial" aria-hidden="true">MK·III · JUDGED</span>
       <span class="jc-vents" aria-hidden="true"></span>
       <span class="jc-bolt jc-bolt-tl" aria-hidden="true"></span><span class="jc-bolt jc-bolt-tr" aria-hidden="true"></span>
       <span class="jc-bolt jc-bolt-bl" aria-hidden="true"></span><span class="jc-bolt jc-bolt-br" aria-hidden="true"></span>
       <div class="judge">
-        <div class="judge-ledger"><VerdictLedger /></div>
-
+        {/* one round — the loudness trap, where your own ears get caught */}
         <RoundFrame
           index="01"
-          phase="split it into parts"
+          phase="trust your ears?"
           verdict="debunked"
-          belief="The first engine split every track into stems and mastered each piece on its own. More separation, more control. Below: one take it built that way, one untouched. Crown the one that sounds better."
-          overturn="Splitting the track injected artifacts no processing could hide. Blind, doing nothing kept winning, for me about two times in three."
-          overturnOriginal="You just crowned the untouched original over the engine. So did I, about two times in three. Splitting the track left artifacts no processing could hide, so doing nothing won."
-        >
-          <TheBench round={round1} />
-        </RoundFrame>
-
-        <RoundFrame
-          index="02"
-          phase="measure before you trust your ears"
-          verdict="held"
-          belief="The same master, twice. One is a few dB hotter. Crown the one that sounds better."
-          overturn="Whichever felt fuller and crisper was probably just louder. Nothing changed but the level. So every test from here on is loudness-matched and blind, and the level never gets a vote."
-          overturnLouder="Gotcha. You crowned the louder one. It is the exact same master, a few dB hotter, and louder reads as fuller every single time. So every test from here on is loudness-matched and blind."
+          belief="Two masters of the same song. Crown the one that sounds better."
+          overturn="It is the same master — one is just a few dB louder. Louder reads as better, every time. That is why a real test is blind and loudness-matched: so your vote means the mix, not the level."
+          overturnLouder="You crowned the louder one. Same master, just hotter — and everyone does. That is the whole problem with trusting a vote."
         >
           <TheBench round={round2} />
         </RoundFrame>
 
-        <RoundFrame
-          index="03"
-          phase="stop splitting; master the whole track"
-          verdict="held"
-          belief="No stems this time. Each take is the whole track mastered toward a different record I love, all matched to one loudness. Crown your pick."
-          overturn="With the artifacts gone, the masters finally beat doing nothing, and there was no single obvious winner. Which one wins turned out to depend on the track, not on me. That crack is where my next idea broke."
-        >
-          <TheBench round={round3} />
-        </RoundFrame>
+        <div class="judge-plates">
+          <span class="jp">blind</span>
+          <span class="jp">loudness-matched · BS.1770</span>
+          <span class="jp">n = 1 rater</span>
+        </div>
 
-        {/* jar: the bench itself is the front-end proof. After the rounds, so it never spoils the trap. */}
-        <CSJar summary="The benches you just used are hand-built in the browser. See how the crossfade works." accent="green">
-          <p class="jar-lead">Every take is decoded once and shared, so the same master a few dB louder is one file at two gains, never downloaded twice. The takes play as looping sources locked to one shared length, each summed through its own gain node. Switching ramps the gains over about forty milliseconds, so the playhead never reloads and never loses its place.</p>
-          <CSCodeBlock file="TheBench.astro · the crossfade graph" lang="ts" caption="Web Audio, no library. The A/B you just played is this graph.">{benchCode}</CSCodeBlock>
-        </CSJar>
-
-        {/* jar: the controls, named as a method. Post-rounds, so Round 02's trap stays a surprise. */}
-        <CSJar summary="The controls that make this a real listening test." accent="green">
-          <ul class="jar-list">
-            <li><b>Blind by default.</b> The takes are unlabeled until you crown one, so the name never votes.</li>
-            <li><b>Loudness-matched.</b> Levels are equalized before you judge, the discipline behind ITU-R BS.1770 and the BS.1534 listening-test protocol, so the level never votes either.</li>
-            <li><b>A do-nothing baseline.</b> Round 01 puts the untouched original in the running, so the engine has to beat doing nothing to win.</li>
-            <li><b>A planted trap.</b> Round 02 was the same master a few dB hotter, to show how fast louder reads as better.</li>
-          </ul>
-          <p class="jar-note">These are the controls a proper listening test is supposed to have. Most upload-a-file tools steer toward a sound; this one judges, blind, against a baseline.</p>
-        </CSJar>
-
-        {/* Round 04 · the apprentice — the debunk the visitor lives (reads the ledger) */}
-        <TasteTrial />
-
-        {/* jar: the crown jewel. The judge insight, named against the frontier it rediscovered. */}
-        <CSJar summary="This failure has a name. The field found it before I did." accent="pink">
-          <p class="jar-lead">I hit this the hard way on an audio system, alone, and only later found the field already had a name for it. When you train a model against a judge that is itself biased, the model learns to satisfy the judge's blind spots instead of getting genuinely better. The field calls it reward-model overoptimization.</p>
-          <ul class="jar-list">
-            <li><b>Gao et al., Scaling Laws for Reward Model Overoptimization.</b> Push hard on a proxy reward and the proxy keeps climbing while the thing you actually wanted starts to fall.</li>
-            <li><b>Reward Models Are Metrics in a Trench Coat (2025).</b> A convenient metric is not the thing you cared about. It just dresses up like it.</li>
-            <li><b>DeepMind, MusicRL.</b> In audio, automatic scores like FAD and CLAP track human-preferred quality only weakly, and what counts as good is partly down to the listener.</li>
-          </ul>
-          <p class="jar-note">The controls I reached for on my own are the standard ones: judge blind, match the loudness, keep a do-nothing baseline, never trust a single round or a single rater. I did not kill the idea of learning from votes. I killed the version that trained on a biased judge, and rebuilt it on an honest one. The lesson generalizes past audio: for anything that generates media, the evaluator is the binding constraint on quality, not the model. That is the part I find most worth building tooling around.</p>
-        </CSJar>
-
-        {/* Round 05 · the live frontier — the honest current edge (n=1, not shipped) */}
-        <LiveFrontier />
+        {/* the insight, one line */}
+        <div class="judge-goodhart">
+          <span class="jg-eyebrow">optimize a biased judge</span>
+          <p class="jg-line">and you sharpen the bias, not the mix. So the fix was never the engine — it was a test my own ears can't cheat.</p>
+          <span class="jg-cite">reward-model overoptimization · Gao et&nbsp;al. · DeepMind MusicRL</span>
+        </div>
       </div>
       </div>
     </div>
   </CSSection>
 
-  {/* ─────── ACT 4d · HOW IT STANDS OUT ─────── */}
-  <CSSection title="Why this isn't just another mastering button" deck="There's no shortage of AI that will master a track. There's nothing that masters yours inside your own library, and proves what it did, blind.">
-    <div class="standout">
-      <div class="so-row so-them">
-        <span class="so-tag">Everyone else</span>
-        <p>LANDR, Ozone, the rest are a <strong>stateless upload box</strong>: send a file, get a master, it forgets you. Some can match a reference you upload, but you are still steering toward it. None sit inside your own library and pick the winner for you, blind, then prove what they did.</p>
-      </div>
-      <div class="so-row so-this">
-        <span class="so-tag">The Lathe</span>
-        <p>Like the good tools, it can reference the records I love. Then it judges the result <strong>blind and loudness-matched</strong>, against doing nothing, inside my own library, where every comparison is measured, not guessed.</p>
-      </div>
-      <p class="so-foot">Blind and loudness-matched is not a feature, it is just the honest way to run the test, and the upload-a-file-get-a-master tools do not bother. The point was never to beat a label release. It was to make eight years of my own work finishable, in my own ear.</p>
-    </div>
-  </CSSection>
+  {/* ─────── the shipped engine · shown, not described (interactive dial) ─────── */}
+  <div class="cs-bleed"><EngineDial /></div>
 
-  {/* ─────── RESOLUTION · the favorite-memory payoff ─────── */}
-  <CSSection title="A date and a number becomes a favorite" deck="Audio 14.m4a came in a nameless 2 a.m. phone memo with terrible audio. It went out a finished song I keep coming back to.">
-    <div class="prose-block">
-      <p><span class="adx">AudioDex</span> found it in the pile and gave it a title: <span class="k-orange">head to toe</span>. <span class="rich">Richard</span> handed it back, measured blind against the records I love, and I could finally hear what it already had. I finished it. It is one of my favorite songs I have made, and the system never touched a note. It is not about fidelity. This recording is proof of that. It is about never losing the one that mattered.</p>
-      <p>It is not a demo. It runs every day against twenty thousand of my own files, and the engineer ships a master only when it beats doing nothing, blind. One person holds the whole loop, from the file on the drive to the test that proves the master. That is the point, not a limit.</p>
-      <p>The calls I'm proudest of are the ones I refused to build:</p>
-    </div>
-
-    <ul class="wont">
-      <li>It won't write my posts or pitch me song ideas.</li>
-      <li>It won't push prompts or listen in on a session.</li>
-      <li>It won't finish a track, or touch a single note.</li>
-      <li>It won't make one creative decision for me.</li>
-    </ul>
-
-    <div class="prose-block">
-      <p>This is the part that outlives my own library. Anything that learns from human taste, including the models now generating music, inherits the judge you train it against. Sharpen a biased one and it does not learn taste, it learns your blind spots, louder. So the work that mattered was never the processing. It was making a test honest enough to trust: blind, loudness matched, more than one listener, and it ships only when it beats doing nothing. Fix the evaluator before the engine. That is the instinct I would bring into a room building audio with human feedback.</p>
-    </div>
-
-    <CSPullquote hero cite="The Lathe">
-      Utility, not synthesis. The machine sorts, fingerprints, surfaces, and clears the friction. The artist still chooses, still drags, still arranges.
-    </CSPullquote>
-  </CSSection>
-
-  {/* jar: one builder, the whole stack. The breadth-of-ownership proof, at the threshold. */}
-  <div class="jar-stack jar-stack-finale">
-    <CSJar summary="Before you hear it, the back of the machine." accent="cyan">
-      <p class="jar-lead">One person designed and built every layer of this: the catalog and its API, the verb contract the surfaces are built on, the front end you are reading, and the classifier that filled it.</p>
-      <figure class="jar-fig">
-        <img src="/case-studies/the-console/diagram-architecture.svg" alt="The Console architecture: capture sources, the catalog and engine, the inboxes, and the surfaces" loading="lazy" />
-        <figcaption>Twenty thousand of my own files, read by sound and filed without me. Whisper hears the words, Claude titles each one, librosa stamps key and tempo, all held in one SQLite catalog and served over a small FastAPI on the M1. The diagram is the rest of the wiring.</figcaption>
-      </figure>
-      <figure class="jar-fig">
-        <img src="/case-studies/the-console/diagram-verbs.svg" alt="The verb contract: the read and write endpoints every surface runs on" loading="lazy" />
-        <figcaption>Every surface talks to the same small set of verbs over that one API. The interfaces are disposable; the catalog and the verbs are not. When two surfaces got deleted in May, the catalog did not move.</figcaption>
-      </figure>
-      <figure class="jar-fig">
-        <img src="/case-studies/the-console/diagram-pivot.svg" alt="The Build 3 Max device killed by two architectural walls, reframed into Build 4" loading="lazy" />
-        <figcaption>Not everything I built survived. An earlier version lived inside the DAW as a Max device and hit two walls I could not engineer around, so I stopped pushing on a dead approach and wrote into the DAW's own browser instead. The judgment was knowing which wall was load-bearing and which was a detour.</figcaption>
-      </figure>
-      <p class="jar-note">The surfaces are disposable. The catalog, the verbs, and the calls about what not to build are not.</p>
-    </CSJar>
-  </div>
-
-  {/* ─────── THE GATEWAY · the finale: step into the running console (key: "soundbender").
-       The module is situated + the post-login view lives in SecretDoor.astro. ─────── */}
-  <SecretDoor />
-
-  <div class="cs-foot">
-    <a href="/#work" class="cs-foot-back">← back to selected work</a>
-  </div>
+  {/* ─────── RESOLUTION · hear the finished song, then power down ─────── */}
+  <div class="cs-bleed"><Finale /></div>
 </CSLayout>
 
 <style>
   .prose-block { max-width: 64ch; }
   .prose-block em { font-style: italic; color: var(--cs-text); }
+
+  /* JUDGED · controls as plates, insight as one line (text-law: plates not prose) */
+  .judge-plates { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; margin: 22px auto 4px; max-width: 760px; }
+  .judge-plates .jp { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 9.5px; letter-spacing: 0.12em; text-transform: uppercase;
+    color: rgba(245, 241, 232, 0.55); border: 1px solid rgba(0, 255, 77, 0.22); border-radius: 5px; padding: 5px 10px; }
+  .judge-goodhart { max-width: 640px; margin: 30px auto 0; text-align: center; }
+  .judge-goodhart .jg-eyebrow { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 10px; letter-spacing: 0.26em; text-transform: uppercase; color: var(--brand-green); }
+  .judge-goodhart .jg-line { margin: 10px auto 0; max-width: 40ch; text-wrap: balance;
+    font-family: "Space Grotesk Variable", "Space Grotesk", ui-sans-serif, system-ui, sans-serif; font-weight: 500; font-size: clamp(16px, 2.2vw, 21px); line-height: 1.45; color: #e9e6de; }
+  .judge-goodhart .jg-cite { display: block; margin-top: 12px; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 10px; letter-spacing: 0.08em; color: rgba(245, 241, 232, 0.42); }
 
   /* Movement II console (4f) — the rounds bolted to one green-keyed backplate, the
      twin of the kiln (Movement I, FileTransform .ft-console). Houses the .judge

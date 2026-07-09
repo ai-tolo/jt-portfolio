@@ -1,0 +1,87 @@
+---
+// One controlled audio player, reused everywhere sound plays (the found file, the
+// finale A/B). Play/pause, a scrubbable bar, elapsed / total time. Never autoplays;
+// only one instance plays at a time (they pause each other). Accent-tinted per
+// section. This is the fix for "a track with no way to stop it or tell how long."
+interface Props { src: string; label?: string; accent?: string; }
+const { src, label, accent = "#8b6bff" } = Astro.props;
+---
+<div class="atx" style={`--atx: ${accent}`} data-atx>
+  <button type="button" class="atx-play" aria-label="play">
+    <svg class="atx-i-play" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5 v14 l11 -7 z"/></svg>
+    <svg class="atx-i-pause" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 5 h4 v14 h-4 z M13 5 h4 v14 h-4 z"/></svg>
+  </button>
+  <div class="atx-body">
+    {label && <span class="atx-label">{label}</span>}
+    <div class="atx-bar" role="slider" tabindex="0" aria-label="seek"><span class="atx-fill"></span><span class="atx-knob"></span></div>
+  </div>
+  <span class="atx-time"><span class="atx-cur">0:00</span> / <span class="atx-dur">0:00</span></span>
+  <audio class="atx-audio" preload="metadata" src={src}></audio>
+</div>
+
+<style>
+  .atx { display: flex; align-items: center; gap: 14px; width: 100%; max-width: 460px; margin: 0 auto;
+    padding: 12px 16px; border-radius: 12px; background: rgba(255,255,255,0.02); border: 1px solid rgba(245,241,232,0.1); }
+  .atx-play { flex: 0 0 auto; width: 40px; height: 40px; border-radius: 50%; cursor: pointer; display: grid; place-items: center;
+    background: color-mix(in srgb, var(--atx) 16%, transparent); border: 1px solid color-mix(in srgb, var(--atx) 55%, transparent); color: var(--atx);
+    transition: background .18s, transform .1s; }
+  .atx-play:hover { background: color-mix(in srgb, var(--atx) 26%, transparent); }
+  .atx-play:active { transform: scale(0.96); }
+  .atx-play svg { width: 18px; height: 18px; fill: currentColor; }
+  .atx-i-pause { display: none; }
+  .atx.playing .atx-i-play { display: none; }
+  .atx.playing .atx-i-pause { display: block; }
+  .atx-body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 7px; }
+  .atx-label { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 11px; letter-spacing: 0.04em; color: rgba(245,241,232,0.66); }
+  .atx-bar { position: relative; height: 5px; border-radius: 3px; background: rgba(245,241,232,0.12); cursor: pointer; }
+  .atx-bar:focus-visible { outline: 2px solid var(--atx); outline-offset: 3px; }
+  .atx-fill { position: absolute; left: 0; top: 0; bottom: 0; width: 0; border-radius: 3px; background: var(--atx); box-shadow: 0 0 8px color-mix(in srgb, var(--atx) 60%, transparent); }
+  .atx-knob { position: absolute; top: 50%; left: 0; width: 11px; height: 11px; border-radius: 50%; transform: translate(-50%,-50%);
+    background: var(--atx); box-shadow: 0 0 8px var(--atx); opacity: 0; transition: opacity .15s; }
+  .atx-bar:hover .atx-knob, .atx.playing .atx-knob { opacity: 1; }
+  .atx-time { flex: 0 0 auto; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 11px; font-variant-numeric: tabular-nums; color: rgba(245,241,232,0.55); }
+</style>
+
+<script>
+  document.querySelectorAll("[data-atx]").forEach((root) => {
+    const audio = root.querySelector(".atx-audio");
+    const play = root.querySelector(".atx-play");
+    const bar = root.querySelector(".atx-bar");
+    const fill = root.querySelector(".atx-fill");
+    const cur = root.querySelector(".atx-cur");
+    const dur = root.querySelector(".atx-dur");
+    if (!audio) return;
+    const fmt = (s) => { if (!isFinite(s)) return "0:00"; const m = Math.floor(s / 60); const ss = Math.floor(s % 60); return m + ":" + String(ss).padStart(2, "0"); };
+    play && play.addEventListener("click", () => {
+      if (audio.paused) {
+        document.dispatchEvent(new CustomEvent("bench:play", { detail: { source: root } }));
+        const p = audio.play(); if (p && p.catch) p.catch(() => {});
+      } else { audio.pause(); }
+    });
+    // one audio stage for the whole page — yield when anything else starts
+    document.addEventListener("bench:play", (e) => {
+      if (e.detail && e.detail.source !== root && !audio.paused) audio.pause();
+    });
+    audio.addEventListener("play", () => root.classList.add("playing"));
+    audio.addEventListener("pause", () => root.classList.remove("playing"));
+    audio.addEventListener("ended", () => { root.classList.remove("playing"); if (fill) fill.style.width = "0%"; });
+    // set duration now if metadata beat us to the listener, else on the event
+    const setDur = () => { if (dur) dur.textContent = fmt(audio.duration); };
+    if (audio.readyState >= 1) setDur();
+    audio.addEventListener("loadedmetadata", setDur);
+    audio.addEventListener("timeupdate", () => {
+      const pct = audio.duration ? (audio.currentTime / audio.duration) * 100 : 0;
+      if (fill) fill.style.width = pct + "%";
+      const knob = root.querySelector(".atx-knob"); if (knob) knob.style.left = pct + "%";
+      if (cur) cur.textContent = fmt(audio.currentTime);
+    });
+    const seek = (e) => { const r = bar.getBoundingClientRect(); const x = Math.min(1, Math.max(0, (e.clientX - r.left) / r.width)); if (audio.duration) audio.currentTime = x * audio.duration; };
+    bar && bar.addEventListener("click", seek);
+    bar && bar.addEventListener("keydown", (e) => {
+      if (e.key !== "ArrowLeft" && e.key !== "ArrowRight") return;
+      e.preventDefault();
+      if (!audio.duration) return;
+      audio.currentTime = Math.min(audio.duration, Math.max(0, audio.currentTime + (e.key === "ArrowLeft" ? -2 : 2)));
+    });
+  });
+</script>

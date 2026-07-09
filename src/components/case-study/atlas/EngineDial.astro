@@ -1,0 +1,167 @@
+---
+// JUDGED · the shipped engine, shown not described. A powered green console: the
+// real FabFilter chain (Pro-Q 3 → Pro-C 2 → Saturn 2 → Pro-L 2) that GROWS or
+// SHRINKS as you move one dial between DO LESS and DO MORE — proving the engine's
+// whole thesis ("the strongest move is fewer moves") by hand. Then the Goodhart
+// stage, lived: feed it your own crownings. Crown the louder take and the dial
+// drifts toward DO MORE on its own — the optimizer chasing a biased signal, over-
+// processing. Crown blind-matched and it settles back. Jon's real resting point
+// (restraint +0.205, after 8 blind votes) is marked on the track. Honesty rides
+// as plates: editable file, not a model; n = 1. No audio here — it is visual.
+const MODULES = [
+  { id: "eq",  name: "Pro-Q 3",  role: "tone",   on: 0 },   // always on (subsonic; tilt grows)
+  { id: "glue",name: "Pro-C 2",  role: "glue",   on: 34 },  // lights past this amount
+  { id: "sat", name: "Saturn 2", role: "warmth", on: 58 },
+  { id: "lim", name: "Pro-L 2",  role: "ceiling",on: 0 },   // always on
+];
+---
+
+<section class="ed" aria-label="the engine, shown">
+  <div class="ed-console">
+    <span class="ed-bolt tl" aria-hidden="true"></span><span class="ed-bolt tr" aria-hidden="true"></span>
+    <span class="ed-bolt bl" aria-hidden="true"></span><span class="ed-bolt br" aria-hidden="true"></span>
+    <span class="ed-led" aria-hidden="true"></span>
+    <span class="ed-brand" aria-hidden="true">SIGNAL · ENGINE</span>
+    <span class="ed-serial" aria-hidden="true">MK·IV · RICHARD</span>
+
+    <div class="ed-inner">
+      <!-- the FabFilter chain — lights and dims live -->
+      <div class="ed-chain" data-amount="24">
+        {MODULES.map((m, i) => (
+          <>
+            <span class={`ed-mod ed-mod-${m.id}`} data-on={String(m.on)} aria-hidden="true">
+              <span class="ed-mod-name">{m.name}</span>
+              <span class="ed-mod-role">{m.role}</span>
+              <span class="ed-mod-lamp"></span>
+            </span>
+            {i < MODULES.length - 1 && <span class="ed-wire" aria-hidden="true"></span>}
+          </>
+        ))}
+      </div>
+
+      <!-- the one dial -->
+      <div class="ed-dialrow">
+        <span class="ed-end left">do less</span>
+        <span class="ed-track">
+          <input class="ed-range" type="range" min="0" max="100" value="24" aria-label="do less to do more" />
+          <span class="ed-mark" aria-hidden="true"><span class="ed-mark-tip">Jon · restraint +0.205</span></span>
+        </span>
+        <span class="ed-end right">do more</span>
+      </div>
+      <p class="ed-read" aria-live="polite" data-role="read">Only a safe ceiling. Nothing tonal — the default does nothing.</p>
+
+      <!-- Goodhart, lived: your votes move the dial -->
+      <div class="ed-votes">
+        <span class="ed-votes-tag">feed it your votes</span>
+        <button type="button" class="ed-vote loud" data-dir="1">crown the louder take</button>
+        <button type="button" class="ed-vote blind" data-dir="-1">crown blind-matched</button>
+        <span class="ed-drift" data-role="drift" aria-live="polite"></span>
+      </div>
+
+      <div class="ed-plates" aria-hidden="false">
+        <span class="ed-plate">editable file · not a model</span>
+        <span class="ed-plate">n = 1 rater</span>
+        <span class="ed-plate">the strongest move is fewer moves</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<style>
+  .ed { --g: #00ff4d; --warn: #ff6a3d; position: relative; margin: 2px auto 0; }
+  .ed-console { position: relative; max-width: 980px; margin: 0 auto;
+    padding: clamp(28px,4vw,48px) clamp(22px,3.5vw,42px) clamp(28px,4vw,44px);
+    border-radius: 16px; border: 1px solid rgba(0,0,0,0.6); isolation: isolate;
+    background: radial-gradient(78% 62% at 50% 20%, rgba(0,255,77,0.07), transparent 72%),
+      repeating-linear-gradient(98deg, rgba(255,255,255,0.012) 0 2px, transparent 2px 5px),
+      linear-gradient(162deg, #202a24 0%, #16191a 46%, #0d100e 100%);
+    box-shadow: 0 60px 110px -46px rgba(0,0,0,0.92), inset 0 2px 0 rgba(255,255,255,0.1), inset 0 -5px 12px rgba(0,0,0,0.6), inset 0 0 0 1px rgba(0,255,77,0.05); }
+  .ed-console::before { content:""; position:absolute; inset:14px; border-radius:12px; pointer-events:none; box-shadow: inset 0 0 0 1px rgba(0,0,0,0.5), inset 0 2px 6px rgba(0,0,0,0.45); }
+  .ed-bolt { position:absolute; width:7px; height:7px; border-radius:50%; background: radial-gradient(circle at 35% 30%, #414a44, #141715); }
+  .ed-bolt.tl{left:16px;top:16px}.ed-bolt.tr{right:16px;top:16px}.ed-bolt.bl{left:16px;bottom:16px}.ed-bolt.br{right:16px;bottom:16px}
+  .ed-led { position:absolute; left:34px; top:22px; width:8px; height:8px; border-radius:50%; background: radial-gradient(circle at 35% 30%, #d8ffe4, #00ff4d); box-shadow:0 0 9px rgba(0,255,77,0.85); animation: ed-hum 5s ease-in-out infinite; }
+  @keyframes ed-hum { 0%,100%{opacity:.5} 50%{opacity:.95} }
+  .ed-brand { position:absolute; left:52px; top:19px; font-family:ui-monospace,SFMono-Regular,Menlo,monospace; font-size:10px; letter-spacing:.3em; color:rgba(245,241,232,0.34); }
+  .ed-serial { position:absolute; right:34px; top:20px; font-family:ui-monospace,SFMono-Regular,Menlo,monospace; font-size:9px; letter-spacing:.2em; color:rgba(245,241,232,0.24); }
+  .ed-inner { position:relative; z-index:1; margin-top:16px; }
+
+  /* chain */
+  .ed-chain { display:flex; align-items:stretch; justify-content:center; gap:0; flex-wrap:wrap; }
+  .ed-mod { position:relative; display:flex; flex-direction:column; gap:2px; padding:14px 16px 12px; min-width:118px; border-radius:10px;
+    background: linear-gradient(160deg, rgba(255,255,255,0.02), rgba(0,0,0,0.2)); border:1px solid rgba(0,0,0,0.5);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.04); opacity:.34; filter:grayscale(0.6); transition: opacity .3s ease, filter .3s ease, box-shadow .3s ease; }
+  .ed-mod.lit { opacity:1; filter:none; box-shadow: 0 0 24px -10px var(--g), inset 0 0 0 1px rgba(0,255,77,0.28); }
+  .ed-mod-name { font-family:"Space Grotesk Variable","Space Grotesk",ui-sans-serif,system-ui,sans-serif; font-weight:700; font-size:13px; color:#e9e6de; }
+  .ed-mod-role { font-family:ui-monospace,SFMono-Regular,Menlo,monospace; font-size:9px; letter-spacing:.14em; text-transform:uppercase; color:rgba(245,241,232,0.42); }
+  .ed-mod-lamp { position:absolute; right:12px; top:14px; width:6px; height:6px; border-radius:50%; background:rgba(245,241,232,0.14); }
+  .ed-mod.lit .ed-mod-lamp { background:var(--g); box-shadow:0 0 8px var(--g); }
+  .ed-mod.over.lit { box-shadow: 0 0 24px -8px var(--warn), inset 0 0 0 1px rgba(255,106,61,0.3); }
+  .ed-mod.over.lit .ed-mod-lamp { background:var(--warn); box-shadow:0 0 8px var(--warn); }
+  .ed-wire { align-self:center; width:22px; height:2px; background:rgba(245,241,232,0.12); }
+  .ed-wire.hot { background:var(--g); box-shadow:0 0 8px var(--g); }
+
+  /* dial */
+  .ed-dialrow { display:flex; align-items:center; gap:14px; margin:26px auto 0; max-width:620px; }
+  .ed-end { font-family:ui-monospace,SFMono-Regular,Menlo,monospace; font-size:10px; letter-spacing:.16em; text-transform:uppercase; color:rgba(245,241,232,0.5); white-space:nowrap; }
+  .ed-track { position:relative; flex:1; }
+  .ed-range { -webkit-appearance:none; appearance:none; width:100%; height:5px; border-radius:3px; background: linear-gradient(90deg, rgba(0,255,77,0.5), rgba(255,106,61,0.5)); outline:none; }
+  .ed-range::-webkit-slider-thumb { -webkit-appearance:none; width:18px; height:18px; border-radius:50%; background: radial-gradient(circle at 35% 30%, #eafff0, #00ff4d); box-shadow:0 0 10px var(--g), 0 2px 4px rgba(0,0,0,0.5); cursor:ew-resize; }
+  .ed-range::-moz-range-thumb { width:18px; height:18px; border:none; border-radius:50%; background:#00ff4d; box-shadow:0 0 10px var(--g); cursor:ew-resize; }
+  .ed-mark { position:absolute; top:-4px; bottom:-4px; left:24%; width:2px; background:rgba(245,241,232,0.55); border-radius:2px; }
+  .ed-mark-tip { position:absolute; bottom:16px; left:50%; transform:translateX(-50%); white-space:nowrap; font-family:ui-monospace,SFMono-Regular,Menlo,monospace; font-size:9px; color:rgba(245,241,232,0.55); }
+  .ed-read { text-align:center; max-width:52ch; margin:16px auto 0; font-family:ui-monospace,SFMono-Regular,Menlo,monospace; font-size:12.5px; line-height:1.55; color:rgba(245,241,232,0.66); min-height:2.4em; }
+
+  /* votes / goodhart */
+  .ed-votes { display:flex; align-items:center; justify-content:center; flex-wrap:wrap; gap:10px; margin:22px auto 0; }
+  .ed-votes-tag { font-family:ui-monospace,SFMono-Regular,Menlo,monospace; font-size:9px; letter-spacing:.2em; text-transform:uppercase; color:rgba(245,241,232,0.4); }
+  .ed-vote { cursor:pointer; border-radius:999px; padding:8px 15px; font-family:ui-monospace,SFMono-Regular,Menlo,monospace; font-size:11px; letter-spacing:.04em; color:rgba(245,241,232,0.78);
+    background:rgba(255,255,255,0.03); border:1px solid rgba(245,241,232,0.16); transition: color .18s, border-color .18s, background .18s, transform .1s; }
+  .ed-vote:hover { transform:translateY(-1px); }
+  .ed-vote.loud:hover { color:var(--warn); border-color:rgba(255,106,61,0.5); }
+  .ed-vote.blind:hover { color:var(--g); border-color:rgba(0,255,77,0.5); }
+  .ed-drift { flex-basis:100%; text-align:center; font-family:ui-monospace,SFMono-Regular,Menlo,monospace; font-size:11.5px; min-height:1.4em; margin-top:2px; transition:color .2s; }
+  .ed-drift.warn { color:var(--warn); } .ed-drift.good { color:var(--g); }
+
+  .ed-plates { display:flex; flex-wrap:wrap; justify-content:center; gap:8px; margin:22px auto 0; }
+  .ed-plate { font-family:ui-monospace,SFMono-Regular,Menlo,monospace; font-size:9.5px; letter-spacing:.12em; text-transform:uppercase; color:rgba(245,241,232,0.5); border:1px solid rgba(245,241,232,0.14); border-radius:5px; padding:5px 10px; }
+
+  @media (max-width:720px){ .ed-mod{min-width:0;flex:1 1 42%;} .ed-wire{display:none;} .ed-chain{gap:8px;} }
+  @media (prefers-reduced-motion: reduce){ .ed-led{animation:none;} }
+</style>
+
+<script>
+  document.querySelectorAll(".ed").forEach((root) => {
+    const range = root.querySelector(".ed-range");
+    const chain = root.querySelector(".ed-chain");
+    const mods = Array.from(root.querySelectorAll(".ed-mod"));
+    const wires = Array.from(root.querySelectorAll(".ed-wire"));
+    const read = root.querySelector('[data-role="read"]');
+    const drift = root.querySelector('[data-role="drift"]');
+    const READS = [
+      { max: 30, t: "Only a safe ceiling. Nothing tonal — the default does nothing." },
+      { max: 56, t: "A little glue, holding it together. Still leaving the tone alone." },
+      { max: 78, t: "Now warmth too — a real character choice on a rough mix." },
+      { max: 101, t: "Every module lit. On a finished master, this is where it starts to sound worked-on — worse." },
+    ];
+    function paint(v) {
+      mods.forEach((m) => { const on = Number(m.dataset.on); const lit = v >= on || on === 0; m.classList.toggle("lit", lit); m.classList.toggle("over", v > 80); });
+      wires.forEach((w, i) => { const nextOn = Number(mods[i + 1] && mods[i + 1].dataset.on || 0); w.classList.toggle("hot", v >= nextOn); });
+      if (read) { const r = READS.find((x) => v < x.max) || READS[READS.length - 1]; read.textContent = r.t; }
+      chain.dataset.amount = String(v);
+    }
+    if (range) { paint(Number(range.value)); range.addEventListener("input", () => paint(Number(range.value))); }
+
+    // votes drift the dial on their own — the optimizer chasing the signal
+    root.querySelectorAll(".ed-vote").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const dir = Number(btn.dataset.dir);
+        let v = Number(range.value) + dir * 11;
+        v = Math.max(0, Math.min(100, v));
+        range.value = String(v); paint(v);
+        if (!drift) return;
+        if (dir > 0) { drift.textContent = "the optimizer drifts toward louder, heavier — it is learning your blind spot, not the mix."; drift.className = "ed-drift warn"; }
+        else { drift.textContent = "blind and loudness-matched, it settles back toward doing less. that is the fix."; drift.className = "ed-drift good"; }
+      });
+    });
+  });
+</script>

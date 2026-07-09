@@ -1,0 +1,322 @@
+---
+// MADE · The Drop Table — the hero interactive. ONE gesture: carry the found
+// sound to a bay, and the bay it lands on is how it plays. Drums = the loop
+// chopped into a kit, keys = repitched into chords, bass = sunk into a bassline —
+// all real renders made by Signal Studio's own samplers from the same four
+// seconds. The bays hide their waveforms until a drop lands (don't spoil the
+// discovery); every wave here is the real geometry of the real audio (waves.ts).
+// While a bay plays, its mechanism strip works in time — pads hit, chords
+// change, the sub lane fills — driven by the audio clock, not a canned loop.
+// A small cue button on the dock plays the untouched loop first. No autoplay,
+// one accent (violet), honors reduced-motion.
+import { WAVE_LOOP, WAVE_DRUMS, WAVE_KEYS, WAVE_BASS, DRUM_STEPS } from "./waves";
+
+const CLIP = "/case-studies/the-console/studio";
+const BAYS = [
+  { mode: "drums", label: "Drums", file: `${CLIP}/drums.mp3`, wave: WAVE_DRUMS, did: "the same loop, chopped into a kit" },
+  { mode: "keys",  label: "Keys",  file: `${CLIP}/keys.mp3`,  wave: WAVE_KEYS,  did: "the same loop, repitched into chords" },
+  { mode: "bass",  label: "Bass",  file: `${CLIP}/bass.mp3`,  wave: WAVE_BASS,  did: "the same loop, sunk into a bassline" },
+];
+const CHORDS = ["C", "Am", "F", "G"];
+---
+
+<section class="ss cs-bleed" aria-label="the drop table">
+  <div class="ss-console">
+    <span class="ss-bolt tl" aria-hidden="true"></span><span class="ss-bolt tr" aria-hidden="true"></span>
+    <span class="ss-bolt bl" aria-hidden="true"></span><span class="ss-bolt br" aria-hidden="true"></span>
+    <span class="ss-led" aria-hidden="true"></span>
+    <span class="ss-serial" aria-hidden="true">SIGNAL STUDIO · DROP TABLE</span>
+    <span class="ss-mk" aria-hidden="true">MK·II · MADE</span>
+
+    <div class="ss-deck">
+      <div class="ss-source">
+        <button type="button" class="ss-chip" draggable="true" aria-label="head to toe, the found loop — carry it to a bay">
+          <span class="ss-chip-was" aria-hidden="true">Audio 14.m4a</span>
+          <svg class="ss-wave" viewBox="0 0 72 40" preserveAspectRatio="none" aria-hidden="true">
+            <path d={WAVE_LOOP} />
+          </svg>
+          <span class="ss-chip-name">head to toe</span>
+          <span class="ss-chip-grip" aria-hidden="true"><i></i><i></i><i></i></span>
+        </button>
+        <button type="button" class="ss-cue" aria-label="hear the loop, untouched">
+          <svg class="ss-cue-play" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5 v14 l11 -7 z"/></svg>
+          <svg class="ss-cue-stop" viewBox="0 0 24 24" aria-hidden="true"><path d="M6.5 6.5 h11 v11 h-11 z"/></svg>
+          <span>the loop · 0:04</span>
+        </button>
+      </div>
+
+      <div class="ss-bays" role="group" aria-label="bays">
+        {BAYS.map((b) => (
+          <button type="button" class={`ss-bay bay-${b.mode}`} data-mode={b.mode} aria-label={`${b.label} — drop the loop here`}>
+            <span class="ss-bay-screen">
+              <svg class="ss-bay-wave" viewBox="0 0 72 40" preserveAspectRatio="none" aria-hidden="true">
+                <path d={b.wave} />
+              </svg>
+              <span class="ss-bay-slot" aria-hidden="true">drop</span>
+              <span class="ss-playhead" aria-hidden="true"></span>
+            </span>
+            {b.mode === "drums" && (
+              <span class="ss-mech ss-mech-drums" aria-hidden="true">
+                {DRUM_STEPS.map((v) => <i style={`--e:${v}`}></i>)}
+              </span>
+            )}
+            {b.mode === "keys" && (
+              <span class="ss-mech ss-mech-keys" aria-hidden="true">
+                {CHORDS.map((c) => <i>{c}</i>)}
+              </span>
+            )}
+            {b.mode === "bass" && (
+              <span class="ss-mech ss-mech-bass" aria-hidden="true">
+                <i class="ss-sub"></i><em>sub</em>
+              </span>
+            )}
+            <span class="ss-bay-name">{b.label}</span>
+          </button>
+        ))}
+      </div>
+    </div>
+
+    <p class="ss-plate" data-role="plate" aria-live="polite">the bay it lands on is how it plays</p>
+  </div>
+
+  <audio class="ss-audio" data-mode="loop" preload="none" src={`${CLIP}/loop.mp3`}></audio>
+  {BAYS.map((b) => <audio class="ss-audio" data-mode={b.mode} preload="none" src={b.file}></audio>)}
+</section>
+
+<style>
+  .ss { --v: #8b6bff; --vdim: rgba(139, 107, 255, 0.45); position: relative; }
+  .ss-console { position: relative; max-width: 980px; margin: 0 auto;
+    padding: clamp(34px, 4.5vw, 56px) clamp(22px, 4vw, 48px) clamp(26px, 3.5vw, 44px);
+    border-radius: 16px; border: 1px solid rgba(0, 0, 0, 0.6); isolation: isolate;
+    background: radial-gradient(80% 60% at 50% 14%, rgba(139, 107, 255, 0.09), transparent 72%),
+      repeating-linear-gradient(98deg, rgba(255, 255, 255, 0.012) 0 2px, transparent 2px 5px),
+      linear-gradient(162deg, #232030 0%, #171420 46%, #0e0c14 100%);
+    box-shadow: 0 60px 110px -46px rgba(0, 0, 0, 0.92), inset 0 2px 0 rgba(255, 255, 255, 0.1), inset 0 -5px 12px rgba(0, 0, 0, 0.6), inset 0 0 0 1px rgba(139, 107, 255, 0.05); }
+  .ss-console::before { content: ""; position: absolute; inset: 14px; border-radius: 12px; pointer-events: none;
+    box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.5), inset 0 2px 6px rgba(0, 0, 0, 0.45); }
+  .ss-bolt { position: absolute; width: 7px; height: 7px; border-radius: 50%; background: radial-gradient(circle at 35% 30%, #47414f, #151217); }
+  .ss-bolt.tl { left: 16px; top: 16px; } .ss-bolt.tr { right: 16px; top: 16px; }
+  .ss-bolt.bl { left: 16px; bottom: 16px; } .ss-bolt.br { right: 16px; bottom: 16px; }
+  .ss-led { position: absolute; left: 34px; top: 22px; width: 8px; height: 8px; border-radius: 50%;
+    background: radial-gradient(circle at 35% 30%, #e5ddff, #8b6bff); box-shadow: 0 0 9px rgba(139, 107, 255, 0.85);
+    animation: ss-hum 5s ease-in-out infinite; }
+  @keyframes ss-hum { 0%, 100% { opacity: 0.5; } 50% { opacity: 0.95; } }
+  .ss-serial { position: absolute; left: 52px; top: 19px; font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 10px; letter-spacing: 0.26em; color: rgba(245, 241, 232, 0.32); }
+  .ss-mk { position: absolute; right: 34px; top: 20px; font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 9px; letter-spacing: 0.2em; text-transform: uppercase; color: rgba(245, 241, 232, 0.24); }
+
+  .ss-deck { display: grid; grid-template-columns: 200px 1fr; gap: clamp(22px, 4vw, 54px); align-items: start; margin-top: 26px; }
+
+  /* ── the dock: the found sound as a cartridge, plus one cue button ── */
+  .ss-source { display: flex; flex-direction: column; align-items: center; gap: 10px; }
+  .ss-chip { position: relative; display: flex; flex-direction: column; align-items: center; gap: 8px; width: 100%; max-width: 190px;
+    padding: 16px 16px 14px; border-radius: 12px; cursor: grab; color: var(--v);
+    background: linear-gradient(160deg, #241f31, #14111b); border: 1px solid rgba(139, 107, 255, 0.42);
+    box-shadow: 0 0 24px -10px var(--v), inset 0 1px 0 rgba(255, 255, 255, 0.06);
+    transition: transform 0.14s ease, box-shadow 0.25s ease; }
+  .ss-chip:hover { transform: translateY(-3px); box-shadow: 0 0 30px -6px var(--v); }
+  .ss-chip:active { cursor: grabbing; }
+  .ss-chip.carry { transform: translateY(-3px) scale(1.02); box-shadow: 0 0 34px -4px var(--v); }
+  .ss-chip.dragging { opacity: 0.4; }
+  .ss-chip:focus-visible { outline: 2px solid var(--v); outline-offset: 3px; }
+  .ss-chip-was { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 9.5px; letter-spacing: 0.05em;
+    color: rgba(245, 241, 232, 0.34); text-decoration: line-through; text-decoration-color: rgba(255, 90, 60, 0.55); }
+  .ss-wave { width: 100%; height: 36px; fill: var(--vdim); stroke: none; }
+  .ss-chip-name { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 13px; color: #f5f1e8; }
+  .ss-chip-grip { display: flex; gap: 4px; margin-top: 2px; }
+  .ss-chip-grip i { width: 3px; height: 3px; border-radius: 50%; background: rgba(245, 241, 232, 0.22); }
+
+  .ss-cue { display: inline-flex; align-items: center; gap: 8px; padding: 7px 12px; border-radius: 999px; cursor: pointer;
+    background: rgba(255, 255, 255, 0.025); border: 1px solid rgba(139, 107, 255, 0.28); color: rgba(245, 241, 232, 0.6);
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 10.5px; letter-spacing: 0.06em;
+    transition: color 0.18s, border-color 0.18s, background 0.18s; }
+  .ss-cue:hover { color: var(--v); border-color: var(--v); }
+  .ss-cue:focus-visible { outline: 2px solid var(--v); outline-offset: 3px; }
+  .ss-cue svg { width: 11px; height: 11px; fill: currentColor; }
+  .ss-cue span { white-space: nowrap; }
+  .ss-cue .ss-cue-stop { display: none; }
+  .ss-cue.on .ss-cue-play { display: none; }
+  .ss-cue.on .ss-cue-stop { display: block; }
+  .ss-cue.on { color: var(--v); border-color: var(--v); }
+
+  /* ── the bays: screens dark until a drop lands ── */
+  .ss-bays { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+  .ss-bay { display: flex; flex-direction: column; align-items: stretch; gap: 10px; padding: 12px 12px 14px; border-radius: 12px; cursor: pointer;
+    background: rgba(255, 255, 255, 0.015); border: 1px dashed rgba(245, 241, 232, 0.22); color: var(--vdim);
+    transition: border-color 0.2s ease, background 0.25s ease, box-shadow 0.3s ease, color 0.25s ease, transform 0.14s ease; }
+  .ss-bay:hover { transform: translateY(-2px); border-color: rgba(245, 241, 232, 0.4); }
+  .ss-bay:focus-visible { outline: 2px solid var(--v); outline-offset: 3px; }
+  .ss.carrying .ss-bay { border-color: rgba(139, 107, 255, 0.55); background: rgba(139, 107, 255, 0.04); }
+  .ss-bay.over { border-style: solid; border-color: var(--v); background: rgba(139, 107, 255, 0.07); color: var(--v); }
+  .ss-bay.armed { border-style: solid; border-color: var(--v); background: rgba(139, 107, 255, 0.09); color: var(--v);
+    box-shadow: 0 0 30px -10px var(--v), inset 0 0 0 1px rgba(139, 107, 255, 0.3); }
+
+  .ss-bay-screen { position: relative; height: 46px; border-radius: 7px; overflow: hidden;
+    background: rgba(0, 0, 0, 0.35); box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.5); }
+  .ss-bay-wave { position: absolute; inset: 4px 2px; width: calc(100% - 4px); height: 38px;
+    fill: currentColor; opacity: 0; transform: scaleY(0.6); transform-origin: center;
+    transition: opacity 0.45s ease, transform 0.45s ease; }
+  .ss-bay.armed .ss-bay-wave { opacity: 0.95; transform: scaleY(1); }
+  .ss-bay-slot { position: absolute; inset: 0; display: grid; place-items: center;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 9px; letter-spacing: 0.3em;
+    text-transform: uppercase; color: rgba(245, 241, 232, 0.26); transition: opacity 0.3s; }
+  .ss-bay.armed .ss-bay-slot, .ss-bay.over .ss-bay-slot { opacity: 0; }
+  .ss-playhead { position: absolute; top: 2px; bottom: 2px; left: 0; width: 1.5px; background: #f5f1e8;
+    box-shadow: 0 0 6px rgba(245, 241, 232, 0.8); opacity: 0; }
+  .ss-bay.playing .ss-playhead { opacity: 0.9; }
+
+  /* mechanism strips — they work in time with the audio clock */
+  .ss-mech { display: flex; gap: 3px; height: 14px; align-items: stretch; }
+  .ss-mech-drums i { flex: 1; border-radius: 2px; background: currentColor; opacity: calc(0.10 + var(--e) * 0.16); transition: opacity 0.1s; }
+  .ss-bay.armed .ss-mech-drums i { opacity: calc(0.14 + var(--e) * 0.3); }
+  .ss-mech-drums i.hit { opacity: 1; box-shadow: 0 0 8px var(--v); }
+  .ss-mech-keys { gap: 4px; }
+  .ss-mech-keys i { flex: 1; display: grid; place-items: center; border-radius: 3px; font-style: normal;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 8.5px; letter-spacing: 0.08em;
+    color: rgba(245, 241, 232, 0.35); background: rgba(139, 107, 255, 0.12); transition: background 0.15s, color 0.15s; }
+  .ss-mech-keys i.hit { background: var(--v); color: #0e0c14; box-shadow: 0 0 8px var(--v); }
+  .ss-mech-bass { position: relative; align-items: center; }
+  .ss-mech-bass .ss-sub { position: relative; flex: 1; height: 6px; border-radius: 3px; background: rgba(255, 255, 255, 0.06); overflow: hidden; }
+  .ss-mech-bass .ss-sub::after { content: ""; position: absolute; inset: 0; width: calc(var(--p, 0) * 100%);
+    background: currentColor; border-radius: 3px; box-shadow: 0 0 8px var(--v); }
+  .ss-mech-bass em { font-style: normal; font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 8.5px; letter-spacing: 0.18em; text-transform: uppercase; color: rgba(245, 241, 232, 0.34); margin-left: 6px; }
+
+  .ss-bay-name { font-family: "Space Grotesk Variable", "Space Grotesk", ui-sans-serif, system-ui, sans-serif;
+    font-weight: 700; font-size: 15px; text-align: center; color: #cfcbd8; }
+  .ss-bay.armed .ss-bay-name { color: var(--v); }
+
+  .ss-plate { text-align: center; margin: 26px auto 0; font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 12px; letter-spacing: 0.06em; color: rgba(245, 241, 232, 0.42); transition: color 0.2s; min-height: 1.4em; }
+
+  @media (max-width: 640px) {
+    .ss-deck { grid-template-columns: 1fr; gap: 22px; }
+    .ss-source { flex-direction: row; justify-content: center; align-items: center; gap: 14px; }
+    .ss-chip { max-width: 170px; }
+    .ss-bays { grid-template-columns: repeat(3, 1fr); gap: 8px; }
+    .ss-bay { padding: 10px 8px 12px; }
+    .ss-bay-name { font-size: 13px; }
+    .ss-mech-keys i { font-size: 7.5px; }
+    .ss-mk { display: none; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .ss-led { animation: none; }
+    .ss-chip, .ss-bay { transition: none; }
+    .ss-bay-wave { transition: opacity 0.2s ease; transform: none; }
+  }
+</style>
+
+<script>
+  document.querySelectorAll(".ss").forEach((root) => {
+    const chip = root.querySelector(".ss-chip");
+    const cue = root.querySelector(".ss-cue");
+    const bays = Array.from(root.querySelectorAll(".ss-bay"));
+    const plate = root.querySelector('[data-role="plate"]');
+    const DID = {
+      drums: "drums — the same loop, chopped into a kit",
+      keys: "keys — the same loop, repitched into chords",
+      bass: "bass — the same loop, sunk into a bassline",
+    };
+    const audios = {};
+    root.querySelectorAll(".ss-audio").forEach((a) => { a.volume = 0.9; audios[a.dataset.mode] = a; });
+    let carrying = false;
+    let raf = 0;
+
+    function stopAll() {
+      Object.values(audios).forEach((a) => { try { a.pause(); a.currentTime = 0; } catch (e) {} });
+      if (cue) cue.classList.remove("on");
+    }
+
+    // one audio stage for the whole page — yield when anything else starts
+    document.addEventListener("bench:play", (e) => {
+      if (!e.detail || e.detail.source === root) return;
+      stopAll();
+      cancelAnimationFrame(raf);
+      bays.forEach((b) => b.classList.remove("playing"));
+    });
+
+    // the mechanism strips run off the audio clock — pads hit, chords change,
+    // the sub lane fills — so what you see is literally where playback is
+    function animate(bay, audio) {
+      cancelAnimationFrame(raf);
+      const mode = bay.dataset.mode;
+      const drumCells = mode === "drums" ? Array.from(bay.querySelectorAll(".ss-mech-drums i")) : null;
+      const keyCells = mode === "keys" ? Array.from(bay.querySelectorAll(".ss-mech-keys i")) : null;
+      const subLane = mode === "bass" ? bay.querySelector(".ss-sub") : null;
+      const playhead = bay.querySelector(".ss-playhead");
+      const tick = () => {
+        if (audio.paused) {
+          bay.classList.remove("playing");
+          if (drumCells) drumCells.forEach((c) => c.classList.remove("hit"));
+          if (keyCells) keyCells.forEach((c) => c.classList.remove("hit"));
+          if (subLane) subLane.style.setProperty("--p", "0");
+          return;
+        }
+        const t = audio.duration ? audio.currentTime / audio.duration : 0;
+        if (playhead) playhead.style.left = (t * 100).toFixed(2) + "%";
+        if (drumCells) { const i = Math.min(15, Math.floor(t * 16)); drumCells.forEach((c, k) => c.classList.toggle("hit", k === i)); }
+        if (keyCells) { const i = Math.min(3, Math.floor(t * 4)); keyCells.forEach((c, k) => c.classList.toggle("hit", k === i)); }
+        if (subLane) subLane.style.setProperty("--p", t.toFixed(3));
+        raf = requestAnimationFrame(tick);
+      };
+      raf = requestAnimationFrame(tick);
+    }
+
+    function land(bay) {
+      bays.forEach((b) => { b.classList.toggle("armed", b === bay); b.classList.remove("over", "playing"); });
+      stopAll();
+      document.dispatchEvent(new CustomEvent("bench:play", { detail: { source: root } }));
+      const a = audios[bay.dataset.mode];
+      if (a) {
+        a.currentTime = 0;
+        const p = a.play();
+        if (p && p.catch) p.catch(() => {});
+        bay.classList.add("playing");
+        animate(bay, a);
+        a.addEventListener("ended", () => bay.classList.remove("playing"), { once: true });
+      }
+      if (plate) plate.textContent = DID[bay.dataset.mode] || "";
+      setCarry(false);
+    }
+    function setCarry(on) { carrying = on; if (chip) chip.classList.toggle("carry", on); root.classList.toggle("carrying", on); }
+
+    if (chip) {
+      chip.addEventListener("dragstart", (e) => {
+        chip.classList.add("dragging");
+        if (e.dataTransfer) { e.dataTransfer.setData("text/plain", "src"); e.dataTransfer.effectAllowed = "copy"; }
+      });
+      chip.addEventListener("dragend", () => chip.classList.remove("dragging"));
+      // touch / keyboard: pick up, then drop on a bay (never click-to-autoplay a bay directly)
+      chip.addEventListener("click", () => setCarry(!carrying));
+    }
+    bays.forEach((bay) => {
+      bay.addEventListener("dragover", (e) => { e.preventDefault(); bay.classList.add("over"); });
+      bay.addEventListener("dragleave", () => bay.classList.remove("over"));
+      bay.addEventListener("drop", (e) => { e.preventDefault(); land(bay); });
+      // a bay only fires when the source is being carried, or re-fires while armed
+      bay.addEventListener("click", () => { if (carrying || bay.classList.contains("armed")) land(bay); });
+    });
+
+    // the cue: hear the untouched loop — a real transport, press again to stop
+    if (cue) {
+      const loop = audios["loop"];
+      cue.addEventListener("click", () => {
+        if (!loop) return;
+        if (!loop.paused) { loop.pause(); loop.currentTime = 0; return; }
+        stopAll();
+        cancelAnimationFrame(raf);
+        bays.forEach((b) => b.classList.remove("playing"));
+        document.dispatchEvent(new CustomEvent("bench:play", { detail: { source: root } }));
+        loop.currentTime = 0;
+        const p = loop.play();
+        if (p && p.catch) p.catch(() => {});
+      });
+      if (loop) {
+        loop.addEventListener("play", () => cue.classList.add("on"));
+        loop.addEventListener("pause", () => cue.classList.remove("on"));
+        loop.addEventListener("ended", () => cue.classList.remove("on"));
+      }
+    }
+  });
+</script>

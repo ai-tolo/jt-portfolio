@@ -26,6 +26,10 @@ export interface BenchTake {
   ref?: string;
   /** True if this is the do-nothing / untouched source. */
   isOriginal?: boolean;
+  /** True if this is the hotter-by-construction take (routes the crown to a
+      round frame's overturnLouder line even when the level lives in the file
+      itself rather than a playback gain). */
+  louder?: boolean;
 }
 export interface BenchRound {
   id: string;
@@ -96,6 +100,7 @@ const BARS = Array.from({ length: 128 }, (_, i) => {
         data-rlabel={t.label}
         data-rref={t.ref ?? ""}
         data-orig={t.isOriginal ? "true" : "false"}
+        data-louder={t.louder ? "true" : "false"}
         aria-label={`Take ${i + 1} — tap to audition, hold to crown`}
       >
         <span class="tb-hold-fill" aria-hidden="true"></span>
@@ -115,7 +120,7 @@ const BARS = Array.from({ length: 128 }, (_, i) => {
   <p class="tb-refline" data-tb-refline hidden></p>
 
   <p class="tb-hint">
-    <kbd>1</kbd>…<kbd>{String(takes.length)}</kbd> switch · hold to <span class="tb-hint-crown">♛ crown</span> · <kbd>R</kbd> reveal · <kbd>space</kbd> play when selected
+    <kbd>1</kbd>…<kbd>{String(takes.length)}</kbd> switch · hold or <kbd>enter</kbd> to <span class="tb-hint-crown">♛ crown</span> · <kbd>R</kbd> reveal · <kbd>space</kbd> play
   </p>
 </div>
 
@@ -147,6 +152,7 @@ const BARS = Array.from({ length: 128 }, (_, i) => {
       label: k.dataset.rlabel || "",
       ref: k.dataset.rref || "",
       original: k.dataset.orig === "true",
+      louder: k.dataset.louder === "true",
     }));
     const N = TAKES.length;
 
@@ -343,7 +349,9 @@ const BARS = Array.from({ length: 128 }, (_, i) => {
           held = true;
           k.dataset.holding = "false";
           crown(i);
-        }, reduce ? 1 : 650);
+          // under reduced-motion only the fill animation goes — the hold itself
+          // keeps its duration, or every tap would crown instead of audition
+        }, reduce ? 500 : 650);
       };
       const endHold = () => {
         k.dataset.holding = "false";
@@ -367,7 +375,7 @@ const BARS = Array.from({ length: 128 }, (_, i) => {
       // tell the ledger (and any round frame) what the ear actually did
       root.dispatchEvent(new CustomEvent("bench:verdict", {
         bubbles: true,
-        detail: { round: roundId, index: i, label: t.label, isOriginal: t.original, gain: t.gain, takes: N },
+        detail: { round: roundId, index: i, label: t.label, isOriginal: t.original, gain: t.gain, louder: t.louder, takes: N },
       }));
     }
 
@@ -413,6 +421,10 @@ const BARS = Array.from({ length: 128 }, (_, i) => {
       } else if (k === " " || k === "spacebar") {
         e.preventDefault();
         toggle();
+      } else if (k === "enter") {
+        // keyboard path to the vote — crown the take you're on
+        e.preventDefault();
+        crown(active);
       }
     });
 

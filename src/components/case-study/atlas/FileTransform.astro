@@ -45,6 +45,9 @@ const DEFAULT_FILE = "47";
 type Seg = { t: string; s?: string; dim?: string; hl?: string; after?: string };
 type Rec = {
   tier: string; kind: string; title: string; keeper: string | null;
+  /** Source filename this record was forged from — shown struck-through beside
+      the title so the rename (a date and a number becomes a title) is explicit. */
+  from?: string;
   duration: string; rel: string; stamped: string; days: string;
   summary: { t?: string; b?: string }[];
   txLabel: string; txCount: string; tx: Seg[];
@@ -73,6 +76,7 @@ const RECORDS: Record<string, Rec> = {
   "47": {
     tier: "Track", kind: "tracks",
     title: SONG_TITLE,
+    from: FILES[1].name,
     keeper: "★ 1 keeper", duration: "3:48", rel: "2y", stamped: "02-14-2024", days: "845d",
     summary: [
       { t: "A phone memo, recorded once at 2am, never re-recorded. The audio is rough and it does not matter: " },
@@ -117,7 +121,7 @@ const ORDER = ["46", "47", "48"];
       <!-- chassis decoration: the whole console is one device, "AudioDex" -->
       <span class="ft-devplate" aria-hidden="true">AudioDex</span>
       <span class="ft-devports" aria-hidden="true"><span class="ft-port-jack"></span><span class="ft-port-usb"></span></span>
-      <span class="ft-chassis-serial" aria-hidden="true">MK·I · THE LATHE</span>
+      <span class="ft-chassis-serial" aria-hidden="true">MK·I · FOUND</span>
       <span class="ft-chassis-vents" aria-hidden="true"></span>
       <span class="ft-bolt ft-bolt-tl" aria-hidden="true"></span><span class="ft-bolt ft-bolt-tr" aria-hidden="true"></span>
       <span class="ft-bolt ft-bolt-bl" aria-hidden="true"></span><span class="ft-bolt ft-bolt-br" aria-hidden="true"></span>
@@ -351,6 +355,7 @@ const ORDER = ["46", "47", "48"];
               <article class="ft-card" data-rec={id} data-kind={r.kind} data-open="true" aria-label={`${r.title}, AudioDex ${r.tier} entry`}>
                 <header class="ft-card-head">
                   <span class:list={["ft-tier", `ft-tier-${r.kind}`]}>{r.tier}</span>
+                  {r.from && <span class="ft-from" aria-label={`renamed from ${r.from}`}><s>{r.from}</s> →</span>}
                   <span class="ft-title">{r.title}</span>
                   {r.keeper && <span class="ft-keeper">{r.keeper}</span>}
                 </header>
@@ -485,8 +490,20 @@ const ORDER = ["46", "47", "48"];
   .ft-stage-inner { position: absolute; top: 52px; left: 0; width: 1160px; height: 660px; }
   @media (max-width: 1240px) { .ft-console { transform: scale(0.92); } }
   @media (max-width: 1080px) { .ft-console { transform: scale(0.8); } }
-  @media (max-width: 920px) { .ft-console { transform: scale(0.66); } }
-  @media (max-width: 760px) { .ft-console { transform: scale(0.52); } }
+  /* From here down, transform:scale no longer matches the 712px layout box, so
+     the stage takes the SCALED height explicitly (712 × scale) — otherwise the
+     console floats in a well of dead space it no longer occupies visually. */
+  @media (max-width: 920px) {
+    .ft { min-height: 0; }
+    .ft-stage { align-items: flex-start; height: 470px; }
+    .ft-console { transform: scale(0.66); transform-origin: top center; }
+  }
+  @media (max-width: 760px) { .ft-console { transform: scale(0.52); } .ft-stage { height: 370px; } }
+  /* phones: keep the whole machine on screen (it stays an object you fire and
+     watch respond — the card text is recovered by the transport just below) */
+  @media (max-width: 620px) { .ft-console { transform: scale(0.44); } .ft-stage { height: 313px; } }
+  @media (max-width: 520px) { .ft-console { transform: scale(0.36); } .ft-stage { height: 256px; } }
+  @media (max-width: 430px) { .ft-console { transform: scale(0.29); } .ft-stage { height: 207px; } }
 
   .ft-chassis-serial { position: absolute; right: 34px; bottom: 19px; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 9px; letter-spacing: 0.22em; text-transform: uppercase; color: rgba(245, 241, 232, 0.24); }
   .ft-chassis-vents { position: absolute; left: 50%; bottom: 16px; transform: translateX(-50%); width: 120px; height: 12px; border-radius: 3px; background: repeating-linear-gradient(90deg, rgba(0, 0, 0, 0.4) 0 2px, rgba(245, 241, 232, 0.06) 2px 5px); opacity: 0.6; }
@@ -859,6 +876,12 @@ const ORDER = ["46", "47", "48"];
   .ft-tier-field { color: var(--brand-green); border: 1px solid rgba(0, 255, 77, 0.4); background: rgba(0, 255, 77, 0.06); }
   .ft-tier-inbox { color: rgba(245, 241, 232, 0.7); border: 1px solid rgba(245, 241, 232, 0.28); background: rgba(245, 241, 232, 0.04); }
   .ft-title { flex: 1; min-width: 12ch; font-family: "Space Grotesk Variable", "Space Grotesk", ui-sans-serif, system-ui, sans-serif; font-weight: 700; font-size: 18px; line-height: 1.15; color: #f8f6ef; letter-spacing: -0.01em; }
+  /* the naming hinge, explicit: the filename the record was forged from, struck
+     through, pointing at the title it became. Lands one beat after the card pop. */
+  .ft-from { flex: 0 0 auto; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 10.5px; letter-spacing: 0.04em; color: rgba(245, 241, 232, 0.42); }
+  .ft-from s { text-decoration-color: rgba(255, 90, 60, 0.6); text-decoration-thickness: 1px; }
+  .ft[data-state="done"] .ft-card .ft-from { animation: ft-from-in 0.5s ease 0.55s both; }
+  @keyframes ft-from-in { from { opacity: 0; } to { opacity: 1; } }
   .ft-keeper { flex: 0 0 auto; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 9.5px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: #00ff4d; border: 1px solid rgba(0, 255, 77, 0.4); border-radius: 3px; padding: 2px 7px; background: rgba(0, 255, 77, 0.06); }
   .ft-wave-row { display: flex; align-items: center; gap: 12px; min-width: 0; }
   .ft-duration { flex: 0 0 auto; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-style: italic; font-size: 16px; font-weight: 700; color: #ff3b6e; font-feature-settings: "tnum"; line-height: 1; letter-spacing: 0.04em; min-width: 3.6em; text-align: right; text-shadow: 0 0 4px rgba(255, 59, 110, 0.65), 0 0 10px rgba(255, 59, 110, 0.35); }
