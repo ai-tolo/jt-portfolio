@@ -1,0 +1,142 @@
+---
+// CH 3 · the develop-through-use loop, made visible. Sits under the blind
+// palette round and reacts to its verdict: when a take gets crowned, the
+// TASTE CARD — the real, human-readable file that steers the engine — updates
+// in front of you (the crowned palette's round count bumps), and the CHAIN
+// SHELF shows what accumulation looks like: the hand-built palettes plus the
+// open slot the next hundred crowns will fill. Honest by construction: this is
+// an editable file, not a model; the engine composes chains per track FROM
+// these palettes, steered by the card. Listens for `bench:verdict` on the
+// document (scoped by round id). Reduced-motion safe (state changes, no theater).
+interface Palette {
+  id: string;        // must EQUAL the bench take's revealed label
+  name: string;      // display name, e.g. "warm · vocal-safe"
+  born: string;      // e.g. "hand-built · June 2026"
+  rounds: number;    // crowns so far
+  axis: string;      // which taste-card leaning this crown nudges (matches a card line key)
+}
+interface Props {
+  roundId: string;         // the bench round to listen to
+  cardFile: string;        // the taste card's real filename
+  cardLines: string[];     // verbatim-style lines from the real card (pre-crown state)
+  palettes: Palette[];
+}
+const { roundId, cardFile, cardLines, palettes } = Astro.props;
+---
+
+<div class="tl" data-taste-loop data-round={roundId}>
+  <div class="tl-grid">
+    <!-- the taste card: an editable file, not a model -->
+    <figure class="tl-card" data-tl-card>
+      <figcaption class="tl-card-head">
+        <span class="tl-card-dot" aria-hidden="true"></span>
+        <span class="tl-card-name">{cardFile}</span>
+        <span class="tl-card-flash" data-tl-flash aria-live="polite"></span>
+      </figcaption>
+      <pre class="tl-card-body">{cardLines.map((l) => <span class="tl-line" data-line={l.split(":")[0].trim()}>{l}</span>)}</pre>
+      <p class="tl-card-note">an editable file, not a model — I can read it, argue with it, overrule it</p>
+    </figure>
+
+    <!-- the shelf: chains accumulate through use -->
+    <div class="tl-shelf" aria-label="the palettes so far">
+      {palettes.map((p) => (
+        <div class="tl-chain" data-chain={p.id} data-axis={p.axis}>
+          <span class="tl-chain-name">{p.name}</span>
+          <span class="tl-chain-born">{p.born}</span>
+          <span class="tl-chain-rounds"><b data-tl-count>{p.rounds}</b> crowns</span>
+        </div>
+      ))}
+      <div class="tl-chain tl-chain-next" aria-hidden="true">
+        <span class="tl-chain-name">the next chain</span>
+        <span class="tl-chain-born">born from the next hundred crowns</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+{/* is:global (namespaced tl-*): the "this page: you chose…" note line is created
+    at runtime and would miss Astro's scope attribute */}
+<style is:global>
+  .tl { max-width: 760px; margin: 26px auto 0; }
+  .tl-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; align-items: start; }
+
+  .tl-card { margin: 0; border-radius: 10px; overflow: hidden;
+    background: rgba(0, 0, 0, 0.32); border: 1px solid rgba(0, 255, 77, 0.16); }
+  .tl-card-head { display: flex; align-items: center; gap: 8px; padding: 9px 12px;
+    border-bottom: 1px solid rgba(245, 241, 232, 0.08); }
+  .tl-card-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--brand-green); box-shadow: 0 0 8px rgba(0, 255, 77, 0.7); }
+  .tl-card-name { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 10.5px; letter-spacing: 0.05em; color: rgba(245, 241, 232, 0.7); }
+  .tl-card-flash { margin-left: auto; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 9px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--brand-green); opacity: 0; transition: opacity 0.25s; }
+  .tl-card-flash.on { opacity: 1; }
+  .tl-card-body { margin: 0; padding: 12px 14px; display: flex; flex-direction: column; gap: 6px;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 11.5px; line-height: 1.5;
+    color: rgba(245, 241, 232, 0.72); white-space: pre-wrap; word-break: break-word; }
+  .tl-line { transition: color 0.25s, text-shadow 0.25s; }
+  .tl-line.bump { color: var(--brand-green); text-shadow: 0 0 12px rgba(0, 255, 77, 0.45); }
+  .tl-card-note { margin: 0; padding: 9px 14px 11px; border-top: 1px solid rgba(245, 241, 232, 0.07);
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 9.5px; font-style: italic;
+    letter-spacing: 0.04em; color: rgba(245, 241, 232, 0.45); }
+
+  .tl-shelf { display: flex; flex-direction: column; gap: 10px; }
+  .tl-chain { display: flex; flex-direction: column; gap: 3px; padding: 11px 14px; border-radius: 10px;
+    background: rgba(255, 255, 255, 0.015); border: 1px solid rgba(0, 255, 77, 0.18);
+    transition: box-shadow 0.3s, border-color 0.3s; }
+  .tl-chain.crowned { border-color: var(--brand-green); box-shadow: 0 0 22px -10px var(--brand-green); }
+  .tl-chain-name { font-family: "Space Grotesk Variable", "Space Grotesk", ui-sans-serif, system-ui, sans-serif;
+    font-weight: 700; font-size: 13.5px; color: #e9e6de; }
+  .tl-chain-born { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 9.5px; letter-spacing: 0.05em; color: rgba(245, 241, 232, 0.42); }
+  .tl-chain-rounds { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 10px; color: rgba(245, 241, 232, 0.6); margin-top: 3px; }
+  .tl-chain-rounds b { color: var(--brand-green); font-weight: 700; }
+  .tl-chain-next { border-style: dashed; border-color: rgba(245, 241, 232, 0.18); opacity: 0.75; }
+  .tl-chain-next .tl-chain-name { color: rgba(245, 241, 232, 0.5); }
+
+  @media (max-width: 640px) {
+    .tl-grid { grid-template-columns: 1fr; }
+  }
+</style>
+
+<script>
+  document.querySelectorAll("[data-taste-loop]").forEach((root) => {
+    const roundId = root.dataset.round;
+    const flash = root.querySelector("[data-tl-flash]");
+    const body = root.querySelector(".tl-card-body");
+    let ownNote = null;
+    document.addEventListener("bench:verdict", (e) => {
+      const d = e.detail || {};
+      if (d.round !== roundId) return;
+      const label = String(d.label || "");
+      let axis = "";
+      // the crowned palette's shelf card lights + its crown count bumps
+      root.querySelectorAll(".tl-chain[data-chain]").forEach((c) => {
+        const hit = label === c.dataset.chain;
+        c.classList.toggle("crowned", hit);
+        if (hit) {
+          axis = c.dataset.axis || "";
+          const n = c.querySelector("[data-tl-count]");
+          if (n && !c.dataset.bumped) { n.textContent = String(Number(n.textContent) + 1); c.dataset.bumped = "true"; }
+        }
+      });
+      // the card reacts the way the real file does: the vote count ticks up,
+      // the crowned palette's leaning lights, and the notes list grows a line
+      root.querySelectorAll(".tl-line").forEach((l) => {
+        const key = l.dataset.line || "";
+        if (key === "n_votes" && !l.dataset.bumped) {
+          l.dataset.bumped = "true";
+          l.textContent = l.textContent.replace(/\d+/, (m) => String(Number(m) + 1));
+          l.classList.add("bump");
+        } else {
+          l.classList.toggle("bump", key === axis);
+        }
+      });
+      if (body) {
+        if (!ownNote) {
+          ownNote = document.createElement("span");
+          ownNote.className = "tl-line bump";
+          body.appendChild(ownNote);
+        }
+        ownNote.textContent = `this page: you chose '${label}'`;
+      }
+      if (flash) { flash.textContent = `you crowned ${label}`; flash.classList.add("on"); }
+    });
+  });
+</script>

@@ -1,34 +1,49 @@
 ---
-// CH 2 · PLAY, DON'T FIDDLE — Signal Studio, told as what it actually is: the
-// homepage instrument that refused to stay a toy. One DOM, two states: the page
-// scrolls the compact instrument into view and the workspace GROWS around it —
-// sidebar library slides out, the view tabs appear, one panel becomes three
-// engine towers. Then the found sound gets to work: drag "head to toe" from the
-// LIBRARY onto DRUMS / KEYS / BASS and each engine enters the groove ON THE
-// NEXT BAR — one Web Audio clock, three looping lanes, per-lane mute — until
-// the junk-drawer memo is playing as a band. Every waveform is the real
-// geometry of the real render (waves.ts); the renders were made by the studio's
-// own samplers. No autoplay: sound starts only from the first drop. Claims the
-// page-wide audio stage (bench:play). Honors reduced-motion (morph is instant,
-// playheads stay — they are information).
+// CH 2 · PLAY, DON'T FIDDLE — Signal Studio as the working system it is, told
+// in one frame with the real app's three views:
+//
+//   SIGNAL  — the instrument. The homepage toy grows into three engine towers;
+//             drop the found sound and lanes enter the groove ON THE BAR. Plus
+//             the topbar ARM cluster (line-in, demonstrated) and the MIDI voice
+//             beat: the studio plays a real synth over MIDI, samples the return,
+//             and maps it into a velocity-aware zone voice (demonstrated).
+//   STREAM  — the reveal: it was listening the whole time. The lanes already
+//             hold the four bars you just played. Drag across a lane and the
+//             selection snaps to bars and becomes a loop chip — the real
+//             product's grab gesture, with real audio (the slice plays).
+//   ARRANGE — Lego blocks into stems: grabbed chips drop onto an 8-bar grid,
+//             snap, and PLAY sequences the actual buffer slices on the same
+//             clock. The action row is the real page's: print stems · keep ·
+//             send to Ableton · engineer ↗ (the handoff into chapter 3).
+//
+// All waveforms are the real geometry of the real renders (waves.ts, made by
+// the studio's own samplers). One Web Audio clock; no autoplay; one page-wide
+// audio stage (bench:play). Reduced-motion: the morph and sequences are
+// instant, playheads stay (information).
 import { WAVE_LOOP, WAVE_DRUMS, WAVE_KEYS, WAVE_BASS, DRUM_STEPS } from "./waves";
 
 const CLIP = "/case-studies/the-console/studio";
 const TOWERS = [
-  { mode: "drums", label: "DRUMS", file: `${CLIP}/drums.mp3`, wave: WAVE_DRUMS, did: "the same loop, chopped into a kit" },
-  { mode: "keys",  label: "KEYS",  file: `${CLIP}/keys.mp3`,  wave: WAVE_KEYS,  did: "the same loop, repitched into chords" },
-  { mode: "bass",  label: "BASS",  file: `${CLIP}/bass.mp3`,  wave: WAVE_BASS,  did: "the same loop, sunk into a bassline" },
+  { mode: "drums", label: "DRUMS", wave: WAVE_DRUMS },
+  { mode: "keys",  label: "KEYS",  wave: WAVE_KEYS },
+  { mode: "bass",  label: "BASS",  wave: WAVE_BASS },
+];
+const LANES = [
+  { mode: "drums", label: "drums", wave: WAVE_DRUMS },
+  { mode: "keys",  label: "keys",  wave: WAVE_KEYS },
+  { mode: "bass",  label: "bass",  wave: WAVE_BASS },
 ];
 const CHORDS = ["C", "Am", "F", "G"];
 const KEYCAPS = ["a", "s", "d", "f", "g", "h", "j", "k"];
 const GEAR = ["Bass Station II", "MODX", "TR-8S"];
+const VOICE_NOTES = ["C1", "G1", "C2", "G2", "C3"];
 ---
 
-<section class="sx cs-bleed" aria-label="Signal Studio — arm the found sound and build the groove">
+<section class="sx cs-bleed" aria-label="Signal Studio — the working system">
   <p class="sx-origin">Built first as the instrument on this site's homepage — then it refused to stay a toy.</p>
 
   <div class="sx-frame" data-sx>
-    <!-- sidebar: hidden while a toy; slides out when the workspace grows -->
+    <!-- sidebar: the library -->
     <aside class="sx-side" aria-label="library">
       <span class="sx-side-h">library</span>
       <button type="button" class="sx-chip" draggable="true" aria-label="head to toe, the found loop — carry it to an engine">
@@ -41,66 +56,139 @@ const GEAR = ["Bass Station II", "MODX", "TR-8S"];
         <svg class="c-stop" viewBox="0 0 24 24" aria-hidden="true"><path d="M6.5 6.5 h11 v11 h-11 z"/></svg>
         <span>the loop · 0:04</span>
       </button>
+      <div class="sx-fresh" aria-hidden="true">
+        <span class="sx-fresh-h">fresh</span>
+        <span class="sx-fresh-row">walking note.m4a</span>
+        <span class="sx-fresh-row">rain outside.m4a</span>
+      </div>
       <span class="sx-side-hint" aria-hidden="true">drag it onto an engine</span>
       <a class="sx-side-eng" href="#engineer">engineer ↗</a>
     </aside>
 
     <div class="sx-main">
-      <!-- topbar: appears with the workspace -->
-      <div class="sx-top" aria-hidden="true">
-        <span class="sx-tab on">signal</span><span class="sx-tab">stream</span><span class="sx-tab">arrange</span>
+      <!-- topbar: live view tabs + the ARM cluster -->
+      <div class="sx-top">
+        <button type="button" class="sx-tab on" data-view-tab="signal">signal</button>
+        <button type="button" class="sx-tab" data-view-tab="stream">stream<i class="sx-nudge" aria-hidden="true"></i></button>
+        <button type="button" class="sx-tab" data-view-tab="arrange">arrange<i class="sx-nudge" aria-hidden="true"></i></button>
         <span class="sx-brand" data-role="brand">the homepage instrument</span>
+        <span class="sx-armwrap">
+          <button type="button" class="sx-arm" data-arm aria-pressed="false" aria-label="arm the line-in (demonstrated)">arm</button>
+          <span class="sx-lcd" data-lcd aria-hidden="true"></span>
+        </span>
       </div>
 
-      <div class="sx-towers">
-        {TOWERS.map((t) => (
-          <div class={`sx-tower tw-${t.mode}`} data-mode={t.mode}>
-            <button type="button" class="sx-node" data-node aria-label={`${t.label} — drop the loop here`}>
-              <span class="sx-node-empty" aria-hidden="true">drop</span>
-              <span class="sx-node-name" aria-hidden="true">head to toe</span>
-            </button>
-            <span class="sx-tower-name">{t.label}</span>
-            <span class="sx-screen">
-              <svg class="sx-wave" viewBox="0 0 72 40" preserveAspectRatio="none" aria-hidden="true"><path d={t.wave} /></svg>
-              <span class="sx-playhead" aria-hidden="true"></span>
-            </span>
-            {t.mode === "drums" && (
-              <span class="sx-mech sx-mech-drums" aria-hidden="true">{DRUM_STEPS.map((v) => <i style={`--e:${v}`}></i>)}</span>
-            )}
-            {t.mode === "keys" && (
-              <span class="sx-mech sx-mech-keys" aria-hidden="true">{CHORDS.map((c) => <i>{c}</i>)}</span>
-            )}
-            {t.mode === "bass" && (
-              <span class="sx-mech sx-mech-bass" aria-hidden="true"><i class="sx-sub"></i><em>sub</em></span>
-            )}
-            <button type="button" class="sx-mute" data-mute aria-label={`mute ${t.label}`} aria-pressed="false">mute</button>
-            {/* the toy face — keycaps live in the keys tower and retire when the studio grows */}
-            {t.mode === "keys" && (
-              <span class="sx-toyface" aria-hidden="true">
-                {KEYCAPS.map((k) => <i class="sx-keycap">{k}</i>)}
+      <!-- ═══ VIEW · SIGNAL ═══ -->
+      <div class="sx-view sx-view-signal on" data-view="signal">
+        <div class="sx-towers">
+          {TOWERS.map((t) => (
+            <div class={`sx-tower tw-${t.mode}`} data-mode={t.mode}>
+              <button type="button" class="sx-node" data-node aria-label={`${t.label} — drop the loop here`}>
+                <span class="sx-node-empty" aria-hidden="true">drop</span>
+                <span class="sx-node-name" aria-hidden="true">head to toe</span>
+              </button>
+              <span class="sx-tower-name">{t.label}</span>
+              <span class="sx-screen">
+                <svg class="sx-wave" viewBox="0 0 72 40" preserveAspectRatio="none" aria-hidden="true"><path d={t.wave} /></svg>
+                <span class="sx-playhead" aria-hidden="true"></span>
               </span>
-            )}
-          </div>
-        ))}
+              {t.mode === "drums" && (
+                <span class="sx-mech sx-mech-drums" aria-hidden="true">{DRUM_STEPS.map((v) => <i style={`--e:${v}`}></i>)}</span>
+              )}
+              {t.mode === "keys" && (
+                <span class="sx-mech sx-mech-keys" aria-hidden="true">{CHORDS.map((c) => <i>{c}</i>)}</span>
+              )}
+              {t.mode === "bass" && (
+                <span class="sx-mech sx-mech-bass" aria-hidden="true"><i class="sx-sub"></i><em>sub</em></span>
+              )}
+              <button type="button" class="sx-mute" data-mute aria-label={`mute ${t.label}`} aria-pressed="false">mute</button>
+              {t.mode === "bass" && (
+                <div class="sx-voicebay">
+                  <button type="button" class="sx-voice-btn" data-voice-btn>render a voice · MIDI</button>
+                  <span class="sx-voice-seq" data-voice-seq aria-hidden="true">
+                    <span class="sx-vnotes">{VOICE_NOTES.map((n) => <i>{n}</i>)}</span>
+                    <span class="sx-vstate" data-voice-state></span>
+                  </span>
+                  <span class="sx-voice-cart" data-voice-cart aria-hidden="true"><i></i>Bass Station II · 12 zones · velocity in</span>
+                </div>
+              )}
+              {t.mode === "keys" && (
+                <span class="sx-toyface" aria-hidden="true">
+                  {KEYCAPS.map((k) => <i class="sx-keycap">{k}</i>)}
+                </span>
+              )}
+            </div>
+          ))}
+        </div>
+        <div class="sx-transport">
+          <button type="button" class="sx-play" data-play aria-label="play or stop the groove" disabled>
+            <svg class="c-play" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5 v14 l11 -7 z"/></svg>
+            <svg class="c-stop" viewBox="0 0 24 24" aria-hidden="true"><path d="M6.5 6.5 h11 v11 h-11 z"/></svg>
+          </button>
+          <span class="sx-bar" data-role="bar">drop the loop to start</span>
+          <span class="sx-bpm">120 bpm</span>
+        </div>
       </div>
 
-      <!-- transport: one clock, everything enters on the bar -->
-      <div class="sx-transport">
-        <button type="button" class="sx-play" data-play aria-label="play or stop the groove" disabled>
-          <svg class="c-play" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5 v14 l11 -7 z"/></svg>
-          <svg class="c-stop" viewBox="0 0 24 24" aria-hidden="true"><path d="M6.5 6.5 h11 v11 h-11 z"/></svg>
-        </button>
-        <span class="sx-bar" data-role="bar">drop the loop to start</span>
-        <span class="sx-bpm">120 bpm</span>
+      <!-- ═══ VIEW · STREAM ═══ -->
+      <div class="sx-view sx-view-stream" data-view="stream">
+        <div class="sx-ruler" aria-hidden="true">
+          {[1, 2, 3, 4].map((b) => <span>{b}</span>)}
+        </div>
+        <div class="sx-lanes">
+          {LANES.map((l) => (
+            <div class={`sx-lane ln-${l.mode}`} data-lane={l.mode} aria-label={`${l.label} lane — drag across it to grab a loop`}>
+              <span class="sx-lane-tag">{l.label}</span>
+              <svg class="sx-lane-wave" viewBox="0 0 72 40" preserveAspectRatio="none" aria-hidden="true"><path d={l.wave} /></svg>
+              <span class="sx-lane-empty" aria-hidden="true">not played yet</span>
+              <span class="sx-lane-sel" aria-hidden="true"></span>
+              <span class="sx-lane-head" aria-hidden="true"></span>
+            </div>
+          ))}
+          <div class="sx-lane sx-lane-live" data-lane="live" aria-label="live input lane">
+            <span class="sx-lane-tag">live in<b>LIVE</b></span>
+            <span class="sx-lane-meter" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></span>
+            <span class="sx-lane-empty" aria-hidden="true">arm to listen</span>
+          </div>
+        </div>
+        <p class="sx-view-plate" data-stream-plate>always rolling — the jam is never lost. drag across a lane to grab a loop.</p>
+      </div>
+
+      <!-- ═══ VIEW · ARRANGE ═══ -->
+      <div class="sx-view sx-view-arrange" data-view="arrange">
+        <div class="sx-actions" aria-hidden="true">
+          <span class="sx-act">print stems</span>
+          <span class="sx-act">keep</span>
+          <span class="sx-act">send to Ableton</span>
+          <a class="sx-act sx-act-eng" href="#engineer" aria-hidden="false">engineer ↗</a>
+        </div>
+        <div class="sx-tray" data-tray>
+          <span class="sx-tray-hint" data-tray-hint>grab loops in the stream view — they land here</span>
+        </div>
+        <div class="sx-gridwrap">
+          <button type="button" class="sx-play sx-play-arr" data-arr-play aria-label="play the arrangement" disabled>
+            <svg class="c-play" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5 v14 l11 -7 z"/></svg>
+            <svg class="c-stop" viewBox="0 0 24 24" aria-hidden="true"><path d="M6.5 6.5 h11 v11 h-11 z"/></svg>
+          </button>
+          <div class="sx-grid" data-grid>
+            <div class="sx-grid-ruler" aria-hidden="true">{[1, 2, 3, 4, 5, 6, 7, 8].map((b) => <span>{b}</span>)}</div>
+            {["drums", "keys", "bass"].map((m) => (
+              <div class={`sx-grow gr-${m}`} data-grow={m}>
+                {[0, 1, 2, 3, 4, 5, 6, 7].map((c) => <span class="sx-cell" data-cell={String(c)}></span>)}
+              </div>
+            ))}
+            <span class="sx-grid-head" aria-hidden="true"></span>
+          </div>
+        </div>
+        <p class="sx-view-plate">blocks snap to bars — build the idea, then ship it.</p>
       </div>
     </div>
   </div>
 
   <p class="sx-plate" data-role="plate" aria-live="polite"></p>
 
-  <!-- the hardware truth, one line + the actual gear as voice cartridges -->
   <div class="sx-gear">
-    <p>The same engines sample my real synths into playable voices — the hardware feeds the same loop.</p>
+    <p>Any instrument with a MIDI port can become a voice — the studio plays it, samples the return, velocity and all.</p>
     <div class="sx-gear-row" aria-hidden="true">
       {GEAR.map((g) => (
         <span class="sx-cart"><i></i>{g}</span>
@@ -108,7 +196,6 @@ const GEAR = ["Bass Station II", "MODX", "TR-8S"];
     </div>
   </div>
 
-  <!-- the handoff: what the studio is FOR -->
   <p class="sx-handoff">
     Four bars I'd keep — an idea that now deserves finishing.
     <a href="#engineer">send it to the engineer ↓</a>
@@ -117,7 +204,10 @@ const GEAR = ["Bass Station II", "MODX", "TR-8S"];
   <audio class="sx-audio" data-mode="loop" preload="none" src={`${CLIP}/loop.mp3`}></audio>
 </section>
 
-<style>
+{/* is:global (namespaced sx-*): the loop chips and arrange blocks are created
+    at runtime with document.createElement, which never receives Astro's scope
+    attribute — scoped styles would silently skip them (learned the hard way) */}
+<style is:global>
   .sx { --v: #8b6bff; position: relative; padding: 8px 24px 24px; }
 
   .sx-origin {
@@ -126,7 +216,7 @@ const GEAR = ["Bass Station II", "MODX", "TR-8S"];
     font-size: clamp(13.5px, 1.6vw, 16px); line-height: 1.6; color: rgba(245, 241, 232, 0.66);
   }
 
-  /* ── the frame: one object, two lives ── */
+  /* ── the frame ── */
   .sx-frame {
     display: flex; gap: 0; max-width: 1060px; margin: 0 auto;
     border-radius: 16px; border: 1px solid rgba(0, 0, 0, 0.6); isolation: isolate; overflow: hidden;
@@ -175,30 +265,55 @@ const GEAR = ["Bass Station II", "MODX", "TR-8S"];
   .sx-cue.on .c-play { display: none; }
   .sx-cue.on .c-stop { display: block; }
   .sx-cue span { white-space: nowrap; }
+  .sx-fresh { display: flex; flex-direction: column; gap: 5px; padding-top: 4px; }
+  .sx-fresh-h { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 8.5px; letter-spacing: 0.24em; text-transform: uppercase; color: rgba(245, 241, 232, 0.3); }
+  .sx-fresh-row { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 9.5px; color: rgba(245, 241, 232, 0.4);
+    padding: 4px 7px; border: 1px solid rgba(245, 241, 232, 0.07); border-radius: 5px; }
   .sx-side-hint { margin-top: auto; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 9.5px; line-height: 1.5; color: rgba(245, 241, 232, 0.35); }
-  /* the real sidebar pins ENGINEER at the very bottom — so does the diorama */
   .sx-side-eng { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase;
     color: rgba(0, 255, 77, 0.55); text-decoration: none; padding-top: 10px; border-top: 1px solid rgba(245, 241, 232, 0.08); transition: color 0.18s; }
   .sx-side-eng:hover { color: var(--brand-green); }
 
-  /* main column */
+  /* main + topbar */
   .sx-main { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; }
   .sx-top {
-    display: flex; align-items: center; height: 40px; padding: 0 16px 0 0;
+    display: flex; align-items: center; height: 40px; padding: 0 12px 0 0;
     border-bottom: 1px solid rgba(245, 241, 232, 0.08);
-    transition: opacity 0.5s ease 0.35s;
   }
-  .sx-frame:not(.grown) .sx-top .sx-tab { opacity: 0; pointer-events: none; }
   .sx-tab {
-    padding: 0 16px; height: 100%; display: inline-flex; align-items: center;
+    position: relative;
+    padding: 0 16px; height: 100%; display: inline-flex; align-items: center; gap: 6px;
+    background: transparent; border: none; cursor: pointer;
     font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase;
     color: rgba(245, 241, 232, 0.4); border-right: 1px solid rgba(245, 241, 232, 0.06);
-    transition: opacity 0.5s ease 0.4s;
+    transition: color 0.18s;
   }
+  .sx-frame:not(.grown) .sx-tab { opacity: 0; pointer-events: none; }
+  .sx-tab:hover { color: rgba(245, 241, 232, 0.75); }
   .sx-tab.on { color: #f5f1e8; box-shadow: inset 0 -2px 0 var(--v); }
+  .sx-tab:focus-visible { outline: 2px solid var(--v); outline-offset: -3px; }
+  .sx-nudge { display: none; width: 6px; height: 6px; border-radius: 50%; background: var(--v); box-shadow: 0 0 8px var(--v); }
+  .sx-tab.nudge .sx-nudge { display: inline-block; animation: sx-nudgepulse 1.2s ease-in-out infinite; }
+  @keyframes sx-nudgepulse { 0%, 100% { opacity: 0.5; } 50% { opacity: 1; } }
   .sx-brand { margin-left: auto; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 9.5px; letter-spacing: 0.22em; text-transform: uppercase; color: rgba(245, 241, 232, 0.38); }
+  .sx-armwrap { display: inline-flex; align-items: center; gap: 8px; margin-left: 14px; transition: opacity 0.5s ease 0.35s; }
+  .sx-frame:not(.grown) .sx-armwrap { opacity: 0; pointer-events: none; }
+  .sx-arm {
+    padding: 4px 10px; border-radius: 5px; cursor: pointer;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 9px; letter-spacing: 0.18em; text-transform: uppercase;
+    color: rgba(245, 241, 232, 0.55); background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(245, 241, 232, 0.18);
+    transition: color 0.18s, border-color 0.18s, background 0.18s;
+  }
+  .sx-arm[aria-pressed="true"] { color: #ff5d63; border-color: rgba(255, 93, 99, 0.6); background: rgba(255, 93, 99, 0.08); }
+  .sx-lcd { min-width: 64px; height: 20px; border-radius: 4px; background: rgba(0, 0, 0, 0.45); box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.6);
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 8.5px; letter-spacing: 0.12em; text-transform: uppercase;
+    color: rgba(255, 93, 99, 0.85); display: inline-flex; align-items: center; justify-content: center; }
 
-  /* towers */
+  /* views */
+  .sx-view { display: none; flex-direction: column; }
+  .sx-view.on { display: flex; }
+
+  /* ═══ signal ═══ */
   .sx-towers { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; padding: 18px 18px 6px; }
   .sx-tower {
     --tw: var(--v);
@@ -206,14 +321,16 @@ const GEAR = ["Bass Station II", "MODX", "TR-8S"];
     border-radius: 12px; background: rgba(255, 255, 255, 0.015); border: 1px solid rgba(245, 241, 232, 0.12);
     transition: opacity 0.55s ease, transform 0.55s ease, border-color 0.25s ease, box-shadow 0.3s ease;
   }
-  /* the studio's own module colors — drums yellow, keys cyan, bass magenta */
+  /* the studio's own module colors */
   .tw-drums { --tw: #ffd24a; }
   .tw-keys { --tw: #17c4fc; }
   .tw-bass { --tw: #c05dff; }
-  /* toy state: only the keys tower shows, as the compact instrument */
+  .sx-lane.ln-drums { --tw: #ffd24a; }
+  .sx-lane.ln-keys { --tw: #17c4fc; }
+  .sx-lane.ln-bass { --tw: #c05dff; }
   .sx-frame:not(.grown) .tw-drums, .sx-frame:not(.grown) .tw-bass { opacity: 0; transform: scale(0.92); pointer-events: none; }
   .sx-frame:not(.grown) .sx-towers { grid-template-columns: 0fr 1fr 0fr; gap: 0; }
-  .sx-frame:not(.grown) .tw-keys .sx-node, .sx-frame:not(.grown) .sx-mute, .sx-frame:not(.grown) .sx-mech, .sx-frame:not(.grown) .sx-screen, .sx-frame:not(.grown) .sx-tower-name { opacity: 0; height: 0; padding: 0; margin: 0; overflow: hidden; border: none; }
+  .sx-frame:not(.grown) .tw-keys .sx-node, .sx-frame:not(.grown) .sx-mute, .sx-frame:not(.grown) .sx-mech, .sx-frame:not(.grown) .sx-screen, .sx-frame:not(.grown) .sx-tower-name, .sx-frame:not(.grown) .sx-voicebay { opacity: 0; height: 0; padding: 0; margin: 0; overflow: hidden; border: none; }
   .sx-frame:not(.grown) .sx-toyface { display: flex; }
 
   .sx-toyface { display: none; gap: 6px; justify-content: center; padding: 18px 4px 14px; }
@@ -282,6 +399,35 @@ const GEAR = ["Bass Station II", "MODX", "TR-8S"];
   .sx-mute:focus-visible { outline: 2px solid var(--tw); outline-offset: 2px; }
   .sx-tower.muted .sx-mute { color: var(--tw); border-color: var(--tw); }
 
+  /* the MIDI voice bay (bass tower) */
+  .sx-voicebay { display: flex; flex-direction: column; gap: 7px; padding-top: 2px; }
+  .sx-voice-btn {
+    align-self: center; padding: 4px 11px; border-radius: 999px; cursor: pointer;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 8.5px; letter-spacing: 0.1em; text-transform: uppercase;
+    color: rgba(245, 241, 232, 0.5); background: transparent; border: 1px dashed color-mix(in srgb, var(--tw) 45%, transparent);
+    transition: color 0.18s, border-color 0.18s;
+  }
+  .sx-voice-btn:hover { color: var(--tw); border-color: var(--tw); }
+  .sx-voice-btn:focus-visible { outline: 2px solid var(--tw); outline-offset: 2px; }
+  .sx-voice-seq { display: none; flex-direction: column; gap: 5px; }
+  .sx-tower[data-voicing="true"] .sx-voice-seq { display: flex; }
+  .sx-tower[data-voicing="true"] .sx-voice-btn { display: none; }
+  .sx-vnotes { display: flex; gap: 4px; justify-content: center; }
+  .sx-vnotes i {
+    padding: 2px 6px; border-radius: 3px; font-style: normal;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 8px; color: rgba(245, 241, 232, 0.3);
+    border: 1px solid rgba(245, 241, 232, 0.12); transition: color 0.12s, border-color 0.12s, box-shadow 0.12s;
+  }
+  .sx-vnotes i.hit { color: var(--tw); border-color: var(--tw); box-shadow: 0 0 8px color-mix(in srgb, var(--tw) 60%, transparent); }
+  .sx-vstate { text-align: center; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 8.5px; letter-spacing: 0.08em; color: rgba(245, 241, 232, 0.5); min-height: 1.3em; }
+  .sx-voice-cart { display: none; align-items: center; gap: 7px; align-self: center; padding: 5px 10px; border-radius: 7px;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 8.5px; letter-spacing: 0.05em; color: rgba(245, 241, 232, 0.8);
+    background: linear-gradient(160deg, #1d1a26, #110f17); border: 1px solid color-mix(in srgb, var(--tw) 45%, transparent); }
+  .sx-voice-cart i { width: 6px; height: 6px; border-radius: 2px; background: var(--tw); box-shadow: 0 0 7px var(--tw); }
+  .sx-tower[data-voiced="true"] .sx-voice-cart { display: inline-flex; }
+  .sx-tower[data-voiced="true"] .sx-voice-seq { display: none; }
+  .sx-tower[data-voiced="true"] .sx-voice-btn { display: none; }
+
   /* transport */
   .sx-transport {
     display: flex; align-items: center; gap: 14px; padding: 10px 18px 16px;
@@ -298,15 +444,104 @@ const GEAR = ["Bass Station II", "MODX", "TR-8S"];
   .sx-play:focus-visible { outline: 2px solid var(--v); outline-offset: 3px; }
   .sx-play svg { width: 15px; height: 15px; fill: currentColor; }
   .sx-play .c-stop { display: none; }
-  .sx.playing .sx-play .c-play { display: none; }
-  .sx.playing .sx-play .c-stop { display: block; }
+  .sx.playing .sx-play:not(.sx-play-arr) .c-play { display: none; }
+  .sx.playing .sx-play:not(.sx-play-arr) .c-stop { display: block; }
+  .sx.arrplaying .sx-play-arr .c-play { display: none; }
+  .sx.arrplaying .sx-play-arr .c-stop { display: block; }
   .sx-bar { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 11px; letter-spacing: 0.05em; color: rgba(245, 241, 232, 0.55); font-variant-numeric: tabular-nums; }
   .sx-bpm { margin-left: auto; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase; color: rgba(245, 241, 232, 0.35); }
+
+  /* ═══ stream ═══ */
+  .sx-ruler { display: grid; grid-template-columns: repeat(4, 1fr); padding: 10px 18px 4px 64px;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 9px; color: rgba(245, 241, 232, 0.35); }
+  .sx-ruler span { border-left: 1px solid rgba(245, 241, 232, 0.14); padding-left: 5px; }
+  .sx-lanes { display: flex; flex-direction: column; gap: 8px; padding: 4px 18px 8px; }
+  .sx-lane {
+    --tw: var(--v);
+    position: relative; height: 52px; border-radius: 8px; overflow: hidden;
+    background: rgba(0, 0, 0, 0.28); border: 1px solid rgba(245, 241, 232, 0.08);
+    cursor: crosshair; touch-action: none;
+  }
+  .sx-lane-tag { position: absolute; left: 8px; top: 6px; z-index: 2; display: inline-flex; align-items: center; gap: 6px;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 9px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--tw); }
+  .sx-lane-tag b { font-size: 7.5px; letter-spacing: 0.14em; padding: 1px 5px; border-radius: 3px; color: #ff5d63; border: 1px solid rgba(255, 93, 99, 0.5); }
+  .sx-lane-wave { position: absolute; inset: 6px 4px; width: calc(100% - 8px); height: 40px; fill: currentColor; color: var(--tw); opacity: 0; transition: opacity 0.4s; margin-left: 56px; width: calc(100% - 64px); }
+  .sx-lane.filled .sx-lane-wave { opacity: 0.8; }
+  .sx-lane-empty { position: absolute; inset: 0; display: grid; place-items: center;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 9px; letter-spacing: 0.22em; text-transform: uppercase; color: rgba(245, 241, 232, 0.22); }
+  .sx-lane.filled .sx-lane-empty { display: none; }
+  .sx-lane-sel { position: absolute; top: 2px; bottom: 2px; left: 0; width: 0; border-radius: 5px;
+    background: color-mix(in srgb, var(--tw) 18%, transparent); border: 1px solid var(--tw); opacity: 0; pointer-events: none; }
+  .sx-lane-sel.on { opacity: 1; }
+  .sx-lane-head { position: absolute; top: 2px; bottom: 2px; left: 56px; width: 1.5px; background: #f5f1e8; box-shadow: 0 0 6px rgba(245, 241, 232, 0.8); opacity: 0; pointer-events: none; }
+  .sx.playing .sx-lane.filled .sx-lane-head { opacity: 0.85; }
+  .sx-lane-live { --tw: #ff5d63; cursor: default; }
+  .sx-lane-live .sx-lane-empty { color: rgba(255, 93, 99, 0.35); }
+  .sx-lane-meter { position: absolute; inset: 10px 12px 10px 76px; display: flex; align-items: center; gap: 5px; opacity: 0; transition: opacity 0.4s; }
+  .sx-lane-live.armed .sx-lane-meter { opacity: 1; }
+  .sx-lane-live.armed .sx-lane-empty { display: none; }
+  .sx-lane-meter i { flex: 1; height: 6px; border-radius: 3px; background: rgba(255, 93, 99, 0.35); animation: sx-breathe 1.6s ease-in-out infinite; }
+  .sx-lane-meter i:nth-child(2n) { animation-delay: 0.35s; }
+  .sx-lane-meter i:nth-child(3n) { animation-delay: 0.7s; }
+  @keyframes sx-breathe { 0%, 100% { transform: scaleY(0.5); opacity: 0.45; } 50% { transform: scaleY(1.4); opacity: 0.95; } }
+  .sx-view-plate { margin: 6px 18px 16px; text-align: center;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 10.5px; letter-spacing: 0.05em; color: rgba(245, 241, 232, 0.4); }
+
+  /* ═══ arrange ═══ */
+  .sx-actions { display: flex; gap: 8px; padding: 12px 18px 2px; flex-wrap: wrap; }
+  .sx-act { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 9px; letter-spacing: 0.12em; text-transform: uppercase;
+    color: rgba(245, 241, 232, 0.4); border: 1px solid rgba(245, 241, 232, 0.12); border-radius: 5px; padding: 5px 10px; text-decoration: none; }
+  .sx-act-eng { color: rgba(0, 255, 77, 0.65); border-color: rgba(0, 255, 77, 0.3); transition: color 0.18s, border-color 0.18s; }
+  .sx-act-eng:hover { color: var(--brand-green); border-color: var(--brand-green); }
+  .sx-tray { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; min-height: 44px; margin: 10px 18px 0; padding: 8px 10px;
+    border: 1px dashed rgba(245, 241, 232, 0.16); border-radius: 8px; }
+  .sx-tray-hint { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 9.5px; letter-spacing: 0.06em; color: rgba(245, 241, 232, 0.3); }
+  .sx-loopchip {
+    --tw: var(--v);
+    display: inline-flex; align-items: center; gap: 7px; padding: 6px 10px; border-radius: 7px; cursor: grab;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 9.5px; color: var(--tw);
+    background: color-mix(in srgb, var(--tw) 10%, transparent); border: 1px solid color-mix(in srgb, var(--tw) 55%, transparent);
+    transition: transform 0.12s, box-shadow 0.2s;
+  }
+  .sx-loopchip:hover { transform: translateY(-1px); box-shadow: 0 0 14px -6px var(--tw); }
+  .sx-loopchip.carry { transform: translateY(-1px) scale(1.04); box-shadow: 0 0 18px -4px var(--tw); }
+  .sx-loopchip i { width: 6px; height: 6px; border-radius: 2px; background: var(--tw); }
+  .sx-loopchip[data-lc-mode="drums"] { --tw: #ffd24a; }
+  .sx-loopchip[data-lc-mode="keys"] { --tw: #17c4fc; }
+  .sx-loopchip[data-lc-mode="bass"] { --tw: #c05dff; }
+
+  .sx-gridwrap { display: flex; gap: 12px; align-items: flex-start; margin: 12px 18px 0; }
+  .sx-play-arr { flex: 0 0 auto; margin-top: 22px; }
+  .sx-grid { position: relative; flex: 1; min-width: 0; margin-left: 46px; }
+  .sx-grid-ruler { display: grid; grid-template-columns: repeat(8, 1fr);
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 8.5px; color: rgba(245, 241, 232, 0.32); padding-bottom: 3px; }
+  .sx-grid-ruler span { border-left: 1px solid rgba(245, 241, 232, 0.12); padding-left: 4px; }
+  .sx-grow { --tw: var(--v); display: grid; grid-template-columns: repeat(8, 1fr); height: 38px; margin-bottom: 6px; position: relative; }
+  .sx-grow.gr-drums { --tw: #ffd24a; }
+  .sx-grow.gr-keys { --tw: #17c4fc; }
+  .sx-grow.gr-bass { --tw: #c05dff; }
+  .sx-grow::before { content: attr(data-grow); position: absolute; left: -4px; top: 50%; transform: translate(-100%, -50%);
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 8.5px; letter-spacing: 0.14em; text-transform: uppercase;
+    color: color-mix(in srgb, var(--tw) 75%, transparent); }
+  .sx-cell { border: 1px dashed rgba(245, 241, 232, 0.09); border-right: none; background: rgba(0, 0, 0, 0.18); cursor: pointer; transition: background 0.15s, border-color 0.15s; }
+  .sx-cell:last-child { border-right: 1px dashed rgba(245, 241, 232, 0.09); }
+  /* while a chip is carried, only ITS row opens up */
+  .sx[data-carrymode="drums"] .gr-drums .sx-cell,
+  .sx[data-carrymode="keys"] .gr-keys .sx-cell,
+  .sx[data-carrymode="bass"] .gr-bass .sx-cell { border-color: color-mix(in srgb, var(--tw) 60%, transparent); background: color-mix(in srgb, var(--tw) 5%, transparent); }
+  .sx-cell.over { background: color-mix(in srgb, var(--tw) 10%, transparent); border-color: var(--tw); }
+  .sx-block { position: absolute; top: 2px; bottom: 2px; border-radius: 5px; cursor: pointer;
+    background: color-mix(in srgb, var(--tw) 22%, transparent); border: 1px solid var(--tw);
+    display: flex; align-items: center; padding: 0 7px; overflow: hidden;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 8.5px; color: var(--tw); white-space: nowrap; }
+  .sx-block:hover { background: color-mix(in srgb, var(--tw) 32%, transparent); }
+  .sx-grid-head { position: absolute; top: 14px; bottom: 0; left: 0; width: 1.5px; background: #f5f1e8; box-shadow: 0 0 6px rgba(245, 241, 232, 0.8); opacity: 0; pointer-events: none; }
+  .sx.arrplaying .sx-grid-head { opacity: 0.9; }
 
   .sx-plate { text-align: center; margin: 18px auto 0; font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
     font-size: 12px; letter-spacing: 0.06em; color: rgba(245, 241, 232, 0.42); min-height: 1.4em; }
 
-  /* gear cartridges */
+  /* gear + handoff */
   .sx-gear { max-width: 640px; margin: 44px auto 0; text-align: center; }
   .sx-gear p { margin: 0 0 14px; font-family: "Space Grotesk Variable", "Space Grotesk", ui-sans-serif, system-ui, sans-serif;
     font-size: clamp(14px, 1.6vw, 17px); line-height: 1.55; color: rgba(245, 241, 232, 0.6); }
@@ -318,7 +553,6 @@ const GEAR = ["Bass Station II", "MODX", "TR-8S"];
   }
   .sx-cart i { width: 7px; height: 7px; border-radius: 2px; background: var(--v); box-shadow: 0 0 7px rgba(139, 107, 255, 0.7); }
 
-  /* handoff */
   .sx-handoff {
     max-width: 46ch; margin: 44px auto 0; text-align: center;
     font-family: "Space Grotesk Variable", "Space Grotesk", ui-sans-serif, system-ui, sans-serif;
@@ -334,20 +568,27 @@ const GEAR = ["Bass Station II", "MODX", "TR-8S"];
   @media (max-width: 760px) {
     .sx { padding: 8px 14px 20px; }
     .sx-frame, .sx-frame:not(.grown) { max-width: 100%; flex-direction: column; }
-    .sx-side { flex: none; flex-direction: row; align-items: center; border-right: none; border-bottom: 1px solid rgba(245, 241, 232, 0.08); padding: 12px 14px; }
-    .sx-frame:not(.grown) .sx-side { margin-left: 0; margin-top: -92px; opacity: 0; }
+    .sx-side { flex: none; flex-direction: row; align-items: center; flex-wrap: wrap; border-right: none; border-bottom: 1px solid rgba(245, 241, 232, 0.08); padding: 12px 14px; }
+    .sx-frame:not(.grown) .sx-side { margin-left: 0; margin-top: -104px; opacity: 0; }
     .sx-chip { flex-direction: row; gap: 10px; padding: 8px 12px; }
     .sx-chip-wave { width: 64px; height: 20px; }
-    .sx-side-hint { display: none; }
-    .sx-side-h { display: none; }
+    .sx-side-hint, .sx-side-h, .sx-fresh { display: none; }
+    .sx-side-eng { border-top: none; padding-top: 0; margin-left: auto; }
     .sx-towers { gap: 8px; padding: 12px 12px 4px; }
     .sx-tower { padding: 9px 8px 10px; }
     .sx-keycap { width: 26px; height: 26px; font-size: 10px; }
     .sx-mech-keys i { font-size: 7px; }
+    .sx-brand { display: none; }
+    .sx-tab { padding: 0 11px; }
+    .sx-lane-wave { margin-left: 46px; width: calc(100% - 54px); }
+    .sx-ruler { padding-left: 54px; }
+    .sx-gridwrap { flex-direction: column; }
+    .sx-play-arr { margin-top: 0; }
   }
   @media (prefers-reduced-motion: reduce) {
-    .sx-frame, .sx-side, .sx-tower, .sx-tab, .sx-transport, .sx-top { transition: none; }
-    .sx-node.pending .sx-node-name { animation: none; }
+    .sx-frame, .sx-side, .sx-tower, .sx-tab, .sx-transport, .sx-top, .sx-armwrap { transition: none; }
+    .sx-node.pending .sx-node-name, .sx-tab.nudge .sx-nudge, .sx-lane-meter i { animation: none; }
+    .sx-lane-meter i { transform: none; opacity: 0.8; }
   }
 </style>
 
@@ -362,6 +603,16 @@ const GEAR = ["Bass Station II", "MODX", "TR-8S"];
     const playBtn = root.querySelector("[data-play]");
     const barEl = root.querySelector('[data-role="bar"]');
     const plate = root.querySelector('[data-role="plate"]');
+    const viewTabs = Array.from(root.querySelectorAll("[data-view-tab]"));
+    const views = Array.from(root.querySelectorAll("[data-view]"));
+    const armBtn = root.querySelector("[data-arm]");
+    const lcd = root.querySelector("[data-lcd]");
+    const liveLane = root.querySelector(".sx-lane-live");
+    const tray = root.querySelector("[data-tray]");
+    const trayHint = root.querySelector("[data-tray-hint]");
+    const arrPlayBtn = root.querySelector("[data-arr-play]");
+    const gridHead = root.querySelector(".sx-grid-head");
+
     const DID = {
       drums: "drums — the same loop, chopped into a kit",
       keys: "keys — the same loop, repitched into chords",
@@ -372,14 +623,12 @@ const GEAR = ["Bass Station II", "MODX", "TR-8S"];
       keys: "/case-studies/the-console/studio/keys.mp3",
       bass: "/case-studies/the-console/studio/bass.mp3",
     };
-    // per-lane gains, measured so the sum stays clean: drums anchor at -21.1
-    // LUFS, bass -2 LU under, keys -3 LU under; summed = -18.6 LUFS, -1.3 dBTP
+    // measured lane gains: drums anchor, sum = -18.6 LUFS / -1.3 dBTP
     const GAINS = { drums: 0.8035, keys: 0.4842, bass: 0.4842 };
-    const LOOP = 8;      // seconds — all three renders are exactly 8.000s, verified
-    const BAR = 2;       // 120bpm, 4/4 → 2s per bar, 4 bars per loop
-
-    // ── the grow moment: the toy becomes the workspace, once ──
+    const LOOP = 8, BAR = 2;
     const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+    // ── grow moment ──
     const grow = () => {
       if (frame.classList.contains("grown")) return;
       frame.classList.add("grown");
@@ -393,13 +642,13 @@ const GEAR = ["Bass Station II", "MODX", "TR-8S"];
       io.observe(frame);
     } else grow();
 
-    // ── one clock, three looping lanes ──
-    let ctx = null, t0 = 0, raf = 0;
-    const lanes = {};      // mode → {gain, source, buffer, live, muted, pendingAt}
-    let started = false;
+    // ── audio core: one clock ──
+    let ctx = null, t0 = 0, raf = 0, started = false;
+    const lanes = {};
+    let grooveSeconds = 0;   // cumulative, for the stream-tab nudge
+    let lastTickAt = 0;
 
     const claimStage = () => document.dispatchEvent(new CustomEvent("bench:play", { detail: { source: root } }));
-
     async function ensureCtx() {
       if (!ctx) ctx = new (window.AudioContext || window.webkitAudioContext)();
       if (ctx.state === "suspended") await ctx.resume();
@@ -419,7 +668,6 @@ const GEAR = ["Bass Station II", "MODX", "TR-8S"];
       const s = ctx.createBufferSource();
       s.buffer = l.buffer; s.loop = true; s.loopStart = 0; s.loopEnd = LOOP;
       s.connect(l.gain);
-      // start at the grid-consistent offset so every lane shares one clock
       const offset = ((when - t0) % LOOP + LOOP) % LOOP;
       s.start(when, offset);
       l.source = s;
@@ -429,25 +677,25 @@ const GEAR = ["Bass Station II", "MODX", "TR-8S"];
       Object.values(lanes).forEach((l) => startSource(l, t0));
       started = true;
       root.classList.add("playing");
+      lastTickAt = 0;
       tick();
     }
     const nextBar = () => t0 + Math.ceil((ctx.currentTime - t0 + 0.02) / BAR) * BAR;
 
     async function arm(mode) {
       await ensureCtx();
+      stopArrange();
       claimStage();
       const l = await loadLane(mode);
       const tower = towers.find((t) => t.dataset.mode === mode);
       const node = tower.querySelector("[data-node]");
       node.classList.add("armed");
       if (!started) {
-        // the first drop starts the clock — this lane enters immediately
         startClock();
         l.gain.gain.setValueAtTime(GAINS[mode], t0);
         l.live = true;
         tower.classList.add("live");
       } else {
-        // everyone after enters ON THE BAR — the DAW feel
         if (!l.source) startSource(l, ctx.currentTime + 0.03);
         const at = nextBar();
         l.pendingAt = at;
@@ -455,12 +703,15 @@ const GEAR = ["Bass Station II", "MODX", "TR-8S"];
         l.gain.gain.setValueAtTime(GAINS[mode], at);
         l.live = true;
       }
+      // the stream was listening — its lane now holds what you played
+      const streamLane = root.querySelector(`.sx-lane[data-lane="${mode}"]`);
+      if (streamLane) streamLane.classList.add("filled");
       if (plate) plate.textContent = DID[mode] || "";
       if (playBtn) playBtn.disabled = false;
       setCarry(false);
     }
 
-    function stopAllLanes() {
+    function stopGroove() {
       Object.values(lanes).forEach((l) => { if (l.source) { try { l.source.stop(); } catch (e) {} l.source = null; } });
       started = false;
       root.classList.remove("playing");
@@ -472,12 +723,14 @@ const GEAR = ["Bass Station II", "MODX", "TR-8S"];
       });
       if (barEl) barEl.textContent = "stopped — press play";
     }
-    function resume() {
+    function resumeGroove() {
       claimStage();
+      stopArrange();
       t0 = ctx.currentTime + 0.06;
-      Object.values(lanes).forEach((l) => { if (l.live) startSource(l); });
+      Object.values(lanes).forEach((l) => { if (l.live) startSource(l, t0); });
       started = true;
       root.classList.add("playing");
+      lastTickAt = 0;
       tick();
     }
 
@@ -485,7 +738,10 @@ const GEAR = ["Bass Station II", "MODX", "TR-8S"];
       if (!started || !ctx) return;
       const now = ctx.currentTime;
       if (now >= t0) {
-        const pos = ((now - t0) % LOOP) / LOOP;             // 0..1 through the 4 bars
+        if (lastTickAt) grooveSeconds += now - lastTickAt;
+        lastTickAt = now;
+        if (grooveSeconds > 8) nudgeTab("stream");
+        const pos = ((now - t0) % LOOP) / LOOP;
         const bar = Math.floor(((now - t0) % LOOP) / BAR) + 1;
         if (barEl) barEl.textContent = `bar ${bar} · 4`;
         towers.forEach((t) => {
@@ -507,12 +763,226 @@ const GEAR = ["Bass Station II", "MODX", "TR-8S"];
             const sub = t.querySelector(".sx-sub");
             if (sub) sub.style.setProperty("--p", l.muted ? "0" : pos.toFixed(3));
           }
+          // stream lanes share the clock — the playhead sweeps there too
+          const sl = root.querySelector(`.sx-lane[data-lane="${mode}"] .sx-lane-head`);
+          if (sl) {
+            const inset = sl.parentElement.getBoundingClientRect().width > 0 ? 56 : 56;
+            sl.style.left = `calc(${inset}px + (100% - ${inset + 8}px) * ${pos.toFixed(3)})`;
+          }
         });
       }
       raf = requestAnimationFrame(tick);
     }
 
-    // ── carry / drop ──
+    // ── views ──
+    function setView(v) {
+      views.forEach((el) => el.classList.toggle("on", el.dataset.view === v));
+      viewTabs.forEach((t) => {
+        const on = t.dataset.viewTab === v;
+        t.classList.toggle("on", on);
+        if (on) t.classList.remove("nudge");
+      });
+    }
+    const visited = new Set(["signal"]);
+    viewTabs.forEach((t) => t.addEventListener("click", () => { visited.add(t.dataset.viewTab); setView(t.dataset.viewTab); }));
+    function nudgeTab(v) {
+      if (visited.has(v)) return;
+      const t = viewTabs.find((x) => x.dataset.viewTab === v);
+      if (t && !t.classList.contains("on")) t.classList.add("nudge");
+    }
+
+    // ── ARM / live-in (demonstrated) ──
+    if (armBtn) armBtn.addEventListener("click", () => {
+      const on = armBtn.getAttribute("aria-pressed") !== "true";
+      armBtn.setAttribute("aria-pressed", String(on));
+      if (lcd) lcd.textContent = on ? "listening" : "";
+      if (liveLane) liveLane.classList.toggle("armed", on);
+    });
+
+    // ── STREAM · drag-to-grab ──
+    const grabbed = [];
+    root.querySelectorAll(".sx-lane[data-lane]:not(.sx-lane-live)").forEach((lane) => {
+      const mode = lane.dataset.lane;
+      const sel = lane.querySelector(".sx-lane-sel");
+      let dragging = false, x0 = 0;
+      const waveLeft = () => 56;
+      const waveWidth = () => lane.getBoundingClientRect().width - waveLeft() - 8;
+      const toBar = (clientX) => {
+        const r = lane.getBoundingClientRect();
+        const frac = Math.min(1, Math.max(0, (clientX - r.left - waveLeft()) / waveWidth()));
+        return Math.min(3, Math.floor(frac * 4));
+      };
+      lane.addEventListener("pointerdown", (e) => {
+        if (!lane.classList.contains("filled")) return;
+        dragging = true; x0 = e.clientX;
+        lane.setPointerCapture(e.pointerId);
+        sel.classList.add("on");
+        paintSel(e.clientX);
+      });
+      const paintSel = (x1) => {
+        const a = Math.min(toBar(x0), toBar(x1));
+        const b = Math.max(toBar(x0), toBar(x1));
+        const left = waveLeft() + (a / 4) * waveWidth();
+        const width = ((b - a + 1) / 4) * waveWidth();
+        sel.style.left = left + "px";
+        sel.style.width = width + "px";
+        sel.dataset.a = String(a);
+        sel.dataset.b = String(b);
+      };
+      lane.addEventListener("pointermove", (e) => { if (dragging) paintSel(e.clientX); });
+      lane.addEventListener("pointerup", () => {
+        if (!dragging) return;
+        dragging = false;
+        const a = Number(sel.dataset.a || 0), b = Number(sel.dataset.b || 0);
+        sel.classList.remove("on");
+        makeChip(mode, a, b - a + 1);
+      });
+      lane.addEventListener("pointercancel", () => { dragging = false; sel.classList.remove("on"); });
+    });
+
+    function makeChip(mode, startBar, lenBars) {
+      if (grabbed.length >= 6) return;
+      const id = `${mode}-${startBar}-${lenBars}-${grabbed.length}`;
+      grabbed.push({ id, mode, startBar, lenBars });
+      const el = document.createElement("button");
+      el.type = "button";
+      el.className = "sx-loopchip";
+      el.dataset.lcMode = mode;
+      el.dataset.lcId = id;
+      el.innerHTML = `<i></i>${mode} · bar${lenBars > 1 ? "s" : ""} ${startBar + 1}${lenBars > 1 ? "–" + (startBar + lenBars) : ""}`;
+      el.setAttribute("aria-label", `grabbed loop: ${mode}, ${lenBars} bar${lenBars > 1 ? "s" : ""} — carry it to the arrange grid`);
+      if (trayHint) trayHint.textContent = "drop them on the grid →";
+      tray.appendChild(el);
+      nudgeTab("arrange");
+      // grab feedback: play the slice once (only if the groove is quiet)
+      if (!started && ctx && lanes[mode]) {
+        claimStage();
+        const l = lanes[mode];
+        const s = ctx.createBufferSource();
+        s.buffer = l.buffer;
+        s.connect(l.gain);
+        l.gain.gain.setValueAtTime(GAINS[mode], ctx.currentTime);
+        s.start(ctx.currentTime + 0.02, startBar * BAR, lenBars * BAR);
+      }
+      // chip carry (tap to pick up, tap a cell to place)
+      el.addEventListener("click", () => {
+        const on = !el.classList.contains("carry");
+        tray.querySelectorAll(".sx-loopchip").forEach((c) => c.classList.remove("carry"));
+        el.classList.toggle("carry", on);
+        root.classList.toggle("chipcarry", on);
+        if (on) root.dataset.carrymode = mode; else delete root.dataset.carrymode;
+        carriedChip = on ? { id, mode, startBar, lenBars, el } : null;
+      });
+    }
+
+    // ── ARRANGE · place blocks, sequence them ──
+    let carriedChip = null;
+    const placed = [];  // {mode, srcBar, lenBars, destBar, el}
+    root.querySelectorAll("[data-grow]").forEach((row) => {
+      const rowMode = row.dataset.grow;
+      row.querySelectorAll("[data-cell]").forEach((cell) => {
+        cell.addEventListener("pointerenter", () => { if (carriedChip && carriedChip.mode === rowMode) cell.classList.add("over"); });
+        cell.addEventListener("pointerleave", () => cell.classList.remove("over"));
+        cell.addEventListener("click", () => {
+          if (!carriedChip || carriedChip.mode !== rowMode) return;
+          const destBar = Number(cell.dataset.cell);
+          const len = Math.min(carriedChip.lenBars, 8 - destBar);
+          placeBlock(row, carriedChip.mode, carriedChip.startBar, len, destBar);
+          carriedChip.el.classList.remove("carry");
+          root.classList.remove("chipcarry");
+          delete root.dataset.carrymode;
+          carriedChip = null;
+          cell.classList.remove("over");
+        });
+      });
+    });
+    function placeBlock(row, mode, srcBar, lenBars, destBar) {
+      const el = document.createElement("span");
+      el.className = "sx-block";
+      el.style.left = `calc(${(destBar / 8) * 100}% + 1px)`;
+      el.style.width = `calc(${(lenBars / 8) * 100}% - 2px)`;
+      el.textContent = mode;
+      el.title = "remove";
+      const rec = { mode, srcBar, lenBars, destBar, el };
+      placed.push(rec);
+      el.addEventListener("click", () => {
+        const i = placed.indexOf(rec);
+        if (i >= 0) placed.splice(i, 1);
+        el.remove();
+        if (arrPlayBtn) arrPlayBtn.disabled = placed.length === 0;
+      });
+      row.appendChild(el);
+      if (arrPlayBtn) arrPlayBtn.disabled = false;
+    }
+
+    let arrSources = [], arrRaf = 0, arrT0 = 0, arrPlaying = false, arrStopTimer = 0;
+    async function playArrange() {
+      await ensureCtx();
+      stopGroove();
+      claimStage();
+      // make sure every placed mode is decoded
+      for (const rec of placed) await loadLane(rec.mode);
+      arrT0 = ctx.currentTime + 0.08;
+      arrSources = placed.map((rec) => {
+        const l = lanes[rec.mode];
+        const s = ctx.createBufferSource();
+        s.buffer = l.buffer;
+        const g = ctx.createGain();
+        g.gain.value = GAINS[rec.mode];
+        s.connect(g); g.connect(ctx.destination);
+        s.start(arrT0 + rec.destBar * BAR, rec.srcBar * BAR, rec.lenBars * BAR);
+        return s;
+      });
+      arrPlaying = true;
+      root.classList.add("arrplaying");
+      const total = 8 * BAR;
+      const sweep = () => {
+        if (!arrPlaying) return;
+        const p = Math.min(1, (ctx.currentTime - arrT0) / total);
+        if (gridHead && p >= 0) gridHead.style.left = (p * 100).toFixed(2) + "%";
+        arrRaf = requestAnimationFrame(sweep);
+      };
+      arrRaf = requestAnimationFrame(sweep);
+      arrStopTimer = window.setTimeout(stopArrange, (total + 0.3) * 1000);
+    }
+    function stopArrange() {
+      if (!arrPlaying) return;
+      arrPlaying = false;
+      window.clearTimeout(arrStopTimer);
+      arrSources.forEach((s) => { try { s.stop(); } catch (e) {} });
+      arrSources = [];
+      cancelAnimationFrame(arrRaf);
+      root.classList.remove("arrplaying");
+      if (gridHead) gridHead.style.left = "0%";
+    }
+    if (arrPlayBtn) arrPlayBtn.addEventListener("click", () => { arrPlaying ? stopArrange() : playArrange(); });
+
+    // ── the MIDI voice beat (demonstrated) ──
+    towers.filter((t) => t.dataset.mode === "bass").forEach((tower) => {
+      const btn = tower.querySelector("[data-voice-btn]");
+      const stateEl = tower.querySelector("[data-voice-state]");
+      const notes = Array.from(tower.querySelectorAll(".sx-vnotes i"));
+      if (!btn) return;
+      btn.addEventListener("click", () => {
+        if (reduce) {
+          tower.dataset.voiced = "true";
+          if (plate) plate.textContent = "the studio played the synth over MIDI and mapped the return across the keys";
+          return;
+        }
+        tower.dataset.voicing = "true";
+        if (stateEl) stateEl.textContent = "playing the synth over MIDI…";
+        notes.forEach((n, i) => setTimeout(() => n.classList.add("hit"), 300 + i * 340));
+        setTimeout(() => { if (stateEl) stateEl.textContent = "sampling the return…"; }, 2100);
+        setTimeout(() => { if (stateEl) stateEl.textContent = "onset-trim → 12 zones"; }, 3100);
+        setTimeout(() => {
+          tower.dataset.voicing = "false";
+          tower.dataset.voiced = "true";
+          if (plate) plate.textContent = "the studio played the synth over MIDI and mapped the return across the keys — velocity and all";
+        }, 4100);
+      });
+    });
+
+    // ── carry / drop (the found sound → towers) ──
     let carrying = false;
     function setCarry(on) { carrying = on; if (chip) chip.classList.toggle("carry", on); root.classList.toggle("carrying", on); }
     if (chip) {
@@ -543,16 +1013,17 @@ const GEAR = ["Bass Station II", "MODX", "TR-8S"];
 
     if (playBtn) playBtn.addEventListener("click", async () => {
       await ensureCtx();
-      if (started) stopAllLanes();
-      else resume();
+      if (started) stopGroove();
+      else resumeGroove();
     });
 
-    // ── the sidebar cue: hear the untouched loop ──
+    // ── the sidebar cue ──
     if (cueBtn && cueAudio) {
       cueAudio.volume = 0.9;
       cueBtn.addEventListener("click", () => {
         if (!cueAudio.paused) { cueAudio.pause(); cueAudio.currentTime = 0; return; }
-        if (started) stopAllLanes();
+        if (started) stopGroove();
+        stopArrange();
         claimStage();
         cueAudio.currentTime = 0;
         const p = cueAudio.play(); if (p && p.catch) p.catch(() => {});
@@ -562,16 +1033,16 @@ const GEAR = ["Bass Station II", "MODX", "TR-8S"];
       cueAudio.addEventListener("ended", () => cueBtn.classList.remove("on"));
     }
 
-    // one audio stage page-wide: yield to anyone else
+    // one audio stage page-wide
     document.addEventListener("bench:play", (e) => {
       if (!e.detail || e.detail.source === root) return;
-      if (started) stopAllLanes();
+      if (started) stopGroove();
+      stopArrange();
       if (cueAudio && !cueAudio.paused) cueAudio.pause();
     });
-    // leaving the chapter stops the band
     if ("IntersectionObserver" in window) {
       new IntersectionObserver((es) => es.forEach((e) => {
-        if (!e.isIntersecting && started) stopAllLanes();
+        if (!e.isIntersecting) { if (started) stopGroove(); stopArrange(); }
       }), { threshold: 0.05 }).observe(root);
     }
   });

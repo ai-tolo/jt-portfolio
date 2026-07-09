@@ -28,21 +28,40 @@ import ChaosToBuckets from "../../components/case-study/atlas/ChaosToBuckets.ast
 import FileTransform from "../../components/case-study/atlas/FileTransform.astro";
 import StudioChapter from "../../components/case-study/atlas/StudioChapter.astro";
 import TheBench from "../../components/case-study/atlas/TheBench.astro";
-import RoundFrame from "../../components/case-study/atlas/RoundFrame.astro";
 import EngineDial from "../../components/case-study/atlas/EngineDial.astro";
+import TasteLoop from "../../components/case-study/atlas/TasteLoop.astro";
 import Finale from "../../components/case-study/atlas/Finale.astro";
 
-// the blind loudness trap — real FabFilter master of "head to toe", one file,
-// two levels, exactly 3.0 LU apart (null-test verified)
+// the palette round — three REAL renders of the same 22s of "head to toe"
+// through the engine's three hand-built arms, loudness-matched to a 0.1 LU
+// spread (verified). Labels must EQUAL the TasteLoop palette ids below.
 const JDG = "/case-studies/the-console/judge";
-const round2 = {
-  id: "r2-loudness", source: "head to toe", tag: "the same master, two levels",
+const round3 = {
+  id: "r3-palettes", source: "head to toe", tag: "three chains, one source — blind",
+  loudnessNote: "all three matched to −18.7 LUFS",
   takes: [
-    { label: "at reference level", file: `${JDG}/judge-r2-matched.mp3`, ref: "the master, matched to a set loudness" },
-    // louder:true routes the crown to the overturnLouder line (RoundFrame)
-    { label: "a few dB hotter", file: `${JDG}/judge-r2-loud.mp3`, ref: "the very same master, just louder", louder: true },
+    { label: "warm · vocal-safe", file: `${JDG}/round-a.mp3`, ref: "air rolled off, de-harshed, glued — the vocal-first arm" },
+    { label: "clean · do-less", file: `${JDG}/round-b.mp3`, ref: "the restraint arm — barely touched, most dynamic" },
+    { label: "bright · forward", file: `${JDG}/round-c.mp3`, ref: "tilted up, glued, saturated — the forward arm" },
   ],
 };
+
+// the REAL taste card (verbatim from ~/automation/data/taste/jon.json) —
+// leanings −1..+1, nudged by blind crowns; notes are its actual log lines
+const CARD_LINES = [
+  "n_votes: 8",
+  "warmth: −0.02",
+  "air: 0.00",
+  "density: −0.008",
+  "restraint: +0.205",
+  "note: job 219 — picked raw over treatments → +restraint",
+  "note: job 222 — chose 'clean'",
+];
+const PALETTES = [
+  { id: "warm · vocal-safe", name: "warm · vocal-safe", born: "hand-built · eng_vocal_aware.py", rounds: 1, axis: "warmth" },
+  { id: "clean · do-less", name: "clean · do-less", born: "hand-built · eng_clean.py", rounds: 2, axis: "restraint" },
+  { id: "bright · forward", name: "bright · forward", born: "hand-built · eng_extended_chain.py", rounds: 0, axis: "air" },
+];
 
 export const prerender = true;
 ---
@@ -90,30 +109,27 @@ export const prerender = true;
       index="03"
       job="Trust your ears"
       product="Richard — the engineer"
-      tagline="The last step. When a track earns it, it goes to the engineer — a FabFilter chain with an opinion about restraint."
-      market="LANDR and Ozone will make it louder and call it better. This exists to know whether it is better."
+      tagline="The last step — and the live frontier: an engineer that develops the more it gets used."
+      market="LANDR and Ozone ship one fixed opinion about better. This one is growing its own — blind round by blind round."
       accent="green"
     />
   </div>
 
   <div class="eng">
     <p class="eng-fantasy">
-      Version one was going to learn my taste from a million blind votes and become
-      the best engineer in the world. The first honest test killed it — take it yourself:
+      Version one was going to learn my taste from a million votes and become the
+      best engineer in the world. That fantasy died honestly — what it left behind
+      is a test I can't cheat, feeding an engine that develops through use.
+      Take a round yourself:
     </p>
 
-    <RoundFrame
-      belief="Two masters of the same song. Crown the one that sounds better."
-      verdict="debunked"
-      overturn="It is the same master — one is just a few dB louder. Louder reads as better, every time. That is why a real test is blind and loudness-matched: so your vote means the mix, not the level."
-      overturnLouder="You crowned the louder one. Same master, just hotter — and everyone does. That is the whole problem with trusting a vote."
-    >
-      <TheBench round={round2} />
-    </RoundFrame>
+    <TheBench round={round3} />
+    <p class="eng-matched">every take is loudness-matched — otherwise the loudest one always wins. there is no wrong crown, only taste.</p>
+
+    <TasteLoop roundId="r3-palettes" cardFile="~/automation/data/taste/jon.json" cardLines={CARD_LINES} palettes={PALETTES} />
 
     <p class="eng-lesson">
-      Optimize a biased judge and you sharpen the bias, not the mix.
-      So the engine that shipped defaults to doing less:
+      Its strongest leaning so far is restraint — the default is to do nothing:
     </p>
   </div>
 
@@ -135,6 +151,11 @@ export const prerender = true;
   }
   .eng-fantasy { margin: 0 0 26px; }
   .eng-lesson { margin: 34px 0 10px; }
+  .eng-matched {
+    margin: 14px 0 0; text-align: center;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 11px; letter-spacing: 0.05em; color: rgba(245, 241, 232, 0.45);
+  }
 
   /* the AudioDex machine fires straight off the chapter title; tighten the seam
      (longhand margins so the .cs-bleed margin-left trick survives) */
