@@ -1,0 +1,1046 @@
+---
+// StudioDesk — THE STUDIO homepage shell (spec: NOTES-STUDIO-SPEC.md, binding).
+//
+// One straight-down view of a sunlit wooden desk. The five objects ON the desk
+// ARE the navigation — their real-world affordance is the signifier (a synth
+// plays; headphones mean listen). No scroll is needed to reach anything: every
+// object, the flagship, the résumé, the instrument, and contact are all present
+// in this single view.
+//
+// The locked decisions this file implements:
+//   D1  Portrait is a RECOMPOSITION of the same five objects (a narrower desk
+//       crop, still one view) — every object carries a landscape (--lx/--ly)
+//       and a portrait (--px/--py) position; a media query swaps which is live.
+//   D2  SIGNAL never plays here. Its object is a real <a href="/signal">; click
+//       dims the room, lights the synth, then NAVIGATES to the instrument page.
+//       The desk hosts no audio engine, ever.
+//   D3  One asset per object + a build-side wake treatment (light/lift/shadow,
+//       transform+opacity only). ObjectArt.astro is the swap point — Jon's art
+//       lands at public/studio/obj-<id>.webp with zero markup changes.
+//   D4  Rooms open IN PLACE over the desk. This file owns the room CHASSIS
+//       (dialog semantics, focus move/trap/restore, Escape, click-away, the
+//       dim); the room INTERIORS mount at #room-<id> (Lane B). Each mount ships
+//       a minimal real fallback so the a11y guardrail (flagship + résumé +
+//       instrument ≤ 1 click) holds even before the full rooms land.
+//
+// Two temperatures: design objects (Work, Writing, Illustrations) are warm and
+// at rest; sound objects (Signal, Sound Lab) are dark gear that wakes cool.
+// Opening a sound object dims the whole desk (an OVERLAY layer — opacity only,
+// never filter: the perf budget is transform+opacity, no rAF at rest).
+//
+// The desk palette is deliberately self-scoped (not the site tokens): the
+// studio is a physical room with its own materials — warm wood, paper, slate —
+// the same way the case-study interiors scope their own dark. Sapphire/amber
+// (the site's machine colors) appear only in powered states, per the locked
+// color rule (ink-only light shell).
+import fs from "node:fs";
+import path from "node:path";
+import ObjectArt from "./ObjectArt.astro";
+
+export interface WorkItem {
+  slug: string;
+  name: string;
+  subtitle: string;
+  outcome: string;
+  tags: string[];
+  cover: string | null;
+}
+
+interface Props {
+  /** Case studies in rank order (flagship first) — from getCaseStudies(). */
+  works: WorkItem[];
+}
+
+const { works } = Astro.props;
+
+// ── The five objects ─────────────────────────────────────────────────────────
+// Footprints + landscape positions/rotations are the Lane C asset contract
+// (src/components/studio/assets/README.md — canvas @2x, 1440×900 reference
+// frame). --w is the landscape footprint (CSS px at 1440 → fluid vw between
+// clamps); --pw is the portrait footprint. Portrait positions recompose the
+// same objects down a narrower desk crop (D1).
+//
+// kind: "room" objects open their panel in place; "nav" (Signal) is a real
+// link that dims then navigates (D2). temp drives the two-temperature read.
+const OBJECTS = [
+  {
+    id: "work", name: "Work", desc: "Case studies, résumé, about",
+    label: "Work — case studies, résumé, and about",
+    temp: "warm", kind: "room",
+    ratio: "600 / 440", w: "clamp(212px, 20.9vw, 330px)", pw: "min(46vw, 300px)",
+    l: { x: 23, y: 44, r: -2 }, p: { x: 33, y: 25, r: -2 },
+  },
+  {
+    id: "signal", name: "Signal", desc: "A playable instrument",
+    label: "Signal — a playable instrument (opens its own page)",
+    temp: "cool", kind: "nav",
+    ratio: "680 / 400", w: "clamp(238px, 23.7vw, 372px)", pw: "min(54vw, 340px)",
+    l: { x: 66, y: 33, r: 1 }, p: { x: 63, y: 42, r: 1.5 },
+  },
+  {
+    id: "soundlab", name: "Sound Lab", desc: "Finished tracks",
+    label: "Sound Lab — a listening room of finished tracks",
+    temp: "cool", kind: "room",
+    ratio: "440 / 440", w: "clamp(152px, 15.3vw, 240px)", pw: "min(38vw, 230px)",
+    l: { x: 78, y: 66, r: -1.5 }, p: { x: 29, y: 57, r: -4 },
+  },
+  {
+    id: "writing", name: "Writing", desc: "Diary of a Soundbender",
+    label: "Writing — Diary of a Soundbender",
+    temp: "warm", kind: "room",
+    ratio: "400 / 320", w: "clamp(140px, 13.9vw, 220px)", pw: "min(34vw, 210px)",
+    l: { x: 45, y: 73, r: 2 }, p: { x: 68, y: 69, r: 2 },
+  },
+  {
+    id: "illustrations", name: "Illustrations", desc: "Drawings",
+    label: "Illustrations — a gallery of drawings",
+    temp: "warm", kind: "room",
+    ratio: "440 / 340", w: "clamp(152px, 15.3vw, 240px)", pw: "min(38vw, 230px)",
+    l: { x: 18, y: 76, r: -3 }, p: { x: 30, y: 84, r: -2 },
+  },
+];
+
+// Desk surface + etched name follow the same swap contract as the objects:
+// Jon's assets land at public/studio/desk.webp and etch.webp (or etch.svg).
+// Until then the surface is a pure-CSS wood treatment (0 KB — the LCP stays
+// text) and the name is an engraved-text treatment on a real <h1>.
+const pub = (f: string) => path.join(process.cwd(), "public", "studio", f);
+const deskAsset = fs.existsSync(pub("desk.webp")) ? "/studio/desk.webp" : null;
+const etchAsset = ["etch.svg", "etch.webp", "etch.png"]
+  .filter((f) => fs.existsSync(pub(f)))
+  .map((f) => `/studio/${f}`)[0];
+
+const EMAIL = "jtollefson123@gmail.com";
+const flagship = works[0];
+---
+
+{/* The skip link jumps past the composition to the plain text index — the
+    whole desk is also navigable as ordinary text (spec guardrail). */}
+<a class="skip" href="#studio-index">Skip to the text index</a>
+
+<section
+  class="studio"
+  data-studio
+  data-open="none"
+  data-power="light"
+  aria-label="The studio — a desk of five objects; each one opens a part of the site"
+>
+  <div class="desk">
+    {/* The desk surface. CSS wood until Jon's desk.webp lands (swap = drop the
+        file; the inline background wins and the gradient layer stands down). */}
+    <div
+      class="surface"
+      aria-hidden="true"
+      data-real={deskAsset ? "" : undefined}
+      style={deskAsset ? `background-image:url(${deskAsset})` : undefined}
+    >
+    </div>
+
+    {/* The etched name — the masthead. A real <h1> stays in the tree for
+        SEO/a11y either way; Jon's etch asset replaces the engraved-text
+        treatment visually when it lands. */}
+    <header class="etch">
+      {etchAsset ? (
+        <>
+          <h1 class="sr-only">Jonathan Tollefson</h1>
+          <img class="etch-img" src={etchAsset} alt="" draggable="false" />
+        </>
+      ) : (
+        <h1 class="etch-text">Jonathan Tollefson</h1>
+      )}
+    </header>
+
+    {/* The five objects. Every one is a REAL control: Signal is an <a> (D2 —
+        it navigates), the rest are <button>s that open their room in place.
+        The label under each is an on-wake enhancement; the accessible name
+        lives on the control itself. */}
+    {OBJECTS.map((o) => {
+      const pos = `--lx:${o.l.x}%; --ly:${o.l.y}%; --lr:${o.l.r}deg; --px:${o.p.x}%; --py:${o.p.y}%; --pr:${o.p.r}deg; --w:${o.w}; --pw:${o.pw}; aspect-ratio:${o.ratio};`;
+      return o.kind === "nav" ? (
+        <a
+          class="obj"
+          href="/signal"
+          data-obj={o.id}
+          data-temp={o.temp}
+          aria-label={o.label}
+          style={pos}
+        >
+          <span class="obj-shadow" aria-hidden="true"></span>
+          <span class="obj-glow" aria-hidden="true"></span>
+          <span class="obj-art" aria-hidden="true"><ObjectArt id={o.id} /></span>
+          <span class="obj-tag" aria-hidden="true">
+            <b>{o.name}</b><i>{o.desc}</i>
+          </span>
+        </a>
+      ) : (
+        <button
+          class="obj"
+          type="button"
+          data-obj={o.id}
+          data-temp={o.temp}
+          aria-label={o.label}
+          aria-expanded="false"
+          aria-controls={`room-panel-${o.id}`}
+          style={pos}
+        >
+          <span class="obj-shadow" aria-hidden="true"></span>
+          <span class="obj-glow" aria-hidden="true"></span>
+          <span class="obj-art" aria-hidden="true"><ObjectArt id={o.id} /></span>
+          <span class="obj-tag" aria-hidden="true">
+            <b>{o.name}</b><i>{o.desc}</i>
+          </span>
+        </button>
+      );
+    })}
+
+    {/* The plain text index — always visible, quiet, the desk's accessible
+        floor: the five objects, the flagship fast-path, the résumé, contact.
+        This is what makes "flagship + résumé + instrument ≤ 1 click" true in
+        plain text, with or without JS. */}
+    <nav class="strip" id="studio-index" aria-label="Site index">
+      <ul class="strip-list">
+        <li><button type="button" class="strip-link" data-open-obj="work">Work</button></li>
+        <li><a class="strip-link" href="/signal">Signal</a></li>
+        <li><button type="button" class="strip-link" data-open-obj="soundlab">Sound&nbsp;Lab</button></li>
+        <li><button type="button" class="strip-link" data-open-obj="writing">Writing</button></li>
+        <li><button type="button" class="strip-link" data-open-obj="illustrations">Illustrations</button></li>
+        <li class="strip-sep" aria-hidden="true"></li>
+        {flagship && (
+          <li><a class="strip-link" href={`/case-studies/${flagship.slug}`}>{flagship.name} — flagship</a></li>
+        )}
+        <li><a class="strip-link" href="/resume">Résumé</a></li>
+        <li><a class="strip-link strip-mail" href={`mailto:${EMAIL}`}>{EMAIL}</a></li>
+      </ul>
+    </nav>
+  </div>
+
+  {/* The POWER DIM — a dedicated overlay layer (opacity only; the perf budget
+      forbids filter on the desk). Sound objects rise above it and glow. */}
+  <div class="dim" aria-hidden="true"></div>
+
+  {/* Click-away target while a room is open. Not in the tab order — keyboard
+      users close with Escape or the room's close button. */}
+  <button class="backdrop" type="button" tabindex="-1" aria-hidden="true"></button>
+
+  {/* ── The rooms (in-place panels) ──────────────────────────────────────────
+      This file owns the chassis: dialog semantics, open/close, focus. Each
+      panel's INTERIOR arrives through a named slot — the page passes the real
+      room component (rooms/WorkRoom.astro etc.), which carries its own header,
+      its own #room-<id> root, and its own #room-<id>-title heading (the Lane
+      A↔B contract). The fallbacks below keep the chassis honest standalone:
+      the recruiter path (flagship + résumé) stays real even with empty slots.
+      Case-study links inside navigate away and back like any link. */}
+
+  <div class="room" id="room-panel-work" role="dialog" aria-modal="true" aria-labelledby="room-work-title" data-room="work" data-temp="warm" hidden>
+    <button class="room-close" type="button" data-close aria-label="Close — back to the desk">✕</button>
+    <div class="room-body">
+      <slot name="room-work">
+        <div class="fb">
+          <h2 class="fb-title" id="room-work-title">Work</h2>
+          <ol class="ws-list">
+            {works.map((w, i) => (
+              <li>
+                <a class="ws-link" href={`/case-studies/${w.slug}`}>
+                  <span class="ws-no" aria-hidden="true">{String(i + 1).padStart(2, "0")}</span>
+                  <span class="ws-name">{w.name}</span>
+                  <span class="ws-sub">{w.subtitle}</span>
+                  {i === 0 && <span class="ws-flag">Flagship</span>}
+                </a>
+              </li>
+            ))}
+          </ol>
+          <p class="ws-resume"><a href="/resume">Full résumé →</a></p>
+          {/* The retired homepage's three descriptor lines, held here so nothing
+              silently vanishes — the seed of the Work room's plain rewritten bio. */}
+          <p class="ws-bio">
+            A designer who builds. Business analyst by title — designer, builder,
+            engineer by practice. Off the clock, bending raw sound into songs.
+          </p>
+        </div>
+      </slot>
+    </div>
+  </div>
+
+  <div class="room room-dark" id="room-panel-soundlab" role="dialog" aria-modal="true" aria-labelledby="room-soundlab-title" data-room="soundlab" data-temp="cool" hidden>
+    <button class="room-close" type="button" data-close aria-label="Close — back to the desk">✕</button>
+    <div class="room-body">
+      <slot name="room-soundlab">
+        <div class="fb">
+          <h2 class="fb-title" id="room-soundlab-title">Sound Lab</h2>
+          <p class="room-note">Finished tracks land here.</p>
+        </div>
+      </slot>
+    </div>
+  </div>
+
+  <div class="room" id="room-panel-writing" role="dialog" aria-modal="true" aria-labelledby="room-writing-title" data-room="writing" data-temp="warm" hidden>
+    <button class="room-close" type="button" data-close aria-label="Close — back to the desk">✕</button>
+    <div class="room-body">
+      <slot name="room-writing">
+        <div class="fb">
+          <h2 class="fb-title" id="room-writing-title">Writing</h2>
+          <p class="room-note">
+            Diary of a Soundbender —
+            <a href="https://substack.com/@diaryofasoundbender" target="_blank" rel="noopener noreferrer">read on Substack ↗</a>
+          </p>
+        </div>
+      </slot>
+    </div>
+  </div>
+
+  <div class="room" id="room-panel-illustrations" role="dialog" aria-modal="true" aria-labelledby="room-illustrations-title" data-room="illustrations" data-temp="warm" hidden>
+    <button class="room-close" type="button" data-close aria-label="Close — back to the desk">✕</button>
+    <div class="room-body">
+      <slot name="room-illustrations">
+        <div class="fb">
+          <h2 class="fb-title" id="room-illustrations-title">Illustrations</h2>
+          <p class="room-note">A gallery of drawings lands here.</p>
+        </div>
+      </slot>
+    </div>
+  </div>
+</section>
+
+<style>
+  /* ── The studio's own materials (self-scoped, see the header comment) ───── */
+  .studio {
+    /* wood */
+    --wood-hi: #d8c498;
+    --wood: #c8b184;
+    --wood-lo: #b19871;
+    --sun: rgba(255, 246, 219, 0.5);
+    /* ink on wood (the light shell is ink-only) */
+    --s-ink: #2b2216;
+    --s-dim: #6a5940;
+    /* materials for objects + rooms */
+    --paper: #efe7d3;
+    --paper-line: rgba(43, 34, 22, 0.4);
+    --slate: #242a33;
+    --slate-line: #47515f;
+    /* machine colors — powered states ONLY */
+    --sapphire: #0ec4fc;
+    --amber: #ffb44d;
+    /* the powered room's dark */
+    --night: #070a10;
+
+    position: relative;
+    /* One view: the desk fills the viewport under the sticky header (measured
+       60px at desktop widths — logo row + --space-3 padding + border). If a
+       screen is shorter than the floor, the page scrolls rather than clipping
+       controls (a11y beats the crop). */
+    height: max(540px, calc(100svh - 60px));
+    overflow: hidden;
+    font-family: "IBM Plex Sans", ui-sans-serif, system-ui, sans-serif;
+  }
+
+  .sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+
+  .skip {
+    position: fixed;
+    left: var(--space-4);
+    top: -60px;
+    z-index: 90;
+    padding: 10px 16px;
+    background: #1c160d;
+    color: #f5efe2;
+    font-family: "IBM Plex Mono", ui-monospace, monospace;
+    font-size: 0.8rem;
+    border-radius: 6px;
+    transition: top 160ms ease;
+  }
+  .skip:focus {
+    top: var(--space-4);
+  }
+
+  /* ── The desk surface ────────────────────────────────────────────────────
+     Pure CSS wood: sun from the UPPER-RIGHT (the locked lighting direction —
+     asset spec §2), grain running with the desk, a shaded lower-left corner.
+     Costs 0 KB, so the LCP is the <h1>. When Jon's desk.webp lands the inline
+     background renders and the gradient stack stands down. */
+  .surface {
+    position: absolute;
+    inset: 0;
+    background-size: cover;
+    background-position: 62% 42%;
+  }
+  .surface::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background:
+      radial-gradient(115% 85% at 82% 4%, var(--sun), transparent 48%),
+      radial-gradient(95% 120% at 6% 108%, rgba(52, 38, 18, 0.3), transparent 56%),
+      repeating-linear-gradient(92deg, rgba(112, 88, 52, 0.09) 0 3px, transparent 3px 11px),
+      repeating-linear-gradient(88deg, rgba(255, 244, 214, 0.05) 0 2px, transparent 2px 14px),
+      linear-gradient(158deg, var(--wood-hi), var(--wood) 46%, var(--wood-lo));
+  }
+  .surface[data-real]::before {
+    /* Jon's surface bakes its own light — no CSS wood on top of it. */
+    content: none;
+  }
+
+  /* ── The etched name ───────────────────────────────────────────────────── */
+  .etch {
+    position: absolute;
+    left: 50%;
+    top: 12%;
+    transform: translate(-50%, -50%);
+    z-index: 1;
+    pointer-events: none;
+    text-align: center;
+    transition: opacity 300ms ease;
+  }
+  .etch-text {
+    margin: 0;
+    font-family: "IBM Plex Sans", ui-sans-serif, system-ui, sans-serif;
+    font-weight: 600;
+    font-size: clamp(1.9rem, 4.6vw, 3.2rem);
+    line-height: 1;
+    letter-spacing: 0.005em;
+    white-space: nowrap;
+    /* Engraved into the wood: darker than the surface, lit from above,
+       shadowed into the cut. Placeholder for Jon's etch asset. */
+    color: color-mix(in srgb, var(--wood-lo) 46%, #4a3722);
+    text-shadow:
+      0 1px 0 rgba(255, 248, 228, 0.42),
+      0 -1px 1px rgba(43, 30, 12, 0.5);
+  }
+  .etch-img {
+    display: block;
+    width: clamp(300px, 61vw, 880px);
+    height: auto;
+  }
+
+  /* When a room is open the desk recedes behind it. */
+  .studio:not([data-open="none"]) .etch {
+    opacity: 0.45;
+  }
+
+  /* ── Objects ─────────────────────────────────────────────────────────────
+     Positioned by % of the desk (landscape coords by default; portrait
+     recomposition swaps to --px/--py below, per D1). The base transform is
+     the layout; wake ADDS a lift — transform+opacity only, no filter, no
+     box-shadow transitions (the shadow is a pre-blurred layer that fades). */
+  .obj {
+    position: absolute;
+    left: var(--lx);
+    top: var(--ly);
+    width: var(--w);
+    margin: 0;
+    padding: 0;
+    border: 0;
+    background: none;
+    cursor: pointer;
+    display: block;
+    z-index: 2;
+    transform: translate(-50%, -50%) rotate(var(--lr));
+    transition: transform 260ms cubic-bezier(0.2, 0.7, 0.3, 1), opacity 300ms ease;
+  }
+  .obj-art {
+    position: relative;
+    display: block;
+    width: 100%;
+    height: 100%;
+    z-index: 2;
+  }
+  /* Two-tone placeholder palette per temperature (consumed by ObjectArt). */
+  .obj[data-temp="warm"] {
+    --ph-fill: var(--paper);
+    --ph-line: var(--paper-line);
+  }
+  .obj[data-temp="cool"] {
+    --ph-fill: var(--slate);
+    --ph-line: var(--slate-line);
+  }
+
+  /* The cast shadow: a pre-blurred dark ellipse thrown toward the LOWER-LEFT
+     (opposite the upper-right sun). On wake the object lifts away from it —
+     the shadow counter-translates and softens, so only transform/opacity move. */
+  .obj-shadow {
+    position: absolute;
+    inset: 4% 2% -2% -4%;
+    z-index: 0;
+    background: radial-gradient(58% 46% at 44% 62%, rgba(46, 32, 14, 0.42), transparent 72%);
+    opacity: 0.8;
+    transform: translate(0, 0);
+    transition: transform 260ms cubic-bezier(0.2, 0.7, 0.3, 1), opacity 260ms ease;
+    pointer-events: none;
+  }
+
+  /* The powered glow (sound gear only) — sapphire light pooled under the
+     object, off at rest, half on wake, full when the room powers on. */
+  .obj-glow {
+    position: absolute;
+    inset: -18%;
+    z-index: 1;
+    background: radial-gradient(52% 48% at 50% 52%, color-mix(in srgb, var(--sapphire) 42%, transparent), transparent 74%);
+    opacity: 0;
+    transition: opacity 420ms ease;
+    pointer-events: none;
+  }
+  .obj[data-temp="warm"] .obj-glow {
+    display: none;
+  }
+
+  /* The on-wake tag: name + one plain line. An enhancement — the accessible
+     name is on the control — so it stays quiet and only appears on wake
+     (always on where there is no hover to wake with). */
+  .obj-tag {
+    position: absolute;
+    left: 50%;
+    top: 100%;
+    transform: translate(-50%, 2px);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+    opacity: 0;
+    transition: opacity 220ms ease, transform 220ms ease;
+    pointer-events: none;
+    white-space: nowrap;
+  }
+  .obj-tag b {
+    font-weight: 600;
+    font-size: 0.84rem;
+    color: var(--s-ink);
+  }
+  .obj-tag i {
+    font-style: normal;
+    font-family: "IBM Plex Mono", ui-monospace, monospace;
+    font-size: 0.62rem;
+    letter-spacing: 0.04em;
+    color: var(--s-dim);
+  }
+
+  /* WAKE — hover / keyboard focus: lift + deepen shadow + reveal the tag.
+     Transform and opacity only. */
+  .obj:hover,
+  .obj:focus-visible {
+    transform: translate(-50%, -50%) rotate(var(--lr)) translateY(-9px) scale(1.02);
+    z-index: 5;
+  }
+  .obj:hover .obj-shadow,
+  .obj:focus-visible .obj-shadow {
+    transform: translateY(11px) scale(1.05);
+    opacity: 1;
+  }
+  .obj:hover .obj-tag,
+  .obj:focus-visible .obj-tag {
+    opacity: 1;
+    transform: translate(-50%, 7px);
+  }
+  .obj[data-temp="cool"]:hover .obj-glow,
+  .obj[data-temp="cool"]:focus-visible .obj-glow {
+    opacity: 0.5;
+  }
+  .obj:focus-visible {
+    outline: 2px solid var(--s-ink);
+    outline-offset: 8px;
+  }
+  /* No hover, no wake — surface the quiet tags permanently on touch. */
+  @media (hover: none) {
+    .obj-tag {
+      opacity: 1;
+      transform: translate(-50%, 4px);
+    }
+  }
+
+  /* While a room is open, the other objects recede and go inert. */
+  .studio:not([data-open="none"]) .obj {
+    opacity: 0.3;
+    pointer-events: none;
+  }
+
+  /* ── POWER — the dim choreography (opacity only) ─────────────────────────
+     Opening a sound object dims the whole desk; the engaged object rises
+     above the dim and its glow comes up full. Design objects never dim. */
+  .dim {
+    position: absolute;
+    inset: 0;
+    z-index: 10;
+    background: radial-gradient(120% 100% at 70% 28%, rgba(7, 10, 16, 0.78), rgba(4, 6, 10, 0.9));
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 560ms ease;
+  }
+  .studio[data-power="dark"] .dim {
+    opacity: 1;
+  }
+  .studio[data-power="dark"] .obj[data-obj="signal"],
+  .studio[data-open="soundlab"] .obj[data-obj="soundlab"] {
+    z-index: 15;
+    opacity: 1;
+  }
+  .studio[data-open="signal"] .obj[data-obj="signal"] .obj-glow,
+  .studio[data-open="soundlab"] .obj[data-obj="soundlab"] .obj-glow {
+    opacity: 1;
+  }
+  /* The departing Signal keeps its woken lift while the room dims around it. */
+  .studio[data-open="signal"] .obj[data-obj="signal"] {
+    transform: translate(-50%, -50%) rotate(var(--lr)) translateY(-9px) scale(1.02);
+  }
+
+  /* ── Click-away backdrop ───────────────────────────────────────────────── */
+  .backdrop {
+    position: absolute;
+    inset: 0;
+    z-index: 20;
+    border: 0;
+    padding: 0;
+    background: transparent;
+    display: none;
+    cursor: pointer;
+  }
+  .studio:not([data-open="none"]) .backdrop {
+    display: block;
+  }
+
+  /* ── Rooms (the in-place panels) ─────────────────────────────────────────
+     The chassis only. The outer .room positions + transitions (and hosts the
+     floating close chip, so it must NOT clip); .room-body owns the chrome and
+     the scroll. Interiors (slotted Lane B rooms) paint their own materials and
+     pick up .room-body's radius via border-radius: inherit — warm rooms are
+     paper; the Sound Lab room is dark (it opened with the power). */
+  .room {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    z-index: 30;
+    width: min(700px, 92%);
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.97);
+    transition: opacity 260ms ease, transform 260ms cubic-bezier(0.2, 0.7, 0.3, 1);
+  }
+  .room[hidden] {
+    display: none !important;
+  }
+  .room[data-in] {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+  }
+  .room-body {
+    max-height: min(76vh, 660px);
+    overflow: auto;
+    border-radius: 14px;
+    background: var(--paper);
+    color: var(--s-ink);
+    border: 1px solid var(--paper-line);
+    box-shadow: 0 44px 90px -34px rgba(28, 18, 4, 0.55);
+  }
+  .room-dark .room-body {
+    background: linear-gradient(180deg, #10141b, var(--night));
+    color: #e7ebf2;
+    border-color: rgba(160, 190, 230, 0.14);
+    box-shadow: 0 44px 90px -30px rgba(0, 0, 0, 0.8), 0 0 60px -30px color-mix(in srgb, var(--sapphire) 45%, transparent);
+  }
+  /* The close chip floats just off the panel's top-right corner — outside the
+     interiors' layout entirely, so it can never collide with a room's own
+     header furniture (e.g. the Work room's résumé link). */
+  .room-close {
+    position: absolute;
+    top: -13px;
+    right: -13px;
+    z-index: 2;
+    width: 32px;
+    height: 32px;
+    padding: 0;
+    border-radius: 50%;
+    border: 1px solid rgba(245, 239, 226, 0.32);
+    background: #1c160d;
+    color: #f5efe2;
+    font-size: 0.85rem;
+    line-height: 1;
+    cursor: pointer;
+    box-shadow: 0 6px 16px -6px rgba(10, 6, 0, 0.6);
+    transition: transform 160ms ease;
+  }
+  .room-close:hover,
+  .room-close:focus-visible {
+    transform: scale(1.1);
+  }
+  .room-close:focus-visible {
+    outline: 2px solid #f5efe2;
+    outline-offset: 2px;
+  }
+  /* Fallback shells (rendered only when a room slot is empty). */
+  .fb {
+    padding: clamp(20px, 3.2vw, 30px);
+  }
+  .fb-title {
+    margin: 0 0 var(--space-4);
+    font-size: clamp(1.2rem, 2.4vw, 1.5rem);
+    font-weight: 600;
+    letter-spacing: -0.01em;
+  }
+  .fb a {
+    color: inherit;
+    text-decoration: underline;
+    text-decoration-color: color-mix(in srgb, currentColor 35%, transparent);
+    text-underline-offset: 3px;
+  }
+  .fb a:focus-visible {
+    outline: 2px solid currentColor;
+    outline-offset: 2px;
+  }
+  .room-note {
+    margin: 0;
+    font-family: "IBM Plex Mono", ui-monospace, monospace;
+    font-size: 0.82rem;
+    line-height: 1.6;
+    color: color-mix(in srgb, currentColor 72%, transparent);
+  }
+
+  /* Work room fallback shell */
+  .ws-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+  }
+  .ws-link {
+    display: flex;
+    align-items: baseline;
+    gap: 12px;
+    padding: 12px 10px;
+    border-radius: 8px;
+    text-decoration: none !important;
+  }
+  .ws-link:hover,
+  .ws-link:focus-visible {
+    background: rgba(43, 34, 22, 0.07);
+  }
+  .ws-no {
+    font-family: "IBM Plex Mono", ui-monospace, monospace;
+    font-size: 0.68rem;
+    color: var(--s-dim);
+  }
+  .ws-name {
+    font-weight: 600;
+    font-size: 1.05rem;
+  }
+  .ws-sub {
+    font-size: 0.85rem;
+    color: var(--s-dim);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .ws-flag {
+    margin-left: auto;
+    font-family: "IBM Plex Mono", ui-monospace, monospace;
+    font-size: 0.6rem;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--s-dim);
+    border: 1px solid var(--paper-line);
+    border-radius: 99px;
+    padding: 3px 9px;
+  }
+  .ws-resume {
+    margin: var(--space-4) 0 0;
+    padding: 0 10px;
+    font-weight: 500;
+  }
+  .ws-bio {
+    margin: var(--space-6) 0 0;
+    padding: var(--space-4) 10px 0;
+    border-top: 1px solid var(--paper-line);
+    font-size: 0.9rem;
+    line-height: 1.55;
+    color: var(--s-dim);
+    max-width: 52ch;
+  }
+
+  /* ── The text index strip ────────────────────────────────────────────────
+     A quiet mono line along the desk's bottom edge. Plain text, always
+     visible, real links — the site's accessible floor. */
+  .strip {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 3;
+    padding: 10px var(--content-pad) 12px;
+  }
+  .strip-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    column-gap: var(--space-5);
+    row-gap: 4px;
+  }
+  .strip-sep {
+    width: 22px;
+    height: 1px;
+    background: color-mix(in srgb, var(--s-ink) 35%, transparent);
+  }
+  .strip-link {
+    display: inline-block;
+    border: 0;
+    background: none;
+    padding: 2px 0;
+    margin: 0;
+    cursor: pointer;
+    font-family: "IBM Plex Mono", ui-monospace, monospace;
+    font-size: 0.72rem;
+    letter-spacing: 0.03em;
+    color: var(--s-dim);
+    text-decoration: underline;
+    text-decoration-color: color-mix(in srgb, var(--s-dim) 45%, transparent);
+    text-underline-offset: 4px;
+    transition: color 160ms ease;
+  }
+  .strip-link:hover,
+  .strip-link:focus-visible {
+    color: var(--s-ink);
+    outline: none;
+    text-decoration-color: var(--s-ink);
+  }
+  .strip-link:focus-visible {
+    outline: 2px solid var(--s-ink);
+    outline-offset: 3px;
+  }
+
+  /* ── D1 — the portrait recomposition ─────────────────────────────────────
+     Same room, same five objects, a narrower desk crop: each object swaps to
+     its portrait position/rotation/footprint. Still one view, no scroll. */
+  @media (orientation: portrait) {
+    .obj {
+      left: var(--px);
+      top: var(--py);
+      width: var(--pw);
+      transform: translate(-50%, -50%) rotate(var(--pr));
+    }
+    .obj:hover,
+    .obj:focus-visible,
+    .studio[data-open="signal"] .obj[data-obj="signal"] {
+      transform: translate(-50%, -50%) rotate(var(--pr)) translateY(-9px) scale(1.02);
+    }
+    .etch {
+      top: 9%;
+    }
+    .etch-text {
+      font-size: clamp(1.5rem, 7.4vw, 2.4rem);
+    }
+    .etch-img {
+      width: min(84vw, 560px);
+    }
+    .surface {
+      /* crop the landscape master toward its usable center-left two-thirds
+         (asset spec §3, portrait coverage) */
+      background-position: 38% 44%;
+    }
+    .room {
+      width: min(560px, 94%);
+    }
+    .room-body {
+      max-height: 80vh;
+    }
+    /* Keep the chip reachable when the panel spans nearly the full width. */
+    .room-close {
+      top: -10px;
+      right: 2px;
+    }
+    .strip-list {
+      column-gap: var(--space-4);
+    }
+  }
+
+  /* ── Reduced motion ──────────────────────────────────────────────────────
+     Every state still lands (the tag reveals, the glow lights, the dim dims,
+     rooms appear) — instantly, with no travel. The wake lift and the shadow
+     throw are motion-only flourishes, so they go entirely. */
+  @media (prefers-reduced-motion: reduce) {
+    .skip,
+    .etch,
+    .obj,
+    .obj-shadow,
+    .obj-glow,
+    .obj-tag,
+    .dim,
+    .room,
+    .room-close {
+      transition: none;
+    }
+    .obj:hover,
+    .obj:focus-visible,
+    .studio[data-open="signal"] .obj[data-obj="signal"] {
+      transform: translate(-50%, -50%) rotate(var(--lr));
+    }
+    .obj:hover .obj-shadow,
+    .obj:focus-visible .obj-shadow {
+      transform: none;
+    }
+    .obj:hover .obj-tag,
+    .obj:focus-visible .obj-tag {
+      transform: translate(-50%, 4px);
+    }
+    .room-close:hover,
+    .room-close:focus-visible {
+      transform: none;
+    }
+  }
+  @media (prefers-reduced-motion: reduce) and (orientation: portrait) {
+    .obj:hover,
+    .obj:focus-visible,
+    .studio[data-open="signal"] .obj[data-obj="signal"] {
+      transform: translate(-50%, -50%) rotate(var(--pr));
+    }
+  }
+</style>
+
+<script>
+  // The desk's one controller: open/close rooms in place, run the power dim,
+  // and hold the a11y contract (focus move-in / trap / restore, Escape,
+  // click-away). No loops, no rAF at rest — state flips CSS transitions.
+  const root = document.querySelector<HTMLElement>("[data-studio]");
+  if (root) {
+    const reduce = window.matchMedia("(prefers-reduced-motion: reduce)");
+    const objButtons = Array.from(
+      root.querySelectorAll<HTMLButtonElement>("button.obj")
+    );
+    // Panels only — direct children. The slotted room interiors also carry
+    // class="room" + data-room (the Lane B contract), so an unscoped query
+    // would resolve to the inner sections and the panels would never un-hide.
+    const rooms = new Map(
+      Array.from(root.querySelectorAll<HTMLElement>(":scope > .room[data-room]")).map(
+        (r) => [r.dataset.room as string, r]
+      )
+    );
+    const backdrop = root.querySelector<HTMLButtonElement>(".backdrop");
+    const SOUND = new Set(["soundlab", "signal"]);
+    const FOCUSABLE =
+      'a[href], button:not([disabled]), input, select, textarea, [tabindex]:not([tabindex="-1"])';
+
+    let openId: string | null = null;
+    let lastFocus: HTMLElement | null = null;
+
+    const setState = (open: string, power: "light" | "dark") => {
+      root.setAttribute("data-open", open);
+      root.setAttribute("data-power", power);
+    };
+
+    const open = (id: string) => {
+      const room = rooms.get(id);
+      if (!room || openId === id) return;
+      lastFocus = document.activeElement as HTMLElement | null;
+      openId = id;
+      setState(id, SOUND.has(id) ? "dark" : "light");
+      for (const [rid, r] of rooms) {
+        if (rid === id) {
+          r.hidden = false;
+          // next frame so the entrance transition runs from the hidden state
+          requestAnimationFrame(() => r.setAttribute("data-in", ""));
+        } else {
+          r.removeAttribute("data-in");
+          r.hidden = true;
+        }
+      }
+      objButtons.forEach((b) =>
+        b.setAttribute("aria-expanded", String(b.dataset.obj === id))
+      );
+      const closeBtn = room.querySelector<HTMLElement>("[data-close]");
+      window.setTimeout(() => closeBtn?.focus(), reduce.matches ? 0 : 70);
+    };
+
+    const close = () => {
+      if (!openId) return;
+      const room = rooms.get(openId);
+      room?.removeAttribute("data-in");
+      const r = room;
+      window.setTimeout(() => { if (r) r.hidden = true; }, reduce.matches ? 0 : 240);
+      objButtons.forEach((b) => b.setAttribute("aria-expanded", "false"));
+      setState("none", "light");
+      openId = null;
+      const back = lastFocus;
+      lastFocus = null;
+      back?.focus?.();
+    };
+
+    // Desk objects (buttons) + the text-index entries open rooms in place.
+    objButtons.forEach((b) =>
+      b.addEventListener("click", () => open(b.dataset.obj as string))
+    );
+    root
+      .querySelectorAll<HTMLButtonElement>("[data-open-obj]")
+      .forEach((b) =>
+        b.addEventListener("click", () =>
+          open(b.getAttribute("data-open-obj") as string)
+        )
+      );
+    backdrop?.addEventListener("click", close);
+    root
+      .querySelectorAll<HTMLButtonElement>("[data-close]")
+      .forEach((b) => b.addEventListener("click", close));
+
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "Escape" && openId) {
+        e.preventDefault();
+        close();
+        return;
+      }
+      // A light focus trap while a room is open (it is aria-modal): Tab
+      // cycles inside the room; links inside still navigate normally.
+      if (e.key === "Tab" && openId) {
+        const room = rooms.get(openId);
+        if (!room) return;
+        const focusables = Array.from(
+          room.querySelectorAll<HTMLElement>(FOCUSABLE)
+        ).filter((el) => el.offsetParent !== null);
+        if (focusables.length === 0) return;
+        const first = focusables[0];
+        const last = focusables[focusables.length - 1];
+        const active = document.activeElement as HTMLElement | null;
+        if (!active || !room.contains(active)) {
+          e.preventDefault();
+          first.focus();
+        } else if (e.shiftKey && active === first) {
+          e.preventDefault();
+          last.focus();
+        } else if (!e.shiftKey && active === last) {
+          e.preventDefault();
+          first.focus();
+        }
+      }
+    });
+
+    // D2 — SIGNAL: dim the room, light the synth, then NAVIGATE. The object
+    // is a real <a>, so modified clicks (new tab) and no-JS pass through
+    // untouched; reduced motion skips straight to the page.
+    const sig = root.querySelector<HTMLAnchorElement>('a.obj[data-obj="signal"]');
+    sig?.addEventListener("click", (e) => {
+      if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button !== 0) return;
+      if (root.getAttribute("data-open") === "signal") return; // already leaving
+      e.preventDefault();
+      if (openId) close();
+      setState("signal", "dark");
+      window.setTimeout(
+        () => window.location.assign(sig.href),
+        reduce.matches ? 0 : 720
+      );
+    });
+
+    // Coming BACK to the desk (bfcache restore after a case study / the
+    // instrument) re-lights the room — the desk is always the at-rest state.
+    window.addEventListener("pageshow", () => {
+      openId = null;
+      setState("none", "light");
+      rooms.forEach((r) => {
+        r.removeAttribute("data-in");
+        r.hidden = true;
+      });
+      objButtons.forEach((b) => b.setAttribute("aria-expanded", "false"));
+    });
+  }
+</script>

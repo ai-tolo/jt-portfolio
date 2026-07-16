@@ -1,0 +1,85 @@
+---
+// SIGNAL — the instrument's own page (minted 2026-07-16 for The Studio, per
+// locked decision D2: the desk never hosts an audio engine; its SIGNAL object
+// dims the room and navigates HERE). The component + the /more mobile swap
+// moved wholesale, unchanged, from the retired comet homepage.
+//
+// SignalMachine itself is SACRED — zero edits. It owns its boot ceremony,
+// power gating, and standby rules.
+import Layout from "../layouts/Layout.astro";
+import Footer from "../components/Footer.astro";
+import SignalMachine from "../components/SignalMachine.astro";
+
+export const prerender = true;
+---
+
+<Layout
+  title="Signal — a playable instrument · Jonathan Tollefson"
+  description="A playable instrument built into the site. Power it on and play — keys, arps, drums, texture."
+  hideThemeSelector={true}
+>
+  <main>
+    {/* A quiet way back — rooms are never dead-ends. */}
+    <nav class="desk-return" aria-label="Back to the desk">
+      <a href="/">← The desk</a>
+    </nav>
+
+    {/* SIGNAL is keyboard-only. On touch / no-fine-pointer devices (where the
+        instrument refuses to play) the page swaps it for the self-contained
+        /more audio exhibit — same predicate the component uses (pointer:fine). */}
+    <div class="sig-desktop">
+      <SignalMachine />
+    </div>
+    <div class="sig-mobile">
+      <iframe class="sig-mobile-frame" data-src="/more/index.html" title="Interactive audio exhibit" loading="lazy" allow="autoplay"></iframe>
+    </div>
+    <script is:inline>
+      if (!window.matchMedia("(pointer: fine)").matches) {
+        const f = document.querySelector(".sig-mobile-frame");
+        if (f && !f.src) f.src = f.getAttribute("data-src");
+      }
+    </script>
+  </main>
+
+  <Footer />
+</Layout>
+
+<style>
+  main {
+    padding-top: 0;
+  }
+
+  .desk-return {
+    max-width: var(--content-max);
+    margin: 0 auto;
+    padding: var(--space-4) var(--content-pad) 0;
+  }
+  .desk-return a {
+    font-size: var(--fs-eyebrow);
+    font-weight: var(--fw-semibold);
+    letter-spacing: var(--ls-eyebrow);
+    text-transform: uppercase;
+    color: var(--muted);
+    text-decoration: underline;
+    text-decoration-color: var(--line);
+    text-underline-offset: 6px;
+    transition: color 160ms ease, text-decoration-color 160ms ease;
+  }
+  .desk-return a:hover,
+  .desk-return a:focus-visible {
+    color: var(--text);
+    text-decoration-color: var(--accent);
+    outline: none;
+  }
+
+  /* SIGNAL is keyboard-only; on touch devices show the /more exhibit instead.
+     Mirrors the component's own !matchMedia('(pointer: fine)') test, so the swap
+     lands on exactly the devices where the instrument won't play. */
+  .sig-desktop { display: none; }
+  .sig-mobile { display: block; }
+  .sig-mobile-frame { display: block; width: 100%; height: 100dvh; border: 0; background: #080b10; }
+  @media (pointer: fine) {
+    .sig-desktop { display: block; }
+    .sig-mobile { display: none; }
+  }
+</style>

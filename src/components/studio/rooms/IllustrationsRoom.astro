@@ -1,0 +1,132 @@
+---
+/**
+ * IllustrationsRoom — the gallery on the desk (Rooms v1, D4: simple + real).
+ *
+ * A simple responsive grid driven entirely by illustrations-manifest.json
+ * (Jon fills it; see its _readme for the row format and the
+ * /public/studio/illustrations/ drop path). No assets exist yet, so this
+ * ships as an honest empty state — the grid renders the moment rows land,
+ * zero code changes.
+ *
+ * CONTRACT (Lane A ↔ Lane B):
+ * - Lane A mounts this inside its dialog machinery; the root carries
+ *   id="room-illustrations" (aria-controls target) and the heading exposes
+ *   id="room-illustrations-title" for aria-labelledby.
+ * - Lane A owns open/close/Escape/focus-restore/backdrop. Warm room — a
+ *   design object, no desk dim.
+ * - Override hooks: --studio-mono/--studio-sans + the --studio-* palette
+ *   props read on the root below.
+ */
+import manifest from "./illustrations-manifest.json";
+
+interface Illo {
+  src: string;
+  alt: string;
+  title?: string;
+  year?: number;
+}
+const items: Illo[] = manifest.items ?? [];
+---
+
+<section class="room" id="room-illustrations" data-room="illustrations" aria-labelledby="room-illustrations-title">
+  <header class="room-head">
+    <h2 class="room-title" id="room-illustrations-title">Illustrations</h2>
+    {items.length > 0 && <p class="room-note">{items.length} piece{items.length === 1 ? "" : "s"}</p>}
+  </header>
+
+  {items.length > 0 ? (
+    <ul class="grid">
+      {items.map((it) => (
+        <li class="cell">
+          <figure class="frame">
+            <img class="art" src={it.src} alt={it.alt} loading="lazy" decoding="async" />
+            {(it.title || it.year) && (
+              <figcaption class="caption">
+                {it.title}{it.title && it.year && " · "}{it.year}
+              </figcaption>
+            )}
+          </figure>
+        </li>
+      ))}
+    </ul>
+  ) : (
+    <p class="room-empty">Nothing hung yet.</p>
+  )}
+</section>
+
+<style>
+  /* Warm room: same paper as the other design objects. */
+  .room {
+    --_paper: var(--studio-paper, #f2ecdd);
+    --_ink: var(--studio-ink, #2b2318);
+    --_dim: var(--studio-dim, #6c5b40);
+    --_line: var(--studio-line, rgba(60, 44, 22, 0.18));
+    --_mono: var(--studio-mono, "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, monospace);
+    --_sans: var(--studio-sans, "IBM Plex Sans", system-ui, -apple-system, sans-serif);
+    display: block;
+    background: var(--_paper);
+    color: var(--_ink);
+    font-family: var(--_sans);
+    color-scheme: light;
+    border-radius: inherit; /* follow Lane A's panel chrome */
+    padding: 24px 26px 28px;
+  }
+
+  .room-head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 16px;
+    margin-bottom: 14px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--_line);
+  }
+  .room-title { margin: 0; font-size: 21px; font-weight: 600; letter-spacing: -0.01em; }
+  .room-note {
+    margin: 0;
+    font-family: var(--_mono);
+    font-size: 11px;
+    letter-spacing: 0.08em;
+    color: var(--_dim);
+  }
+
+  .grid {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    gap: 12px;
+  }
+  .frame { margin: 0; }
+  .art {
+    display: block;
+    width: 100%;
+    aspect-ratio: 4 / 3;
+    object-fit: cover;
+    border-radius: 8px;
+    border: 1px solid var(--_line);
+    background: rgba(60, 44, 22, 0.05);
+  }
+  .caption {
+    margin-top: 6px;
+    font-family: var(--_mono);
+    font-size: 10.5px;
+    letter-spacing: 0.06em;
+    color: var(--_dim);
+  }
+
+  .room-empty {
+    margin: 0;
+    padding: 26px 0;
+    font-family: var(--_mono);
+    font-size: 12px;
+    letter-spacing: 0.06em;
+    color: var(--_dim);
+  }
+
+  @media (max-width: 26rem) {
+    .room { padding: 20px 18px 22px; }
+    .grid { grid-template-columns: repeat(2, 1fr); gap: 10px; }
+  }
+</style>

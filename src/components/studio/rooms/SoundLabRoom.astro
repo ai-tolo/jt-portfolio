@@ -1,0 +1,169 @@
+---
+/**
+ * SoundLabRoom — the listening room on the desk (Rooms v1, D4: simple + real).
+ *
+ * A clean track list with inline native players, driven entirely by
+ * soundlab-manifest.json (Jon fills it; see its _readme for the row format and
+ * the /public/studio/tracks/ drop path). No engine, no visualizer — the desk
+ * never hosts an audio engine (D2); native <audio> is the whole player.
+ *
+ * CONTRACT (Lane A ↔ Lane B):
+ * - Lane A mounts this inside its dialog machinery; the root carries
+ *   id="room-soundlab" (aria-controls target) and the heading exposes
+ *   id="room-soundlab-title" for aria-labelledby.
+ * - Lane A owns open/close/Escape/focus-restore/backdrop and the desk-wide
+ *   power dim (this is a SOUND object — opening it dims the desk). The room
+ *   only paints its own powered interior: dark, machine colors allowed.
+ * - Playback hygiene is self-contained: one track at a time, and everything
+ *   pauses when the room leaves view (Lane A closing the panel is enough — no
+ *   close hook needed from Lane A).
+ * - Override hooks: --studio-mono/--studio-sans + the --studio-dark-* /
+ *   --studio-live palette props read on the root below.
+ */
+import manifest from "./soundlab-manifest.json";
+
+interface Track {
+  title: string;
+  year: number;
+  src: string;
+  duration?: string;
+}
+const tracks: Track[] = manifest.tracks ?? [];
+---
+
+<section class="room" id="room-soundlab" data-room="soundlab" aria-labelledby="room-soundlab-title">
+  <header class="room-head">
+    <h2 class="room-title" id="room-soundlab-title">Sound Lab</h2>
+    <p class="room-note">Finished tracks.</p>
+  </header>
+
+  {tracks.length > 0 ? (
+    <ol class="tracks">
+      {tracks.map((t, i) => (
+        <li class="track">
+          <div class="track-meta">
+            <span class="track-no" aria-hidden="true">{String(i + 1).padStart(2, "0")}</span>
+            <span class="track-title">{t.title}</span>
+            <span class="track-year">{t.year}{t.duration && ` · ${t.duration}`}</span>
+          </div>
+          {/* native controls: keyboard + SR accessible for free; preload="none"
+              keeps the desk's arrival weight at zero until a track is played */}
+          <audio class="track-audio" controls preload="none" src={t.src}>
+            <a href={t.src}>Download {t.title}</a>
+          </audio>
+        </li>
+      ))}
+    </ol>
+  ) : (
+    <p class="room-empty">Nothing on the shelf yet.</p>
+  )}
+</section>
+
+<style>
+  /* Powered room: the one place in the light shell where machine colors are
+     allowed (sapphire lives on the live rail). color-scheme:dark also flips the
+     native audio controls dark in Blink/WebKit. */
+  .room {
+    --_bg: var(--studio-dark, #100f0d);
+    --_bg2: var(--studio-dark-2, #171512);
+    --_ink: var(--studio-dark-ink, #ece8e1);
+    --_dim: var(--studio-dark-dim, #8a8378);
+    --_line: var(--studio-dark-line, rgba(255, 255, 255, 0.09));
+    --_live: var(--studio-live, #0ec4fc);
+    --_mono: var(--studio-mono, "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, monospace);
+    --_sans: var(--studio-sans, "IBM Plex Sans", system-ui, -apple-system, sans-serif);
+    display: block;
+    background: linear-gradient(180deg, var(--_bg2), var(--_bg));
+    color: var(--_ink);
+    font-family: var(--_sans);
+    color-scheme: dark;
+    border-radius: inherit; /* follow Lane A's panel chrome */
+    padding: 24px 26px 28px;
+  }
+
+  .room-head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 16px;
+    margin-bottom: 18px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--_line);
+  }
+  .room-title { margin: 0; font-size: 21px; font-weight: 600; letter-spacing: -0.01em; }
+  .room-note {
+    margin: 0;
+    font-family: var(--_mono);
+    font-size: 11px;
+    letter-spacing: 0.08em;
+    color: var(--_dim);
+  }
+
+  .tracks {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+  }
+  .track { padding: 12px 0 14px; }
+  .track + .track { border-top: 1px solid var(--_line); }
+  .track-meta {
+    display: flex;
+    align-items: baseline;
+    gap: 12px;
+    margin-bottom: 8px;
+  }
+  .track-no {
+    font-family: var(--_mono);
+    font-size: 10.5px;
+    letter-spacing: 0.08em;
+    color: var(--_live); /* the live rail: sapphire index, powered state only */
+  }
+  .track-title { font-size: 15px; font-weight: 600; letter-spacing: -0.005em; }
+  .track-year {
+    margin-left: auto;
+    font-family: var(--_mono);
+    font-size: 10.5px;
+    letter-spacing: 0.06em;
+    color: var(--_dim);
+    white-space: nowrap;
+  }
+  .track-audio { display: block; width: 100%; height: 36px; }
+  .track-audio:focus-visible { outline: 2px solid var(--_live); outline-offset: 3px; border-radius: 18px; }
+
+  .room-empty {
+    margin: 0;
+    padding: 26px 0;
+    font-family: var(--_mono);
+    font-size: 12px;
+    letter-spacing: 0.06em;
+    color: var(--_dim);
+  }
+
+  @media (max-width: 26rem) {
+    .room { padding: 20px 18px 22px; }
+  }
+</style>
+
+<script>
+  /* One deck: starting a track pauses the rest; and a track that finds its
+     room hidden (Lane A closed the panel) pauses itself, so audio never keeps
+     playing under the desk. The visibility check rides timeupdate — it fires
+     only WHILE something plays (~4Hz), so the room costs nothing at rest and
+     needs no hook into Lane A's close path. */
+  const room = document.getElementById("room-soundlab");
+  if (room) {
+    const players = Array.from(room.querySelectorAll<HTMLAudioElement>("audio"));
+    const roomHidden = () =>
+      "checkVisibility" in room ? !room.checkVisibility() : room.offsetParent === null;
+    players.forEach((a) => {
+      a.addEventListener("play", () => {
+        players.forEach((b) => { if (b !== a) b.pause(); });
+      });
+      a.addEventListener("timeupdate", () => {
+        if (!a.paused && roomHidden()) a.pause();
+      });
+    });
+  }
+</script>

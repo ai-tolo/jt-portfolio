@@ -1,0 +1,217 @@
+---
+/**
+ * WorkRoom — the Work panel on the desk (Rooms v1, D4: simple + real).
+ *
+ * The recruiter's destination: the five case studies as a quiet list (rank
+ * order, flagship first — each opens its existing dark page and returns), a
+ * clear résumé link, and the plain bio. Copy is the approved homepage
+ * descriptor set, recombined — plain and understated, nothing salesy.
+ *
+ * CONTRACT (Lane A ↔ Lane B):
+ * - Lane A mounts this inside its dialog machinery; the root carries
+ *   id="room-work" so a desk object's aria-controls resolves to the visible
+ *   panel, and the heading exposes id="room-work-title" for aria-labelledby.
+ * - Lane A owns open/close/Escape/focus-restore/backdrop. This room is plain
+ *   content: real links, visible focus, no traps, no close button of its own.
+ * - The room paints its own interior (warm/paper — a design object, no dim)
+ *   and inherits the panel's border-radius. Override hooks: --studio-mono /
+ *   --studio-sans and the --studio-* palette props read on the root below.
+ * - No cursor rules here: whether the page runs the house custom cursor
+ *   (tokens.css cursor:none + <Cursor/>) is Lane A's page-level call.
+ */
+import { getCaseStudies } from "../../../lib/notion";
+
+// Rank order locked (Jon, 2026-06-03) — overrides the Notion Order field.
+// Flagship first; it must stay one click from arrival.
+const RANK = ["the-console", "chs", "crediverso", "raylu", "momence"];
+const rankOf = (slug: string) => {
+  const i = RANK.indexOf(slug);
+  return i === -1 ? RANK.length : i;
+};
+const allWorks = await getCaseStudies();
+const works = [...allWorks].sort((a, b) => rankOf(a.slug) - rankOf(b.slug));
+---
+
+<section class="room" id="room-work" data-room="work" aria-labelledby="room-work-title">
+  <header class="room-head">
+    <h2 class="room-title" id="room-work-title">Work</h2>
+    {/* the recruiter fast-path: résumé sits at the top, not buried below the list */}
+    <a class="resume-link" href="/resume">Résumé<span class="arrow" aria-hidden="true"> →</span></a>
+  </header>
+
+  {/* the five case studies — a quiet list. Each row is one link; the cover is
+      decorative (the name carries the meaning), so it's alt="". */}
+  <ol class="cs-list">
+    {works.map((w, i) => (
+      <li class="cs-item">
+        <a class="cs-link" href={`/case-studies/${w.slug}`}>
+          <span class="cs-no" aria-hidden="true">{String(i + 1).padStart(2, "0")}</span>
+          {w.cover ? (
+            <img class="cs-thumb" src={w.cover} alt="" loading="lazy" decoding="async" width="96" height="72" />
+          ) : (
+            <span class="cs-thumb cs-thumb-empty" aria-hidden="true"></span>
+          )}
+          <span class="cs-text">
+            <span class="cs-name">{w.name}{i === 0 && <span class="cs-flag">flagship</span>}</span>
+            {w.subtitle && <span class="cs-sub">{w.subtitle}</span>}
+            {w.outcome && <span class="cs-out">{w.outcome}</span>}
+          </span>
+        </a>
+      </li>
+    ))}
+  </ol>
+
+  {/* the bio — the retired comet's three approved descriptors, restated plain.
+      Contact stays in the page footer (Lane A). */}
+  <div class="bio">
+    <h3 class="bio-h">About</h3>
+    <p class="bio-lede">A designer who builds.</p>
+    <p class="bio-p">
+      User experience architect in Minneapolis. Business analyst by title —
+      designer, builder, engineer by practice.
+    </p>
+    <p class="bio-p">Off the clock, bending raw sound into songs.</p>
+  </div>
+</section>
+
+<style>
+  /* Warm room: paper on the desk. Self-scoped palette with --studio-* override
+     hooks so Lane A can retheme every room from the page root. */
+  .room {
+    --_paper: var(--studio-paper, #f2ecdd);
+    --_ink: var(--studio-ink, #2b2318);
+    --_dim: var(--studio-dim, #6c5b40);
+    --_line: var(--studio-line, rgba(60, 44, 22, 0.18));
+    --_mono: var(--studio-mono, "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, monospace);
+    --_sans: var(--studio-sans, "IBM Plex Sans", system-ui, -apple-system, sans-serif);
+    display: block;
+    background: var(--_paper);
+    color: var(--_ink);
+    font-family: var(--_sans);
+    color-scheme: light;
+    border-radius: inherit; /* follow Lane A's panel chrome */
+    padding: 24px 26px 28px;
+  }
+
+  .room-head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 16px;
+    margin-bottom: 18px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--_line);
+  }
+  .room-title {
+    margin: 0;
+    font-size: 21px;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+  }
+  .resume-link {
+    font-family: var(--_mono);
+    font-size: 12px;
+    letter-spacing: 0.06em;
+    color: var(--_ink);
+    text-decoration: underline;
+    text-decoration-color: var(--_line);
+    text-underline-offset: 4px;
+    white-space: nowrap;
+  }
+  .resume-link:hover,
+  .resume-link:focus-visible {
+    text-decoration-color: currentColor;
+    outline: none;
+  }
+  .resume-link:focus-visible { outline: 2px solid var(--_ink); outline-offset: 3px; }
+  .arrow { text-decoration: none; }
+
+  /* ── case-study list ── */
+  .cs-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+  }
+  .cs-item + .cs-item { border-top: 1px solid var(--_line); }
+  .cs-link {
+    display: grid;
+    grid-template-columns: auto auto 1fr;
+    align-items: start; /* index + thumb ride with the title, not mid-block */
+    gap: 14px;
+    padding: 11px 8px;
+    border-radius: 8px;
+    text-decoration: none;
+    color: inherit;
+    transition: background 160ms ease;
+  }
+  .cs-link:hover { background: rgba(60, 44, 22, 0.06); }
+  .cs-link:focus-visible { outline: 2px solid var(--_ink); outline-offset: -2px; }
+  .cs-no {
+    font-family: var(--_mono);
+    font-size: 10.5px;
+    letter-spacing: 0.08em;
+    color: var(--_dim);
+    padding-top: 5px; /* optical align with the name's cap height */
+  }
+  .cs-thumb {
+    width: 96px;
+    height: 72px;
+    object-fit: cover;
+    border-radius: 6px;
+    border: 1px solid var(--_line);
+    background: rgba(60, 44, 22, 0.05);
+    display: block;
+  }
+  .cs-thumb-empty { display: block; }
+  .cs-text { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+  .cs-name { font-size: 15.5px; font-weight: 600; letter-spacing: -0.005em; }
+  .cs-flag {
+    font-family: var(--_mono);
+    font-size: 9.5px;
+    font-weight: 400;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--_dim);
+    margin-left: 8px;
+  }
+  .cs-sub { font-size: 13px; color: var(--_dim); line-height: 1.45; }
+  .cs-out {
+    font-family: var(--_mono);
+    font-size: 10.5px;
+    letter-spacing: 0.03em;
+    color: var(--_dim);
+    margin-top: 2px;
+  }
+
+  /* ── bio ── */
+  .bio {
+    margin-top: 20px;
+    padding-top: 16px;
+    border-top: 1px solid var(--_line);
+  }
+  .bio-h {
+    margin: 0 0 10px;
+    font-family: var(--_mono);
+    font-size: 10.5px;
+    font-weight: 500;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--_dim);
+  }
+  .bio-lede { margin: 0 0 8px; font-size: 16px; font-weight: 600; letter-spacing: -0.005em; }
+  .bio-p { margin: 0 0 8px; font-size: 14px; line-height: 1.6; color: var(--_ink); }
+  .bio-p:last-child { margin-bottom: 0; }
+
+  /* narrow panels (D1 portrait recomposition): the thumb sheds, rows stay one line each */
+  @media (max-width: 26rem) {
+    .room { padding: 20px 18px 22px; }
+    .cs-thumb { display: none; }
+    .cs-link { grid-template-columns: auto 1fr; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .cs-link { transition: none; }
+  }
+</style>

@@ -1,0 +1,154 @@
+---
+/**
+ * WritingRoom — Diary of a Soundbender on the desk (Rooms v1, D4: simple + real).
+ *
+ * The publication link plus the latest posts as static links — no client
+ * fetch, no embed script (the desk stays quiet at rest, perf budget intact).
+ * The post list is hand-updated: swap POSTS below when new pieces ship.
+ * Verified against the live feed 2026-07-16.
+ *
+ * CONTRACT (Lane A ↔ Lane B):
+ * - Lane A mounts this inside its dialog machinery; the root carries
+ *   id="room-writing" (aria-controls target) and the heading exposes
+ *   id="room-writing-title" for aria-labelledby.
+ * - Lane A owns open/close/Escape/focus-restore/backdrop. Warm room — a
+ *   design object, no desk dim. Plain content, real links, visible focus.
+ * - Override hooks: --studio-mono/--studio-sans + the --studio-* palette
+ *   props read on the root below.
+ */
+const PUB = {
+  name: "Diary of a Soundbender",
+  href: "https://substack.com/@diaryofasoundbender",
+};
+
+// Latest posts, newest first (live URLs on the publication's own domain).
+const POSTS = [
+  { title: "pushin P(aper)", date: "May 2026", href: "https://jontolo.substack.com/p/pushin-paper" },
+  { title: "32 in Minneapolis | 83 in Dakar", date: "Apr 2026", href: "https://jontolo.substack.com/p/32-in-minneapolis-83-in-dakar" },
+  { title: "Sound", date: "Apr 2026", href: "https://jontolo.substack.com/p/sound" },
+];
+---
+
+<section class="room" id="room-writing" data-room="writing" aria-labelledby="room-writing-title">
+  <header class="room-head">
+    <h2 class="room-title" id="room-writing-title">Writing</h2>
+    <p class="room-note">{PUB.name}</p>
+  </header>
+
+  <ul class="posts">
+    {POSTS.map((p) => (
+      <li class="post">
+        <a class="post-link" href={p.href} target="_blank" rel="noopener noreferrer">
+          <span class="post-date">{p.date}</span>
+          <span class="post-title">{p.title}</span>
+          <span class="post-ext" aria-hidden="true">↗</span>
+        </a>
+      </li>
+    ))}
+  </ul>
+
+  <p class="room-foot">
+    <a class="pub-link" href={PUB.href} target="_blank" rel="noopener noreferrer">
+      All posts on Substack<span class="post-ext" aria-hidden="true"> ↗</span>
+    </a>
+  </p>
+</section>
+
+<style>
+  /* Warm room: same paper as the other design objects. */
+  .room {
+    --_paper: var(--studio-paper, #f2ecdd);
+    --_ink: var(--studio-ink, #2b2318);
+    --_dim: var(--studio-dim, #6c5b40);
+    --_line: var(--studio-line, rgba(60, 44, 22, 0.18));
+    --_mono: var(--studio-mono, "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, monospace);
+    --_sans: var(--studio-sans, "IBM Plex Sans", system-ui, -apple-system, sans-serif);
+    display: block;
+    background: var(--_paper);
+    color: var(--_ink);
+    font-family: var(--_sans);
+    color-scheme: light;
+    border-radius: inherit; /* follow Lane A's panel chrome */
+    padding: 24px 26px 28px;
+  }
+
+  .room-head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 16px;
+    margin-bottom: 14px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--_line);
+  }
+  .room-title { margin: 0; font-size: 21px; font-weight: 600; letter-spacing: -0.01em; }
+  .room-note {
+    margin: 0;
+    font-family: var(--_mono);
+    font-size: 11px;
+    letter-spacing: 0.08em;
+    color: var(--_dim);
+  }
+
+  .posts {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+  }
+  .post + .post { border-top: 1px solid var(--_line); }
+  .post-link {
+    display: flex;
+    align-items: baseline;
+    gap: 14px;
+    padding: 12px 8px;
+    border-radius: 8px;
+    text-decoration: none;
+    color: inherit;
+    transition: background 160ms ease;
+  }
+  .post-link:hover { background: rgba(60, 44, 22, 0.06); }
+  .post-link:focus-visible { outline: 2px solid var(--_ink); outline-offset: -2px; }
+  .post-date {
+    font-family: var(--_mono);
+    font-size: 10.5px;
+    letter-spacing: 0.08em;
+    color: var(--_dim);
+    white-space: nowrap;
+    min-width: 62px;
+  }
+  .post-title { font-size: 15px; font-weight: 600; letter-spacing: -0.005em; }
+  .post-ext { margin-left: auto; font-size: 12px; color: var(--_dim); }
+
+  .room-foot {
+    margin: 16px 0 0;
+    padding-top: 14px;
+    border-top: 1px solid var(--_line);
+  }
+  .pub-link {
+    font-family: var(--_mono);
+    font-size: 12px;
+    letter-spacing: 0.06em;
+    color: var(--_ink);
+    text-decoration: underline;
+    text-decoration-color: var(--_line);
+    text-underline-offset: 4px;
+  }
+  .pub-link:hover,
+  .pub-link:focus-visible {
+    text-decoration-color: currentColor;
+    outline: none;
+  }
+  .pub-link:focus-visible { outline: 2px solid var(--_ink); outline-offset: 3px; }
+  .pub-link .post-ext { margin-left: 0; text-decoration: none; }
+
+  @media (max-width: 26rem) {
+    .room { padding: 20px 18px 22px; }
+    .post-link { flex-wrap: wrap; gap: 6px 14px; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .post-link { transition: none; }
+  }
+</style>

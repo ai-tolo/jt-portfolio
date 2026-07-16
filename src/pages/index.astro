@@ -1,15 +1,47 @@
 ---
+// THE STUDIO — the homepage (spec: NOTES-STUDIO-SPEC.md, binding).
+//
+// One straight-down view of a sunlit desk; the five objects on it ARE the
+// navigation. The page is thin on purpose: Layout owns title/meta/OG (no
+// regression from the outgoing homepage), StudioDesk owns the desk shell +
+// room chassis, the rooms/ components own each interior, Footer owns contact.
+//
+// DISPOSITION of the retired comet homepage (hard boundary: nothing silently
+// vanishes — all of it stays in git history on main):
+//   · <AboutSignal/> (the ~880vh comet choreography)  → RETIRED. Its three
+//     descriptor lines are the Work room's plain bio (rooms/WorkRoom.astro).
+//   · The HeroName masthead ("Jonathan Tollefson")    → the etched name on the
+//     desk (StudioDesk keeps a real <h1>); the role/eyebrow copy → Work room.
+//   · The #work Card Deck selector (rail, hover tones, broadcast sound toggle,
+//     per-project accents, --boot veil)               → CUT. Its load-bearing
+//     content — the five case-study links in RANK order — is the Work room.
+//   · "Full resume →"                                 → Work room + the desk's
+//     text index (résumé stays ≤ 1 click from arrival).
+//   · <SignalMachine/> + the /more mobile swap        → moved WHOLESALE,
+//     unchanged, to /signal (src/pages/signal.astro). The desk's SIGNAL object
+//     dims the room, then navigates there (D2).
+//   · <Footer/>                                       → kept; contact email added.
 import Layout from "../layouts/Layout.astro";
 import Footer from "../components/Footer.astro";
-import AboutSignal from "../components/AboutSignal.astro";
-import SignalMachine from "../components/SignalMachine.astro";
+import StudioDesk from "../components/studio/StudioDesk.astro";
+import WorkRoom from "../components/studio/rooms/WorkRoom.astro";
+import SoundLabRoom from "../components/studio/rooms/SoundLabRoom.astro";
+import WritingRoom from "../components/studio/rooms/WritingRoom.astro";
+import IllustrationsRoom from "../components/studio/rooms/IllustrationsRoom.astro";
 import { getCaseStudies } from "../lib/notion";
+
+// The IBM Plex layer is the studio's locked type (bundled locally, house
+// rule: no CDN fonts). Only the weights the desk + rooms actually set.
+import "@fontsource/ibm-plex-sans/400.css";
+import "@fontsource/ibm-plex-sans/500.css";
+import "@fontsource/ibm-plex-sans/600.css";
+import "@fontsource/ibm-plex-mono/400.css";
+import "@fontsource/ibm-plex-mono/500.css";
 
 export const prerender = true;
 
-// Order the case studies by strength (Jon's call 2026-06-03), overriding the
-// Notion Order field. This order is the index numbering 01..NN, top of the list
-// first; the first item is also the default preview shown in the pane at rest.
+// Rank order locked (Jon, 2026-06-03) — overrides the Notion Order field.
+// Flagship first; the desk's text index surfaces it one click from arrival.
 const RANK = ["the-console", "chs", "crediverso", "raylu", "momence"];
 const rankOf = (slug: string) => {
   const i = RANK.indexOf(slug);
@@ -17,531 +49,25 @@ const rankOf = (slug: string) => {
 };
 const allWorks = await getCaseStudies();
 const works = [...allWorks].sort((a, b) => rankOf(a.slug) - rankOf(b.slug));
-
-// ── The Card Deck: each project is a numbered "signal node" on the left rail —
-// it carries the project's --accent and a pentatonic note (for the optional hover
-// tone). Tuning a node in (hover / keyboard focus) fills the big cover CARD with
-// that project. Sapphire #0ec4fc is the shared system colour at rest.
-const DECK: Record<string, { accent: string; note: string; freq: number }> = {
-  "the-console": { accent: "#16c5f5", note: "C5", freq: 523.25 },
-  "chs":         { accent: "#ffb347", note: "D5", freq: 587.33 },
-  "crediverso":  { accent: "#ff6f91", note: "E5", freq: 659.25 },
-  "raylu":       { accent: "#57d39a", note: "G5", freq: 783.99 },
-  "momence":     { accent: "#b69cff", note: "A5", freq: 880.0 },
-};
-const DECK_FALLBACK = { accent: "#16c5f5", note: "C5", freq: 523.25 };
-const deck = works.map((proj, i) => ({ proj, i, ...(DECK[proj.slug] ?? DECK_FALLBACK) }));
 ---
 
 <Layout title="Jonathan Tollefson — User Experience Architect" hideThemeSelector={true}>
   <main>
-    {/* The landing + about, nested as one scroll-through: the masthead name, then
-        the signal you scrub — three honest descriptors of Jon surface as it
-        lights up — before it releases into the work below. See AboutSignal. */}
-    <AboutSignal />
-
-    <section class="section work" id="work" aria-label="Selected work">
-      <div class="inner">
-        <div class="work-head">
-          <span class="section-eyebrow"><i class="se-tick" aria-hidden="true"></i>Selected work</span>
-          <p class="work-intro">Five projects — the catalog. Tune one in.</p>
-        </div>
-
-        {/* The Card Deck: a signal-routing DEVICE. Each project is a numbered
-            "signal node" on the left rail; hover / keyboard-focus tunes it in —
-            its cover fills the big CARD (now viewing), the accent floods the
-            device, and (only if the visitor switches sound on) its note plays.
-            The <a> nodes carry the full aria-label, so the big card is aria-hidden. */}
-        <div class="deck module" data-work-list data-active="0" data-sound="off">
-          {/* the AUDIO SWITCH — sits at the top of the rail, vertically in line
-              with the signal nodes; a broadcast-style control to opt into the
-              per-project hover tones (off by default). */}
-          <button class="dk-audio" type="button" aria-pressed="false" aria-label="Toggle hover sound" title="Hover sound">
-            <span class="dk-ripple" aria-hidden="true"></span>
-            <svg class="dk-ico" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-              <circle class="dk-core" cx="12" cy="12" r="2.3"></circle>
-              <path class="dk-arc" d="M8 8.4a5 5 0 0 0 0 7.2"></path>
-              <path class="dk-arc" d="M5.4 5.8a8.6 8.6 0 0 0 0 12.4"></path>
-              <path class="dk-arc" d="M16 8.4a5 5 0 0 1 0 7.2"></path>
-              <path class="dk-arc" d="M18.6 5.8a8.6 8.6 0 0 1 0 12.4"></path>
-              <line class="dk-slash" x1="4.5" y1="19.5" x2="19.5" y2="4.5"></line>
-            </svg>
-          </button>
-
-          <ol class="deck-rail bank">
-            {deck.map((d) => (
-              <li class="we" data-i={d.i} style={`--accent:${d.accent}`}>
-                <a class="node" href={`/case-studies/${d.proj.slug}`} data-i={d.i} data-freq={d.freq}
-                   aria-label={`View case study: ${d.proj.name} — ${d.proj.subtitle}${d.proj.outcome ? ". " + d.proj.outcome : ""}`}>
-                  <span class="nd-ping" aria-hidden="true"></span>
-                  <span class="nd-disc" aria-hidden="true"></span>
-                  <span class="nd-no" aria-hidden="true">{String(d.i + 1).padStart(2, "0")}</span>
-                  {d.proj.cover && (
-                    <span class="nd-cover" aria-hidden="true" style={`background-image:url(${d.proj.cover})`}></span>
-                  )}
-                  <span class="nd-mobile" aria-hidden="true">
-                    <span class="nd-m-name">{d.proj.name}</span>
-                    <span class="nd-m-pitch">{d.proj.subtitle}</span>
-                    {d.proj.outcome && <span class="nd-m-out">{d.proj.outcome}</span>}
-                  </span>
-                </a>
-              </li>
-            ))}
-          </ol>
-
-          {/* The big CARD — the now-viewing. A visual, desktop-only enhancement
-              fed by the same data the rail links carry, so it's aria-hidden. The
-              default (first) card shows at rest; CSS swaps on hover / keyboard
-              focus (data-active). The cover is the readout — no meter, no waveform. */}
-          <div class="deck-card screen" aria-hidden="true" data-active="0">
-            {deck.map((d) => (
-              <article class="dcard" data-dc={d.i} style={`--accent:${d.accent}`}>
-                <div class="dc-cover">
-                  {d.proj.cover ? (
-                    <img src={d.proj.cover} alt="" loading={d.i === 0 ? "eager" : "lazy"} />
-                  ) : (
-                    <div class="dc-empty"></div>
-                  )}
-                </div>
-                <span class="dc-edge"></span>
-                <span class="dc-sweep"></span>
-                <div class="dc-tuned"><span class="dc-dot"></span>♪ Tuned · <span class="dc-note">{d.note}</span></div>
-                <div class="dc-plate">
-                  <div class="dc-title">{d.proj.name}</div>
-                  <p class="dc-sub">{d.proj.subtitle}</p>
-                  <div class="dc-sig"><span class="dc-base"></span><span class="dc-blip"></span></div>
-                  <div class="dc-meta">
-                    {d.proj.tags.length > 0 && (
-                      <span class="dc-tags">{d.proj.tags.slice(0, 3).map((t) => <span class="dc-tag">{t}</span>)}</span>
-                    )}
-                    <span class="dc-view">View case study →</span>
-                  </div>
-                </div>
-              </article>
-            ))}
-          </div>
-        </div>
-
-        <div class="work-foot">
-          <a class="work-foot-link" href="/resume">
-            <span>Full resume</span>
-            <span aria-hidden="true">→</span>
-          </a>
-        </div>
-      </div>
-    </section>
-
-    {/* SIGNAL — the instrument. The site grammar: signals wake machines, and
-        machines make sound. Audio exists only after the power press; the boot
-        ceremony + standby rules live in the component. */}
-    {/* SIGNAL is keyboard-only. On touch / no-fine-pointer devices (where the
-        instrument refuses to play) the homepage swaps it for the self-contained
-        /more audio exhibit — same predicate the component uses (pointer:fine). */}
-    <div class="sig-desktop">
-      <SignalMachine />
-    </div>
-    <div class="sig-mobile">
-      <iframe class="sig-mobile-frame" data-src="/more/index.html" title="Interactive audio exhibit" loading="lazy" allow="autoplay"></iframe>
-    </div>
-    <script is:inline>
-      if (!window.matchMedia("(pointer: fine)").matches) {
-        const f = document.querySelector(".sig-mobile-frame");
-        if (f && !f.src) f.src = f.getAttribute("data-src");
-      }
-    </script>
+    <StudioDesk works={works}>
+      <WorkRoom slot="room-work" />
+      <SoundLabRoom slot="room-soundlab" />
+      <WritingRoom slot="room-writing" />
+      <IllustrationsRoom slot="room-illustrations" />
+    </StudioDesk>
   </main>
 
   <Footer />
-
-  {/* The Card Deck controller: reveal the nodes as the deck enters, then tune a
-      node in on hover / keyboard focus (swap the card, light the node + accent
-      glow, fire the sonar ping, and — only if the visitor opted into sound — play
-      that project's note). Defaults to node 0, so the first project shows live
-      even with no JS. Audio is off until the toggle is pressed (its click is the
-      user gesture that unlocks the AudioContext, and keeps the page silent by
-      default). */}
-  <script>
-    const list = document.querySelector<HTMLElement>("[data-work-list]");
-    if (list) {
-      const reveal = new IntersectionObserver((records) => {
-        for (const r of records) {
-          if (r.isIntersecting) { r.target.classList.add("we-in"); reveal.unobserve(r.target); }
-        }
-      }, { threshold: 0.18 });
-      Array.from(list.querySelectorAll<HTMLElement>(".we")).forEach((e) => reveal.observe(e));
-
-      const card = list.querySelector<HTMLElement>(".deck-card");
-      const nodes = Array.from(list.querySelectorAll<HTMLAnchorElement>(".node"));
-      const accents = Array.from(list.querySelectorAll<HTMLElement>(".we"))
-        .map((b) => b.style.getPropertyValue("--accent").trim() || "#16c5f5");
-      const glow = (i: number) => list.style.setProperty("--accent-glow", accents[i] || "transparent");
-      const reduce = window.matchMedia("(prefers-reduced-motion: reduce)");
-
-      // optional hover tone — off until opted in; lazy AudioContext, low gain, short.
-      let soundOn = false, actx: AudioContext | null = null;
-      const ensureCtx = () => (actx = actx || new (window.AudioContext || (window as any).webkitAudioContext)());
-      // hover: Jon's mastered AAC (sound-lab), inline base64, decoded once + cached; pitch-shifted per tile (A)
-      const HOVER_B64 = "AAAAHGZ0eXBNNEEgAAAAAE00QSBtcDQyaXNvbQAAA7ptb292AAAAbG12aGQAAAAA5lXUtOZV1LQAALuAAAB4AAABAAABAAAAAAAAAAAAAAAAAQAAAAAAAAAAAAAAAAAAAAEAAAAAAAAAAAAAAAAAAEAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAACAAACTHRyYWsAAABcdGtoZAAAAAfmVdS05lXUtAAAAAEAAAAAAAB4AAAAAAAAAAAAAAAAAAEAAAAAAQAAAAAAAAAAAAAAAAAAAAEAAAAAAAAAAAAAAAAAAEAAAAAAAAAAAAAAAAAAAehtZGlhAAAAIG1kaGQAAAAA5lXUtOZV1LQAALuAAAB4AAAAAAAAAAAiaGRscgAAAAAAAAAAc291bgAAAAAAAAAAAAAAAAAAAAABnm1pbmYAAAAQc21oZAAAAAAAAAAAAAAAJGRpbmYAAAAcZHJlZgAAAAAAAAABAAAADHVybCAAAAABAAABYnN0YmwAAAB2c3RzZAAAAAAAAAABAAAAZm1wNGEAAAAAAAAAAQAAAAAAAAAAAAIAEAAAAAC7gAAAAAAAM2VzZHMAAAAAA4CAgCIAAAAEgICAFEAUABgAAABY0AACcQAFgICAAhGQBoCAgAECAAAAD3NidGQAAAAASTI0AAAAGHN0dHMAAAAAAAAAAQAAAB4AAAQAAAAAKHN0c2MAAAAAAAAAAgAAAAEAAAAYAAAAAQAAAAIAAAAGAAAAAQAAAIxzdHN6AAAAAAAAAAAAAAAeAAAABgAAAGAAAADsAAABAwAAAQYAAAERAAABIQAAARsAAAEWAAABNAAAARwAAAEMAAABDgAAARUAAAEFAAAA+QAAAPYAAAD2AAAA8wAAAOYAAADYAAAA0wAAAN0AAADfAAAA2gAAANYAAADVAAAA7wAAAOYAAACFAAAAGHN0Y28AAAAAAAAAAgAAEAAAACZnAAAA+nVkdGEAAADybWV0YQAAAAAAAAAiaGRscgAAAAAAAAAAbWRpcmFwcGwAAAAAAAAAAAAAAAAAxGlsc3QAAAC8LS0tLQAAABxtZWFuAAAAAGNvbS5hcHBsZS5pVHVuZXMAAAAUbmFtZQAAAABpVHVuU01QQgAAAIRkYXRhAAAAAQAAAAAgMDAwMDAwMDAgMDAwMDA4NDAgMDAwMDAxOTUgMDAwMDAwMDAwMDAwNkUyQiAwMDAwMDAwMCAwMDAwMDAwMCAwMDAwMDAwMCAwMDAwMDAwMCAwMDAwMDAwMCAwMDAwMDAwMCAwMDAwMDAwMCAwMDAwMDAwMAAADCJmcmVlAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABtObWRhdCEAA0BoHCELlACK0iZhBs+5a+b7QBcq+OocjgnxjCKJTzQLzP97mOoEkK9XBZtTKIQFXW+h0PhecL1GdmAVbkt8s5QoA8gWCidghwKosRb67E4v8R8BLGdCos524wvwA+IBRY9/TiELj+91H///8Ha2LZgw69jDEkWFQuVnWBwACCBzw9qzVqCYZEpvMM8pLuLXTJSvkNcWdNYQlsIaLNkJR8Jh5875QoGSSP88r3ejZm2ZKgIQQ6c2VNh2dt3paiZ1DqnY9mF5lKQpl+8cXg0nA8+uskY4GogA92A9H1hzQ4D7GNDWshUFhWUQhh/O3lQ9HnbiNsXKnpJ4AIAW0CgsFCKUY/J+v1Om7o5MTCAJhC/fr4hicqQrnUxyygNX+EuuwcR9YKCBFA69REgqGRKDs8g60RmBIWNtLVGgEVGgmkO/obBZtdEhFsjUDC1Lj/wHIQuETayDY2FZWEFn80eK23XX3VxHhLqgaEnMqSJn1+00ndWc4LI8ZZry4Sa0nY0EzRyZxb0/CIRjXnkSM2MV7+sD8XJb6cBnSFhYv8EkLctgTx2/Cl7BF8LdiwkFELPPD3A/UeIda49MSGbqr7r9G2eL8d5U76G4dU+/ImeEVVg7WYrMogEwaCIQo+JNeO28PrS6fOa89dgcP31EH0TFYs5UUXhizl74NITXWJ0coTSrvvDcuGjAPfRD+BLrfrvh3Lfo3mPx9txulROX8/XDiDRE1XSeV4IT4BhiWJy5O3ySW1WRJ5Kt0hC+jWQTWQQkIF3lyyGYNIyp6/p8hW2/+ffccCELjIAAj///79axFYhFQhDRGCFUzp/XOacJ+szV85pLgykQTYlCoQz7yYgOrDb62j6IookaejeOsITbLF5LUCqAjR4A8xly9d52fDyo75j6gl+RV1ERUOM6EK0/skees0w82wq+8bY8GKK+9t4zIMUEWMbmVV2vvC2CFn105CVP/jbdmEzMaMwQtrMVnAShoKBCr6uH9J2t9WO6644wBHFKkLqp3HpqOYRSLmnp+PKn2LWJCB5OuoD0t5AcKAenMO+tpEKRiMFpM5qLgVIfBzdn6IpBrzOTFDJPm1IeTzfhSJUfE+nXI48JebjXNlOaABcDr+znnkNwHGDGuT2UfMQfOgUnfZ4hC44AAKr///CWtBWJxwEQ0OxAIQhIR8z7d+ennR0JK6BcNTxJ9XgI/QGwxOU9oB84+4qf7cs4OtMAJyNQJXKWEywzn00LbfW1xaomFw5iVRLOo/I34r8207FVEjMLqjYY0uXhUY6DssqaBxWVD8E5K+F/Y8W536Gd+hlKIY1x331WeHLZFVgCHtUjscDYdCEUBEISPqW9fxmo+L9xr4TqtvjYM/+diHejb2VsazWYs95Kcqj4TJx706BYv4FgRm6B3xG0CkSIzPkM8ts6Q2RriY0sIdj/UOu6dtTD7TI4QIy9zEAACukU88Unu6Hv97eNE9/L6l/h4TtXSZzV+91jfb0T2ABZwAAg8Cz7fkZNog4hC4RVrANjQVBgtiQIUU6V9ve3H4g8wNYGRa1baaaBBt9A2T6kktiS1eIQu961nbrs8z+5jm5VGOwqqPbHRknLEwUrNrsV9UKsLuU8f1S63tVExTbzZAWFvuXZskSlCERCXoUmgqOuwZmrESh8GgmJuzr1sElO+DbPcXQv80hvpOWcAenlU6oa1OKyQNxWJAgFhAEghEfis+3bcfXiFW68464CAkRzCYBXYCvjesJsPq+/OGw++KVxOtRUSrrJzfg0AYo6sm+GYhmYgA5CNSIyLWP7snrJDT/xfC9cHD92cBmxiNFEQiSHIEVq9R8SlMABctdAIIRgofj85sqedU3W1MTiN6zpdh0zIBXJ2ZygFmnj7fNRVMAU41yMa75771DgIQuMAEAHv//xtrENHQNEYRiCRX73/V9h18HE6OEb0gH9MwMFxZRkPfD6sQdgQuSOX53gU7CcEL9XocXPdNR6uL0kEKtzmxN4JarFVCVUos+JHVxYybqvQBbxSl6ZZEB1aOuCKpFHVHtimLXRZYkEsxAIZTJe/pFyew4yCyVk9zbfXu9OrWMiB3Z/edOjhma+oACeNEXAh2MRQIxhEvzb8vVunrwr4fF1U+osNL0KGihdg3yrxcc+upfwd/UrWovN8M1qpZ5iKYcBBAKBzLXM2vOqcnvqJtUVs3w6RWyiEAB00+ZwloVGfQCtcZphFj8/aAOw/Fc/ZimKkkPWmSyZkSs9Pq8m749mNJkKTNSkw4SBleIAQlgdVvcIcCELjAAGBP//8XawDQxDQyDA6CwnEEizn3ujzJz+q3SuPTzAznZN1E9z45FYnlcqTz1/tyPoxk4eVk2kzbl0H3JLCEAoyA6rB5I0bhDPF3t12TUN2xz6IErMrIw0e4cuDXrWtJQmgxVRsDPeSPLO5NwAnlwSV2ZayO4fzs6HDDCQQBngQFUaO6z9fSZ+BK6vNNLJmZCKtaBsbEoTEEYSTWqjv0OPVvabuOpU+AkvIBONuofPFl4MKHjeknV8zwXZ3debeMZFjKbUwoSJiX5DB3kkD6Q8ZinhuOJu5Ct/1IgImllE+AWvPxjbv8rxajnFpt9xrzY0aFE0q8/OgRIgJ1QLrs/HpL89hLWD1Y4sAAcvkZexHuOAIQuKAIQH//9xVwgtDYgSaxfyeD40jU1rpJ3rgKNrpmDTeXOOxta35e7umW5mS5qyBl/B51z5FqVMF1bIADsih0ZrlkHR28pDsNZg/MPQWnNuOD5izn1IDxdCsu2KJE9AzPO5wXDCt9gxTswBSqo3FdFDIuUQRxz5jGNdmXPRZncQclAEBEOqUxTwoxywCbQ1Nu4yB4iCIAjKeIiLegqGIWFAWIIQim/r29eHyR2n0dvbifE0BuaT45JbcHVG0K39H1/HNJWXP4CRSYrDLko/ifID6sMWIg6brNZF0PpZvamw9vqqi+m9opeezmx2bg2P+7/p6noH6PpuuG7CSgFdi+90KQzIlksQZRgyeyrmSGpzoPJbIcv8UkAgKQW8kOzifgiVlNjjbuUgeIiCZVVnu/b2bA4hC4oBAAf///C2sQ0ViQFiGMImXP03TNPKLvV+S1gXD/OSKHhGztHgWO3QipnQL6Rcx4pkEE+orlfTfG3ZsYimfgDSGTfrpc11nGk3be1rAYhA2MzgQ8QHaN9YatqqoAFgivsi82dX8V1NgchW0RSp1YabGq6jGnP2rQ4AQA+BChoVdEIa+B0XoVuy/hYOvAhLNSTFQmFAmEZAimtZn5ysJi9a5eZxPpUCRveT9KrBeStQqbte2CrPtq55Yf98l70+7l/8f9l5QOHj1Nf9n8TsVbkjIsFsz8HTA+lmshkMTZ+42D9Vy6u2HaexVSDaBAFSKbTTTpnTurvWiCEIoAMbur7H2e/L6S0wMZeNPh/G9KE2X1sXacrk9j08DiELjAF4A///0JaxDCGKJAi+b6xv1iPInnSedQwCK+PU/0JTE0UwdOwDDdv0vy7ylnyW4fSJIwPqG2/eHwkwJuw//seFUv/qwQkTOihUoAJIjGjNAy2YYW8efUT3lOQHM36vgrffeV1WYRdUS9pvW0TQdk1dpU6rdQhG0tGeMNjqCqXkjgoEFa4LY2MJAiNR897bao9uWunGtW2CPBST62w/sMSWGppjqRcNVuGczcYbFpv853n6n8ynVt5qOIrhkZyEbhFo+JJVUFx0PiZMbKnPrBb2xXWVmOYe8GHlb+JLhE4AiDq0cPDdJzmR3oUFBUlblOl9zcue+X/MfNOTgj2zfv18+rtGIEuKAOAhC4zBwAf///A3CDMQKOa/d8/PqNS4L826alAXYWQU+N5ATZfPep4wR/y1DN7t/wlFHE7cfUEblmxDEmNIxxySUwDjGmq8Z2WeryOXvEO19QpdxJUBa1BpDMtTh8cbWVN7XWv0ZGrOyd5R1l83yWHto0c4KoQYJQvHGZI7cSqveVe66eCg7b7ZGQCAIe1iGkMRBBR5ffnx4nrlNA46TjiwZG5UXytuJ1+l1dX2Ub35+M1dvyhncWWm38XUbCJy72shPoIvsPyeiN12yu/ZIFnV+2CcY5X8TrtweTaqIIADVQX2Bv+saRXM09P26RSFo7qFKV5x/bv3vQiRz8i+Hm8EBZtkC/rwAgIhP3p3K8AhC4xHIQP///B2sQ0ggwJBCIJla19vFMLtq+Lt51TMCE5aS+RshghPUSZBXsY9255o4hCi3c+XQ1ds2oW5Us+IamFvRAsr0pPUnmjSwbcx1KGDABFFU4Fk2NAmR/H3mr9g5AbzJw7Nhf8VZewmpUIGHywVZn3ODQ//TRDoWvrwOqIf47dVQh7WgrHRBDQoEIgm8zqePHecjoT67a61LARldRcIsFBo6mbZ/Hp7XEC0/pog9dCuJHKQeMgmGTZEoFu9Q5ra1sKu5n7GnvroSQYS0S/husXCwqqMZi+FqQnR0ZNfsNld65v6j+1dNh9Sx4oAigxf2v4Ty5yZcBHohUW4Bltt0tx+fsJ8ITiEI+f79aacn6DgIQuKeeIH///wFrENFgqECjdLrxn2lpH3t08ooHr6hsL8bBAa8fpaZLIsCcUgkmq7ymdXnv/T5X1egB0kJFEUkhgYSblaVFBDfsrgTaDJkxUqKdWEPa12CT3tcVMwUEZ0ZgtMqJM4jPnku61Gugb1PvrWk9EdAnbqTJXWaeAtYhobCoZBgZiCjjsx387u7ba+s1v4rq6B6IZ2ZmCtgRV1RjBZu1729uWUlkjvJ4rn5C2uuI5BhCZSExF+l6gE1gnWm0LYexyHKPzn4WW0+n2oKPKdcLbnzXWYeJ66iZprKYumT9ExPTtbfSe1wva0SybYzgEOMXDIqWsLLJLPR/p9Gns9UhdwIQuMkcwP///wdrENIYRkCga3+z3a6dJb6OiAIpf3+wfItIOBWZOmY+fkBnwpEGJ8UhvPTF+BxFWG1EBcJWJlpsz06sWjMvt2gEcoYgTwi4o4P43nWKMeI5+cInwhkTQxAZraTqy0J8f87jZpuvx/Evpv4JLoHCRRVrENioyBgSDCj7qd5+m8+6zjWNPpoAxz7reXksdOZ+5x52qnoL8lLLSAEkE6GZbxECOZJDyYeZ1MIkhjnV935MZ3bDsd3j+WmZNwBTxjKXX/9O34WssRZSAjkIQuPGlW09OTNXwvUm6755+5tvl2UdYRZ7oluE+b/2WnEl6Tvk/AIQuMoBAL///w1rAMIEMCQQVN/y9/XzVzXDf4VqdWA070vA8+x3n2QoF6C95ibUmA4dKYZkn7Zgx+d6mFghXAoug+ojW5WulbaZMly5gBtSul2XJ2FaWKPOYTSGhU9bsp940ZkiX0CxUpZuc08p5wSNA0h0rQOVssIC1GKkEGBEGgiEKJp4f9M209uukTh1L42E0YzZ+PTsfMGGxjT1NMxYHWziLsHRK3IhE9CA5eB0H4jkScGRuOe53ynv/W+P5LqqfhNujjQjtA1NMzSrJ7LlGvGmxWapdT5ewn7lCSHBlTzqEM9bqPHwqdbnwmj2yeZjZbNKbgIQuMgeSf///wNrINIYaCEIUWd3v5VJpeezqOh2C4Au9qzsnMN/iiVYP6OqwlBPs6dhkWJT91fu/UKffIUbopjmyxVpbfXjhe7+zhXTo5SU+WO0OWhB6HYZxIaQebxBaGiUEqIJVJ/lUeWwqdWyosWQLHPaZ1yaGnb5xYIW1iGkMURhJ7K8Pn0ezyppduujYBTPdlXD7JWaafUa3l1TVeCzSIIRFcG57YbYnivme7RnoDN/HVfCQlDaEe8bHqX6VnWjwRyF7RiO7NrtR01aFkTzZAUxYiAAbNonqguXfw+edwSCIAAMKP1yUtDMQiZIxYAMWACkOAIQuMHPEP///wlrENoYZjCj4w988bmp5JV66eWKBqhgzf8fsN8U/eiHgDKIf9pMDPp9E8K+Rfij9oqn9ztUNASJ5/0v+Pzegdvmm89QzCvplXKYDGubtqDtK4cpWTJ15T25fzEqutqSGQkPn8O0JYffKsHaqA3Ub8fseic3jxz0aiKt9FELCEQVf7td++ety7LLkedAAz3bGT8ZNSVgu5hHyG20wXackGsQFYs+LpJsbp6B7IkZ8jojRi0LVv9twt6hY/nmxsXzFuiQckyKGX9ZpDQQoZ4BBcB/L77wztSdnKe6aS/GeQPLNGSwJS38/FhwUcIQuMAdpf///wFrANigzDIIWOj5z9PXm/xtddccdAGRxnpo9C6f7qkbSW9Zx6JndtBEeSUex7Vf+3sIvjay8UVDicG7sq1vtV1TtZPXj492Yx6FwidBQCbBIBc7kc/RbXvxK262ZLO190UtHlOaYBhoofFkkLbKQgYCggs/lxP259d9WvaOtTiuAMQaQzj7ucjKNM15gjv+j1P1NYxCCa1kSW5/wBOSTTEhFIRAHBoM39M+z/+gzKWfRjXd8waW43IvvPGxDzxcZZ1vguxR1neElIsA31TKbc+PwLOJS0jUJMTZGs8uAhC4wBOh////FXCCIMLv5h4+d4ex0atNQAXqmqPcKXvD9HnzHL15N/sQHMt9BHEtzuKtweMRqnqw4C4cQcx9FZpY2wssaLMf1f5rw3IylIQCbn+nRL46NGbi1cA9rfiP1rkiY3xTKj8H7UZaeFttHYRBC761dePW/HUGjqargDESRsb8a1UVj7//tfasK1TACTcZHswVqEga4SRFuo8GQmiDqXSHwpIKLOB7jfDqaLUbJYdqM2EuqEID55VCgjTa/AHbxXH8LabcWLEMGM1fbMmroXWfJqUcAhC4P9rENIQYXMN/nBfT4LnWgObm2KKtPORe7ZGtld09fGW5ORb80hkZqvRmOGHEU5USCKuv8VeSCtwjKkywDy7pFSojZ/PZoctEqXMLcskj1q8YxDC1JMd6KY2n5fwTYxcNbKQQYEF3+LqvnM7Ou6u9L4dAAcitnP8kPyn5PCSGM1Ppjg5AxySsYTRAJqFdzOEdHU8TUtCt8PrYHwWtXuzmnt4WWP6k4UynKP3Tgc227FPyBydXcIeszt0Yb7hwl/KRT2YS0isSKjdexTqmUChOPwIQuKAD8////wNrQNhg1BQMCC727U/LxPLUjjh1bAyiD5jzcq1H8QbfNmi8qJz/nMm1JJ2jI0Jd7V/yRkE92ud6INPHg785I8HXV/FE9SNGZjRWWJU1v/xYIAz8DoRNSd6sFVy1LVBLcAQAf5Psqzcssaxuc6FtdJcYXfybfZ6jpa16OMBgeAbIWH0LrnmRydglyVbBMDyNTPkIwrSRWBPyPgSwmA5NT0czCWTN8+zHkpqevWQ07p8FAt2aeBtKVS4QYGASWrGS/aq+uIhMMJxrExxjxv8Udt1mEVA4AhC4QNtg6DC78eGc/Pfr4votxPhACKF2Hvq+r/wCAR7srCOtqr/XSYIhhKEcR9xrt2wtXIj50YBDjmzT1kXrx41nctL2mMoz6rvve3eIOEFmkeZdY0ErE+zkE1SSvTHDkzQNK8JcqKYQs/mDx+e3s4Fpd6nIMNxxDkDlHcK+/5b7d4sJtifZSMyXZrTuO+zbrd9zfy4YVRWLZ2j2nmrf9/kEWjvyvamUIxeL8tJ2twV7sYgUV2A9ImjHiVr7PJYfCNKlisqfs5wUjY1Y7csAZxZyzVnzWduMqOYmvwPTxwIQuELa0DRIIQgw/E273+ca6cXwnFgMN3hl313NcNxLKFw99TSRSMmPaEW67hMjPLnVA9e/vVkxoWeJTWnPYKfaE7arqmVY6rpYrN1qOb46D4ztoyhx35F4c2jB/DBZMchbggbFBQs/HRXj5pa3MfDPM1sALJCtIyIs7I+Mk8tpEwn6TlaKSe0m1Wvot0ROzPQhkp8Cji1I1gEkNIVD1f6ZeC0aqhDm0wqQQYzjiHr2/7NF3l2A8DLAiE0DcgZsufODU1JE6aUgnLTokfNj9rztZdz45Z1HC44OAhC4wARC///zB2sA2aBGQLPbWv2d/I/V01wUAYPp8N+lZRh9cnHMmtM8/T6V6JWS0FWsp/HXumFoBlmEl+DzUVTUVbCIDNFiPly0a7syS4fkmAR+KNrADPERTVVADHHT2bN6MJFYS5sIgwEQhZ+LL/jZTrD2yONNgBxjqVpXlA4O6J9iXvUgdfkozZQO75gm66ixx4XiiLlgByvbZz2SAck6FwrpZV971WYcEAUVMeDR+DmJqT+LiSq9zjSVNNb90H/mkwNm8PNdUfgUaoZU2OhEQlMqrgIQuEJaxDZoEIgw+vb7a57+zV8SPi3D1AAurUOiZhajr3PfleqPGSSyyegieWQcOQd3x/9dQx4O3Dwike1faLJNZGmtk77+b3GwwIbPuQS9UZYtgYY0kM0yStah89bXtAXhLqwhCFn6w2/gr4VuOE8tbAGPCJrUjp5uwo9RudZZPP720SfQExO4qgXMExpkKLsrW1+eRHE4aTscXqGwKWpqMpibE9zGvELAybtjTbURZfNRAtF4vDzBBihRTET24uaHAkWDpYwDWrRZJ5dl1V/X4fw+A4ISuJAzAv//8QtugdhYgiCz9+k/PfunXV8n3QdgAPzJerMID3TFroJumD4n98ySRpRiMmZ171xo6g8Rhx9O1n2uY+YyRm2MvoLQIcsJsQ3yn0V7HfwfuqcPYF/pJ6Qat1EmclVfC3l2ioCBbuqAITUKhA26jmFgiELPiPbn9Pfb46UVJxabDQ0dwcWY7K3XncZO7jiee1xPG5snq9qTdGJo0ZNU0mKCSUX6g5576X8pONjE8XsvJWr0VtSB1vrKrHeyKGFfq90KhpxgUn07R0OBkuPZVtXJ1WPNhoACOmMhkrEbnW384gne1Pmh5nsHAhTf7n/c7boOXzOMXXgURD/cqBTnwKIB/82BRIWrbf8LuYiTwbDrp7luIi/pO4sm8Qgc773v8i7Bc8kH5SVFa7mWBzzWEHLMyzfzSFgGWaxvXLwlKPeOhuSQyt3nLyKigs0MghegGVaZ2k9bXPfCvhXhc4d+Algis6k6XCIcvFaC2SUPufGPHOku2uukUoSJyrCCUDOYgTde98TVxi+rd5tL8ZroO+4uFybnoPHNqpsNpKpqWXsmHicuYG+aTO8pM99C5ueM0JJcMcl1jRLqW44lxhjrQuYRxnfern2c2+YgHKryex4CFN/of90tSg6eB69SiAAPXlTwAPAbpJhx63lUYAAAAAAAEsUpjkDYwAAAAAAAH8/9f8F2IAHbflnxXYAA625IoOHu1m3r1KIAA9eVPAA8B+WIG57kkkyUAAAAAAABd+Ukwe3/4oAAAAAAAFADxxIFtAAAAAAAAft//9/27rwAP6UARiAA4=";
-      const b64buf = (b: string) => { const s = atob(b), u = new Uint8Array(s.length); for (let i = 0; i < s.length; i++) u[i] = s.charCodeAt(i); return u.buffer; };
-      let _hbuf: AudioBuffer | null = null, _hp: Promise<AudioBuffer> | null = null;
-      const loadHover = (ac: AudioContext) => _hp || (_hp = ac.decodeAudioData(b64buf(HOVER_B64)).then(b => (_hbuf = b)));
-      const tone = (freq: number) => {
-        if (!soundOn || !freq) return;
-        try {
-          const ac = ensureCtx();
-          const fire = (buf: AudioBuffer) => {
-            const s = ac.createBufferSource(); s.buffer = buf;
-            s.playbackRate.value = freq / 523.25;   // pitch per tile: the-console (C5) = 1.0, others step up the pentatonic
-            const g = ac.createGain(); g.gain.value = 0.72;   // 10% quieter than the 0.8 ship gain (Jon 2026-06-15); low + non-fatiguing on rapid fire
-            const hs = ac.createBiquadFilter(); hs.type = 'highshelf'; hs.frequency.value = 3500; hs.gain.value = -8;   // tame the harsh top (Jon: "cut the high end a bit more, less harsh")
-            s.connect(hs); hs.connect(g); g.connect(ac.destination); s.start();
-          };
-          if (_hbuf) fire(_hbuf); else loadHover(ac).then(fire);
-        } catch {}
-      };
-      const retrigger = (el: Element | null | undefined, cls: string) => {
-        if (!el || reduce.matches) return;
-        el.classList.remove(cls); void (el as HTMLElement).offsetWidth; el.classList.add(cls);
-      };
-
-      const engage = (i: number) => {
-        list.setAttribute("data-active", String(i));
-        list.setAttribute("data-engaged", "1");
-        card?.setAttribute("data-active", String(i));
-        nodes.forEach((n, j) => n.classList.toggle("is-active", j === i));
-        glow(i);
-        retrigger(nodes[i], "pinging");
-        retrigger(card?.querySelector(`.dcard[data-dc="${i}"]`), "swept");
-        tone(+(nodes[i].dataset.freq || 0));
-      };
-      const release = () => {
-        list.setAttribute("data-active", "0");
-        list.removeAttribute("data-engaged");
-        card?.setAttribute("data-active", "0");
-        nodes.forEach((n) => n.classList.remove("is-active"));
-        glow(0);
-      };
-      nodes.forEach((node, i) => {
-        node.addEventListener("pointerenter", () => engage(i));
-        node.addEventListener("focus", () => engage(i));
-      });
-      list.addEventListener("pointerleave", release);
-      list.addEventListener("focusout", (e) => {
-        if (!list.contains((e.relatedTarget as Node) ?? null)) release();
-      });
-
-      // ONE sitewide sound consent (shared with the SIGNAL instrument below): the
-      // deck toggle reads/writes localStorage['jt-sound']; the instrument's first
-      // power-on sets it and announces via a window event, so a visitor who powers
-      // the machine walks back up and the hover plucks are already on.
-      const soundBtn = list.querySelector<HTMLButtonElement>(".dk-audio");
-      const setSound = (on: boolean) => {
-        soundOn = on;
-        list.setAttribute("data-sound", on ? "on" : "off");
-        soundBtn?.setAttribute("aria-pressed", String(on));
-      };
-      try { if (localStorage.getItem("jt-sound") === "on") setSound(true); } catch {}
-      window.addEventListener("jt-sound", ((e: CustomEvent) => {
-        if (e.detail === "on" && !soundOn) setSound(true);
-      }) as EventListener);
-      soundBtn?.addEventListener("click", () => {
-        setSound(!soundOn);
-        try { localStorage.setItem("jt-sound", soundOn ? "on" : "off"); } catch {}
-        retrigger(soundBtn, "pulsing");
-        if (soundOn) { try { ensureCtx().resume?.(); } catch {} }
-      });
-
-      glow(0);   // the card floods with node 0's accent at rest
-    }
-  </script>
 </Layout>
 
 <style>
   main {
-    /* The landing/about (AboutSignal) owns the top of the page: it centres the
-       masthead in the live stage and sets its own padding in the static
-       fallback, so main adds none here. */
-    padding-top: 0;
-  }
-
-  /* SIGNAL is keyboard-only; on touch devices show the /more exhibit instead.
-     Mirrors the component's own !matchMedia('(pointer: fine)') test, so the swap
-     lands on exactly the devices where the instrument won't play. */
-  .sig-desktop { display: none; }
-  .sig-mobile { display: block; }
-  .sig-mobile-frame { display: block; width: 100%; height: 100dvh; border: 0; background: #080b10; }
-  @media (pointer: fine) {
-    .sig-desktop { display: block; }
-    .sig-mobile { display: none; }
-  }
-
-  /* Generic section — no rules between sections; the page flows. */
-  .section {
-    padding: var(--space-16) 0;
-  }
-  /* The work index is the arrival composition: it must land the whole catalog in one
-     viewport, so it runs a tighter top than a generic section (the comet/portal owns
-     the headroom above it). */
-  .work.section { padding-top: clamp(1.5rem, 4vh, 2.6rem); }
-
-  /* The work index — a quiet tracklist of the projects. The title is all you
-     see at rest; the cover + outcome surface in a fixed preview pane on the
-     right on hover / keyboard focus. Collapses to inline cards on touch. Every
-     colour is a token, so it re-themes (dark-first). */
-  .work-head { margin-bottom: clamp(1.1rem, 2.6vw, 1.7rem); }
-  .section-eyebrow {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.6rem;
-    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-    font-size: var(--fs-eyebrow);
-    font-weight: var(--fw-semibold);
-    letter-spacing: var(--ls-eyebrow);
-    text-transform: uppercase;
-    color: var(--muted);
-  }
-  .se-tick { width: 22px; height: 2px; background: var(--accent); display: inline-block; }
-  .work-intro {
-    margin-top: 0.9rem;
-    font-family: "Space Grotesk Variable", "Space Grotesk", ui-sans-serif, system-ui, sans-serif;
-    font-size: clamp(1.1rem, 2.4vw, 1.5rem);
-    font-weight: 500;
-    letter-spacing: -0.01em;
-    line-height: 1.2;
-    color: var(--text);
-  }
-
-  .deck {
-    /* the Card Deck DEVICE: a chassis housing a header, the slim left rail of
-       signal NODES, and the big cover CARD (right). The card scales to the
-       viewport so the whole unit composes in one frame. Chassis + card are dark
-       in every theme; per-project --accent + sapphire are the only colour. */
-    position: relative;
-    display: grid;
-    grid-template-columns: clamp(4.2rem, 6vw, 5.4rem) minmax(0, 1fr);
-    grid-template-rows: auto 1fr;
-    gap: clamp(0.8rem, 1.6vh, 1.3rem) clamp(1rem, 2vw, 1.5rem);
-    align-items: stretch;
-    padding: clamp(14px, 1.6vw, 22px);
-    border-radius: 18px;
-    border: 1px solid rgba(150, 190, 240, 0.14);
-    background: linear-gradient(157deg, rgba(30, 39, 55, 0.46) 0%, rgba(11, 15, 23, 0.6) 100%);
-    box-shadow:
-      0 44px 90px -46px rgba(0, 0, 0, 0.88),
-      inset 0 1.5px 0 rgba(255, 255, 255, 0.11),
-      inset 0 0 0 1px rgba(120, 160, 210, 0.06),
-      inset 0 -7px 16px rgba(0, 0, 0, 0.3),
-      0 0 70px -34px color-mix(in srgb, var(--accent-glow, #0ec4fc) 55%, transparent);
-    overflow: hidden;
-  }
-  /* a soft glass sheen across the top-left; content sits above it */
-  .deck::before {
-    content: ""; position: absolute; inset: 0; pointer-events: none; z-index: 0;
-    background: linear-gradient(152deg, rgba(255, 255, 255, 0.05) 0%, rgba(255, 255, 255, 0) 28%);
-  }
-  /* the POWER-VEIL: a dark layer over the whole device that LIFTS as the signal boots it
-     (--boot 0→1, set by AboutSignal as the comet is absorbed). Defaults to 1 = lifted
-     (full power) when not in the live arrival, so the static/browse module reads normal. */
-  .deck::after {
-    content: ""; position: absolute; inset: 0; pointer-events: none; z-index: 6; border-radius: 18px;
-    background: radial-gradient(132% 104% at 80% 28%, rgba(4, 7, 12, 0.9), rgba(1, 2, 5, 0.97));
-    opacity: calc(1 - var(--boot, 1));
-  }
-  .dk-audio, .deck-rail, .deck-card { position: relative; z-index: 1; }
-  /* the AUDIO SWITCH — a prominent broadcast control at the top of the rail, in
-     line with the signal nodes. Sapphire #0ec4fc is the shared system colour;
-     OFF reads as a dim, slashed signal, ON lights the broadcast arcs. */
-  .dk-audio {
-    grid-column: 1; grid-row: 1;
-    display: flex; align-items: center; justify-content: center;
-    width: clamp(40px, 4.4vw, 52px); height: clamp(40px, 4.4vw, 52px);
-    margin: 0 auto clamp(8px, 1.3vh, 12px); padding: 0; cursor: pointer;
-    border-radius: 50%; border: 1px solid rgba(150, 190, 240, 0.16);
-    background: linear-gradient(180deg, rgba(38, 47, 62, 0.5), rgba(15, 20, 29, 0.62));
-    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06), 0 2px 6px rgba(0, 0, 0, 0.4);
-    transition: border-color 0.25s ease, box-shadow 0.25s ease, background 0.25s ease;
-  }
-  .dk-audio:focus-visible { outline: 2px solid #0ec4fc; outline-offset: 2px; }
-  .dk-ico { width: 56%; height: 56%; overflow: visible; }
-  .dk-core { fill: #6c7a89; transition: fill 0.25s ease; }
-  .dk-arc { stroke: #6c7a89; stroke-width: 1.7; stroke-linecap: round; opacity: 0.7; transition: stroke 0.25s ease, opacity 0.25s ease; }
-  .dk-slash { stroke: #8590a0; stroke-width: 1.7; stroke-linecap: round; opacity: 0.95; transition: opacity 0.25s ease; }
-  .dk-ripple { position: absolute; inset: -1px; border-radius: 50%; border: 1.5px solid #0ec4fc; opacity: 0; pointer-events: none; }
-  .deck[data-sound="on"] .dk-audio {
-    border-color: color-mix(in srgb, #0ec4fc 60%, transparent);
-    background: radial-gradient(circle at 50% 36%, color-mix(in srgb, #0ec4fc 22%, #10151c), #0a0e14);
-    box-shadow: inset 0 0 16px color-mix(in srgb, #0ec4fc 22%, transparent), 0 0 20px -3px #0ec4fc;
-  }
-  .deck[data-sound="on"] .dk-core { fill: #0ec4fc; }
-  .deck[data-sound="on"] .dk-arc { stroke: #0ec4fc; opacity: 1; }
-  .deck[data-sound="on"] .dk-slash { opacity: 0; }
-  .dk-audio.pulsing .dk-ripple { animation: dk-ping 0.55s cubic-bezier(0.2, 0.6, 0.3, 1); }
-
-  /* ── the rail of signal NODES (the projects) ── */
-  .deck-rail {
-    list-style: none; margin: 0; padding: 0; grid-column: 1; grid-row: 2; align-self: stretch;
-    display: flex; flex-direction: column; justify-content: center; gap: clamp(8px, 1.3vh, 12px);
-  }
-  .we { margin: 0; flex: 1 1 0; display: flex; }   /* nodes grow to fill the rail height */
-  .node {
-    position: relative; flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 5px;
-    min-height: clamp(46px, 7vh, 70px); text-decoration: none; border-radius: 11px;
-    border: 1px solid rgba(150, 190, 240, 0.1);
-    background: linear-gradient(180deg, rgba(38, 47, 62, 0.42), rgba(15, 20, 29, 0.5));
-    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05), 0 2px 6px rgba(0, 0, 0, 0.3);
-    transition: background 0.3s ease, box-shadow 0.3s ease, border-color 0.3s ease;
-  }
-  .node:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
-  .nd-disc {
-    position: relative; width: 24px; height: 24px; border-radius: 50%;
-    background: radial-gradient(circle at 50% 36%, #2a313c, #0c0f14 70%);
-    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12), inset 0 -2px 4px rgba(0, 0, 0, 0.7);
-    transition: background 0.3s ease, box-shadow 0.3s ease;
-  }
-  .nd-disc::before {
-    content: ""; position: absolute; inset: 5px; border-radius: 50%;
-    border: 1.5px solid color-mix(in srgb, var(--accent) 50%, #3a414c); opacity: 0.5; transition: opacity 0.3s ease;
-  }
-  .nd-no { font-family: ui-monospace, "IBM Plex Mono", Menlo, monospace; font-size: 0.56rem; font-weight: 600; letter-spacing: 0.08em; color: #7a8694; transition: color 0.3s ease; }
-  /* one-shot sonar PING on hover/focus (re-fired by the controller via .pinging) */
-  .nd-ping {
-    position: absolute; top: 50%; left: 50%; width: 24px; height: 24px; margin: -12px 0 0 -12px; border-radius: 50%;
-    border: 1.5px solid var(--accent); opacity: 0; pointer-events: none; transform: scale(0.6);
-  }
-  .node.pinging .nd-ping { animation: dk-ping 0.55s cubic-bezier(0.2, 0.6, 0.3, 1); }
-  @keyframes dk-ping { 0% { opacity: 0.8; transform: scale(0.55); } 100% { opacity: 0; transform: scale(2.4); } }
-  .nd-cover, .nd-mobile { display: none; }
-  /* TUNED IN — the live node: disc lights, ring blooms, accent glow */
-  .node:hover, .node:focus-visible, .node.is-active,
-  .deck:not([data-engaged]) .we[data-i="0"] .node {
-    background: linear-gradient(180deg, color-mix(in srgb, var(--accent) 14%, rgba(30, 38, 52, 0.46)), rgba(15, 20, 29, 0.5));
-    border-color: color-mix(in srgb, var(--accent) 45%, transparent);
-    box-shadow: inset 0 0 18px color-mix(in srgb, var(--accent) 12%, transparent), 0 0 16px -5px color-mix(in srgb, var(--accent) 55%, transparent);
-  }
-  .node:hover .nd-disc, .node:focus-visible .nd-disc, .node.is-active .nd-disc,
-  .deck:not([data-engaged]) .we[data-i="0"] .node .nd-disc {
-    background: radial-gradient(circle at 50% 36%, #fff, var(--accent) 62%);
-    box-shadow: 0 0 12px color-mix(in srgb, var(--accent) 85%, transparent);
-  }
-  .node:hover .nd-disc::before, .node:focus-visible .nd-disc::before, .node.is-active .nd-disc::before,
-  .deck:not([data-engaged]) .we[data-i="0"] .node .nd-disc::before { opacity: 0; }
-  .node:hover .nd-no, .node:focus-visible .nd-no, .node.is-active .nd-no,
-  .deck:not([data-engaged]) .we[data-i="0"] .node .nd-no { color: #fff; }
-
-  /* ── THE CARD — the now-viewing display; five covers stack, opacity-swapped.
-     Dark in every theme, with a glow keyed to the live project's --accent-glow. */
-  .deck-card {
-    grid-column: 2; grid-row: 1 / -1; position: relative; border-radius: 14px; overflow: hidden;
-    border: 1px solid rgba(150, 200, 255, 0.13);
-    background: linear-gradient(155deg, #0e1a28 0%, #070d16 70%, #050a12 100%);
-    box-shadow:
-      inset 0 2px 6px rgba(0, 0, 0, 0.5), inset 0 0 0 1.5px rgba(0, 0, 0, 0.5), inset 0 0 44px rgba(0, 0, 0, 0.45),
-      0 0 calc(40px * var(--boot, 1)) -6px color-mix(in srgb, var(--accent-glow, transparent) 44%, transparent);
-    min-height: clamp(14rem, 40svh, 25rem);
-    transition: box-shadow 0.4s ease;
-  }
-  .dcard {
-    position: absolute; inset: 0; opacity: 0; pointer-events: none;
-    transition: opacity 0.45s ease;
-  }
-  /* the active card is driven by data-active on .deck-card (controller; defaults to
-     0 in markup so the first card shows with no JS). Scoped to .deck-card / .dcard. */
-  .deck-card[data-active="0"] .dcard[data-dc="0"],
-  .deck-card[data-active="1"] .dcard[data-dc="1"],
-  .deck-card[data-active="2"] .dcard[data-dc="2"],
-  .deck-card[data-active="3"] .dcard[data-dc="3"],
-  .deck-card[data-active="4"] .dcard[data-dc="4"],
-  .deck-card[data-active="5"] .dcard[data-dc="5"] { opacity: var(--boot, 1); }
-  .dc-cover { position: absolute; inset: 0; }
-  .dc-cover img { width: 100%; height: 100%; object-fit: cover; display: block; }
-  .dc-empty { width: 100%; height: 100%; background: radial-gradient(120% 100% at 70% 0%, color-mix(in srgb, var(--accent) 22%, transparent), transparent 60%), #04070c; }
-  .dc-edge { position: absolute; left: 0; right: 0; top: 0; height: 3px; z-index: 4; opacity: 0.75; background: linear-gradient(90deg, transparent, var(--accent), transparent); }
-  /* a signal SWEEP across the card on swap (controller toggles .swept) */
-  .dc-sweep {
-    position: absolute; inset: 0; z-index: 3; pointer-events: none; opacity: 0; width: 40%;
-    background: linear-gradient(90deg, transparent, color-mix(in srgb, var(--accent) 26%, transparent), transparent);
-  }
-  .dcard.swept .dc-sweep { animation: dk-sweep 0.5s ease; }
-  @keyframes dk-sweep { 0% { opacity: 0.9; transform: translateX(-120%); } 100% { opacity: 0; transform: translateX(330%); } }
-  /* the tuned-in label (audio cue, NOT a meter): the project's note */
-  .dc-tuned {
-    position: absolute; top: 12px; right: 13px; z-index: 5; display: inline-flex; align-items: center; gap: 7px;
-    font-family: ui-monospace, Menlo, monospace; font-size: 0.55rem; letter-spacing: 0.14em; text-transform: uppercase; color: #cdd6e1;
-    background: rgba(5, 8, 13, 0.55); border: 1px solid color-mix(in srgb, var(--accent) 35%, rgba(150, 200, 255, 0.12)); border-radius: 999px; padding: 5px 10px;
-  }
-  .dc-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--accent); box-shadow: 0 0 8px var(--accent); }
-  .dc-note { color: var(--accent); }
-  /* the title plate — a scrim so the title stays legible over ANY cover */
-  .dc-plate {
-    position: absolute; left: 0; right: 0; bottom: 0; z-index: 5; padding: clamp(16px, 2vw, 24px);
-    background: linear-gradient(0deg, rgba(3, 5, 9, 0.96) 0%, rgba(3, 5, 9, 0.82) 45%, rgba(3, 5, 9, 0.35) 75%, transparent 100%);
-  }
-  .dc-title {
-    font-family: "Space Grotesk Variable", "Space Grotesk", sans-serif; font-weight: 700;
-    letter-spacing: -0.03em; line-height: 0.95; font-size: clamp(1.7rem, 3.2vw, 2.7rem);
-    color: #fff; text-shadow: 0 2px 18px rgba(0, 0, 0, 0.6);
-  }
-  .dc-sub { margin-top: 0.5rem; font-size: clamp(0.92rem, 1.3vw, 1.05rem); line-height: 1.35; color: #d3dce6; max-width: 44ch; }
-  .dc-sig { position: relative; margin-top: 0.9rem; height: 12px; }
-  .dc-base { position: absolute; left: 0; right: 0; top: 50%; height: 1.5px; background: linear-gradient(90deg, color-mix(in srgb, var(--accent) 55%, transparent), transparent 70%); }
-  .dc-blip { position: absolute; left: 0; top: 50%; width: 8px; height: 8px; margin-top: -4px; border-radius: 50%; background: var(--accent); box-shadow: 0 0 10px var(--accent); opacity: 0; }
-  .dcard.swept .dc-blip { animation: dk-blip 0.6s ease; }
-  @keyframes dk-blip { 0% { opacity: 1; transform: translateX(0); } 100% { opacity: 0; transform: translateX(200px); } }
-  .dc-meta { margin-top: 0.9rem; display: flex; flex-wrap: wrap; gap: 0.5rem 1rem; align-items: center; font-family: ui-monospace, Menlo, monospace; font-size: 0.58rem; letter-spacing: 0.13em; text-transform: uppercase; color: #9aa6b3; }
-  .dc-tags { display: inline-flex; gap: 0.5rem; flex-wrap: wrap; }
-  .dc-tag { color: #b6c2cd; border: 1px solid color-mix(in srgb, var(--accent) 30%, rgba(150, 210, 255, 0.16)); border-radius: 999px; padding: 0.22rem 0.55rem; }
-  .dc-view { color: #fff; border-bottom: 2px solid var(--accent); padding-bottom: 0.25rem; }
-
-  /* Mobile / touch: the deck sheds its chassis and becomes plain project cards. */
-  @media (max-width: 55.99rem) {
-    .deck { display: block; padding: 0; border: none; background: none; box-shadow: none; border-radius: 0; }
-    .deck::before, .deck::after, .dk-audio, .deck-card { display: none; }
-    .deck-rail { display: block; }
-    .node {
-      display: flex; flex-direction: column; align-items: stretch; gap: 0; min-height: 0;
-      padding: 1.4rem 0 1.7rem; border: none; border-bottom: 1px solid var(--line);
-      background: none; box-shadow: none; border-radius: 0;
-    }
-    .nd-ping, .nd-disc, .nd-no { display: none; }
-    .nd-cover {
-      display: block; order: -1; position: relative; width: 100%; aspect-ratio: 16 / 9;
-      background-size: cover; background-position: center; border: 1px solid var(--line);
-      filter: brightness(0.92); margin-bottom: 1rem;
-    }
-    .nd-mobile { display: block; }
-    .nd-m-name { display: block; font-family: "Space Grotesk Variable", "Space Grotesk", sans-serif; font-weight: 600; font-size: clamp(1.7rem, 8vw, 2.4rem); letter-spacing: -0.02em; line-height: 1.05; color: var(--text); }
-    .nd-m-pitch { display: block; margin-top: 0.55rem; font-size: 1.02rem; line-height: 1.4; color: color-mix(in srgb, var(--text) 86%, transparent); }
-    .nd-m-out { display: block; margin-top: 0.5rem; font-size: 0.86rem; line-height: 1.45; color: var(--muted); }
-    .work-intro { max-width: 28ch; }
-  }
-  @media (prefers-reduced-motion: reduce) {
-    .dcard, .node, .nd-disc { transition: none; }
-    .node.pinging .nd-ping, .dcard.swept .dc-sweep, .dcard.swept .dc-blip { animation: none; }
-  }
-
-  .work-foot {
-    padding: var(--space-12) 0 var(--space-4);
-    border-top: 1px solid var(--line);
-    margin-top: var(--space-8);
-  }
-  .work-foot-link {
-    display: inline-flex;
-    align-items: center;
-    gap: var(--space-2);
-    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-    font-size: var(--fs-eyebrow);
-    letter-spacing: var(--ls-eyebrow);
-    text-transform: uppercase;
-    color: var(--accent);
-    text-decoration: none;
-    padding: var(--space-3) var(--space-4);
-    border: 1px solid var(--accent);
-    transition: color 200ms ease, background 200ms ease;
-  }
-  .work-foot-link:hover,
-  .work-foot-link:focus-visible {
-    color: var(--bg);
-    background: var(--accent);
+    /* The desk is the whole first view; it sets its own height under the
+       sticky header. No page padding of its own. */
+    padding: 0;
   }
 </style>
-
