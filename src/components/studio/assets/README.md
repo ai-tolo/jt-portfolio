@@ -1,39 +1,52 @@
-# Studio assets — swap contract (Lane C)
+# Studio assets — swap contract (v2, 2026-07-26 consultant pass)
 
-Full ASSET SPEC SHEET: `~/career-strategy/studio-asset-spec.md` (copy on `~/Desktop`).
 Binding build spec: `NOTES-STUDIO-SPEC.md` at the repo root.
+Jon's remaining work: **`~/career-strategy/studio-bench.html`** (the worksheet — open it,
+it supersedes the old spec-sheet flow). Historical sheet: `~/career-strategy/studio-asset-spec.md`.
 
-## The contract in one breath
+## State: the desk is DRESSED
 
-Jon authors 8 deliverables — the desk surface, the etched name, and one asset per desk
-object — to the canvases in the spec sheet, and drops them at these paths. Same
-basename + same canvas ratio ⇒ the real art replaces its neutral placeholder silhouette
-with **zero code changes**.
+All 7 slots below are **filled** with built assets in the approved "morning" direction
+(pale ash, window-pool sun, carbon gear). They were exported from the scene generator at
+`~/studio-mocks/scene.mjs` (`node scene.mjs --export`), which is the single source of
+truth for the desk's art. The site no longer depends on Jon's assets to look intentional.
+
+Jon's hand replaces only the **identity carriers**, via the bench:
+
+1. `etch.webp` — currently a marker-FONT interim autograph. Replace with his real hand.
+2. `obj-illustrations.webp` — currently a built creature drawing. Replace the drawing
+   with his own (the ingest pipeline keeps the taped-sheet framing).
+3. `public/studio/illustrations/` + `rooms/illustrations-manifest.json` — gallery content.
+
+Drop-photo → finished-asset pipeline: `~/studio-mocks/ingest.mjs` (see the bench cards).
+
+## The filled slots (canvas = current truth; ratios locked in StudioDesk OBJECTS)
 
 ```
-public/studio/desk.webp                 desk surface   3072×2048  WebP (no alpha, q~80)
-public/studio/etch.webp                 etched name    1760×440   WebP-alpha (or etch.svg)
-public/studio/obj-work.webp             WORK           600×440    WebP-alpha
-public/studio/obj-signal.webp           SIGNAL         680×400    WebP-alpha
-public/studio/obj-soundlab.webp         SOUND LAB      440×440    WebP-alpha
-public/studio/obj-writing.webp          WRITING        400×320    WebP-alpha
-public/studio/obj-illustrations.webp    ILLUSTRATIONS  440×340    WebP-alpha
+public/studio/desk.webp                 desk surface   3072×2048   WebP no-alpha  132 KB
+public/studio/etch.webp                 the autograph  1760×440    WebP-alpha      24 KB  ← Jon's hand
+public/studio/obj-work.webp             WORK           940×710     WebP-alpha      31 KB
+public/studio/obj-signal.webp           SIGNAL         1120×660    WebP-alpha      20 KB
+public/studio/obj-soundlab.webp         SOUND LAB      750×565     WebP-alpha      32 KB
+public/studio/obj-writing.webp          WRITING        585×930     WebP-alpha      15 KB
+public/studio/obj-illustrations.webp    ILLUSTRATIONS  910×610     WebP-alpha      20 KB  ← Jon's drawing
+Total 276 KB (budget ≤ 730 KB; LCP @4× measured 0.64 s against the < 2.0 s gate)
 ```
 
-## Rules that make the swap seamless (details in the spec sheet)
+Object canvases are the generator's local boxes × 2.5 (retina-safe at the largest
+rendered size). Same basename + same ratio ⇒ zero code changes, unchanged.
 
-- All raster @2x against a 1440×900 reference viewport; sRGB.
-- ONE shared light source: sun from the UPPER-RIGHT of the frame, top-down camera —
-  highlights top/right, form shading lower-left.
-- NO baked cast shadows (the build owns the CSS shadow so the wake-lift can move it);
-  contact occlusion ≤ 16 canvas px is fine.
-- 6% transparent bleed on all sides; silhouette never touches the canvas edge.
-- Author objects UPRIGHT — the placed rotation is CSS-side.
-- Sound objects (Signal, Sound Lab) authored dark/unpowered; the glow is build-side (D3).
-- Total image weight budget: ≤ 730 KB (LCP < 2.0 s @ 4× CPU throttle).
+## Rules (unchanged from v1, still binding for any replacement)
 
-## To the desk builder (Lane A)
+- ONE light source: sun from the UPPER-RIGHT, top-down camera.
+- NO baked cast shadows (build-side CSS owns them); contact occlusion ≤ 16 canvas px OK.
+- 6% transparent bleed; author objects UPRIGHT (rotation is CSS-side).
+- Sound objects authored dark/unpowered; glow is build-side (D3).
 
-These dimensions were derived from NOTES-STUDIO-SPEC.md + the grey-box scaffold before
-your placeholders landed. If your final object footprints differ, update BOTH this file
-and `~/career-strategy/studio-asset-spec.md` §3/§5 so Jon authors against the truth.
+## Regenerating / re-skinning
+
+`~/studio-mocks/scene.mjs` holds both direction palettes (morning + golden). To re-skin
+the whole desk: flip the direction in the `--export` block, `node scene.mjs --export`,
+convert per the script comments, copy `out/export/*.webp` here. Composition lives in
+StudioDesk's OBJECTS array + the generator's VIEWS (keep them in sync — VIEWS is the
+design source, OBJECTS is the shipped truth).
