@@ -48,8 +48,6 @@ interface Track { src: string; title: string; year?: number; duration?: string; 
 const tracks: Track[] = (soundlab as any).tracks ?? [];
 interface Illo { src: string; alt: string; title?: string; year?: number; }
 const illos: Illo[] = (illustrations as any).items ?? [];
-
-const EMAIL = "jtollefson123@gmail.com";
 ---
 
 <a class="skip" href="#work">Skip to the work</a>
@@ -89,14 +87,15 @@ const EMAIL = "jtollefson123@gmail.com";
     </nav>
   </section>
 
-  {/* ── THE PILL — the row, docked ─────────────────────────────────────── */}
-  <nav class="pill" data-pill aria-label="Sections" hidden>
+  {/* ── THE RAIL — the row, docked as a left column (Jon, 2026-08-12:
+      left nav over the pill; mobile chrome deferred) ───────────────────── */}
+  <nav class="rail" data-rail aria-label="Sections" hidden>
     {MARKS.map((m) => (
-      <a class="pill-item" href={`#${m.id}`} data-for={m.id} aria-label={m.word}>
-        <span class="pill-art" aria-hidden="true">
+      <a class="rail-item" href={`#${m.id}`} data-for={m.id} data-temp={m.temp} aria-label={m.word}>
+        <span class="rail-art" aria-hidden="true">
           {m.art ? <img src={m.art} alt="" draggable="false" /> : m.emoji}
         </span>
-        <span class="pill-word">{m.word}</span>
+        <span class="rail-word">{m.word}</span>
       </a>
     ))}
   </nav>
@@ -162,11 +161,9 @@ const EMAIL = "jtollefson123@gmail.com";
     )}
   </section>
 
-  <footer class="foot">
-    <a href={`mailto:${EMAIL}`}>{EMAIL}</a>
-    <a href="/resume">résumé</a>
-    <span>Minneapolis, MN</span>
-  </footer>
+  {/* end sentinel: at document bottom the last section takes the active
+      state even though it is too short to reach the spy band */}
+  <div data-end aria-hidden="true"></div>
 </div>
 
 <style>
@@ -204,6 +201,9 @@ const EMAIL = "jtollefson123@gmail.com";
   }
 
   .one {
+    /* the wood breathes after the last sheet — and the tail gives the final
+       sections room to reach the scroll-spy band */
+    padding-bottom: clamp(140px, 32vh, 360px);
     --ink: #141210;
     --dim: #6a5940;
     --paper: rgba(248, 244, 234, 0.96);
@@ -342,66 +342,72 @@ const EMAIL = "jtollefson123@gmail.com";
     border-radius: 10px;
   }
 
-  /* ── the pill ────────────────────────────────────────────────────────── */
-  .pill {
+  /* ── the rail (left column) ──────────────────────────────────────────── */
+  .rail {
     position: fixed;
-    top: 12px;
-    left: 50%;
+    left: 14px;
+    top: 50%;
     z-index: 50;
     display: flex;
+    flex-direction: column;
     gap: 4px;
-    padding: 6px 8px;
-    border-radius: 99px;
+    padding: 8px 6px;
+    border-radius: 16px;
     background: rgba(245, 242, 234, 0.94);
     border: 1px solid var(--paper-line);
-    box-shadow: 0 10px 24px -12px rgba(20, 12, 4, 0.5);
-    transform: translate(-50%, -6px);
+    box-shadow: 0 14px 30px -14px rgba(20, 12, 4, 0.5);
+    transform: translate(-10px, -50%);
     opacity: 0;
     pointer-events: none;
     transition: opacity 220ms ease, transform 220ms ease;
   }
-  .pill[data-in] {
-    transform: translate(-50%, 0);
+  .rail[data-in] {
+    transform: translate(0, -50%);
     opacity: 1;
     pointer-events: auto;
   }
-  .pill[hidden] {
+  .rail[hidden] {
     display: flex; /* stays in layout for the transition; visibility via opacity */
   }
-  .pill-item {
+  .rail-item {
     display: flex;
+    flex-direction: column;
     align-items: center;
-    gap: 7px;
-    padding: 6px 12px;
-    border-radius: 99px;
+    gap: 4px;
+    width: 76px;
+    padding: 9px 4px 7px;
+    border-radius: 11px;
     text-decoration: none;
     font-family: "IBM Plex Mono", ui-monospace, monospace;
-    font-size: 0.72rem;
-    letter-spacing: 0.03em;
     color: #4a4436;
     transition: background 160ms ease, color 160ms ease;
   }
-  .pill-item:hover {
+  .rail-item:hover {
     background: rgba(20, 18, 16, 0.08);
   }
-  .pill-item[data-on] {
+  .rail-item[data-on] {
     background: var(--ink);
     color: #f5f2ea;
   }
-  .pill-item:focus-visible {
+  .rail-item:focus-visible {
     outline: 2px solid var(--ink);
     outline-offset: 2px;
   }
-  .pill-art {
-    font-size: 15px;
+  .rail-art {
+    font-size: 19px;
     line-height: 1;
     display: grid;
     place-items: center;
   }
-  .pill-art img {
-    width: 16px;
-    height: 16px;
+  .rail-art img {
+    width: 20px;
+    height: 20px;
     object-fit: contain;
+  }
+  .rail-word {
+    font-size: 0.56rem;
+    letter-spacing: 0.04em;
+    white-space: nowrap;
   }
 
   /* ── sections ────────────────────────────────────────────────────────── */
@@ -569,47 +575,12 @@ const EMAIL = "jtollefson123@gmail.com";
     display: block;
   }
 
-  .foot {
-    max-width: 1080px;
-    margin: 0 auto;
-    padding: 10px clamp(26px, 4vw, 46px) 60px;
-    display: flex;
-    flex-wrap: wrap;
-    gap: 24px;
-    font-family: "IBM Plex Mono", ui-monospace, monospace;
-    font-size: 0.75rem;
-    letter-spacing: 0.04em;
-    color: var(--dim);
-  }
-  .foot a {
-    color: var(--ink);
-    text-decoration: underline;
-    text-underline-offset: 4px;
-  }
-  .foot span {
-    margin-left: auto;
-  }
-
-  /* ── phone ───────────────────────────────────────────────────────────── */
-  @media (max-width: 560px) {
-    .corner {
-      right: 16px;
-    }
-    .marks {
-      gap: 14px;
-    }
-    .mark-word {
-      font-size: 0.62rem;
-    }
-    .pill-word {
-      display: none; /* icon-only pill on phones */
-    }
-    .pill-item {
-      padding: 7px 10px;
-    }
+  /* keep the sheets clear of the rail on narrower desktop windows
+     (mobile chrome is deferred — Jon, 2026-08-12) */
+  @media (max-width: 1320px) {
     .sheet {
-      margin-left: 12px;
-      margin-right: 12px;
+      margin-left: 108px;
+      margin-right: 24px;
     }
   }
 
@@ -630,37 +601,88 @@ const EMAIL = "jtollefson123@gmail.com";
 </style>
 
 <script>
-  // The pill: appears when the hero row leaves the viewport; scroll-spy
+  // The rail: appears when the hero row leaves the viewport; scroll-spy
   // highlights the section in view. IntersectionObservers only — no rAF,
   // no scroll handlers.
-  const pill = document.querySelector<HTMLElement>("[data-pill]");
+  const rail = document.querySelector<HTMLElement>("[data-rail]");
   const heroMarks = document.querySelector<HTMLElement>("[data-hero-marks]");
-  if (pill && heroMarks) {
-    pill.hidden = false; // present; visibility is opacity/transform via [data-in]
+  if (rail && heroMarks) {
+    rail.hidden = false; // present; visibility is opacity/transform via [data-in]
     new IntersectionObserver(
       ([e]) => {
-        if (e.isIntersecting) pill.removeAttribute("data-in");
-        else pill.setAttribute("data-in", "");
+        if (e.isIntersecting) rail.removeAttribute("data-in");
+        else rail.setAttribute("data-in", "");
       },
       { rootMargin: "-8px 0px 0px 0px" }
     ).observe(heroMarks);
 
+    // Scroll-spy: IO events are only the TRIGGER; the active section is
+    // recomputed deterministically each time — the lowest section whose top
+    // has passed the 35% line, or the last section at hard bottom (short
+    // final sheets can never reach the line). No scroll handlers, no rAF.
     const items = new Map(
-      Array.from(pill.querySelectorAll<HTMLElement>("[data-for]")).map((el) => [el.dataset.for, el])
+      Array.from(rail.querySelectorAll<HTMLElement>("[data-for]")).map((el) => [el.dataset.for as string, el])
     );
-    const spy = new IntersectionObserver(
-      (entries) => {
-        for (const e of entries) {
-          if (!e.isIntersecting) continue;
-          items.forEach((el) => el.removeAttribute("data-on"));
-          items.get((e.target as HTMLElement).id)?.setAttribute("data-on", "");
+    const ids = Array.from(items.keys());
+    // A nav click LOCKS its target as the active section (the two bottom
+    // sections share one max-scroll position, so position alone can't tell
+    // them apart); any user-initiated scroll releases the lock.
+    let lock: string | null = null;
+    const recompute = () => {
+      const doc = document.documentElement;
+      const atBottom = window.innerHeight + window.scrollY >= doc.scrollHeight - 8;
+      let active = ids[0];
+      if (lock) {
+        active = lock;
+      } else if (atBottom) {
+        active = ids[ids.length - 1];
+      } else {
+        const line = window.innerHeight * 0.35;
+        for (const id of ids) {
+          const s = document.getElementById(id);
+          if (s && s.getBoundingClientRect().top <= line) active = id;
         }
-      },
-      { rootMargin: "-10% 0px -70% 0px" }
+      }
+      items.forEach((el, id) => {
+        if (id === active) el.setAttribute("data-on", "");
+        else el.removeAttribute("data-on");
+      });
+    };
+    document.querySelectorAll<HTMLAnchorElement>('a[href^="#"]').forEach((a) =>
+      a.addEventListener("click", () => {
+        const id = (a.getAttribute("href") || "").slice(1);
+        if (items.has(id)) {
+          lock = id;
+          recompute();
+        }
+      })
     );
-    items.forEach((_, id) => {
-      const s = id && document.getElementById(id);
+    (["wheel", "touchstart", "keydown"] as const).forEach((evt) =>
+      window.addEventListener(evt, () => { lock = null; }, { passive: true })
+    );
+    const spy = new IntersectionObserver(recompute, { threshold: [0, 0.25, 0.5, 0.75, 1] });
+    ids.forEach((id) => {
+      const s = document.getElementById(id);
       if (s) spy.observe(s);
     });
+    const end = document.querySelector("[data-end]");
+    if (end) spy.observe(end);
+    // IO crossings can all fire before a smooth scroll settles; recompute
+    // once more when scrolling ends (scrollend where supported, else a
+    // debounced passive listener — no per-frame work either way).
+    if ("onscrollend" in window) {
+      window.addEventListener("scrollend", recompute, { passive: true });
+    } else {
+      let t = 0;
+      window.addEventListener(
+        "scroll",
+        () => {
+          window.clearTimeout(t);
+          t = window.setTimeout(recompute, 120);
+        },
+        { passive: true }
+      );
+    }
+    recompute();
   }
 </script>
