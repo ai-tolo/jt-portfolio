@@ -1,0 +1,666 @@
+---
+// StudioOne — the one-page skeleton (direction locked with Jon, 2026-08-12).
+//
+// One page, consistent wood ground. The hero IS the sitemap: autograph,
+// one quiet sentence, and the five marks in a small centered row (emoji
+// placeholders now — Jon's art lands at public/studio/mark-<id>.webp and
+// takes over per mark, same swap-contract pattern as ever). Click = smooth
+// anchor scroll. Once the hero row leaves the viewport, the row's five marks
+// reappear as a FLOATING PILL (top-center capsule, scroll-spy active state,
+// identical on phone). Sound sections are night sheets on the same wood
+// (two temperatures, row-local; the page itself never dims).
+//
+// Supersedes the desk composition (StudioDesk.astro stays in git history;
+// /signal, case studies, /resume untouched). Skeleton only: Jon owns the
+// section surface treatment after this lands.
+import fs from "node:fs";
+import path from "node:path";
+import soundlab from "./rooms/soundlab-manifest.json";
+import illustrations from "./rooms/illustrations-manifest.json";
+import type { WorkItem } from "./StudioDesk.astro";
+
+interface Props {
+  works: WorkItem[];
+}
+const { works } = Astro.props;
+
+// The one-liner. Jon rewrites this string at will (his voice: plain,
+// human-centered function; explicitly NOT music-dramatic).
+const ONE_LINER = "I design tools around how people actually use them.";
+
+const pub = (f: string) => path.join(process.cwd(), "public", "studio", f);
+const exists = (f: string) => fs.existsSync(pub(f));
+const etchAsset = ["etch.svg", "etch.webp", "etch.png"].filter(exists).map((f) => `/studio/${f}`)[0];
+
+// The five marks. Emoji until Jon's art lands at public/studio/mark-<id>.webp.
+const MARKS = [
+  { id: "work", word: "work", emoji: "📁", temp: "warm" },
+  { id: "signal", word: "signal", emoji: "🎹", temp: "cool" },
+  { id: "soundlab", word: "sound lab", emoji: "🎧", temp: "cool" },
+  { id: "writing", word: "writing", emoji: "✍️", temp: "warm" },
+  { id: "illustrations", word: "illustrations", emoji: "✏️", temp: "warm" },
+].map((m) => ({
+  ...m,
+  art: ["webp", "svg", "png"].map((e) => `mark-${m.id}.${e}`).filter(exists).map((f) => `/studio/${f}`)[0],
+}));
+
+interface Track { src: string; title: string; year?: number; duration?: string; }
+const tracks: Track[] = (soundlab as any).tracks ?? [];
+interface Illo { src: string; alt: string; title?: string; year?: number; }
+const illos: Illo[] = (illustrations as any).items ?? [];
+
+const EMAIL = "jtollefson123@gmail.com";
+---
+
+<a class="skip" href="#work">Skip to the work</a>
+
+{/* The wood: one fixed layer; everything scrolls over it. */}
+<div class="ground" aria-hidden="true"></div>
+
+<div class="one" data-one>
+  {/* ── HERO — the sitemap ─────────────────────────────────────────────── */}
+  <section class="hero" aria-label="Jonathan Tollefson — site index">
+    <p class="corner">
+      <span class="avail">available for work</span>
+      <a href="/resume">résumé</a>
+    </p>
+
+    <header class="hero-name">
+      {etchAsset ? (
+        <>
+          <h1 class="sr-only">Jonathan Tollefson</h1>
+          <img class="etch-img" src={etchAsset} alt="" draggable="false" />
+        </>
+      ) : (
+        <h1 class="etch-text">Jonathan Tollefson</h1>
+      )}
+      <p class="liner">{ONE_LINER}</p>
+    </header>
+
+    <nav class="marks" data-hero-marks aria-label="Sections">
+      {MARKS.map((m) => (
+        <a class="mark" href={`#${m.id}`} data-temp={m.temp} aria-label={m.word}>
+          <span class="mark-art" aria-hidden="true">
+            {m.art ? <img src={m.art} alt="" draggable="false" /> : <span class="mark-emoji">{m.emoji}</span>}
+          </span>
+          <span class="mark-word">{m.word}</span>
+        </a>
+      ))}
+    </nav>
+  </section>
+
+  {/* ── THE PILL — the row, docked ─────────────────────────────────────── */}
+  <nav class="pill" data-pill aria-label="Sections" hidden>
+    {MARKS.map((m) => (
+      <a class="pill-item" href={`#${m.id}`} data-for={m.id} aria-label={m.word}>
+        <span class="pill-art" aria-hidden="true">
+          {m.art ? <img src={m.art} alt="" draggable="false" /> : m.emoji}
+        </span>
+        <span class="pill-word">{m.word}</span>
+      </a>
+    ))}
+  </nav>
+
+  {/* ── SECTIONS ───────────────────────────────────────────────────────── */}
+  <section class="sheet paper" id="work" aria-labelledby="work-t">
+    <h2 id="work-t"><span aria-hidden="true">📁</span> Work</h2>
+    <ul class="covers">
+      {works.map((w, i) => (
+        <li>
+          <a class="cover" href={`/case-studies/${w.slug}`}>
+            {w.cover && <img src={w.cover} alt="" loading="lazy" />}
+            <span class="cover-name">{w.name}{i === 0 && <em class="flag">flagship</em>}</span>
+            <span class="cover-sub">{w.subtitle}</span>
+          </a>
+        </li>
+      ))}
+    </ul>
+  </section>
+
+  <section class="sheet night" id="signal" aria-labelledby="signal-t">
+    <h2 id="signal-t"><span aria-hidden="true">🎹</span> Signal</h2>
+    <p class="night-line">A playable instrument, built for this site. Press power, type to play.</p>
+    <a class="night-cta" href="/signal">open the instrument →</a>
+  </section>
+
+  <section class="sheet night" id="soundlab" aria-labelledby="soundlab-t">
+    <h2 id="soundlab-t"><span aria-hidden="true">🎧</span> Sound Lab</h2>
+    {tracks.length > 0 ? (
+      <ol class="tracks">
+        {tracks.map((t, i) => (
+          <li class="track">
+            <span class="tno">{String(i + 1).padStart(2, "0")}</span>
+            <span class="tname">{t.title}</span>
+            <span class="tmeta">{[t.year, t.duration].filter(Boolean).join(" · ")}</span>
+            <audio controls preload="none" src={t.src}></audio>
+          </li>
+        ))}
+      </ol>
+    ) : (
+      <p class="night-line">Finished tracks land here.</p>
+    )}
+  </section>
+
+  <section class="sheet paper" id="writing" aria-labelledby="writing-t">
+    <h2 id="writing-t"><span aria-hidden="true">✍️</span> Writing</h2>
+    <p class="paper-line">
+      Diary of a Soundbender — weekly, on making music with tools you built yourself.
+      <a href="https://substack.com/@diaryofasoundbender" target="_blank" rel="noopener noreferrer">read on Substack ↗</a>
+    </p>
+  </section>
+
+  <section class="sheet paper" id="illustrations" aria-labelledby="illustrations-t">
+    <h2 id="illustrations-t"><span aria-hidden="true">✏️</span> Illustrations</h2>
+    {illos.length > 0 ? (
+      <ul class="illos">
+        {illos.map((it) => (
+          <li><img src={it.src} alt={it.alt} loading="lazy" />{it.title && <span>{it.title}</span>}</li>
+        ))}
+      </ul>
+    ) : (
+      <p class="paper-line">Nothing hung yet.</p>
+    )}
+  </section>
+
+  <footer class="foot">
+    <a href={`mailto:${EMAIL}`}>{EMAIL}</a>
+    <a href="/resume">résumé</a>
+    <span>Minneapolis, MN</span>
+  </footer>
+</div>
+
+<style>
+  .sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+  .skip {
+    position: fixed;
+    left: 20px;
+    top: -60px;
+    z-index: 90;
+    padding: 10px 16px;
+    background: #1c160d;
+    color: #f5efe2;
+    font-family: "IBM Plex Mono", ui-monospace, monospace;
+    font-size: 0.8rem;
+    border-radius: 6px;
+    transition: top 160ms ease;
+  }
+  .skip:focus {
+    top: 20px;
+  }
+
+  /* ── the wood ground ─────────────────────────────────────────────────── */
+  .ground {
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    background: #d5c9ae url("/studio/desk.webp") center / cover no-repeat;
+  }
+
+  .one {
+    --ink: #141210;
+    --dim: #6a5940;
+    --paper: rgba(248, 244, 234, 0.96);
+    --paper-line: rgba(90, 74, 50, 0.28);
+    --night: #0b0e14;
+    --night-line: #1c222e;
+    --night-ink: #e8ecf4;
+    --night-dim: #7d8798;
+    --sapphire: #0ec4fc;
+    --ember: #ff5432;
+    color: var(--ink);
+    font-family: "IBM Plex Sans", ui-sans-serif, system-ui, sans-serif;
+  }
+
+  /* ── hero ────────────────────────────────────────────────────────────── */
+  .hero {
+    min-height: 100svh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: clamp(40px, 7vh, 72px);
+    padding: 24px;
+    position: relative;
+  }
+  .corner {
+    position: absolute;
+    top: 22px;
+    right: 26px;
+    margin: 0;
+    display: flex;
+    gap: 20px;
+    align-items: baseline;
+    font-family: "IBM Plex Mono", ui-monospace, monospace;
+    font-size: 0.72rem;
+    letter-spacing: 0.04em;
+    color: var(--dim);
+  }
+  .avail::before {
+    content: "";
+    display: inline-block;
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: var(--ember);
+    margin-right: 7px;
+  }
+  .corner a {
+    color: var(--ink);
+    text-decoration: underline;
+    text-underline-offset: 4px;
+  }
+  .hero-name {
+    text-align: center;
+  }
+  .etch-text {
+    margin: 0;
+    font-family: "IBM Plex Mono", ui-monospace, monospace;
+    font-weight: 600;
+    font-size: clamp(1.3rem, 3vw, 2rem);
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+  }
+  .etch-img {
+    display: block;
+    width: clamp(260px, 30vw, 420px);
+    height: auto;
+    margin: 0 auto;
+  }
+  .liner {
+    margin: 18px 0 0;
+    font-size: clamp(0.95rem, 1.4vw, 1.05rem);
+    color: var(--dim);
+    max-width: 44ch;
+    line-height: 1.5;
+  }
+
+  /* the row: five small marks, word under each */
+  .marks {
+    display: flex;
+    gap: clamp(18px, 3.4vw, 44px);
+    align-items: flex-start;
+  }
+  .mark {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    text-decoration: none;
+    color: var(--ink);
+    transition: transform 200ms cubic-bezier(0.2, 0.7, 0.3, 1);
+  }
+  .mark-art {
+    display: grid;
+    place-items: center;
+    width: clamp(52px, 6vw, 64px);
+    height: clamp(52px, 6vw, 64px);
+    border-radius: 14px;
+    background: var(--paper);
+    border: 1px solid var(--paper-line);
+    box-shadow: -3px 5px 10px -4px rgba(22, 13, 4, 0.35);
+    transition: transform 200ms cubic-bezier(0.2, 0.7, 0.3, 1), box-shadow 200ms ease;
+  }
+  .mark[data-temp="cool"] .mark-art {
+    background: var(--night);
+    border-color: var(--night-line);
+  }
+  .mark-emoji {
+    font-size: clamp(24px, 2.8vw, 30px);
+    line-height: 1;
+  }
+  .mark-art img {
+    width: 72%;
+    height: 72%;
+    object-fit: contain;
+  }
+  .mark-word {
+    font-family: "IBM Plex Mono", ui-monospace, monospace;
+    font-size: 0.72rem;
+    letter-spacing: 0.05em;
+    color: var(--dim);
+    white-space: nowrap;
+  }
+  .mark:hover .mark-art,
+  .mark:focus-visible .mark-art {
+    transform: translateY(-4px);
+    box-shadow: -4px 9px 16px -5px rgba(22, 13, 4, 0.4);
+  }
+  .mark:hover .mark-word,
+  .mark:focus-visible .mark-word {
+    color: var(--ink);
+  }
+  .mark:focus-visible {
+    outline: 2px solid var(--ink);
+    outline-offset: 6px;
+    border-radius: 10px;
+  }
+
+  /* ── the pill ────────────────────────────────────────────────────────── */
+  .pill {
+    position: fixed;
+    top: 12px;
+    left: 50%;
+    z-index: 50;
+    display: flex;
+    gap: 4px;
+    padding: 6px 8px;
+    border-radius: 99px;
+    background: rgba(245, 242, 234, 0.94);
+    border: 1px solid var(--paper-line);
+    box-shadow: 0 10px 24px -12px rgba(20, 12, 4, 0.5);
+    transform: translate(-50%, -6px);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 220ms ease, transform 220ms ease;
+  }
+  .pill[data-in] {
+    transform: translate(-50%, 0);
+    opacity: 1;
+    pointer-events: auto;
+  }
+  .pill[hidden] {
+    display: flex; /* stays in layout for the transition; visibility via opacity */
+  }
+  .pill-item {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    padding: 6px 12px;
+    border-radius: 99px;
+    text-decoration: none;
+    font-family: "IBM Plex Mono", ui-monospace, monospace;
+    font-size: 0.72rem;
+    letter-spacing: 0.03em;
+    color: #4a4436;
+    transition: background 160ms ease, color 160ms ease;
+  }
+  .pill-item:hover {
+    background: rgba(20, 18, 16, 0.08);
+  }
+  .pill-item[data-on] {
+    background: var(--ink);
+    color: #f5f2ea;
+  }
+  .pill-item:focus-visible {
+    outline: 2px solid var(--ink);
+    outline-offset: 2px;
+  }
+  .pill-art {
+    font-size: 15px;
+    line-height: 1;
+    display: grid;
+    place-items: center;
+  }
+  .pill-art img {
+    width: 16px;
+    height: 16px;
+    object-fit: contain;
+  }
+
+  /* ── sections ────────────────────────────────────────────────────────── */
+  .sheet {
+    max-width: 1080px;
+    margin: 0 auto clamp(40px, 7vh, 80px);
+    padding: clamp(26px, 4vw, 46px);
+    border-radius: 8px;
+    scroll-margin-top: 76px;
+    box-shadow: 0 18px 44px -24px rgba(20, 12, 4, 0.5);
+  }
+  .paper {
+    background: var(--paper);
+    border: 1px solid var(--paper-line);
+  }
+  .night {
+    background: var(--night);
+    border: 1px solid var(--night-line);
+    color: var(--night-ink);
+  }
+  .sheet h2 {
+    margin: 0 0 22px;
+    font-family: "IBM Plex Mono", ui-monospace, monospace;
+    font-weight: 600;
+    font-size: clamp(1.05rem, 1.8vw, 1.3rem);
+    letter-spacing: 0.09em;
+    text-transform: uppercase;
+  }
+  .night h2 {
+    color: var(--night-ink);
+  }
+
+  .covers {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    gap: 18px;
+  }
+  .cover {
+    display: block;
+    text-decoration: none;
+    color: inherit;
+  }
+  .cover img {
+    width: 100%;
+    aspect-ratio: 16 / 10;
+    object-fit: cover;
+    border-radius: 4px;
+    border: 1px solid var(--paper-line);
+    display: block;
+    transition: transform 200ms cubic-bezier(0.2, 0.7, 0.3, 1);
+  }
+  .cover:hover img,
+  .cover:focus-visible img {
+    transform: translateY(-3px);
+  }
+  .cover-name {
+    display: block;
+    margin-top: 9px;
+    font-weight: 600;
+    font-size: 0.92rem;
+  }
+  .flag {
+    font-family: "IBM Plex Mono", ui-monospace, monospace;
+    font-style: normal;
+    font-size: 0.56rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    border: 1px solid var(--paper-line);
+    border-radius: 99px;
+    padding: 2px 7px;
+    margin-left: 8px;
+    vertical-align: 2px;
+    color: var(--dim);
+  }
+  .cover-sub {
+    display: block;
+    margin-top: 3px;
+    font-size: 0.8rem;
+    color: var(--dim);
+  }
+
+  .night-line {
+    margin: 0;
+    color: var(--night-dim);
+    font-size: 0.95rem;
+    line-height: 1.55;
+  }
+  .night-cta {
+    display: inline-block;
+    margin-top: 18px;
+    font-family: "IBM Plex Mono", ui-monospace, monospace;
+    font-size: 0.8rem;
+    letter-spacing: 0.04em;
+    color: var(--sapphire);
+    text-decoration: underline;
+    text-underline-offset: 4px;
+    text-decoration-color: color-mix(in srgb, var(--sapphire) 45%, transparent);
+  }
+  .night-cta:hover,
+  .night-cta:focus-visible {
+    text-decoration-color: var(--sapphire);
+  }
+
+  .tracks {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+  .track {
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    align-items: center;
+    gap: 8px 14px;
+    font-family: "IBM Plex Mono", ui-monospace, monospace;
+  }
+  .tno {
+    font-size: 0.7rem;
+    color: var(--sapphire);
+  }
+  .tname {
+    font-size: 0.92rem;
+    font-weight: 600;
+  }
+  .tmeta {
+    font-size: 0.72rem;
+    color: var(--night-dim);
+  }
+  .track audio {
+    grid-column: 1 / -1;
+    width: 100%;
+    height: 36px;
+  }
+
+  .paper-line {
+    margin: 0;
+    font-size: 0.95rem;
+    line-height: 1.55;
+    color: var(--dim);
+  }
+  .paper-line a {
+    color: var(--ink);
+    text-decoration: underline;
+    text-underline-offset: 4px;
+    margin-left: 8px;
+  }
+
+  .illos {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
+    gap: 16px;
+  }
+  .illos img {
+    width: 100%;
+    border-radius: 4px;
+    border: 1px solid var(--paper-line);
+    display: block;
+  }
+
+  .foot {
+    max-width: 1080px;
+    margin: 0 auto;
+    padding: 10px clamp(26px, 4vw, 46px) 60px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 24px;
+    font-family: "IBM Plex Mono", ui-monospace, monospace;
+    font-size: 0.75rem;
+    letter-spacing: 0.04em;
+    color: var(--dim);
+  }
+  .foot a {
+    color: var(--ink);
+    text-decoration: underline;
+    text-underline-offset: 4px;
+  }
+  .foot span {
+    margin-left: auto;
+  }
+
+  /* ── phone ───────────────────────────────────────────────────────────── */
+  @media (max-width: 560px) {
+    .corner {
+      right: 16px;
+    }
+    .marks {
+      gap: 14px;
+    }
+    .mark-word {
+      font-size: 0.62rem;
+    }
+    .pill-word {
+      display: none; /* icon-only pill on phones */
+    }
+    .pill-item {
+      padding: 7px 10px;
+    }
+    .sheet {
+      margin-left: 12px;
+      margin-right: 12px;
+    }
+  }
+
+  /* smooth anchor travel, motion-gated */
+  @media (prefers-reduced-motion: no-preference) {
+    :global(html) {
+      scroll-behavior: smooth;
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .pill,
+    .mark,
+    .mark-art,
+    .cover img {
+      transition: none;
+    }
+  }
+</style>
+
+<script>
+  // The pill: appears when the hero row leaves the viewport; scroll-spy
+  // highlights the section in view. IntersectionObservers only — no rAF,
+  // no scroll handlers.
+  const pill = document.querySelector<HTMLElement>("[data-pill]");
+  const heroMarks = document.querySelector<HTMLElement>("[data-hero-marks]");
+  if (pill && heroMarks) {
+    pill.hidden = false; // present; visibility is opacity/transform via [data-in]
+    new IntersectionObserver(
+      ([e]) => {
+        if (e.isIntersecting) pill.removeAttribute("data-in");
+        else pill.setAttribute("data-in", "");
+      },
+      { rootMargin: "-8px 0px 0px 0px" }
+    ).observe(heroMarks);
+
+    const items = new Map(
+      Array.from(pill.querySelectorAll<HTMLElement>("[data-for]")).map((el) => [el.dataset.for, el])
+    );
+    const spy = new IntersectionObserver(
+      (entries) => {
+        for (const e of entries) {
+          if (!e.isIntersecting) continue;
+          items.forEach((el) => el.removeAttribute("data-on"));
+          items.get((e.target as HTMLElement).id)?.setAttribute("data-on", "");
+        }
+      },
+      { rootMargin: "-10% 0px -70% 0px" }
+    );
+    items.forEach((_, id) => {
+      const s = id && document.getElementById(id);
+      if (s) spy.observe(s);
+    });
+  }
+</script>

@@ -1,4 +1,13 @@
-# THE STUDIO — homepage rebuild spec (binding). Branch: studio-desk. NEVER merge to main (Vercel prod).
+# THE STUDIO — homepage rebuild spec. Branch: studio-desk. NEVER merge to main (Vercel prod).
+
+> **SUPERSEDED 2026-08-12 (Jon's direction, interview-locked):** the one-view desk
+> composition below is retired. The homepage is now the ONE-PAGE skeleton —
+> `src/components/studio/StudioOne.astro`: wood ground, hero = autograph + one-liner +
+> five small marks (emoji placeholders → `public/studio/mark-<id>.webp` swap slots),
+> anchor-scroll sections (Work covers / Signal + Sound Lab night sheets / Writing /
+> Illustrations), floating-pill nav with scroll-spy once the hero row leaves view.
+> Still true below: the hard boundaries, guardrails (a11y, perf, asset protocol),
+> D2 (the page never hosts an audio engine), and the /signal + case-study sanctity.
 
 ## Concept (Jon's words)
 The homepage is a place, not a page: a wooden desk with sharpie drawings, in a sunlit room with
