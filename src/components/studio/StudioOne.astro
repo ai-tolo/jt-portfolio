@@ -32,22 +32,25 @@ const pub = (f: string) => path.join(process.cwd(), "public", "studio", f);
 const exists = (f: string) => fs.existsSync(pub(f));
 const etchAsset = ["etch.svg", "etch.webp", "etch.png"].filter(exists).map((f) => `/studio/${f}`)[0];
 
-// The five marks. Emoji until Jon's art lands at public/studio/mark-<id>.webp.
-const MARKS = [
-  { id: "work", word: "work", emoji: "📁", temp: "warm" },
-  { id: "signal", word: "signal", emoji: "🎹", temp: "cool" },
-  { id: "soundlab", word: "sound lab", emoji: "🎧", temp: "cool" },
-  { id: "writing", word: "writing", emoji: "✍️", temp: "warm" },
-  { id: "illustrations", word: "illustrations", emoji: "✏️", temp: "warm" },
-].map((m) => ({
-  ...m,
-  art: ["webp", "svg", "png"].map((e) => `mark-${m.id}.${e}`).filter(exists).map((f) => `/studio/${f}`)[0],
-}));
-
 interface Track { src: string; title: string; year?: number; duration?: string; }
 const tracks: Track[] = (soundlab as any).tracks ?? [];
 interface Illo { src: string; alt: string; title?: string; year?: number; }
 const illos: Illo[] = (illustrations as any).items ?? [];
+
+// The five marks (art: public/studio/mark-<id>.webp swap slots; emoji only as
+// last-resort fallback). A mark renders ONLY when its room has something in
+// it — the nav can never advertise an empty room.
+const MARKS = [
+  { id: "work", word: "work", emoji: "📁", temp: "warm", has: works.length > 0 },
+  { id: "signal", word: "signal", emoji: "🎹", temp: "cool", has: true },
+  { id: "soundlab", word: "sound lab", emoji: "🎧", temp: "cool", has: tracks.length > 0 },
+  { id: "writing", word: "writing", emoji: "✍️", temp: "warm", has: true },
+  { id: "illustrations", word: "illustrations", emoji: "✏️", temp: "warm", has: illos.length > 0 },
+].filter((m) => m.has).map((m) => ({
+  ...m,
+  art: ["webp", "svg", "png"].map((e) => `mark-${m.id}.${e}`).filter(exists).map((f) => `/studio/${f}`)[0],
+}));
+const SHOW = new Set(MARKS.map((m) => m.id));
 ---
 
 <a class="skip" href="#work">Skip to the work</a>
@@ -59,7 +62,7 @@ const illos: Illo[] = (illustrations as any).items ?? [];
   {/* ── HERO — the sitemap ─────────────────────────────────────────────── */}
   <section class="hero" aria-label="Jonathan Tollefson — site index">
     <p class="corner">
-      <span class="avail">available for work</span>
+      <span class="avail">design engineer · minneapolis, mn · remote-US</span>
       <a href="/resume">résumé</a>
     </p>
 
@@ -101,8 +104,8 @@ const illos: Illo[] = (illustrations as any).items ?? [];
   </nav>
 
   {/* ── SECTIONS ───────────────────────────────────────────────────────── */}
-  <section class="sheet paper" id="work" aria-labelledby="work-t">
-    <h2 id="work-t"><span aria-hidden="true">📁</span> Work</h2>
+  {SHOW.has("work") && <section class="sheet paper" id="work" aria-labelledby="work-t">
+    <h2 id="work-t">Work</h2>
     <ul class="covers">
       {works.map((w, i) => (
         <li>
@@ -114,16 +117,16 @@ const illos: Illo[] = (illustrations as any).items ?? [];
         </li>
       ))}
     </ul>
-  </section>
+  </section>}
 
   <section class="sheet night" id="signal" aria-labelledby="signal-t">
-    <h2 id="signal-t"><span aria-hidden="true">🎹</span> Signal</h2>
+    <h2 id="signal-t">Signal</h2>
     <p class="night-line">A playable instrument, built for this site. Press power, type to play.</p>
     <a class="night-cta" href="/signal">open the instrument →</a>
   </section>
 
-  <section class="sheet night" id="soundlab" aria-labelledby="soundlab-t">
-    <h2 id="soundlab-t"><span aria-hidden="true">🎧</span> Sound Lab</h2>
+  {SHOW.has("soundlab") && <section class="sheet night" id="soundlab" aria-labelledby="soundlab-t">
+    <h2 id="soundlab-t">Sound Lab</h2>
     {tracks.length > 0 ? (
       <ol class="tracks">
         {tracks.map((t, i) => (
@@ -131,25 +134,25 @@ const illos: Illo[] = (illustrations as any).items ?? [];
             <span class="tno">{String(i + 1).padStart(2, "0")}</span>
             <span class="tname">{t.title}</span>
             <span class="tmeta">{[t.year, t.duration].filter(Boolean).join(" · ")}</span>
-            <audio controls preload="none" src={t.src}></audio>
+            <audio controls preload="metadata" src={t.src}></audio>
           </li>
         ))}
       </ol>
     ) : (
       <p class="night-line">Finished tracks land here.</p>
     )}
-  </section>
+  </section>}
 
   <section class="sheet paper" id="writing" aria-labelledby="writing-t">
-    <h2 id="writing-t"><span aria-hidden="true">✍️</span> Writing</h2>
+    <h2 id="writing-t">Writing</h2>
     <p class="paper-line">
       Diary of a Soundbender — weekly, on making music with tools you built yourself.
       <a href="https://substack.com/@diaryofasoundbender" target="_blank" rel="noopener noreferrer">read on Substack ↗</a>
     </p>
   </section>
 
-  <section class="sheet paper" id="illustrations" aria-labelledby="illustrations-t">
-    <h2 id="illustrations-t"><span aria-hidden="true">✏️</span> Illustrations</h2>
+  {SHOW.has("illustrations") && <section class="sheet paper" id="illustrations" aria-labelledby="illustrations-t">
+    <h2 id="illustrations-t">Illustrations</h2>
     {illos.length > 0 ? (
       <ul class="illos">
         {illos.map((it) => (
@@ -159,7 +162,15 @@ const illos: Illo[] = (illustrations as any).items ?? [];
     ) : (
       <p class="paper-line">Nothing hung yet.</p>
     )}
-  </section>
+  </section>}
+
+  {/* the floor: one quiet line on the wood — reachable, placeable, dated */}
+  <footer class="floor">
+    <a href="mailto:jtollefson123@gmail.com">jtollefson123@gmail.com</a>
+    <span>·</span><span>Minneapolis, MN</span>
+    <span>·</span><a href="https://substack.com/@diaryofasoundbender" target="_blank" rel="noopener noreferrer">substack</a>
+    <span>·</span><a href="/resume">résumé</a>
+  </footer>
 
   {/* end sentinel: at document bottom the last section takes the active
       state even though it is too short to reach the spy band */}
@@ -342,13 +353,20 @@ const illos: Illo[] = (illustrations as any).items ?? [];
     border-radius: 10px;
   }
 
-  /* ── the rail (left column) ──────────────────────────────────────────── */
+  /* ── the rail (left column; desktop only — mobile chrome deferred) ───── */
+  .rail {
+    display: none;
+  }
+  @media (min-width: 900px) {
+    .rail {
+      display: flex;
+    }
+  }
   .rail {
     position: fixed;
     left: 14px;
     top: 50%;
     z-index: 50;
-    display: flex;
     flex-direction: column;
     gap: 4px;
     padding: 8px 6px;
@@ -575,13 +593,37 @@ const illos: Illo[] = (illustrations as any).items ?? [];
     display: block;
   }
 
-  /* keep the sheets clear of the rail on narrower desktop windows
-     (mobile chrome is deferred — Jon, 2026-08-12) */
-  @media (max-width: 1320px) {
+  /* keep the sheets clear of the rail on narrower desktop windows;
+     below 900px there is no rail — sheets run full width with gutters */
+  @media (min-width: 900px) and (max-width: 1320px) {
     .sheet {
       margin-left: 108px;
       margin-right: 24px;
     }
+  }
+  @media (max-width: 899px) {
+    .sheet {
+      margin-left: 14px;
+      margin-right: 14px;
+    }
+  }
+
+  .floor {
+    max-width: 1080px;
+    margin: 0 auto;
+    padding: 4px clamp(26px, 4vw, 46px) 0;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    font-family: "IBM Plex Mono", ui-monospace, monospace;
+    font-size: 0.74rem;
+    letter-spacing: 0.04em;
+    color: var(--dim);
+  }
+  .floor a {
+    color: var(--ink);
+    text-decoration: underline;
+    text-underline-offset: 4px;
   }
 
   /* smooth anchor travel, motion-gated */
