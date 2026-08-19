@@ -90,9 +90,9 @@ const SHOW = new Set(MARKS.map((m) => m.id));
     </nav>
   </section>
 
-  {/* ── THE RAIL — the row, docked as a left column (Jon, 2026-08-12:
-      left nav over the pill; mobile chrome deferred) ───────────────────── */}
-  <nav class="rail" data-rail aria-label="Sections" hidden>
+  {/* ── THE SIDEBAR — persistent left column, nav only (Jon, 2026-08-16:
+      always present from load; flat light panel; mobile deferred) ───────── */}
+  <nav class="rail" data-rail aria-label="Sections">
     {MARKS.map((m) => (
       <a class="rail-item" href={`#${m.id}`} data-for={m.id} data-temp={m.temp} aria-label={m.word}>
         <span class="rail-art" aria-hidden="true">
@@ -213,9 +213,10 @@ const SHOW = new Set(MARKS.map((m) => m.id));
   }
 
   .one {
-    /* the wood breathes after the last sheet — and the tail gives the final
+    /* the ground breathes after the last sheet — and the tail gives the final
        sections room to reach the scroll-spy band */
     padding-bottom: clamp(140px, 32vh, 360px);
+    --railw: 0px;
     --ink: #141210;
     --dim: #6a5940;
     --paper: rgba(248, 244, 234, 0.96);
@@ -354,7 +355,7 @@ const SHOW = new Set(MARKS.map((m) => m.id));
     border-radius: 10px;
   }
 
-  /* ── the rail (left column; desktop only — mobile chrome deferred) ───── */
+  /* ── the sidebar (persistent left column; desktop only) ──────────────── */
   .rail {
     display: none;
   }
@@ -365,28 +366,17 @@ const SHOW = new Set(MARKS.map((m) => m.id));
   }
   .rail {
     position: fixed;
-    left: 14px;
-    top: 50%;
+    left: 0;
+    top: 0;
+    bottom: 0;
     z-index: 50;
+    width: 92px;
     flex-direction: column;
-    gap: 4px;
-    padding: 8px 6px;
-    border-radius: 16px;
-    background: rgba(245, 242, 234, 0.94);
-    border: 1px solid var(--paper-line);
-    box-shadow: 0 14px 30px -14px rgba(20, 12, 4, 0.5);
-    transform: translate(-10px, -50%);
-    opacity: 0;
-    pointer-events: none;
-    transition: opacity 220ms ease, transform 220ms ease;
-  }
-  .rail[data-in] {
-    transform: translate(0, -50%);
-    opacity: 1;
-    pointer-events: auto;
-  }
-  .rail[hidden] {
-    display: flex; /* stays in layout for the transition; visibility via opacity */
+    justify-content: center;
+    gap: 6px;
+    padding: 16px 8px;
+    background: #f4f3f0;
+    border-right: 1px solid rgba(20, 18, 16, 0.14);
   }
   .rail-item {
     display: flex;
@@ -398,11 +388,11 @@ const SHOW = new Set(MARKS.map((m) => m.id));
     border-radius: 11px;
     text-decoration: none;
     font-family: "IBM Plex Mono", ui-monospace, monospace;
-    color: #4a4436;
+    color: #45423c;
     transition: background 160ms ease, color 160ms ease;
   }
   .rail-item:hover {
-    background: rgba(20, 18, 16, 0.08);
+    background: rgba(20, 18, 16, 0.07);
   }
   .rail-item[data-on] {
     background: var(--ink);
@@ -594,11 +584,17 @@ const SHOW = new Set(MARKS.map((m) => m.id));
     display: block;
   }
 
-  /* keep the sheets clear of the rail on narrower desktop windows;
-     below 900px there is no rail — sheets run full width with gutters */
+  /* the content column clears the persistent sidebar; below 900px there is
+     no sidebar — sheets run full width with gutters */
+  @media (min-width: 900px) {
+    .one {
+      --railw: 92px;
+      padding-left: var(--railw);
+    }
+  }
   @media (min-width: 900px) and (max-width: 1320px) {
     .sheet {
-      margin-left: 108px;
+      margin-left: 24px;
       margin-right: 24px;
     }
   }
@@ -644,20 +640,11 @@ const SHOW = new Set(MARKS.map((m) => m.id));
 </style>
 
 <script>
-  // The rail: appears when the hero row leaves the viewport; scroll-spy
-  // highlights the section in view. IntersectionObservers only — no rAF,
-  // no scroll handlers.
+  // The sidebar is always present; scroll-spy highlights the section in
+  // view (none while the hero owns the viewport). IO-triggered recompute —
+  // no rAF, no per-frame scroll work.
   const rail = document.querySelector<HTMLElement>("[data-rail]");
-  const heroMarks = document.querySelector<HTMLElement>("[data-hero-marks]");
-  if (rail && heroMarks) {
-    rail.hidden = false; // present; visibility is opacity/transform via [data-in]
-    new IntersectionObserver(
-      ([e]) => {
-        if (e.isIntersecting) rail.removeAttribute("data-in");
-        else rail.setAttribute("data-in", "");
-      },
-      { rootMargin: "-8px 0px 0px 0px" }
-    ).observe(heroMarks);
+  if (rail) {
 
     // Scroll-spy: IO events are only the TRIGGER; the active section is
     // recomputed deterministically each time — the lowest section whose top
@@ -674,7 +661,7 @@ const SHOW = new Set(MARKS.map((m) => m.id));
     const recompute = () => {
       const doc = document.documentElement;
       const atBottom = window.innerHeight + window.scrollY >= doc.scrollHeight - 8;
-      let active = ids[0];
+      let active: string | null = null;
       if (lock) {
         active = lock;
       } else if (atBottom) {
@@ -700,7 +687,7 @@ const SHOW = new Set(MARKS.map((m) => m.id));
         }
       })
     );
-    (["wheel", "touchstart", "keydown"] as const).forEach((evt) =>
+    (["wheel", "touchstart", "keydown", "pointerdown"] as const).forEach((evt) =>
       window.addEventListener(evt, () => { lock = null; }, { passive: true })
     );
     const spy = new IntersectionObserver(recompute, { threshold: [0, 0.25, 0.5, 0.75, 1] });
