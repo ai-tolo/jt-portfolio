@@ -20,6 +20,7 @@ import writing from "./rooms/writing-manifest.json";
 import illustrations from "./rooms/illustrations-manifest.json";
 import SignalMachine from "../SignalMachine.astro";
 import Transport from "../Transport.astro";
+import Carousel from "../Carousel.astro";
 import type { WorkItem } from "./StudioDesk.astro";
 
 interface Props {
@@ -35,8 +36,36 @@ const pub = (f: string) => path.join(process.cwd(), "public", "studio", f);
 const exists = (f: string) => fs.existsSync(pub(f));
 const etchAsset = ["etch.svg", "etch.webp", "etch.png"].filter(exists).map((f) => `/studio/${f}`)[0];
 
-interface Track { src: string | null; title: string; note?: string; year?: number; duration?: string; peaks?: string | null; }
+interface Track { src: string | null; title: string; note?: string; year?: number; duration?: string; peaks?: string | null; cover?: string | null; }
 const tracks: Track[] = ((soundlab as any).tracks ?? []).filter((t: Track) => t.src);
+
+// Generated cover: the track's OWN waveform, radial, on the night ground —
+// honest per-track art until Jon's covers land in the manifest (cover field).
+const peaksFor = (t: Track): number[] => {
+  try {
+    const base = (t.peaks ?? "").replace(/\.[a-z0-9]+$/i, "");
+    return JSON.parse(fs.readFileSync(path.join(process.cwd(), "public", "peaks", `${base}.json`), "utf8")).peaks;
+  } catch { return Array.from({ length: 120 }, (_, i) => 0.25 + 0.2 * Math.sin(i / 5)); }
+};
+const coverSvg = (t: Track, seed: number): string => {
+  const pk = peaksFor(t);
+  const N = Math.min(pk.length, 144);
+  const cx = 120, cy = 120, r0 = 52;
+  let bars = "";
+  for (let i = 0; i < N; i++) {
+    const a = (i / N) * Math.PI * 2 - Math.PI / 2 + seed * 0.13;
+    const len = 10 + pk[Math.floor((i / N) * pk.length)] * 46;
+    const x1 = cx + Math.cos(a) * r0, y1 = cy + Math.sin(a) * r0;
+    const x2 = cx + Math.cos(a) * (r0 + len), y2 = cy + Math.sin(a) * (r0 + len);
+    bars += `<line x1="${x1.toFixed(1)}" y1="${y1.toFixed(1)}" x2="${x2.toFixed(1)}" y2="${y2.toFixed(1)}"/>`;
+  }
+  return `<svg viewBox="0 0 240 240" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="">
+    <rect width="240" height="240" fill="#0b0e14"/>
+    <circle cx="120" cy="120" r="46" fill="none" stroke="rgba(232,236,244,0.1)" stroke-width="1"/>
+    <g stroke="rgba(14,196,252,0.75)" stroke-width="1.6" stroke-linecap="round">${bars}</g>
+    <circle cx="120" cy="120" r="3" fill="rgba(255,84,50,0.9)"/>
+  </svg>`;
+};
 interface Illo { src: string; alt: string; title?: string; year?: number; }
 const illos: Illo[] = (illustrations as any).items ?? [];
 interface Post { slug: string; title: string; date: string; subtitle?: string; cover?: string | null; paragraphs: string[]; }
@@ -58,15 +87,15 @@ const LEDES: Record<string, string> = {
     "One take-home, 48 hours: rebuild Momence's customer profile so a yoga studio and a B2B coach both recognize themselves. I sent back <strong>four categories that bend per tenant</strong>.",
 };
 
-// The marks — Apple emoji by Jon's call (2026-08-16), one per room; a mark
-// renders ONLY when its room has something in it. SIGNAL is LAST: the
-// instrument is the site's finale, and its 🎹 gets the ethereal treatment.
+// The words — type-only (Jon, 2026-08-19: no emoji; tasteful mono). Order
+// mirrors the page: the instrument is the handshake, right under the hero.
+// A word renders ONLY when its room has something in it.
 const MARKS = [
-  { id: "work", word: "work", emoji: "💼", ethereal: false, has: works.length > 0 },
-  { id: "soundlab", word: "music", emoji: "🎧", ethereal: false, has: tracks.length > 0 },
-  { id: "writing", word: "writing", emoji: "✏️", ethereal: false, has: true },
-  { id: "illustrations", word: "illustrations", emoji: "🖼️", ethereal: false, has: illos.length > 0 },
-  { id: "signal", word: "signal", emoji: "🎹", ethereal: true, has: true },
+  { id: "signal", word: "play", ethereal: true, has: true },
+  { id: "work", word: "work", ethereal: false, has: works.length > 0 },
+  { id: "soundlab", word: "listen", ethereal: false, has: tracks.length > 0 },
+  { id: "illustrations", word: "look", ethereal: false, has: illos.length > 0 },
+  { id: "writing", word: "read", ethereal: false, has: true },
 ].filter((m) => m.has);
 const SHOW = new Set(MARKS.map((m) => m.id));
 ---
@@ -105,8 +134,7 @@ const SHOW = new Set(MARKS.map((m) => m.id));
       always present from load; flat light panel; mobile deferred) ───────── */}
   <nav class="rail" data-rail aria-label="Sections">
     {MARKS.map((m) => (
-      <a class="rail-item" href={`#${m.id}`} data-for={m.id} data-ethereal={m.ethereal ? "" : undefined} aria-label={m.word}>
-        <span class="rail-art" aria-hidden="true">{m.emoji}</span>
+      <a class="rail-item" href={`#${m.id}`} data-for={m.id} data-ethereal={m.ethereal ? "" : undefined}>
         <span class="rail-word">{m.word}</span>
       </a>
     ))}
@@ -118,8 +146,22 @@ const SHOW = new Set(MARKS.map((m) => m.id));
   </nav>
 
   {/* ── SECTIONS ───────────────────────────────────────────────────────── */}
+  {/* ── SIGNAL — the instrument itself, live, the site's finale.
+      Power-on takes the whole site dark; scrolling away powers it off and
+      the light returns. The component is SACRED — observed, never edited. */}
+  {/* No id here — SignalMachine's own root is <section id="signal">, which
+      serves as the anchor + spy target; this host only frames and observes. */}
+  <section class="live-signal" aria-label="Signal — a playable instrument" data-signal-host>
+    <div class="sig-desktop">
+      <SignalMachine />
+    </div>
+    <div class="sig-mobile">
+      <iframe class="sig-mobile-frame" data-src="/more/index.html" title="Interactive audio exhibit" loading="lazy" allow="autoplay"></iframe>
+    </div>
+  </section>
+
   {SHOW.has("work") && <section class="sheet paper" id="work" aria-labelledby="work-t">
-    <h2 id="work-t">Work</h2>
+    <h2 id="work-t">Selected Work</h2>
     <ul class="works">
       {works.map((w, i) => (
         <li>
@@ -141,29 +183,36 @@ const SHOW = new Set(MARKS.map((m) => m.id));
   </section>}
 
 
+  {/* the about-that-isn't-a-section: three sentences of human before the
+      personal half begins. DRAFT — Jon rewrites at will. */}
+  <p class="bio">
+    I'm Jon Tollefson. Days I design and build tools at the seam of interface,
+    code, and AI; nights I'm in the studio, bending found sound into songs.
+    Everything below is both of those at once — made in Minneapolis.
+  </p>
+
   {SHOW.has("soundlab") && <section class="sheet night" id="soundlab" aria-labelledby="soundlab-t">
-    <h2 id="soundlab-t">Music I've Made</h2>
-    {tracks.length > 0 ? (
-      <ol class="tracks">
-        {tracks.map((t, i) => (
-          <li class="track">
-            <span class="tno">{String(i + 1).padStart(2, "0")}</span>
-            <span class="thead">
-              <span class="tname">{t.title}</span>
-              {t.note && <span class="tnote">{t.note}</span>}
-            </span>
-            <span class="tmeta">{[t.year, t.duration].filter(Boolean).join(" · ")}</span>
-            <div class="track-tp"><Transport src={t.src!} peaks={t.peaks ?? undefined} title={t.title} accent="var(--sapphire)" compact /></div>
-          </li>
-        ))}
-      </ol>
-    ) : (
-      <p class="night-line">Finished tracks land here.</p>
-    )}
+    <h2 id="soundlab-t">Listen</h2>
+    <Carousel count={tracks.length} label="Music" accent="var(--sapphire)">
+      {tracks.map((t, i) => (
+        <article class="ls">
+          <div class="ls-cover" aria-hidden="true">
+            {t.cover ? <img src={t.cover} alt="" loading={i === 0 ? "eager" : "lazy"} /> : <Fragment set:html={coverSvg(t, i)} />}
+          </div>
+          <div class="ls-body">
+            <span class="ls-no">{String(i + 1).padStart(2, "0")}</span>
+            <h3 class="ls-title">{t.title}</h3>
+            {t.note && <p class="ls-note">{t.note}</p>}
+            <p class="ls-meta">{[t.year, t.duration].filter(Boolean).join(" · ")}</p>
+            <div class="ls-tp"><Transport src={t.src!} peaks={t.peaks ?? undefined} title={t.title} accent="var(--sapphire)" compact /></div>
+          </div>
+        </article>
+      ))}
+    </Carousel>
   </section>}
 
   <section class="sheet paper" id="writing" aria-labelledby="writing-t">
-    <h2 id="writing-t">Writing</h2>
+    <h2 id="writing-t">Read</h2>
     {posts.length > 0 ? (
       <ul class="tiles">
         {posts.map((post) => (
@@ -182,32 +231,17 @@ const SHOW = new Set(MARKS.map((m) => m.id));
     )}
   </section>
 
-  {SHOW.has("illustrations") && <section class="sheet paper" id="illustrations" aria-labelledby="illustrations-t">
-    <h2 id="illustrations-t">Illustrations</h2>
-    {illos.length > 0 ? (
-      <ul class="illos">
-        {illos.map((it) => (
-          <li><img src={it.src} alt={it.alt} loading="lazy" />{it.title && <span>{it.title}</span>}</li>
-        ))}
-      </ul>
-    ) : (
-      <p class="paper-line">Nothing hung yet.</p>
-    )}
+  {SHOW.has("illustrations") && <section class="sheet night" id="illustrations" aria-labelledby="illustrations-t">
+    <h2 id="illustrations-t">Look</h2>
+    <Carousel count={illos.length} label="Visual work" accent="var(--brand-yellow, #ffc94d)">
+      {illos.map((it) => (
+        <figure class="lk">
+          <img class="lk-img" src={it.src} alt={it.alt} loading="lazy" />
+          {(it.title || it.year) && <figcaption class="lk-cap">{[it.title, it.year].filter(Boolean).join(" · ")}</figcaption>}
+        </figure>
+      ))}
+    </Carousel>
   </section>}
-
-  {/* ── SIGNAL — the instrument itself, live, the site's finale.
-      Power-on takes the whole site dark; scrolling away powers it off and
-      the light returns. The component is SACRED — observed, never edited. */}
-  {/* No id here — SignalMachine's own root is <section id="signal">, which
-      serves as the anchor + spy target; this host only frames and observes. */}
-  <section class="live-signal" aria-label="Signal — a playable instrument" data-signal-host>
-    <div class="sig-desktop">
-      <SignalMachine />
-    </div>
-    <div class="sig-mobile">
-      <iframe class="sig-mobile-frame" data-src="/more/index.html" title="Interactive audio exhibit" loading="lazy" allow="autoplay"></iframe>
-    </div>
-  </section>
 
   {/* the floor: reachable + placeable — email with the city beneath it */}
   <footer class="floor">
@@ -365,12 +399,10 @@ const SHOW = new Set(MARKS.map((m) => m.id));
     border-right: 1px solid rgba(20, 18, 16, 0.14);
   }
   .rail-item {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 4px;
+    display: grid;
+    place-items: center;
     width: 76px;
-    padding: 9px 4px 7px;
+    padding: 11px 4px;
     border-radius: 11px;
     text-decoration: none;
     font-family: "IBM Plex Mono", ui-monospace, monospace;
@@ -400,8 +432,9 @@ const SHOW = new Set(MARKS.map((m) => m.id));
     object-fit: contain;
   }
   .rail-word {
-    font-size: 0.56rem;
-    letter-spacing: 0.04em;
+    font-size: 0.74rem;
+    font-weight: 500;
+    letter-spacing: 0.07em;
     white-space: nowrap;
   }
 
@@ -438,15 +471,9 @@ const SHOW = new Set(MARKS.map((m) => m.id));
     pointer-events: none;
     z-index: -1;
   }
-  .rail-item[data-ethereal] .rail-art {
-    filter: drop-shadow(0 0 5px rgba(14, 196, 252, 0.35));
-  }
   @media (prefers-reduced-motion: no-preference) {
     .rail-item[data-ethereal]::before {
       animation: ea-ring 5.4s ease-in-out infinite;
-    }
-    .rail-item[data-ethereal] .rail-art {
-      animation: ea-float 5.4s ease-in-out infinite;
     }
     @keyframes ea-ring {
       0%, 100% {
@@ -914,8 +941,8 @@ const SHOW = new Set(MARKS.map((m) => m.id));
   /* ── the live instrument (the finale) ────────────────────────────────── */
   .live-signal {
     max-width: 1180px;
-    /* the descent to the machine: a long clear approach, then the finale */
-    margin: clamp(140px, 26vh, 320px) auto clamp(48px, 8vh, 90px);
+    /* the handshake: right off the hero, one clear breath, then the machine */
+    margin: clamp(36px, 6vh, 72px) auto clamp(90px, 15vh, 180px);
     scroll-margin-top: 24px;
   }
   .sig-desktop {
@@ -993,6 +1020,100 @@ const SHOW = new Set(MARKS.map((m) => m.id));
   .track-tp {
     grid-column: 1 / -1;
     width: 100%;
+  }
+
+  /* the about-that-isn't-a-section */
+  .bio {
+    max-width: 56ch;
+    margin: 0 auto clamp(40px, 6vh, 70px);
+    padding: 0 24px;
+    font-size: clamp(1rem, 1.5vw, 1.12rem);
+    line-height: 1.65;
+    color: color-mix(in srgb, var(--ink) 80%, var(--dim));
+    text-align: center;
+  }
+
+  /* listen: one track, with gravity */
+  .ls {
+    display: grid;
+    grid-template-columns: minmax(200px, 300px) 1fr;
+    gap: clamp(22px, 3.4vw, 44px);
+    align-items: center;
+    padding: 6px 2px;
+  }
+  @media (max-width: 720px) {
+    .ls {
+      grid-template-columns: 1fr;
+    }
+  }
+  .ls-cover {
+    aspect-ratio: 1;
+    border-radius: 8px;
+    overflow: hidden;
+    border: 1px solid var(--night-line);
+    background: #0b0e14;
+  }
+  .ls-cover :global(svg),
+  .ls-cover img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+  }
+  .ls-body {
+    min-width: 0;
+  }
+  .ls-no {
+    font-family: "IBM Plex Mono", ui-monospace, monospace;
+    font-size: 0.7rem;
+    letter-spacing: 0.1em;
+    color: var(--sapphire);
+  }
+  .ls-title {
+    margin: 6px 0 0;
+    font-size: clamp(1.25rem, 2.4vw, 1.7rem);
+    font-weight: 600;
+    letter-spacing: -0.01em;
+    color: var(--night-ink);
+  }
+  .ls-note {
+    margin: 10px 0 0;
+    font-size: 0.95rem;
+    line-height: 1.55;
+    color: var(--night-dim);
+    max-width: 52ch;
+  }
+  .ls-meta {
+    margin: 10px 0 0;
+    font-family: "IBM Plex Mono", ui-monospace, monospace;
+    font-size: 0.72rem;
+    letter-spacing: 0.05em;
+    color: var(--night-dim);
+  }
+  .ls-tp {
+    margin-top: 18px;
+  }
+
+  /* look: the image as big as the sheet allows */
+  .lk {
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+  .lk-img {
+    width: 100%;
+    max-height: min(68vh, 640px);
+    object-fit: contain;
+    border-radius: 6px;
+    background: #05070c;
+  }
+  .lk-cap {
+    font-family: "IBM Plex Mono", ui-monospace, monospace;
+    font-size: 0.72rem;
+    letter-spacing: 0.05em;
+    color: var(--night-dim);
+    text-align: center;
   }
 
   .paper-line {
