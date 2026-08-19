@@ -35,7 +35,7 @@ const pub = (f: string) => path.join(process.cwd(), "public", "studio", f);
 const exists = (f: string) => fs.existsSync(pub(f));
 const etchAsset = ["etch.svg", "etch.webp", "etch.png"].filter(exists).map((f) => `/studio/${f}`)[0];
 
-interface Track { src: string | null; title: string; year?: number; duration?: string; peaks?: string | null; }
+interface Track { src: string | null; title: string; note?: string; year?: number; duration?: string; peaks?: string | null; }
 const tracks: Track[] = ((soundlab as any).tracks ?? []).filter((t: Track) => t.src);
 interface Illo { src: string; alt: string; title?: string; year?: number; }
 const illos: Illo[] = (illustrations as any).items ?? [];
@@ -47,15 +47,15 @@ const posts: Post[] = (writing as any).posts ?? [];
 // presentation copy; <strong> spans carry the scan path. Fallback = subtitle.
 const LEDES: Record<string, string> = {
   "the-console":
-    "The gear was never the problem; finishing was. I built <strong>three tools</strong> for where songs die: file <strong>20,000+ recordings</strong>, play one back as a band, judge it blind.",
+    "Eight years of music was dying on my hard drive. I built three tools to stop it: a catalog that knows what I have, a studio that plays it back like a band, and <strong>a listening test I can't cheat</strong>.",
   "chs":
-    "Taught AI to <strong>10,000 employees</strong> at CHS, from a 250-user GPT Enterprise beta to company-wide. Non-technical teams now <strong>build their own models</strong> on internal data.",
+    "CHS has 10,000 employees and, suddenly, AI. I taught it — from a 250-person beta to the whole company, until <strong>non-technical teams were building their own models</strong>.",
   "crediverso":
-    "Shipped <strong>bilingual mobile banking</strong> on iOS where family is a feature, not a footnote: <strong>15% drop in primary-flow bounce</strong>, a 700 to 2,100 pre-launch channel.",
+    "Most banking apps treat family like a liability. We shipped one in two languages where <strong>family is the point</strong> — and the front door stopped losing people: bounce fell 40% to 25%.",
   "raylu":
-    "Built the brand and the <strong>clickable Figma prototypes</strong> that helped Raylu close a <strong>$4M seed</strong> from Conversion Capital, Unusual Ventures, and angels.",
+    "Raylu had a product in their heads and pitch meetings on the calendar. I built the brand and the prototypes <strong>they carried into the rooms that closed $4M</strong>.",
   "momence":
-    "Redesigned Momence's customer profile in a <strong>48-hour take-home</strong>: <strong>four categories</strong>, modular by tenant, paired desktop and mobile, so it bends to each business.",
+    "One take-home, 48 hours: rebuild Momence's customer profile so a yoga studio and a B2B coach both recognize themselves. I sent back <strong>four categories that bend per tenant</strong>.",
 };
 
 // The marks — Apple emoji by Jon's call (2026-08-16), one per room; a mark
@@ -148,9 +148,12 @@ const SHOW = new Set(MARKS.map((m) => m.id));
         {tracks.map((t, i) => (
           <li class="track">
             <span class="tno">{String(i + 1).padStart(2, "0")}</span>
-            <span class="tname">{t.title}</span>
+            <span class="thead">
+              <span class="tname">{t.title}</span>
+              {t.note && <span class="tnote">{t.note}</span>}
+            </span>
             <span class="tmeta">{[t.year, t.duration].filter(Boolean).join(" · ")}</span>
-            <div class="track-tp"><Transport src={t.src!} peaks={t.peaks ?? undefined} title={t.title} accent="var(--sapphire)" /></div>
+            <div class="track-tp"><Transport src={t.src!} peaks={t.peaks ?? undefined} title={t.title} accent="var(--sapphire)" compact /></div>
           </li>
         ))}
       </ol>
@@ -557,7 +560,7 @@ const SHOW = new Set(MARKS.map((m) => m.id));
   /* ── sections ────────────────────────────────────────────────────────── */
   .sheet {
     max-width: 1080px;
-    margin: 0 auto clamp(40px, 7vh, 80px);
+    margin: 0 auto clamp(72px, 12vh, 140px);
     padding: clamp(26px, 4vw, 46px);
     border-radius: 8px;
     scroll-margin-top: 76px;
@@ -911,7 +914,8 @@ const SHOW = new Set(MARKS.map((m) => m.id));
   /* ── the live instrument (the finale) ────────────────────────────────── */
   .live-signal {
     max-width: 1180px;
-    margin: 0 auto clamp(40px, 7vh, 80px);
+    /* the descent to the machine: a long clear approach, then the finale */
+    margin: clamp(140px, 26vh, 320px) auto clamp(48px, 8vh, 90px);
     scroll-margin-top: 24px;
   }
   .sig-desktop {
@@ -937,33 +941,54 @@ const SHOW = new Set(MARKS.map((m) => m.id));
     }
   }
 
-  /* the track rows (Music I've Made) */
+  /* the track wall (Music I've Made): scales to a dozen sides — two columns
+     wide, one below 1000px; notes tuck under titles */
   .tracks {
     list-style: none;
     margin: 0;
     padding: 0;
-    display: flex;
-    flex-direction: column;
-    gap: 18px;
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 22px 34px;
+  }
+  @media (min-width: 1000px) {
+    .tracks {
+      grid-template-columns: 1fr 1fr;
+    }
   }
   .track {
     display: grid;
     grid-template-columns: auto 1fr auto;
-    align-items: center;
-    gap: 8px 14px;
+    align-items: baseline;
+    gap: 6px 12px;
     font-family: "IBM Plex Mono", ui-monospace, monospace;
+    padding: 14px 0 4px;
+    border-top: 1px solid var(--night-line);
   }
   .tno {
     font-size: 0.7rem;
     color: var(--sapphire);
   }
+  .thead {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    min-width: 0;
+  }
   .tname {
     font-size: 0.92rem;
     font-weight: 600;
   }
-  .tmeta {
-    font-size: 0.72rem;
+  .tnote {
+    font-family: "IBM Plex Sans", ui-sans-serif, system-ui, sans-serif;
+    font-size: 0.8rem;
+    line-height: 1.45;
     color: var(--night-dim);
+  }
+  .tmeta {
+    font-size: 0.68rem;
+    color: var(--night-dim);
+    white-space: nowrap;
   }
   .track-tp {
     grid-column: 1 / -1;
