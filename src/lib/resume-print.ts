@@ -135,8 +135,8 @@ export const printContent: PrintResumeContent = {
   education: [
     {
       name: "Harvard University",
-      dates: "2015 – 2022",
-      degree: "B.A. Sociology · Minors in Marketing & Creative Design",
+      dates: "2022",
+      degree: "A.B., Sociology",
       honors: "Dean's List (6×) · Rosenkrantz Discovery Grant",
     },
     {
