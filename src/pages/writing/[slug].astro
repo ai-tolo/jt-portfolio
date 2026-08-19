@@ -1,0 +1,123 @@
+---
+// /writing/<slug> — one Diary of a Soundbender post, full text ON the site
+// (Jon, 2026-08-16: homepage shows preview tiles; essays live here, sourced
+// from writing-manifest.json — the Substack is the origin, not the venue).
+import Layout from "../../layouts/Layout.astro";
+import writing from "../../components/studio/rooms/writing-manifest.json";
+
+export const prerender = true;
+
+export function getStaticPaths() {
+  return (writing.posts ?? []).map((post) => ({
+    params: { slug: post.slug },
+    props: { post },
+  }));
+}
+
+interface Post {
+  slug: string;
+  title: string;
+  date: string;
+  subtitle?: string;
+  cover?: string | null;
+  paragraphs: string[];
+}
+const { post } = Astro.props as { post: Post };
+---
+
+<Layout
+  title={`${post.title} — Jonathan Tollefson`}
+  description={post.subtitle || `Diary of a Soundbender — ${post.title}`}
+  ogImage={post.cover || undefined}
+  hideThemeSelector={true}
+  chromeless={true}
+>
+  <main class="wpage">
+    <nav class="wnav">
+      <a href="/#writing">← the studio</a>
+    </nav>
+    <article class="wpost">
+      <header class="whead">
+        <h1>{post.title}</h1>
+        {post.subtitle && <p class="wsub">{post.subtitle}</p>}
+        <p class="wmeta">Diary of a Soundbender · {post.date}</p>
+      </header>
+      {post.cover && <img class="wcover" src={post.cover} alt="" />}
+      {post.paragraphs.map((para) => <p class="wp">{para}</p>)}
+    </article>
+  </main>
+</Layout>
+
+<style>
+  .wpage {
+    min-height: 100svh;
+    background: #e9e8e5;
+    color: #141210;
+    font-family: "IBM Plex Sans", ui-sans-serif, system-ui, sans-serif;
+    padding: 34px 20px 110px;
+    cursor: auto;
+  }
+  .wpage :global(a),
+  .wpage :global(button) {
+    cursor: pointer;
+  }
+  .wnav {
+    max-width: 660px;
+    margin: 0 auto 34px;
+  }
+  .wnav a {
+    font-family: "IBM Plex Mono", ui-monospace, monospace;
+    font-size: 0.76rem;
+    letter-spacing: 0.05em;
+    color: #6a6660;
+    text-decoration: underline;
+    text-underline-offset: 4px;
+  }
+  .wnav a:hover,
+  .wnav a:focus-visible {
+    color: #141210;
+  }
+  .wpost {
+    max-width: 660px;
+    margin: 0 auto;
+    background: rgba(248, 244, 234, 0.96);
+    border: 1px solid rgba(90, 74, 50, 0.25);
+    border-radius: 8px;
+    padding: clamp(28px, 5vw, 54px);
+    box-shadow: 0 18px 44px -24px rgba(20, 12, 4, 0.35);
+  }
+  .whead h1 {
+    margin: 0 0 10px;
+    font-size: clamp(1.4rem, 3.2vw, 1.9rem);
+    line-height: 1.2;
+    letter-spacing: -0.01em;
+  }
+  .wsub {
+    margin: 0 0 12px;
+    font-size: 1rem;
+    line-height: 1.5;
+    color: #6a6660;
+  }
+  .wmeta {
+    margin: 0 0 26px;
+    font-family: "IBM Plex Mono", ui-monospace, monospace;
+    font-size: 0.7rem;
+    letter-spacing: 0.06em;
+    color: #6a6660;
+  }
+  .wcover {
+    width: 100%;
+    border-radius: 6px;
+    border: 1px solid rgba(90, 74, 50, 0.25);
+    margin: 0 0 28px;
+    display: block;
+  }
+  .wp {
+    margin: 0 0 16px;
+    font-size: 1rem;
+    line-height: 1.7;
+  }
+  .wp:last-child {
+    margin-bottom: 0;
+  }
+</style>

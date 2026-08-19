@@ -37,8 +37,24 @@ interface Track { src: string; title: string; year?: number; duration?: string; 
 const tracks: Track[] = (soundlab as any).tracks ?? [];
 interface Illo { src: string; alt: string; title?: string; year?: number; }
 const illos: Illo[] = (illustrations as any).items ?? [];
-interface Post { title: string; date: string; status?: string; paragraphs: string[]; }
+interface Post { slug: string; title: string; date: string; subtitle?: string; cover?: string | null; paragraphs: string[]; }
 const posts: Post[] = (writing as any).posts ?? [];
+
+// Recruiter-facing WORK ledes: the one-to-two-sentence summary IS the title
+// (Jon, 2026-08-16 — project names demote to metadata). Hand-authored
+// presentation copy; <strong> spans carry the scan path. Fallback = subtitle.
+const LEDES: Record<string, string> = {
+  "the-console":
+    "Songs kept dying in my hard drive, so I built <strong>three audio tools</strong> where they die — a catalog that reads 20k recordings, a studio that turns one loop into a band, and a <strong>blind listening test</strong> that keeps my own ears honest.",
+  "chs":
+    "Taught <strong>AI to 10,000 employees</strong> — from 250 GPT Enterprise beta users to company-wide rollout, with non-technical teams building custom models on internal data.",
+  "crediverso":
+    "Shipped V1 of <strong>bilingual mobile banking</strong> where family is a feature, not a footnote — <strong>15% drop</strong> in primary-flow bounce before launch.",
+  "raylu":
+    "Brand and clickable prototypes that helped <strong>close $4M in seed funding</strong> — Conversion Capital, Unusual Ventures, and angels.",
+  "momence":
+    "A customer profile that <strong>bends to fit each business</strong> — four-category schema, modular by tenant, designed in a 48-hour take-home.",
+};
 
 // The five marks (art: public/studio/mark-<id>.webp swap slots; emoji only as
 // last-resort fallback). A mark renders ONLY when its room has something in
@@ -65,19 +81,22 @@ const SHOW = new Set(MARKS.map((m) => m.id));
   {/* ── HERO — the sitemap ─────────────────────────────────────────────── */}
   <section class="hero" aria-label="Jonathan Tollefson — site index">
     <p class="corner">
-      <span class="avail">minneapolis, mn</span>
+      <span>minneapolis, mn</span>
+      <i class="dot" aria-hidden="true"></i>
       <a href="/resume">résumé</a>
     </p>
 
     <header class="hero-name">
-      {etchAsset ? (
-        <>
-          <h1 class="sr-only">Jonathan Tollefson</h1>
-          <img class="etch-img" src={etchAsset} alt="" draggable="false" />
-        </>
-      ) : (
-        <h1 class="etch-text">Jonathan Tollefson</h1>
-      )}
+      <div class="etch-slot">
+        {etchAsset ? (
+          <>
+            <h1 class="sr-only">Jonathan Tollefson</h1>
+            <img class="etch-img" src={etchAsset} alt="" draggable="false" />
+          </>
+        ) : (
+          <h1 class="etch-text">Jonathan Tollefson</h1>
+        )}
+      </div>
       <p class="liner">{ONE_LINER}</p>
     </header>
 
@@ -99,13 +118,20 @@ const SHOW = new Set(MARKS.map((m) => m.id));
   {/* ── SECTIONS ───────────────────────────────────────────────────────── */}
   {SHOW.has("work") && <section class="sheet paper" id="work" aria-labelledby="work-t">
     <h2 id="work-t">Work</h2>
-    <ul class="covers">
+    <ul class="works">
       {works.map((w, i) => (
         <li>
-          <a class="cover" href={`/case-studies/${w.slug}`}>
-            {w.cover && <img src={w.cover} alt="" loading="lazy" />}
-            <span class="cover-name">{w.name}{i === 0 && <em class="flag">flagship</em>}</span>
-            <span class="cover-sub">{w.subtitle}</span>
+          <a class="wrow" href={`/case-studies/${w.slug}`} data-flagship={i === 0 ? "" : undefined}>
+            {w.cover && <span class="wrow-cover"><img src={w.cover} alt="" loading={i === 0 ? "eager" : "lazy"} /></span>}
+            <span class="wrow-body">
+              <span class="wrow-lede" set:html={LEDES[w.slug] ?? w.subtitle}></span>
+              <span class="wrow-meta">
+                <b>{w.name}</b>
+                {i === 0 && <em class="flag">flagship</em>}
+                {w.tags?.length > 0 && <span class="wrow-tags">{w.tags.slice(0, 4).join(" · ")}</span>}
+              </span>
+              {w.outcome && !LEDES[w.slug] && <span class="wrow-outcome">{w.outcome}</span>}
+            </span>
           </a>
         </li>
       ))}
@@ -114,18 +140,21 @@ const SHOW = new Set(MARKS.map((m) => m.id));
 
   {/* SIGNAL — the sheet IS the instrument's face; the power button is the
       door. The whole panel is one link to /signal. */}
-  <a class="sheet machine" id="signal" href="/signal" aria-label="Signal — a playable instrument. Press power.">
+  <a class="sheet machine" id="signal" href="/signal" aria-label="Signal — a playable instrument. Press power to open it.">
     <span class="m-head" aria-hidden="true">
       <span class="m-id">
         <h2 class="m-name" id="signal-t">SIGNAL</h2>
-        <span class="m-sub">a playable instrument</span>
+        <span class="m-sub">a playable instrument · built for this site</span>
       </span>
-      <span class="m-power">
-        <i class="m-ring"></i>
-        <i class="m-core"></i>
+      <span class="m-powerwrap">
+        <span class="m-power">
+          <i class="m-ring"></i>
+          <i class="m-core"></i>
+        </span>
+        <span class="m-open">press power <i>→</i></span>
       </span>
     </span>
-    <span class="m-glass" aria-hidden="true"></span>
+    <span class="m-glass" aria-hidden="true"><span class="m-ghost">A · W · S · E · D · F · T · G</span></span>
     <span class="m-caps" aria-hidden="true">
       {Array.from({ length: 14 }).map(() => <i></i>)}
     </span>
@@ -152,17 +181,18 @@ const SHOW = new Set(MARKS.map((m) => m.id));
   <section class="sheet paper" id="writing" aria-labelledby="writing-t">
     <h2 id="writing-t">Writing</h2>
     {posts.length > 0 ? (
-      posts.map((post, i) => (
-        <details class="post" open={i === 0}>
-          <summary class="post-head">
-            <h3 class="post-title">{post.title}</h3>
-            <span class="post-date">{post.date}</span>
-          </summary>
-          <div class="post-body">
-            {post.paragraphs.map((para) => <p class="post-p">{para}</p>)}
-          </div>
-        </details>
-      ))
+      <ul class="tiles">
+        {posts.map((post) => (
+          <li>
+            <a class="tile" href={`/writing/${post.slug}`}>
+              {post.cover && <span class="tile-cover"><img src={post.cover} alt="" loading="lazy" /></span>}
+              <span class="tile-title">{post.title}</span>
+              {post.subtitle && <span class="tile-sub">{post.subtitle}</span>}
+              <span class="tile-date">{post.date}</span>
+            </a>
+          </li>
+        ))}
+      </ul>
     ) : (
       <p class="paper-line">Writing lands here.</p>
     )}
@@ -265,21 +295,19 @@ const SHOW = new Set(MARKS.map((m) => m.id));
     right: 26px;
     margin: 0;
     display: flex;
-    gap: 20px;
-    align-items: baseline;
+    gap: 12px;
+    align-items: center;
     font-family: "IBM Plex Mono", ui-monospace, monospace;
     font-size: 0.72rem;
     letter-spacing: 0.04em;
     color: var(--dim);
   }
-  .avail::before {
-    content: "";
-    display: inline-block;
+  .corner .dot {
     width: 7px;
     height: 7px;
     border-radius: 50%;
     background: var(--ember);
-    margin-right: 7px;
+    flex: none;
   }
   .corner a {
     color: var(--ink);
@@ -287,7 +315,10 @@ const SHOW = new Set(MARKS.map((m) => m.id));
     text-underline-offset: 4px;
   }
   .hero-name {
-    text-align: center;
+    width: min(720px, 88%);
+  }
+  .etch-slot {
+    text-align: left;
   }
   .etch-text {
     margin: 0;
@@ -301,14 +332,14 @@ const SHOW = new Set(MARKS.map((m) => m.id));
     display: block;
     width: clamp(260px, 30vw, 420px);
     height: auto;
-    margin: 0 auto;
   }
   .liner {
-    margin: 18px 0 0;
+    margin: 26px 0 0 auto;
     font-size: clamp(0.95rem, 1.4vw, 1.05rem);
     color: var(--dim);
-    max-width: 44ch;
+    max-width: 34ch;
     line-height: 1.5;
+    text-align: right;
   }
 
   /* ── the sidebar (persistent left column; desktop only) ──────────────── */
@@ -405,20 +436,36 @@ const SHOW = new Set(MARKS.map((m) => m.id));
     color: var(--night-ink);
   }
 
-  .covers {
+  .works {
     list-style: none;
     margin: 0;
     padding: 0;
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
-    gap: 18px;
   }
-  .cover {
-    display: block;
+  .works li + li {
+    border-top: 1px solid var(--paper-line);
+  }
+  .wrow {
+    display: grid;
+    grid-template-columns: 200px 1fr;
+    gap: 12px 26px;
+    align-items: start;
+    padding: 24px 6px;
     text-decoration: none;
     color: inherit;
+    border-radius: 6px;
   }
-  .cover img {
+  .wrow[data-flagship] {
+    grid-template-columns: 280px 1fr;
+  }
+  .wrow:hover,
+  .wrow:focus-visible {
+    background: rgba(20, 18, 16, 0.035);
+  }
+  .wrow:focus-visible {
+    outline: 2px solid var(--ink);
+    outline-offset: -2px;
+  }
+  .wrow-cover img {
     width: 100%;
     aspect-ratio: 16 / 10;
     object-fit: cover;
@@ -427,15 +474,53 @@ const SHOW = new Set(MARKS.map((m) => m.id));
     display: block;
     transition: transform 200ms cubic-bezier(0.2, 0.7, 0.3, 1);
   }
-  .cover:hover img,
-  .cover:focus-visible img {
-    transform: translateY(-3px);
+  .wrow:hover .wrow-cover img {
+    transform: translateY(-2px);
   }
-  .cover-name {
-    display: block;
-    margin-top: 9px;
+  .wrow-body {
+    display: flex;
+    flex-direction: column;
+    gap: 9px;
+    min-width: 0;
+  }
+  .wrow-lede {
+    font-size: 1.02rem;
+    line-height: 1.5;
+    max-width: 58ch;
+    color: color-mix(in srgb, var(--ink) 82%, var(--dim));
+  }
+  .wrow[data-flagship] .wrow-lede {
+    font-size: 1.14rem;
+  }
+  .wrow-lede strong {
     font-weight: 600;
-    font-size: 0.92rem;
+    color: var(--ink);
+  }
+  .wrow-meta {
+    display: flex;
+    align-items: baseline;
+    gap: 12px;
+    flex-wrap: wrap;
+    font-family: "IBM Plex Mono", ui-monospace, monospace;
+  }
+  .wrow-meta b {
+    font-weight: 600;
+    font-size: 0.72rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+  }
+  .wrow-tags {
+    font-size: 0.66rem;
+    letter-spacing: 0.04em;
+    color: var(--dim);
+  }
+  .wrow-outcome {
+    font-family: "IBM Plex Mono", ui-monospace, monospace;
+    font-size: 0.72rem;
+    line-height: 1.55;
+    letter-spacing: 0.02em;
+    color: var(--dim);
+    max-width: 70ch;
   }
   .flag {
     font-family: "IBM Plex Mono", ui-monospace, monospace;
@@ -446,14 +531,6 @@ const SHOW = new Set(MARKS.map((m) => m.id));
     border: 1px solid var(--paper-line);
     border-radius: 99px;
     padding: 2px 7px;
-    margin-left: 8px;
-    vertical-align: 2px;
-    color: var(--dim);
-  }
-  .cover-sub {
-    display: block;
-    margin-top: 3px;
-    font-size: 0.8rem;
     color: var(--dim);
   }
 
@@ -491,11 +568,54 @@ const SHOW = new Set(MARKS.map((m) => m.id));
       0 18px 44px -24px rgba(10, 8, 4, 0.6);
     cursor: pointer;
   }
+  .machine {
+    padding: clamp(34px, 4.6vw, 56px);
+  }
   .m-head {
     display: flex;
     align-items: center;
     justify-content: space-between;
     gap: 20px;
+  }
+  .m-powerwrap {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    flex: none;
+  }
+  .m-open {
+    font-family: "IBM Plex Mono", ui-monospace, monospace;
+    font-size: 0.68rem;
+    letter-spacing: 0.08em;
+    color: #7d8798;
+    transition: color 200ms ease;
+  }
+  .m-open i {
+    font-style: normal;
+    display: inline-block;
+    transition: transform 200ms ease;
+  }
+  .machine:hover .m-open,
+  .machine:focus-visible .m-open {
+    color: #ffb44d;
+  }
+  .machine:hover .m-open i,
+  .machine:focus-visible .m-open i {
+    transform: translateX(4px);
+  }
+  .m-ghost {
+    display: grid;
+    place-items: center;
+    height: 100%;
+    font-family: "IBM Plex Mono", ui-monospace, monospace;
+    font-size: 0.78rem;
+    letter-spacing: 0.5em;
+    color: rgba(125, 135, 152, 0.35);
+    transition: color 260ms ease;
+  }
+  .machine:hover .m-ghost {
+    color: rgba(14, 196, 252, 0.55);
   }
   .m-name {
     margin: 0;
@@ -518,8 +638,8 @@ const SHOW = new Set(MARKS.map((m) => m.id));
   /* the power button — the door */
   .m-power {
     position: relative;
-    width: 66px;
-    height: 66px;
+    width: 92px;
+    height: 92px;
     flex: none;
     border-radius: 50%;
     background: radial-gradient(circle at 38% 32%, #23262d, #101216 70%);
@@ -528,7 +648,7 @@ const SHOW = new Set(MARKS.map((m) => m.id));
   }
   .m-ring {
     position: absolute;
-    inset: 14px;
+    inset: 19px;
     border-radius: 50%;
     border: 2.5px solid rgba(255, 84, 50, 0.45);
     box-shadow: 0 0 12px rgba(255, 84, 50, 0.25);
@@ -537,10 +657,10 @@ const SHOW = new Set(MARKS.map((m) => m.id));
   .m-core {
     position: absolute;
     left: 50%;
-    top: 26%;
-    width: 2.5px;
-    height: 13px;
-    margin-left: -1.25px;
+    top: 25%;
+    width: 3px;
+    height: 19px;
+    margin-left: -1.5px;
     background: rgba(255, 84, 50, 0.6);
     border-radius: 2px;
     transition: background 220ms ease, box-shadow 220ms ease;
@@ -571,8 +691,8 @@ const SHOW = new Set(MARKS.map((m) => m.id));
   }
   .m-glass {
     display: block;
-    margin-top: 26px;
-    height: 54px;
+    margin-top: 34px;
+    height: 96px;
     border-radius: 6px;
     background: linear-gradient(165deg, rgba(170, 196, 232, 0.10), rgba(170, 196, 232, 0.02) 40%, transparent), #05070c;
     border: 1px solid #232833;
@@ -584,100 +704,66 @@ const SHOW = new Set(MARKS.map((m) => m.id));
   }
   .m-caps i {
     flex: 1;
-    height: 26px;
+    height: 40px;
     border-radius: 4px;
     background: linear-gradient(180deg, #262b34, #1a1f27);
     border: 1px solid rgba(0, 0, 0, 0.65);
     box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.07);
   }
 
-  /* ── writing: the posts, on the site ─────────────────────────────────── */
-  .post + .post {
-    margin-top: 18px;
-    padding-top: 18px;
-    border-top: 1px solid var(--paper-line);
-  }
-  .post-head {
-    display: flex;
-    align-items: baseline;
-    gap: 14px;
-    flex-wrap: wrap;
-    cursor: pointer;
+  /* ── writing: preview tiles → /writing/<slug> ────────────────────────── */
+  .tiles {
     list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+    gap: 20px;
   }
-  .post-head::-webkit-details-marker {
-    display: none;
+  .tile {
+    display: flex;
+    flex-direction: column;
+    gap: 9px;
+    text-decoration: none;
+    color: inherit;
+    border-radius: 6px;
   }
-  .post-head::before {
-    content: "▸";
-    font-size: 0.7rem;
-    color: var(--dim);
-    transition: transform 160ms ease;
+  .tile-cover img {
+    width: 100%;
+    aspect-ratio: 16 / 10;
+    object-fit: cover;
+    border-radius: 4px;
+    border: 1px solid var(--paper-line);
+    display: block;
+    transition: transform 200ms cubic-bezier(0.2, 0.7, 0.3, 1);
   }
-  .post[open] > .post-head::before {
-    transform: rotate(90deg);
+  .tile:hover .tile-cover img {
+    transform: translateY(-3px);
   }
-  .post-head:hover .post-title {
+  .tile-title {
+    font-weight: 600;
+    font-size: 0.98rem;
+    line-height: 1.3;
+  }
+  .tile:hover .tile-title {
     text-decoration: underline;
     text-underline-offset: 4px;
     text-decoration-color: color-mix(in srgb, currentColor 35%, transparent);
   }
-  .post-body {
-    margin-top: 14px;
-    padding-left: 20px;
+  .tile-sub {
+    font-size: 0.84rem;
+    line-height: 1.45;
+    color: var(--dim);
   }
-  .post-title {
-    margin: 0;
-    font-size: 1.05rem;
-    font-weight: 600;
-  }
-  .post-date {
+  .tile-date {
     font-family: "IBM Plex Mono", ui-monospace, monospace;
-    font-size: 0.7rem;
+    font-size: 0.66rem;
     letter-spacing: 0.05em;
     color: var(--dim);
   }
-  .post-p {
-    margin: 0 0 14px;
-    font-size: 0.95rem;
-    line-height: 1.65;
-    max-width: 62ch;
-  }
-  .post-p:last-child {
-    margin-bottom: 0;
-  }
-
-  .tracks {
-    list-style: none;
-    margin: 0;
-    padding: 0;
-    display: flex;
-    flex-direction: column;
-    gap: 16px;
-  }
-  .track {
-    display: grid;
-    grid-template-columns: auto 1fr auto;
-    align-items: center;
-    gap: 8px 14px;
-    font-family: "IBM Plex Mono", ui-monospace, monospace;
-  }
-  .tno {
-    font-size: 0.7rem;
-    color: var(--sapphire);
-  }
-  .tname {
-    font-size: 0.92rem;
-    font-weight: 600;
-  }
-  .tmeta {
-    font-size: 0.72rem;
-    color: var(--night-dim);
-  }
-  .track audio {
-    grid-column: 1 / -1;
-    width: 100%;
-    height: 36px;
+  .tile:focus-visible {
+    outline: 2px solid var(--ink);
+    outline-offset: 4px;
   }
 
   .paper-line {
