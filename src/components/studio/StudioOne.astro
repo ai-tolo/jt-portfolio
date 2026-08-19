@@ -401,20 +401,58 @@ const SHOW = new Set(MARKS.map((m) => m.id));
     white-space: nowrap;
   }
 
-  /* the signal mark: subtly ethereal — a soft aurora behind the keys */
-  .rail-item[data-ethereal] .rail-art {
+  /* the signal mark: a breathing aurora RING around the whole chip + a
+     gentle float — quiet, but unmistakably not like the others. It is the
+     one lure toward the bottom of the page. */
+  .rail-item[data-ethereal] {
     position: relative;
-    filter: drop-shadow(0 0 6px rgba(14, 196, 252, 0.35));
+    isolation: isolate;
+  }
+  .rail-item[data-ethereal]::before {
+    content: "";
+    position: absolute;
+    inset: 1px;
+    border-radius: 11px;
+    border: 1.5px solid rgba(14, 196, 252, 0.55);
+    box-shadow:
+      0 0 10px rgba(14, 196, 252, 0.35),
+      inset 0 0 8px rgba(14, 196, 252, 0.12);
+    pointer-events: none;
+    z-index: -1;
+  }
+  .rail-item[data-ethereal] .rail-art {
+    filter: drop-shadow(0 0 5px rgba(14, 196, 252, 0.35));
   }
   @media (prefers-reduced-motion: no-preference) {
+    .rail-item[data-ethereal]::before {
+      animation: ea-ring 5.4s ease-in-out infinite;
+    }
     .rail-item[data-ethereal] .rail-art {
-      animation: ethereal 4.6s ease-in-out infinite;
+      animation: ea-float 5.4s ease-in-out infinite;
     }
-    @keyframes ethereal {
-      0%, 100% { filter: drop-shadow(0 0 5px rgba(14, 196, 252, 0.3)); }
-      45% { filter: drop-shadow(0 0 9px rgba(155, 108, 255, 0.5)); }
-      70% { filter: drop-shadow(0 0 8px rgba(255, 180, 77, 0.4)); }
+    @keyframes ea-ring {
+      0%, 100% {
+        border-color: rgba(14, 196, 252, 0.55);
+        box-shadow: 0 0 10px rgba(14, 196, 252, 0.35), inset 0 0 8px rgba(14, 196, 252, 0.12);
+      }
+      38% {
+        border-color: rgba(155, 108, 255, 0.6);
+        box-shadow: 0 0 14px rgba(155, 108, 255, 0.45), inset 0 0 9px rgba(155, 108, 255, 0.14);
+      }
+      70% {
+        border-color: rgba(255, 180, 77, 0.55);
+        box-shadow: 0 0 12px rgba(255, 180, 77, 0.4), inset 0 0 8px rgba(255, 180, 77, 0.12);
+      }
     }
+    @keyframes ea-float {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-2.5px); }
+    }
+  }
+  /* the ring stays legible when the item inverts (active) or the site is night */
+  .rail-item[data-ethereal][data-on]::before {
+    inset: -2px;
+    border-radius: 14px;
   }
 
   /* ── the comet: reading progress riding the rail's right edge ────────── */
