@@ -79,7 +79,7 @@ export const printContent: PrintResumeContent = {
     "Six-plus years before that across enterprise AI, B2B SaaS, and a bilingual banking launch, designing with engineers rather than handing off.",
   builds: [
     {
-      org: "The Engineer",
+      org: "Finishable — the Engineer",
       pos: "AI mastering agent",
       dates: "2026 – Present",
       bullets: [
@@ -95,7 +95,7 @@ export const printContent: PrintResumeContent = {
       },
     },
     {
-      org: "The Console",
+      org: "Finishable — the Catalog",
       pos: "audio catalog and search",
       dates: "2026 – Present",
       bullets: [

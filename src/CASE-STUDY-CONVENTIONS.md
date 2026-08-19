@@ -1,3 +1,9 @@
+> **NAMING (2026-08-19, locked with Jon):** the body of work is **Finishable**; its three
+> instruments are **the Catalog**, **the Studio**, **the Engineer** on every public label,
+> nav, résumé entry, and link. In-art wordmarks (the AudioDex journal badge, Richard the
+> turtle) are the artifacts' own in-world branding and stay. Old public names
+> (The Console / The Lathe / AudioDex / Signal Studio / Richard-as-label) are retired.
+
 # Case-study rhythm conventions
 
 The shared rulebook for restyling the individual case studies (the Lathe and the
