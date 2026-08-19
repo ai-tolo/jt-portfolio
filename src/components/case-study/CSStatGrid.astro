@@ -1,6 +1,12 @@
 ---
 // Animated count-up stats grid. Each stat lights up when scrolled into
 // view; the digits animate from 0 to the target value over ~900ms.
+//
+// PROGRESSIVE ENHANCEMENT (2026-08-19 adversarial review): the TRUE value is
+// server-rendered so PDFs, static captures, crawlers, JS-off and throttled
+// loads all read the real number. The script zeroes the field only at the
+// moment the count-up actually starts; reduced-motion readers keep the
+// static true value (no animation at all).
 
 interface Stat {
   /** Numeric target — for count-up. */
@@ -22,6 +28,12 @@ interface Props {
 }
 
 const { stats } = Astro.props;
+
+const fmt = (s: Stat) => {
+  if (s.format === "decimal") return s.n.toFixed(1);
+  if (s.format === "compact") return s.n >= 1000 ? (s.n / 1000).toFixed(1) + "k" : String(Math.round(s.n));
+  return Math.round(s.n).toLocaleString("en-US");
+};
 ---
 
 <div class="cs-stats">
@@ -33,7 +45,7 @@ const { stats } = Astro.props;
     >
       <div class="cs-stat-n">
         {s.prefix && <span class="cs-stat-prefix">{s.prefix}</span>}
-        <span class="cs-stat-num" data-stat-num>0</span>
+        <span class="cs-stat-num" data-stat-num>{fmt(s)}</span>
         {s.suffix && <span class="cs-stat-suffix">{s.suffix}</span>}
       </div>
       <div class="cs-stat-lbl">{s.label}</div>
@@ -71,15 +83,19 @@ const { stats } = Astro.props;
     requestAnimationFrame(tick);
   };
 
-  const io = new IntersectionObserver((entries) => {
-    for (const e of entries) {
-      if (e.isIntersecting) {
-        animate(e.target as HTMLElement);
-        io.unobserve(e.target);
+  // Reduced-motion readers keep the server-rendered true value; everyone
+  // else gets the count-up, zeroed only at the instant it begins.
+  if (!window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+    const io = new IntersectionObserver((entries) => {
+      for (const e of entries) {
+        if (e.isIntersecting) {
+          animate(e.target as HTMLElement);
+          io.unobserve(e.target);
+        }
       }
-    }
-  }, { threshold: 0.4 });
-  els.forEach((el) => io.observe(el));
+    }, { threshold: 0.4 });
+    els.forEach((el) => io.observe(el));
+  }
 </script>
 
 <style>

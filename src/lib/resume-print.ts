@@ -12,7 +12,7 @@
 //   never a novel discovery. Validation is single-rater; the multi-rater
 //   blind run is the stated gate.
 // - ITU-R BS.1770 + true-peak only. No BS.1534/MUSHRA. No "learns your
-//   taste" as a live feature. Real numbers only (700→2,100 / +125%, 50+,
+//   taste" as a live feature. Real numbers only (700→2,100 / 3×, 50+,
 //   15%, ~20,000 files).
 // - Plain, understated voice. No em dashes.
 // - One page: this content is sized to fit US Letter at 10pt. If you add a
@@ -128,7 +128,7 @@ export const printContent: PrintResumeContent = {
       bullets: [
         "Designed the primitives, patterns, and onboarding flows for a bilingual mobile banking V1, shipped on iOS.",
         "Ran usability testing with 50+ participants; iterating the primary flow cut bounce 15%.",
-        "Grew the pre-launch channel 125% (700 to 2,100 followers) on A/B-tested messaging.",
+        "Grew the pre-launch channel from 700 to 2,100 followers on A/B-tested messaging.",
       ],
     },
   ],
