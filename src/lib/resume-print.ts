@@ -86,7 +86,7 @@ export const printContent: PrintResumeContent = {
         "Built an AI mastering system that works as an agent, not a button: it takes actions and carries state across a multi-step run, rendering several masters, running a blind, loudness-matched A/B (ITU-R BS.1770, true-peak controlled), and composing a final master from the strongest takes.",
         "Built an active-learning model of my own taste, then shelved it: blind A/B results showed it overfitting a biased evaluator, the known reward-model overoptimization failure.",
         "Moved the work into the judge instead: a blind, loudness-matched harness that gates every change against a baseline of doing nothing. Single-rater so far; a multi-rater blind run is the next gate.",
-        "Designed and shipped the whole system with no handoffs: interaction design, front end (Astro, React, TypeScript), and backend (Python, FastAPI).",
+        "Designed and shipped end to end, no handoffs — Astro, React, TypeScript, Python, FastAPI.",
       ],
       link: {
         label: "Interactive case study:",
@@ -102,6 +102,19 @@ export const printContent: PrintResumeContent = {
         "Built a searchable catalog of roughly 20,000 audio files, fingerprinted, deduplicated, and auto-classified through a Whisper, Claude, and librosa pipeline. Sole engineer across ingestion, classification, and interface.",
       ],
     },
+    {
+      org: "SIGNAL",
+      pos: "browser instrument",
+      dates: "2026 – Present",
+      bullets: [
+        "Built a playable instrument that runs in a browser tab — Web Audio synthesis, sequencing, and a performance layer — sound engine and interface designed as one system. It lives on my homepage; press power.",
+      ],
+      link: {
+        label: "Play it:",
+        text: "uxjon.com/#signal",
+        href: "https://uxjon.com/#signal",
+      },
+    },
   ],
   experience: [
     {
@@ -110,6 +123,7 @@ export const printContent: PrintResumeContent = {
       dates: "Aug 2023 – Present",
       bullets: [
         "Designed and prototyped interfaces for enterprise AI and BI products, embedded with engineering where the interface had to make a model's output legible and usable.",
+        "Designed a FigJam-based documentation and alignment system adopted as the cross-team default across product, engineering, and business.",
         "Built and shipped a Python tool that parses the dbt manifest and fans model lineage into Excel, Power BI, and stakeholder briefs in one pass; designed the output and owned it end to end.",
       ],
     },
@@ -119,6 +133,7 @@ export const printContent: PrintResumeContent = {
       dates: "Apr – Oct 2023",
       bullets: [
         "Designed the interface, component set, and interaction model for a B2B SaaS AI chat platform, specified so the patterns mapped 1:1 to the React implementation.",
+        "Ran the roadmap for a distributed team shipping prototype releases on a tight cycle.",
       ],
     },
     {
@@ -127,7 +142,7 @@ export const printContent: PrintResumeContent = {
       dates: "Feb 2021 – Jan 2023",
       bullets: [
         "Designed the primitives, patterns, and onboarding flows for a bilingual mobile banking V1, shipped on iOS.",
-        "Ran usability testing with 50+ participants; iterating the primary flow cut bounce 15%.",
+        "Ran usability testing with 50+ participants; the iterated primary flow cut bounce from 40% to 25%.",
         "Grew the pre-launch channel from 700 to 2,100 followers on A/B-tested messaging.",
       ],
     },
@@ -151,7 +166,7 @@ export const printContent: PrintResumeContent = {
       { label: "Design", items: "Figma, Framer, Adobe Creative Suite" },
     ],
     [
-      { label: "Models & Audio", items: "Claude, Whisper, librosa, demucs" },
+      { label: "Models & Audio", items: "Web Audio API, Claude, Whisper, librosa, demucs" },
       { label: "Data", items: "SQL, dbt, Power BI" },
     ],
   ],
