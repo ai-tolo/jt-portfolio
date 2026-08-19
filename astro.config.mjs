@@ -9,6 +9,7 @@ import vercel from '@astrojs/vercel';
 //
 // https://astro.build/config
 export default defineConfig({
+  redirects: { '/signal': '/#signal' },
   site: 'https://uxjon.com',
   output: 'server',
   adapter: vercel(),

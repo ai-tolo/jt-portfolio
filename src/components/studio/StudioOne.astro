@@ -18,6 +18,7 @@ import path from "node:path";
 import soundlab from "./rooms/soundlab-manifest.json";
 import writing from "./rooms/writing-manifest.json";
 import illustrations from "./rooms/illustrations-manifest.json";
+import SignalMachine from "../SignalMachine.astro";
 import type { WorkItem } from "./StudioDesk.astro";
 
 interface Props {
@@ -45,30 +46,27 @@ const posts: Post[] = (writing as any).posts ?? [];
 // presentation copy; <strong> spans carry the scan path. Fallback = subtitle.
 const LEDES: Record<string, string> = {
   "the-console":
-    "Songs kept dying in my hard drive, so I built <strong>three audio tools</strong> where they die — a catalog that reads 20k recordings, a studio that turns one loop into a band, and a <strong>blind listening test</strong> that keeps my own ears honest.",
+    "The gear was never the problem; finishing was. I built <strong>three tools</strong> for where songs die: file <strong>20,000+ recordings</strong>, play one back as a band, judge it blind.",
   "chs":
-    "Taught <strong>AI to 10,000 employees</strong> — from 250 GPT Enterprise beta users to company-wide rollout, with non-technical teams building custom models on internal data.",
+    "Taught AI to <strong>10,000 employees</strong> at CHS, from a 250-user GPT Enterprise beta to company-wide. Non-technical teams now <strong>build their own models</strong> on internal data.",
   "crediverso":
-    "Shipped V1 of <strong>bilingual mobile banking</strong> where family is a feature, not a footnote — <strong>15% drop</strong> in primary-flow bounce before launch.",
+    "Shipped <strong>bilingual mobile banking</strong> on iOS where family is a feature, not a footnote: <strong>15% drop in primary-flow bounce</strong>, 125% pre-launch follower growth.",
   "raylu":
-    "Brand and clickable prototypes that helped <strong>close $4M in seed funding</strong> — Conversion Capital, Unusual Ventures, and angels.",
+    "Built the brand and the <strong>clickable Figma prototypes</strong> that helped Raylu close a <strong>$4M seed</strong> from Conversion Capital, Unusual Ventures, and angels.",
   "momence":
-    "A customer profile that <strong>bends to fit each business</strong> — four-category schema, modular by tenant, designed in a 48-hour take-home.",
+    "Redesigned Momence's customer profile in a <strong>48-hour take-home</strong>: <strong>four categories</strong>, modular by tenant, paired desktop and mobile, so it bends to each business.",
 };
 
-// The five marks (art: public/studio/mark-<id>.webp swap slots; emoji only as
-// last-resort fallback). A mark renders ONLY when its room has something in
-// it — the nav can never advertise an empty room.
+// The marks — Apple emoji by Jon's call (2026-08-16), one per room; a mark
+// renders ONLY when its room has something in it. SIGNAL is LAST: the
+// instrument is the site's finale, and its 🎹 gets the ethereal treatment.
 const MARKS = [
-  { id: "work", word: "work", emoji: "📁", temp: "warm", has: works.length > 0 },
-  { id: "signal", word: "signal", emoji: "🎹", temp: "cool", has: true },
-  { id: "soundlab", word: "sound lab", emoji: "🎧", temp: "cool", has: tracks.length > 0 },
-  { id: "writing", word: "writing", emoji: "✍️", temp: "warm", has: true },
-  { id: "illustrations", word: "illustrations", emoji: "✏️", temp: "warm", has: illos.length > 0 },
-].filter((m) => m.has).map((m) => ({
-  ...m,
-  art: ["webp", "svg", "png"].map((e) => `mark-${m.id}.${e}`).filter(exists).map((f) => `/studio/${f}`)[0],
-}));
+  { id: "work", word: "work", emoji: "💼", ethereal: false, has: works.length > 0 },
+  { id: "soundlab", word: "music", emoji: "🎧", ethereal: false, has: tracks.length > 0 },
+  { id: "writing", word: "writing", emoji: "✏️", ethereal: false, has: true },
+  { id: "illustrations", word: "illustrations", emoji: "🖼️", ethereal: false, has: illos.length > 0 },
+  { id: "signal", word: "signal", emoji: "🎹", ethereal: true, has: true },
+].filter((m) => m.has);
 const SHOW = new Set(MARKS.map((m) => m.id));
 ---
 
@@ -106,13 +104,16 @@ const SHOW = new Set(MARKS.map((m) => m.id));
       always present from load; flat light panel; mobile deferred) ───────── */}
   <nav class="rail" data-rail aria-label="Sections">
     {MARKS.map((m) => (
-      <a class="rail-item" href={`#${m.id}`} data-for={m.id} data-temp={m.temp} aria-label={m.word}>
-        <span class="rail-art" aria-hidden="true">
-          {m.art ? <img src={m.art} alt="" draggable="false" /> : m.emoji}
-        </span>
+      <a class="rail-item" href={`#${m.id}`} data-for={m.id} data-ethereal={m.ethereal ? "" : undefined} aria-label={m.word}>
+        <span class="rail-art" aria-hidden="true">{m.emoji}</span>
         <span class="rail-word">{m.word}</span>
       </a>
     ))}
+    <span class="comet" data-comet aria-hidden="true">
+      <i class="comet-track"></i>
+      <i class="comet-fill"></i>
+      <i class="comet-bead"></i>
+    </span>
   </nav>
 
   {/* ── SECTIONS ───────────────────────────────────────────────────────── */}
@@ -138,30 +139,9 @@ const SHOW = new Set(MARKS.map((m) => m.id));
     </ul>
   </section>}
 
-  {/* SIGNAL — the sheet IS the instrument's face; the power button is the
-      door. The whole panel is one link to /signal. */}
-  <a class="sheet machine" id="signal" href="/signal" aria-label="Signal — a playable instrument. Press power to open it.">
-    <span class="m-head" aria-hidden="true">
-      <span class="m-id">
-        <h2 class="m-name" id="signal-t">SIGNAL</h2>
-        <span class="m-sub">a playable instrument · built for this site</span>
-      </span>
-      <span class="m-powerwrap">
-        <span class="m-power">
-          <i class="m-ring"></i>
-          <i class="m-core"></i>
-        </span>
-        <span class="m-open">press power <i>→</i></span>
-      </span>
-    </span>
-    <span class="m-glass" aria-hidden="true"><span class="m-ghost">A · W · S · E · D · F · T · G</span></span>
-    <span class="m-caps" aria-hidden="true">
-      {Array.from({ length: 14 }).map(() => <i></i>)}
-    </span>
-  </a>
 
   {SHOW.has("soundlab") && <section class="sheet night" id="soundlab" aria-labelledby="soundlab-t">
-    <h2 id="soundlab-t">Sound Lab</h2>
+    <h2 id="soundlab-t">Music I've Made</h2>
     {tracks.length > 0 ? (
       <ol class="tracks">
         {tracks.map((t, i) => (
@@ -211,12 +191,27 @@ const SHOW = new Set(MARKS.map((m) => m.id));
     )}
   </section>}
 
-  {/* the floor: one quiet line on the wood — reachable, placeable, dated */}
+  {/* ── SIGNAL — the instrument itself, live, the site's finale.
+      Power-on takes the whole site dark; scrolling away powers it off and
+      the light returns. The component is SACRED — observed, never edited. */}
+  {/* No id here — SignalMachine's own root is <section id="signal">, which
+      serves as the anchor + spy target; this host only frames and observes. */}
+  <section class="live-signal" aria-label="Signal — a playable instrument" data-signal-host>
+    <div class="sig-desktop">
+      <SignalMachine />
+    </div>
+    <div class="sig-mobile">
+      <iframe class="sig-mobile-frame" data-src="/more/index.html" title="Interactive audio exhibit" loading="lazy" allow="autoplay"></iframe>
+    </div>
+  </section>
+
+  {/* the floor: reachable + placeable — email with the city beneath it */}
   <footer class="floor">
-    <a href="mailto:jtollefson123@gmail.com">jtollefson123@gmail.com</a>
-    <span>·</span><span>Minneapolis, MN</span>
-    <span>·</span><a href="https://substack.com/@diaryofasoundbender" target="_blank" rel="noopener noreferrer">substack</a>
-    <span>·</span><a href="/resume">résumé</a>
+    <span class="floor-lines">
+      <a href="mailto:jtollefson123@gmail.com">jtollefson123@gmail.com</a>
+      <span class="floor-city">Minneapolis, MN</span>
+    </span>
+    <a class="floor-resume" href="/resume">résumé</a>
   </footer>
 
   {/* end sentinel: at document bottom the last section takes the active
@@ -406,6 +401,106 @@ const SHOW = new Set(MARKS.map((m) => m.id));
     white-space: nowrap;
   }
 
+  /* the signal mark: subtly ethereal — a soft aurora behind the keys */
+  .rail-item[data-ethereal] .rail-art {
+    position: relative;
+    filter: drop-shadow(0 0 6px rgba(14, 196, 252, 0.35));
+  }
+  @media (prefers-reduced-motion: no-preference) {
+    .rail-item[data-ethereal] .rail-art {
+      animation: ethereal 4.6s ease-in-out infinite;
+    }
+    @keyframes ethereal {
+      0%, 100% { filter: drop-shadow(0 0 5px rgba(14, 196, 252, 0.3)); }
+      45% { filter: drop-shadow(0 0 9px rgba(155, 108, 255, 0.5)); }
+      70% { filter: drop-shadow(0 0 8px rgba(255, 180, 77, 0.4)); }
+    }
+  }
+
+  /* ── the comet: reading progress riding the rail's right edge ────────── */
+  .comet {
+    position: absolute;
+    top: 18px;
+    bottom: 18px;
+    right: -7px;
+    width: 12px;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 400ms ease;
+  }
+  .comet[data-scrollable] {
+    opacity: 1;
+  }
+  .comet-track,
+  .comet-fill {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 50%;
+    width: 2px;
+    transform: translateX(-50%);
+    border-radius: 2px;
+  }
+  .comet-track {
+    background: rgba(20, 18, 16, 0.1);
+  }
+  .comet-fill {
+    background: linear-gradient(180deg, var(--brand-pink, #ff5c8a) 0%, var(--brand-orange, #ff8a3d) 50%, var(--brand-yellow, #ffc94d) 100%);
+    clip-path: inset(0 0 calc((1 - var(--p, 0)) * 100%) 0);
+    filter: drop-shadow(0 0 5px color-mix(in srgb, var(--brand-orange, #ff8a3d) 40%, transparent));
+  }
+  .comet-bead {
+    position: absolute;
+    left: 50%;
+    top: calc(var(--p, 0) * 100%);
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    transform: translate(-50%, -50%);
+    background: radial-gradient(circle at 50% 38%, #fff 0%, var(--brand-orange, #ff8a3d) 55%, color-mix(in srgb, var(--brand-orange, #ff8a3d) 55%, #000) 100%);
+    box-shadow: 0 0 12px 2px color-mix(in srgb, var(--brand-orange, #ff8a3d) 50%, transparent);
+  }
+  .comet-bead::after {
+    content: "";
+    position: absolute;
+    left: 50%;
+    bottom: 50%;
+    width: 6px;
+    height: 22px;
+    transform: translateX(-50%);
+    background: linear-gradient(to top, var(--brand-orange, #ff8a3d), transparent);
+    border-radius: 6px;
+    filter: blur(2px);
+  }
+
+  /* ── NIGHT — the instrument's power owns the site's light ────────────── */
+  .ground,
+  .rail {
+    transition: background 560ms ease, border-color 560ms ease;
+  }
+  :global(html[data-night]) .ground {
+    background: #0b0e14;
+  }
+  :global(html[data-night]) .rail {
+    background: #101216;
+    border-right-color: rgba(160, 190, 230, 0.12);
+  }
+  :global(html[data-night]) .rail-item {
+    color: #8f98a8;
+  }
+  :global(html[data-night]) .rail-item[data-on] {
+    background: #e8ecf4;
+    color: #101216;
+  }
+  :global(html[data-night]) .comet-track {
+    background: rgba(232, 236, 244, 0.12);
+  }
+  :global(html[data-night]) .floor,
+  :global(html[data-night]) .floor a,
+  :global(html[data-night]) .floor-city {
+    color: #8f98a8;
+  }
+
   /* ── sections ────────────────────────────────────────────────────────── */
   .sheet {
     max-width: 1080px;
@@ -454,9 +549,6 @@ const SHOW = new Set(MARKS.map((m) => m.id));
     color: inherit;
     border-radius: 6px;
   }
-  .wrow[data-flagship] {
-    grid-template-columns: 280px 1fr;
-  }
   .wrow:hover,
   .wrow:focus-visible {
     background: rgba(20, 18, 16, 0.035);
@@ -488,9 +580,6 @@ const SHOW = new Set(MARKS.map((m) => m.id));
     line-height: 1.5;
     max-width: 58ch;
     color: color-mix(in srgb, var(--ink) 82%, var(--dim));
-  }
-  .wrow[data-flagship] .wrow-lede {
-    font-size: 1.14rem;
   }
   .wrow-lede strong {
     font-weight: 600;
@@ -766,6 +855,35 @@ const SHOW = new Set(MARKS.map((m) => m.id));
     outline-offset: 4px;
   }
 
+  /* ── the live instrument (the finale) ────────────────────────────────── */
+  .live-signal {
+    max-width: 1180px;
+    margin: 0 auto clamp(40px, 7vh, 80px);
+    scroll-margin-top: 24px;
+  }
+  .sig-desktop {
+    display: none;
+  }
+  .sig-mobile {
+    display: block;
+    padding: 0 14px;
+  }
+  .sig-mobile-frame {
+    width: 100%;
+    height: 78svh;
+    border: 1px solid var(--night-line);
+    border-radius: 10px;
+    background: var(--night);
+  }
+  @media (pointer: fine) {
+    .sig-desktop {
+      display: block;
+    }
+    .sig-mobile {
+      display: none;
+    }
+  }
+
   .paper-line {
     margin: 0;
     font-size: 0.95rem;
@@ -820,11 +938,20 @@ const SHOW = new Set(MARKS.map((m) => m.id));
     margin: 0 auto;
     padding: 4px clamp(26px, 4vw, 46px) 0;
     display: flex;
-    flex-wrap: wrap;
+    align-items: flex-end;
+    justify-content: space-between;
     gap: 10px;
     font-family: "IBM Plex Mono", ui-monospace, monospace;
     font-size: 0.74rem;
     letter-spacing: 0.04em;
+    color: var(--dim);
+  }
+  .floor-lines {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+  }
+  .floor-city {
     color: var(--dim);
   }
   .floor a {
@@ -924,5 +1051,62 @@ const SHOW = new Set(MARKS.map((m) => m.id));
       );
     }
     recompute();
+  }
+
+  // ── the comet: reading progress on the rail's right edge. rAF-throttled
+  // passive scroll — motion only while scrolling, nothing at rest.
+  const comet = document.querySelector<HTMLElement>("[data-comet]");
+  if (comet) {
+    let ticking = false;
+    const measure = () => {
+      const doc = document.documentElement;
+      const span = doc.scrollHeight - window.innerHeight;
+      if (span > 4) comet.setAttribute("data-scrollable", "");
+      else comet.removeAttribute("data-scrollable");
+      const pv = span > 4 ? Math.min(1, Math.max(0, window.scrollY / span)) : 0;
+      comet.style.setProperty("--p", pv.toFixed(4));
+    };
+    const onScroll = () => {
+      if (ticking) return;
+      ticking = true;
+      requestAnimationFrame(() => { ticking = false; measure(); });
+    };
+    measure();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    window.addEventListener("resize", onScroll, { passive: true });
+    window.addEventListener("load", measure);
+  }
+
+  // ── the instrument owns the light. The SignalMachine is SACRED — we only
+  // OBSERVE its data-state: boot → the site goes night; powerdown/standby →
+  // light returns. Scrolling the instrument out of view powers it off.
+  const sgm = document.getElementById("sgm");
+  const host = document.querySelector("[data-signal-host]");
+  if (sgm && host) {
+    const night = (on: boolean) => {
+      if (on) document.documentElement.setAttribute("data-night", "");
+      else document.documentElement.removeAttribute("data-night");
+    };
+    const powered = () => {
+      const st = sgm.getAttribute("data-state");
+      return st === "boot" || st === "on" || st === "live";
+    };
+    new MutationObserver(() => night(powered())).observe(sgm, {
+      attributes: true,
+      attributeFilter: ["data-state"],
+    });
+    new IntersectionObserver(([e]) => {
+      if (!e.isIntersecting && powered()) {
+        const pwr = document.getElementById("pwr");
+        pwr?.click(); // the machine's own powerdown path
+        night(false);
+      }
+    }, { threshold: 0 }).observe(host);
+  }
+
+  // touch devices: load the /more exhibit into the fallback frame
+  if (!window.matchMedia("(pointer: fine)").matches) {
+    const f = document.querySelector<HTMLIFrameElement>(".sig-mobile-frame");
+    if (f && !f.src) f.src = f.getAttribute("data-src") || "";
   }
 </script>

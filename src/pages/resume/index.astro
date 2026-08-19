@@ -3,7 +3,7 @@ import Layout from "../../layouts/Layout.astro";
 import ResumeRenderer from "../../components/ResumeRenderer.astro";
 import ResumeShell from "../../components/resume/ResumeShell.astro";
 import PrintResume from "../../components/resume/PrintResume.astro";
-import Footer from "../../components/Footer.astro";
+import AwayRail from "../../components/studio/AwayRail.astro";
 import { getDefaultResume } from "../../lib/resumes";
 
 export const prerender = true;
@@ -15,7 +15,13 @@ if (!resume) throw new Error("No default resume marked Active in the Resumes dat
 <Layout
   title={`${resume.header.name} — Resume`}
   description={`${resume.header.name} resume. ${resume.header.title}.`}
+  hideThemeSelector={true}
+  chromeless={true}
 >
+  {/* The studio's chrome, not the old site's: light nav column (home in the
+      middle; no résumé link — you're on it), neutral studio ground, no old
+      footer. Print styles untouched (PrintResume owns the PDF). */}
+  <AwayRail variant="light" resume={false} />
   <main class="resume-page">
     <ResumeShell>
       <ResumeRenderer resume={resume} />
@@ -23,12 +29,23 @@ if (!resume) throw new Error("No default resume marked Active in the Resumes dat
     {/* print-only curated one-pager; the interactive sheet above is screen-only */}
     <PrintResume />
   </main>
-
-  <Footer />
 </Layout>
 
-<style>
+<style is:global>
   .resume-page {
     padding: var(--space-8) 0 var(--space-16);
+    background: #e9e8e5;
+    min-height: 100svh;
+  }
+  @media (min-width: 900px) {
+    .resume-page {
+      padding-left: 92px;
+    }
+  }
+  @media print {
+    .resume-page {
+      background: #fff;
+      padding-left: 0;
+    }
   }
 </style>
