@@ -19,6 +19,7 @@ import soundlab from "./rooms/soundlab-manifest.json";
 import writing from "./rooms/writing-manifest.json";
 import illustrations from "./rooms/illustrations-manifest.json";
 import SignalMachine from "../SignalMachine.astro";
+import Transport from "../Transport.astro";
 import type { WorkItem } from "./StudioDesk.astro";
 
 interface Props {
@@ -34,8 +35,8 @@ const pub = (f: string) => path.join(process.cwd(), "public", "studio", f);
 const exists = (f: string) => fs.existsSync(pub(f));
 const etchAsset = ["etch.svg", "etch.webp", "etch.png"].filter(exists).map((f) => `/studio/${f}`)[0];
 
-interface Track { src: string; title: string; year?: number; duration?: string; }
-const tracks: Track[] = (soundlab as any).tracks ?? [];
+interface Track { src: string | null; title: string; year?: number; duration?: string; peaks?: string | null; }
+const tracks: Track[] = ((soundlab as any).tracks ?? []).filter((t: Track) => t.src);
 interface Illo { src: string; alt: string; title?: string; year?: number; }
 const illos: Illo[] = (illustrations as any).items ?? [];
 interface Post { slug: string; title: string; date: string; subtitle?: string; cover?: string | null; paragraphs: string[]; }
@@ -149,7 +150,7 @@ const SHOW = new Set(MARKS.map((m) => m.id));
             <span class="tno">{String(i + 1).padStart(2, "0")}</span>
             <span class="tname">{t.title}</span>
             <span class="tmeta">{[t.year, t.duration].filter(Boolean).join(" · ")}</span>
-            <audio controls preload="metadata" src={t.src}></audio>
+            <div class="track-tp"><Transport src={t.src!} peaks={t.peaks ?? undefined} title={t.title} accent="var(--sapphire)" /></div>
           </li>
         ))}
       </ol>
@@ -399,6 +400,20 @@ const SHOW = new Set(MARKS.map((m) => m.id));
     font-size: 0.56rem;
     letter-spacing: 0.04em;
     white-space: nowrap;
+  }
+
+  /* SCROLL-MAP mode (Jon, 2026-08-18): each item sits at the comet-track
+     position of its section, so the bead passes an icon exactly while the
+     reader is in that section. JS measures + pins; no-JS keeps the flex
+     column. The comet spans 18px insets — items map to the same span. */
+  .rail[data-mapped] {
+    justify-content: flex-start;
+  }
+  .rail[data-mapped] .rail-item {
+    position: absolute;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    top: calc(18px + var(--fy, 0) * (100% - 36px));
   }
 
   /* the signal mark: a breathing aurora RING around the whole chip + a
@@ -922,6 +937,39 @@ const SHOW = new Set(MARKS.map((m) => m.id));
     }
   }
 
+  /* the track rows (Music I've Made) */
+  .tracks {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+  }
+  .track {
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    align-items: center;
+    gap: 8px 14px;
+    font-family: "IBM Plex Mono", ui-monospace, monospace;
+  }
+  .tno {
+    font-size: 0.7rem;
+    color: var(--sapphire);
+  }
+  .tname {
+    font-size: 0.92rem;
+    font-weight: 600;
+  }
+  .tmeta {
+    font-size: 0.72rem;
+    color: var(--night-dim);
+  }
+  .track-tp {
+    grid-column: 1 / -1;
+    width: 100%;
+  }
+
   .paper-line {
     margin: 0;
     font-size: 0.95rem;
@@ -1091,6 +1139,29 @@ const SHOW = new Set(MARKS.map((m) => m.id));
     recompute();
   }
 
+  // ── the scroll map: pin each rail item at its section's position along
+  // the comet track (measured, not evenly spaced). Re-measured on load and
+  // resize — layout reads happen only then, never per-frame.
+  if (rail) {
+    const mapItems = () => {
+      const doc = document.documentElement;
+      const span = doc.scrollHeight - window.innerHeight;
+      if (span <= 4) return;
+      let ok = 0;
+      rail.querySelectorAll<HTMLElement>("[data-for]").forEach((el) => {
+        const s = document.getElementById(el.dataset.for || "");
+        if (!s) return;
+        const frac = Math.min(1, Math.max(0, (s.offsetTop - 40) / span));
+        el.style.setProperty("--fy", frac.toFixed(4));
+        ok++;
+      });
+      if (ok > 0) rail.setAttribute("data-mapped", "");
+    };
+    mapItems();
+    window.addEventListener("load", mapItems);
+    window.addEventListener("resize", () => window.setTimeout(mapItems, 120), { passive: true });
+  }
+
   // ── the comet: reading progress on the rail's right edge. rAF-throttled
   // passive scroll — motion only while scrolling, nothing at rest.
   const comet = document.querySelector<HTMLElement>("[data-comet]");
@@ -1133,13 +1204,15 @@ const SHOW = new Set(MARKS.map((m) => m.id));
       attributes: true,
       attributeFilter: ["data-state"],
     });
+    // "Scrolled away" = most of the machine has left the viewport (adjacent
+    // sections keep a sliver visible, so threshold 0 would never fire).
     new IntersectionObserver(([e]) => {
-      if (!e.isIntersecting && powered()) {
+      if (e.intersectionRatio < 0.35 && powered()) {
         const pwr = document.getElementById("pwr");
         pwr?.click(); // the machine's own powerdown path
         night(false);
       }
-    }, { threshold: 0 }).observe(host);
+    }, { threshold: [0, 0.35] }).observe(host);
   }
 
   // touch devices: load the /more exhibit into the fallback frame

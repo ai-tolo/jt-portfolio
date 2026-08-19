@@ -1,0 +1,182 @@
+---
+// Transport — the house audio player (2026-08-19, from the adversarial
+// review: one transport everywhere, zero browser chrome, honest numbers).
+//
+// Waveform from PRE-RENDERED peaks (scripts/gen-peaks.mjs → public/peaks/*.json),
+// so the true duration is server-rendered before any audio loads — the time
+// readout can never say 0:00/0:00 against a known length. Keyboard: the play
+// button toggles; ←/→ seek 5s; the waveform is click-to-seek. No rAF at rest —
+// progress renders off the audio element's timeupdate events.
+import fs from "node:fs";
+import path from "node:path";
+
+interface Props {
+  src: string;
+  /** Basename of the peaks JSON in public/peaks (defaults from src). */
+  peaks?: string;
+  title: string;
+  /** Accent for the played region. */
+  accent?: string;
+  /** Compact = shorter bars (inline moments, e.g. the four-bar handoff). */
+  compact?: boolean;
+}
+const { src, peaks, title, accent = "var(--brand-cyan, #6ee0ff)", compact = false } = Astro.props;
+
+const base = (peaks ?? path.basename(src)).replace(/\.[a-z0-9]+$/i, "");
+const peaksPath = path.join(process.cwd(), "public", "peaks", `${base}.json`);
+let DATA: { duration: number; peaks: number[] } = { duration: 0, peaks: [] };
+try {
+  DATA = JSON.parse(fs.readFileSync(peaksPath, "utf8"));
+} catch {
+  /* no peaks file: the transport still works, with a flat line */
+  DATA = { duration: 0, peaks: Array.from({ length: 160 }, () => 0.12) };
+}
+const fmtTime = (s: number) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, "0")}`;
+---
+
+<div class:list={["tp", { "tp-compact": compact }]} data-transport style={`--tp-accent:${accent}`}>
+  <button class="tp-btn" type="button" data-tp-toggle aria-label={`Play ${title}`}>
+    <svg class="tp-ic-play" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5.5v13l11-6.5z" /></svg>
+    <svg class="tp-ic-pause" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 5h3.4v14H7zM13.6 5H17v14h-3.6z" /></svg>
+  </button>
+  <div class="tp-wave" data-tp-wave role="slider" tabindex="0" aria-label={`Seek within ${title}`}
+    aria-valuemin="0" aria-valuemax={String(Math.round(DATA.duration))} aria-valuenow="0">
+    {DATA.peaks.map((p) => <i style={`--h:${Math.max(6, p * 100)}%`}></i>)}
+  </div>
+  <span class="tp-time" data-tp-time>0:00&nbsp;/&nbsp;{fmtTime(DATA.duration)}</span>
+  <audio preload="none" src={src} data-tp-audio data-duration={String(DATA.duration)}></audio>
+</div>
+
+<style>
+  .tp {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    width: 100%;
+  }
+  .tp-btn {
+    flex: none;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    border: 1px solid rgba(245, 241, 232, 0.25);
+    background: rgba(245, 241, 232, 0.06);
+    color: rgba(245, 241, 232, 0.9);
+    display: grid;
+    place-items: center;
+    cursor: pointer;
+    transition: border-color 160ms ease, background 160ms ease;
+  }
+  .tp-btn:hover,
+  .tp-btn:focus-visible {
+    border-color: var(--tp-accent);
+    background: rgba(245, 241, 232, 0.1);
+  }
+  .tp-btn:focus-visible {
+    outline: 2px solid var(--tp-accent);
+    outline-offset: 2px;
+  }
+  .tp-btn svg {
+    width: 18px;
+    height: 18px;
+    fill: currentColor;
+  }
+  .tp-ic-pause { display: none; }
+  .tp[data-playing] .tp-ic-pause { display: block; }
+  .tp[data-playing] .tp-ic-play { display: none; }
+
+  .tp-wave {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    gap: 1px;
+    height: 44px;
+    cursor: pointer;
+    border-radius: 4px;
+  }
+  .tp-compact .tp-wave { height: 30px; }
+  .tp-wave:focus-visible {
+    outline: 2px solid var(--tp-accent);
+    outline-offset: 4px;
+  }
+  .tp-wave i {
+    flex: 1;
+    height: var(--h);
+    min-width: 1px;
+    background: rgba(245, 241, 232, 0.28);
+    border-radius: 1px;
+    transition: background 120ms ease;
+  }
+  .tp-wave i[data-played] {
+    background: var(--tp-accent);
+  }
+  .tp-time {
+    flex: none;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 0.72rem;
+    letter-spacing: 0.04em;
+    color: rgba(245, 241, 232, 0.6);
+    font-feature-settings: "tnum";
+  }
+</style>
+
+<script>
+  // One controller for every transport on the page. Progress paints on the
+  // audio's own timeupdate (≈4Hz) — no rAF, nothing at rest. Starting one
+  // transport pauses the others (one voice at a time on a reading page).
+  const all = Array.from(document.querySelectorAll<HTMLElement>("[data-transport]"));
+  const fmt = (s: number) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, "0")}`;
+  for (const tp of all) {
+    const audio = tp.querySelector<HTMLAudioElement>("[data-tp-audio]")!;
+    const toggle = tp.querySelector<HTMLButtonElement>("[data-tp-toggle]")!;
+    const wave = tp.querySelector<HTMLElement>("[data-tp-wave]")!;
+    const time = tp.querySelector<HTMLElement>("[data-tp-time]")!;
+    const bars = Array.from(wave.querySelectorAll("i"));
+    const declared = Number(audio.dataset.duration || "0");
+    const dur = () => (audio.duration && isFinite(audio.duration) ? audio.duration : declared);
+
+    const paint = () => {
+      const d = dur();
+      const p = d > 0 ? audio.currentTime / d : 0;
+      const lit = Math.floor(p * bars.length);
+      bars.forEach((b, i) => (i < lit ? b.setAttribute("data-played", "") : b.removeAttribute("data-played")));
+      time.textContent = `${fmt(audio.currentTime)} / ${fmt(d)}`;
+      wave.setAttribute("aria-valuenow", String(Math.round(audio.currentTime)));
+    };
+
+    toggle.addEventListener("click", () => {
+      if (audio.paused) {
+        for (const other of all) {
+          const oa = other.querySelector<HTMLAudioElement>("[data-tp-audio]")!;
+          if (oa !== audio && !oa.paused) oa.pause();
+        }
+        audio.play();
+      } else audio.pause();
+    });
+    audio.addEventListener("play", () => tp.setAttribute("data-playing", ""));
+    audio.addEventListener("pause", () => tp.removeAttribute("data-playing"));
+    audio.addEventListener("ended", () => {
+      tp.removeAttribute("data-playing");
+      audio.currentTime = 0;
+      paint();
+    });
+    audio.addEventListener("timeupdate", paint);
+
+    const seekTo = (frac: number) => {
+      const d = dur();
+      if (d > 0) {
+        audio.currentTime = Math.max(0, Math.min(d, frac * d));
+        paint();
+      }
+    };
+    wave.addEventListener("click", (e) => {
+      const r = wave.getBoundingClientRect();
+      seekTo((e.clientX - r.left) / r.width);
+    });
+    wave.addEventListener("keydown", (e) => {
+      if (e.key === "ArrowRight") { e.preventDefault(); audio.currentTime = Math.min(dur(), audio.currentTime + 5); paint(); }
+      if (e.key === "ArrowLeft") { e.preventDefault(); audio.currentTime = Math.max(0, audio.currentTime - 5); paint(); }
+      if (e.key === " " || e.key === "Enter") { e.preventDefault(); toggle.click(); }
+    });
+  }
+</script>
