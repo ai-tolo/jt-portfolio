@@ -103,6 +103,10 @@ const { count, label, accent = "var(--brand-cyan, #6ee0ff)" } = Astro.props;
 
 <script>
   const pad = (n: number) => String(n).padStart(2, "0");
+  // Carousels that dominate the viewport also answer the keyboard without
+  // needing focus first (Jon, 2026-08-20 — the look band fills the screen,
+  // so ←/→ should just work). Focused carousels keep their own handler.
+  const registry: { car: HTMLElement; go: (d: number) => void }[] = [];
   for (const car of document.querySelectorAll<HTMLElement>("[data-carousel]")) {
     const track = car.querySelector<HTMLElement>("[data-car-track]")!;
     const slides = Array.from(track.children) as HTMLElement[];
@@ -139,6 +143,31 @@ const { count, label, accent = "var(--brand-cyan, #6ee0ff)" } = Astro.props;
       if (e.key === "ArrowRight") show(i + 1);
       if (e.key === "ArrowLeft") show(i - 1);
     });
+    registry.push({ car, go: (d) => show(i + d) });
     show(0);
+  }
+
+  if (registry.length > 0) {
+    window.addEventListener("keydown", (e) => {
+      if (e.key !== "ArrowLeft" && e.key !== "ArrowRight") return;
+      if (e.metaKey || e.ctrlKey || e.altKey || e.shiftKey) return;
+      const el = document.activeElement as HTMLElement | null;
+      // anything that owns its own arrow keys keeps them
+      if (el && (el.tagName === "INPUT" || el.tagName === "TEXTAREA" || el.tagName === "SELECT" || el.isContentEditable)) return;
+      if (el?.hasAttribute?.("data-tp-wave")) return;
+      if (el?.closest?.("[data-carousel]")) return;
+      // route to the carousel covering most of the screen — only when one
+      // genuinely dominates (the full-viewport look band case)
+      let best: (typeof registry)[number] | null = null;
+      let bestVis = window.innerHeight * 0.55;
+      for (const c of registry) {
+        const r = c.car.getBoundingClientRect();
+        const vis = Math.min(r.bottom, window.innerHeight) - Math.max(r.top, 0);
+        if (vis >= bestVis) { bestVis = vis; best = c; }
+      }
+      if (!best) return;
+      e.preventDefault();
+      best.go(e.key === "ArrowRight" ? 1 : -1);
+    });
   }
 </script>
