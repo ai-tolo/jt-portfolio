@@ -183,14 +183,6 @@ const SHOW = new Set(MARKS.map((m) => m.id));
   </section>}
 
 
-  {/* the about-that-isn't-a-section: three sentences of human before the
-      personal half begins. DRAFT — Jon rewrites at will. */}
-  <p class="bio">
-    I'm Jon Tollefson. Days I design and build tools at the seam of interface,
-    code, and AI; nights I'm in the studio, bending found sound into songs.
-    Everything below is both of those at once — made in Minneapolis.
-  </p>
-
   {SHOW.has("soundlab") && <section class="sheet night" id="soundlab" aria-labelledby="soundlab-t">
     <h2 id="soundlab-t">Listen</h2>
     <Carousel count={tracks.length} label="Music" accent="var(--sapphire)">
@@ -1022,17 +1014,6 @@ const SHOW = new Set(MARKS.map((m) => m.id));
     width: 100%;
   }
 
-  /* the about-that-isn't-a-section */
-  .bio {
-    max-width: 56ch;
-    margin: 0 auto clamp(40px, 6vh, 70px);
-    padding: 0 24px;
-    font-size: clamp(1rem, 1.5vw, 1.12rem);
-    line-height: 1.65;
-    color: color-mix(in srgb, var(--ink) 80%, var(--dim));
-    text-align: center;
-  }
-
   /* listen: one track, with gravity */
   .ls {
     display: grid;
@@ -1260,7 +1241,13 @@ const SHOW = new Set(MARKS.map((m) => m.id));
     const items = new Map(
       Array.from(rail.querySelectorAll<HTMLElement>("[data-for]")).map((el) => [el.dataset.for as string, el])
     );
-    const ids = Array.from(items.keys());
+    // Nav order (play first) is NOT document order (look renders after read);
+    // "last section whose top passed the line" and "last at hard bottom" are
+    // both document-order rules, so walk the sections as the page stacks them.
+    const ids = Array.from(items.keys()).sort((a, b) => {
+      const sa = document.getElementById(a), sb = document.getElementById(b);
+      return (sa?.offsetTop ?? 0) - (sb?.offsetTop ?? 0);
+    });
     // A nav click LOCKS its target as the active section (the two bottom
     // sections share one max-scroll position, so position alone can't tell
     // them apart); any user-initiated scroll releases the lock.
@@ -1323,23 +1310,21 @@ const SHOW = new Set(MARKS.map((m) => m.id));
     recompute();
   }
 
-  // ── the scroll map: pin each rail item at its section's position along
-  // the comet track (measured, not evenly spaced). Re-measured on load and
-  // resize — layout reads happen only then, never per-frame.
+  // ── the rail rhythm: words sit at an EVEN vertical beat in page order
+  // (measured section positions made read/look crowd the rail's foot —
+  // Jon, 2026-08-20: spacing felt weird). The comet alone carries true
+  // scroll position; the words are nav, and nav reads best on a grid.
   if (rail) {
     const mapItems = () => {
-      const doc = document.documentElement;
-      const span = doc.scrollHeight - window.innerHeight;
-      if (span <= 4) return;
-      let ok = 0;
-      rail.querySelectorAll<HTMLElement>("[data-for]").forEach((el) => {
-        const s = document.getElementById(el.dataset.for || "");
-        if (!s) return;
-        const frac = Math.min(1, Math.max(0, (s.offsetTop - 40) / span));
+      const ordered = Array.from(rail.querySelectorAll<HTMLElement>("[data-for]"))
+        .map((el) => ({ el, top: document.getElementById(el.dataset.for || "")?.offsetTop ?? 0 }))
+        .sort((a, b) => a.top - b.top);
+      const n = ordered.length;
+      ordered.forEach(({ el }, i) => {
+        const frac = n === 1 ? 0.5 : 0.1 + (i / (n - 1)) * 0.8;
         el.style.setProperty("--fy", frac.toFixed(4));
-        ok++;
       });
-      if (ok > 0) rail.setAttribute("data-mapped", "");
+      if (n > 0) rail.setAttribute("data-mapped", "");
     };
     mapItems();
     window.addEventListener("load", mapItems);
