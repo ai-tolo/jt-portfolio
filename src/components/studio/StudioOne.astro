@@ -144,6 +144,10 @@ const SHOW = new Set(MARKS.map((m) => m.id));
       <i class="comet-fill"></i>
       <i class="comet-bead"></i>
     </span>
+    <button class="rail-night" type="button" data-night-toggle aria-pressed="false" aria-label="Night mode">
+      <span class="rn-moon" aria-hidden="true">🌙</span>
+      <span class="rn-sun" aria-hidden="true">☀️</span>
+    </button>
   </nav>
 
   {/* ── SECTIONS ───────────────────────────────────────────────────────── */}
@@ -581,6 +585,82 @@ const SHOW = new Set(MARKS.map((m) => m.id));
   :global(html[data-night]) .floor a,
   :global(html[data-night]) .floor-city {
     color: #8f98a8;
+  }
+  /* night reaches everything that sits DIRECTLY on the ground (sheets keep
+     their own light — lit paper in a dark room) */
+  :global(html[data-night]) .etch-img {
+    filter: invert(1);
+  }
+  :global(html[data-night]) .etch-text {
+    color: #e8ecf4;
+  }
+  :global(html[data-night]) .liner,
+  :global(html[data-night]) .corner {
+    color: #7d8798;
+  }
+  :global(html[data-night]) .corner a {
+    color: #e8ecf4;
+  }
+  :global(html[data-night]) .lk-cap {
+    color: #7d8798;
+  }
+  /* the machine's intro line sits on the ground too (styled from out here —
+     the component itself stays untouched) */
+  :global(html[data-night]) .live-signal :global(.sgm-intro) {
+    color: #8f98a8;
+  }
+  :global(html[data-night]) .look-band :global(.car-counter) {
+    color: #7d8798;
+  }
+  :global(html[data-night]) .look-band :global(.car-btn) {
+    border-color: rgba(232, 236, 244, 0.3);
+    background: rgba(16, 18, 22, 0.6);
+    color: #e8ecf4;
+  }
+
+  /* ── the night switch: moon at the rail's foot; sun brings the light back.
+     Jon's switch and the instrument's power are independent sources — either
+     keeps the room dark. */
+  .rail-night {
+    position: absolute;
+    bottom: 14px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 46px;
+    height: 36px;
+    display: grid;
+    place-items: center;
+    padding: 0;
+    border-radius: 10px;
+    border: 1px solid rgba(20, 18, 16, 0.22);
+    background: rgba(20, 18, 16, 0.04);
+    cursor: pointer;
+    font-size: 16px;
+    line-height: 1;
+    transition: background 160ms ease, border-color 160ms ease;
+  }
+  .rail-night:hover {
+    background: rgba(20, 18, 16, 0.1);
+  }
+  .rail-night:focus-visible {
+    outline: 2px solid var(--ink);
+    outline-offset: 2px;
+  }
+  .rn-sun {
+    display: none;
+  }
+  :global(html[data-night]) .rail-night {
+    border-color: rgba(232, 236, 244, 0.28);
+    background: rgba(232, 236, 244, 0.06);
+  }
+  :global(html[data-night]) .rail-night:hover {
+    background: rgba(232, 236, 244, 0.14);
+  }
+  :global(html[data-night]) .rn-moon {
+    display: none;
+  }
+  :global(html[data-night]) .rn-sun {
+    display: block;
   }
 
   /* ── sections ────────────────────────────────────────────────────────── */
@@ -1239,6 +1319,15 @@ const SHOW = new Set(MARKS.map((m) => m.id));
   // view (none while the hero owns the viewport). IO-triggered recompute —
   // no rAF, no per-frame scroll work.
   const rail = document.querySelector<HTMLElement>("[data-rail]");
+  // ONE source of truth shared by the spy, the word map, and the comet:
+  // sections in document order, and each word's fixed rail fraction. The
+  // bead and the highlight both derive from these — they cannot disagree.
+  const docIds = rail
+    ? Array.from(rail.querySelectorAll<HTMLElement>("[data-for]"))
+        .map((el) => el.dataset.for as string)
+        .sort((a, b) => (document.getElementById(a)?.offsetTop ?? 0) - (document.getElementById(b)?.offsetTop ?? 0))
+    : [];
+  const fyOf = (i: number, n: number) => (n === 1 ? 0.5 : 0.1 + (i / (n - 1)) * 0.8);
   if (rail) {
 
     // Scroll-spy, rebuilt from scratch (2026-08-20 — the lock/trip-line
@@ -1254,10 +1343,7 @@ const SHOW = new Set(MARKS.map((m) => m.id));
     );
     // Document order (not nav order) so exact ties break toward the later
     // section — the one the reader is scrolling INTO.
-    const ids = Array.from(items.keys()).sort((a, b) => {
-      const sa = document.getElementById(a), sb = document.getElementById(b);
-      return (sa?.offsetTop ?? 0) - (sb?.offsetTop ?? 0);
-    });
+    const ids = docIds;
     const recompute = () => {
       const vh = window.innerHeight;
       let active: string | null = null;
@@ -1308,15 +1394,11 @@ const SHOW = new Set(MARKS.map((m) => m.id));
   // scroll position; the words are nav, and nav reads best on a grid.
   if (rail) {
     const mapItems = () => {
-      const ordered = Array.from(rail.querySelectorAll<HTMLElement>("[data-for]"))
-        .map((el) => ({ el, top: document.getElementById(el.dataset.for || "")?.offsetTop ?? 0 }))
-        .sort((a, b) => a.top - b.top);
-      const n = ordered.length;
-      ordered.forEach(({ el }, i) => {
-        const frac = n === 1 ? 0.5 : 0.1 + (i / (n - 1)) * 0.8;
-        el.style.setProperty("--fy", frac.toFixed(4));
+      docIds.forEach((id, i) => {
+        const el = rail.querySelector<HTMLElement>(`[data-for="${id}"]`);
+        el?.style.setProperty("--fy", fyOf(i, docIds.length).toFixed(4));
       });
-      if (n > 0) rail.setAttribute("data-mapped", "");
+      if (docIds.length > 0) rail.setAttribute("data-mapped", "");
     };
     mapItems();
     window.addEventListener("load", mapItems);
@@ -1327,13 +1409,71 @@ const SHOW = new Set(MARKS.map((m) => m.id));
   // passive scroll — motion only while scrolling, nothing at rest.
   const comet = document.querySelector<HTMLElement>("[data-comet]");
   if (comet) {
+    // The bead used to ride raw scroll fraction while the words sat on an
+    // even grid — two coordinate systems, so the bead could kiss "work"
+    // while "play" was lit (Jon, 2026-08-20). Now the bead rides a
+    // piecewise map whose knots are (flip scrollY, word fraction): it
+    // crosses each word at the exact scroll where the spy lights it.
+    // Flip points come from the SAME dominance rule the spy uses, found by
+    // bisection over cached section offsets — pure math, no layout reads.
+    let anchors: { s: number; fy: number }[] = [];
+    const buildAnchors = () => {
+      anchors = [];
+      const vh = window.innerHeight;
+      const span = document.documentElement.scrollHeight - vh;
+      if (span <= 4 || docIds.length === 0) return;
+      const secs = docIds.map((id) => {
+        const el = document.getElementById(id);
+        const top = el?.offsetTop ?? 0;
+        return { top, bot: top + (el?.offsetHeight ?? 0) };
+      });
+      const activeAt = (s: number) => {
+        let a = -1;
+        let best = vh * 0.25;
+        for (let k = 0; k < secs.length; k++) {
+          const v = Math.max(0, Math.min(secs[k].bot - s, vh) - Math.max(secs[k].top - s, 0));
+          if (v >= best) { best = v; a = k; }
+        }
+        return a;
+      };
+      for (let k = 0; k < secs.length; k++) {
+        // smallest scrollY where section k (or a later one) takes the light
+        let lo = anchors.length ? anchors[anchors.length - 1].s : 0;
+        let hi = span;
+        if (activeAt(hi) < k) return; // never reached — degenerate; keep raw ride
+        while (hi - lo > 1) {
+          const mid = Math.floor((lo + hi) / 2);
+          if (activeAt(mid) >= k) hi = mid;
+          else lo = mid;
+        }
+        anchors.push({ s: hi, fy: fyOf(k, secs.length) });
+      }
+    };
     let ticking = false;
     const measure = () => {
       const doc = document.documentElement;
       const span = doc.scrollHeight - window.innerHeight;
       if (span > 4) comet.setAttribute("data-scrollable", "");
       else comet.removeAttribute("data-scrollable");
-      const pv = span > 4 ? Math.min(1, Math.max(0, window.scrollY / span)) : 0;
+      const y = Math.min(span, Math.max(0, window.scrollY));
+      let pv = span > 4 ? y / span : 0;
+      if (anchors.length > 0) {
+        const first = anchors[0];
+        const last = anchors[anchors.length - 1];
+        if (y <= first.s) {
+          pv = first.s > 0 ? (y / first.s) * first.fy : first.fy;
+        } else if (y >= last.s) {
+          pv = span > last.s ? last.fy + ((y - last.s) / (span - last.s)) * (1 - last.fy) : 1;
+        } else {
+          for (let k = 0; k < anchors.length - 1; k++) {
+            const a = anchors[k], b = anchors[k + 1];
+            if (y >= a.s && y < b.s) {
+              pv = a.fy + ((y - a.s) / (b.s - a.s)) * (b.fy - a.fy);
+              break;
+            }
+          }
+        }
+      }
       comet.style.setProperty("--p", pv.toFixed(4));
     };
     const onScroll = () => {
@@ -1341,27 +1481,47 @@ const SHOW = new Set(MARKS.map((m) => m.id));
       ticking = true;
       requestAnimationFrame(() => { ticking = false; measure(); });
     };
+    buildAnchors();
     measure();
     window.addEventListener("scroll", onScroll, { passive: true });
-    window.addEventListener("resize", onScroll, { passive: true });
-    window.addEventListener("load", measure);
+    window.addEventListener("resize", () => { buildAnchors(); onScroll(); }, { passive: true });
+    window.addEventListener("load", () => { buildAnchors(); measure(); });
   }
 
-  // ── the instrument owns the light. The SignalMachine is SACRED — we only
-  // OBSERVE its data-state: boot → the site goes night; powerdown/standby →
-  // light returns. Scrolling the instrument out of view powers it off.
+  // ── NIGHT has two independent sources (2026-08-20): the instrument's
+  // power (ambience, as ever) and Jon's own switch at the rail's foot
+  // (persisted — dark-room reading). Either keeps the room dark; the
+  // switch survives the machine powering off.
+  const nightRoot = document.documentElement;
+  let nightManual = false;
+  try { nightManual = localStorage.getItem("studio-night") === "1"; } catch {}
+  let nightPower = false;
+  const applyNight = () => {
+    if (nightManual || nightPower) nightRoot.setAttribute("data-night", "");
+    else nightRoot.removeAttribute("data-night");
+  };
+  const nightBtn = document.querySelector<HTMLButtonElement>("[data-night-toggle]");
+  const syncNightBtn = () => nightBtn?.setAttribute("aria-pressed", nightManual ? "true" : "false");
+  nightBtn?.addEventListener("click", () => {
+    nightManual = !nightManual;
+    try { localStorage.setItem("studio-night", nightManual ? "1" : "0"); } catch {}
+    syncNightBtn();
+    applyNight();
+  });
+  syncNightBtn();
+  applyNight();
+
+  // The SignalMachine is SACRED — we only OBSERVE its data-state: boot →
+  // the site goes night; powerdown/standby → the machine's claim on the
+  // dark ends. Scrolling the instrument out of view powers it off.
   const sgm = document.getElementById("sgm");
   const host = document.querySelector("[data-signal-host]");
   if (sgm && host) {
-    const night = (on: boolean) => {
-      if (on) document.documentElement.setAttribute("data-night", "");
-      else document.documentElement.removeAttribute("data-night");
-    };
     const powered = () => {
       const st = sgm.getAttribute("data-state");
       return st === "boot" || st === "on" || st === "live";
     };
-    new MutationObserver(() => night(powered())).observe(sgm, {
+    new MutationObserver(() => { nightPower = powered(); applyNight(); }).observe(sgm, {
       attributes: true,
       attributeFilter: ["data-state"],
     });
@@ -1371,7 +1531,8 @@ const SHOW = new Set(MARKS.map((m) => m.id));
       if (e.intersectionRatio < 0.35 && powered()) {
         const pwr = document.getElementById("pwr");
         pwr?.click(); // the machine's own powerdown path
-        night(false);
+        nightPower = false;
+        applyNight();
       }
     }, { threshold: [0, 0.35] }).observe(host);
   }
