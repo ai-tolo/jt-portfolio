@@ -91,11 +91,11 @@ const LEDES: Record<string, string> = {
 // mirrors the page: the instrument is the handshake, right under the hero.
 // A word renders ONLY when its room has something in it.
 const MARKS = [
-  { id: "signal", word: "play", ethereal: true, has: true },
-  { id: "work", word: "work", ethereal: false, has: works.length > 0 },
-  { id: "soundlab", word: "listen", ethereal: false, has: tracks.length > 0 },
-  { id: "illustrations", word: "look", ethereal: false, has: illos.length > 0 },
-  { id: "writing", word: "read", ethereal: false, has: true },
+  { id: "signal", word: "play", emoji: "🎹", ethereal: true, has: true },
+  { id: "work", word: "work", emoji: "💼", ethereal: false, has: works.length > 0 },
+  { id: "soundlab", word: "listen", emoji: "🎧", ethereal: false, has: tracks.length > 0 },
+  { id: "illustrations", word: "look", emoji: "🖼️", ethereal: false, has: illos.length > 0 },
+  { id: "writing", word: "read", emoji: "✏️", ethereal: false, has: true },
 ].filter((m) => m.has);
 const SHOW = new Set(MARKS.map((m) => m.id));
 ---
@@ -135,6 +135,7 @@ const SHOW = new Set(MARKS.map((m) => m.id));
   <nav class="rail" data-rail aria-label="Sections">
     {MARKS.map((m) => (
       <a class="rail-item" href={`#${m.id}`} data-for={m.id} data-ethereal={m.ethereal ? "" : undefined}>
+        <span class="rail-art" aria-hidden="true">{m.emoji}</span>
         <span class="rail-word">{m.word}</span>
       </a>
     ))}
@@ -382,7 +383,7 @@ const SHOW = new Set(MARKS.map((m) => m.id));
     top: 0;
     bottom: 0;
     z-index: 50;
-    width: 92px;
+    width: 110px;
     flex-direction: column;
     justify-content: center;
     gap: 6px;
@@ -391,10 +392,14 @@ const SHOW = new Set(MARKS.map((m) => m.id));
     border-right: 1px solid rgba(20, 18, 16, 0.14);
   }
   .rail-item {
-    display: grid;
-    place-items: center;
-    width: 76px;
-    padding: 11px 4px;
+    /* emoji + word in a row, everything flush left so the emoji column
+       reads as one straight line down the rail (Jon, 2026-08-20) */
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 9px;
+    width: 94px;
+    padding: 10px 8px 10px 10px;
     border-radius: 11px;
     text-decoration: none;
     font-family: "IBM Plex Mono", ui-monospace, monospace;
@@ -413,8 +418,10 @@ const SHOW = new Set(MARKS.map((m) => m.id));
     outline-offset: 2px;
   }
   .rail-art {
-    font-size: 19px;
+    font-size: 17px;
     line-height: 1;
+    width: 20px;
+    flex: none;
     display: grid;
     place-items: center;
   }
@@ -1167,7 +1174,7 @@ const SHOW = new Set(MARKS.map((m) => m.id));
      no sidebar — sheets run full width with gutters */
   @media (min-width: 900px) {
     .one {
-      --railw: 92px;
+      --railw: 110px;
       padding-left: var(--railw);
     }
   }
@@ -1234,57 +1241,42 @@ const SHOW = new Set(MARKS.map((m) => m.id));
   const rail = document.querySelector<HTMLElement>("[data-rail]");
   if (rail) {
 
-    // Scroll-spy: IO events are only the TRIGGER; the active section is
-    // recomputed deterministically each time — the lowest section whose top
-    // has passed the 35% line, or the last section at hard bottom (short
-    // final sheets can never reach the line). No scroll handlers, no rAF.
+    // Scroll-spy, rebuilt from scratch (2026-08-20 — the lock/trip-line
+    // version kept misfiring at the seams). ONE stateless rule, matched to
+    // what the eye says: the section covering the most viewport is where
+    // you are; under a quarter-screen nobody is (the hero zone). Same
+    // scroll position always gives the same highlight — no locks, no
+    // direction bias, no bottom special case (a click scrolls its target
+    // to the top, where it is dominant by definition; at hard bottom the
+    // last section is the only one still on screen).
     const items = new Map(
       Array.from(rail.querySelectorAll<HTMLElement>("[data-for]")).map((el) => [el.dataset.for as string, el])
     );
-    // Nav order (play first) is NOT document order (look renders after read);
-    // "last section whose top passed the line" and "last at hard bottom" are
-    // both document-order rules, so walk the sections as the page stacks them.
+    // Document order (not nav order) so exact ties break toward the later
+    // section — the one the reader is scrolling INTO.
     const ids = Array.from(items.keys()).sort((a, b) => {
       const sa = document.getElementById(a), sb = document.getElementById(b);
       return (sa?.offsetTop ?? 0) - (sb?.offsetTop ?? 0);
     });
-    // A nav click LOCKS its target as the active section (the two bottom
-    // sections share one max-scroll position, so position alone can't tell
-    // them apart); any user-initiated scroll releases the lock.
-    let lock: string | null = null;
     const recompute = () => {
-      const doc = document.documentElement;
-      const atBottom = window.innerHeight + window.scrollY >= doc.scrollHeight - 8;
+      const vh = window.innerHeight;
       let active: string | null = null;
-      if (lock) {
-        active = lock;
-      } else if (atBottom) {
-        active = ids[ids.length - 1];
-      } else {
-        const line = window.innerHeight * 0.35;
-        for (const id of ids) {
-          const s = document.getElementById(id);
-          if (s && s.getBoundingClientRect().top <= line) active = id;
-        }
+      let best = vh * 0.25;
+      for (const id of ids) {
+        const s = document.getElementById(id);
+        if (!s) continue;
+        const r = s.getBoundingClientRect();
+        const vis = Math.min(r.bottom, vh) - Math.max(r.top, 0);
+        if (vis >= best) { best = vis; active = id; }
       }
       items.forEach((el, id) => {
         if (id === active) el.setAttribute("data-on", "");
         else el.removeAttribute("data-on");
       });
     };
-    document.querySelectorAll<HTMLAnchorElement>('a[href^="#"]').forEach((a) =>
-      a.addEventListener("click", () => {
-        const id = (a.getAttribute("href") || "").slice(1);
-        if (items.has(id)) {
-          lock = id;
-          recompute();
-        }
-      })
-    );
-    (["wheel", "touchstart", "keydown", "pointerdown"] as const).forEach((evt) =>
-      window.addEventListener(evt, () => { lock = null; }, { passive: true })
-    );
-    const spy = new IntersectionObserver(recompute, { threshold: [0, 0.25, 0.5, 0.75, 1] });
+    const spy = new IntersectionObserver(recompute, {
+      threshold: [0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1],
+    });
     ids.forEach((id) => {
       const s = document.getElementById(id);
       if (s) spy.observe(s);
