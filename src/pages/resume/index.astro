@@ -18,22 +18,42 @@ if (!resume) throw new Error("No default resume marked Active in the Resumes dat
   hideThemeSelector={true}
   chromeless={true}
 >
-  {/* The studio's chrome, not the old site's: the case-study dark column
-      (home in the middle; no résumé link — you're on it), dark canvas to
-      match. Print styles untouched (PrintResume owns the PDF). */}
-  <AwayRail variant="dark" resume={false} />
-  <main class="resume-page">
-    <ResumeShell>
-      <ResumeRenderer resume={resume} />
-    </ResumeShell>
-    {/* print-only curated one-pager; the interactive sheet above is screen-only */}
-    <PrintResume />
-  </main>
+  {/* Two views, one page (Jon, 2026-08-20): the PRINTABLE sheet is the
+      default, shown as paper on the studio's light ground; the interactive
+      experience lives behind the second tab (its dark canvas comes with it).
+      Print styles untouched either way — PrintResume owns the PDF. */}
+  <div class="resume-world" data-resume-view="paper">
+    <AwayRail variant="light" resume={false} />
+    <main class="resume-page">
+      <div class="view-tabs" data-view-tabs>
+        <button type="button" data-view-btn="paper" aria-pressed="true">paper</button>
+        <button type="button" data-view-btn="interactive" aria-pressed="false" class="vt-live">interactive</button>
+        <button type="button" class="vt-pdf" data-view-print>save the pdf</button>
+      </div>
+      <div class="paper-stage">
+        <PrintResume />
+      </div>
+      <ResumeShell>
+        <ResumeRenderer resume={resume} />
+      </ResumeShell>
+    </main>
+  </div>
 </Layout>
 
+<script>
+  const world = document.querySelector<HTMLElement>("[data-resume-view]");
+  const btns = Array.from(document.querySelectorAll<HTMLButtonElement>("[data-view-btn]"));
+  const setView = (v: string) => {
+    world?.setAttribute("data-resume-view", v);
+    btns.forEach((b) => b.setAttribute("aria-pressed", String(b.getAttribute("data-view-btn") === v)));
+    history.replaceState(null, "", v === "interactive" ? "#interactive" : window.location.pathname);
+  };
+  btns.forEach((b) => b.addEventListener("click", () => setView(b.getAttribute("data-view-btn") || "paper")));
+  document.querySelector("[data-view-print]")?.addEventListener("click", () => window.print());
+  if (window.location.hash === "#interactive") setView("interactive");
+</script>
+
 <style is:global>
-  /* Dark canvas matching the case studies (tokens are pinned dark site-wide;
-     the page just stops fighting them). */
   .resume-page {
     padding: var(--space-8) 0 var(--space-16);
     min-height: 100svh;
@@ -43,10 +63,157 @@ if (!resume) throw new Error("No default resume marked Active in the Resumes dat
       padding-left: 92px;
     }
   }
+
+  @media screen {
+    /* the two views swap; each brings its own canvas */
+    .resume-world[data-resume-view="paper"] {
+      background: #e9e8e5;
+    }
+    .resume-world[data-resume-view="paper"] .rs-root {
+      display: none;
+    }
+    .resume-world[data-resume-view="interactive"] .paper-stage {
+      display: none;
+    }
+    /* the interactive view keeps the case-study dark canvas — the light
+       rail flips with it so the chrome never fights the room */
+    .resume-world[data-resume-view="interactive"] .awayrail.light {
+      background: #101216;
+      border-right-color: rgba(160, 190, 230, 0.12);
+    }
+    .resume-world[data-resume-view="interactive"] .awayrail.light .ar-chip {
+      border-color: rgba(232, 236, 244, 0.28);
+      background: rgba(232, 236, 244, 0.06);
+      color: #e8ecf4;
+    }
+    .resume-world[data-resume-view="interactive"] .awayrail.light .ar-word {
+      color: #8f98a8;
+    }
+
+    /* ── the tabs: paper first; the interactive one wears the house's
+       "this one is alive" ring ──────────────────────────────────────── */
+    .view-tabs {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      padding: 6px 20px 26px;
+      font-family: "IBM Plex Mono", ui-monospace, monospace;
+    }
+    .view-tabs button {
+      appearance: none;
+      cursor: pointer;
+      font: inherit;
+      font-size: 0.76rem;
+      letter-spacing: 0.07em;
+      padding: 9px 16px;
+      border-radius: 10px;
+      border: 1px solid rgba(20, 18, 16, 0.28);
+      background: transparent;
+      color: #45423c;
+      transition: background 160ms ease, color 160ms ease, border-color 160ms ease;
+    }
+    .view-tabs button:hover {
+      background: rgba(20, 18, 16, 0.07);
+    }
+    .view-tabs button[aria-pressed="true"] {
+      background: #141210;
+      border-color: #141210;
+      color: #f5f2ea;
+    }
+    .view-tabs button:focus-visible {
+      outline: 2px solid #141210;
+      outline-offset: 2px;
+    }
+    .vt-live {
+      position: relative;
+      isolation: isolate;
+    }
+    .vt-live::before {
+      content: "";
+      position: absolute;
+      inset: -2px;
+      border-radius: 12px;
+      border: 1.5px solid rgba(14, 196, 252, 0.55);
+      box-shadow: 0 0 10px rgba(14, 196, 252, 0.35), inset 0 0 8px rgba(14, 196, 252, 0.12);
+      pointer-events: none;
+      z-index: -1;
+    }
+    @media (prefers-reduced-motion: no-preference) {
+      .vt-live::before {
+        animation: vt-ring 5.4s ease-in-out infinite;
+      }
+      @keyframes vt-ring {
+        0%, 100% {
+          border-color: rgba(14, 196, 252, 0.55);
+          box-shadow: 0 0 10px rgba(14, 196, 252, 0.35), inset 0 0 8px rgba(14, 196, 252, 0.12);
+        }
+        38% {
+          border-color: rgba(155, 108, 255, 0.6);
+          box-shadow: 0 0 14px rgba(155, 108, 255, 0.45), inset 0 0 9px rgba(155, 108, 255, 0.14);
+        }
+        70% {
+          border-color: rgba(255, 180, 77, 0.55);
+          box-shadow: 0 0 12px rgba(255, 180, 77, 0.4), inset 0 0 8px rgba(255, 180, 77, 0.12);
+        }
+      }
+    }
+    .vt-pdf {
+      border-color: transparent !important;
+      text-decoration: underline;
+      text-underline-offset: 4px;
+    }
+    .vt-pdf:hover {
+      background: transparent !important;
+      color: #141210;
+    }
+    /* dark-canvas clothes for the same tabs */
+    .resume-world[data-resume-view="interactive"] .view-tabs button {
+      border-color: rgba(232, 236, 244, 0.28);
+      color: #8f98a8;
+    }
+    .resume-world[data-resume-view="interactive"] .view-tabs button:hover {
+      background: rgba(232, 236, 244, 0.08);
+    }
+    .resume-world[data-resume-view="interactive"] .view-tabs button[aria-pressed="true"] {
+      background: #e8ecf4;
+      border-color: #e8ecf4;
+      color: #101216;
+    }
+    .resume-world[data-resume-view="interactive"] .vt-pdf {
+      border-color: transparent !important;
+      color: #8f98a8;
+    }
+    .resume-world[data-resume-view="interactive"] .vt-pdf:hover {
+      color: #e8ecf4;
+    }
+
+    /* ── the paper, as paper: white letter sheet on the studio ground ── */
+    .paper-stage {
+      display: grid;
+      justify-items: center;
+      padding: 0 20px 90px;
+    }
+    .paper-stage .print-resume {
+      width: min(8.5in, 100%);
+      background: #ffffff;
+      padding: clamp(26px, 5vw, 58px) clamp(22px, 5vw, 62px);
+      border: 1px solid rgba(90, 74, 50, 0.25);
+      border-radius: 4px;
+      box-shadow: 0 26px 60px -30px rgba(20, 12, 4, 0.45);
+    }
+  }
+
   @media print {
-    .resume-page {
-      background: #fff;
-      padding-left: 0;
+    .view-tabs {
+      display: none !important;
+    }
+    .resume-world {
+      background: #ffffff !important;
+    }
+    .paper-stage {
+      display: block !important;
+      padding: 0 !important;
     }
   }
 </style>
