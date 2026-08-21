@@ -26,9 +26,20 @@ if (!resume) throw new Error("No default resume marked Active in the Resumes dat
     <AwayRail variant="light" resume={false} />
     <main class="resume-page">
       <div class="view-tabs" data-view-tabs>
-        <button type="button" data-view-btn="paper" aria-pressed="true">paper</button>
-        <button type="button" data-view-btn="interactive" aria-pressed="false" class="vt-live">interactive</button>
-        <button type="button" class="vt-pdf" data-view-print>save the pdf</button>
+        <div class="vt-center">
+          <button type="button" data-view-btn="paper" aria-pressed="true">paper</button>
+          <button type="button" data-view-btn="interactive" aria-pressed="false" class="vt-live">
+            interactive
+            <span class="vt-lamp" aria-hidden="true"></span>
+          </button>
+        </div>
+        <button type="button" class="vt-pdf" data-view-print>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"
+            stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M12 4v10" /><path d="m7.5 10.5 4.5 4.5 4.5-4.5" /><path d="M5 19h14" />
+          </svg>
+          download pdf
+        </button>
       </div>
       <div class="paper-stage">
         <PrintResume />
@@ -47,6 +58,10 @@ if (!resume) throw new Error("No default resume marked Active in the Resumes dat
     world?.setAttribute("data-resume-view", v);
     btns.forEach((b) => b.setAttribute("aria-pressed", String(b.getAttribute("data-view-btn") === v)));
     history.replaceState(null, "", v === "interactive" ? "#interactive" : window.location.pathname);
+    // The shell's page-flags measure their targets and re-place on resize;
+    // they were display:none at load (paper is the default), so every rect
+    // read zero. Re-fire the measurer once the shell is actually visible.
+    if (v === "interactive") requestAnimationFrame(() => window.dispatchEvent(new Event("resize")));
   };
   btns.forEach((b) => b.addEventListener("click", () => setView(b.getAttribute("data-view-btn") || "paper")));
   document.querySelector("[data-view-print]")?.addEventListener("click", () => window.print());
@@ -90,15 +105,20 @@ if (!resume) throw new Error("No default resume marked Active in the Resumes dat
       color: #8f98a8;
     }
 
-    /* ── the tabs: paper first; the interactive one wears the house's
-       "this one is alive" ring ──────────────────────────────────────── */
+    /* ── the tabs: paper/interactive dead-center; the pdf action keeps to
+       the right edge ────────────────────────────────────────────────── */
     .view-tabs {
-      display: flex;
+      display: grid;
+      grid-template-columns: 1fr auto 1fr;
       align-items: center;
-      justify-content: center;
-      gap: 10px;
       padding: 6px 20px 26px;
       font-family: "IBM Plex Mono", ui-monospace, monospace;
+    }
+    .vt-center {
+      grid-column: 2;
+      display: flex;
+      align-items: center;
+      gap: 10px;
     }
     .view-tabs button {
       appearance: none;
@@ -125,17 +145,59 @@ if (!resume) throw new Error("No default resume marked Active in the Resumes dat
       outline: 2px solid #141210;
       outline-offset: 2px;
     }
+    /* ── the interactive key: an instrument keycap with its lamp on. Dark
+       face on either canvas; press it and it sinks, the lamp goes ember —
+       the machine's own language (dark-until-power, one lamp). */
     .vt-live {
       position: relative;
       isolation: isolate;
+      border-color: #2a2f3a;
+      background: linear-gradient(180deg, #1d212b 0%, #12151c 55%, #0e1117 100%);
+      color: #e8ecf4;
+      padding-right: 26px;
+      box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.07),
+        0 2px 0 #05070c,
+        0 4px 10px rgba(5, 7, 12, 0.3);
+      transition: transform 120ms ease, box-shadow 120ms ease, color 160ms ease;
+    }
+    .vt-live:hover {
+      background: linear-gradient(180deg, #222736 0%, #141822 55%, #0e1117 100%);
+      transform: translateY(1px);
+      box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.07),
+        0 1px 0 #05070c,
+        0 3px 8px rgba(5, 7, 12, 0.3);
+    }
+    .vt-live[aria-pressed="true"] {
+      background: linear-gradient(180deg, #0e1117 0%, #12151c 100%);
+      border-color: #2a2f3a;
+      color: #0ec4fc;
+      transform: translateY(2px);
+      box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.55);
+    }
+    .vt-lamp {
+      position: absolute;
+      top: 50%;
+      right: 10px;
+      transform: translateY(-50%);
+      width: 5px;
+      height: 5px;
+      border-radius: 50%;
+      background: #0ec4fc;
+      box-shadow: 0 0 7px rgba(14, 196, 252, 0.9);
+    }
+    .vt-live[aria-pressed="true"] .vt-lamp {
+      background: #ff5432;
+      box-shadow: 0 0 8px rgba(255, 84, 50, 0.9);
     }
     .vt-live::before {
       content: "";
       position: absolute;
-      inset: -2px;
-      border-radius: 12px;
-      border: 1.5px solid rgba(14, 196, 252, 0.55);
-      box-shadow: 0 0 10px rgba(14, 196, 252, 0.35), inset 0 0 8px rgba(14, 196, 252, 0.12);
+      inset: -3px;
+      border-radius: 13px;
+      border: 1.5px solid rgba(14, 196, 252, 0.45);
+      box-shadow: 0 0 10px rgba(14, 196, 252, 0.3);
       pointer-events: none;
       z-index: -1;
     }
@@ -143,39 +205,55 @@ if (!resume) throw new Error("No default resume marked Active in the Resumes dat
       .vt-live::before {
         animation: vt-ring 5.4s ease-in-out infinite;
       }
+      .vt-lamp {
+        animation: vt-lamp 2.6s ease-in-out infinite;
+      }
+      @keyframes vt-lamp {
+        0%, 100% { opacity: 0.55; }
+        50% { opacity: 1; }
+      }
       @keyframes vt-ring {
         0%, 100% {
-          border-color: rgba(14, 196, 252, 0.55);
-          box-shadow: 0 0 10px rgba(14, 196, 252, 0.35), inset 0 0 8px rgba(14, 196, 252, 0.12);
+          border-color: rgba(14, 196, 252, 0.45);
+          box-shadow: 0 0 10px rgba(14, 196, 252, 0.3);
         }
         38% {
-          border-color: rgba(155, 108, 255, 0.6);
-          box-shadow: 0 0 14px rgba(155, 108, 255, 0.45), inset 0 0 9px rgba(155, 108, 255, 0.14);
+          border-color: rgba(155, 108, 255, 0.5);
+          box-shadow: 0 0 14px rgba(155, 108, 255, 0.4);
         }
         70% {
-          border-color: rgba(255, 180, 77, 0.55);
-          box-shadow: 0 0 12px rgba(255, 180, 77, 0.4), inset 0 0 8px rgba(255, 180, 77, 0.12);
+          border-color: rgba(255, 180, 77, 0.45);
+          box-shadow: 0 0 12px rgba(255, 180, 77, 0.35);
         }
       }
     }
     .vt-pdf {
+      grid-column: 3;
+      justify-self: end;
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
       border-color: transparent !important;
       text-decoration: underline;
       text-underline-offset: 4px;
+    }
+    .vt-pdf svg {
+      width: 14px;
+      height: 14px;
     }
     .vt-pdf:hover {
       background: transparent !important;
       color: #141210;
     }
-    /* dark-canvas clothes for the same tabs */
-    .resume-world[data-resume-view="interactive"] .view-tabs button {
+    /* dark-canvas clothes for the same tabs (the keycap dresses itself) */
+    .resume-world[data-resume-view="interactive"] .view-tabs button:not(.vt-live) {
       border-color: rgba(232, 236, 244, 0.28);
       color: #8f98a8;
     }
-    .resume-world[data-resume-view="interactive"] .view-tabs button:hover {
+    .resume-world[data-resume-view="interactive"] .view-tabs button:not(.vt-live):hover {
       background: rgba(232, 236, 244, 0.08);
     }
-    .resume-world[data-resume-view="interactive"] .view-tabs button[aria-pressed="true"] {
+    .resume-world[data-resume-view="interactive"] .view-tabs button:not(.vt-live)[aria-pressed="true"] {
       background: #e8ecf4;
       border-color: #e8ecf4;
       color: #101216;
