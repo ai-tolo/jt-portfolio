@@ -239,10 +239,19 @@ const SHOW = new Set(MARKS.map((m) => m.id));
   {SHOW.has("illustrations") && <section class="look-band" id="illustrations" aria-labelledby="illustrations-t">
     <h2 id="illustrations-t" class="sr-only">Look</h2>
     <Carousel count={illos.length} label="Visual work" accent="var(--brand-yellow, #ffc94d)">
-      {illos.map((it) => (
+      {illos.map((it, i) => (
         <figure class="lk">
           <img class="lk-img" src={it.src} alt={it.alt} loading="lazy" />
-          {(it.title || it.medium) && <figcaption class="lk-cap">{[it.title, it.medium].filter(Boolean).join(" · ")}</figcaption>}
+          {/* the placard: title carries the weight; medium, year, and the
+              piece's place in the set share one quiet line beneath it
+              (Jon, 2026-08-23 — hierarchy without competing with the art) */}
+          <figcaption class="lk-cap">
+            <span class="lk-title">{it.title}</span>
+            <span class="lk-meta">
+              {[it.medium, it.year, `${String(i + 1).padStart(2, "0")} / ${String(illos.length).padStart(2, "0")}`]
+                .filter(Boolean).join(" · ")}
+            </span>
+          </figcaption>
         </figure>
       ))}
     </Carousel>
@@ -609,7 +618,10 @@ const SHOW = new Set(MARKS.map((m) => m.id));
   :global(html[data-night]) .corner a {
     color: #e8ecf4;
   }
-  :global(html[data-night]) .lk-cap {
+  :global(html[data-night]) .lk-title {
+    color: #cfd6e2;
+  }
+  :global(html[data-night]) .lk-meta {
     color: #7d8798;
   }
   /* the machine's intro line sits on the ground too (styled from out here —
@@ -1254,11 +1266,10 @@ const SHOW = new Set(MARKS.map((m) => m.id));
     position: static;
     margin: 0;
   }
+  /* the placard's meta line carries the position; the chassis counter
+     would say it twice from a far corner */
   .look-band :global(.car-counter) {
-    position: absolute;
-    right: 22px;
-    bottom: 10px;
-    color: var(--dim);
+    display: none;
   }
   .look-band :global(.car-btn) {
     position: absolute;
@@ -1295,9 +1306,22 @@ const SHOW = new Set(MARKS.map((m) => m.id));
     display: block;
   }
   .lk-cap {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 3px;
     font-family: "IBM Plex Mono", ui-monospace, monospace;
-    font-size: 0.72rem;
-    letter-spacing: 0.05em;
+    text-align: center;
+  }
+  .lk-title {
+    font-size: 0.78rem;
+    font-weight: 500;
+    letter-spacing: 0.03em;
+    color: var(--ink);
+  }
+  .lk-meta {
+    font-size: 0.66rem;
+    letter-spacing: 0.06em;
     color: var(--dim);
   }
 
