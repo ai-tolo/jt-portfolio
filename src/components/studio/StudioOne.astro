@@ -69,6 +69,10 @@ const coverSvg = (t: Track, seed: number): string => {
 interface Illo { src: string; alt: string; title?: string; year?: number; medium?: string; }
 const illos: Illo[] = (illustrations as any).items ?? [];
 interface Post { slug: string; title: string; date: string; subtitle?: string; cover?: string | null; paragraphs: string[]; }
+const fmtDate = (iso: string) => {
+  const d = new Date(iso + "T12:00:00");
+  return isNaN(d.getTime()) ? iso : d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+};
 const posts: Post[] = (writing as any).posts ?? [];
 
 // Recruiter-facing WORK ledes: the one-to-two-sentence summary IS the title
@@ -91,7 +95,10 @@ const LEDES: Record<string, string> = {
 // mirrors the page: the instrument is the handshake, right under the hero.
 // A word renders ONLY when its room has something in it.
 const MARKS = [
-  { id: "signal", word: "play", emoji: "🎹", ethereal: true, has: true },
+  // id "play" = the .live-signal HOST (has a box at every width); the
+  // machine's own #signal root is display:none on coarse pointers, which
+  // made the word a dead link on phones (review, 2026-08-25)
+  { id: "play", word: "play", emoji: "🎹", ethereal: true, has: true },
   { id: "work", word: "work", emoji: "💼", ethereal: false, has: works.length > 0 },
   { id: "soundlab", word: "listen", emoji: "🎧", ethereal: false, has: tracks.length > 0 },
   { id: "illustrations", word: "look", emoji: "🖼️", ethereal: false, has: illos.length > 0 },
@@ -124,6 +131,7 @@ const SHOW = new Set(MARKS.map((m) => m.id));
         ) : (
           <h1 class="etch-text">Jonathan Tollefson</h1>
         )}
+        <p class="role-line">design engineer · audio &amp; real-time web</p>
       </div>
       <p class="liner">{ONE_LINER}</p>
     </header>
@@ -179,12 +187,12 @@ const SHOW = new Set(MARKS.map((m) => m.id));
       the light returns. The component is SACRED — observed, never edited. */}
   {/* No id here — SignalMachine's own root is <section id="signal">, which
       serves as the anchor + spy target; this host only frames and observes. */}
-  <section class="live-signal" aria-label="Signal — a playable instrument" data-signal-host>
+  <section class="live-signal" id="play" aria-label="Signal — a playable instrument" data-signal-host>
     <div class="sig-desktop">
       <SignalMachine />
     </div>
     <div class="sig-mobile">
-      <p class="sig-mobile-note">a pocket exhibit — the instrument itself plays on the desktop site</p>
+      <p class="sig-mobile-note">a blind listening test, pocket-sized — the instrument itself plays on the desktop site</p>
       <iframe class="sig-mobile-frame" data-src="/more/index.html" title="Interactive audio exhibit" loading="lazy" allow="autoplay"></iframe>
     </div>
   </section>
@@ -242,7 +250,7 @@ const SHOW = new Set(MARKS.map((m) => m.id));
               {post.cover && <span class="tile-cover"><img src={post.cover} alt="" loading="lazy" /></span>}
               <span class="tile-title">{post.title}</span>
               {post.subtitle && <span class="tile-sub">{post.subtitle}</span>}
-              <span class="tile-date">{post.date}</span>
+              <span class="tile-date">{fmtDate(post.date)}</span>
             </a>
           </li>
         ))}
@@ -395,6 +403,16 @@ const SHOW = new Set(MARKS.map((m) => m.id));
     display: block;
     width: clamp(260px, 30vw, 420px);
     height: auto;
+  }
+  .role-line {
+    margin: 12px 0 0 4px;
+    font-family: "IBM Plex Mono", ui-monospace, monospace;
+    font-size: 0.74rem;
+    letter-spacing: 0.08em;
+    color: var(--dim);
+  }
+  :global(html[data-night]) .role-line {
+    color: #7d8798;
   }
   .liner {
     margin: 26px 0 0 auto;
@@ -793,6 +811,7 @@ const SHOW = new Set(MARKS.map((m) => m.id));
     .mbar-item {
       flex: 1 1 0;
       min-width: 0;
+      min-height: 44px;
       display: flex;
       flex-direction: column;
       align-items: center;
@@ -804,12 +823,29 @@ const SHOW = new Set(MARKS.map((m) => m.id));
       font-family: "IBM Plex Mono", ui-monospace, monospace;
       color: #45423c;
     }
+    /* the bar mirrors the PHONE page order — play's section closes the
+       show down here, so its word goes last (review, 2026-08-25) */
+    .mbar-item[data-for="play"] {
+      order: 6;
+    }
+    .mbar-night {
+      order: 7;
+    }
+    .mbar-item:focus-visible,
+    .mbar-night:focus-visible {
+      outline: 2px solid var(--ink);
+      outline-offset: -2px;
+    }
+    :global(html[data-night]) .mbar-item:focus-visible,
+    :global(html[data-night]) .mbar-night:focus-visible {
+      outline-color: #e8ecf4;
+    }
     .mbar-emoji {
       font-size: 16px;
       line-height: 1;
     }
     .mbar-word {
-      font-size: 0.56rem;
+      font-size: 0.66rem;
       letter-spacing: 0.05em;
     }
     .mbar-item[data-on] {
@@ -857,13 +893,23 @@ const SHOW = new Set(MARKS.map((m) => m.id));
     .one {
       display: flex;
       flex-direction: column;
-      padding-bottom: calc(clamp(140px, 32vh, 360px) + 58px + env(safe-area-inset-bottom));
+      padding-bottom: calc(64px + 58px + env(safe-area-inset-bottom));
     }
     /* flex items default to min-width:auto — wide children (the machine)
        must scroll inside their own box, never stretch the page */
     .one > * {
       min-width: 0;
       max-width: 100%;
+    }
+    /* the art sizes to its own aspect on phones — an 88svh letterbox read
+       as an empty screen; and the band keeps clearance so an anchored tap
+       never parks the placard under the bar (review, 2026-08-25) */
+    .lk-img {
+      height: auto;
+      max-height: 68svh;
+    }
+    .look-band {
+      scroll-margin-bottom: calc(64px + env(safe-area-inset-bottom));
     }
     .one > .hero { order: 0; }
     .one > #work { order: 1; }
@@ -884,8 +930,17 @@ const SHOW = new Set(MARKS.map((m) => m.id));
     }
   }
 
-  /* the exhibit's honest frame (mobile only): what this is, where the
-     real one lives. DRAFT — Jon's voice owns this line. */
+  /* the exhibit's honest frame: what this is, where the real one lives.
+     DRAFT — Jon's voice owns this line. Width-gated like the rest of the
+     mobile pass. */
+  .sig-mobile-note {
+    display: none;
+  }
+  @media screen and (max-width: 899px) {
+    .sig-mobile-note {
+      display: block;
+    }
+  }
   .sig-mobile-note {
     margin: 0 4px 10px;
     font-family: "IBM Plex Mono", ui-monospace, monospace;
@@ -1580,11 +1635,15 @@ const SHOW = new Set(MARKS.map((m) => m.id));
   // ONE source of truth shared by the spy, the word map, and the comet:
   // sections in document order, and each word's fixed rail fraction. The
   // bead and the highlight both derive from these — they cannot disagree.
-  const docIds = rail
-    ? Array.from(rail.querySelectorAll<HTMLElement>("[data-for]"))
-        .map((el) => el.dataset.for as string)
-        .sort((a, b) => (document.getElementById(a)?.offsetTop ?? 0) - (document.getElementById(b)?.offsetTop ?? 0))
-    : [];
+  // Computed FRESH each call: the mobile flex order makes layout position
+  // width-dependent, so a one-time snapshot goes stale when the viewport
+  // crosses 900px (tablet rotation — review, 2026-08-25).
+  const getDocIds = () =>
+    rail
+      ? Array.from(rail.querySelectorAll<HTMLElement>("[data-for]"))
+          .map((el) => el.dataset.for as string)
+          .sort((a, b) => (document.getElementById(a)?.offsetTop ?? 0) - (document.getElementById(b)?.offsetTop ?? 0))
+      : [];
   // Words occupy the rail's top three quarters; the bottom quarter is the
   // light switch's own zone (Jon, 2026-08-20 — "look" was crowding it).
   const fyOf = (i: number, n: number) => (n === 1 ? 0.5 : 0.08 + (i / (n - 1)) * 0.68);
@@ -1605,8 +1664,8 @@ const SHOW = new Set(MARKS.map((m) => m.id));
     ).map((el) => ({ id: el.dataset.for as string, el }));
     // Document order (not nav order) so exact ties break toward the later
     // section — the one the reader is scrolling INTO.
-    const ids = docIds;
     const recompute = () => {
+      const ids = getDocIds();
       const vh = window.innerHeight;
       let active: string | null = null;
       let best = vh * 0.25;
@@ -1625,7 +1684,7 @@ const SHOW = new Set(MARKS.map((m) => m.id));
     const spy = new IntersectionObserver(recompute, {
       threshold: [0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1],
     });
-    ids.forEach((id) => {
+    getDocIds().forEach((id) => {
       const s = document.getElementById(id);
       if (s) spy.observe(s);
     });
@@ -1656,11 +1715,12 @@ const SHOW = new Set(MARKS.map((m) => m.id));
   // scroll position; the words are nav, and nav reads best on a grid.
   if (rail) {
     const mapItems = () => {
-      docIds.forEach((id, i) => {
+      const ids = getDocIds();
+      ids.forEach((id, i) => {
         const el = rail.querySelector<HTMLElement>(`[data-for="${id}"]`);
-        el?.style.setProperty("--fy", fyOf(i, docIds.length).toFixed(4));
+        el?.style.setProperty("--fy", fyOf(i, ids.length).toFixed(4));
       });
-      if (docIds.length > 0) rail.setAttribute("data-mapped", "");
+      if (ids.length > 0) rail.setAttribute("data-mapped", "");
     };
     mapItems();
     window.addEventListener("load", mapItems);
@@ -1683,6 +1743,7 @@ const SHOW = new Set(MARKS.map((m) => m.id));
       anchors = [];
       const vh = window.innerHeight;
       const span = document.documentElement.scrollHeight - vh;
+      const docIds = getDocIds();
       if (span <= 4 || docIds.length === 0) return;
       const secs = docIds.map((id) => {
         const el = document.getElementById(id);

@@ -24,6 +24,10 @@ interface Post {
   paragraphs: string[];
 }
 const { post } = Astro.props as { post: Post };
+const fmtDate = (iso: string) => {
+  const d = new Date(iso + "T12:00:00");
+  return isNaN(d.getTime()) ? iso : d.toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" });
+};
 ---
 
 <Layout
@@ -39,10 +43,14 @@ const { post } = Astro.props as { post: Post };
       <header class="whead">
         <h1>{post.title}</h1>
         {post.subtitle && <p class="wsub">{post.subtitle}</p>}
-        <p class="wmeta">Diary of a Soundbender · {post.date}</p>
+        <p class="wmeta">Diary of a Soundbender · {fmtDate(post.date)}</p>
       </header>
       {post.cover && <img class="wcover" src={post.cover} alt="" />}
       {post.paragraphs.map((para) => <p class="wp">{para}</p>)}
+      {/* provenance + the follow path a reader asked for (review, 2026-08-25) */}
+      <p class="wsource">
+        from <a href={`https://jontolo.substack.com/p/${post.slug}`} target="_blank" rel="noopener noreferrer">Diary of a Soundbender — read on Substack →</a>
+      </p>
     </article>
   </main>
 </Layout>
@@ -107,5 +115,19 @@ const { post } = Astro.props as { post: Post };
   }
   .wp:last-child {
     margin-bottom: 0;
+  }
+  .wsource {
+    margin: 26px 0 0;
+    padding-top: 14px;
+    border-top: 1px solid rgba(90, 74, 50, 0.2);
+    font-family: "IBM Plex Mono", ui-monospace, monospace;
+    font-size: 0.72rem;
+    letter-spacing: 0.04em;
+    color: #6a6660;
+  }
+  .wsource a {
+    color: #141210;
+    text-decoration: underline;
+    text-underline-offset: 4px;
   }
 </style>

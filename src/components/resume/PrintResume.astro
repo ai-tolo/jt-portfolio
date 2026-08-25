@@ -24,6 +24,8 @@ import "@fontsource/geist/latin-700.css";
 import { printContent as c } from "../../lib/resume-print";
 
 const isUrl = (s: string) => /^[a-z0-9.-]+\.[a-z]{2,}(\/|$)/i.test(s) && !s.includes("@") && !/^\(/.test(s);
+const isEmail = (s: string) => s.includes("@");
+const isPhone = (s: string) => /^\(?\d{3}\)?[\s.-]?\d{3}[\s.-]?\d{4}$/.test(s.trim());
 ---
 
 <div class="print-resume">
@@ -34,7 +36,10 @@ const isUrl = (s: string) => /^[a-z0-9.-]+\.[a-z]{2,}(\/|$)/i.test(s) && !s.incl
       {c.contact.map((item, i) => (
         <>
           {i > 0 && " · "}
-          {isUrl(item) ? <a href={`https://${item}`}>{item}</a> : item}
+          {isUrl(item) ? <a href={`https://${item}`}>{item}</a>
+            : isEmail(item) ? <a href={`mailto:${item}`}>{item}</a>
+            : isPhone(item) ? <a href={`tel:+1${item.replace(/\D/g, "")}`}>{item}</a>
+            : item}
         </>
       ))}
     </div>
