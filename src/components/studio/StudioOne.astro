@@ -144,7 +144,7 @@ const SHOW = new Set(MARKS.map((m) => m.id));
       <i class="comet-fill"></i>
       <i class="comet-bead"></i>
     </span>
-    <button class="rail-night" type="button" data-night-toggle aria-pressed="false" aria-label="Night mode">
+    <button class="rail-night" type="button" data-night-toggle aria-pressed="false" aria-label="Night mode" data-rail-night>
       <svg class="rn-glyph rn-sun" viewBox="0 0 12 12" fill="none" stroke="currentColor"
         stroke-width="1.3" stroke-linecap="round" aria-hidden="true">
         <circle cx="6" cy="6" r="2.6" />
@@ -155,6 +155,21 @@ const SHOW = new Set(MARKS.map((m) => m.id));
         stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
         <path d="M9.8 7.6A4.4 4.4 0 0 1 4.4 2.2a4.4 4.4 0 1 0 5.4 5.4Z" />
       </svg>
+    </button>
+  </nav>
+
+  {/* ── the MOBILE bar — the rail's phone form (2026-08-24): the five words
+      at the thumb, night switch at the end. Same spy lights both. */}
+  <nav class="mbar" data-mbar aria-label="Sections">
+    {MARKS.map((m) => (
+      <a class="mbar-item" href={`#${m.id}`} data-for={m.id}>
+        <span class="mbar-emoji" aria-hidden="true">{m.emoji}</span>
+        <span class="mbar-word">{m.word}</span>
+      </a>
+    ))}
+    <button class="mbar-night" type="button" data-night-toggle aria-pressed="false" aria-label="Night mode">
+      <span class="mn-moon" aria-hidden="true">🌙</span>
+      <span class="mn-sun" aria-hidden="true">☀️</span>
     </button>
   </nav>
 
@@ -169,6 +184,7 @@ const SHOW = new Set(MARKS.map((m) => m.id));
       <SignalMachine />
     </div>
     <div class="sig-mobile">
+      <p class="sig-mobile-note">a pocket exhibit — the instrument itself plays on the desktop site</p>
       <iframe class="sig-mobile-frame" data-src="/more/index.html" title="Interactive audio exhibit" loading="lazy" allow="autoplay"></iframe>
     </div>
   </section>
@@ -754,6 +770,134 @@ const SHOW = new Set(MARKS.map((m) => m.id));
     outline-color: #e8ecf4;
   }
 
+  /* ── the MOBILE bar (2026-08-24): five words at the thumb + the moon.
+     Screen-only; the desktop rail owns >=900px. */
+  .mbar {
+    display: none;
+  }
+  @media screen and (max-width: 899px) {
+    .mbar {
+      position: fixed;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      z-index: 60;
+      display: flex;
+      align-items: stretch;
+      gap: 2px;
+      padding: 6px 6px calc(6px + env(safe-area-inset-bottom));
+      background: #f4f3f0;
+      border-top: 1px solid rgba(20, 18, 16, 0.14);
+      transition: background 560ms ease, border-color 560ms ease;
+    }
+    .mbar-item {
+      flex: 1 1 0;
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 2px;
+      padding: 6px 2px;
+      border-radius: 9px;
+      text-decoration: none;
+      font-family: "IBM Plex Mono", ui-monospace, monospace;
+      color: #45423c;
+    }
+    .mbar-emoji {
+      font-size: 16px;
+      line-height: 1;
+    }
+    .mbar-word {
+      font-size: 0.56rem;
+      letter-spacing: 0.05em;
+    }
+    .mbar-item[data-on] {
+      background: var(--ink);
+      color: #f5f2ea;
+    }
+    .mbar-night {
+      flex: 0 0 46px;
+      display: grid;
+      place-items: center;
+      border: 0;
+      border-left: 1px solid rgba(20, 18, 16, 0.14);
+      border-radius: 0;
+      background: transparent;
+      font-size: 16px;
+      line-height: 1;
+      cursor: pointer;
+    }
+    .mn-sun {
+      display: none;
+    }
+    :global(html[data-night]) .mn-moon {
+      display: none;
+    }
+    :global(html[data-night]) .mn-sun {
+      display: block;
+    }
+    :global(html[data-night]) .mbar {
+      background: #101216;
+      border-top-color: rgba(160, 190, 230, 0.12);
+    }
+    :global(html[data-night]) .mbar-item {
+      color: #8f98a8;
+    }
+    :global(html[data-night]) .mbar-item[data-on] {
+      background: #e8ecf4;
+      color: #101216;
+    }
+    :global(html[data-night]) .mbar-night {
+      border-left-color: rgba(160, 190, 230, 0.12);
+    }
+
+    /* triage order: the page leads with proof; the exhibit closes the show.
+       Visual order only — the spy and the map read layout, not source. */
+    .one {
+      display: flex;
+      flex-direction: column;
+      padding-bottom: calc(clamp(140px, 32vh, 360px) + 58px + env(safe-area-inset-bottom));
+    }
+    /* flex items default to min-width:auto — wide children (the machine)
+       must scroll inside their own box, never stretch the page */
+    .one > * {
+      min-width: 0;
+      max-width: 100%;
+    }
+    .one > .hero { order: 0; }
+    .one > #work { order: 1; }
+    .one > #soundlab { order: 2; }
+    .one > .look-band { order: 3; }
+    .one > #writing { order: 4; }
+    .one > .live-signal { order: 5; }
+    .one > .floor { order: 6; }
+    .one > [data-end] { order: 7; }
+
+    /* bigger thumb targets on the hero corner */
+    .corner {
+      font-size: 0.78rem;
+      gap: 14px;
+    }
+    .corner a {
+      padding: 8px 2px;
+    }
+  }
+
+  /* the exhibit's honest frame (mobile only): what this is, where the
+     real one lives. DRAFT — Jon's voice owns this line. */
+  .sig-mobile-note {
+    margin: 0 4px 10px;
+    font-family: "IBM Plex Mono", ui-monospace, monospace;
+    font-size: 0.68rem;
+    letter-spacing: 0.05em;
+    line-height: 1.55;
+    color: var(--dim);
+  }
+  :global(html[data-night]) .sig-mobile-note {
+    color: #7d8798;
+  }
+
   /* ── sections ────────────────────────────────────────────────────────── */
   .sheet {
     max-width: 1080px;
@@ -801,6 +945,14 @@ const SHOW = new Set(MARKS.map((m) => m.id));
     text-decoration: none;
     color: inherit;
     border-radius: 6px;
+  }
+  /* phones: cover above, words below — the two-column grid starves the
+     lede into one-word lines (2026-08-24 mobile pass) */
+  @media (max-width: 720px) {
+    .wrow {
+      grid-template-columns: 1fr;
+      gap: 14px;
+    }
   }
   .wrow:hover,
   .wrow:focus-visible {
@@ -1446,9 +1598,11 @@ const SHOW = new Set(MARKS.map((m) => m.id));
     // direction bias, no bottom special case (a click scrolls its target
     // to the top, where it is dominant by definition; at hard bottom the
     // last section is the only one still on screen).
-    const items = new Map(
-      Array.from(rail.querySelectorAll<HTMLElement>("[data-for]")).map((el) => [el.dataset.for as string, el])
-    );
+    // Both bars (desktop rail + mobile bottom bar) carry data-for items;
+    // one spy lights whichever is on duty.
+    const items = Array.from(
+      document.querySelectorAll<HTMLElement>("[data-rail] [data-for], [data-mbar] [data-for]")
+    ).map((el) => ({ id: el.dataset.for as string, el }));
     // Document order (not nav order) so exact ties break toward the later
     // section — the one the reader is scrolling INTO.
     const ids = docIds;
@@ -1463,7 +1617,7 @@ const SHOW = new Set(MARKS.map((m) => m.id));
         const vis = Math.min(r.bottom, vh) - Math.max(r.top, 0);
         if (vis >= best) { best = vis; active = id; }
       }
-      items.forEach((el, id) => {
+      items.forEach(({ id, el }) => {
         if (id === active) el.setAttribute("data-on", "");
         else el.removeAttribute("data-on");
       });
@@ -1608,14 +1762,19 @@ const SHOW = new Set(MARKS.map((m) => m.id));
     if (nightManual || nightPower) nightRoot.setAttribute("data-night", "");
     else nightRoot.removeAttribute("data-night");
   };
-  const nightBtn = document.querySelector<HTMLButtonElement>("[data-night-toggle]");
-  const syncNightBtn = () => nightBtn?.setAttribute("aria-pressed", nightManual ? "true" : "false");
-  nightBtn?.addEventListener("click", () => {
-    nightManual = !nightManual;
-    try { localStorage.setItem("studio-night", nightManual ? "1" : "0"); } catch {}
-    syncNightBtn();
-    applyNight();
-  });
+  // two switches, one state: the rail's console toggle and the mobile
+  // bar's moon both carry data-night-toggle
+  const nightBtns = Array.from(document.querySelectorAll<HTMLButtonElement>("[data-night-toggle]"));
+  const syncNightBtn = () =>
+    nightBtns.forEach((b) => b.setAttribute("aria-pressed", nightManual ? "true" : "false"));
+  nightBtns.forEach((b) =>
+    b.addEventListener("click", () => {
+      nightManual = !nightManual;
+      try { localStorage.setItem("studio-night", nightManual ? "1" : "0"); } catch {}
+      syncNightBtn();
+      applyNight();
+    })
+  );
   syncNightBtn();
   applyNight();
 
@@ -1645,9 +1804,20 @@ const SHOW = new Set(MARKS.map((m) => m.id));
     }, { threshold: [0, 0.35] }).observe(host);
   }
 
-  // touch devices: load the /more exhibit into the fallback frame
+  // touch devices: load the /more exhibit only when the reader nears it —
+  // on mobile the exhibit sits last, so most triage visits never pay for it
   if (!window.matchMedia("(pointer: fine)").matches) {
     const f = document.querySelector<HTMLIFrameElement>(".sig-mobile-frame");
-    if (f && !f.src) f.src = f.getAttribute("data-src") || "";
+    if (f && !f.src) {
+      new IntersectionObserver(
+        ([e], obs) => {
+          if (e.isIntersecting) {
+            f.src = f.getAttribute("data-src") || "";
+            obs.disconnect();
+          }
+        },
+        { rootMargin: "300px" }
+      ).observe(f);
+    }
   }
 </script>

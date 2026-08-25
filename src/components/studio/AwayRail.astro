@@ -26,10 +26,33 @@ const { variant = "dark", resume = true } = Astro.props;
 </nav>
 
 <style>
+  /* below 900px the column becomes a BOTTOM BAR (2026-08-24 mobile pass) —
+     phones kept losing the way home until the very last line of a page.
+     Screen-only throughout: letter paper is narrower than 900px, and the
+     bar must never print. */
   .awayrail {
     display: none;
   }
-  @media (min-width: 900px) {
+  @media screen and (max-width: 899px) {
+    .awayrail {
+      position: fixed;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      z-index: 70;
+      display: flex;
+      flex-direction: row;
+      align-items: center;
+      justify-content: space-between;
+      padding: 8px 18px calc(8px + env(safe-area-inset-bottom));
+      border-top: 1px solid rgba(20, 18, 16, 0.14);
+    }
+    /* the pages themselves must clear the bar */
+    :global(body) {
+      padding-bottom: calc(58px + env(safe-area-inset-bottom));
+    }
+  }
+  @media screen and (min-width: 900px) {
     .awayrail {
       position: fixed;
       left: 0;
@@ -41,24 +64,38 @@ const { variant = "dark", resume = true } = Astro.props;
       flex-direction: column;
       align-items: center;
       justify-content: flex-start;
+      border-top: 0;
       padding: 20px 8px 18px;
     }
   }
   .awayrail.dark {
     background: #101216;
-    border-right: 1px solid rgba(160, 190, 230, 0.12);
+    border-top-color: rgba(160, 190, 230, 0.12);
   }
   .awayrail.light {
     background: #f4f3f0;
-    border-right: 1px solid rgba(20, 18, 16, 0.14);
+  }
+  @media (min-width: 900px) {
+    .awayrail.dark {
+      border-right: 1px solid rgba(160, 190, 230, 0.12);
+    }
+    .awayrail.light {
+      border-right: 1px solid rgba(20, 18, 16, 0.14);
+    }
   }
 
   .ar-home {
     display: flex;
-    flex-direction: column;
+    flex-direction: row;
     align-items: center;
-    gap: 5px;
+    gap: 9px;
     text-decoration: none;
+  }
+  @media (min-width: 900px) {
+    .ar-home {
+      flex-direction: column;
+      gap: 5px;
+    }
   }
   .ar-chip {
     display: grid;
@@ -108,16 +145,23 @@ const { variant = "dark", resume = true } = Astro.props;
   }
 
   .ar-resume {
-    position: absolute;
-    bottom: 22px;
-    left: 50%;
-    transform: translateX(-50%);
     font-family: "IBM Plex Mono", ui-monospace, monospace;
-    font-size: 0.66rem;
+    font-size: 0.78rem;
     letter-spacing: 0.06em;
     text-decoration: underline;
     text-underline-offset: 4px;
     white-space: nowrap;
+    padding: 10px 4px;
+  }
+  @media (min-width: 900px) {
+    .ar-resume {
+      position: absolute;
+      bottom: 22px;
+      left: 50%;
+      transform: translateX(-50%);
+      font-size: 0.66rem;
+      padding: 0;
+    }
   }
   .dark .ar-resume {
     color: #8f98a8;
