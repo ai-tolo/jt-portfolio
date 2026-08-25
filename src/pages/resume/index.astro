@@ -15,22 +15,22 @@ import AwayRail from "../../components/studio/AwayRail.astro";
 import ProofAgentLoop from "../../components/resume/ProofAgentLoop.astro";
 import ProofJudge from "../../components/resume/ProofJudge.astro";
 import ProofDbtPipeline from "../../components/resume/ProofDbtPipeline.astro";
-import ProofGrowth from "../../components/resume/ProofGrowth.astro";
+import ProofSignalKeys from "../../components/resume/ProofSignalKeys.astro";
 
 export const prerender = true;
 
-// The flags: four proofs, anchored to the exact bullets they back.
-// Desktop-only (the flags are a pointer experience); phones get the
-// clean sheet and the same PDF.
-const FLAGS = [
-  { key: "agent", label: "watch a run", side: "right", accent: "#0ec4fc",
+// The marks: drawn marginalia in the editor's red — one ink, like a
+// careful reader annotated the document. Each opens its proof IN PLACE
+// beneath the bullet it backs (set finalized per the panel verdict).
+const MARKS = [
+  { key: "agent", word: "run it", side: "right",
     target: '[data-pr-org="Finishable — the Engineer"] li[data-bi="0"]' },
-  { key: "judge", label: "the judge", side: "right", accent: "#00d44a",
-    target: '[data-pr-org="Finishable — the Engineer"] li[data-bi="2"]' },
-  { key: "parser", label: "run the parser", side: "left", accent: "#ffb347",
+  { key: "judge", word: "the catch", side: "left",
+    target: '[data-pr-org="Finishable — the Engineer"] li[data-bi="1"]' },
+  { key: "signal", word: "play it", side: "right",
+    target: '[data-pr-org="SIGNAL"] li[data-bi="0"]' },
+  { key: "parser", word: "run it", side: "left",
     target: '[data-pr-org="CHS Inc."] li[data-bi="2"]' },
-  { key: "growth", label: "the numbers", side: "left", accent: "#ff2761",
-    target: '[data-pr-org="Crediverso"] li[data-bi="1"]' },
 ];
 ---
 
@@ -51,30 +51,32 @@ const FLAGS = [
           </svg>
           download pdf
         </a>
-        <p class="r-hint">the flags open the proof behind a line</p>
       </div>
 
       <div class="paper-stage">
         <div class="sheet-wrap" data-sheet>
           <PrintResume />
-          {FLAGS.map((f) => (
+          {MARKS.map((m) => (
             <button
               type="button"
-              class={`r-flag r-flag-${f.side}`}
-              style={`--fa:${f.accent}`}
-              data-flag={f.key}
-              data-flag-target={f.target}
+              class={`r-mark r-mark-${m.side}`}
+              data-mark={m.key}
+              data-mark-target={m.target}
               aria-expanded="false"
-              aria-controls={`proof-${f.key}`}
+              aria-controls={`proof-${m.key}`}
             >
-              {f.label}
+              <svg class="r-mark-ink" viewBox="0 0 44 34" fill="none" stroke="currentColor"
+                stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M21.5 4.2c-7.8-1.1-15 2.8-15.6 9.2-.6 6.6 5.4 11.9 12.9 12.4 7.4.5 14.4-3.4 15-9.6.5-5.4-3.9-9.9-9.8-11.3" />
+                <path d="M35.8 16.9l4.9 1.2-2.7 4.2" />
+              </svg>
+              <span class="r-mark-word">{m.word}</span>
+              <i class="r-mark-dot" aria-hidden="true"></i>
             </button>
           ))}
-        </div>
 
-        {/* the dock: one proof unfolds at a time, under the sheet — lift a
-            flag and the studio shows through the paper */}
-        <div class="proof-dock" data-dock>
+          {/* the dock: panels float into the parted paper at their bullet */}
+          <div class="proof-dock" data-dock>
           <section id="proof-agent" class="proof-panel" data-proof-panel="agent" hidden aria-label="The mastering run, live">
             <ProofAgentLoop />
           </section>
@@ -84,9 +86,10 @@ const FLAGS = [
           <section id="proof-parser" class="proof-panel" data-proof-panel="parser" hidden aria-label="The dbt parser, live">
             <ProofDbtPipeline />
           </section>
-          <section id="proof-growth" class="proof-panel" data-proof-panel="growth" hidden aria-label="The Crediverso numbers">
-            <ProofGrowth />
+          <section id="proof-signal" class="proof-panel" data-proof-panel="signal" hidden aria-label="Five playable keys">
+            <ProofSignalKeys />
           </section>
+          </div>
         </div>
       </div>
     </main>
@@ -94,44 +97,109 @@ const FLAGS = [
 </Layout>
 
 <script>
-  // Flag placement: each flag sits at its target bullet's vertical position,
-  // hanging off the sheet edge. Measured against the sheet wrap; re-placed
-  // on resize and after fonts settle. Screen-only, >=900px (CSS gates).
+  // Marginalia mechanics: each mark sits in the sheet margin at its bullet;
+  // opening one reserves a gap under the bullet's entry (the paper parts)
+  // and floats the proof panel into it, with focus mode dimming the rest.
+  // The sheet's DOM is never touched — the print/ATS contract stays sealed.
   const wrap = document.querySelector<HTMLElement>("[data-sheet]");
-  const flags = Array.from(document.querySelectorAll<HTMLButtonElement>("[data-flag]"));
+  const marks = Array.from(document.querySelectorAll<HTMLButtonElement>("[data-mark]"));
   const panels = Array.from(document.querySelectorAll<HTMLElement>("[data-proof-panel]"));
+
+  const entryOf = (sel: string) => document.querySelector(sel)?.closest<HTMLElement>(".pr-entry") ?? null;
 
   const place = () => {
     if (!wrap) return;
     const base = wrap.getBoundingClientRect();
-    for (const f of flags) {
-      const t = document.querySelector(f.dataset.flagTarget || "");
+    for (const m of marks) {
+      const t = document.querySelector(m.dataset.markTarget || "");
       if (!t) continue;
       const r = t.getBoundingClientRect();
-      f.style.top = `${Math.round(r.top - base.top + r.height / 2)}px`;
+      m.style.top = `${Math.round(r.top - base.top + r.height / 2)}px`;
     }
-    wrap.setAttribute("data-flags-placed", "");
+    wrap.setAttribute("data-marks-placed", "");
   };
 
   let openKey: string | null = null;
-  const setOpen = (key: string | null) => {
-    openKey = key;
-    for (const p of panels) p.hidden = p.dataset.proofPanel !== key;
-    for (const f of flags) f.setAttribute("aria-expanded", String(f.dataset.flag === key));
-    if (key) {
-      const p = panels.find((x) => x.dataset.proofPanel === key);
-      p?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+  const closeAll = () => {
+    openKey = null;
+    wrap?.removeAttribute("data-focus");
+    document.querySelectorAll("[data-lit]").forEach((e) => e.removeAttribute("data-lit"));
+    for (const p of panels) {
+      p.hidden = true;
+      p.style.top = "";
     }
+    for (const m of marks) m.setAttribute("aria-expanded", "false");
+    document.querySelectorAll<HTMLElement>(".pr-entry").forEach((e) => (e.style.paddingBottom = ""));
+    place();
   };
-  flags.forEach((f) =>
-    f.addEventListener("click", () => setOpen(openKey === f.dataset.flag ? null : (f.dataset.flag as string)))
+
+  const open = (key: string) => {
+    closeAll();
+    openKey = key;
+    const mark = marks.find((m) => m.dataset.mark === key);
+    const panel = panels.find((p) => p.dataset.proofPanel === key);
+    const entry = mark ? entryOf(mark.dataset.markTarget || "") : null;
+    if (!mark || !panel || !entry || !wrap) return;
+    // measure the panel offscreen, then reserve the gap and float it in.
+    // Positions are padding-aware (entry rects include the reserved gap)
+    // and re-derived once the 340ms padding transition settles, so opening
+    // one proof while another is closing can never land the panel low.
+    panel.hidden = false;
+    panel.style.visibility = "hidden";
+    const h = panel.getBoundingClientRect().height;
+    const contentBottom = () => {
+      const base = wrap.getBoundingClientRect();
+      const eb = entry.getBoundingClientRect();
+      const pad = parseFloat(getComputedStyle(entry).paddingBottom) || 0;
+      return Math.round(eb.bottom - pad - base.top);
+    };
+    panel.style.top = `${contentBottom() + 14}px`;
+    entry.style.paddingBottom = `${Math.round(h + 26)}px`;
+    panel.style.visibility = "";
+    window.setTimeout(() => {
+      if (openKey !== key) return;
+      panel.style.top = `${contentBottom() + 14}px`;
+      place();
+    }, 380);
+    entry.setAttribute("data-lit", "");
+    wrap.setAttribute("data-focus", "");
+    mark.setAttribute("aria-expanded", "true");
+    place();
+    window.setTimeout(() => panel.scrollIntoView({ behavior: "smooth", block: "nearest" }), 60);
+  };
+
+  marks.forEach((m) =>
+    m.addEventListener("click", (e) => {
+      e.stopPropagation();
+      openKey === m.dataset.mark ? closeAll() : open(m.dataset.mark as string);
+    })
   );
   document.addEventListener("keydown", (e) => {
-    if (e.key === "Escape" && openKey) setOpen(null);
+    if (e.key === "Escape" && openKey) closeAll();
+  });
+  document.addEventListener("click", (e) => {
+    if (!openKey) return;
+    const t = e.target as HTMLElement;
+    if (!t.closest("[data-proof-panel]") && !t.closest("[data-mark]")) closeAll();
   });
 
   place();
-  window.addEventListener("resize", () => window.setTimeout(place, 120));
+  // The strongest proof greets the reader already open (a 40-screens-a-day
+  // reader clicks nothing) — desktop only; phones keep the clean sheet.
+  let greeted = false;
+  const greet = () => {
+    if (greeted || !window.matchMedia("(min-width: 900px)").matches) return;
+    greeted = true;
+    window.setTimeout(() => { if (!openKey) open("judge"); }, 450);
+  };
+  if (document.fonts?.ready) document.fonts.ready.then(greet);
+  else window.setTimeout(greet, 900);
+  window.addEventListener("resize", () => {
+    window.setTimeout(() => {
+      if (openKey) { const k = openKey; closeAll(); open(k); }
+      else place();
+    }, 120);
+  });
   window.addEventListener("load", place);
   if (document.fonts?.ready) document.fonts.ready.then(place);
 </script>
@@ -180,16 +248,7 @@ const FLAGS = [
     .r-pdf:hover {
       color: #b33a2a;
     }
-    .r-hint {
-      margin: 0;
-      font-size: 0.68rem;
-      letter-spacing: 0.05em;
-      color: #6a6660;
-    }
     @media (max-width: 899px) {
-      .r-hint {
-        display: none; /* flags are desktop-only */
-      }
       .r-actions {
         justify-content: center;
       }
@@ -220,71 +279,120 @@ const FLAGS = [
       color: #b33a2a;
     }
 
-    /* ── the flags: Post-its hanging off the sheet edges ── */
-    .r-flag {
+    /* ── the marks: drawn marginalia in the editor's red — a reader's
+       pen on the document, not an object stuck to it ── */
+    .r-mark {
       display: none;
     }
     @media (min-width: 900px) {
-      .r-flag {
-        display: block;
+      .r-mark {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 1px;
         position: absolute;
         z-index: 2;
-        padding: 7px 14px 7px 12px;
+        width: 52px;
+        padding: 4px 2px;
         border: 0;
+        background: transparent;
         cursor: pointer;
-        font-family: "IBM Plex Mono", ui-monospace, monospace;
-        font-size: 0.72rem;
-        letter-spacing: 0.04em;
-        line-height: 1;
-        color: #141210;
-        background: color-mix(in srgb, var(--fa) 42%, #fff);
-        border-radius: 3px 8px 8px 3px;
-        box-shadow: 0 3px 10px -4px rgba(20, 12, 4, 0.5);
-        transform: translate(78%, -50%) rotate(1.4deg);
-        transition: transform 140ms ease, box-shadow 140ms ease;
-        white-space: nowrap;
+        color: #b33a2a;
+        transform: translateY(-50%);
         opacity: 0;
+        transition: opacity 300ms ease, transform 160ms ease;
       }
-      [data-flags-placed] .r-flag {
+      [data-marks-placed] .r-mark {
         opacity: 1;
       }
-      .r-flag-left {
-        left: -14px;
-        transform: translate(-78%, -50%) rotate(-1.6deg);
-        border-radius: 8px 3px 3px 8px;
+      .r-mark-left {
+        left: 2px;
       }
-      .r-flag-right {
-        right: -14px;
+      .r-mark-right {
+        right: 2px;
       }
-      .r-flag:hover,
-      .r-flag:focus-visible {
-        box-shadow: 0 5px 14px -4px rgba(20, 12, 4, 0.55);
+      .r-mark-right .r-mark-ink {
+        transform: scaleX(-1);
       }
-      .r-flag-left:hover,
-      .r-flag-left:focus-visible {
-        transform: translate(-84%, -50%) rotate(-1.6deg);
+      .r-mark-ink {
+        width: 40px;
+        height: 31px;
       }
-      .r-flag-right:hover,
-      .r-flag-right:focus-visible {
-        transform: translate(84%, -50%) rotate(1.4deg);
+      .r-mark-word {
+        font-family: "IBM Plex Mono", ui-monospace, monospace;
+        font-size: 0.58rem;
+        letter-spacing: 0.05em;
+        line-height: 1;
       }
-      .r-flag[aria-expanded="true"] {
-        outline: 2px solid var(--fa);
-        outline-offset: 1px;
+      .r-mark-dot {
+        position: absolute;
+        top: 0;
+        right: 4px;
+        width: 4px;
+        height: 4px;
+        border-radius: 50%;
+        background: #b33a2a;
       }
-      .r-flag:focus-visible {
-        outline: 2px solid #141210;
+      @media (prefers-reduced-motion: no-preference) {
+        .r-mark-dot {
+          animation: rm-breathe 2.8s ease-in-out infinite;
+        }
+        @keyframes rm-breathe {
+          0%, 100% { opacity: 0.35; }
+          50% { opacity: 1; }
+        }
+      }
+      .r-mark:hover,
+      .r-mark:focus-visible {
+        transform: translateY(-50%) scale(1.06);
+      }
+      .r-mark:focus-visible {
+        outline: 2px solid #b33a2a;
         outline-offset: 2px;
+        border-radius: 6px;
       }
+      .r-mark[aria-expanded="true"] .r-mark-dot {
+        opacity: 1;
+        animation: none;
+      }
+    }
+
+    /* ── focus mode: the page dims around the claim and its proof ── */
+    .print-resume .pr-entry {
+      transition: padding-bottom 340ms cubic-bezier(0.3, 0.8, 0.3, 1), opacity 280ms ease;
+    }
+    [data-focus] .print-resume > section,
+    [data-focus] .print-resume > .pr-header,
+    [data-focus] .print-resume > .pr-outside {
+      transition: opacity 280ms ease;
+      opacity: 0.22;
+    }
+    [data-focus] .print-resume > section:has([data-lit]) {
+      opacity: 1;
+    }
+    [data-focus] .print-resume > section:has([data-lit]) .pr-entry:not([data-lit]),
+    [data-focus] .print-resume > section:has([data-lit]) > h2 {
+      opacity: 0.22;
+    }
+    [data-focus] .r-mark:not([aria-expanded="true"]) {
+      opacity: 0.25;
     }
 
     /* ── the dock: dark card under the sheet — the studio under the paper ── */
     .proof-dock {
-      width: min(8.5in, 100%);
-      margin: 0 auto;
+      /* panels float into the parted paper; the dock itself has no box */
+      display: contents;
+    }
+    @media (max-width: 899px) {
+      .proof-panel {
+        display: none !important;
+      }
     }
     .proof-panel {
-      margin-top: 18px;
+      position: absolute;
+      left: clamp(10px, 2vw, 26px);
+      right: clamp(10px, 2vw, 26px);
+      z-index: 3;
       padding: clamp(16px, 3vw, 28px);
       background: #101216;
       border: 1px solid rgba(160, 190, 230, 0.16);
@@ -295,9 +403,8 @@ const FLAGS = [
 
   @media print {
     .r-actions,
-    .r-flag,
-    .proof-dock,
-    .r-hint {
+    .r-mark,
+    .proof-dock {
       display: none !important;
     }
     .resume-page,
@@ -305,6 +412,12 @@ const FLAGS = [
       min-height: 0 !important;
       padding: 0 !important;
       margin: 0 !important;
+    }
+    .r-mark {
+      display: none !important;
+    }
+    .print-resume .pr-entry {
+      padding-bottom: 0 !important;
     }
     .resume-world {
       background: #ffffff !important;

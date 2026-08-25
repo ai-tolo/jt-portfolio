@@ -1,186 +1,401 @@
 ---
-// PROOF — the Engineer bullet: "works as an agent, not a button... renders
-// several masters, runs a blind loudness-matched A/B, weighs the votes to pick
-// a winner, composes a king, and a grounded step decides whether to blend
-// layers." Instead of asserting it, this runs the loop: five stages light in
-// sequence on Run, so the multi-step, takes-actions-and-reasons-over-state
-// shape reads at a glance. Theme-aware, reduced-motion-safe, vertical flow so
-// it never overflows on mobile.
+// PROOF for the Engineer bullet: "Built an AI mastering system that works as an
+// agent, not a button: it takes actions and carries state across a multi-step
+// run, rendering several masters, running a blind, loudness-matched A/B
+// (ITU-R BS.1770, true-peak controlled), and composing a final master from the
+// strongest takes."
+//
+// What this is: a DIAGRAM of the mechanism, not a live run. Five stages light
+// in sequence so the shape of one run reads at a glance. The payoff is the last
+// stage, the restraint gate, because the interesting behavior of the system is
+// that it usually decides NOT to act.
+//
+// What is real: every number comes from src/lib/judge-ledger.json, a dated
+// snapshot of the harness database (mix_jobs / mix_variants). Nothing counts up
+// to a pretend-live figure; the counters are static and true, with a settle-in
+// only. Reduced motion snaps straight to the end state.
 
+import ledger from "../../lib/judge-ledger.json";
+
+const DECIDED = ledger.jobs.with_champion; // 78 runs that reached a champion
+const KEPT = ledger.jobs.champion_original; // 42 of them kept the original
+const RUNS = ledger.jobs.total_runs; // 229
+const RENDERS = ledger.renders.total; // 939
+const AVG = ledger.renders.avg_per_run; // 4.2
+const MAX = ledger.renders.max_per_run; // 6
+const PCT = Math.round((KEPT / DECIDED) * 100); // 54
+const SNAPSHOT = ledger.snapshot;
+
+// Stages 1 to 4 are the machinery. Stage 5 is the point, so it renders as the
+// gate card below instead of another rail row.
 const STAGES = [
-  { id: "render", label: "Render", detail: "6 masters across taste axes" },
-  { id: "ab", label: "Blind A/B", detail: "loudness-matched, labels hidden" },
-  { id: "weigh", label: "Weigh votes", detail: "votes become win-rates" },
-  { id: "crown", label: "Crown a king", detail: "composed from the winning takes" },
-  { id: "decide", label: "Decide layers", detail: "grounded check, usually no" },
+  { label: "Render", detail: `4 to ${MAX} masters, ${AVG} on average` },
+  { label: "Blind A/B", detail: "loudness-matched, labels hidden" },
+  { label: "Weigh", detail: "votes become win-rates" },
+  { label: "Champion", detail: "composed from the winning takes" },
+];
+
+const COUNTS = [
+  { n: RUNS.toLocaleString("en-US"), label: "runs", tone: "" },
+  { n: RENDERS.toLocaleString("en-US"), label: "renders", tone: "" },
+  { n: KEPT.toLocaleString("en-US"), label: "originals kept", tone: "keep" },
 ];
 ---
 
 <div class="pf pf-loop" data-proof="agentloop">
-  <div class="pf-head">
-    <span class="pf-kicker">live · the agent loop</span>
-    <h4 class="pf-title">Render, judge, decide. One pass.</h4>
-    <button type="button" class="pf-replay" data-replay aria-label="Run the agent loop again">
-      <svg viewBox="0 0 16 16" width="13" height="13" aria-hidden="true"><path d="M13 8a5 5 0 1 1-1.46-3.54M13 2.5V5h-2.5" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
-      <span data-run-label>Run</span>
+  <div class="lp-head">
+    <div class="lp-headline">
+      <span class="lp-kicker">how one run moves</span>
+      <h4 class="lp-title">Five steps. The last one usually says no.</h4>
+    </div>
+    <button type="button" class="lp-replay" data-replay aria-label="Replay the run diagram">
+      <svg viewBox="0 0 16 16" width="12" height="12" aria-hidden="true"><path d="M13 8a5 5 0 1 1-1.46-3.54M13 2.5V5h-2.5" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+      <span data-run-label>replay</span>
     </button>
   </div>
 
-  <ol class="lp-flow" data-flow>
+  <ol class="lp-flow">
     {STAGES.map((s, i) => (
-      <li class="lp-stage" data-stage={s.id}>
+      <li class="lp-stage" data-stage>
         <span class="lp-idx" aria-hidden="true">{i + 1}</span>
         <div class="lp-body">
           <span class="lp-label">{s.label}</span>
           <span class="lp-detail">{s.detail}</span>
         </div>
         <span class="lp-tick" aria-hidden="true">
-          <svg viewBox="0 0 16 16" width="12" height="12"><path d="M3.5 8.5l3 3 6-7" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          <svg viewBox="0 0 16 16" width="11" height="11"><path d="M3.5 8.5l3 3 6-7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path></svg>
         </span>
       </li>
     ))}
+
+    <li class="lp-stage lp-gate" data-stage>
+      <span class="lp-idx" aria-hidden="true">5</span>
+      <div class="gt-card">
+        <div class="gt-top">
+          <span class="gt-q">Add more processing?</span>
+          <span class="gt-verdict">usually no</span>
+        </div>
+
+        <div
+          class="gt-meter"
+          role="img"
+          aria-label={`${KEPT} of ${DECIDED} runs that reached a champion kept the original master, ${PCT} percent.`}
+        >
+          {Array.from({ length: DECIDED }).map((_, i) => (
+            <i class:list={["gt-t", { "is-keep": i < KEPT }]} style={`--i:${i}`}></i>
+          ))}
+        </div>
+
+        <div class="gt-foot">
+          <span class="gt-read">{KEPT} of {DECIDED} decided runs kept the original</span>
+          <b class="gt-pct">{PCT}%</b>
+        </div>
+      </div>
+    </li>
   </ol>
 
-  <div class="pf-meter" data-meter>
-    <span><b data-c="renders">0</b> renders</span>
-    <span class="pf-meter-sep">·</span>
-    <span><b data-c="round">0</b> blind round</span>
-    <span class="pf-meter-sep">·</span>
-    <span><b data-c="king">0</b> king · <span data-status>idle</span></span>
+  <div class="lp-counts">
+    <div class="lp-nums">
+      {COUNTS.map((c, i) => (
+        <>
+          {i > 0 && <span class="lp-sep" aria-hidden="true">·</span>}
+          <span class="lp-count">
+            <b class:list={["lp-n", { "is-keep": c.tone === "keep" }]} style={`--d:${i * 90}ms`}>{c.n}</b>
+            <span class="lp-nlabel">{c.label}</span>
+          </span>
+        </>
+      ))}
+    </div>
+    <span class="lp-source">harness log, snapshot {SNAPSHOT} · single rater</span>
   </div>
 </div>
 
 <script>
-  import { onPlay, countUp, prefersReduced } from "./lib/motion";
+  import { onPlay, prefersReduced } from "./lib/motion";
 
   document.querySelectorAll<HTMLElement>('[data-proof="agentloop"]').forEach((root) => {
-    const stages = Array.from(root.querySelectorAll<HTMLElement>(".lp-stage"));
+    const stages = Array.from(root.querySelectorAll<HTMLElement>("[data-stage]"));
     const runLabel = root.querySelector<HTMLElement>("[data-run-label]");
-    const status = root.querySelector<HTMLElement>("[data-status]");
-    const meter = {
-      renders: root.querySelector<HTMLElement>('[data-c="renders"]'),
-      round: root.querySelector<HTMLElement>('[data-c="round"]'),
-      king: root.querySelector<HTMLElement>('[data-c="king"]'),
-    };
-    const STATUS = ["rendering…", "judging blind…", "weighing votes…", "crowning…", "deciding…"];
+    const STEP = 380;
 
     let timers: number[] = [];
     const clear = () => { timers.forEach(clearTimeout); timers = []; };
     const after = (ms: number, fn: () => void) => { timers.push(window.setTimeout(fn, ms)); };
 
-    const finish = () => {
+    // The settled end state, reachable directly: reduced motion, a throttled
+    // tab, or a headless run all land here rather than freezing mid-sequence.
+    const settle = () => {
       stages.forEach((s) => { s.classList.remove("is-active"); s.classList.add("is-done"); });
-      if (status) status.textContent = "done";
-      if (runLabel) runLabel.textContent = "Run again";
-      if (meter.renders) countUp(meter.renders, 6, { dur: 700 });
-      if (meter.round) countUp(meter.round, 1, { dur: 500 });
-      if (meter.king) countUp(meter.king, 1, { dur: 500 });
+      root.classList.add("is-on", "is-settled");
+      if (runLabel) runLabel.textContent = "replay";
     };
 
     const run = () => {
       clear();
       stages.forEach((s) => s.classList.remove("is-active", "is-done"));
-      if (runLabel) runLabel.textContent = "Running";
+      root.classList.remove("is-on", "is-settled");
 
-      if (prefersReduced()) { finish(); return; }
+      if (prefersReduced()) { settle(); return; }
 
-      const step = 520;
+      if (runLabel) runLabel.textContent = "running";
       stages.forEach((s, i) => {
-        after(i * step, () => {
+        after(i * STEP, () => {
           stages.forEach((x, j) => { if (j < i) { x.classList.remove("is-active"); x.classList.add("is-done"); } });
           s.classList.add("is-active");
-          if (status) status.textContent = STATUS[i];
+          // the gate lights its meter as it opens
+          if (i === stages.length - 1) root.classList.add("is-on");
         });
       });
-      after(stages.length * step, finish);
-      // headless backstop
-      after(stages.length * step + 400, finish);
+      after(stages.length * STEP, settle);
+      after(stages.length * STEP + 900, settle); // headless backstop
     };
 
     root.querySelector<HTMLButtonElement>("[data-replay]")?.addEventListener("click", run);
-    onPlay(root, run, { threshold: 0.3 });
+    onPlay(root, run, { threshold: 0.25 });
   });
 </script>
 
 <style>
-  .pf {
-    --pf-radius: 8px;
-    --pf-bg: color-mix(in srgb, var(--surface-1) 60%, var(--bg));
-    margin-top: var(--space-4);
-    border: 1.5px solid transparent;
-    border-radius: var(--pf-radius);
-    background:
-      linear-gradient(var(--pf-bg), var(--pf-bg)) padding-box,
-      linear-gradient(135deg, #ff3b6e 0%, #ff6e21 50%, #eeff00 100%) border-box;
-    box-shadow: 0 0 22px rgba(255, 59, 110, 0.15), 0 10px 26px -12px rgba(0, 0, 0, 0.5);
-    padding: var(--space-4);
-    font-weight: var(--fw-regular);
+  /* Renders inside the dark proof panel (#101216) on a light page, so the
+     module carries its own palette rather than inheriting page tokens. */
+  .pf-loop {
+    --ink: #e8edf4;
+    --dim: #98a5b5;
+    --faint: #6d7a89;
+    --line: rgba(160, 190, 230, 0.14);
+    --line-2: rgba(160, 190, 230, 0.26);
+    --cyan: #0ec4fc;
+    --green: #00d44a;
+    --mono: "IBM Plex Mono", ui-monospace, monospace;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    background: none;
+    color: var(--ink);
+    line-height: 1.45;
   }
-  .pf-head { display: flex; align-items: baseline; gap: var(--space-3); margin-bottom: var(--space-4); flex-wrap: wrap; }
-  .pf-kicker { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0.625rem; letter-spacing: 0.16em; text-transform: uppercase; color: var(--accent); }
-  .pf-title { font-size: 0.9375rem; font-weight: var(--fw-semibold); letter-spacing: -0.01em; color: var(--text); flex: 1 1 auto; }
-  .pf-replay {
-    display: inline-flex; align-items: center; gap: 6px; appearance: none;
-    border: 1px solid var(--line); background: var(--bg); color: var(--text);
-    font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0.6875rem;
-    letter-spacing: 0.04em; padding: 5px 11px; border-radius: 999px; cursor: pointer;
+
+  /* ── head ── */
+  .lp-head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+    margin-bottom: 16px;
+  }
+  .lp-headline { min-width: 0; }
+  .lp-kicker {
+    display: block;
+    font-family: var(--mono);
+    font-size: 0.625rem;
+    letter-spacing: 0.16em;
+    color: var(--faint);
+    margin-bottom: 5px;
+  }
+  .lp-title {
+    margin: 0;
+    font-size: 0.9375rem;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+    color: var(--ink);
+  }
+  .lp-replay {
+    flex: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    appearance: none;
+    border: 1px solid var(--line-2);
+    border-radius: 999px;
+    background: transparent;
+    color: var(--dim);
+    font-family: var(--mono);
+    font-size: 0.625rem;
+    letter-spacing: 0.06em;
+    padding: 5px 11px;
+    cursor: pointer;
     transition: border-color 160ms ease, color 160ms ease;
   }
-  .pf-replay:hover { border-color: var(--accent); color: var(--accent); }
+  .lp-replay:hover,
+  .lp-replay:focus-visible { border-color: var(--cyan); color: var(--cyan); outline: none; }
 
-  /* ── the loop ── */
-  .lp-flow { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
+  /* ── the rail ── */
+  .lp-flow { list-style: none; margin: 0; padding: 0; }
   .lp-stage {
     position: relative;
-    display: flex; align-items: center; gap: var(--space-3);
-    padding: 9px 0 9px 0;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 6px 0;
   }
-  /* connecting rail down the index column */
   .lp-stage::before {
-    content: ""; position: absolute; left: 13px; top: 0; bottom: 0; width: 2px;
+    content: "";
+    position: absolute;
+    left: 12px;
+    top: 0;
+    bottom: 0;
+    width: 2px;
     background: var(--line);
   }
   .lp-stage:first-child::before { top: 50%; }
-  .lp-stage:last-child::before { bottom: 50%; }
 
   .lp-idx {
-    position: relative; z-index: 1; flex-shrink: 0;
-    width: 28px; height: 28px; border-radius: 50%;
-    display: grid; place-items: center;
-    font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0.75rem;
-    color: var(--muted); background: var(--bg);
-    border: 1.5px solid var(--line);
-    transition: color 240ms ease, border-color 240ms ease, background 240ms ease, transform 240ms ease;
+    position: relative;
+    z-index: 1;
+    flex: none;
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    display: grid;
+    place-items: center;
+    font-family: var(--mono);
+    font-size: 0.6875rem;
+    color: var(--faint);
+    background: #101216;
+    border: 1px solid var(--line-2);
+    transition: color 220ms ease, border-color 220ms ease, box-shadow 220ms ease;
   }
   .lp-body { display: flex; flex-direction: column; gap: 1px; min-width: 0; flex: 1 1 auto; }
-  .lp-label { font-size: 0.875rem; font-weight: var(--fw-semibold); color: var(--text); }
-  .lp-detail { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0.625rem; color: var(--muted); }
+  .lp-label { font-size: 0.8125rem; font-weight: 600; color: var(--ink); }
+  .lp-detail { font-family: var(--mono); font-size: 0.625rem; color: var(--dim); }
   .lp-tick {
-    flex-shrink: 0; color: var(--accent); opacity: 0; transform: scale(0.6);
-    transition: opacity 220ms ease, transform 220ms cubic-bezier(0.22, 1, 0.36, 1);
+    flex: none;
+    color: var(--cyan);
+    opacity: 0;
+    transform: scale(0.6);
+    transition: opacity 200ms ease, transform 200ms cubic-bezier(0.22, 1, 0.36, 1);
   }
 
   .lp-stage.is-active .lp-idx {
-    color: var(--bg); background: var(--accent); border-color: var(--accent);
-    transform: scale(1.08);
-    box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent) 22%, transparent);
+    color: var(--cyan);
+    border-color: var(--cyan);
+    box-shadow: 0 0 0 3px rgba(14, 196, 252, 0.14);
   }
-  .lp-stage.is-active .lp-label { color: var(--accent); }
-  .lp-stage.is-done .lp-idx { color: var(--accent); border-color: var(--accent); background: color-mix(in srgb, var(--accent) 12%, var(--bg)); }
+  .lp-stage.is-done .lp-idx { color: var(--dim); border-color: var(--line-2); }
   .lp-stage.is-done .lp-tick { opacity: 1; transform: none; }
 
-  /* ── meter ── */
-  .pf-meter {
-    display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 10px;
-    margin-top: var(--space-4); padding-top: var(--space-3);
-    border-top: 1px solid var(--line);
-    font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0.6875rem; color: var(--muted);
+  /* ── stage 5: the gate, where the run usually stops ── */
+  .lp-gate { align-items: flex-start; padding-top: 10px; }
+  .lp-gate::before { top: 0; height: 23px; bottom: auto; }
+  .lp-gate .lp-idx { color: var(--dim); }
+  .lp-gate.is-active .lp-idx,
+  .lp-gate.is-done .lp-idx {
+    color: var(--green);
+    border-color: rgba(0, 212, 74, 0.5);
+    box-shadow: 0 0 0 3px rgba(0, 212, 74, 0.12);
   }
-  .pf-meter b { color: var(--accent); font-variant-numeric: tabular-nums; font-size: 0.8125rem; }
-  .pf-meter-sep { color: var(--line); }
-  [data-status] { color: var(--accent); }
+
+  .gt-card {
+    flex: 1 1 auto;
+    min-width: 0;
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    background: rgba(160, 190, 230, 0.035);
+    padding: 11px 13px 12px;
+  }
+  .gt-top {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+  .gt-q { font-size: 0.8125rem; font-weight: 600; color: var(--ink); }
+  .gt-verdict {
+    font-family: var(--mono);
+    font-size: 0.75rem;
+    letter-spacing: 0.02em;
+    color: var(--green);
+    border: 1px solid rgba(0, 212, 74, 0.34);
+    border-radius: 4px;
+    padding: 2px 8px;
+    white-space: nowrap;
+  }
+
+  /* one tick per decided run: countable, not a bar you have to trust */
+  .gt-meter {
+    display: flex;
+    gap: 2px;
+    margin: 11px 0 9px;
+    height: 20px;
+  }
+  .gt-t {
+    flex: 1 1 0;
+    min-width: 1px;
+    border-radius: 1px;
+    background: rgba(160, 190, 230, 0.13);
+    transition: background-color 260ms ease, box-shadow 260ms ease;
+    transition-delay: calc(var(--i) * 7ms);
+  }
+  .pf-loop.is-on .gt-t.is-keep {
+    background: var(--green);
+    box-shadow: 0 0 7px rgba(0, 212, 74, 0.32);
+  }
+  .pf-loop.is-on .gt-t:not(.is-keep) { background: rgba(160, 190, 230, 0.19); }
+
+  .gt-foot {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 12px;
+  }
+  .gt-read { font-family: var(--mono); font-size: 0.625rem; color: var(--dim); }
+  .gt-pct {
+    font-family: var(--mono);
+    font-size: 1.1875rem;
+    font-weight: 600;
+    line-height: 1;
+    color: var(--green);
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* ── counters: static, real, from the ledger ── */
+  .lp-counts {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 8px 16px;
+    flex-wrap: wrap;
+    margin-top: 14px;
+    padding-top: 11px;
+    border-top: 1px solid var(--line);
+  }
+  .lp-nums { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+  .lp-count { display: inline-flex; align-items: baseline; gap: 5px; }
+  .lp-n {
+    font-family: var(--mono);
+    font-size: 0.8125rem;
+    font-weight: 600;
+    color: var(--ink);
+    font-variant-numeric: tabular-nums;
+  }
+  .lp-n.is-keep { color: var(--green); }
+  .lp-nlabel { font-family: var(--mono); font-size: 0.625rem; color: var(--dim); }
+  .lp-sep { color: var(--line-2); }
+  .lp-source { font-family: var(--mono); font-size: 0.5625rem; color: var(--faint); }
+
+  /* settle-in only: the numbers are already in the markup, this just lands
+     them. If the class never arrives, they are simply there. */
+  .pf-loop.is-settled .lp-n {
+    animation: lp-land 460ms cubic-bezier(0.22, 1, 0.36, 1) both;
+    animation-delay: var(--d);
+  }
+  @keyframes lp-land {
+    from { opacity: 0.2; transform: translateY(3px); }
+    to { opacity: 1; transform: none; }
+  }
+
+  @media (max-width: 34rem) {
+    .lp-head { flex-direction: column; gap: 10px; }
+    .gt-meter { height: 16px; gap: 1px; }
+    .gt-foot { flex-direction: column; align-items: flex-start; gap: 4px; }
+  }
 
   @media (prefers-reduced-motion: reduce) {
-    .lp-idx, .lp-tick { transition: none !important; }
+    .lp-idx,
+    .lp-tick,
+    .gt-t,
+    .lp-replay { transition: none !important; }
+    .pf-loop.is-settled .lp-n { animation: none !important; }
   }
 </style>

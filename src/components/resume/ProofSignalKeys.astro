@@ -1,0 +1,233 @@
+---
+// ProofSignalKeys — the SIGNAL bullet's in-place proof (2026-08-26).
+// Five playable keys built on the same Web Audio primitives as the
+// homepage instrument. Hard constraints: SILENT until a deliberate
+// press (no autoplay, no sound on hover), and it says it will make
+// sound before it does — recruiters screen in open offices.
+// A minor pentatonic so any order of presses sounds intentional.
+---
+
+<div class="pf pf-keys" data-proof="signalkeys">
+  <div class="pf-head">
+    <span class="pf-kicker">web audio, in this page</span>
+    <h4 class="pf-title">The instrument claim, pressable.</h4>
+    <span class="pk-soundtag" aria-hidden="true">
+      <svg viewBox="0 0 16 16" width="12" height="12" fill="none" stroke="currentColor"
+        stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M2 6v4h3l4 3V3L5 6H2Z" /><path d="M11.5 5.5a3.5 3.5 0 0 1 0 5" />
+      </svg>
+      sound on press
+    </span>
+  </div>
+
+  <div class="pk-row" data-pk-row>
+    {["A", "S", "D", "F", "G"].map((k, i) => (
+      <button type="button" class="pk-key" data-pk-key={i} aria-label={`Play note ${i + 1}`}>
+        <span class="pk-cap">{k}</span>
+        <i class="pk-lamp" aria-hidden="true"></i>
+      </button>
+    ))}
+  </div>
+
+  <p class="pk-note">
+    Synthesis, envelope, and filter run right here, in the résumé.
+    The full instrument lives at <a href="https://uxjon.com/#play">uxjon.com/#play</a>.
+  </p>
+</div>
+
+<script>
+  // One context, created lazily on the FIRST press — never before.
+  const root = document.querySelector<HTMLElement>('[data-proof="signalkeys"]');
+  if (root) {
+    const FREQS = [220.0, 261.63, 293.66, 329.63, 392.0]; // A minor pentatonic
+    let ctx: AudioContext | null = null;
+    let master: GainNode | null = null;
+
+    const ensure = () => {
+      if (ctx) return;
+      ctx = new AudioContext();
+      const comp = ctx.createDynamicsCompressor();
+      comp.threshold.value = -18;
+      comp.knee.value = 24;
+      comp.ratio.value = 6;
+      master = ctx.createGain();
+      master.gain.value = 0.22;
+      master.connect(comp);
+      comp.connect(ctx.destination);
+    };
+
+    const voices = new Map<number, { osc: OscillatorNode; osc2: OscillatorNode; g: GainNode }>();
+
+    const noteOn = (i: number) => {
+      ensure();
+      if (!ctx || !master || voices.has(i)) return;
+      if (ctx.state === "suspended") ctx.resume();
+      const t = ctx.currentTime;
+      const g = ctx.createGain();
+      g.gain.setValueAtTime(0, t);
+      g.gain.linearRampToValueAtTime(0.9, t + 0.012);
+      const lp = ctx.createBiquadFilter();
+      lp.type = "lowpass";
+      lp.frequency.setValueAtTime(1800, t);
+      lp.frequency.exponentialRampToValueAtTime(900, t + 0.5);
+      lp.Q.value = 0.7;
+      const osc = ctx.createOscillator();
+      osc.type = "triangle";
+      osc.frequency.value = FREQS[i];
+      const osc2 = ctx.createOscillator();
+      osc2.type = "triangle";
+      osc2.frequency.value = FREQS[i];
+      osc2.detune.value = 6;
+      const g2 = ctx.createGain();
+      g2.gain.value = 0.4;
+      osc.connect(lp);
+      osc2.connect(g2);
+      g2.connect(lp);
+      lp.connect(g);
+      g.connect(master);
+      osc.start(t);
+      osc2.start(t);
+      voices.set(i, { osc, osc2, g });
+    };
+
+    const noteOff = (i: number) => {
+      const v = voices.get(i);
+      if (!v || !ctx) return;
+      voices.delete(i);
+      const t = ctx.currentTime;
+      v.g.gain.cancelScheduledValues(t);
+      v.g.gain.setValueAtTime(v.g.gain.value, t);
+      v.g.gain.exponentialRampToValueAtTime(0.0006, t + 0.42);
+      v.osc.stop(t + 0.5);
+      v.osc2.stop(t + 0.5);
+    };
+
+    const keys = Array.from(root.querySelectorAll<HTMLButtonElement>("[data-pk-key]"));
+    keys.forEach((k) => {
+      const i = Number(k.dataset.pkKey);
+      const down = (e: Event) => { e.preventDefault(); k.setAttribute("data-lit", ""); noteOn(i); };
+      const up = () => { k.removeAttribute("data-lit"); noteOff(i); };
+      k.addEventListener("pointerdown", down);
+      k.addEventListener("pointerup", up);
+      k.addEventListener("pointerleave", up);
+      k.addEventListener("pointercancel", up);
+      // keyboard on the focused button
+      k.addEventListener("keydown", (e) => { if ((e.key === "Enter" || e.key === " ") && !e.repeat) down(e); });
+      k.addEventListener("keyup", (e) => { if (e.key === "Enter" || e.key === " ") up(); });
+    });
+
+    // a/s/d/f/g work while focus is anywhere inside the module
+    const MAP: Record<string, number> = { a: 0, s: 1, d: 2, f: 3, g: 4 };
+    root.addEventListener("keydown", (e) => {
+      const i = MAP[e.key?.toLowerCase?.()];
+      if (i === undefined || e.repeat) return;
+      keys[i]?.setAttribute("data-lit", "");
+      noteOn(i);
+    });
+    root.addEventListener("keyup", (e) => {
+      const i = MAP[e.key?.toLowerCase?.()];
+      if (i === undefined) return;
+      keys[i]?.removeAttribute("data-lit");
+      noteOff(i);
+    });
+  }
+</script>
+
+<style>
+  .pf-keys {
+    font-family: "IBM Plex Mono", ui-monospace, monospace;
+    color: #e8ecf4;
+  }
+  .pf-head {
+    display: flex;
+    align-items: baseline;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin-bottom: 16px;
+  }
+  .pf-kicker {
+    font-size: 0.66rem;
+    letter-spacing: 0.08em;
+    color: #0ec4fc;
+  }
+  .pf-title {
+    margin: 0;
+    font-family: "Geist Variable", ui-sans-serif, system-ui, sans-serif;
+    font-size: 1rem;
+    font-weight: 600;
+    color: #f5f1e8;
+  }
+  .pk-soundtag {
+    margin-left: auto;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 0.62rem;
+    letter-spacing: 0.06em;
+    color: #ffb347;
+  }
+  .pk-row {
+    display: flex;
+    gap: 8px;
+  }
+  .pk-key {
+    position: relative;
+    flex: 1 1 0;
+    height: 74px;
+    border: 1px solid #2a2f3a;
+    border-radius: 8px;
+    background: linear-gradient(180deg, #1d212b 0%, #12151c 60%, #0e1117 100%);
+    color: #cfd6e2;
+    cursor: pointer;
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.07),
+      0 3px 0 #05070c,
+      0 5px 12px rgba(5, 7, 12, 0.35);
+    transition: transform 90ms ease, box-shadow 90ms ease;
+    touch-action: none;
+  }
+  .pk-cap {
+    font-size: 0.95rem;
+    letter-spacing: 0.04em;
+  }
+  .pk-lamp {
+    position: absolute;
+    top: 7px;
+    right: 8px;
+    width: 4px;
+    height: 4px;
+    border-radius: 50%;
+    background: rgba(14, 196, 252, 0.25);
+    transition: background 90ms ease, box-shadow 90ms ease;
+  }
+  .pk-key:hover {
+    border-color: #3a4150;
+  }
+  .pk-key:focus-visible {
+    outline: 2px solid #0ec4fc;
+    outline-offset: 2px;
+  }
+  .pk-key[data-lit] {
+    transform: translateY(3px);
+    box-shadow:
+      inset 0 2px 6px rgba(0, 0, 0, 0.55),
+      0 0 0 #05070c;
+    color: #0ec4fc;
+  }
+  .pk-key[data-lit] .pk-lamp {
+    background: #0ec4fc;
+    box-shadow: 0 0 8px rgba(14, 196, 252, 0.9);
+  }
+  .pk-note {
+    margin: 16px 0 0;
+    font-size: 0.7rem;
+    letter-spacing: 0.03em;
+    line-height: 1.6;
+    color: #7d8798;
+  }
+  .pk-note a {
+    color: #cfd6e2;
+    text-decoration: underline;
+    text-underline-offset: 3px;
+  }
+</style>

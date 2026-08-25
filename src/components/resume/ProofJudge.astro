@@ -1,66 +1,151 @@
 ---
-// PROOF — the Engineer bullet: "an active-learning model that learned my taste
-// and steered masters toward it... was overfitting a biased evaluator rather
-// than improving the audio. I shelved it and put the work into the judge."
-// Instead of asserting the insight, this draws it: the score the biased judge
-// hands out climbs while blind, loudness-matched preference stays flat. They
-// diverge. That gap is reward-model overoptimization. Then the fix lights up:
-// blind, loudness-matched, gated against doing nothing. Theme-aware,
-// reduced-motion-safe, fluid SVG so it never overflows on mobile.
+// PROOF for the Engineer bullet: the taste model was overfitting my ratings, so
+// the judging moved out of the model and into a blind, loudness-matched test.
+//
+// This module is the CHECKABLE ARTIFACT: it does not assert the story, it shows
+// the ledger. Every row, date, LUFS value, listening note and aggregate below
+// is read from src/lib/judge-ledger.json, a dated snapshot of the real harness
+// database (mix_judgements / mix_jobs / mix_variants on the M1). Nothing here is
+// authored for effect and nothing animates a number into existence.
+//
+// It opens by default, so it is built for a cold glance: the numbers are static
+// in the HTML, only the ledger lines and the two bars have a reveal, and any
+// reduced-motion or no-JS reader gets the settled state immediately.
+import ledger from "../../lib/judge-ledger.json";
 
-const W = 320;
-const H = 116;
-// y inverted: lower y = higher value.
-// what the biased judge rewarded — climbs.
-const REWARD = [[0, 96], [70, 78], [140, 58], [230, 36], [320, 20]];
-// what I actually preferred, judged blind — stays flat, then dips.
-const TRUE = [[0, 96], [70, 92], [140, 90], [230, 94], [320, 100]];
-const toPath = (pts: number[][]) => pts.map((p, i) => `${i ? "L" : "M"}${p[0]} ${p[1]}`).join(" ");
-const REWARD_D = toPath(REWARD);
-const TRUE_D = toPath(TRUE);
-const SPLIT = [140, 74]; // where the two lines visibly part
+type Row = { d: string; axis: string; lufs: number; orig: boolean; note?: string };
 
-const FIXES = ["blind", "loudness-matched", "gated vs doing nothing"];
+const rows = ledger.rows as Row[];
+const b = ledger.blind;
+const j = ledger.jobs;
+const r = ledger.renders;
+
+// share of decisions where the winning take was the untouched original
+const pctVotes = Math.round((b.chose_original / b.votes) * 100); // 45
+const pctRuns = Math.round((j.champion_original / j.with_champion) * 100); // 54
+
+// flatten to display lines so the ledger reveal can stagger row + note alike,
+// and so a date only prints when the session changes (as the log reads)
+type Line =
+  | { kind: "row"; d: string; axis: string; lufs: string; orig: boolean; newDay: boolean }
+  | { kind: "note"; text: string };
+
+const lines: Line[] = [];
+rows.forEach((row, i) => {
+  lines.push({
+    kind: "row",
+    d: row.d,
+    axis: row.axis,
+    lufs: row.lufs.toFixed(2),
+    orig: row.orig,
+    newDay: i === 0 || rows[i - 1].d !== row.d,
+  });
+  if (row.note) lines.push({ kind: "note", text: row.note });
+});
+
+const BARS = [
+  { label: "blind votes", pct: pctVotes, num: b.chose_original, den: b.votes },
+  { label: "decided runs", pct: pctRuns, num: j.champion_original, den: j.with_champion },
+];
 ---
 
 <div class="pf pf-judge" data-proof="judge">
-  <div class="pf-head">
-    <span class="pf-kicker">live · the evaluation</span>
-    <h4 class="pf-title">The judge was overfitting. The audio was not improving.</h4>
-    <button type="button" class="pf-replay" data-replay aria-label="Replay the divergence">
-      <svg viewBox="0 0 16 16" width="13" height="13" aria-hidden="true"><path d="M13 8a5 5 0 1 1-1.46-3.54M13 2.5V5h-2.5" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
-      <span data-run-label>Replay</span>
-    </button>
-  </div>
+  <header class="pf-head">
+    <p class="pf-kicker">the harness ledger · snapshot {ledger.snapshot}</p>
+    <h4 class="pf-title">
+      The taste model was overfitting my ratings, not improving the audio. I shelved it and built a blind judge.
+    </h4>
+    <p class="jg-method">
+      each round: two takes, unlabeled, matched to the same LUFS, judged on one axis
+      (focal, dynamics, space, raw vs processed). the original is always on the ballot.
+    </p>
+  </header>
 
-  <figure class="jg-chart">
-    <svg class="jg-svg" viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" role="img" aria-label="The reward the biased judge handed out climbed while blind preference stayed flat; the gap is reward-model overoptimization.">
-      <g class="jg-grid" aria-hidden="true">
-        <line x1="0" y1="0.5" x2={W} y2="0.5"></line>
-        <line x1="0" y1={H * 0.5} x2={W} y2={H * 0.5}></line>
-        <line x1="0" y1={H - 0.5} x2={W} y2={H - 0.5}></line>
-      </g>
-      <!-- divergence shading between the two lines, right of the split -->
-      <path class="jg-gap" data-gap d={`M${SPLIT[0]} ${SPLIT[1]} L320 20 L320 100 L${SPLIT[0]} ${TRUE[2][1]} Z`} aria-hidden="true"></path>
-      <!-- blind preference (flat, muted) -->
-      <path class="jg-true" data-true d={TRUE_D} fill="none"></path>
-      <!-- what the judge rewarded (climbs, accent) -->
-      <path class="jg-reward" data-reward d={REWARD_D} fill="none"></path>
-      <circle class="jg-split" data-split cx={SPLIT[0]} cy={SPLIT[1]} r="3.2" aria-hidden="true"></circle>
-    </svg>
+  <div class="jg-body">
+    <section class="jg-ledger" aria-label="Ledger rows">
+      <div class="jg-secthead">
+        <span class="jg-seclabel">the ledger</span>
+        <span class="jg-secmeta">{rows.length} of {b.rounds} rounds</span>
+      </div>
 
-    <span class="jg-tag jg-tag-reward" data-endlabel aria-hidden="true">reward ↑</span>
-    <span class="jg-tag jg-tag-true" aria-hidden="true">blind preference →</span>
-    <span class="jg-gaplabel" data-gaplabel aria-hidden="true">overfitting the evaluator</span>
-  </figure>
+      <div class="jg-tablewrap">
+        <table class="jg-table">
+          <caption class="jg-sr">
+            Ten rounds from the blind listening ledger: date, axis, the LUFS both takes were
+            matched to, and which take won. Listening notes are quoted under their round.
+          </caption>
+          <colgroup>
+            <col class="jg-c-d" /><col class="jg-c-a" /><col class="jg-c-l" /><col class="jg-c-w" />
+          </colgroup>
+          <thead>
+            <tr>
+              <th scope="col">date</th>
+              <th scope="col">axis</th>
+              <th scope="col" class="jg-num">matched lufs</th>
+              <th scope="col">winner</th>
+            </tr>
+          </thead>
+          <tbody>
+            {lines.map((l, i) =>
+              l.kind === "row" ? (
+                <tr class:list={["jg-line", "jg-row", { "is-day": l.newDay }]} style={`--i:${i}`}>
+                  <td class="jg-d">{l.newDay ? l.d : ""}</td>
+                  <td class="jg-a">{l.axis}</td>
+                  <td class="jg-l jg-num">{l.lufs}</td>
+                  <td class="jg-w"><span class:list={["jg-dot", l.orig ? "is-keep" : "is-move"]} aria-hidden="true"></span><span class={l.orig ? "jg-win-keep" : "jg-win-move"}>{l.orig ? "original" : "render"}</span></td>
+                </tr>
+              ) : (
+                <tr class="jg-line jg-noteline" style={`--i:${i}`}>
+                  <td colspan="4"><span class="jg-note">{l.text}</span></td>
+                </tr>
+              )
+            )}
+          </tbody>
+        </table>
+      </div>
 
-  <div class="jg-fix" data-fix>
-    <span class="jg-fix-label">so I shelved it and rebuilt the judge:</span>
-    <span class="jg-chips">
-      {FIXES.map((f) => (
-        <span class="jg-chip" data-chip>{f}</span>
-      ))}
-    </span>
+      <p class="jg-foot">the first nine rounds and the latest. behind them: {j.total_runs} runs, {r.total} renders, {r.avg_per_run} per run ({r.max_per_run} at most).</p>
+    </section>
+
+    <section class="jg-verdict" aria-label="What the ledger adds up to">
+      <dl class="jg-agg">
+        <dt class="jg-n">{b.votes}</dt>
+        <dd class="jg-t">blind loudness-matched votes</dd>
+        <dt class="jg-n">{b.chose_original}</dt>
+        <dd class="jg-t">kept the original</dd>
+        <dt class="jg-n jg-word">single</dt>
+        <dd class="jg-t">rater</dd>
+      </dl>
+
+      <div class="jg-restraint">
+        <p class="jg-rlabel">how often the original won</p>
+        <div class="jg-bars">
+          {BARS.map((bar, i) => (
+            <div class="jg-barrow">
+              <span class="jg-blabel">{bar.label}</span>
+              <span class="jg-track">
+                <span class="jg-fill" style={`width:${bar.pct}%;--i:${i}`}></span>
+                <span class="jg-half" aria-hidden="true"></span>
+              </span>
+              <span class="jg-bval">{bar.num}<span class="jg-slash">/</span>{bar.den}</span>
+            </div>
+          ))}
+        </div>
+        <p class="jg-scale"><span class="jg-halfkey" aria-hidden="true"></span> dashed line: 50%</p>
+        <p class="jg-read">
+          of {j.with_champion} runs that reached a champion, {j.champion_original} champions were the
+          original. doing nothing won {pctRuns}% of decided runs.
+        </p>
+      </div>
+
+      <p class="jg-caveat">
+        <span class="jg-flag" aria-hidden="true"></span>
+        <span>
+          single rater so far, {b.rounds} rounds across {b.sessions} sessions, {b.first} to {b.last}.
+          a multi-rater blind run is the next gate. no catch trials yet.
+        </span>
+      </p>
+    </section>
   </div>
 </div>
 
@@ -68,176 +153,347 @@ const FIXES = ["blind", "loudness-matched", "gated vs doing nothing"];
   import { onPlay, prefersReduced } from "./lib/motion";
 
   document.querySelectorAll<HTMLElement>('[data-proof="judge"]').forEach((root) => {
-    const reward = root.querySelector<SVGPathElement>("[data-reward]");
-    const truth = root.querySelector<SVGPathElement>("[data-true]");
-    const runLabel = root.querySelector<HTMLElement>("[data-run-label]");
-    const chips = Array.from(root.querySelectorAll<HTMLElement>("[data-chip]"));
+    // Settled state is the default in CSS: no JS, no motion, or a throttled
+    // tab all leave the ledger fully readable. Arming is what opts into the
+    // reveal, so it can only ever hide rows while the script is in control.
+    if (prefersReduced()) {
+      root.classList.add("is-on");
+      return;
+    }
+    root.classList.add("is-armed");
 
-    const setup = (p: SVGPathElement | null) => {
-      const len = p?.getTotalLength?.() ?? 320;
-      if (p) { p.style.strokeDasharray = `${len}`; p.style.strokeDashoffset = `${len}`; }
-      return len;
-    };
-    const rLen = setup(reward);
-    const tLen = setup(truth);
+    const reveal = () => root.classList.add("is-on");
+    onPlay(root, reveal, { threshold: 0.15 });
 
-    let timers: number[] = [];
-    const clear = () => { timers.forEach(clearTimeout); timers = []; };
-    const after = (ms: number, fn: () => void) => { timers.push(window.setTimeout(fn, ms)); };
-
-    const draw = (p: SVGPathElement | null, dur: number) => {
-      if (!p) return;
-      p.style.transition = "none";
-      // force reflow so the reset takes before we animate
-      void p.getBoundingClientRect();
-      requestAnimationFrame(() => requestAnimationFrame(() => {
-        p.style.transition = `stroke-dashoffset ${dur}ms cubic-bezier(0.4, 0, 0.1, 1)`;
-        p.style.strokeDashoffset = "0";
-      }));
-    };
-
-    const settle = () => {
-      if (reward) { reward.style.transition = "none"; reward.style.strokeDashoffset = "0"; }
-      if (truth) { truth.style.transition = "none"; truth.style.strokeDashoffset = "0"; }
-      root.classList.add("is-done");
-      chips.forEach((c) => c.classList.add("is-on"));
-    };
-
-    const run = () => {
-      clear();
-      root.classList.remove("is-done");
-      chips.forEach((c) => c.classList.remove("is-on"));
-      if (runLabel) runLabel.textContent = "Replaying";
-
-      if (prefersReduced()) { settle(); if (runLabel) runLabel.textContent = "Replay"; return; }
-
-      if (reward) reward.style.strokeDashoffset = `${rLen}`;
-      if (truth) truth.style.strokeDashoffset = `${tLen}`;
-      draw(truth, 1100);
-      draw(reward, 1300);
-
-      after(1450, () => {
-        root.classList.add("is-done");
-        if (runLabel) runLabel.textContent = "Replay";
-      });
-      chips.forEach((c, i) => after(1550 + i * 360, () => c.classList.add("is-on")));
-      // headless backstop
-      after(2900, settle);
-    };
-
-    root.querySelector<HTMLButtonElement>("[data-replay]")?.addEventListener("click", run);
-    onPlay(root, run, { threshold: 0.3 });
+    // Backstop for headless/backgrounded tabs: if the module has a box on
+    // screen and nothing has played it, settle it. A panel still collapsed
+    // (height 0) stays armed so its reveal survives for the first open.
+    window.setTimeout(() => {
+      if (root.getBoundingClientRect().height > 1) reveal();
+    }, 2200);
   });
 </script>
 
 <style>
-  .pf {
-    --pf-radius: 8px;
-    --pf-bg: color-mix(in srgb, var(--surface-1) 60%, var(--bg));
-    margin-top: var(--space-4);
-    border: 1.5px solid transparent;
-    border-radius: var(--pf-radius);
-    background:
-      linear-gradient(var(--pf-bg), var(--pf-bg)) padding-box,
-      linear-gradient(135deg, #ff3b6e 0%, #ff6e21 50%, #eeff00 100%) border-box;
-    box-shadow: 0 0 22px rgba(255, 59, 110, 0.15), 0 10px 26px -12px rgba(0, 0, 0, 0.5);
-    padding: var(--space-4);
-    font-weight: var(--fw-regular);
-  }
-  .pf-head { display: flex; align-items: baseline; gap: var(--space-3); margin-bottom: var(--space-4); flex-wrap: wrap; }
-  .pf-kicker { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0.625rem; letter-spacing: 0.16em; text-transform: uppercase; color: var(--accent); }
-  .pf-title { font-size: 0.9375rem; font-weight: var(--fw-semibold); letter-spacing: -0.01em; color: var(--text); flex: 1 1 auto; }
-  .pf-replay {
-    display: inline-flex; align-items: center; gap: 6px; appearance: none;
-    border: 1px solid var(--line); background: var(--bg); color: var(--text);
-    font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0.6875rem;
-    letter-spacing: 0.04em; padding: 5px 11px; border-radius: 999px; cursor: pointer;
-    transition: border-color 160ms ease, color 160ms ease;
-  }
-  .pf-replay:hover { border-color: var(--accent); color: var(--accent); }
+  /* The module sits inside the sheet's dark proof panel (#101216), so it draws
+     no card of its own and it does not read theme tokens: the surrounding page
+     is a white résumé in a light theme. Palette is stated outright. */
+  .pf-judge {
+    --ink: #e7ecf3;
+    --mid: #97a2b3;
+    --dim: #6c7787;
+    --line: rgba(160, 190, 230, 0.14);
+    --line-soft: rgba(160, 190, 230, 0.07);
+    --keep: #00d44a;
+    --move: #0ec4fc;
+    --warn: #ffb347;
+    --mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
 
-  /* ── chart ── */
-  .jg-chart { margin: 0; position: relative; }
-  .jg-svg { display: block; width: 100%; height: 116px; overflow: visible; }
-  .jg-grid line { stroke: var(--line); stroke-width: 1; opacity: 0.5; vector-effect: non-scaling-stroke; }
+    margin: 0;
+    color: var(--ink);
+    font-weight: 400;
+    text-align: left;
+  }
 
-  .jg-gap {
-    fill: color-mix(in srgb, var(--accent) 12%, transparent);
-    opacity: 0;
-    transition: opacity 0.6s ease 0.9s;
-  }
-  .pf-judge.is-done .jg-gap { opacity: 1; }
-
-  .jg-true {
-    stroke: var(--muted);
-    stroke-width: 1.8;
-    stroke-dasharray: 4 3;
-    stroke-linecap: round;
-    vector-effect: non-scaling-stroke;
-  }
-  .jg-reward {
-    stroke: var(--accent);
-    stroke-width: 2.4;
-    stroke-linecap: round;
-    stroke-linejoin: round;
-    vector-effect: non-scaling-stroke;
-  }
-  .jg-split {
-    fill: var(--bg); stroke: var(--accent); stroke-width: 1.6;
-    vector-effect: non-scaling-stroke;
-    opacity: 0; transition: opacity 0.4s ease 0.8s;
-  }
-  .pf-judge.is-done .jg-split { opacity: 1; }
-
-  /* ── overlay labels ── */
-  .jg-tag {
+  .jg-sr {
     position: absolute;
-    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-    font-size: 0.5625rem; white-space: nowrap; pointer-events: none;
-    opacity: 0; transition: opacity 0.4s ease 1s;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
   }
-  .pf-judge.is-done .jg-tag { opacity: 1; }
-  .jg-tag-reward { right: 0; top: 4px; color: var(--accent); font-weight: var(--fw-semibold); }
-  .jg-tag-true { right: 0; bottom: 2px; color: var(--muted); }
-  .jg-gaplabel {
-    position: absolute; left: 44%; top: 30%;
-    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-    font-size: 0.5625rem; letter-spacing: 0.02em; color: var(--accent);
-    background: color-mix(in srgb, var(--bg) 86%, transparent);
-    border: 1px solid color-mix(in srgb, var(--accent) 40%, var(--line));
-    border-radius: 4px; padding: 1px 5px; white-space: nowrap; pointer-events: none;
-    opacity: 0; transform: translateY(4px); transition: opacity 0.45s ease 1.1s, transform 0.45s ease 1.1s;
-  }
-  .pf-judge.is-done .jg-gaplabel { opacity: 1; transform: none; }
 
-  /* ── the fix ── */
-  .jg-fix {
-    display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px;
-    margin-top: var(--space-4); padding-top: var(--space-3);
+  /* ── head ── */
+  .pf-head {
+    display: block;
+    margin: 0 0 clamp(12px, 2vw, 18px);
+  }
+  .pf-kicker {
+    margin: 0 0 7px;
+    font-family: var(--mono);
+    font-size: 0.625rem;
+    letter-spacing: 0.1em;
+    color: var(--move);
+  }
+  .pf-title {
+    margin: 0;
+    max-width: 62ch;
+    font-size: clamp(0.95rem, 1.5vw, 1.075rem);
+    font-weight: 500;
+    line-height: 1.35;
+    letter-spacing: -0.01em;
+    color: var(--ink);
+  }
+  .jg-method {
+    margin: 8px 0 0;
+    max-width: 68ch;
+    font-family: var(--mono);
+    font-size: 0.6875rem;
+    line-height: 1.6;
+    color: var(--mid);
+  }
+
+  /* ── body: ledger left, what it adds up to right ── */
+  .jg-body {
+    display: grid;
+    gap: clamp(14px, 2.4vw, 26px);
+    border-top: 1px solid var(--line);
+    padding-top: clamp(12px, 2vw, 18px);
+  }
+  @media (min-width: 46rem) {
+    .jg-body {
+      grid-template-columns: minmax(0, 1.22fr) minmax(0, 0.9fr);
+    }
+    .jg-verdict {
+      border-left: 1px solid var(--line);
+      padding-left: clamp(14px, 2.4vw, 26px);
+    }
+  }
+
+  /* ── the ledger ── */
+  .jg-ledger { min-width: 0; }
+  .jg-secthead {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 8px;
+    font-family: var(--mono);
+    font-size: 0.625rem;
+    letter-spacing: 0.08em;
+  }
+  .jg-seclabel { color: var(--ink); }
+  .jg-secmeta { color: var(--dim); }
+
+  /* on a phone the ledger scrolls sideways rather than breaking a field name
+     like raw_vs_processed across two lines */
+  .jg-tablewrap { overflow-x: auto; }
+  .jg-table {
+    width: 100%;
+    min-width: 356px;
+    table-layout: fixed;
+    border-collapse: collapse;
+    font-family: var(--mono);
+    font-size: 0.6875rem;
+    line-height: 1.4;
+  }
+  .jg-c-d { width: 24%; }
+  .jg-c-a { width: 30%; }
+  .jg-c-l { width: 21%; }
+  .jg-c-w { width: 25%; }
+
+  .jg-table th {
+    padding: 0 0 6px;
+    font-weight: 400;
+    font-size: 0.5625rem;
+    letter-spacing: 0.12em;
+    color: var(--dim);
+    text-align: left;
+    border-bottom: 1px solid var(--line);
+  }
+  .jg-table td {
+    padding: 5px 8px 5px 0;
+    vertical-align: baseline;
+    border-bottom: 1px solid var(--line-soft);
+  }
+  .jg-table td:last-child { padding-right: 0; }
+  .jg-num { text-align: right; font-variant-numeric: tabular-nums; }
+  .jg-table th.jg-num { text-align: right; padding-right: 10px; }
+  .jg-table td.jg-l { padding-right: 10px; color: var(--mid); }
+  .jg-d { color: var(--mid); font-variant-numeric: tabular-nums; }
+  .jg-a { color: var(--ink); }
+
+  /* a session break gets a real rule, the way the log groups by date */
+  .jg-row.is-day:not(:first-child) td { border-top: 1px solid var(--line); }
+
+  .jg-w { white-space: nowrap; }
+  .jg-dot {
+    display: inline-block;
+    width: 5px;
+    height: 5px;
+    margin-right: 7px;
+    border-radius: 50%;
+    vertical-align: 1px;
+  }
+  .jg-dot.is-keep { background: var(--keep); }
+  .jg-dot.is-move { background: transparent; box-shadow: inset 0 0 0 1.5px var(--move); }
+  .jg-win-keep { color: var(--keep); }
+  .jg-win-move { color: var(--move); opacity: 0.85; }
+
+  .jg-noteline td {
+    padding: 0 0 7px;
+    border-bottom: 1px solid var(--line-soft);
+  }
+  .jg-note {
+    display: block;
+    padding-left: 9px;
+    border-left: 1px solid var(--line);
+    font-size: 0.65rem;
+    line-height: 1.5;
+    color: var(--dim);
+  }
+  .jg-note::before { content: "\201C"; }
+  .jg-note::after { content: "\201D"; }
+
+  .jg-foot {
+    margin: 9px 0 0;
+    font-family: var(--mono);
+    font-size: 0.625rem;
+    line-height: 1.55;
+    color: var(--dim);
+  }
+
+  /* ── what it adds up to ── */
+  .jg-verdict { min-width: 0; }
+  /* the aggregate, big and quiet: the number, then what it counts */
+  .jg-agg {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    align-items: baseline;
+    column-gap: 11px;
+    row-gap: 5px;
+    margin: 0;
+    font-family: var(--mono);
+  }
+  .jg-n {
+    margin: 0;
+    text-align: right;
+    font-size: 1.3rem;
+    line-height: 1.15;
+    letter-spacing: -0.02em;
+    color: var(--ink);
+    font-variant-numeric: tabular-nums;
+  }
+  .jg-word { font-size: 0.95rem; }
+  .jg-t {
+    margin: 0;
+    font-size: 0.6875rem;
+    line-height: 1.4;
+    color: var(--mid);
+  }
+
+  .jg-restraint {
+    margin-top: clamp(12px, 2vw, 18px);
+    padding-top: clamp(11px, 1.8vw, 15px);
     border-top: 1px solid var(--line);
   }
-  .jg-fix-label { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0.6875rem; color: var(--muted); }
-  .jg-chips { display: flex; flex-wrap: wrap; gap: 6px; }
-  .jg-chip {
-    font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0.625rem;
-    color: var(--muted); background: var(--bg);
-    border: 1px solid var(--line); border-radius: 999px; padding: 3px 9px;
-    opacity: 0.45; transform: translateY(2px);
-    transition: opacity 0.32s ease, transform 0.32s ease, color 0.32s ease, border-color 0.32s ease;
+  .jg-rlabel {
+    margin: 0 0 9px;
+    font-family: var(--mono);
+    font-size: 0.5625rem;
+    letter-spacing: 0.12em;
+    color: var(--dim);
   }
-  .jg-chip.is-on {
-    opacity: 1; transform: none; color: var(--accent);
-    border-color: color-mix(in srgb, var(--accent) 50%, var(--line));
+  .jg-bars { display: grid; gap: 7px; }
+  .jg-barrow {
+    display: grid;
+    grid-template-columns: minmax(0, auto) minmax(60px, 1fr) auto;
+    align-items: center;
+    gap: 9px;
+    font-family: var(--mono);
+    font-size: 0.625rem;
   }
-  .jg-chip.is-on::before { content: "✓ "; }
+  .jg-blabel { color: var(--mid); white-space: nowrap; }
+  .jg-track {
+    position: relative;
+    display: block;
+    height: 6px;
+    border-radius: 3px;
+    background: rgba(160, 190, 230, 0.1);
+  }
+  .jg-fill {
+    display: block;
+    height: 100%;
+    border-radius: 3px;
+    background: var(--keep);
+    opacity: 0.8;
+    transform-origin: left center;
+  }
+  .jg-half {
+    position: absolute;
+    top: -3px;
+    bottom: -3px;
+    left: 50%;
+    width: 0;
+    border-left: 1px dashed rgba(231, 236, 243, 0.5);
+  }
+  .jg-bval { color: var(--ink); font-variant-numeric: tabular-nums; }
+  .jg-slash { color: var(--dim); padding: 0 1px; }
 
-  @media (max-width: 34rem) {
-    .jg-svg { height: 104px; }
-    .jg-gaplabel { left: 38%; }
+  .jg-scale {
+    margin: 7px 0 0;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-family: var(--mono);
+    font-size: 0.5625rem;
+    color: var(--dim);
+  }
+  .jg-halfkey {
+    display: inline-block;
+    width: 0;
+    height: 12px;
+    transform: translateY(2px);
+    border-left: 1px dashed rgba(231, 236, 243, 0.5);
+  }
+  .jg-read {
+    margin: 10px 0 0;
+    font-family: var(--mono);
+    font-size: 0.6875rem;
+    line-height: 1.6;
+    color: var(--mid);
+  }
+
+  /* ── the caveat, stated plainly and last ── */
+  .jg-caveat {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    margin: clamp(11px, 1.8vw, 16px) 0 0;
+    padding-top: clamp(10px, 1.6vw, 14px);
+    border-top: 1px solid var(--line);
+    font-family: var(--mono);
+    font-size: 0.625rem;
+    line-height: 1.6;
+    color: var(--dim);
+  }
+  .jg-flag {
+    flex: none;
+    width: 5px;
+    height: 5px;
+    border-radius: 1px;
+    background: var(--warn);
+    transform: translateY(-1px);
+  }
+
+  /* ── reveal: settled by default, armed only when the script takes over ── */
+  .pf-judge.is-armed .jg-line {
+    opacity: 0;
+    transform: translateY(3px);
+    transition: opacity 340ms ease, transform 340ms cubic-bezier(0.22, 1, 0.36, 1);
+    transition-delay: calc(var(--i, 0) * 38ms);
+  }
+  .pf-judge.is-armed .jg-fill {
+    transform: scaleX(0);
+    transition: transform 780ms cubic-bezier(0.22, 1, 0.36, 1);
+    transition-delay: calc(560ms + var(--i, 0) * 90ms);
+  }
+  .pf-judge.is-armed.is-on .jg-line { opacity: 1; transform: none; }
+  .pf-judge.is-armed.is-on .jg-fill { transform: scaleX(1); }
+
+  @media (max-width: 30rem) {
+    .jg-table { font-size: 0.625rem; }
+    .jg-barrow { grid-template-columns: minmax(0, auto) minmax(44px, 1fr) auto; gap: 7px; }
   }
 
   @media (prefers-reduced-motion: reduce) {
-    .jg-gap, .jg-split, .jg-tag, .jg-gaplabel, .jg-chip { transition: none !important; }
-    .jg-reward, .jg-true { stroke-dashoffset: 0 !important; }
+    .pf-judge .jg-line {
+      opacity: 1 !important;
+      transform: none !important;
+    }
+    .pf-judge .jg-fill { transform: none !important; }
+    .pf-judge .jg-line,
+    .pf-judge .jg-fill { transition: none !important; }
   }
 </style>
