@@ -65,10 +65,9 @@ const MARKS = [
               aria-expanded="false"
               aria-controls={`proof-${m.key}`}
             >
-              <svg class="r-mark-ink" viewBox="0 0 44 34" fill="none" stroke="currentColor"
-                stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                <path d="M21.5 4.2c-7.8-1.1-15 2.8-15.6 9.2-.6 6.6 5.4 11.9 12.9 12.4 7.4.5 14.4-3.4 15-9.6.5-5.4-3.9-9.9-9.8-11.3" />
-                <path d="M35.8 16.9l4.9 1.2-2.7 4.2" />
+              <svg class="r-mark-oval" viewBox="0 0 100 42" preserveAspectRatio="none" fill="none"
+                stroke="currentColor" stroke-width="3.2" stroke-linecap="round" aria-hidden="true">
+                <path d="M50 5.5C26 4 7 11 6.2 21c-.8 10.5 17.5 16.5 43 15.5 25.6-1 45-7.5 44.6-16.5C93.4 11 76 4.6 56 5.2" />
               </svg>
               <span class="r-mark-word">{m.word}</span>
               <i class="r-mark-dot" aria-hidden="true"></i>
@@ -112,11 +111,14 @@ const MARKS = [
     const base = wrap.getBoundingClientRect();
     for (const m of marks) {
       const t = document.querySelector(m.dataset.markTarget || "");
-      if (!t) continue;
+      if (!t) {
+        m.removeAttribute("data-placed");
+        continue;
+      }
       const r = t.getBoundingClientRect();
       m.style.top = `${Math.round(r.top - base.top + r.height / 2)}px`;
+      m.setAttribute("data-placed", "");
     }
-    wrap.setAttribute("data-marks-placed", "");
   };
 
   let openKey: string | null = null;
@@ -279,55 +281,57 @@ const MARKS = [
       color: #b33a2a;
     }
 
-    /* ── the marks: drawn marginalia in the editor's red — a reader's
-       pen on the document, not an object stuck to it ── */
+    /* ── the marks: a reader's red pen circling a word in the margin,
+       half on the paper, half on the desk ── */
     .r-mark {
       display: none;
     }
     @media (min-width: 900px) {
       .r-mark {
-        display: flex;
-        flex-direction: column;
+        display: inline-flex;
         align-items: center;
-        gap: 1px;
+        justify-content: center;
         position: absolute;
         z-index: 2;
-        width: 52px;
-        padding: 4px 2px;
+        padding: 8px 14px;
         border: 0;
         background: transparent;
         cursor: pointer;
         color: #b33a2a;
-        transform: translateY(-50%);
+        white-space: nowrap;
+        transform: translateY(-50%) rotate(-2deg);
         opacity: 0;
+        visibility: hidden;
         transition: opacity 300ms ease, transform 160ms ease;
       }
-      [data-marks-placed] .r-mark {
+      .r-mark[data-placed] {
         opacity: 1;
+        visibility: visible;
       }
       .r-mark-left {
-        left: 2px;
+        left: -30px;
       }
       .r-mark-right {
-        right: 2px;
+        right: -30px;
+        transform: translateY(-50%) rotate(1.6deg);
       }
-      .r-mark-right .r-mark-ink {
-        transform: scaleX(-1);
-      }
-      .r-mark-ink {
-        width: 40px;
-        height: 31px;
+      .r-mark-oval {
+        position: absolute;
+        inset: 0;
+        width: 100%;
+        height: 100%;
+        overflow: visible;
       }
       .r-mark-word {
         font-family: "IBM Plex Mono", ui-monospace, monospace;
-        font-size: 0.58rem;
+        font-size: 0.62rem;
         letter-spacing: 0.05em;
         line-height: 1;
       }
       .r-mark-dot {
         position: absolute;
-        top: 0;
-        right: 4px;
+        top: -1px;
+        right: 2px;
         width: 4px;
         height: 4px;
         border-radius: 50%;
@@ -342,14 +346,19 @@ const MARKS = [
           50% { opacity: 1; }
         }
       }
-      .r-mark:hover,
-      .r-mark:focus-visible {
-        transform: translateY(-50%) scale(1.06);
+      .r-mark:hover {
+        transform: translateY(-50%) rotate(-2deg) scale(1.07);
+      }
+      .r-mark-right:hover {
+        transform: translateY(-50%) rotate(1.6deg) scale(1.07);
       }
       .r-mark:focus-visible {
         outline: 2px solid #b33a2a;
-        outline-offset: 2px;
-        border-radius: 6px;
+        outline-offset: 3px;
+        border-radius: 999px;
+      }
+      .r-mark[aria-expanded="true"] {
+        color: #8c2417;
       }
       .r-mark[aria-expanded="true"] .r-mark-dot {
         opacity: 1;
