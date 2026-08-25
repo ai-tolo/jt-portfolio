@@ -30,18 +30,38 @@ const isPhone = (s: string) => /^\(?\d{3}\)?[\s.-]?\d{3}[\s.-]?\d{4}$/.test(s.tr
 
 <div class="print-resume">
   <header class="pr-header">
-    <div class="pr-name">{c.name}</div>
-    <div class="pr-role">{c.title}</div>
+    <div class="pr-name-row">
+      <div class="pr-name">{c.name}</div>
+      <div class="pr-role">{c.title}</div>
+    </div>
+    {/* Contact policy (Jon, 2026-08-25): phone is PRINT-ONLY; LinkedIn is an
+        icon on screen but stays a text URL in print (ATS parses text). */}
     <div class="pr-contact">
-      {c.contact.map((item, i) => (
-        <>
-          {i > 0 && " · "}
-          {isUrl(item) ? <a href={`https://${item}`}>{item}</a>
-            : isEmail(item) ? <a href={`mailto:${item}`}>{item}</a>
-            : isPhone(item) ? <a href={`tel:+1${item.replace(/\D/g, "")}`}>{item}</a>
-            : item}
-        </>
-      ))}
+      {c.contact.map((item, i) => {
+        const phone = isPhone(item);
+        const li = item.startsWith("linkedin.com");
+        return (
+          <span class={phone ? "pr-ct pr-print-only" : "pr-ct"}>
+            {i > 0 && <span class="pr-ct-sep"> · </span>}
+            {li ? (
+              <>
+                <a class="pr-li-text" href={`https://${item}`}>{item}</a>
+                <a class="pr-li-icon" href={`https://${item}`} aria-label="LinkedIn" target="_blank" rel="noopener noreferrer">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
+                    stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <rect x="3" y="3" width="18" height="18" rx="3" />
+                    <path d="M8 11v5" /><path d="M8 8v.01" />
+                    <path d="M12 16v-5" /><path d="M16 16v-3a2 2 0 0 0-4 0" />
+                  </svg>
+                </a>
+              </>
+            ) : isUrl(item) ? <a href={`https://${item}`}>{item}</a>
+              : isEmail(item) ? <a href={`mailto:${item}`}>{item}</a>
+              : phone ? <a href={`tel:+1${item.replace(/\D/g, "")}`}>{item}</a>
+              : item}
+          </span>
+        );
+      })}
     </div>
   </header>
 
@@ -57,13 +77,13 @@ const isPhone = (s: string) => /^\(?\d{3}\)?[\s.-]?\d{3}[\s.-]?\d{4}$/.test(s.tr
     <section>
       <h2>{heading}</h2>
       {entries.map((e) => (
-        <div class="pr-entry">
+        <div class="pr-entry" data-pr-org={e.org}>
           <div class="pr-entry-head">
             <div class="pr-org">{e.org}{e.pos && <span class="pr-pos"> · {e.pos}</span>}</div>
             <div class="pr-dates">{e.dates}</div>
           </div>
           <ul>
-            {e.bullets.map((b) => <li>{b}</li>)}
+            {e.bullets.map((b, bi) => <li data-bi={bi}>{b}</li>)}
           </ul>
           {e.link && (
             <div class="pr-link">{e.link.label} <a href={e.link.href}>{e.link.text}</a></div>
@@ -113,9 +133,15 @@ const isPhone = (s: string) => /^\(?\d{3}\)?[\s.-]?\d{3}[\s.-]?\d{4}$/.test(s.tr
   @media screen {
     .print-resume { display: none !important; }
     [data-resume-view="paper"] .print-resume { display: block !important; }
+    .print-resume .pr-print-only { display: none !important; }
+    .print-resume .pr-li-text { display: none !important; }
+    .print-resume .pr-li-icon svg { width: 13px; height: 13px; vertical-align: -2px; }
   }
   @media print {
-    @page { size: letter; margin: 0.45in 0.6in; }
+    .print-resume .pr-li-icon { display: none !important; }
+  }
+  @media print {
+    @page { size: letter; margin: 0.34in 0.48in; }
     html, body { background: #ffffff !important; background-image: none !important; }
     .site-header,
     .footer,
@@ -136,9 +162,9 @@ const isPhone = (s: string) => /^\(?\d{3}\)?[\s.-]?\d{3}[\s.-]?\d{4}$/.test(s.tr
      reset below (which would otherwise zero the li hanging indents and section
      rhythm — the reset's :is() carries class specificity). */
   .print-resume {
-    line-height: 1.38;
+    line-height: 1.35;
     font-family: "Geist", -apple-system, "Segoe UI", Helvetica, Arial, sans-serif;
-    font-size: 10pt;
+    font-size: 9.7pt;
     color: #222228;
     font-kerning: none;
     font-feature-settings: "kern" 0, "liga" 0;
@@ -153,21 +179,22 @@ const isPhone = (s: string) => /^\(?\d{3}\)?[\s.-]?\d{3}[\s.-]?\d{4}$/.test(s.tr
   }
   .print-resume a { color: inherit; text-decoration: none; }
 
-  .print-resume .pr-header { border-bottom: 1.5pt solid #B33A2A; padding-bottom: 5pt; margin-bottom: 6pt; }
-  .print-resume .pr-name { font-size: 22pt; font-weight: 700; letter-spacing: -0.02em; line-height: 1; color: #16161c; }
-  .print-resume .pr-role { font-size: 11pt; font-weight: 600; color: #B33A2A; margin-top: 3.5pt; letter-spacing: 0.01em; }
-  .print-resume .pr-contact { font-size: 8.75pt; color: #56565e; margin-top: 5pt; letter-spacing: 0.01em; }
+  .print-resume .pr-header { border-bottom: 1.5pt solid #B33A2A; padding-bottom: 3pt; margin-bottom: 4pt; }
+  .print-resume .pr-name-row { display: flex; justify-content: space-between; align-items: baseline; gap: 12pt; }
+  .print-resume .pr-name { font-size: 19pt; font-weight: 700; letter-spacing: -0.02em; line-height: 1; color: #16161c; }
+  .print-resume .pr-role { font-size: 10.5pt; font-weight: 600; color: #B33A2A; letter-spacing: 0.01em; }
+  .print-resume .pr-contact { font-size: 8.75pt; color: #56565e; margin-top: 4pt; letter-spacing: 0.01em; }
 
-  .print-resume section { margin-bottom: 5pt; }
+  .print-resume section { margin-bottom: 3pt; }
   .print-resume h2 {
     font-size: 8pt; font-weight: 700; text-transform: uppercase; letter-spacing: 0.12em;
-    color: #B33A2A; margin-bottom: 4pt; padding-bottom: 2pt;
+    color: #B33A2A; margin-bottom: 3pt; padding-bottom: 2pt;
     border-bottom: 0.75pt solid #e3dfda;
     line-height: 1.38;
   }
-  .print-resume .pr-summary { font-size: 10pt; line-height: 1.42; }
+  .print-resume .pr-summary { font-size: 9.7pt; line-height: 1.36; }
 
-  .print-resume .pr-entry { margin-bottom: 5pt; }
+  .print-resume .pr-entry { margin-bottom: 4pt; }
   .print-resume .pr-entry:last-child { margin-bottom: 0; }
   .print-resume .pr-entry-head { display: flex; justify-content: space-between; align-items: baseline; gap: 12pt; }
   .print-resume .pr-org { font-size: 10.5pt; font-weight: 700; letter-spacing: -0.005em; color: #16161c; }
@@ -175,7 +202,7 @@ const isPhone = (s: string) => /^\(?\d{3}\)?[\s.-]?\d{3}[\s.-]?\d{4}$/.test(s.tr
   .print-resume .pr-dates { font-size: 8.5pt; color: #71717a; white-space: nowrap; font-variant-numeric: tabular-nums; }
 
   .print-resume ul { list-style: none; margin-top: 2pt; }
-  .print-resume li { padding-left: 12pt; margin-bottom: 1.25pt; line-height: 1.36; }
+  .print-resume li { padding-left: 12pt; margin-bottom: 1pt; line-height: 1.3; }
   .print-resume li:last-child { margin-bottom: 0; }
   .print-resume li::before { content: "\203A"; display: inline-block; width: 12pt; margin-left: -12pt; color: #B33A2A; font-weight: 700; }
   .print-resume .pr-link { font-size: 8.75pt; color: #56565e; margin-top: 4pt; }
@@ -187,10 +214,10 @@ const isPhone = (s: string) => /^\(?\d{3}\)?[\s.-]?\d{3}[\s.-]?\d{4}$/.test(s.tr
   .print-resume .pr-deg { font-size: 9pt; color: #222228; margin-top: 1pt; }
   .print-resume .pr-hon { font-size: 8.5pt; color: #56565e; margin-top: 1pt; }
 
-  .print-resume .pr-skills div { font-size: 9.25pt; line-height: 1.5; }
+  .print-resume .pr-skills div { font-size: 9.25pt; line-height: 1.4; }
   .print-resume .pr-skill-k { font-weight: 700; color: #16161c; }
 
-  .print-resume .pr-outside { font-size: 8.5pt; color: #56565e; margin-top: 6pt; padding-top: 4pt; border-top: 0.75pt solid #e3dfda; }
+  .print-resume .pr-outside { font-size: 8.5pt; color: #56565e; margin-top: 2pt; padding-top: 2pt; border-top: 0.75pt solid #e3dfda; }
   .print-resume .pr-outside-k { font-weight: 700; color: #B33A2A; text-transform: uppercase; letter-spacing: 0.1em; font-size: 7.75pt; margin-right: 7pt; }
   .print-resume .pr-outside :global(em) { font-style: italic; }
 </style>

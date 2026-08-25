@@ -74,9 +74,9 @@ export const printContent: PrintResumeContent = {
   ],
   summary:
     "Design engineer working the seam between interface design, front-end, and applied AI. " +
-    "Built and shipped an agentic audio-mastering system solo, and ran into a known failure mode of these systems: " +
-    "the evaluator, not the model, sets the ceiling on quality. " +
-    "Six-plus years before that across enterprise AI, B2B SaaS, and a bilingual banking launch, designing with engineers rather than handing off.",
+    "Sole designer, builder, and shipper of an agentic audio-mastering system, and of the blind evaluation harness that gates it, " +
+    "built after hitting the known failure mode of these systems: the evaluator, not the model, sets the ceiling on quality. " +
+    "Before that, enterprise AI at a Fortune 500 cooperative, a B2B SaaS AI platform, and a bilingual banking launch that cut onboarding bounce from 40% to 25%, designing with engineers rather than handing off.",
   builds: [
     {
       org: "Finishable — the Engineer",
@@ -86,7 +86,7 @@ export const printContent: PrintResumeContent = {
         "Built an AI mastering system that works as an agent, not a button: it takes actions and carries state across a multi-step run, rendering several masters, running a blind, loudness-matched A/B (ITU-R BS.1770, true-peak controlled), and composing a final master from the strongest takes.",
         "Built an active-learning model of my own taste, then shelved it: blind A/B results showed it overfitting a biased evaluator, the known reward-model overoptimization failure.",
         "Moved the work into the judge instead: a blind, loudness-matched harness that gates every change against a baseline of doing nothing. Single-rater so far; a multi-rater blind run is the next gate.",
-        "Designed and shipped end to end, no handoffs — Astro, React, TypeScript, Python, FastAPI.",
+        "Designed and shipped end to end, no handoffs: Astro, React, TypeScript, Python, FastAPI.",
       ],
       link: {
         label: "Interactive case study:",
@@ -99,7 +99,7 @@ export const printContent: PrintResumeContent = {
       pos: "audio catalog and search",
       dates: "2026 – Present",
       bullets: [
-        "Built a searchable catalog of roughly 20,000 audio files, fingerprinted, deduplicated, and auto-classified through a Whisper, Claude, and librosa pipeline. Sole engineer across ingestion, classification, and interface.",
+        "Built a searchable catalog of roughly 20,000 audio files, read by sound, fingerprinted, deduplicated, and auto-classified through a Whisper, Claude, and librosa pipeline. Sole engineer across ingestion, classification, and interface.",
       ],
     },
     {
@@ -107,12 +107,12 @@ export const printContent: PrintResumeContent = {
       pos: "browser instrument",
       dates: "2026 – Present",
       bullets: [
-        "Built a playable instrument that runs in a browser tab — Web Audio synthesis, sequencing, and a performance layer — sound engine and interface designed as one system. It lives on my homepage; press power.",
+        "Built a playable instrument that runs in a browser tab: Web Audio synthesis, sequencing, and a performance layer, with the sound engine and the interface designed as one system. It lives on my homepage; press power.",
       ],
       link: {
         label: "Play it:",
-        text: "uxjon.com/#signal",
-        href: "https://uxjon.com/#signal",
+        text: "uxjon.com/#play",
+        href: "https://uxjon.com/#play",
       },
     },
   ],
@@ -122,9 +122,9 @@ export const printContent: PrintResumeContent = {
       pos: "Business Analyst, AI & BI Engineering",
       dates: "Aug 2023 – Present",
       bullets: [
-        "Designed and prototyped interfaces for enterprise AI and BI products, embedded with engineering where the interface had to make a model's output legible and usable.",
+        "Designed and prototyped interfaces for enterprise AI and BI products at a Fortune 500 agricultural cooperative, embedded with engineering on consumer agri-tech tools and internal AI tooling.",
         "Designed a FigJam-based documentation and alignment system adopted as the cross-team default across product, engineering, and business.",
-        "Built and shipped a Python tool that parses the dbt manifest and fans model lineage into Excel, Power BI, and stakeholder briefs in one pass; designed the output and owned it end to end.",
+        "Built and shipped a Python tool that parses the dbt manifest and fans model lineage into Excel, Power BI, and stakeholder briefs in one pass; owned it end to end for business users, engineers, and the AI team.",
       ],
     },
     {

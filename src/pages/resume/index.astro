@@ -1,76 +1,144 @@
 ---
+// /resume — the ANNOTATED SHEET (Jon, 2026-08-25). One document: the
+// ATS one-pager is the only résumé on the page, and the interactive
+// proofs hang off it as Post-it flags. Tap a flag and its proof module
+// unfolds in a dock under the sheet. This retires the paper/interactive
+// toggle and the Notion-driven screen résumé — resume-print.ts is the
+// single source of truth for résumé prose.
+//
+// The PDF button serves a real asset: public/jonathan-tollefson-resume.pdf.
+// REGENERATE IT after any content change (headless Chrome printToPDF of
+// this page; keep it ONE page — verify with pypdf).
 import Layout from "../../layouts/Layout.astro";
-import ResumeRenderer from "../../components/ResumeRenderer.astro";
-import ResumeShell from "../../components/resume/ResumeShell.astro";
 import PrintResume from "../../components/resume/PrintResume.astro";
 import AwayRail from "../../components/studio/AwayRail.astro";
-import { getDefaultResume } from "../../lib/resumes";
+import ProofAgentLoop from "../../components/resume/ProofAgentLoop.astro";
+import ProofJudge from "../../components/resume/ProofJudge.astro";
+import ProofDbtPipeline from "../../components/resume/ProofDbtPipeline.astro";
+import ProofGrowth from "../../components/resume/ProofGrowth.astro";
 
 export const prerender = true;
 
-const resume = await getDefaultResume();
-if (!resume) throw new Error("No default resume marked Active in the Resumes database.");
+// The flags: four proofs, anchored to the exact bullets they back.
+// Desktop-only (the flags are a pointer experience); phones get the
+// clean sheet and the same PDF.
+const FLAGS = [
+  { key: "agent", label: "watch a run", side: "right", accent: "#0ec4fc",
+    target: '[data-pr-org="Finishable — the Engineer"] li[data-bi="0"]' },
+  { key: "judge", label: "the judge", side: "right", accent: "#00d44a",
+    target: '[data-pr-org="Finishable — the Engineer"] li[data-bi="2"]' },
+  { key: "parser", label: "run the parser", side: "left", accent: "#ffb347",
+    target: '[data-pr-org="CHS Inc."] li[data-bi="2"]' },
+  { key: "growth", label: "the numbers", side: "left", accent: "#ff2761",
+    target: '[data-pr-org="Crediverso"] li[data-bi="1"]' },
+];
 ---
 
 <Layout
-  title={`${resume.header.name} — Resume`}
-  description={`${resume.header.name} resume. ${resume.header.title}.`}
+  title="Jonathan Tollefson — Resume"
+  description="Jonathan Tollefson résumé. Design Engineer — interface design, front-end, applied AI."
   hideThemeSelector={true}
   chromeless={true}
 >
-  {/* Two views, one page (Jon, 2026-08-20): the PRINTABLE sheet is the
-      default, shown as paper on the studio's light ground; the interactive
-      experience lives behind the second tab (its dark canvas comes with it).
-      Print styles untouched either way — PrintResume owns the PDF. */}
   <div class="resume-world" data-resume-view="paper">
     <AwayRail variant="light" resume={false} />
     <main class="resume-page">
-      <div class="view-tabs" data-view-tabs>
-        <div class="vt-center">
-          <button type="button" data-view-btn="paper" aria-pressed="true">paper</button>
-          <button type="button" data-view-btn="interactive" aria-pressed="false" class="vt-live">
-            interactive
-            <span class="vt-lamp" aria-hidden="true"></span>
-          </button>
-        </div>
-        <button type="button" class="vt-pdf" data-view-print>
+      <div class="r-actions">
+        <a class="r-pdf" href="/jonathan-tollefson-resume.pdf" download="jonathan-tollefson-resume.pdf">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"
             stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
             <path d="M12 4v10" /><path d="m7.5 10.5 4.5 4.5 4.5-4.5" /><path d="M5 19h14" />
           </svg>
-          print · save as pdf
-        </button>
+          download pdf
+        </a>
+        <p class="r-hint">the flags open the proof behind a line</p>
       </div>
+
       <div class="paper-stage">
-        <PrintResume />
+        <div class="sheet-wrap" data-sheet>
+          <PrintResume />
+          {FLAGS.map((f) => (
+            <button
+              type="button"
+              class={`r-flag r-flag-${f.side}`}
+              style={`--fa:${f.accent}`}
+              data-flag={f.key}
+              data-flag-target={f.target}
+              aria-expanded="false"
+              aria-controls={`proof-${f.key}`}
+            >
+              {f.label}
+            </button>
+          ))}
+        </div>
+
+        {/* the dock: one proof unfolds at a time, under the sheet — lift a
+            flag and the studio shows through the paper */}
+        <div class="proof-dock" data-dock>
+          <section id="proof-agent" class="proof-panel" data-proof-panel="agent" hidden aria-label="The mastering run, live">
+            <ProofAgentLoop />
+          </section>
+          <section id="proof-judge" class="proof-panel" data-proof-panel="judge" hidden aria-label="The blind judge, live">
+            <ProofJudge />
+          </section>
+          <section id="proof-parser" class="proof-panel" data-proof-panel="parser" hidden aria-label="The dbt parser, live">
+            <ProofDbtPipeline />
+          </section>
+          <section id="proof-growth" class="proof-panel" data-proof-panel="growth" hidden aria-label="The Crediverso numbers">
+            <ProofGrowth />
+          </section>
+        </div>
       </div>
-      <ResumeShell>
-        <ResumeRenderer resume={resume} />
-      </ResumeShell>
     </main>
   </div>
 </Layout>
 
 <script>
-  const world = document.querySelector<HTMLElement>("[data-resume-view]");
-  const btns = Array.from(document.querySelectorAll<HTMLButtonElement>("[data-view-btn]"));
-  const setView = (v: string) => {
-    world?.setAttribute("data-resume-view", v);
-    btns.forEach((b) => b.setAttribute("aria-pressed", String(b.getAttribute("data-view-btn") === v)));
-    history.replaceState(null, "", v === "interactive" ? "#interactive" : window.location.pathname);
-    // The shell's page-flags measure their targets and re-place on resize;
-    // they were display:none at load (paper is the default), so every rect
-    // read zero. Re-fire the measurer once the shell is actually visible.
-    if (v === "interactive") requestAnimationFrame(() => window.dispatchEvent(new Event("resize")));
+  // Flag placement: each flag sits at its target bullet's vertical position,
+  // hanging off the sheet edge. Measured against the sheet wrap; re-placed
+  // on resize and after fonts settle. Screen-only, >=900px (CSS gates).
+  const wrap = document.querySelector<HTMLElement>("[data-sheet]");
+  const flags = Array.from(document.querySelectorAll<HTMLButtonElement>("[data-flag]"));
+  const panels = Array.from(document.querySelectorAll<HTMLElement>("[data-proof-panel]"));
+
+  const place = () => {
+    if (!wrap) return;
+    const base = wrap.getBoundingClientRect();
+    for (const f of flags) {
+      const t = document.querySelector(f.dataset.flagTarget || "");
+      if (!t) continue;
+      const r = t.getBoundingClientRect();
+      f.style.top = `${Math.round(r.top - base.top + r.height / 2)}px`;
+    }
+    wrap.setAttribute("data-flags-placed", "");
   };
-  btns.forEach((b) => b.addEventListener("click", () => setView(b.getAttribute("data-view-btn") || "paper")));
-  document.querySelector("[data-view-print]")?.addEventListener("click", () => window.print());
-  if (window.location.hash === "#interactive") setView("interactive");
+
+  let openKey: string | null = null;
+  const setOpen = (key: string | null) => {
+    openKey = key;
+    for (const p of panels) p.hidden = p.dataset.proofPanel !== key;
+    for (const f of flags) f.setAttribute("aria-expanded", String(f.dataset.flag === key));
+    if (key) {
+      const p = panels.find((x) => x.dataset.proofPanel === key);
+      p?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+    }
+  };
+  flags.forEach((f) =>
+    f.addEventListener("click", () => setOpen(openKey === f.dataset.flag ? null : (f.dataset.flag as string)))
+  );
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape" && openKey) setOpen(null);
+  });
+
+  place();
+  window.addEventListener("resize", () => window.setTimeout(place, 120));
+  window.addEventListener("load", place);
+  if (document.fonts?.ready) document.fonts.ready.then(place);
 </script>
 
 <style is:global>
   .resume-page {
-    padding: var(--space-8) 0 var(--space-16);
+    padding: 30px 0 90px;
     min-height: 100svh;
   }
   @media (min-width: 900px) {
@@ -80,211 +148,163 @@ if (!resume) throw new Error("No default resume marked Active in the Resumes dat
   }
 
   @media screen {
-    /* the two views swap; each brings its own canvas */
-    .resume-world[data-resume-view="paper"] {
+    .resume-world {
       background: #e9e8e5;
     }
-    .resume-world[data-resume-view="paper"] .rs-root {
-      display: none;
-    }
-    .resume-world[data-resume-view="interactive"] .paper-stage {
-      display: none;
-    }
-    /* the interactive view keeps the case-study dark canvas — the light
-       rail flips with it so the chrome never fights the room */
-    .resume-world[data-resume-view="interactive"] .awayrail.light {
-      background: #101216;
-      border-right-color: rgba(160, 190, 230, 0.12);
-    }
-    .resume-world[data-resume-view="interactive"] .awayrail.light .ar-chip {
-      border-color: rgba(232, 236, 244, 0.28);
-      background: rgba(232, 236, 244, 0.06);
-      color: #e8ecf4;
-    }
-    .resume-world[data-resume-view="interactive"] .awayrail.light .ar-word {
-      color: #8f98a8;
-    }
 
-    /* ── the tabs: paper/interactive dead-center; the pdf action keeps to
-       the right edge ────────────────────────────────────────────────── */
-    .view-tabs {
-      display: grid;
-      grid-template-columns: 1fr auto 1fr;
-      align-items: center;
-      padding: 6px 20px 26px;
+    /* ── actions row: one honest control + one quiet hint ── */
+    .r-actions {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 14px;
+      max-width: 8.5in;
+      margin: 0 auto;
+      padding: 0 20px 18px;
       font-family: "IBM Plex Mono", ui-monospace, monospace;
     }
-    .vt-center {
-      grid-column: 2;
-      display: flex;
-      align-items: center;
-      gap: 10px;
-    }
-    .view-tabs button {
-      appearance: none;
-      cursor: pointer;
-      font: inherit;
-      font-size: 0.76rem;
-      letter-spacing: 0.07em;
-      padding: 9px 16px;
-      border-radius: 10px;
-      border: 1px solid rgba(20, 18, 16, 0.28);
-      background: transparent;
-      color: #45423c;
-      transition: background 160ms ease, color 160ms ease, border-color 160ms ease;
-    }
-    .view-tabs button:hover {
-      background: rgba(20, 18, 16, 0.07);
-    }
-    .view-tabs button[aria-pressed="true"] {
-      background: #141210;
-      border-color: #141210;
-      color: #f5f2ea;
-    }
-    .view-tabs button:focus-visible {
-      outline: 2px solid #141210;
-      outline-offset: 2px;
-    }
-    /* ── the interactive key: an instrument keycap with its lamp on. Dark
-       face on either canvas; press it and it sinks, the lamp goes ember —
-       the machine's own language (dark-until-power, one lamp). */
-    .vt-live {
-      position: relative;
-      isolation: isolate;
-      border-color: #2a2f3a;
-      background: linear-gradient(180deg, #1d212b 0%, #12151c 55%, #0e1117 100%);
-      color: #e8ecf4;
-      padding-right: 26px;
-      box-shadow:
-        inset 0 1px 0 rgba(255, 255, 255, 0.07),
-        0 2px 0 #05070c,
-        0 4px 10px rgba(5, 7, 12, 0.3);
-      transition: transform 120ms ease, box-shadow 120ms ease, color 160ms ease;
-    }
-    .vt-live:hover {
-      background: linear-gradient(180deg, #222736 0%, #141822 55%, #0e1117 100%);
-      transform: translateY(1px);
-      box-shadow:
-        inset 0 1px 0 rgba(255, 255, 255, 0.07),
-        0 1px 0 #05070c,
-        0 3px 8px rgba(5, 7, 12, 0.3);
-    }
-    .vt-live[aria-pressed="true"] {
-      background: linear-gradient(180deg, #0e1117 0%, #12151c 100%);
-      border-color: #2a2f3a;
-      color: #0ec4fc;
-      transform: translateY(2px);
-      box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.55);
-    }
-    .vt-lamp {
-      position: absolute;
-      top: 50%;
-      right: 10px;
-      transform: translateY(-50%);
-      width: 5px;
-      height: 5px;
-      border-radius: 50%;
-      background: #0ec4fc;
-      box-shadow: 0 0 7px rgba(14, 196, 252, 0.9);
-    }
-    .vt-live[aria-pressed="true"] .vt-lamp {
-      background: #ff5432;
-      box-shadow: 0 0 8px rgba(255, 84, 50, 0.9);
-    }
-    .vt-live::before {
-      content: "";
-      position: absolute;
-      inset: -3px;
-      border-radius: 13px;
-      border: 1.5px solid rgba(14, 196, 252, 0.45);
-      box-shadow: 0 0 10px rgba(14, 196, 252, 0.3);
-      pointer-events: none;
-      z-index: -1;
-    }
-    @media (prefers-reduced-motion: no-preference) {
-      .vt-live::before {
-        animation: vt-ring 5.4s ease-in-out infinite;
-      }
-      .vt-lamp {
-        animation: vt-lamp 2.6s ease-in-out infinite;
-      }
-      @keyframes vt-lamp {
-        0%, 100% { opacity: 0.55; }
-        50% { opacity: 1; }
-      }
-      @keyframes vt-ring {
-        0%, 100% {
-          border-color: rgba(14, 196, 252, 0.45);
-          box-shadow: 0 0 10px rgba(14, 196, 252, 0.3);
-        }
-        38% {
-          border-color: rgba(155, 108, 255, 0.5);
-          box-shadow: 0 0 14px rgba(155, 108, 255, 0.4);
-        }
-        70% {
-          border-color: rgba(255, 180, 77, 0.45);
-          box-shadow: 0 0 12px rgba(255, 180, 77, 0.35);
-        }
-      }
-    }
-    .vt-pdf {
-      grid-column: 3;
-      justify-self: end;
+    .r-pdf {
       display: inline-flex;
       align-items: center;
       gap: 7px;
-      border-color: transparent !important;
+      font-size: 0.76rem;
+      letter-spacing: 0.07em;
+      color: #141210;
       text-decoration: underline;
       text-underline-offset: 4px;
     }
-    .vt-pdf svg {
+    .r-pdf svg {
       width: 14px;
       height: 14px;
     }
-    .vt-pdf:hover {
-      background: transparent !important;
-      color: #141210;
+    .r-pdf:hover {
+      color: #b33a2a;
     }
-    /* dark-canvas clothes for the same tabs (the keycap dresses itself) */
-    .resume-world[data-resume-view="interactive"] .view-tabs button:not(.vt-live) {
-      border-color: rgba(232, 236, 244, 0.28);
-      color: #8f98a8;
+    .r-hint {
+      margin: 0;
+      font-size: 0.68rem;
+      letter-spacing: 0.05em;
+      color: #6a6660;
     }
-    .resume-world[data-resume-view="interactive"] .view-tabs button:not(.vt-live):hover {
-      background: rgba(232, 236, 244, 0.08);
-    }
-    .resume-world[data-resume-view="interactive"] .view-tabs button:not(.vt-live)[aria-pressed="true"] {
-      background: #e8ecf4;
-      border-color: #e8ecf4;
-      color: #101216;
-    }
-    .resume-world[data-resume-view="interactive"] .vt-pdf {
-      border-color: transparent !important;
-      color: #8f98a8;
-    }
-    .resume-world[data-resume-view="interactive"] .vt-pdf:hover {
-      color: #e8ecf4;
+    @media (max-width: 899px) {
+      .r-hint {
+        display: none; /* flags are desktop-only */
+      }
+      .r-actions {
+        justify-content: center;
+      }
     }
 
-    /* ── the paper, as paper: white letter sheet on the studio ground ── */
+    /* ── the sheet, as paper ── */
     .paper-stage {
       display: grid;
       justify-items: center;
-      padding: 0 20px 90px;
+      padding: 0 20px 60px;
+    }
+    .sheet-wrap {
+      position: relative;
+      width: min(8.5in, 100%);
     }
     .paper-stage .print-resume {
-      width: min(8.5in, 100%);
+      width: 100%;
       background: #ffffff;
       padding: clamp(26px, 5vw, 58px) clamp(22px, 5vw, 62px);
       border: 1px solid rgba(90, 74, 50, 0.25);
       border-radius: 4px;
       box-shadow: 0 26px 60px -30px rgba(20, 12, 4, 0.45);
     }
+    .paper-stage .print-resume .pr-li-icon {
+      color: #56565e;
+    }
+    .paper-stage .print-resume .pr-li-icon:hover {
+      color: #b33a2a;
+    }
+
+    /* ── the flags: Post-its hanging off the sheet edges ── */
+    .r-flag {
+      display: none;
+    }
+    @media (min-width: 900px) {
+      .r-flag {
+        display: block;
+        position: absolute;
+        z-index: 2;
+        padding: 7px 14px 7px 12px;
+        border: 0;
+        cursor: pointer;
+        font-family: "IBM Plex Mono", ui-monospace, monospace;
+        font-size: 0.72rem;
+        letter-spacing: 0.04em;
+        line-height: 1;
+        color: #141210;
+        background: color-mix(in srgb, var(--fa) 42%, #fff);
+        border-radius: 3px 8px 8px 3px;
+        box-shadow: 0 3px 10px -4px rgba(20, 12, 4, 0.5);
+        transform: translate(78%, -50%) rotate(1.4deg);
+        transition: transform 140ms ease, box-shadow 140ms ease;
+        white-space: nowrap;
+        opacity: 0;
+      }
+      [data-flags-placed] .r-flag {
+        opacity: 1;
+      }
+      .r-flag-left {
+        left: -14px;
+        transform: translate(-78%, -50%) rotate(-1.6deg);
+        border-radius: 8px 3px 3px 8px;
+      }
+      .r-flag-right {
+        right: -14px;
+      }
+      .r-flag:hover,
+      .r-flag:focus-visible {
+        box-shadow: 0 5px 14px -4px rgba(20, 12, 4, 0.55);
+      }
+      .r-flag-left:hover,
+      .r-flag-left:focus-visible {
+        transform: translate(-84%, -50%) rotate(-1.6deg);
+      }
+      .r-flag-right:hover,
+      .r-flag-right:focus-visible {
+        transform: translate(84%, -50%) rotate(1.4deg);
+      }
+      .r-flag[aria-expanded="true"] {
+        outline: 2px solid var(--fa);
+        outline-offset: 1px;
+      }
+      .r-flag:focus-visible {
+        outline: 2px solid #141210;
+        outline-offset: 2px;
+      }
+    }
+
+    /* ── the dock: dark card under the sheet — the studio under the paper ── */
+    .proof-dock {
+      width: min(8.5in, 100%);
+      margin: 0 auto;
+    }
+    .proof-panel {
+      margin-top: 18px;
+      padding: clamp(16px, 3vw, 28px);
+      background: #101216;
+      border: 1px solid rgba(160, 190, 230, 0.16);
+      border-radius: 8px;
+      box-shadow: 0 26px 60px -30px rgba(20, 12, 4, 0.5);
+    }
   }
 
   @media print {
-    .view-tabs {
+    .r-actions,
+    .r-flag,
+    .proof-dock,
+    .r-hint {
       display: none !important;
+    }
+    .resume-page,
+    .resume-world {
+      min-height: 0 !important;
+      padding: 0 !important;
+      margin: 0 !important;
     }
     .resume-world {
       background: #ffffff !important;
@@ -293,22 +313,8 @@ if (!resume) throw new Error("No default resume marked Active in the Resumes dat
       display: block !important;
       padding: 0 !important;
     }
-  }
-  /* small phones: the tab row stacks (top-level media — nesting inside
-     the screen block was unreliable through the CSS pipeline) */
-  @media screen and (max-width: 460px) {
-    .view-tabs {
-      grid-template-columns: 1fr;
-      row-gap: 10px;
-      justify-items: center;
-    }
-    .vt-center {
-      grid-column: 1;
-    }
-    .vt-pdf {
-      grid-column: 1;
-      justify-self: center;
-      white-space: nowrap;
+    .sheet-wrap {
+      width: 100% !important;
     }
   }
 </style>
