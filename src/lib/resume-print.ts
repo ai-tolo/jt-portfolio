@@ -130,7 +130,7 @@ export const printContent: PrintResumeContent = {
     {
       org: "Raylu, Inc.",
       pos: "Product Designer (Freelance)",
-      dates: "Apr – Oct 2023",
+      dates: "Jan – Oct 2023",
       bullets: [
         "Designed the interface, component set, and interaction model for a B2B SaaS AI chat platform, specified so the patterns mapped 1:1 to the React implementation.",
         "Ran the roadmap for a distributed team shipping prototype releases on a tight cycle.",
