@@ -87,6 +87,7 @@ const fmtTime = (s: number) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60
 
   .tp-wave {
     flex: 1;
+    overflow: hidden;
     /* min-width:auto made ~160 1px bars a hard 319px floor that shoved
        the time readout off phone screens (review, 2026-08-25) */
     min-width: 0;
@@ -164,8 +165,15 @@ const fmtTime = (s: number) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60
         audio.play();
       } else audio.pause();
     });
-    audio.addEventListener("play", () => tp.setAttribute("data-playing", ""));
-    audio.addEventListener("pause", () => tp.removeAttribute("data-playing"));
+    const title = toggle.getAttribute("aria-label")?.replace(/^Play /, "") ?? "";
+    audio.addEventListener("play", () => {
+      tp.setAttribute("data-playing", "");
+      toggle.setAttribute("aria-label", `Pause ${title}`);
+    });
+    audio.addEventListener("pause", () => {
+      tp.removeAttribute("data-playing");
+      toggle.setAttribute("aria-label", `Play ${title}`);
+    });
     audio.addEventListener("ended", () => {
       tp.removeAttribute("data-playing");
       audio.currentTime = 0;
@@ -180,10 +188,23 @@ const fmtTime = (s: number) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60
         paint();
       }
     };
-    wave.addEventListener("click", (e) => {
+    // drag-scrub: the wave looks like a scrubber, so it behaves like one —
+    // seek follows the pointer continuously while held (QA 2026-08-28)
+    let scrubbing = false;
+    wave.addEventListener("pointerdown", (e) => {
+      scrubbing = true;
+      wave.setPointerCapture(e.pointerId);
       const r = wave.getBoundingClientRect();
       seekTo((e.clientX - r.left) / r.width);
     });
+    wave.addEventListener("pointermove", (e) => {
+      if (!scrubbing) return;
+      const r = wave.getBoundingClientRect();
+      seekTo((e.clientX - r.left) / r.width);
+    });
+    const endScrub = () => { scrubbing = false; };
+    wave.addEventListener("pointerup", endScrub);
+    wave.addEventListener("pointercancel", endScrub);
     wave.addEventListener("keydown", (e) => {
       if (e.key === "ArrowRight") { e.preventDefault(); audio.currentTime = Math.min(dur(), audio.currentTime + 5); paint(); }
       if (e.key === "ArrowLeft") { e.preventDefault(); audio.currentTime = Math.max(0, audio.currentTime - 5); paint(); }

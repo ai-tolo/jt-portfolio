@@ -212,6 +212,21 @@ const maxSlots = Math.max(...slotCount);
     const fmt = (n: number) => n.toLocaleString("en-US");
     const setCounter = (k: string, v: number) => { const el = counters[k]; if (el) el.textContent = fmt(v); };
 
+    // ── edge guard ──────────────────────────────────────────────────────────
+    // Chips are painted centred on their point, so on a narrow stage the widest
+    // chip at an outer bin (or at the far end of the scatter) hangs past the
+    // stage and overflow:hidden cuts the name in half. Measure the widest chip
+    // once (and on resize) and keep every painted X inside that margin. On the
+    // 1280px desktop stage the margin lands inside the scatter band already, so
+    // this is a no-op there.
+    let edge = 0;
+    const measureEdge = () => {
+      const sw = stage.clientWidth || 1;
+      let w = 0;
+      for (const r of PRE) w = Math.max(w, r.el.offsetWidth);
+      edge = ((w / 2) / sw) * 100 + 1.2;   // +1.2cqw covers the scatter's rotation
+    };
+
     const heroScale = (p: number) => {
       const a = clamp01((p - 0.70) / 0.04);   // 1 -> 1.16 across 0.70..0.74
       const b = clamp01((p - 0.74) / 0.04);   // back to 1 across 0.74..0.78
@@ -238,8 +253,9 @@ const maxSlots = Math.max(...slotCount);
         let S = 1, O = 1;
         if (r.dupe) { const t = clamp01((p - 0.70) / 0.18); S = 1 - 0.4 * t; O = 1 - t; }
         else if (r.hero) { S = heroScale(p); }
+        const Xc = Math.min(Math.max(X + dX, edge), 100 - edge);
         r.el.style.transform =
-          `translate(${(X + dX).toFixed(2)}cqw, ${(Y + dY).toFixed(2)}cqh) translate(-50%, -50%) rotate(${R.toFixed(2)}deg) scale(${S.toFixed(3)})`;
+          `translate(${Xc.toFixed(2)}cqw, ${(Y + dY).toFixed(2)}cqh) translate(-50%, -50%) rotate(${R.toFixed(2)}deg) scale(${S.toFixed(3)})`;
         r.el.style.opacity = O !== 1 ? O.toFixed(3) : "";
         r.el.style.setProperty("--lit", e.toFixed(3));
         if (r.hero) r.el.style.setProperty("--glow", clamp01((p - 0.70) / 0.06).toFixed(3));
@@ -273,7 +289,9 @@ const maxSlots = Math.max(...slotCount);
 
     if (reduce) {
       // one settled poster, no scrub, no scroll listener
+      measureEdge();
       apply(1);
+      (document as any).fonts?.ready?.then(() => { measureEdge(); apply(1); });
       return;
     }
 
@@ -289,6 +307,11 @@ const maxSlots = Math.max(...slotCount);
       requestAnimationFrame(() => { queued = false; apply(lastP); });
     };
     window.addEventListener("scroll", onScroll, { passive: true });
+    // the edge margin is width-dependent (and font-dependent), so re-measure
+    // whenever either can have changed, then repaint the SAME p
+    window.addEventListener("resize", () => { measureEdge(); apply(lastP); }, { passive: true });
+    (document as any).fonts?.ready?.then(() => { measureEdge(); apply(lastP); });
+    measureEdge();
     apply(0);      // paint the initial frame immediately (don't wait for a scroll)
     onScroll();
   });
@@ -324,7 +347,12 @@ const maxSlots = Math.max(...slotCount);
   .ctb-eyebrow {
     display: inline-flex; align-items: center; gap: 9px;
     font-size: 12.5px; font-weight: 700; letter-spacing: 0.24em; text-transform: uppercase;
-    color: var(--brand-pink); margin-bottom: 12px;
+    /* an inline-flex eyebrow is an atomic inline box: its own line-height AND
+       its vertical margin both grow the callout's FIRST line box. Match the
+       paragraph's rhythm and carry no vertical margin, so line 1 sits the same
+       distance from line 2 as every other pair. */
+    line-height: 1.55; margin: 0;
+    color: var(--brand-pink);
   }
   .ctb-eyebrow::before { content: ""; width: 22px; height: 3px; border-radius: 2px; background: currentColor; box-shadow: 0 0 10px currentColor; }
   .ctb-eyebrow-pink { color: var(--brand-pink); }
@@ -333,7 +361,16 @@ const maxSlots = Math.max(...slotCount);
   .ctb-eyebrow-cyan { color: var(--brand-cyan); }
 
   /* ── counters ── */
-  .ctb-counters { position: absolute; top: 24px; right: 30px; z-index: 6; display: flex; gap: 22px; }
+  /* Above the chip layer AND on their own ground: the scatter drifts through
+     this corner, and a chip's box drawn under a readout still reads as a line
+     struck through the number. Same glass plate the captions wear. */
+  .ctb-counters {
+    position: absolute; top: 24px; right: 30px; z-index: 8; display: flex; gap: 22px;
+    padding: 10px 15px; border-radius: 9px;
+    background: rgba(8, 7, 13, 0.72); border: 1px solid rgba(245, 241, 232, 0.08);
+    backdrop-filter: blur(5px); -webkit-backdrop-filter: blur(5px);
+    box-shadow: 0 12px 32px -18px rgba(0, 0, 0, 0.8);
+  }
   .ctb-counter { text-align: right; }
   .ctb-counter b {
     display: block; font-family: var(--cs-mono); font-style: italic;
@@ -443,12 +480,33 @@ const maxSlots = Math.max(...slotCount);
     .ctb-chip-inner { font-size: 9.5px; padding: 4px 6px; }
     .ctb-chip-name { max-width: 16vw; }
     .ctb-chip-wave { display: none; }
-    .ctb-counters { position: static; flex-direction: row; gap: 14px; padding: 0 30px; margin-top: 64px; justify-content: flex-start; }
+    /* phones stack the counters into the flow behind the caption band, where
+       the glass plate has nothing to sit on top of — keep the bare readouts */
+    .ctb-counters {
+      position: static; flex-direction: row; gap: 14px; padding: 0 30px;
+      margin: 64px 0 0; justify-content: flex-start;
+      background: none; border: none; box-shadow: none;
+      backdrop-filter: none; -webkit-backdrop-filter: none;
+    }
     .ctb-counter { text-align: left; }
     .ctb-counter b { font-size: 16px; }
     .ctb-bin-blurb { display: none; }
     .ctb-caption { font-size: 12px; }
     .ctb-prog-pct { display: none; }
+  }
+
+  /* ── phones + small tablets: the stage stops spanning edge to edge, and a
+     chip can never be wider than the bin frame it lands in. A chip is painted
+     centred on its point, so a 110px chip on a 63px bin hung half its name off
+     the viewport at both outer bins and the overflow:hidden stage cut it. The
+     stage takes the page's 20px gutter; the chip takes the bin's width and
+     truncates inside it. ── */
+  @media (max-width: 899px) {
+    .ctb-sticky { padding: 0 20px; }
+    /* one bin column is 20cqw; the frame inside it is 16.8cqw */
+    .ctb-chip { max-width: 16cqw; }
+    .ctb-chip-inner { max-width: 100%; }
+    .ctb-chip-name { max-width: 100%; }
   }
 
   @media (prefers-reduced-motion: reduce) {

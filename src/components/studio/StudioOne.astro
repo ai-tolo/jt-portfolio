@@ -101,8 +101,8 @@ const MARKS = [
   { id: "play", word: "play", emoji: "🎹", ethereal: true, has: true },
   { id: "work", word: "work", emoji: "💼", ethereal: false, has: works.length > 0 },
   { id: "soundlab", word: "listen", emoji: "🎧", ethereal: false, has: tracks.length > 0 },
-  { id: "illustrations", word: "look", emoji: "🖼️", ethereal: false, has: illos.length > 0 },
   { id: "writing", word: "read", emoji: "✏️", ethereal: false, has: true },
+  { id: "illustrations", word: "look", emoji: "🖼️", ethereal: false, has: illos.length > 0 },
 ].filter((m) => m.has);
 const SHOW = new Set(MARKS.map((m) => m.id));
 ---
@@ -285,7 +285,7 @@ const SHOW = new Set(MARKS.map((m) => m.id));
   <footer class="floor">
     <span class="floor-lines">
       <a href="mailto:jtollefson123@gmail.com">jtollefson123@gmail.com</a>
-      <span class="floor-city">Minneapolis, MN</span>
+      <span class="floor-city">minneapolis, mn</span>
     </span>
     <span class="floor-right">
       <a class="floor-li" href="https://linkedin.com/in/jtollefson123" aria-label="LinkedIn" target="_blank" rel="noopener noreferrer"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="3" /><path d="M8 11v5" /><path d="M8 8v.01" /><path d="M12 16v-5" /><path d="M16 16v-3a2 2 0 0 0-4 0" /></svg></a>
@@ -306,6 +306,14 @@ const SHOW = new Set(MARKS.map((m) => m.id));
     overflow: hidden;
     clip-path: inset(50%);
     white-space: nowrap;
+  }
+  /* the global focus ring is cream (dark-world token) — invisible on this
+     paper; ink is the legible fallback here, flipped again for night */
+  :global(:focus-visible) {
+    outline-color: #141210;
+  }
+  :global(html[data-night]) :global(:focus-visible) {
+    outline-color: #e8ecf4;
   }
   .skip {
     position: fixed;
@@ -331,6 +339,17 @@ const SHOW = new Set(MARKS.map((m) => m.id));
     inset: 0;
     z-index: -1;
     background: #e9e8e5;
+  }
+  /* the canvas behind the ground must match it, or rubber-band overscroll
+     and the mobile bar's padding band show the dark Layout through
+     (sibling of Jon's /resume black-band bug, 2026-08-28) */
+  :global(html),
+  :global(body) {
+    background: #e9e8e5 !important;
+  }
+  :global(html[data-night]),
+  :global(html[data-night] body) {
+    background: #0b0e14 !important;
   }
 
   .one {
@@ -826,8 +845,14 @@ const SHOW = new Set(MARKS.map((m) => m.id));
       font-family: "IBM Plex Mono", ui-monospace, monospace;
       color: #45423c;
     }
-    /* the bar mirrors the PHONE page order — play's section closes the
-       show down here, so its word goes last (review, 2026-08-25) */
+    /* the bar mirrors the PHONE page order (look before read, play last);
+       DOM order stays the desktop document order for honest tab order */
+    .mbar-item[data-for="illustrations"] {
+      order: 3;
+    }
+    .mbar-item[data-for="writing"] {
+      order: 4;
+    }
     .mbar-item[data-for="play"] {
       order: 6;
     }
@@ -1323,7 +1348,7 @@ const SHOW = new Set(MARKS.map((m) => m.id));
     max-width: 1180px;
     /* the handshake: right off the hero, one clear breath, then the machine */
     margin: clamp(36px, 6vh, 72px) auto clamp(90px, 15vh, 180px);
-    scroll-margin-top: 24px;
+    scroll-margin-top: 76px;
   }
   .sig-desktop {
     display: none;
@@ -1477,6 +1502,7 @@ const SHOW = new Set(MARKS.map((m) => m.id));
   .look-band {
     width: 100%;
     margin: 0 0 clamp(72px, 12vh, 140px);
+    scroll-margin-top: 76px;
   }
   .look-band :global(.car) {
     position: relative;
@@ -1520,9 +1546,15 @@ const SHOW = new Set(MARKS.map((m) => m.id));
   }
   .lk-img {
     width: 100%;
-    height: 88svh;
     object-fit: contain;
     display: block;
+  }
+  /* desktop: tall gallery box; phones size to the art (the mobile rule
+     was being overridden by this base — QA 2026-08-28) */
+  @media (min-width: 900px) {
+    .lk-img {
+      height: 88svh;
+    }
   }
   .lk-cap {
     display: flex;
@@ -1641,6 +1673,18 @@ const SHOW = new Set(MARKS.map((m) => m.id));
     color: var(--ink);
     text-decoration: underline;
     text-underline-offset: 4px;
+    transition: color 160ms ease;
+  }
+  .floor a:hover,
+  .floor a:focus-visible {
+    color: #b33a2a;
+  }
+  .floor a.floor-li {
+    color: var(--dim);
+  }
+  .floor a.floor-li:hover,
+  .floor a.floor-li:focus-visible {
+    color: var(--ink);
   }
 
   /* smooth anchor travel, motion-gated */
@@ -1709,8 +1753,13 @@ const SHOW = new Set(MARKS.map((m) => m.id));
         if (vis >= best) { best = vis; active = id; }
       }
       items.forEach(({ id, el }) => {
-        if (id === active) el.setAttribute("data-on", "");
-        else el.removeAttribute("data-on");
+        if (id === active) {
+          el.setAttribute("data-on", "");
+          el.setAttribute("aria-current", "true");
+        } else {
+          el.removeAttribute("data-on");
+          el.removeAttribute("aria-current");
+        }
       });
     };
     const spy = new IntersectionObserver(recompute, {
@@ -1862,6 +1911,12 @@ const SHOW = new Set(MARKS.map((m) => m.id));
     nightBtns.forEach((b) => b.setAttribute("aria-pressed", nightManual ? "true" : "false"));
   nightBtns.forEach((b) =>
     b.addEventListener("click", () => {
+      // if the instrument owns the dark, an OFF press means "lights on":
+      // power the machine down through its own button so the control
+      // never reports a state the room contradicts (QA 2026-08-28)
+      if (nightManual && nightPower) {
+        document.getElementById("pwr")?.click();
+      }
       nightManual = !nightManual;
       try { localStorage.setItem("studio-night", nightManual ? "1" : "0"); } catch {}
       syncNightBtn();

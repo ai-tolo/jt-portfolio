@@ -64,6 +64,7 @@ const { count, label, accent = "var(--brand-cyan, #6ee0ff)" } = Astro.props;
     margin-top: 18px;
   }
   .car-btn {
+    position: relative;
     width: 38px;
     height: 38px;
     border-radius: 50%;
@@ -79,6 +80,20 @@ const { count, label, accent = "var(--brand-cyan, #6ee0ff)" } = Astro.props;
     width: 17px;
     height: 17px;
   }
+  /* invisible hit expansion to a 46px tap box */
+  .car-btn::before {
+    content: "";
+    position: absolute;
+    inset: -4px;
+  }
+  /* on touch, a disabled ghost arrow over artwork reads as broken — give
+     disabled the same backing so the state reads as a state */
+  @media (pointer: coarse) {
+    .car-btn:disabled {
+      opacity: 0.45;
+      background: rgba(5, 7, 12, 0.45);
+    }
+  }
   .car-btn:hover:not(:disabled),
   .car-btn:focus-visible {
     border-color: var(--car-accent);
@@ -93,7 +108,7 @@ const { count, label, accent = "var(--brand-cyan, #6ee0ff)" } = Astro.props;
     cursor: default;
   }
   .car-counter {
-    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-family: "IBM Plex Mono", ui-monospace, monospace;
     font-size: 0.72rem;
     letter-spacing: 0.08em;
     color: rgba(245, 241, 232, 0.55);
@@ -121,10 +136,19 @@ const { count, label, accent = "var(--brand-cyan, #6ee0ff)" } = Astro.props;
       slides.forEach((s, k) => {
         if (k === i) s.removeAttribute("aria-hidden");
         else s.setAttribute("aria-hidden", "true");
-        // keep focus + tab order inside the visible slide only
+        // keep focus + tab order inside the visible slide only — RESTORE
+        // each element's authored tabindex (removeAttribute broke the
+        // transport's role=slider wave, which needs tabindex=0 — QA)
         s.querySelectorAll<HTMLElement>("a, button, [tabindex]").forEach((el) => {
-          if (k === i) el.removeAttribute("tabindex");
-          else el.setAttribute("tabindex", "-1");
+          if (el.dataset.origTabindex === undefined) {
+            el.dataset.origTabindex = el.getAttribute("tabindex") ?? "";
+          }
+          if (k === i) {
+            if (el.dataset.origTabindex === "") el.removeAttribute("tabindex");
+            else el.setAttribute("tabindex", el.dataset.origTabindex);
+          } else {
+            el.setAttribute("tabindex", "-1");
+          }
         });
         // pause any playing transport that slides away
         if (k !== i) s.querySelectorAll<HTMLAudioElement>("audio").forEach((a) => a.pause());

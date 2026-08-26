@@ -91,7 +91,7 @@ const CLUSTER_META = CLUSTERS.map((c) => ({ name: c.name, count: c.count, target
 ---
 
 <CSLayout
-  title="Raylu — Jon Tollefson"
+  title="Raylu — Jonathan Tollefson"
   description="Two founders had a deep ML product and no design, brand, or clickable artifact. I made the Figma workspace itself the alignment artifact — investor deck, product spec, and engineering handoff in one file. They closed a $4M seed."
   ogImage="/case-studies/raylu/cover.png"
 >
@@ -407,19 +407,46 @@ const CLUSTER_META = CLUSTERS.map((c) => ({ name: c.name, count: c.count, target
       apply(((clientX - r.left) / r.width) * 100, user);
     };
 
+    // Gesture gate (same rule as the site's carousel): on a coarse pointer we
+    // do NOT seek on pointerdown. We record the down point and only begin
+    // scrubbing once the gesture is clearly horizontal — |dx| > 10px AND
+    // |dx| > |dy| * 1.4 — so a vertical or diagonal-mostly-vertical swipe over
+    // the slider neither moves the divider nor steals the page's scroll.
+    // A fine pointer (mouse) keeps click-to-position.
+    const SLOP = 10;
     let dragging = false;
-    const down = (e: PointerEvent) => {
+    let armed = false;            // pointer is down, gesture not yet resolved
+    let sx = 0, sy = 0, sid = -1;
+
+    const begin = (e: PointerEvent) => {
+      armed = false;
       dragging = true;
       ba.setPointerCapture?.(e.pointerId);
       ba.classList.add("ba-dragging");
+    };
+
+    const down = (e: PointerEvent) => {
+      sx = e.clientX; sy = e.clientY; sid = e.pointerId;
+      if (e.pointerType !== "mouse") { armed = true; dragging = false; return; }
+      begin(e);
       fromClientX(e.clientX, true);
       e.preventDefault();
     };
     const move = (e: PointerEvent) => {
+      if (armed && e.pointerId === sid) {
+        const dx = e.clientX - sx, dy = e.clientY - sy;
+        if (Math.abs(dx) <= SLOP || Math.abs(dx) <= Math.abs(dy) * 1.4) {
+          // mostly vertical (or not moved far enough yet) — leave it to the page
+          if (Math.abs(dy) > SLOP) armed = false;
+          return;
+        }
+        begin(e);   // first seek happens below, on this same move
+      }
       if (!dragging) return;
       fromClientX(e.clientX, true);
     };
     const up = (e: PointerEvent) => {
+      armed = false;
       dragging = false;
       ba.classList.remove("ba-dragging");
       ba.releasePointerCapture?.(e.pointerId);

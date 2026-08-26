@@ -31,8 +31,13 @@ const { title, description, ogImage = "/og-image.png" } = Astro.props;
     {description && <meta name="description" content={description} />}
     <meta property="og:title" content={title} />
     {description && <meta property="og:description" content={description} />}
-    <meta property="og:image" content={ogImage} />
+    <link rel="canonical" href={new URL(Astro.url.pathname, "https://uxjon.com").href} />
+    <meta property="og:url" content={new URL(Astro.url.pathname, "https://uxjon.com").href} />
+    <meta property="og:site_name" content="Jonathan Tollefson" />
+    <meta property="og:image" content={new URL(ogImage, "https://uxjon.com").href} />
     <meta property="og:type" content="article" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="theme-color" content="#07060c" />
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
     {/* Tolo.Cloud case study runs in the portal's pinned dark theme so the
         page looks and feels like the product it describes. The public site
@@ -50,10 +55,9 @@ const { title, description, ogImage = "/og-image.png" } = Astro.props;
 
     <main class="cs-main">
       <slot />
-    </main>
 
-    {/* The house floor, dark clothes (2026-08-23 — the old site Footer with
-        its credo/colophon/Substack retires; this matches the homepage's). */}
+    {/* The house floor, dark clothes — INSIDE main so it shares the
+        rail-inset content column (QA 2026-08-28). */}
     <footer class="cs-floor">
       <span class="cs-floor-lines">
         <a href="mailto:jtollefson123@gmail.com">jtollefson123@gmail.com</a>
@@ -64,6 +68,7 @@ const { title, description, ogImage = "/og-image.png" } = Astro.props;
         <a class="cs-floor-resume" href="/resume">résumé</a>
       </span>
     </footer>
+    </main>
   </body>
 </html>
 
@@ -170,10 +175,9 @@ const { title, description, ogImage = "/og-image.png" } = Astro.props;
     font-size: 0.78rem;
     letter-spacing: 0.04em;
   }
-  @media (min-width: 900px) {
-    .cs-floor {
-      margin-left: 92px;
-    }
+  .cs-floor {
+    margin-top: 24px;
+    margin-bottom: 40px;
   }
   .cs-floor-lines {
     display: flex;
@@ -228,11 +232,13 @@ const { title, description, ogImage = "/og-image.png" } = Astro.props;
     .cs-main {
       padding-left: 92px;
     }
-    /* .cs-bleed centers on its padded parent — without this offset every
-       bleed sat 46px right of the viewport and the page scrolled sideways.
-       .cs-main prefix outranks the later base rule (review, 2026-08-25) */
+    /* .cs-bleed spans the rail-inset area [92px, 100vw] so every section
+       shares ONE center axis and heroes never slide under the rail
+       (QA 2026-08-28; supersedes the 46px correction) */
     .cs-main .cs-bleed {
-      margin-left: calc(50% - 46px);
+      width: calc(100vw - 92px);
+      margin-left: 50%;
+      transform: translateX(-50%);
     }
   }
 

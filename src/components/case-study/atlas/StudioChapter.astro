@@ -71,9 +71,11 @@ import Transport from "../../Transport.astro";
     <div class="sx-main">
       <!-- topbar: live view tabs + the ARM cluster -->
       <div class="sx-top">
-        <button type="button" class="sx-tab on" data-view-tab="signal">signal</button>
-        <button type="button" class="sx-tab" data-view-tab="stream">stream<i class="sx-nudge" aria-hidden="true"></i></button>
-        <button type="button" class="sx-tab" data-view-tab="arrange">arrange<i class="sx-nudge" aria-hidden="true"></i></button>
+        <div class="sx-tabs" role="tablist" aria-label="studio view">
+          <button type="button" class="sx-tab on" role="tab" aria-selected="true" data-view-tab="signal">signal</button>
+          <button type="button" class="sx-tab" role="tab" aria-selected="false" data-view-tab="stream">stream<i class="sx-nudge" aria-hidden="true"></i></button>
+          <button type="button" class="sx-tab" role="tab" aria-selected="false" data-view-tab="arrange">arrange<i class="sx-nudge" aria-hidden="true"></i></button>
+        </div>
         <span class="sx-brand" data-role="brand">the homepage instrument</span>
         <span class="sx-armwrap">
           <button type="button" class="sx-arm" data-arm aria-pressed="false" aria-label="arm the line-in (demonstrated)">arm</button>
@@ -233,6 +235,9 @@ import Transport from "../../Transport.astro";
   .sx-since {
     max-width: 56ch;
     margin: 12px 0 0;
+    /* the same running prose chapters 01 and 03 set flush left — it only
+       inherited centring from the .sx-gear block */
+    text-align: start;
     color: rgba(245, 241, 232, 0.6);
     font-size: 0.92em;
     line-height: 1.6;
@@ -324,6 +329,9 @@ import Transport from "../../Transport.astro";
     display: flex; align-items: center; height: 40px; padding: 0 12px 0 0;
     border-bottom: 1px solid rgba(245, 241, 232, 0.08);
   }
+  /* the three view switches are a real tablist — the group is a box so the
+     assistive-tech grouping and the visual grouping are the same thing */
+  .sx-tabs { display: flex; align-items: stretch; height: 100%; }
   .sx-tab {
     position: relative;
     padding: 0 16px; height: 100%; display: inline-flex; align-items: center; gap: 6px;
@@ -587,7 +595,9 @@ import Transport from "../../Transport.astro";
     font-size: 12px; letter-spacing: 0.06em; color: rgba(245, 241, 232, 0.42); min-height: 1.4em; }
 
   /* gear + handoff */
-  .sx-gear { max-width: 640px; margin: 56px auto 0; text-align: center; }
+  /* running prose in this chapter sets flush left, the way chapters 01 and 03
+     set theirs — the gear chips keep their own centred row */
+  .sx-gear { max-width: 640px; margin: 56px auto 0; text-align: start; }
   .sx .sx-gear p { margin: 0 0 14px; font-family: "Space Grotesk Variable", "Space Grotesk", ui-sans-serif, system-ui, sans-serif;
     font-size: clamp(14px, 1.6vw, 17px); line-height: 1.55; color: rgba(245, 241, 232, 0.6); }
   .sx-gear-row { display: flex; justify-content: center; flex-wrap: wrap; gap: 10px; }
@@ -599,7 +609,7 @@ import Transport from "../../Transport.astro";
   .sx-cart i { width: 7px; height: 7px; border-radius: 2px; background: var(--v); box-shadow: 0 0 7px rgba(139, 107, 255, 0.7); }
 
   .sx .sx-handoff {
-    max-width: 46ch; margin: 52px auto 0; text-align: center;
+    max-width: 46ch; margin: 52px auto 0; text-align: start;
     font-family: "Space Grotesk Variable", "Space Grotesk", ui-sans-serif, system-ui, sans-serif;
     font-size: clamp(15px, 1.8vw, 19px); line-height: 1.6; color: rgba(245, 241, 232, 0.85);
   }
@@ -834,6 +844,8 @@ import Transport from "../../Transport.astro";
       viewTabs.forEach((t) => {
         const on = t.dataset.viewTab === v;
         t.classList.toggle("on", on);
+        // selection is carried by ARIA too, not by the .on class alone
+        t.setAttribute("aria-selected", on ? "true" : "false");
         if (on) t.classList.remove("nudge");
       });
     }
