@@ -11,6 +11,7 @@ import "@fontsource/ibm-plex-mono/latin-600.css";
 import "../../styles/tokens.css";
 import CSProgress from "./CSProgress.astro";
 import AwayRail from "../studio/AwayRail.astro";
+import Cursor from "../Cursor.astro";
 
 interface Props {
   title: string;
@@ -52,6 +53,7 @@ const { title, description, ogImage = "/og-image.png" } = Astro.props;
         back/resume text nav). */}
     <AwayRail variant="dark" />
     <CSProgress />
+    <Cursor />
 
     <main class="cs-main">
       <slot />
@@ -76,21 +78,14 @@ const { title, description, ogImage = "/og-image.png" } = Astro.props;
   /* Custom case-study pages run on a focused, dark canvas. They opt OUT
      of the public-site theme cycler — the <script is:inline> in the head
      pins data-theme="dark" so the only palette in play is the portal's. */
-  /* tokens.css hides the system cursor on fine-pointer devices to let the
-     public-site custom cursor (Cursor.astro) take over. The case-study
-     route doesn't include Cursor.astro, so restore the system cursor here
-     to prevent an invisible-mouse state. */
-  @media (pointer: fine) {
-    .cs-body,
-    .cs-body a,
-    .cs-body button,
+  /* tokens.css hides the system cursor on body/a/button for the custom
+     cursor (Cursor.astro), which this route now includes (2026-08-28 —
+     one cursor sitewide, Jon's call). Extend cursor: none to this route's
+     interactive elements so the system cursor never doubles the dot; the
+     media guard mirrors tokens.css so reduced-motion keeps a real cursor. */
+  @media (pointer: fine) and (prefers-reduced-motion: no-preference) {
     .cs-body input,
     .cs-body textarea,
-    .cs-body [role="button"] {
-      cursor: auto;
-    }
-    .cs-body a,
-    .cs-body button,
     .cs-body [role="button"],
     .cs-body [data-bc-rename],
     .cs-body [data-bc-expand],
@@ -98,14 +93,10 @@ const { title, description, ogImage = "/og-image.png" } = Astro.props;
     .cs-body [data-pb-promote],
     .cs-body [data-pb-reset],
     .cs-body [data-ce-slider]::-webkit-slider-thumb,
-    .cs-body .ce-dot {
-      cursor: pointer;
-    }
-    .cs-body input[type="range"] {
-      cursor: ew-resize;
-    }
+    .cs-body .ce-dot,
+    .cs-body input[type="range"],
     .cs-body [contenteditable="true"] {
-      cursor: text;
+      cursor: none;
     }
   }
 

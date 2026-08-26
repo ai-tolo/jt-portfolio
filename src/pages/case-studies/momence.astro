@@ -218,6 +218,136 @@ export const prerender = true;
   })();
 </script>
 
+<script>
+  // Tap-to-zoom for the in-study screenshots at phone widths (Jon,
+  // 2026-08-28 — the dense admin shots are illegible inside a 375px
+  // column). Progressive enhancement: a magnifier chip is injected on
+  // each frame, phone-only via CSS; tapping the chip or the shot opens
+  // a full-screen <dialog> with the image at its design width, panned
+  // by native scroll. No JS = the page reads exactly as before.
+  (() => {
+    const phone = window.matchMedia("(max-width: 899px)");
+    const frames = document.querySelectorAll<HTMLElement>(
+      ".mo-mess-frame, .mo-reveal-fig .cs-fig-frame, .mo-surface-frame"
+    );
+    if (!frames.length) return;
+
+    const dlg = document.createElement("dialog");
+    dlg.className = "mo-zoom";
+    dlg.setAttribute("aria-label", "Zoomed screenshot");
+    dlg.innerHTML =
+      '<div class="mo-zoom-pan"><img alt="" /></div>' +
+      '<button class="mo-zoom-close" type="button" aria-label="Close">×</button>';
+    document.body.appendChild(dlg);
+    const pan = dlg.querySelector<HTMLElement>(".mo-zoom-pan")!;
+    const big = dlg.querySelector<HTMLImageElement>("img")!;
+    dlg.querySelector(".mo-zoom-close")!.addEventListener("click", () => dlg.close());
+
+    const open = (img: HTMLImageElement) => {
+      big.src = img.currentSrc || img.src;
+      big.alt = img.alt;
+      // Design-scale, not export-scale: the notion exports are ~1.5x, so
+      // cap at 1400 CSS px (≈ the widest design) with the viewport as the
+      // floor. Reading happens by panning.
+      const w = Math.max(window.innerWidth, Math.min(img.naturalWidth || 1400, 1400));
+      big.style.width = w + "px";
+      dlg.showModal();
+      pan.scrollLeft = 0;
+      pan.scrollTop = 0;
+    };
+
+    frames.forEach((frame) => {
+      const img = frame.querySelector("img");
+      if (!img) return;
+      frame.classList.add("mo-zoomable");
+      const chip = document.createElement("button");
+      chip.type = "button";
+      chip.className = "mo-zoom-chip";
+      chip.setAttribute("aria-label", "Zoom image");
+      chip.innerHTML =
+        '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m20 20-4.9-4.9"/><path d="M10.5 8v5M8 10.5h5"/></svg>';
+      frame.appendChild(chip);
+      const go = (e: Event) => {
+        if (!phone.matches) return;
+        e.preventDefault();
+        open(img);
+      };
+      chip.addEventListener("click", go);
+      img.addEventListener("click", go);
+    });
+  })();
+</script>
+
+<style is:global>
+  /* ── tap-to-zoom lightbox (phone) — global block: the chip + dialog are
+     JS-created, so scoped selectors would never match them ─────────────── */
+  .mo-zoomable {
+    position: relative;
+  }
+  .mo-zoom-chip {
+    display: none;
+    position: absolute;
+    right: 10px;
+    bottom: 10px;
+    width: 40px;
+    height: 40px;
+    place-items: center;
+    border-radius: 10px;
+    border: 1px solid rgba(245, 241, 232, 0.25);
+    background: rgba(7, 6, 12, 0.72);
+    color: #f5f1e8;
+    padding: 0;
+  }
+  .mo-zoom-chip svg {
+    width: 19px;
+    height: 19px;
+  }
+  @media (max-width: 899px) {
+    .mo-zoom-chip {
+      display: grid;
+    }
+  }
+  .mo-zoom {
+    width: 100vw;
+    height: 100dvh;
+    max-width: none;
+    max-height: none;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    background: #07060c;
+  }
+  .mo-zoom::backdrop {
+    background: rgba(4, 3, 8, 0.85);
+  }
+  .mo-zoom-pan {
+    width: 100%;
+    height: 100%;
+    overflow: auto;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
+  }
+  .mo-zoom-pan img {
+    display: block;
+    max-width: none;
+    height: auto;
+  }
+  .mo-zoom-close {
+    position: fixed;
+    top: 12px;
+    right: 12px;
+    width: 44px;
+    height: 44px;
+    border-radius: 12px;
+    border: 1px solid rgba(245, 241, 232, 0.3);
+    background: rgba(7, 6, 12, 0.78);
+    color: #f5f1e8;
+    font-size: 26px;
+    line-height: 1;
+    padding: 0;
+  }
+</style>
+
 <style>
   /* .prose-block carries no rules of its own — the paragraphs inherit the
      house prose settings (measure, size, rhythm) from CSLayout's .cs-main. */
