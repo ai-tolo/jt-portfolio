@@ -163,7 +163,7 @@ const t0 = TENANTS[0];
       <div class="mo-tn-row mo-tn-row-activity">
         <span class="mo-tn-row-lbl">Recent activity</span>
         <ul class="mo-tn-activity" data-mo-tn-activity>
-          {t0.activity.map((a) => <li>· {a}</li>)}
+          {t0.activity.map((a) => <li>{a}</li>)}
         </ul>
       </div>
     </div>
@@ -275,7 +275,7 @@ const t0 = TENANTS[0];
       chips(subsUl, t.subs);
       chips(flexUl, t.flexFields);
       chips(tagsUl, t.tags);
-      chips(actUl, t.activity, "· ");
+      chips(actUl, t.activity);
 
       // lead KPI counts from old to new
       const from = animate ? prev.leadKpi.n : t.leadKpi.n;
@@ -494,6 +494,8 @@ const t0 = TENANTS[0];
     font-size: 22px;
     font-weight: 800;
     margin: 0 0 2px;
+    /* the header is the app's fixed dark chrome — never the page ink */
+    color: #fff;
   }
   .mo-tn-card-meta {
     font-size: 12px;
@@ -566,36 +568,9 @@ const t0 = TENANTS[0];
     gap: 6px;
   }
   .mo-tn-activity { flex-direction: column; gap: 4px; }
-  .mo-tn-subs li {
-    font-size: 11.5px;
-    padding: 3px 8px;
-    border-radius: 3px;
-    background: #ede9fe;
-    color: #5b21b6;
-    font-weight: 600;
-  }
-  .mo-tn-flex li {
-    font-size: 11.5px;
-    padding: 3px 8px;
-    border-radius: 3px;
-    background: #fef3c7;
-    color: #92400e;
-    font-weight: 600;
-  }
-  .mo-tn-tags li {
-    font-size: 11.5px;
-    padding: 3px 8px;
-    border-radius: 3px;
-    background: #f1f5f9;
-    color: #475569;
-    font-weight: 600;
-  }
-  .mo-tn-activity li {
-    font-family: var(--cs-mono);
-    font-size: 11.5px;
-    color: #1c1c1e;
-    line-height: 1.5;
-  }
+  /* the chip/activity <li>s are rewritten by the cycler via innerHTML, so
+     their rules live in the is:global block at the foot of this file —
+     scoped selectors stop matching the moment the JS re-deals them */
   .mo-tn-row-activity { padding-bottom: 18px; }
 
   /* the reshuffle pulse ────────────────────────────────────────────────── */
@@ -605,15 +580,7 @@ const t0 = TENANTS[0];
   .mo-tn-shuffle .mo-tn-kpis { animation: mo-tn-deal 320ms cubic-bezier(0.22, 1, 0.36, 1); }
   .mo-tn-shuffle .mo-tn-kpi-lead { animation: mo-tn-lead-promote 360ms cubic-bezier(0.22, 1, 0.36, 1); }
   .mo-tn-shuffle .mo-tn-card-tenant strong { animation: mo-tn-flash 520ms ease; }
-  .mo-tn-shuffle .mo-tn-subs li,
-  .mo-tn-shuffle .mo-tn-flex li,
-  .mo-tn-shuffle .mo-tn-tags li { animation: mo-tn-chip-in 300ms ease backwards; }
-  .mo-tn-shuffle .mo-tn-activity li { animation: mo-tn-row-in 320ms ease backwards; }
-  /* stagger the flex chips a touch behind subs, tags behind flex */
-  .mo-tn-shuffle .mo-tn-flex li { animation-delay: 40ms; }
-  .mo-tn-shuffle .mo-tn-tags li { animation-delay: 80ms; }
-  .mo-tn-shuffle .mo-tn-activity li:nth-child(2) { animation-delay: 60ms; }
-  .mo-tn-shuffle .mo-tn-activity li:nth-child(3) { animation-delay: 120ms; }
+  /* the injected-li shuffle rules live in the is:global block below */
 
   @keyframes mo-tn-deal {
     0%   { transform: translateY(4px); opacity: 0.55; }
@@ -683,4 +650,49 @@ const t0 = TENANTS[0];
     .mo-tn-shuffle .mo-tn-activity li { animation: none; }
     .mo-tn-hint::before { animation: none; }
   }
+</style>
+
+<style is:global>
+  /* Rules for the JS-rewritten <li>s (chips + activity rows). They are
+     created via innerHTML on every tenant cycle, so they never carry the
+     Astro scope attribute — scoped versions of these rules only style the
+     SSR'd first render. Namespaced .mo-tn-* keeps the block contained. */
+  .mo-tn-subs li {
+    font-size: 11.5px;
+    padding: 3px 8px;
+    border-radius: 3px;
+    background: #ede9fe;
+    color: #5b21b6;
+    font-weight: 600;
+  }
+  .mo-tn-flex li {
+    font-size: 11.5px;
+    padding: 3px 8px;
+    border-radius: 3px;
+    background: #fef3c7;
+    color: #92400e;
+    font-weight: 600;
+  }
+  .mo-tn-tags li {
+    font-size: 11.5px;
+    padding: 3px 8px;
+    border-radius: 3px;
+    background: #f1f5f9;
+    color: #475569;
+    font-weight: 600;
+  }
+  .mo-tn-activity li {
+    font-family: var(--cs-mono);
+    font-size: 11.5px;
+    color: #1c1c1e;
+    line-height: 1.5;
+  }
+  .mo-tn-shuffle .mo-tn-subs li,
+  .mo-tn-shuffle .mo-tn-flex li,
+  .mo-tn-shuffle .mo-tn-tags li { animation: mo-tn-chip-in 300ms ease backwards; }
+  .mo-tn-shuffle .mo-tn-activity li { animation: mo-tn-row-in 320ms ease backwards; }
+  .mo-tn-shuffle .mo-tn-flex li { animation-delay: 40ms; }
+  .mo-tn-shuffle .mo-tn-tags li { animation-delay: 80ms; }
+  .mo-tn-shuffle .mo-tn-activity li:nth-child(2) { animation-delay: 60ms; }
+  .mo-tn-shuffle .mo-tn-activity li:nth-child(3) { animation-delay: 120ms; }
 </style>

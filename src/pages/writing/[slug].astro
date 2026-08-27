@@ -91,15 +91,19 @@ const fmtDate = (iso: string) => {
     transition: background 560ms ease, border-color 560ms ease;
   }
   /* night: the paper goes dark with the room (Jon's homepage-sheet rule,
-     extended sitewide 2026-08-28) — same clothes as the homepage sheets */
-  :global(html[data-night]) .wpost {
-    background: #0b0e14;
-    border-color: #1c222e;
-  }
-  :global(html[data-night]) .wcover,
-  :global(html[data-night]) .lfloor,
-  :global(html[data-night]) .wsource {
-    border-color: #1c222e;
+     extended sitewide 2026-08-28) — same clothes as the homepage sheets.
+     Screen-only: printing from a night tab still has html[data-night]
+     set, and these borders were leaking onto paper (QA print lens). */
+  @media screen {
+    :global(html[data-night]) .wpost {
+      background: #0b0e14;
+      border-color: #1c222e;
+    }
+    :global(html[data-night]) .wcover,
+    :global(html[data-night]) .lfloor,
+    :global(html[data-night]) .wsource {
+      border-color: #1c222e;
+    }
   }
   .whead h1 {
     margin: 0 0 10px;
@@ -195,8 +199,12 @@ const fmtDate = (iso: string) => {
   }
 
   /* print: ink on white no matter the night state (this route has no
-     PrintResume-style backstop, so the guard lives here) */
+     PrintResume-style backstop, so the guard lives here). The floor is
+     hidden to match /resume's print contract — paper gets the essay and
+     its source line, not site chrome. */
   @media print {
+    :global(html),
+    :global(body),
     .wpage,
     .wpost {
       background: #fff !important;
@@ -204,7 +212,13 @@ const fmtDate = (iso: string) => {
       box-shadow: none !important;
       border-color: #ddd !important;
     }
-    .lfloor,
+    .wcover,
+    .wsource {
+      border-color: #ddd !important;
+    }
+    .lfloor {
+      display: none !important;
+    }
     .wsource {
       color: #555 !important;
     }
