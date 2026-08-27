@@ -14,7 +14,11 @@ interface Props {
   flush?: boolean;            // trim bottom padding when a module mounts right below
 }
 const { index, job, product, tagline, market, accent = "cyan", flush = false } = Astro.props;
-const ACCENTS = { cyan: "var(--brand-cyan)", violet: "#8b6bff", green: "var(--brand-green)", amber: "var(--brand-yellow)" };
+// --ch paints the eyebrow TEXT as well as the rule, so it has to be AA on the
+// day ground: the route's *-text tokens resolve back to the raw brand hues at
+// night. Violet has no brand token, so it rides a local property the style
+// block re-points per mode.
+const ACCENTS = { cyan: "var(--cs-cyan-text)", violet: "var(--ch-violet)", green: "var(--cs-green-text)", amber: "var(--cs-yellow-text)" };
 ---
 
 <section class:list={["ch", { "ch-flush": flush }]} style={`--ch: ${ACCENTS[accent]}`}>
@@ -28,7 +32,14 @@ const ACCENTS = { cyan: "var(--brand-cyan)", violet: "#8b6bff", green: "var(--br
 </section>
 
 <style>
-  .ch { padding: clamp(72px, 11vh, 128px) 24px clamp(40px, 6vh, 72px); }
+  .ch {
+    --ch-violet: #6d4fd8;
+    padding: clamp(72px, 11vh, 128px) 24px clamp(40px, 6vh, 72px);
+  }
+  /* screen-only, the way the route's night block is: print always resolves day */
+  @media screen {
+    :global(html[data-night]) .ch { --ch-violet: #8b6bff; }
+  }
   .ch.ch-flush { padding-bottom: 18px; }
   .ch-inner { max-width: 1060px; margin: 0 auto; }
 
@@ -41,7 +52,7 @@ const ACCENTS = { cyan: "var(--brand-cyan)", violet: "#8b6bff", green: "var(--br
   .ch-num {
     display: inline-block; margin-right: 14px; padding-right: 14px;
     border-right: 1px solid color-mix(in srgb, var(--ch) 45%, transparent);
-    color: rgba(245, 241, 232, 0.5);
+    color: var(--cs-text-dim);
   }
 
   .ch-job {
@@ -51,9 +62,15 @@ const ACCENTS = { cyan: "var(--brand-cyan)", violet: "#8b6bff", green: "var(--br
     font-size: clamp(40px, 6.4vw, 84px);
     letter-spacing: -0.03em;
     line-height: 1.0;
-    color: #f5f1e8;
-    text-shadow: 0 0 46px color-mix(in srgb, var(--ch) 26%, transparent);
+    color: var(--cs-text);
+    /* the accent bloom is a lit-room effect: it only reads on a dark canvas */
+    text-shadow: none;
     max-width: 18ch;
+  }
+  @media screen {
+    :global(html[data-night]) .ch-job {
+      text-shadow: 0 0 46px color-mix(in srgb, var(--ch) 26%, transparent);
+    }
   }
   .ch-rule { display: block; width: 76px; height: 3px; border-radius: 2px; background: var(--ch); margin: 22px 0 0; }
 
@@ -63,7 +80,7 @@ const ACCENTS = { cyan: "var(--brand-cyan)", violet: "#8b6bff", green: "var(--br
     font-style: italic;
     font-size: clamp(15px, 1.8vw, 19px);
     line-height: 1.55;
-    color: rgba(245, 241, 232, 0.82);
+    color: var(--cs-prose);
     max-width: 52ch;
   }
   .ch-market {
@@ -71,7 +88,7 @@ const ACCENTS = { cyan: "var(--brand-cyan)", violet: "#8b6bff", green: "var(--br
     font-family: "Space Grotesk Variable", "Space Grotesk", ui-sans-serif, system-ui, sans-serif;
     font-size: clamp(14px, 1.6vw, 17px);
     line-height: 1.55;
-    color: rgba(245, 241, 232, 0.55);
+    color: var(--cs-text-muted);
     max-width: 56ch;
   }
 

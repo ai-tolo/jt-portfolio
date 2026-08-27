@@ -65,21 +65,15 @@ const fmtDate = (iso: string) => {
 </Layout>
 
 <style>
-  :global(html),
-  :global(body) {
-    background: #e9e8e5;
-  }
+  /* ground + ink ride the sitewide day/night tokens (tokens.css owns
+     html/body; the old static #e9e8e5 pins would have blocked night) */
   .wpage {
     min-height: 100svh;
-    background: #e9e8e5;
-    color: #141210;
+    background: var(--bg);
+    color: var(--text);
     font-family: "IBM Plex Sans", ui-sans-serif, system-ui, sans-serif;
     padding: 34px 20px 110px;
-    cursor: auto;
-  }
-  .wpage :global(a),
-  .wpage :global(button) {
-    cursor: pointer;
+    transition: background 560ms ease, color 560ms ease;
   }
   @media (min-width: 900px) {
     .wpage {
@@ -94,6 +88,18 @@ const fmtDate = (iso: string) => {
     border-radius: 8px;
     padding: clamp(28px, 5vw, 54px);
     box-shadow: 0 18px 44px -24px rgba(20, 12, 4, 0.35);
+    transition: background 560ms ease, border-color 560ms ease;
+  }
+  /* night: the paper goes dark with the room (Jon's homepage-sheet rule,
+     extended sitewide 2026-08-28) — same clothes as the homepage sheets */
+  :global(html[data-night]) .wpost {
+    background: #0b0e14;
+    border-color: #1c222e;
+  }
+  :global(html[data-night]) .wcover,
+  :global(html[data-night]) .lfloor,
+  :global(html[data-night]) .wsource {
+    border-color: #1c222e;
   }
   .whead h1 {
     margin: 0 0 10px;
@@ -105,14 +111,14 @@ const fmtDate = (iso: string) => {
     margin: 0 0 12px;
     font-size: 1rem;
     line-height: 1.5;
-    color: #6a6660;
+    color: var(--muted);
   }
   .wmeta {
     margin: 0 0 26px;
     font-family: "IBM Plex Mono", ui-monospace, monospace;
     font-size: 0.7rem;
     letter-spacing: 0.06em;
-    color: #6a6660;
+    color: var(--muted);
   }
   .wcover {
     width: 100%;
@@ -141,7 +147,7 @@ const fmtDate = (iso: string) => {
     font-family: "IBM Plex Mono", ui-monospace, monospace;
     font-size: 0.74rem;
     letter-spacing: 0.04em;
-    color: #6a6660;
+    color: var(--muted);
   }
   .lfloor-lines {
     display: flex;
@@ -149,14 +155,14 @@ const fmtDate = (iso: string) => {
     gap: 5px;
   }
   .lfloor a {
-    color: #141210;
+    color: var(--text);
     text-decoration: underline;
     text-underline-offset: 4px;
     transition: color 160ms ease;
   }
   .lfloor a:hover,
   .lfloor a:focus-visible {
-    color: #b33a2a;
+    color: var(--accent);
   }
   .lfloor-li {
     display: inline-flex;
@@ -180,11 +186,27 @@ const fmtDate = (iso: string) => {
     font-family: "IBM Plex Mono", ui-monospace, monospace;
     font-size: 0.72rem;
     letter-spacing: 0.04em;
-    color: #6a6660;
+    color: var(--muted);
   }
   .wsource a {
-    color: #141210;
+    color: var(--text);
     text-decoration: underline;
     text-underline-offset: 4px;
+  }
+
+  /* print: ink on white no matter the night state (this route has no
+     PrintResume-style backstop, so the guard lives here) */
+  @media print {
+    .wpage,
+    .wpost {
+      background: #fff !important;
+      color: #141210 !important;
+      box-shadow: none !important;
+      border-color: #ddd !important;
+    }
+    .lfloor,
+    .wsource {
+      color: #555 !important;
+    }
   }
 </style>
