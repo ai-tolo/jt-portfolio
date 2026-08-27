@@ -1,8 +1,10 @@
 ---
-// Layout wrapper for rich, custom case-study pages. Pins the portal dark
-// palette via [data-theme="dark"] so the public site's theme cycling
-// doesn't reach in. Provides the shared brand tokens used by the CS
-// primitives.
+// Layout wrapper for rich, custom case-study pages. Light by default and
+// governed by the sitewide day/night axis (html[data-night]) like every
+// other route — the pinned always-dark canvas was retired 2026-08-28 on
+// Jon's call ("it breaks the rule of light mode and dark mode switch").
+// Night mode reproduces the old dark palette verbatim. Provides the
+// shared brand tokens used by the CS primitives.
 import "@fontsource-variable/geist";
 import "@fontsource-variable/space-grotesk";
 import "@fontsource/ibm-plex-mono/latin-400.css";
@@ -12,6 +14,7 @@ import "../../styles/tokens.css";
 import CSProgress from "./CSProgress.astro";
 import AwayRail from "../studio/AwayRail.astro";
 import Cursor from "../Cursor.astro";
+import NightBoot from "../NightBoot.astro";
 
 interface Props {
   title: string;
@@ -38,20 +41,16 @@ const { title, description, ogImage = "/og-image.png" } = Astro.props;
     <meta property="og:image" content={new URL(ogImage, "https://uxjon.com").href} />
     <meta property="og:type" content="article" />
     <meta name="twitter:card" content="summary_large_image" />
-    <meta name="theme-color" content="#07060c" />
+    <meta name="theme-color" content="#e9e8e5" />
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
-    {/* Tolo.Cloud case study runs in the portal's pinned dark theme so the
-        page looks and feels like the product it describes. The public site
-        theme cycler is bypassed entirely on this route. */}
-    <script is:inline>
-      document.documentElement.dataset.theme = "dark";
-    </script>
+    {/* Same pre-paint night bootstrap as Layout.astro — the case-study
+        route follows the sitewide day/night axis. */}
+    <NightBoot />
   </head>
   <body class="cs-body">
-    {/* The site's nav column (home + résumé), dark to match the canvas, with
-        the comet trail riding its right edge (2026-08-16 — replaces the old
-        back/resume text nav). */}
-    <AwayRail variant="dark" />
+    {/* The site's nav column (home + résumé + night switch), themed by the
+        sitewide axis, with the comet trail riding its right edge. */}
+    <AwayRail />
     <CSProgress />
     <Cursor />
 
@@ -75,9 +74,11 @@ const { title, description, ogImage = "/og-image.png" } = Astro.props;
 </html>
 
 <style is:global>
-  /* Custom case-study pages run on a focused, dark canvas. They opt OUT
-     of the public-site theme cycler — the <script is:inline> in the head
-     pins data-theme="dark" so the only palette in play is the portal's. */
+  /* Case-study pages run on the studio's light canvas by default; the
+     sitewide night switch flips the whole route to the old dark palette
+     (verbatim values in the html[data-night] block below). Product
+     demos and screenshot stages keep their own dark skins in BOTH
+     temperatures — the product is dark; only the page around it turns. */
   /* tokens.css hides the system cursor on body/a/button for the custom
      cursor (Cursor.astro), which this route now includes (2026-08-28 —
      one cursor sitewide, Jon's call). Extend cursor: none to this route's
@@ -87,22 +88,16 @@ const { title, description, ogImage = "/og-image.png" } = Astro.props;
     .cs-body input,
     .cs-body textarea,
     .cs-body [role="button"],
-    .cs-body [data-bc-rename],
-    .cs-body [data-bc-expand],
-    .cs-body [data-vh-verb],
-    .cs-body [data-pb-promote],
-    .cs-body [data-pb-reset],
-    .cs-body [data-ce-slider]::-webkit-slider-thumb,
-    .cs-body .ce-dot,
     .cs-body input[type="range"],
     .cs-body [contenteditable="true"] {
       cursor: none;
     }
   }
 
-  :root[data-theme="dark"] .cs-body {
+  .cs-body {
     /* Brand tokens lifted from the portal so the case study can speak
-       with the product's voice. */
+       with the product's voice. Same hues in both temperatures — they
+       belong to the product's graphics, not the page. */
     --brand-pink: #ff2761;
     --brand-orange: #ff5a3c;
     --brand-yellow: #ffb347;
@@ -111,14 +106,31 @@ const { title, description, ogImage = "/og-image.png" } = Astro.props;
     --brand-grad: linear-gradient(90deg, #ff2761 0%, #ff5a3c 50%, #ffb347 100%);
     --brand-grad-soft: linear-gradient(90deg, rgba(255,39,97,0.18) 0%, rgba(255,90,60,0.18) 50%, rgba(255,179,71,0.18) 100%);
 
-    --cs-bg: #07060c;
-    --cs-surface: #0f0a12;
-    --cs-surface-2: #15101a;
-    --cs-text: #f5f1e8;
-    --cs-text-muted: rgba(245, 241, 232, 0.62);
-    --cs-text-dim: rgba(245, 241, 232, 0.38);
-    --cs-line: rgba(245, 241, 232, 0.10);
-    --cs-line-strong: rgba(245, 241, 232, 0.22);
+    /* Day canvas — the same ground as the homepage studio. */
+    --cs-bg: #e9e8e5;
+    --cs-surface: #f4f3f0;
+    --cs-surface-2: #eceae6;
+    --cs-text: #141210;
+    --cs-text-muted: rgba(20, 18, 16, 0.66);
+    --cs-text-dim: rgba(20, 18, 16, 0.44);
+    --cs-line: rgba(20, 18, 16, 0.14);
+    --cs-line-strong: rgba(20, 18, 16, 0.32);
+    /* Prose ink (was a hardcoded cream on .cs-main p). */
+    --cs-prose: rgba(20, 18, 16, 0.88);
+    /* Screenshot MAT — a light backdrop for dark/transparent captures.
+       Deliberately the SAME in night: a mat is a mat. Never paint mats
+       with --cs-text (that inverts into a black slab on day). */
+    --cs-mat: #f5f1e8;
+    /* Brand hues used AS TEXT need AA on the light ground; night maps
+       them back to the raw brand values. */
+    --cs-accent: #b33a2a;
+    --cs-pink-text: #c2184c;
+    --cs-cyan-text: #0b6e96;
+    --cs-green-text: #0a7a33;
+    --cs-yellow-text: #8a6d00;
+    /* the brand gradient for background-clip:text titles — deepened on
+       day so the amber end doesn't wash out on the light ground */
+    --cs-grad-text: linear-gradient(90deg, #c2184c 0%, #c53a20 50%, #8a6d00 100%);
 
     background: var(--cs-bg);
     color: var(--cs-text);
@@ -126,24 +138,48 @@ const { title, description, ogImage = "/og-image.png" } = Astro.props;
     line-height: 1.55;
     -webkit-font-smoothing: antialiased;
     text-rendering: optimizeLegibility;
+    transition: background 560ms ease, color 560ms ease;
+  }
+  /* Night — the pre-2026-08-28 dark route, value for value. Screen-only
+     so print can never resolve a dark page. */
+  @media screen {
+    html[data-night] .cs-body {
+      --cs-bg: #07060c;
+      --cs-surface: #0f0a12;
+      --cs-surface-2: #15101a;
+      --cs-text: #f5f1e8;
+      --cs-text-muted: rgba(245, 241, 232, 0.62);
+      --cs-text-dim: rgba(245, 241, 232, 0.38);
+      --cs-line: rgba(245, 241, 232, 0.10);
+      --cs-line-strong: rgba(245, 241, 232, 0.22);
+      --cs-prose: rgba(245, 241, 232, 0.88);
+      --cs-accent: var(--brand-orange);
+      --cs-pink-text: var(--brand-pink);
+      --cs-cyan-text: var(--brand-cyan);
+      --cs-green-text: var(--brand-green);
+      --cs-yellow-text: var(--brand-yellow);
+      --cs-grad-text: var(--brand-grad);
+    }
   }
 
   .cs-body * {
     box-sizing: border-box;
   }
 
-  /* Subtle starfield-ish noise so the dark canvas doesn't feel flat. The
-     speckles.svg is reused from the public homepage; here we cut its
-     alpha way down. */
-  .cs-body::before {
-    content: "";
-    position: fixed;
-    inset: 0;
-    background-image: url("/speckles.svg");
-    background-repeat: repeat;
-    opacity: 0.06;
-    pointer-events: none;
-    z-index: 0;
+  /* Subtle starfield-ish noise so the dark canvas doesn't feel flat.
+     Night-only: the speckles are light-colored and invisible on the day
+     ground anyway. */
+  @media screen {
+    html[data-night] .cs-body::before {
+      content: "";
+      position: fixed;
+      inset: 0;
+      background-image: url("/speckles.svg");
+      background-repeat: repeat;
+      opacity: 0.06;
+      pointer-events: none;
+      z-index: 0;
+    }
   }
 
   .cs-body .cs-main,
@@ -182,7 +218,7 @@ const { title, description, ogImage = "/og-image.png" } = Astro.props;
   }
   .cs-floor a:hover,
   .cs-floor a:focus-visible {
-    color: var(--brand-orange);
+    color: var(--cs-accent);
   }
   .cs-floor-city {
     color: var(--cs-text-muted);
@@ -202,7 +238,7 @@ const { title, description, ogImage = "/og-image.png" } = Astro.props;
   }
   .cs-floor-li:hover,
   .cs-floor-li:focus-visible {
-    color: var(--brand-orange);
+    color: var(--cs-accent);
   }
   @media screen and (max-width: 899px) {
     .cs-floor-resume {
@@ -216,18 +252,19 @@ const { title, description, ogImage = "/og-image.png" } = Astro.props;
   .cs-main {
     padding: 0 0 96px;
   }
-  /* the fixed 92px rail is opaque — give the reading column its offset
+  /* the fixed rail is opaque — give the reading column its offset
      HERE, once, so page-local max-width wrappers stop sharing pixels
-     with it between 900 and 1280px (2026-08-23 cohesion pass) */
+     with it between 900 and 1280px (2026-08-23 cohesion pass; width
+     unified on var(--railw) 2026-08-28) */
   @media (min-width: 900px) {
     .cs-main {
-      padding-left: 92px;
+      padding-left: var(--railw, 110px);
     }
-    /* .cs-bleed spans the rail-inset area [92px, 100vw] so every section
+    /* .cs-bleed spans the rail-inset area [railw, 100vw] so every section
        shares ONE center axis and heroes never slide under the rail
        (QA 2026-08-28; supersedes the 46px correction) */
     .cs-main .cs-bleed {
-      width: calc(100vw - 92px);
+      width: calc(100vw - var(--railw, 110px));
       margin-left: 50%;
       transform: translateX(-50%);
     }
@@ -257,7 +294,7 @@ const { title, description, ogImage = "/og-image.png" } = Astro.props;
   }
   .cs-foot-back:hover,
   .cs-foot-back:focus-visible {
-    color: var(--brand-orange);
+    color: var(--cs-accent);
   }
 
   .cs-inner {
@@ -290,12 +327,12 @@ const { title, description, ogImage = "/og-image.png" } = Astro.props;
     max-width: 1440px;
   }
 
-  /* Typography defaults for case-study prose. Light cream on near-black,
-     a hair larger than the public-site default so it reads at scale. */
+  /* Typography defaults for case-study prose — a hair larger than the
+     public-site default so it reads at scale. Ink rides the theme axis. */
   .cs-main p {
     font-size: 17px;
     line-height: 1.65;
-    color: rgba(245, 241, 232, 0.88);
+    color: var(--cs-prose);
     margin: 0 0 18px;
     max-width: 64ch;
   }
@@ -305,9 +342,9 @@ const { title, description, ogImage = "/og-image.png" } = Astro.props;
   .cs-main td code {
     font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
     font-size: 0.88em;
-    background: rgba(14, 196, 252, 0.08);
-    color: var(--brand-cyan);
-    border: 1px solid rgba(14, 196, 252, 0.18);
+    background: color-mix(in srgb, var(--cs-cyan-text) 9%, transparent);
+    color: var(--cs-cyan-text);
+    border: 1px solid color-mix(in srgb, var(--cs-cyan-text) 22%, transparent);
     border-radius: 3px;
     padding: 1px 5px;
   }
@@ -315,7 +352,7 @@ const { title, description, ogImage = "/og-image.png" } = Astro.props;
   .cs-main a {
     color: var(--cs-text);
     text-decoration: underline;
-    text-decoration-color: var(--brand-orange);
+    text-decoration-color: var(--cs-accent);
     text-underline-offset: 4px;
     text-decoration-thickness: 1px;
   }

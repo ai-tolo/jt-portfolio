@@ -1,65 +1,41 @@
-/* Brand tokens + reset. Imported once via Layout.astro.
-   Color tokens are scoped to [data-theme] so they swap at runtime
-   via the ThemeSelector. The :root rule below is the default (Carbon)
-   and is also matched by [data-theme="dark"].
+/* Brand tokens + reset. Imported by both html owners (Layout, CSLayout).
 
-   Each theme = field + anchor + tint + ONE pop. Modeled on the album-cover
-   logic (Pinegrove / minimalist sleeves): one bold field, dark anchor,
-   light tinted text inside the anchor, and a single accent that pops.
+   ONE theme axis sitewide (2026-08-28, the 4-theme cycler is retired):
+   day is the default, html[data-night] is night. The night block is
+   screen-only so print always resolves the day values — the resume
+   print/ATS contract must never see a dark page.
 
    Token model:
    - --bg / --text: page background + body text color
-   - --ink: chunk + anchor block color (high-contrast anchor)
-   - --ink-fg: text color inside chunks (strategic tinted highlight)
-   - --accent: the POP. Used sparingly: cursor dot, hover decorations.
-   - --muted: dimmed body text (hardcoded for AA contrast, not alpha)
+   - --ink / --ink-fg: anchor block color + text inside it
+   - --accent: the pop, used sparingly
+   - --muted: dimmed body text (solid for AA contrast, not alpha)
    - --line: subtle dividers + outlines
-   - --surface-1: slightly elevated bg for cover placeholders
+   - --surface-1: slightly elevated panel (the rail family)
 */
 
-:root,
-:root[data-theme="dark"] {
-  --bg: #0A0A0A;
-  --text: #F5F1E8;
-  --ink: #F8F6EF;
-  --ink-fg: #0A0A0A;
-  --accent: #FF5A3C;
-  --muted: #7A746C;
-  --line: #2A2824;
-  --surface-1: #15130F;
+:root {
+  --bg: #e9e8e5;
+  --text: #141210;
+  --ink: #141210;
+  --ink-fg: #f4f3f0;
+  --accent: #b33a2a;
+  --muted: #6a6660;
+  --line: rgba(20, 18, 16, 0.14);
+  --surface-1: #f4f3f0;
 }
 
-:root[data-theme="powder"] {
-  --bg: #A8C9D9;
-  --text: #11283F;
-  --ink: #11283F;
-  --ink-fg: #F4EFE2;
-  --accent: #D43F2E;
-  --muted: #3F5870;
-  --line: #6E8AA0;
-  --surface-1: #93B5C8;
-}
-
-:root[data-theme="field"] {
-  --bg: #5C9248;
-  --text: #0E2814;
-  --ink: #0E2814;
-  --ink-fg: #DCF0A8;
-  --accent: #E04A2E;
-  --muted: #1A4020;
-  --line: #2E5A30;
-  --surface-1: #4A7D38;
-}
-
-:root[data-theme="honey"] {
-  --bg: #E8C246;
-  --text: #2A1A05;
-  --ink: #2A1A05;
-  --ink-fg: #FBF2D8;
-  --accent: #C82A1F;
-  --muted: #5A3F12;
-  --line: #B8973A;
-  --surface-1: #D4AE3A;
+@media screen {
+  html[data-night] {
+    --bg: #0b0e14;
+    --text: #e8ecf4;
+    --ink: #e8ecf4;
+    --ink-fg: #101216;
+    --accent: #ff5a3c;
+    --muted: #7d8798;
+    --line: #1c222e;
+    --surface-1: #101216;
+  }
 }
 
 :root {
@@ -102,6 +78,10 @@
   /* Layout */
   --content-max: 72rem;                       /* 1152 */
   --content-pad: clamp(1.5rem, 5vw, 4rem);    /* 24 -> 64 */
+  /* ONE rail width sitewide (2026-08-28; was 110 home / 92 away).
+     StudioOne shadows this with 0px below 900px — the rail has no box
+     there and the bottom bars take over. */
+  --railw: 110px;
 }
 
 /* Reset */
@@ -119,54 +99,17 @@ html {
 
 body {
   margin: 0;
-  /* Establish a stacking context so the dimmer pseudo-element sits
-     between the speckles and page content. */
   position: relative;
   min-height: 100vh;
   background-color: var(--bg);
-  /* Speckled cardstock texture. Colors drawn from all 4 theme palettes. */
-  background-image: url("/speckles.svg");
-  background-repeat: repeat;
-  background-size: 800px 800px;
   color: var(--text);
   font-family: "Geist Variable", "Geist", "Inter", system-ui, -apple-system, sans-serif;
   font-feature-settings: "ss01", "cv11";
   font-size: var(--fs-body);
   font-weight: var(--fw-regular);
   line-height: var(--lh-body);
-  transition: background-color 280ms cubic-bezier(0.2, 0, 0, 1),
-              color 280ms cubic-bezier(0.2, 0, 0, 1);
-}
-
-/* Per-theme speckle dimmer. Carbon (dark) softens the cream speckles
-   with a translucent overlay; light themes show speckles undimmed.
-
-   The dimmer is scoped directly via :root[data-theme="..."] body::before
-   rather than reading a CSS custom property, because Chromium has a
-   known invalidation bug: pseudo-elements consuming a custom property
-   that changes via attribute-selector cascade don't always repaint,
-   leaving the old value stuck (e.g., dark dimmer over honey = muddy
-   olive). Attribute-selector rules trigger a reliable style invalidation. */
-body::before {
-  content: "";
-  position: fixed;
-  inset: 0;
-  background-color: transparent;
-  pointer-events: none;
-  z-index: -1;
-  transition: background-color 280ms cubic-bezier(0.2, 0, 0, 1);
-}
-:root[data-theme="dark"] body::before {
-  background-color: rgba(10, 10, 10, 0.38);
-}
-
-@media print {
-  body {
-    background-image: none !important;
-  }
-  body::before {
-    display: none !important;
-  }
+  /* the same 560ms fade the homepage room uses for its night cycle */
+  transition: background-color 560ms ease, color 560ms ease;
 }
 
 h1, h2, h3, h4, h5, h6, p, ul, ol {

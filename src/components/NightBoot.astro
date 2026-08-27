@@ -1,0 +1,32 @@
+---
+// Pre-paint night bootstrap — rendered in the <head> of BOTH html owners
+// (Layout.astro and CSLayout.astro) so every route wakes up in the right
+// temperature. Must stay is:inline: a hoisted module runs after first
+// paint, and every night-mode load would flash light for 560ms.
+//
+// Contract (shared with the night switch): localStorage "studio-night",
+// "1" = night, anything else = day; the attribute html[data-night] is
+// presence-only. pageshow re-applies on bfcache restore, same as the old
+// theme bootstrap did. Also drops the retired 4-theme cycler's "theme"
+// key (dark/powder/field/honey, retired 2026-08-28).
+---
+<script is:inline>
+  (() => {
+    const apply = () => {
+      let on = false;
+      try {
+        on = localStorage.getItem("studio-night") === "1";
+      } catch {}
+      const root = document.documentElement;
+      if (on) root.setAttribute("data-night", "");
+      else root.removeAttribute("data-night");
+      const meta = document.querySelector('meta[name="theme-color"]');
+      if (meta) meta.setAttribute("content", on ? "#0b0e14" : "#e9e8e5");
+    };
+    try {
+      localStorage.removeItem("theme");
+    } catch {}
+    apply();
+    window.addEventListener("pageshow", apply);
+  })();
+</script>

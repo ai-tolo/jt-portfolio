@@ -1,18 +1,21 @@
 ---
-// AwayRail — the site's nav column on AWAY pages (case studies, résumé).
-// Same 92px column as the homepage sidebar, reduced to: 🏠 home in the
-// middle, résumé at the bottom (optional). Dark variant matches the
-// case-study canvas; light matches the studio ground. Desktop only —
-// below 900px the pages keep their own full-width flow.
+// AwayRail — the site's nav column on AWAY pages (case studies, résumé,
+// writing). One rail sitewide since 2026-08-28: same 110px width as the
+// homepage rail (var(--railw) in tokens.css), day/night via the sitewide
+// axis instead of the old per-page variant prop. Desktop: 🡐 home at the
+// top, résumé + the night switch at the foot. Below 900px it becomes the
+// bottom bar (home · résumé · moon). Screen-only throughout: letter
+// paper is narrower than 900px, and the bar must never print.
+import NightSwitch from "./NightSwitch.astro";
+
 interface Props {
-  variant?: "dark" | "light";
-  /** Show the résumé link at the column's foot (omit on /resume itself). */
+  /** Show the résumé link (omit on /resume itself). */
   resume?: boolean;
 }
-const { variant = "dark", resume = true } = Astro.props;
+const { resume = true } = Astro.props;
 ---
 
-<nav class={`awayrail ${variant}`} aria-label="Site">
+<nav class="awayrail" aria-label="Site">
   <a class="ar-home" href="/" aria-label="Home — the studio">
     <span class="ar-chip" aria-hidden="true">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"
@@ -22,16 +25,16 @@ const { variant = "dark", resume = true } = Astro.props;
     </span>
     <span class="ar-word" aria-hidden="true">home</span>
   </a>
-  {resume && <a class="ar-resume" href="/resume">résumé</a>}
+  <div class="ar-foot">
+    {resume && <a class="ar-resume" href="/resume">résumé</a>}
+    <NightSwitch />
+  </div>
 </nav>
 
 <style>
-  /* below 900px the column becomes a BOTTOM BAR (2026-08-24 mobile pass) —
-     phones kept losing the way home until the very last line of a page.
-     Screen-only throughout: letter paper is narrower than 900px, and the
-     bar must never print. */
   .awayrail {
     display: none;
+    transition: background 560ms ease, border-color 560ms ease;
   }
   @media screen and (max-width: 899px) {
     .awayrail {
@@ -51,6 +54,12 @@ const { variant = "dark", resume = true } = Astro.props;
     :global(body) {
       padding-bottom: calc(62px + env(safe-area-inset-bottom));
     }
+    .ar-foot {
+      display: flex;
+      flex-direction: row;
+      align-items: center;
+      gap: 12px;
+    }
   }
   @media screen and (min-width: 900px) {
     .awayrail {
@@ -59,28 +68,48 @@ const { variant = "dark", resume = true } = Astro.props;
       top: 0;
       bottom: 0;
       z-index: 70;
-      width: 92px;
+      width: var(--railw, 110px);
       display: flex;
       flex-direction: column;
       align-items: center;
       justify-content: flex-start;
       border-top: 0;
-      padding: 20px 8px 18px;
+      padding: 20px 8px 14px;
+    }
+    .ar-foot {
+      margin-top: auto;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 10px;
+    }
+    /* hairline quarantining the foot from the column, same language as
+       the homepage switch's divider */
+    .ar-foot::before {
+      content: "";
+      width: 26px;
+      border-top: 1px solid rgba(20, 18, 16, 0.2);
+      margin-bottom: 6px;
+    }
+    :global(html[data-night]) .ar-foot::before {
+      border-top-color: rgba(232, 236, 244, 0.2);
     }
   }
-  .awayrail.dark {
-    background: #101216;
-    border-top-color: rgba(160, 190, 230, 0.12);
-  }
-  .awayrail.light {
+  .awayrail {
     background: #f4f3f0;
   }
   @media (min-width: 900px) {
-    .awayrail.dark {
-      border-right: 1px solid rgba(160, 190, 230, 0.12);
-    }
-    .awayrail.light {
+    .awayrail {
       border-right: 1px solid rgba(20, 18, 16, 0.14);
+    }
+  }
+  :global(html[data-night]) .awayrail {
+    background: #101216;
+    border-top-color: rgba(160, 190, 230, 0.12);
+  }
+  @media (min-width: 900px) {
+    :global(html[data-night]) .awayrail {
+      border-right-color: rgba(160, 190, 230, 0.12);
     }
   }
 
@@ -103,52 +132,61 @@ const { variant = "dark", resume = true } = Astro.props;
     width: 48px;
     height: 44px;
     border-radius: 11px;
-    transition: border-color 160ms ease, background 160ms ease;
+    border: 1px solid rgba(20, 18, 16, 0.3);
+    background: rgba(20, 18, 16, 0.04);
+    color: #141210;
+    transition: border-color 160ms ease, background 560ms ease, color 560ms ease;
   }
   .ar-chip svg {
     width: 21px;
     height: 21px;
     transition: transform 160ms ease;
   }
-  .dark .ar-chip {
-    border: 1px solid rgba(232, 236, 244, 0.28);
+  :global(html[data-night]) .ar-chip {
+    border-color: rgba(232, 236, 244, 0.28);
     background: rgba(232, 236, 244, 0.06);
     color: #e8ecf4;
-  }
-  .light .ar-chip {
-    border: 1px solid rgba(20, 18, 16, 0.3);
-    background: rgba(20, 18, 16, 0.04);
-    color: #141210;
   }
   .ar-word {
     font-family: "IBM Plex Mono", ui-monospace, monospace;
     font-size: 0.7rem;
     letter-spacing: 0.06em;
+    color: #6a6660;
+    transition: color 560ms ease;
   }
   @media screen and (min-width: 900px) {
     .ar-word {
       font-size: 0.56rem;
     }
   }
-  .dark .ar-word { color: #8f98a8; }
-  .light .ar-word { color: #6a6660; }
+  :global(html[data-night]) .ar-word {
+    color: #8f98a8;
+  }
   .ar-home:hover .ar-chip,
   .ar-home:focus-visible .ar-chip {
     border-color: currentColor;
   }
-  .dark .ar-home:hover .ar-chip { background: rgba(232, 236, 244, 0.12); }
-  .light .ar-home:hover .ar-chip { background: rgba(20, 18, 16, 0.08); }
+  .ar-home:hover .ar-chip {
+    background: rgba(20, 18, 16, 0.08);
+  }
+  :global(html[data-night]) .ar-home:hover .ar-chip {
+    background: rgba(232, 236, 244, 0.12);
+  }
   .ar-home:hover .ar-chip svg,
   .ar-home:focus-visible .ar-chip svg {
     transform: translateX(-2.5px);
   }
-  .ar-home:hover .ar-word { color: currentColor; }
+  .ar-home:hover .ar-word {
+    color: currentColor;
+  }
   .ar-home:focus-visible {
     outline: 2px solid currentColor;
     outline-offset: 3px;
     border-radius: 12px;
   }
 
+  /* résumé — visible at every width since 2026-08-28 (one nav, and the
+     link must be clearly present on case studies). */
   .ar-resume {
     font-family: "IBM Plex Mono", ui-monospace, monospace;
     font-size: 0.78rem;
@@ -157,24 +195,24 @@ const { variant = "dark", resume = true } = Astro.props;
     text-underline-offset: 4px;
     white-space: nowrap;
     padding: 10px 4px;
+    color: #6a6660;
+    transition: color 560ms ease;
   }
   @media (min-width: 900px) {
     .ar-resume {
-      display: none; /* the floor owns résumé on desktop (QA 2026-08-28) */
+      font-size: 0.7rem;
+      padding: 6px 4px;
     }
   }
-  .dark .ar-resume {
+  .ar-resume:hover,
+  .ar-resume:focus-visible {
+    color: #141210;
+  }
+  :global(html[data-night]) .ar-resume {
     color: #8f98a8;
   }
-  .dark .ar-resume:hover,
-  .dark .ar-resume:focus-visible {
+  :global(html[data-night]) .ar-resume:hover,
+  :global(html[data-night]) .ar-resume:focus-visible {
     color: #e8ecf4;
-  }
-  .light .ar-resume {
-    color: #6a6660;
-  }
-  .light .ar-resume:hover,
-  .light .ar-resume:focus-visible {
-    color: #141210;
   }
 </style>

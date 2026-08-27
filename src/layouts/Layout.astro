@@ -2,20 +2,14 @@
 import "@fontsource-variable/geist";
 import "@fontsource-variable/space-grotesk";
 import "../styles/tokens.css";
-import ThemeSelector from "../components/ThemeSelector.astro";
 import Cursor from "../components/Cursor.astro";
-import Header from "../components/Header.astro";
+import NightBoot from "../components/NightBoot.astro";
 
 interface Props {
   title: string;
   description?: string;
   /** Override the default OG image. Path relative to site root, e.g. "/og-case-study.png". */
   ogImage?: string;
-  /** Hide the floating theme switcher (e.g. the homepage, where the comet parks in the corner). */
-  hideThemeSelector?: boolean;
-  /** Drop the sticky site header entirely (the desk homepage: the room owns the
-      whole viewport; the recruiter path lives on the desk + the text index). */
-  chromeless?: boolean;
 }
 
 const DEFAULT_DESCRIPTION =
@@ -25,8 +19,6 @@ const {
   title,
   description = DEFAULT_DESCRIPTION,
   ogImage = "/og-image.png",
-  hideThemeSelector = false,
-  chromeless = false,
 } = Astro.props;
 
 // Astro.site is set in astro.config.mjs. Falls back to uxjon.com if missing.
@@ -45,7 +37,7 @@ const ogImageUrl = new URL(ogImage, siteOrigin).toString();
     <title>{title}</title>
     <meta name="description" content={description} />
     <link rel="canonical" href={canonical} />
-    <meta name="theme-color" content="#0A0A0A" />
+    <meta name="theme-color" content="#e9e8e5" />
 
     {/* Icons. SVG for modern browsers (with built-in dark-mode swap); PNG
         fallbacks for older browsers and search results; Apple touch icon
@@ -74,32 +66,12 @@ const ogImageUrl = new URL(ogImage, siteOrigin).toString();
     <meta name="twitter:description" content={description} />
     <meta name="twitter:image" content={ogImageUrl} />
 
-    {/* Inline theme bootstrap. Runs before paint to prevent FOUC.
-        Validates against the current theme set; old ids fall back to dark.
-        The pageshow handler reapplies the theme on bfcache restore — without
-        it, navigating back to a page that was opened in a different theme
-        leaves the wrong theme cached. */}
-    <script is:inline>
-      (() => {
-        const valid = new Set(["dark", "powder", "field", "honey"]);
-        const apply = () => {
-          try {
-            const stored = localStorage.getItem("theme");
-            document.documentElement.dataset.theme =
-              stored && valid.has(stored) ? stored : "dark";
-          } catch {
-            document.documentElement.dataset.theme = "dark";
-          }
-        };
-        apply();
-        window.addEventListener("pageshow", apply);
-      })();
-    </script>
+    {/* One theme axis sitewide: day by default, html[data-night] via the
+        switch. Applied pre-paint (the old 4-theme cycler is retired). */}
+    <NightBoot />
   </head>
   <body>
-    {!hideThemeSelector && <ThemeSelector />}
     <Cursor />
-    {!chromeless && <Header />}
     <slot />
   </body>
 </html>

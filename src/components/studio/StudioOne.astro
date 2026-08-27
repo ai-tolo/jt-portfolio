@@ -342,14 +342,18 @@ const SHOW = new Set(MARKS.map((m) => m.id));
   }
   /* the canvas behind the ground must match it, or rubber-band overscroll
      and the mobile bar's padding band show the dark Layout through
-     (sibling of Jon's /resume black-band bug, 2026-08-28) */
-  :global(html),
-  :global(body) {
-    background: #e9e8e5 !important;
-  }
-  :global(html[data-night]),
-  :global(html[data-night] body) {
-    background: #0b0e14 !important;
+     (sibling of Jon's /resume black-band bug, 2026-08-28). Screen-only:
+     html[data-night] out-specifies print white-page rules even across
+     !important, so night must never reach print. */
+  @media screen {
+    :global(html),
+    :global(body) {
+      background: #e9e8e5 !important;
+    }
+    :global(html[data-night]),
+    :global(html[data-night] body) {
+      background: #0b0e14 !important;
+    }
   }
 
   .one {
@@ -1918,8 +1922,13 @@ const SHOW = new Set(MARKS.map((m) => m.id));
   try { nightManual = localStorage.getItem("studio-night") === "1"; } catch {}
   let nightPower = false;
   const applyNight = () => {
-    if (nightManual || nightPower) nightRoot.setAttribute("data-night", "");
+    const on = nightManual || nightPower;
+    if (on) nightRoot.setAttribute("data-night", "");
     else nightRoot.removeAttribute("data-night");
+    // browser chrome follows the room (same contract as NightBoot/NightSwitch)
+    document
+      .querySelector('meta[name="theme-color"]')
+      ?.setAttribute("content", on ? "#0b0e14" : "#e9e8e5");
   };
   // two switches, one state: the rail's console toggle and the mobile
   // bar's moon both carry data-night-toggle
