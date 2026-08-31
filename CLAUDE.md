@@ -1,9 +1,11 @@
 # jt-portfolio — working rules
 
-The live site is **uxjon.com** (the Studio redesign, shipped Aug 2026). Fuller
-history and the open-items list live in Claude's file memory
-(`portfolio_studio_reapproach` and `resume_experience`); this file is the
-repo-local contract every session must follow.
+The live site is **uxjon.com** (the Studio redesign, shipped Aug 2026). For
+CURRENT state, branch position, and open items read Claude's file memory
+`finishable_reapproach_direction` FIRST (its "WHERE WE ARE" block is the
+handoff); fuller history lives in `portfolio_studio_reapproach`, résumé
+truth in `resume_experience`. This file is the repo-local contract every
+session must follow.
 
 ## Branch + deploy model
 - **main = production.** Vercel auto-deploys `origin/main`. Never commit to
@@ -16,7 +18,9 @@ repo-local contract every session must follow.
 ## Verification norms (non-negotiable)
 - Build gate: `source ~/.nvm/nvm.sh; npm run build > /tmp/build.log 2>&1; echo "exit: $?"`
   — judge ONLY the exit code; grepping the log for "error" gives false passes.
-- Dev server: preview name `studio-desk`, port **4631** (global launch.json).
+- Dev server: preview name `studio-desk`, port **4631**, or `studio-build`,
+  port **4632** (both in the global launch.json — the second exists so
+  parallel sessions never fight over one port; take whichever is free).
   Never run dev servers via plain Bash.
 - Browser verification: the CDP harness at `~/studio-mocks/cdp.mjs`
   (`launch(port)` → `{cdp, ev, close}`; `ev` does NOT await promises;
@@ -32,6 +36,10 @@ repo-local contract every session must follow.
 - `src/components/SignalMachine.astro` is **SACRED**: observe it (its root is
   `section#sgm` inside `.sig-desktop`; page-level anchor/spy target is the
   HOST `#play`), style it only from outside, never edit it.
+- `src/components/studio/builds-copy.ts` holds **JON'S LOCKED WORDS**
+  (installed verbatim from his copy chat, 2026-08-31): never edit, polish,
+  or reflow a sentence. Structure/media `src` fields may change; prose may
+  not. Same rule for the ledes in `src/lib/case-links.ts` (canon).
 - `src/components/studio/StudioOne.astro`: python start..end splicing has
   repeatedly eaten neighboring blocks. Use anchored exact-string edits, and
   verify every scripted replace actually matched (a silent no-match shipped a
@@ -65,3 +73,8 @@ repo-local contract every session must follow.
 - Chrome is quiet IBM Plex Mono; case studies use the `--cs-mono` token.
 - Night mode: `html[data-night]`, two sources (manual switch OR instrument
   power). Dark-until-power is lighting only.
+- Gear objects (homepage `.gear`: Builds, Audios) are dark machine-family
+  panels borrowing the instrument's material language from OUTSIDE, and
+  stay IDENTICAL in day and night — dark gear in a sunlit room is the
+  site's physics. Homepage nav is 🎹 (emoji-only chip, aria "play") ·
+  builds · audios · visuals; section ids stay work/soundlab/illustrations.
