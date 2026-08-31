@@ -1,12 +1,11 @@
 // BUILDS — the three story pieces (direction locked with Jon, 2026-08-31:
 // the Archive / the Studio / the Watch; felt transformation, headline →
-// continuous read).
+// continuous-read fold).
 //
-// ⚠️ EVERY WORD IN THIS FILE IS DRAFT. The real copy is being locked in a
-// separate chat; it lands by replacing the strings below — the layout in
-// StudioOne.astro reads whatever is here, any paragraph count, any length.
-// Flip `draft: false` per piece once Jon's words are in; the visible
-// "draft copy" chip keys off that flag alone.
+// ⭐ THE WORDS ARE LOCKED (copy chat delivery, installed 2026-08-31).
+// Every headline and paragraph below is Jon-owned, verbatim — do not edit,
+// polish, or "improve" a sentence. Media captions are Jon's cue lines from
+// the script, split at its "→" beats into sequential slots.
 //
 // Media contract: assets live at public/builds/<piece-id>/… and land by
 // filling `src` (film = mp4/webm, stills = webp/jpg, audio = mp3 + the
@@ -28,7 +27,7 @@ export interface BuildPiece {
   id: string;
   name: string;
   headline: string;
-  dek: string;
+  dek?: string;
   draft: boolean;
   blocks: BuildBlock[];
 }
@@ -37,97 +36,126 @@ export const BUILDS: BuildPiece[] = [
   {
     id: "archive",
     name: "the archive",
-    draft: true,
-    headline: "Everything I ever recorded, and no way to hear it.",
-    dek: "Voice memos, song fragments, a family dinner — and the library that finally made them touchable.",
+    draft: false,
+    headline: 'Years of my life, trapped in files named "New Recording."',
     blocks: [
       {
         type: "p",
-        html: "For years I recorded everything — song fragments hummed into the phone, friends laughing at dinner, ideas talked out on walks. The memos piled up in a list that only ever grew downward, one gray row at a time, named by date and nothing else.",
+        html: "I document with sound. Where other people reach for the camera, I hit record: ideas hummed into a phone, songs starting in parking lots, laughter I didn't want to lose. Audio is how I remember.",
+      },
+      {
+        type: "p",
+        html: "The problem is that our tech treats sound like a second-class memory. Photos get faces, places, search. Recordings get a timestamp and a duration. Mine piled up for years across phones, laptops, and drives: hundreds of moments, technically saved, practically gone. Every so often I'd stumble into one and be wrecked by how good it felt to be back there. Then I wouldn't find another one for a year.",
+      },
+      {
+        type: "p",
+        html: "So I built the library I wished existed. Every recording read and named by what's actually inside it. Transcripts I can search the way everyone else searches their photos. Waveforms I can see, touch, trim, keep. The quote, the laugh, the idea from three summers ago: seconds away now.",
+      },
+      {
+        type: "p",
+        html: "The archive stopped being storage. It became a place I go.",
       },
       {
         type: "media",
         kind: "stills",
         src: null,
-        caption: "the stock Voice Memos list, scrolled deadpan — the problem in the tech everyone already knows",
-      },
-      {
-        type: "p",
-        html: "Finding one again was rare enough to feel like an event. We document our lives in photographs and know exactly how to wander back through them; nobody teaches you to wander through sound. Pressing record at a family dinner still reads as intrusive where a camera doesn't. So the recordings held the parts of life a photo can't — voices, timing, the room itself — and stayed unreachable.",
-      },
-      {
-        type: "p",
-        html: "The library changed the physics. Every moment is searchable now; a quote or a laugh is at my fingertips in seconds. Waveforms make the sound touchable — you can see the shape of a joke land. Trim a moment out, favorite it, drop it on a soundboard and play it back like an instrument.",
+        caption: "the stock Voice Memos list, deadpan",
       },
       {
         type: "media",
         kind: "film",
         src: null,
-        caption: "the library in hand — scrubbing a waveform, pulling a favorite moment out by feel",
+        caption: 'the real library, a search for "laugh" landing',
+      },
+      {
+        type: "media",
+        kind: "film",
+        src: null,
+        caption: "a waveform trimmed to a single moment",
       },
     ],
   },
   {
     id: "studio",
     name: "the studio",
-    draft: true,
-    headline: "Making music was joy. Recording it was bureaucracy.",
-    dek: "Years of out-engineering the room, defeated by a battery icon — until the instruments moved inside the laptop.",
+    draft: false,
+    headline: "Making music was never the hard part.",
     blocks: [
       {
         type: "p",
-        html: "I spent years out-engineering my own studio. A master switch so the whole room woke at once; surge strips zip-tied under the desk; every cable labeled at both ends. The instruments were always ready.",
+        html: "I have a room full of instruments I love and a computer that can pretend to be any instrument on earth. The hard part was everything between playing and keeping: the laptop that needs charging, the DAW that needs updating, the channels that need arming, the project that needs a name before the idea even exists. I have ADHD. My favorite thing in the world came wrapped in exactly the kind of bureaucracy my brain refuses to run.",
       },
       {
         type: "p",
-        html: "The computer never was. Recording meant a prerequisite chain — battery, updates, arming the track, naming the file — and by the end of it the performance I'd walked in with was gone. I have ADHD; the friction wasn't an inconvenience, it was a wall. The music was joy. The recording was bureaucracy.",
+        html: "I spent years engineering my way around it. One master power switch. Cable runs planned like plumbing. A studio tuned so nothing could interrupt. The friction always found a way back in, because the paradigm was the problem: every setup on earth still assumed creation happens at a desk, after a checklist.",
+      },
+      {
+        type: "p",
+        html: "So I changed what a studio is. Mine listens all the time: there is no record button to forget. My hardware got distilled into the laptop: the studio plays each instrument over MIDI and keeps its voice, so the whole room travels with me. And the interface isn't a screen anymore. It's a PlayStation controller, bought new for exactly this: the most fun way of making music I could bring into the world. Drums play like a fighting game. One button grabs the four bars I just loved. And when it's true, I hold the trigger and the song prints itself into stems, named right, ready for Ableton.",
+      },
+      {
+        type: "p",
+        html: "Now the couch is a studio. The ocean is a studio. The music happens wherever I am, and the machine keeps every second of it. All the hard parts got automated away. The part that's left is the part I love.",
       },
       {
         type: "media",
         kind: "stills",
         src: null,
-        caption: "the arming ritual, step by step — the checklist a song had to survive",
+        caption: "the arming ritual shown flat",
       },
       {
-        type: "p",
-        html: "The shift wasn't a better checklist. Resampling and automation distilled the physical instruments into the laptop — the whole room, its sounds and its habits, folded into something that opens in one motion.",
-      },
-      {
-        type: "p",
-        html: "Then I bought the newest PlayStation controller, on purpose, to be the instrument's front panel — because the coolest, easiest, most fun way to make music should feel like play. Now creation happens anywhere the couch is, or the ocean, or an airplane seat. It isn't convenience; it's universe-building, with the technology finally out of the way.",
+        type: "media",
+        kind: "stills",
+        src: null,
+        caption: "a night's capture strip",
       },
       {
         type: "media",
         kind: "film",
         src: null,
-        caption: "hands on the controller — a jam moving, couch-lit",
+        caption: "the moment cards, tappable",
       },
       {
-        type: "p",
-        html: "It ends where the old studio never did: hold the trigger and the stems print. Songs get finished. Albums are possible.",
+        type: "media",
+        kind: "film",
+        src: null,
+        caption: "THE FILM: thumbs on the pad, hardware answering, the folder printing",
       },
     ],
   },
   {
     id: "watch",
     name: "the watch",
-    draft: true,
-    headline: "Ideas were born on the couch and died on the way to the computer.",
-    dek: "Speak anywhere; the thought lands as a ticket, a calendar hold, a change — context intact.",
+    draft: false,
+    headline: "My best ideas never survived the walk to the computer.",
     blocks: [
       {
         type: "p",
-        html: "Ideas used to die in transit. Born on the couch, they had to survive the trip — wake a screen, fight voice-to-text, hold three other thoughts in line, clean up the mess afterward — and most didn't. The distance between thinking a thing and it counting was the whole problem.",
+        html: "Ideas don't wait until you're at a desk. Mine show up on the couch, at the window, halfway through a walk: fully formed, in my own voice, ready to go. Capturing one used to mean killing the moment it came from. Sit down. Open a screen. Fight voice-to-text. Shrink the thought into a note, clean up the note, and only then tell the machine what to do. Half my ideas didn't survive the trip.",
       },
       {
         type: "p",
-        html: "Now I speak where the thought happens. A sentence into the watch becomes a ticket, a calendar hold, a change to a system — with its context still attached. Nothing asks me to stop being wherever I am. (The watch itself is a small saga: hardware that wasn't for sale, worn anyway.) The state never breaks; the flow keeps.",
+        html: "Now I talk to my watch. That's the whole gesture. I stay where the thought found me and say it while it's still alive. A system I own catches it, understands it, and files it into what it wanted to be: a task, a calendar event, a change to make. By the time I sit back down, my thinking is already work.",
+      },
+      {
+        type: "p",
+        html: "The device I needed famously doesn't exist to buy. I looked: rings on preorder, mics that die by lunch, wearables that fail one simple sentence: record when I say record, keep what I said. Building it myself took a weekend, because the hard parts (the transcription, the server, the understanding) were already mine, humming in a closet.",
+      },
+      {
+        type: "p",
+        html: "The distance between thinking something and it happening has collapsed to the length of a sentence. This very page was partly built that way.",
       },
       {
         type: "media",
         kind: "film",
         src: null,
-        caption: "the watch film — a thought spoken mid-walk, landing as a ticket",
+        caption: "THE FILM: you mid-room, wrist up, hard cut to the ticket and calendar event materializing",
+      },
+      {
+        type: "media",
+        kind: "stills",
+        src: null,
+        caption: "the pipe in one quiet diagram-breath",
       },
     ],
   },

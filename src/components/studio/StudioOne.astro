@@ -16,7 +16,6 @@
 import fs from "node:fs";
 import path from "node:path";
 import soundlab from "./rooms/soundlab-manifest.json";
-import writing from "./rooms/writing-manifest.json";
 import illustrations from "./rooms/illustrations-manifest.json";
 import SignalMachine from "../SignalMachine.astro";
 import Transport from "../Transport.astro";
@@ -63,34 +62,29 @@ const coverSvg = (t: Track, seed: number): string => {
 };
 interface Illo { src: string; alt: string; title?: string; year?: number; medium?: string; }
 const illos: Illo[] = (illustrations as any).items ?? [];
-interface Post { slug: string; title: string; date: string; subtitle?: string; cover?: string | null; paragraphs: string[]; }
-const fmtDate = (iso: string) => {
-  const d = new Date(iso + "T12:00:00");
-  return isNaN(d.getTime()) ? iso : d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
-};
-const posts: Post[] = (writing as any).posts ?? [];
-
 // The five-row case-study shelf DISSOLVED here 2026-08-31 (direction file:
 // homepage = Builds only). Its ledes' disposition: chs / crediverso / raylu
 // moved to src/lib/case-links.ts and surface on /resume; momence keeps its
 // URL but leaves the site's surfaces; the-console page + doors stay live
-// as quarry for the Builds pieces. Story copy = builds-copy.ts (DRAFT
-// until the copy chat locks it).
+// as quarry for the Builds pieces. Story copy = builds-copy.ts (words
+// LOCKED 2026-08-31 — Jon-owned, never edit there).
+// The writing section left the homepage the same day ("for now" — Jon's
+// round-2 call): manifests + /writing/<slug> pages stay live at their URLs.
 
-// The words — type-only (Jon, 2026-08-19: no emoji; tasteful mono). Order
-// mirrors the page: the instrument is the handshake, right under the hero.
-// A word renders ONLY when its room has something in it.
+// The nav (Jon's round-2 overhaul, 2026-08-31): plain nouns for the rooms
+// — builds · audios · visuals ("audios" is Jon's word, deliberately) —
+// plus ONE wordless object: the instrument as an emoji-only chip, first.
+// `word: ""` = wordless chip (aria carries the name). A word renders ONLY
+// when its room has something in it. Section ids are stable internals
+// (work/soundlab/illustrations) so deep links and the spy survive renames.
 const MARKS = [
   // id "play" = the .live-signal HOST (has a box at every width); the
   // machine's own #signal root is display:none on coarse pointers, which
-  // made the word a dead link on phones (review, 2026-08-25)
-  { id: "play", word: "play", emoji: "🎹", ethereal: true, has: true },
-  // "work" now anchors the BUILDS matrix (id stays "work": deep links +
-  // the locked rail word survive the shelf's dissolution)
-  { id: "work", word: "work", emoji: "💼", ethereal: false, has: BUILDS.length > 0 },
-  { id: "soundlab", word: "listen", emoji: "🎧", ethereal: false, has: tracks.length > 0 },
-  { id: "writing", word: "read", emoji: "✏️", ethereal: false, has: true },
-  { id: "illustrations", word: "look", emoji: "🖼️", ethereal: false, has: illos.length > 0 },
+  // made the chip a dead link on phones (review, 2026-08-25)
+  { id: "play", word: "", aria: "play", emoji: "🎹", ethereal: true, has: true },
+  { id: "work", word: "builds", aria: "builds", emoji: "🛠️", ethereal: false, has: BUILDS.length > 0 },
+  { id: "soundlab", word: "audios", aria: "audios", emoji: "🎧", ethereal: false, has: tracks.length > 0 },
+  { id: "illustrations", word: "visuals", aria: "visuals", emoji: "🖼️", ethereal: false, has: illos.length > 0 },
 ].filter((m) => m.has);
 const SHOW = new Set(MARKS.map((m) => m.id));
 ---
@@ -130,9 +124,16 @@ const SHOW = new Set(MARKS.map((m) => m.id));
       always present from load; flat light panel; mobile deferred) ───────── */}
   <nav class="rail" data-rail aria-label="Sections">
     {MARKS.map((m) => (
-      <a class="rail-item" href={`#${m.id}`} data-for={m.id} data-ethereal={m.ethereal ? "" : undefined}>
+      <a
+        class="rail-item"
+        href={`#${m.id}`}
+        data-for={m.id}
+        data-ethereal={m.ethereal ? "" : undefined}
+        data-solo={m.word === "" ? "" : undefined}
+        aria-label={m.word === "" ? m.aria : undefined}
+      >
         <span class="rail-art" aria-hidden="true">{m.emoji}</span>
-        <span class="rail-word">{m.word}</span>
+        {m.word !== "" && <span class="rail-word">{m.word}</span>}
       </a>
     ))}
     <span class="comet" data-comet aria-hidden="true">
@@ -158,9 +159,15 @@ const SHOW = new Set(MARKS.map((m) => m.id));
       at the thumb, night switch at the end. Same spy lights both. */}
   <nav class="mbar" data-mbar aria-label="Sections">
     {MARKS.map((m) => (
-      <a class="mbar-item" href={`#${m.id}`} data-for={m.id}>
+      <a
+        class="mbar-item"
+        href={`#${m.id}`}
+        data-for={m.id}
+        data-solo={m.word === "" ? "" : undefined}
+        aria-label={m.word === "" ? m.aria : undefined}
+      >
         <span class="mbar-emoji" aria-hidden="true">{m.emoji}</span>
-        <span class="mbar-word">{m.word}</span>
+        {m.word !== "" && <span class="mbar-word">{m.word}</span>}
       </a>
     ))}
     <button class="mbar-night" type="button" data-night-toggle aria-pressed="false" aria-label="Night mode">
@@ -185,13 +192,14 @@ const SHOW = new Set(MARKS.map((m) => m.id));
     </div>
   </section>
 
-  {/* ── BUILDS — three story pieces as a brutalist matrix (direction locked
-      2026-08-31): headline row → continuous-read expansion. All words come
-      from builds-copy.ts (DRAFT until the copy chat locks them — swap the
-      strings there, never this layout). "Builds" is the banner's working
-      name; the rail keeps the locked word "work" and the id stays "work"
-      so deep links and the spy survive the shelf's dissolution. */}
-  {SHOW.has("work") && <section class="sheet paper" id="work" aria-labelledby="work-t">
+  {/* ── BUILDS — three story pieces, headline row → continuous-read fold.
+      Words LOCKED in builds-copy.ts (Jon-owned — never edit there). Jon's
+      round-2 call: not paper — a machine-family OBJECT in the room, the
+      instrument's material language borrowed from OUTSIDE (SignalMachine
+      itself stays sacred): carbon panel, engraved type, a glass read
+      panel, keycap marks, one ember lamp per slot. Dark in BOTH modes —
+      dark gear in a sunlit room is the site's physics. */}
+  {SHOW.has("work") && <section class="gear gear-builds" id="work" aria-labelledby="work-t">
     <h2 id="work-t">Builds</h2>
     <div class="builds">
       {BUILDS.map((b, i) => (
@@ -200,6 +208,7 @@ const SHOW = new Set(MARKS.map((m) => m.id));
             <span class="bp-id">
               <span class="bp-no" aria-hidden="true">{String(i + 1).padStart(2, "0")}</span>
               <span class="bp-name">{b.name}</span>
+              <i class="bp-led" aria-hidden="true"></i>
             </span>
             <span class="bp-hookwrap">
               <h3 class="bp-hook">{b.headline}</h3>
@@ -240,8 +249,10 @@ const SHOW = new Set(MARKS.map((m) => m.id));
   </section>}
 
 
-  {SHOW.has("soundlab") && <section class="sheet night" id="soundlab" aria-labelledby="soundlab-t">
-    <h2 id="soundlab-t">Listen</h2>
+  {/* the player wears the same gear clothes (round 2): carbon face, glass
+      cover window, keycap arrows — Transport/Carousel mechanics untouched */}
+  {SHOW.has("soundlab") && <section class="gear gear-audio" id="soundlab" aria-labelledby="soundlab-t">
+    <h2 id="soundlab-t">Audios</h2>
     <Carousel count={tracks.length} label="Music" accent="var(--sapphire)">
       {tracks.map((t, i) => (
         <article class="ls">
@@ -260,28 +271,12 @@ const SHOW = new Set(MARKS.map((m) => m.id));
     </Carousel>
   </section>}
 
-  <section class="sheet paper" id="writing" aria-labelledby="writing-t">
-    <h2 id="writing-t">Read</h2>
-    {posts.length > 0 ? (
-      <ul class="tiles">
-        {posts.map((post) => (
-          <li>
-            <a class="tile" href={`/writing/${post.slug}`}>
-              {post.cover && <span class="tile-cover"><img src={post.cover} alt="" loading="lazy" /></span>}
-              <span class="tile-title">{post.title}</span>
-              {post.subtitle && <span class="tile-sub">{post.subtitle}</span>}
-              <span class="tile-date">{fmtDate(post.date)}</span>
-            </a>
-          </li>
-        ))}
-      </ul>
-    ) : (
-      <p class="paper-line">Writing lands here.</p>
-    )}
-  </section>
+  {/* the writing section left the homepage 2026-08-31 ("for now" — Jon's
+      round-2 call). The tiles, manifests, and /writing/<slug> pages all
+      stay in the tree, live at their URLs; only this room is unrouted. */}
 
   {SHOW.has("illustrations") && <section class="look-band" id="illustrations" aria-labelledby="illustrations-t">
-    <h2 id="illustrations-t" class="sr-only">Look</h2>
+    <h2 id="illustrations-t" class="sr-only">Visuals</h2>
     <Carousel count={illos.length} label="Visual work" accent="var(--brand-yellow, #ffc94d)">
       {illos.map((it, i) => (
         <figure class="lk">
@@ -537,6 +532,17 @@ const SHOW = new Set(MARKS.map((m) => m.id));
     letter-spacing: 0.07em;
     white-space: nowrap;
   }
+  /* the wordless chip: the instrument as a small standalone object — snug
+     around its emoji, centered on the rail's axis. Sitting off the word
+     column is deliberate: it is not a word, it is a thing. */
+  .rail-item[data-solo] {
+    width: auto;
+    padding: 11px 13px;
+  }
+  .rail-item[data-solo] .rail-art {
+    width: auto;
+    font-size: 19px;
+  }
 
   /* SCROLL-MAP mode (Jon, 2026-08-18): each item sits at the comet-track
      position of its section, so the bead passes an icon exactly while the
@@ -717,21 +723,8 @@ const SHOW = new Set(MARKS.map((m) => m.id));
     background: rgba(16, 18, 22, 0.6);
     color: #e8ecf4;
   }
-  /* the paper sheets go dark with the room; their interiors are painted
-     with --ink/--dim/--paper-line, so redefining the vars carries the
-     work rows and writing tiles along without per-element overrides */
-  :global(html[data-night]) .sheet.paper {
-    background: var(--night);
-    border-color: var(--night-line);
-    color: var(--night-ink);
-    --ink: var(--night-ink);
-    --dim: var(--night-dim);
-    --paper-line: var(--night-line);
-  }
-  :global(html[data-night]) .bp-head:hover,
-  :global(html[data-night]) .bp-head:focus-visible {
-    background: rgba(232, 236, 244, 0.05);
-  }
+  /* (round 2: no paper sheets remain on the page — the gear objects wear
+     fixed machine inks and need no night flip) */
 
   /* ── the light switch: a brutalist console toggle at the rail's foot
      (Jon, 2026-08-20 — a different KIND of object from the nav chips:
@@ -884,13 +877,10 @@ const SHOW = new Set(MARKS.map((m) => m.id));
       font-family: "IBM Plex Mono", ui-monospace, monospace;
       color: #45423c;
     }
-    /* the bar mirrors the PHONE page order (look before read, play last);
+    /* the bar mirrors the PHONE page order (play last);
        DOM order stays the desktop document order for honest tab order */
     .mbar-item[data-for="illustrations"] {
       order: 3;
-    }
-    .mbar-item[data-for="writing"] {
-      order: 4;
     }
     .mbar-item[data-for="play"] {
       order: 6;
@@ -914,6 +904,10 @@ const SHOW = new Set(MARKS.map((m) => m.id));
     .mbar-word {
       font-size: 0.66rem;
       letter-spacing: 0.05em;
+    }
+    /* the wordless chip carries a slightly larger object */
+    .mbar-item[data-solo] .mbar-emoji {
+      font-size: 19px;
     }
     .mbar-item[data-on] {
       background: var(--ink);
@@ -982,7 +976,6 @@ const SHOW = new Set(MARKS.map((m) => m.id));
     .one > #work { order: 1; }
     .one > #soundlab { order: 2; }
     .one > .look-band { order: 3; }
-    .one > #writing { order: 4; }
     .one > .live-signal { order: 5; }
     .one > .floor { order: 6; }
     .one > [data-end] { order: 7; }
@@ -1020,55 +1013,53 @@ const SHOW = new Set(MARKS.map((m) => m.id));
     color: #7d8798;
   }
 
-  /* ── sections ────────────────────────────────────────────────────────── */
-  .sheet {
+  /* ── sections: the GEAR family (round 2 — replaces the paper/night
+     sheets). Dark machine-objects on the light ground, the instrument's
+     material language borrowed from OUTSIDE (SignalMachine itself is
+     sacred): carbon panel, engraved silkscreen, glass. Same face in day
+     and night — dark gear in a sunlit room is the site's physics. */
+  .gear {
     max-width: 1080px;
     margin: 0 auto clamp(72px, 12vh, 140px);
     padding: clamp(26px, 4vw, 46px);
-    border-radius: 8px;
+    border-radius: 10px;
     scroll-margin-top: 76px;
-    box-shadow: 0 18px 44px -24px rgba(20, 12, 4, 0.5);
-    /* the paper sheets fade with the room's 560ms night cycle */
-    transition: background 560ms ease, border-color 560ms ease, color 560ms ease;
+    background: linear-gradient(160deg, #1c1f25, #14161b 55%, #0e1014);
+    border: 1px solid #262b34;
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.06),
+      0 18px 44px -24px rgba(10, 8, 4, 0.6);
   }
-  .paper {
-    background: var(--paper);
-    border: 1px solid var(--paper-line);
-  }
-  .night {
-    background: var(--night);
-    border: 1px solid var(--night-line);
-    color: var(--night-ink);
-  }
-  .sheet h2 {
-    margin: 0 0 22px;
+  .gear h2 {
+    margin: 0 0 24px;
     font-family: "IBM Plex Mono", ui-monospace, monospace;
     font-weight: 600;
     font-size: clamp(1.05rem, 1.8vw, 1.3rem);
-    letter-spacing: 0.09em;
+    letter-spacing: 0.22em;
     text-transform: uppercase;
-  }
-  .night h2 {
-    color: var(--night-ink);
+    color: #e8ecf4;
+    /* engraved silkscreen — never lit */
+    text-shadow: 0 1px 0 rgba(0, 0, 0, 0.6), 0 -1px 0 rgba(255, 255, 255, 0.06);
   }
 
-  /* ── BUILDS: the brutalist matrix. Hard rules, square corners, three
-     cells to a row (id | hook | mark), verticals desktop-only. Painted
-     entirely in --ink/--dim/--paper-line so the sheet's night var flip
-     carries it with zero extra rules. */
+  /* ── BUILDS: the story matrix ON the machine (round 2 — carbon, not
+     paper; Jon: "an object that exists on the page"). Slots read as
+     engravings; the fold opens a lit glass panel; one ember lamp per slot
+     answers the instrument's power language. Fixed inks — the object is
+     the same in day and night. */
   .builds {
-    border-top: 2px solid var(--ink);
+    border-top: 2px solid rgba(232, 236, 244, 0.4);
   }
   .bp {
-    border-bottom: 1px solid var(--paper-line);
+    border-bottom: 1px solid rgba(232, 236, 244, 0.12);
   }
   .bp:last-child {
-    border-bottom: 2px solid var(--ink);
+    border-bottom: 2px solid rgba(232, 236, 244, 0.4);
   }
   .bp-head {
     display: grid;
     grid-template-areas: "id hook x";
-    grid-template-columns: 128px 1fr 56px;
+    grid-template-columns: 128px 1fr 64px;
     align-items: stretch;
     cursor: pointer;
     list-style: none;
@@ -1080,30 +1071,47 @@ const SHOW = new Set(MARKS.map((m) => m.id));
     content: "";
   }
   .bp-head:hover {
-    background: rgba(20, 18, 16, 0.035);
+    background: rgba(232, 236, 244, 0.04);
   }
   .bp-head:focus-visible {
-    outline: 2px solid var(--ink);
+    outline: 2px solid #e8ecf4;
     outline-offset: -2px;
   }
   .bp-id {
     grid-area: id;
     display: flex;
     flex-direction: column;
-    gap: 7px;
-    padding: 20px 14px 20px 4px;
+    align-items: flex-start;
+    gap: 8px;
+    padding: 22px 14px 22px 4px;
     font-family: "IBM Plex Mono", ui-monospace, monospace;
   }
   .bp-no {
     font-size: 0.62rem;
     letter-spacing: 0.1em;
-    color: var(--dim);
+    color: #7d8798;
   }
   .bp-name {
     font-size: 0.72rem;
     font-weight: 600;
     letter-spacing: 0.12em;
     text-transform: uppercase;
+    color: #e8ecf4;
+    /* engraved, like everything printed on the panel */
+    text-shadow: 0 1px 0 rgba(0, 0, 0, 0.6), 0 -1px 0 rgba(255, 255, 255, 0.06);
+  }
+  /* the slot lamp: dark socket at rest, ember while its read is open */
+  .bp-led {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: rgba(255, 84, 50, 0.16);
+    box-shadow: inset 0 0 2px rgba(0, 0, 0, 0.7);
+    transition: background 220ms ease, box-shadow 220ms ease;
+  }
+  .bp[open] .bp-led {
+    background: #ff5432;
+    box-shadow: 0 0 8px rgba(255, 84, 50, 0.7);
   }
   .bp-hookwrap {
     grid-area: hook;
@@ -1111,8 +1119,8 @@ const SHOW = new Set(MARKS.map((m) => m.id));
     flex-direction: column;
     align-items: flex-start;
     gap: 8px;
-    padding: 18px 22px 20px;
-    border-left: 1px solid var(--paper-line);
+    padding: 20px 22px 22px;
+    border-left: 1px solid rgba(232, 236, 244, 0.12);
     min-width: 0;
   }
   .bp-hook {
@@ -1122,11 +1130,12 @@ const SHOW = new Set(MARKS.map((m) => m.id));
     line-height: 1.25;
     letter-spacing: -0.01em;
     max-width: 34ch;
+    color: #e8ecf4;
   }
   .bp-dek {
     font-size: 0.86rem;
     line-height: 1.5;
-    color: var(--dim);
+    color: #7d8798;
     max-width: 58ch;
   }
   .bp-draft {
@@ -1137,57 +1146,73 @@ const SHOW = new Set(MARKS.map((m) => m.id));
     text-transform: uppercase;
     border: 1px solid currentColor;
     padding: 2px 7px;
-    color: #b33a2a;
-  }
-  :global(html[data-night]) .bp-draft {
     color: #ff8a70;
   }
-  /* the mark: a drawn +, no words — it turns × when the read is open */
+  /* the mark: a keycap with an engraved + that turns × when open */
   .bp-x {
     grid-area: x;
     position: relative;
-    border-left: 1px solid var(--paper-line);
+    border-left: 1px solid rgba(232, 236, 244, 0.12);
   }
-  .bp-x::before,
+  .bp-x::before {
+    content: "";
+    position: absolute;
+    left: 50%;
+    top: 34px;
+    width: 34px;
+    height: 34px;
+    transform: translate(-50%, -50%);
+    border-radius: 4px;
+    background: linear-gradient(180deg, #262b34, #1a1f27);
+    border: 1px solid rgba(0, 0, 0, 0.65);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.07);
+    transition: box-shadow 120ms ease;
+  }
   .bp-x::after {
     content: "";
     position: absolute;
     left: 50%;
-    top: 32px;
-    background: var(--ink);
-    transition: transform 220ms cubic-bezier(0.3, 0.8, 0.3, 1);
-  }
-  .bp-x::before {
+    top: 34px;
     width: 15px;
-    height: 1.5px;
-    transform: translate(-50%, -50%);
-  }
-  .bp-x::after {
-    width: 1.5px;
     height: 15px;
     transform: translate(-50%, -50%);
+    background:
+      linear-gradient(#e8ecf4, #e8ecf4) center / 15px 1.5px no-repeat,
+      linear-gradient(#e8ecf4, #e8ecf4) center / 1.5px 15px no-repeat;
+    transition: transform 220ms cubic-bezier(0.3, 0.8, 0.3, 1);
   }
-  .bp[open] .bp-x::before,
+  .bp-head:hover .bp-x::before {
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12);
+  }
+  .bp[open] .bp-x::before {
+    box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.6);
+  }
   .bp[open] .bp-x::after {
     transform: translate(-50%, -50%) rotate(45deg);
   }
-  /* the continuous read: one measured column under the hook */
+  /* the continuous read: a lit glass panel set into the machine */
   .bp-read {
-    padding: 10px 22px 40px 150px;
+    margin: 4px 22px 36px 150px;
+    padding: clamp(22px, 3vw, 34px);
+    background:
+      linear-gradient(165deg, rgba(170, 196, 232, 0.08), rgba(170, 196, 232, 0.02) 40%, transparent),
+      #05070c;
+    border: 1px solid #232833;
+    border-radius: 6px;
   }
   .bp-p {
     margin: 0 0 1.1em;
     max-width: 62ch;
     font-size: 1.02rem;
     line-height: 1.7;
-    color: color-mix(in srgb, var(--ink) 86%, var(--dim));
+    color: #cfd6e2;
   }
   .bp-p:last-child {
     margin-bottom: 0;
   }
   .bp-p strong {
     font-weight: 600;
-    color: var(--ink);
+    color: #e8ecf4;
   }
   /* media beats: real when src lands; an HONEST dashed slot until then */
   .bp-media {
@@ -1198,7 +1223,8 @@ const SHOW = new Set(MARKS.map((m) => m.id));
   .bp-media img {
     display: block;
     width: 100%;
-    border: 1px solid var(--paper-line);
+    border: 1px solid #232833;
+    border-radius: 4px;
   }
   .bp-cap {
     margin-top: 8px;
@@ -1206,7 +1232,7 @@ const SHOW = new Set(MARKS.map((m) => m.id));
     font-size: 0.66rem;
     letter-spacing: 0.05em;
     line-height: 1.5;
-    color: var(--dim);
+    color: #7d8798;
   }
   .bp-slot {
     display: flex;
@@ -1216,7 +1242,8 @@ const SHOW = new Set(MARKS.map((m) => m.id));
     gap: 9px;
     aspect-ratio: 16 / 9;
     padding: 18px;
-    border: 1px dashed color-mix(in srgb, var(--dim) 55%, transparent);
+    border: 1px dashed rgba(125, 135, 152, 0.4);
+    border-radius: 4px;
     text-align: center;
   }
   .bp-media[data-kind="audio"] .bp-slot {
@@ -1228,16 +1255,16 @@ const SHOW = new Set(MARKS.map((m) => m.id));
     font-size: 0.58rem;
     letter-spacing: 0.14em;
     text-transform: uppercase;
-    border: 1px solid color-mix(in srgb, var(--dim) 55%, transparent);
+    border: 1px solid rgba(125, 135, 152, 0.4);
     padding: 2px 8px;
-    color: var(--dim);
+    color: #7d8798;
   }
   .bp-slot-note {
     font-family: "IBM Plex Mono", ui-monospace, monospace;
     font-size: 0.7rem;
     letter-spacing: 0.03em;
     line-height: 1.55;
-    color: var(--dim);
+    color: #7d8798;
     max-width: 44ch;
   }
   .bp-slot-pending {
@@ -1245,7 +1272,7 @@ const SHOW = new Set(MARKS.map((m) => m.id));
     font-size: 0.58rem;
     letter-spacing: 0.14em;
     text-transform: uppercase;
-    color: color-mix(in srgb, var(--dim) 70%, transparent);
+    color: rgba(125, 135, 152, 0.65);
   }
   /* the fold: height-animated where the platform can (Chromium 131+);
      everywhere else it snaps open — honest, and reduced-motion clean */
@@ -1267,27 +1294,28 @@ const SHOW = new Set(MARKS.map((m) => m.id));
   @media (max-width: 720px) {
     .bp-head {
       grid-template-areas: "id x" "hook hook";
-      grid-template-columns: 1fr 44px;
+      grid-template-columns: 1fr 52px;
     }
     .bp-id {
       flex-direction: row;
-      align-items: baseline;
+      align-items: center;
       gap: 10px;
-      padding: 16px 4px 0;
+      padding: 18px 4px 0;
     }
     .bp-hookwrap {
       border-left: 0;
-      padding: 10px 4px 18px;
+      padding: 12px 4px 20px;
     }
     .bp-x {
       border-left: 0;
     }
     .bp-x::before,
     .bp-x::after {
-      top: 24px;
+      top: 28px;
     }
     .bp-read {
-      padding: 6px 4px 30px;
+      margin: 4px 0 28px;
+      padding: 18px 16px;
     }
   }
 
@@ -1468,60 +1496,8 @@ const SHOW = new Set(MARKS.map((m) => m.id));
     box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.07);
   }
 
-  /* ── writing: preview tiles → /writing/<slug> ────────────────────────── */
-  .tiles {
-    list-style: none;
-    margin: 0;
-    padding: 0;
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
-    gap: 20px;
-  }
-  .tile {
-    display: flex;
-    flex-direction: column;
-    gap: 9px;
-    text-decoration: none;
-    color: inherit;
-    border-radius: 6px;
-  }
-  .tile-cover img {
-    width: 100%;
-    aspect-ratio: 16 / 10;
-    object-fit: cover;
-    border-radius: 4px;
-    border: 1px solid var(--paper-line);
-    display: block;
-    transition: transform 200ms cubic-bezier(0.2, 0.7, 0.3, 1);
-  }
-  .tile:hover .tile-cover img {
-    transform: translateY(-3px);
-  }
-  .tile-title {
-    font-weight: 600;
-    font-size: 0.98rem;
-    line-height: 1.3;
-  }
-  .tile:hover .tile-title {
-    text-decoration: underline;
-    text-underline-offset: 4px;
-    text-decoration-color: color-mix(in srgb, currentColor 35%, transparent);
-  }
-  .tile-sub {
-    font-size: 0.84rem;
-    line-height: 1.45;
-    color: var(--dim);
-  }
-  .tile-date {
-    font-family: "IBM Plex Mono", ui-monospace, monospace;
-    font-size: 0.66rem;
-    letter-spacing: 0.05em;
-    color: var(--dim);
-  }
-  .tile:focus-visible {
-    outline: 2px solid var(--ink);
-    outline-offset: 4px;
-  }
+  /* (the writing tiles left with their section, 2026-08-31 — the
+     /writing/<slug> pages keep their own styles) */
 
   /* ── the live instrument (the finale) ────────────────────────────────── */
   .live-signal {
@@ -1629,12 +1605,15 @@ const SHOW = new Set(MARKS.map((m) => m.id));
       grid-template-columns: 1fr;
     }
   }
+  /* the cover sits behind glass — the gear face's window */
   .ls-cover {
     aspect-ratio: 1;
-    border-radius: 8px;
+    border-radius: 6px;
     overflow: hidden;
-    border: 1px solid var(--night-line);
-    background: #0b0e14;
+    border: 1px solid #232833;
+    background:
+      linear-gradient(165deg, rgba(170, 196, 232, 0.1), rgba(170, 196, 232, 0.02) 40%, transparent),
+      #05070c;
   }
   .ls-cover :global(svg),
   .ls-cover img {
@@ -1675,6 +1654,23 @@ const SHOW = new Set(MARKS.map((m) => m.id));
   }
   .ls-tp {
     margin-top: 18px;
+  }
+  /* the player's arrows as keycaps — the gear face's controls (clothing
+     only; Carousel mechanics untouched) */
+  .gear-audio :global(.car-btn) {
+    border-radius: 4px;
+    background: linear-gradient(180deg, #262b34, #1a1f27);
+    border: 1px solid rgba(0, 0, 0, 0.65);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.07);
+    color: #e8ecf4;
+  }
+  .gear-audio :global(.car-btn:hover:not(:disabled)),
+  .gear-audio :global(.car-btn:focus-visible) {
+    border-color: rgba(232, 236, 244, 0.35);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12);
+  }
+  .gear-audio :global(.car-counter) {
+    color: #7d8798;
   }
 
   /* look: just the artwork on the site's own ground — no frame, no dark
@@ -1756,19 +1752,6 @@ const SHOW = new Set(MARKS.map((m) => m.id));
     color: var(--dim);
   }
 
-  .paper-line {
-    margin: 0;
-    font-size: 0.95rem;
-    line-height: 1.55;
-    color: var(--dim);
-  }
-  .paper-line a {
-    color: var(--ink);
-    text-decoration: underline;
-    text-underline-offset: 4px;
-    margin-left: 8px;
-  }
-
   .illos {
     list-style: none;
     margin: 0;
@@ -1793,13 +1776,13 @@ const SHOW = new Set(MARKS.map((m) => m.id));
     }
   }
   @media (min-width: 900px) and (max-width: 1320px) {
-    .sheet {
+    .gear {
       margin-left: 24px;
       margin-right: 24px;
     }
   }
   @media (max-width: 899px) {
-    .sheet {
+    .gear {
       margin-left: 14px;
       margin-right: 14px;
     }
