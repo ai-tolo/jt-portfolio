@@ -33,33 +33,6 @@ const etchAsset = ["etch.svg", "etch.webp", "etch.png"].filter(exists).map((f) =
 interface Track { src: string | null; title: string; note?: string; year?: number; duration?: string; peaks?: string | null; cover?: string | null; }
 const tracks: Track[] = ((soundlab as any).tracks ?? []).filter((t: Track) => t.src);
 
-// Generated cover: the track's OWN waveform, radial, on the night ground —
-// honest per-track art until Jon's covers land in the manifest (cover field).
-const peaksFor = (t: Track): number[] => {
-  try {
-    const base = (t.peaks ?? "").replace(/\.[a-z0-9]+$/i, "");
-    return JSON.parse(fs.readFileSync(path.join(process.cwd(), "public", "peaks", `${base}.json`), "utf8")).peaks;
-  } catch { return Array.from({ length: 120 }, (_, i) => 0.25 + 0.2 * Math.sin(i / 5)); }
-};
-const coverSvg = (t: Track, seed: number): string => {
-  const pk = peaksFor(t);
-  const N = Math.min(pk.length, 144);
-  const cx = 120, cy = 120, r0 = 52;
-  let bars = "";
-  for (let i = 0; i < N; i++) {
-    const a = (i / N) * Math.PI * 2 - Math.PI / 2 + seed * 0.13;
-    const len = 10 + pk[Math.floor((i / N) * pk.length)] * 46;
-    const x1 = cx + Math.cos(a) * r0, y1 = cy + Math.sin(a) * r0;
-    const x2 = cx + Math.cos(a) * (r0 + len), y2 = cy + Math.sin(a) * (r0 + len);
-    bars += `<line x1="${x1.toFixed(1)}" y1="${y1.toFixed(1)}" x2="${x2.toFixed(1)}" y2="${y2.toFixed(1)}"/>`;
-  }
-  return `<svg viewBox="0 0 240 240" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="">
-    <rect width="240" height="240" fill="#0b0e14"/>
-    <circle cx="120" cy="120" r="46" fill="none" stroke="rgba(232,236,244,0.1)" stroke-width="1"/>
-    <g stroke="rgba(14,196,252,0.75)" stroke-width="1.6" stroke-linecap="round">${bars}</g>
-    <circle cx="120" cy="120" r="3" fill="rgba(255,84,50,0.9)"/>
-  </svg>`;
-};
 interface Illo { src: string; alt: string; title?: string; year?: number; medium?: string; }
 const illos: Illo[] = (illustrations as any).items ?? [];
 // The five-row case-study shelf DISSOLVED here 2026-08-31 (direction file:
@@ -72,7 +45,7 @@ const illos: Illo[] = (illustrations as any).items ?? [];
 // round-2 call): manifests + /writing/<slug> pages stay live at their URLs.
 
 // The nav (Jon's round-2 overhaul, 2026-08-31): plain nouns for the rooms
-// — builds · audios · visuals ("audios" is Jon's word, deliberately) —
+// — builds · audio — plus the visual room's emoji-only stop —
 // plus ONE wordless object: the instrument as an emoji-only chip, first.
 // `word: ""` = wordless chip (aria carries the name). A word renders ONLY
 // when its room has something in it. Section ids are stable internals
@@ -83,10 +56,13 @@ const MARKS = [
   // made the chip a dead link on phones (review, 2026-08-25)
   { id: "play", word: "", aria: "play", emoji: "🎹", ethereal: true, has: true },
   { id: "work", word: "builds", aria: "builds", emoji: "🛠️", ethereal: false, has: BUILDS.length > 0 },
-  { id: "soundlab", word: "audios", aria: "audios", emoji: "🎧", ethereal: false, has: tracks.length > 0 },
-  { id: "illustrations", word: "visuals", aria: "visuals", emoji: "🖼️", ethereal: false, has: illos.length > 0 },
+  { id: "soundlab", word: "audio", aria: "audio", emoji: "🎧", ethereal: false, has: tracks.length > 0 },
+  { id: "illustrations", word: "", aria: "visuals", emoji: "🖼️", ethereal: false, has: illos.length > 0 },
 ].filter((m) => m.has);
 const SHOW = new Set(MARKS.map((m) => m.id));
+// The builds' marks (Jon's picks, 2026-09-02): the same emoji language as
+// the rail, one per piece; lives here so builds-copy.ts stays untouched.
+const BUILD_MARKS: Record<string, string> = { archive: "🗂️", studio: "🎛️", watch: "⌚" };
 ---
 
 <a class="skip" href="#work">Skip to the work</a>
@@ -182,7 +158,7 @@ const SHOW = new Set(MARKS.map((m) => m.id));
       the light returns. The component is SACRED — observed, never edited. */}
   {/* No id here — SignalMachine's own root is <section id="signal">, which
       serves as the anchor + spy target; this host only frames and observes. */}
-  <section class="live-signal" id="play" aria-label="Signal — a playable instrument" data-signal-host>
+  <section class="live-signal room" id="play" aria-label="Signal — a playable instrument" data-signal-host>
     <div class="sig-desktop">
       <SignalMachine />
     </div>
@@ -193,29 +169,25 @@ const SHOW = new Set(MARKS.map((m) => m.id));
   </section>
 
   {/* ── BUILDS — three story pieces, headline row → continuous-read fold.
-      Words LOCKED in builds-copy.ts (Jon-owned — never edit there). Jon's
-      round-2 call: not paper — a machine-family OBJECT in the room, the
-      instrument's material language borrowed from OUTSIDE (SignalMachine
-      itself stays sacred): carbon panel, engraved type, a glass read
-      panel, keycap marks, one ember lamp per slot. Dark in BOTH modes —
-      dark gear in a sunlit room is the site's physics. */}
-  {SHOW.has("work") && <section class="gear gear-builds" id="work" aria-labelledby="work-t">
-    <h2 id="work-t">Builds</h2>
+      Words LOCKED in builds-copy.ts (Jon-owned — never edit there). Round 3
+      (2026-09-02): THE LEDGER, Jon's pick from three rendered directions —
+      an index printed straight on the room ground, no panel, no gear (the
+      gear family retired from the homepage entirely in round 3e); the
+      open read is text on the ground too. Inks follow the room: dark by
+      day, light at night. */}
+  {SHOW.has("work") && <section class="ledger room" id="work" aria-labelledby="work-t">
+    <h2 id="work-t" class="sr-only">Builds</h2>
     <div class="builds">
-      {BUILDS.map((b, i) => (
+      {BUILDS.map((b) => (
         <details class="bp" id={`build-${b.id}`}>
           <summary class="bp-head">
-            <span class="bp-id">
-              <span class="bp-no" aria-hidden="true">{String(i + 1).padStart(2, "0")}</span>
-              <span class="bp-name">{b.name}</span>
-              <i class="bp-led" aria-hidden="true"></i>
-            </span>
+            <span class="bp-mark" aria-hidden="true">{BUILD_MARKS[b.id] ?? "🗂️"}</span>
+            <span class="sr-only">{b.name}: </span>
             <span class="bp-hookwrap">
               <h3 class="bp-hook">{b.headline}</h3>
-              <span class="bp-dek">{b.dek}</span>
+              {b.dek && <span class="bp-dek">{b.dek}</span>}
               {b.draft && <em class="bp-draft">draft copy</em>}
             </span>
-            <span class="bp-x" aria-hidden="true"></span>
           </summary>
           <div class="bp-read">
             {b.blocks.map((blk) =>
@@ -249,33 +221,43 @@ const SHOW = new Set(MARKS.map((m) => m.id));
   </section>}
 
 
-  {/* the player wears the same gear clothes (round 2): carbon face, glass
-      cover window, keycap arrows — Transport/Carousel mechanics untouched */}
-  {SHOW.has("soundlab") && <section class="gear gear-audio" id="soundlab" aria-labelledby="soundlab-t">
-    <h2 id="soundlab-t">Audios</h2>
-    <Carousel count={tracks.length} label="Music" accent="var(--sapphire)">
+  {/* ── AUDIO — THE FIELD RECORDER (round 3e, 2026-09-02: Jon's pick from
+      three rendered players; the gear panel and the radial cover are
+      retired). A TP-7 face laid flat on the sunlit ground: media first,
+      the placard directly under it, then ONE machine row — an abutting key
+      strip (prev · PLAY · next), a hairline rule with a 1px tick as the
+      seek, and a recessed mono counter. Transport + Carousel mechanics are
+      untouched: the deck's prev/next keys drive the chassis buttons; with
+      one track they are engraved-dim and disabled. */}
+  {SHOW.has("soundlab") && <section class="room" id="soundlab" aria-labelledby="soundlab-t"><div class="au">
+    <h2 id="soundlab-t" class="sr-only">Audio</h2>
+    <Carousel count={tracks.length} label="Music" accent="var(--ember)">
       {tracks.map((t, i) => (
         <article class="ls">
           <div class="ls-cover" aria-hidden="true">
-            {t.cover ? <img src={t.cover} alt="" loading={i === 0 ? "eager" : "lazy"} /> : <Fragment set:html={coverSvg(t, i)} />}
+            {t.cover ? (
+              <img src={t.cover} alt="" loading={i === 0 ? "eager" : "lazy"} />
+            ) : (
+              <span class="ls-cat">{String(i + 1).padStart(2, "0")}</span>
+            )}
           </div>
-          <div class="ls-body">
-            <span class="ls-no">{String(i + 1).padStart(2, "0")}</span>
-            <h3 class="ls-title">{t.title}</h3>
-            {t.note && <p class="ls-note">{t.note}</p>}
-            <p class="ls-meta">{[t.year, t.duration].filter(Boolean).join(" · ")}</p>
-            <div class="ls-tp"><Transport src={t.src!} peaks={t.peaks ?? undefined} title={t.title} accent="var(--sapphire)" compact /></div>
+          <h3 class="ls-title">{t.title}</h3>
+          {t.note && <p class="ls-note">{t.note}</p>}
+          <div class="ls-deck">
+            <button class="ls-key ls-prev" type="button" data-au-prev aria-label="Previous track" disabled={tracks.length < 2}>«</button>
+            <Transport src={t.src!} peaks={t.peaks ?? undefined} title={t.title} accent="var(--ember)" compact />
+            <button class="ls-key ls-next" type="button" data-au-next aria-label="Next track" disabled={tracks.length < 2}>»</button>
           </div>
         </article>
       ))}
     </Carousel>
-  </section>}
+  </div></section>}
 
   {/* the writing section left the homepage 2026-08-31 ("for now" — Jon's
       round-2 call). The tiles, manifests, and /writing/<slug> pages all
       stay in the tree, live at their URLs; only this room is unrouted. */}
 
-  {SHOW.has("illustrations") && <section class="look-band" id="illustrations" aria-labelledby="illustrations-t">
+  {SHOW.has("illustrations") && <section class="look-band room" id="illustrations" aria-labelledby="illustrations-t">
     <h2 id="illustrations-t" class="sr-only">Visuals</h2>
     <Carousel count={illos.length} label="Visual work" accent="var(--brand-yellow, #ffc94d)">
       {illos.map((it, i) => (
@@ -723,8 +705,9 @@ const SHOW = new Set(MARKS.map((m) => m.id));
     background: rgba(16, 18, 22, 0.6);
     color: #e8ecf4;
   }
-  /* (round 2: no paper sheets remain on the page — the gear objects wear
-     fixed machine inks and need no night flip) */
+  /* (round 3: the ledger and the recorder carry their own section-local
+     ink pairs — --mx-* and --au-* — which are the only night flips they
+     need) */
 
   /* ── the light switch: a brutalist console toggle at the rail's foot
      (Jon, 2026-08-20 — a different KIND of object from the nav chips:
@@ -858,6 +841,10 @@ const SHOW = new Set(MARKS.map((m) => m.id));
       align-items: stretch;
       gap: 2px;
       padding: 6px 6px calc(6px + env(safe-area-inset-bottom));
+      /* one pinned height, shared with the rooms (--mbar-h) so a room's
+         foot meets the bar's top exactly — measured 58.8px unpinned */
+      box-sizing: border-box;
+      height: calc(var(--mbar-h) + env(safe-area-inset-bottom, 0px));
       background: #f4f3f0;
       border-top: 1px solid rgba(20, 18, 16, 0.14);
       transition: background 560ms ease, border-color 560ms ease;
@@ -1013,56 +1000,117 @@ const SHOW = new Set(MARKS.map((m) => m.id));
     color: #7d8798;
   }
 
-  /* ── sections: the GEAR family (round 2 — replaces the paper/night
-     sheets). Dark machine-objects on the light ground, the instrument's
-     material language borrowed from OUTSIDE (SignalMachine itself is
-     sacred): carbon panel, engraved silkscreen, glass. Same face in day
-     and night — dark gear in a sunlit room is the site's physics. */
-  .gear {
-    max-width: 1080px;
-    margin: 0 auto clamp(72px, 12vh, 140px);
-    padding: clamp(26px, 4vw, 46px);
-    border-radius: 10px;
-    scroll-margin-top: 76px;
-    background: linear-gradient(160deg, #1c1f25, #14161b 55%, #0e1014);
-    border: 1px solid #262b34;
-    box-shadow:
-      inset 0 1px 0 rgba(255, 255, 255, 0.06),
-      0 18px 44px -24px rgba(10, 8, 4, 0.6);
+  /* ── ROOMS (Jon, 2026-09-02: "each section has its own viewport — when
+     I enter Builds I shouldn't see the images below or the instrument
+     above"). A room is at least one viewport tall with its object
+     centered; rooms abut, so an anchor lands a room's top at the top of the
+     viewport (scroll-margin 0 — also the comet's framed knot) and neither
+     neighbor is on screen. Audio's dark panel sits INSIDE its room as a
+     panel-sized object; Builds and Visuals are their own rooms. Below 900px
+     the bottom bar owns --mbar-h of the viewport, so rooms are that much
+     shorter. */
+  :global(:root) {
+    --mbar-h: 60px; /* the phone bar's pinned height; rooms subtract it */
   }
-  .gear h2 {
-    margin: 0 0 24px;
+  .room {
+    box-sizing: border-box;
+    min-height: 100svh;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    padding-top: clamp(28px, 5vh, 56px);
+    padding-bottom: clamp(28px, 5vh, 56px);
+    scroll-margin-top: 0;
+  }
+  @media (max-width: 899px) {
+    .room {
+      min-height: calc(100svh - var(--mbar-h) - env(safe-area-inset-bottom, 0px));
+    }
+  }
+
+  /* ── BUILDS: THE LEDGER (round 3, 2026-09-02 — Jon's pick from three
+     rendered directions; the carbon matrix + the Codex bare-matrix pass
+     are both retired). An index printed straight on the room ground: one
+     baseline per row (mono number · tracked name · headline), 2px ink
+     rules bracketing the index, hairlines between rows, every rule running
+     from the 1080 column's left edge off the RIGHT EDGE of the page. Open
+     = the read prints below its row at the headline's left edge; pending
+     media = quiet mono index lines. Two inks only, on the room's tokens:
+     `.one`'s --ink/--dim by day, its --night-ink/--night-dim when the room
+     is dark (the section-local --mx-* pair is the ONLY place that flips —
+     everything below reads through it). Nothing here has a background. */
+  .ledger {
+    --mx-ink: var(--ink);
+    --mx-dim: var(--dim);
+    --mx-hair: color-mix(in srgb, var(--mx-ink) 24%, transparent);
+    --mx-hair-soft: color-mix(in srgb, var(--mx-ink) 18%, transparent);
+    max-width: none;
+    /* left edge = where the 1080 column starts (flush with Audio below);
+       right edge = the page, so the rules run off it */
+    margin: 0 0 0 max(24px, calc((100% - 1080px) / 2));
+    padding-inline: 0;
+    color: var(--mx-ink);
+  }
+  :global(html[data-night]) .ledger {
+    --mx-ink: var(--night-ink);
+    --mx-dim: var(--night-dim);
+  }
+  .ledger h2 {
+    margin: 0 0 28px;
     font-family: "IBM Plex Mono", ui-monospace, monospace;
     font-weight: 600;
     font-size: clamp(1.05rem, 1.8vw, 1.3rem);
     letter-spacing: 0.22em;
     text-transform: uppercase;
-    color: #e8ecf4;
-    /* engraved silkscreen — never lit */
-    text-shadow: 0 1px 0 rgba(0, 0, 0, 0.6), 0 -1px 0 rgba(255, 255, 255, 0.06);
+    color: var(--mx-ink);
+    transition: color 560ms ease;
   }
 
-  /* ── BUILDS: the story matrix ON the machine (round 2 — carbon, not
-     paper; Jon: "an object that exists on the page"). Slots read as
-     engravings; the fold opens a lit glass panel; one ember lamp per slot
-     answers the instrument's power language. Fixed inks — the object is
-     the same in day and night. */
+  /* the rules: ink brackets, hairlines between */
   .builds {
-    border-top: 2px solid rgba(232, 236, 244, 0.4);
+    border-top: 2px solid var(--mx-ink);
+    transition: border-color 560ms ease;
   }
   .bp {
-    border-bottom: 1px solid rgba(232, 236, 244, 0.12);
+    border-bottom: 1px solid var(--mx-hair);
+    transition: border-color 560ms ease;
   }
   .bp:last-child {
-    border-bottom: 2px solid rgba(232, 236, 244, 0.4);
+    border-bottom: 2px solid var(--mx-ink);
   }
+
+  /* the row: the headline IS the row; its mark sits INSIDE the rules in a
+     first column (Jon, 2026-09-02: not hanging outside) and is the switch —
+     quiet monochrome at rest, in colour on hover and while its read is
+     open (one lit lamp at a time). The mark's box is exactly one headline
+     line tall, so it centres on the first line however the hook wraps. */
   .bp-head {
     display: grid;
-    grid-template-areas: "id hook x";
-    grid-template-columns: 128px 1fr 64px;
-    align-items: stretch;
+    grid-template-columns: 48px minmax(0, 1fr);
+    grid-template-areas: "mark hook";
+    column-gap: 20px;
+    align-items: start;
+    padding: 34px 0 36px;
     cursor: pointer;
     list-style: none;
+    transition: background-color 160ms ease;
+  }
+  .bp-mark {
+    grid-area: mark;
+    width: 48px;
+    height: calc(1.75rem * 1.2);
+    display: grid;
+    place-items: center;
+    font-size: 26px;
+    line-height: 1;
+    filter: grayscale(1);
+    opacity: 0.55;
+    transition: filter 220ms ease, opacity 220ms ease;
+  }
+  .bp-head:hover .bp-mark,
+  .bp[open] .bp-mark {
+    filter: none;
+    opacity: 1;
   }
   .bp-head::-webkit-details-marker {
     display: none;
@@ -1071,74 +1119,41 @@ const SHOW = new Set(MARKS.map((m) => m.id));
     content: "";
   }
   .bp-head:hover {
-    background: rgba(232, 236, 244, 0.04);
+    background: color-mix(in srgb, var(--mx-ink) 5%, transparent);
   }
   .bp-head:focus-visible {
-    outline: 2px solid #e8ecf4;
+    outline: 2px solid var(--mx-ink);
     outline-offset: -2px;
-  }
-  .bp-id {
-    grid-area: id;
-    display: flex;
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 8px;
-    padding: 22px 14px 22px 4px;
-    font-family: "IBM Plex Mono", ui-monospace, monospace;
-  }
-  .bp-no {
-    font-size: 0.62rem;
-    letter-spacing: 0.1em;
-    color: #7d8798;
-  }
-  .bp-name {
-    font-size: 0.72rem;
-    font-weight: 600;
-    letter-spacing: 0.12em;
-    text-transform: uppercase;
-    color: #e8ecf4;
-    /* engraved, like everything printed on the panel */
-    text-shadow: 0 1px 0 rgba(0, 0, 0, 0.6), 0 -1px 0 rgba(255, 255, 255, 0.06);
-  }
-  /* the slot lamp: dark socket at rest, ember while its read is open */
-  .bp-led {
-    width: 6px;
-    height: 6px;
-    border-radius: 50%;
-    background: rgba(255, 84, 50, 0.16);
-    box-shadow: inset 0 0 2px rgba(0, 0, 0, 0.7);
-    transition: background 220ms ease, box-shadow 220ms ease;
-  }
-  .bp[open] .bp-led {
-    background: #ff5432;
-    box-shadow: 0 0 8px rgba(255, 84, 50, 0.7);
   }
   .bp-hookwrap {
     grid-area: hook;
-    display: flex;
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 8px;
-    padding: 20px 22px 22px;
-    border-left: 1px solid rgba(232, 236, 244, 0.12);
+    display: block;
+    padding-right: 56px;
     min-width: 0;
   }
   .bp-hook {
     margin: 0;
-    font-size: clamp(1.1rem, 2vw, 1.45rem);
-    font-weight: 600;
-    line-height: 1.25;
-    letter-spacing: -0.01em;
-    max-width: 34ch;
-    color: #e8ecf4;
+    font-family: "IBM Plex Sans", ui-sans-serif, system-ui, sans-serif;
+    font-size: 1.75rem;
+    font-weight: 500;
+    line-height: 1.2;
+    letter-spacing: -0.014em;
+    text-wrap: balance;
+    color: var(--mx-ink);
+    transition: color 560ms ease;
   }
   .bp-dek {
-    font-size: 0.86rem;
+    display: block;
+    margin-top: 6px;
+    max-width: 62ch;
+    font-size: 0.9rem;
     line-height: 1.5;
-    color: #7d8798;
-    max-width: 58ch;
+    color: var(--mx-dim);
+    transition: color 560ms ease;
   }
   .bp-draft {
+    display: inline-block;
+    margin-top: 8px;
     font-family: "IBM Plex Mono", ui-monospace, monospace;
     font-style: normal;
     font-size: 0.56rem;
@@ -1146,133 +1161,102 @@ const SHOW = new Set(MARKS.map((m) => m.id));
     text-transform: uppercase;
     border: 1px solid currentColor;
     padding: 2px 7px;
-    color: #ff8a70;
+    color: var(--mx-dim);
   }
-  /* the mark: a keycap with an engraved + that turns × when open */
-  .bp-x {
-    grid-area: x;
-    position: relative;
-    border-left: 1px solid rgba(232, 236, 244, 0.12);
-  }
-  .bp-x::before {
-    content: "";
-    position: absolute;
-    left: 50%;
-    top: 34px;
-    width: 34px;
-    height: 34px;
-    transform: translate(-50%, -50%);
-    border-radius: 4px;
-    background: linear-gradient(180deg, #262b34, #1a1f27);
-    border: 1px solid rgba(0, 0, 0, 0.65);
-    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.07);
-    transition: box-shadow 120ms ease;
-  }
-  .bp-x::after {
-    content: "";
-    position: absolute;
-    left: 50%;
-    top: 34px;
-    width: 15px;
-    height: 15px;
-    transform: translate(-50%, -50%);
-    background:
-      linear-gradient(#e8ecf4, #e8ecf4) center / 15px 1.5px no-repeat,
-      linear-gradient(#e8ecf4, #e8ecf4) center / 1.5px 15px no-repeat;
-    transition: transform 220ms cubic-bezier(0.3, 0.8, 0.3, 1);
-  }
-  .bp-head:hover .bp-x::before {
-    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12);
-  }
-  .bp[open] .bp-x::before {
-    box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.6);
-  }
-  .bp[open] .bp-x::after {
-    transform: translate(-50%, -50%) rotate(45deg);
-  }
-  /* the continuous read: a lit glass panel set into the machine */
+
+  /* the read: text on the ground below the row, from the headline's left
+     edge (the mark column stays outside the text); the headline row stays
+     in place as its title */
   .bp-read {
-    margin: 4px 22px 36px 150px;
-    padding: clamp(22px, 3vw, 34px);
-    background:
-      linear-gradient(165deg, rgba(170, 196, 232, 0.08), rgba(170, 196, 232, 0.02) 40%, transparent),
-      #05070c;
-    border: 1px solid #232833;
-    border-radius: 6px;
+    margin: 0 56px 0 68px;
+    padding: 24px 0 84px;
+    font-size: 1.05rem;
+    color: var(--mx-ink);
   }
   .bp-p {
-    margin: 0 0 1.1em;
+    margin: 0 0 1.15em;
     max-width: 62ch;
-    font-size: 1.02rem;
+    font-size: 1.05rem;
     line-height: 1.7;
-    color: #cfd6e2;
+    text-wrap: pretty;
+    color: var(--mx-ink);
+    transition: color 560ms ease;
   }
   .bp-p:last-child {
     margin-bottom: 0;
   }
   .bp-p strong {
     font-weight: 600;
-    color: #e8ecf4;
+    color: var(--mx-ink);
   }
-  /* media beats: real when src lands; an HONEST dashed slot until then */
+
+  /* media: real media prints full-width with its caption once src lands;
+     until then an HONEST index line — kind · what will live there ·
+     pending — never a faked frame */
   .bp-media {
-    margin: 1.9em 0;
-    max-width: 640px;
+    margin: 0;
+    max-width: 62ch;
+  }
+  .bp-p + .bp-media {
+    margin-top: 2.6em;
+  }
+  .bp-media:has(img, video) {
+    margin: 2.4em 0;
+    max-width: none;
   }
   .bp-media video,
   .bp-media img {
     display: block;
     width: 100%;
-    border: 1px solid #232833;
-    border-radius: 4px;
   }
   .bp-cap {
-    margin-top: 8px;
+    margin-top: 10px;
     font-family: "IBM Plex Mono", ui-monospace, monospace;
     font-size: 0.66rem;
     letter-spacing: 0.05em;
     line-height: 1.5;
-    color: #7d8798;
+    color: var(--mx-dim);
+    transition: color 560ms ease;
   }
   .bp-slot {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    gap: 9px;
-    aspect-ratio: 16 / 9;
-    padding: 18px;
-    border: 1px dashed rgba(125, 135, 152, 0.4);
-    border-radius: 4px;
-    text-align: center;
+    display: grid;
+    grid-template-columns: 64px minmax(0, 1fr) auto;
+    grid-template-areas: "kind note pending";
+    column-gap: 16px;
+    align-items: baseline;
+    padding: 11px 0;
+    border-top: 1px solid var(--mx-hair-soft);
+    font-family: "IBM Plex Mono", ui-monospace, monospace;
+    transition: border-color 560ms ease;
   }
-  .bp-media[data-kind="audio"] .bp-slot {
-    aspect-ratio: auto;
-    min-height: 92px;
+  .bp-media:last-child .bp-slot {
+    border-bottom: 1px solid var(--mx-hair-soft);
   }
   .bp-slot-kind {
-    font-family: "IBM Plex Mono", ui-monospace, monospace;
-    font-size: 0.58rem;
+    grid-area: kind;
+    font-size: 0.64rem;
     letter-spacing: 0.14em;
     text-transform: uppercase;
-    border: 1px solid rgba(125, 135, 152, 0.4);
-    padding: 2px 8px;
-    color: #7d8798;
+    color: var(--mx-dim);
+    transition: color 560ms ease;
   }
   .bp-slot-note {
-    font-family: "IBM Plex Mono", ui-monospace, monospace;
-    font-size: 0.7rem;
-    letter-spacing: 0.03em;
+    grid-area: note;
+    font-size: 0.72rem;
+    letter-spacing: 0.02em;
     line-height: 1.55;
-    color: #7d8798;
-    max-width: 44ch;
+    text-wrap: pretty;
+    color: var(--mx-ink);
+    transition: color 560ms ease;
   }
   .bp-slot-pending {
-    font-family: "IBM Plex Mono", ui-monospace, monospace;
-    font-size: 0.58rem;
+    grid-area: pending;
+    justify-self: end;
+    font-size: 0.64rem;
     letter-spacing: 0.14em;
     text-transform: uppercase;
-    color: rgba(125, 135, 152, 0.65);
+    color: var(--mx-dim);
+    transition: color 560ms ease;
   }
   /* the fold: height-animated where the platform can (Chromium 131+);
      everywhere else it snaps open — honest, and reduced-motion clean */
@@ -1289,33 +1273,52 @@ const SHOW = new Set(MARKS.map((m) => m.id));
       height: auto;
     }
   }
-  /* phones: the id row rides above the hook; verticals drop, the rows
-     carry the matrix */
+  /* no rail below 900px: the column starts near the edge; rules still
+     run off the right */
+  @media (max-width: 899px) {
+    .ledger {
+      margin-left: 14px; /* = the room's phone gutter */
+      margin-right: 0;
+    }
+  }
+  /* phones: number + name + marker on one mono line, headline under it,
+     the read full width; pending lines stack kind/pending over the note */
+  @media (max-width: 899px) {
+    .bp-head {
+      grid-template-columns: 44px minmax(0, 1fr);
+      column-gap: 14px;
+    }
+    .bp-mark {
+      width: 44px;
+      font-size: 24px;
+    }
+  }
   @media (max-width: 720px) {
     .bp-head {
-      grid-template-areas: "id x" "hook hook";
-      grid-template-columns: 1fr 52px;
-    }
-    .bp-id {
-      flex-direction: row;
-      align-items: center;
-      gap: 10px;
-      padding: 18px 4px 0;
+      padding: 22px 0 26px;
     }
     .bp-hookwrap {
-      border-left: 0;
-      padding: 12px 4px 20px;
+      padding-right: 20px;
     }
-    .bp-x {
-      border-left: 0;
+    .bp-hook {
+      font-size: 1.35rem;
+      line-height: 1.28;
     }
-    .bp-x::before,
-    .bp-x::after {
-      top: 28px;
+    .bp-mark {
+      height: calc(1.35rem * 1.28);
     }
     .bp-read {
-      margin: 4px 0 28px;
-      padding: 18px 16px;
+      margin: 0;
+      padding: 6px 16px 40px 0;
+    }
+    .bp-p {
+      font-size: 1rem;
+      line-height: 1.65;
+    }
+    .bp-slot {
+      grid-template-columns: auto minmax(0, 1fr);
+      grid-template-areas: "kind pending" "note note";
+      row-gap: 4px;
     }
   }
 
@@ -1501,22 +1504,31 @@ const SHOW = new Set(MARKS.map((m) => m.id));
 
   /* ── the live instrument (the finale) ────────────────────────────────── */
   .live-signal {
-    max-width: 1180px;
-    /* the handshake: right off the hero, one clear breath, then the machine */
-    margin: clamp(36px, 6vh, 72px) auto clamp(90px, 15vh, 180px);
-    scroll-margin-top: 76px;
+    /* 1248 = the sacred file's reference: 1120px device + its .inner's 128px
+       gutter. Narrower hosts held the reference device off-center and
+       6% small on tall screens (found 2026-09-02 with the fit pass). */
+    max-width: 1248px;
+    margin: 0 auto;
   }
   .sig-desktop {
     display: none;
   }
-  /* the machine has a floor width; in a genuinely narrow window it scrolls
-     inside its own box rather than stretching the page. Applied ONLY down
-     there: an unconditional overflow rectangle-clipped the machine's soft
-     shadow at every width (Jon, 2026-08-27). */
-  @media (max-width: 1259px) {
-    .sig-desktop {
-      overflow-x: auto;
-    }
+  /* FIT (2026-09-02, Jon: "the drums module hangs off the side"). The
+     sacred file pins the device to its 1120px reference and zooms it
+     uniformly only at ≥1200px; below that it let the device go fluid, and
+     the rhythm zone (fixed columns) overflowed the casing at 1024–1100.
+     Styled from OUTSIDE only: pin the reference at EVERY width and let the
+     host set a continuous `--sig-zoom` (JS below: min(the file's own
+     height caps, column ÷ 1120)). The device now always fits its column,
+     so the old horizontal scroller is gone — nothing clips the soft shadow
+     at any width (Jon's rule, 2026-08-27/09-01). */
+  .live-signal :global(.sgm) {
+    width: fit-content;
+    margin-inline: auto;
+  }
+  .live-signal :global(.sgm .device) {
+    width: 1120px;
+    zoom: var(--sig-zoom, 1);
   }
   .sig-mobile {
     display: block;
@@ -1592,93 +1604,287 @@ const SHOW = new Set(MARKS.map((m) => m.id));
     width: 100%;
   }
 
-  /* listen: one track, with gravity */
+  /* ── AUDIO: THE FIELD RECORDER (round 3e, 2026-09-02). The TP-7's face
+     laid flat on the room ground: media first and biggest; the placard
+     (title, note) directly beneath, full width; then the machine on ONE
+     row — a strip of abutting keys hard-left (prev · PLAY · next, one heavy
+     mass), a single hairline rule with a 1px playhead tick spanning the
+     middle (no fill — the tick is the position), and the counter in a
+     recessed pane hard-right. Every part shares one left edge. Materials
+     are value steps of the room's ink over the room's ground (tokens.css
+     --bg flips at night by itself); every seam 1px; ONE lamp (ember) only
+     on the live key. The section-local --au-ink/--au-dim pair is the only
+     place that flips — everything below reads through it (same law as the
+     ledger's --mx-*). Transport's own styles are overridden from here with
+     the room id for specificity; its mechanics are untouched. */
+  .au {
+    --au-ink: var(--ink);
+    --au-dim: var(--dim);
+    --au-key: color-mix(in srgb, var(--au-ink) 5%, var(--bg));
+    --au-key-down: color-mix(in srgb, var(--au-ink) 11%, var(--bg));
+    --au-well: color-mix(in srgb, var(--au-ink) 7%, var(--bg));
+    --au-pane: color-mix(in srgb, var(--au-ink) 10%, var(--bg));
+    --au-seam: color-mix(in srgb, var(--au-ink) 26%, transparent);
+    --au-hair: color-mix(in srgb, var(--au-ink) 40%, transparent);
+    --au-mute: color-mix(in srgb, var(--au-ink) 50%, transparent);
+    --au-ghost: color-mix(in srgb, var(--au-ink) 38%, transparent);
+    --au-lamp: var(--ember);
+    --au-key-w: 56px; /* prev / next */
+    --au-play-w: 96px; /* the one heavy mass */
+    --au-key-h: 56px;
+    --au-gap: 22px; /* placard → machine */
+    box-sizing: border-box;
+    width: min(860px, calc(100% - 28px));
+    margin: 0 auto;
+    color: var(--au-ink);
+  }
+  :global(html[data-night]) .au {
+    --au-ink: var(--night-ink);
+    --au-dim: var(--night-dim);
+    --au-key: color-mix(in srgb, var(--au-ink) 10%, var(--bg));
+    --au-key-down: color-mix(in srgb, var(--au-ink) 16%, var(--bg));
+    --au-pane: color-mix(in srgb, var(--au-ink) 12%, var(--bg));
+    --au-seam: color-mix(in srgb, var(--au-ink) 30%, transparent);
+    --au-hair: color-mix(in srgb, var(--au-ink) 42%, transparent);
+  }
+  /* the chassis arrows are replaced by the deck's own keys */
+  .au :global(.car-nav) {
+    display: none;
+  }
   .ls {
-    display: grid;
-    grid-template-columns: minmax(200px, 300px) 1fr;
-    gap: clamp(22px, 3.4vw, 44px);
-    align-items: center;
-    padding: 6px 2px;
+    padding: 0;
   }
-  @media (max-width: 720px) {
-    .ls {
-      grid-template-columns: 1fr;
-    }
-  }
-  /* the cover sits behind glass — the gear face's window */
+
+  /* media: first, biggest — a recessed window; a real cover fills it, an
+     honest ordinal sits in the empty one until then */
   .ls-cover {
-    aspect-ratio: 1;
-    border-radius: 6px;
+    position: relative;
+    box-sizing: border-box;
+    width: 100%;
+    aspect-ratio: 16 / 10;
+    max-height: calc(100svh - 300px); /* the face stays inside its room on short screens */
+    border-radius: 2px;
     overflow: hidden;
-    border: 1px solid #232833;
-    background:
-      linear-gradient(165deg, rgba(170, 196, 232, 0.1), rgba(170, 196, 232, 0.02) 40%, transparent),
-      #05070c;
+    background: var(--au-well);
+    border: 1px solid var(--au-seam);
+    box-shadow: inset 0 1px 0 var(--au-seam);
   }
-  .ls-cover :global(svg),
   .ls-cover img {
+    display: block;
     width: 100%;
     height: 100%;
     object-fit: cover;
-    display: block;
   }
-  .ls-body {
-    min-width: 0;
-  }
-  .ls-no {
+  .ls-cat {
+    position: absolute;
+    left: 14px;
+    bottom: 12px;
     font-family: "IBM Plex Mono", ui-monospace, monospace;
-    font-size: 0.7rem;
-    letter-spacing: 0.1em;
-    color: var(--sapphire);
+    font-size: 0.66rem;
+    letter-spacing: 0.12em;
+    color: var(--au-mute);
   }
+
+  /* the placard: directly under the art, one left edge with the machine */
   .ls-title {
-    margin: 6px 0 0;
-    font-size: clamp(1.25rem, 2.4vw, 1.7rem);
+    margin: 18px 0 0;
+    min-width: 0;
+    font-family: "IBM Plex Sans", ui-sans-serif, system-ui, sans-serif;
+    font-size: clamp(1.1rem, 1.5vw, 1.3rem);
     font-weight: 600;
+    line-height: 1.2;
     letter-spacing: -0.01em;
-    color: var(--night-ink);
+    color: var(--au-ink);
   }
   .ls-note {
-    margin: 10px 0 0;
-    font-size: 0.95rem;
-    line-height: 1.55;
-    color: var(--night-dim);
-    max-width: 52ch;
+    margin: 6px 0 0;
+    min-width: 0;
+    max-width: 60ch;
+    font-size: 0.9rem;
+    line-height: 1.5;
+    color: var(--au-dim);
   }
-  .ls-meta {
-    margin: 10px 0 0;
+
+  /* the machine: ONE row. The Transport dissolves into the deck's grid so
+     its play key, rule, and counter sit between the deck's own keys */
+  .ls-deck {
+    display: grid;
+    grid-template-columns: var(--au-key-w) var(--au-play-w) var(--au-key-w) 1fr auto;
+    grid-template-areas: "prev play next wave time";
+    align-items: center;
+    margin-top: var(--au-gap);
+  }
+  #soundlab .ls-deck :global(.tp) {
+    display: contents;
+  }
+  /* the key strip: abutting keys, hairline seams, one heavy mass */
+  .ls-key,
+  #soundlab .ls-deck :global(.tp-btn) {
+    box-sizing: border-box;
+    width: var(--au-key-w);
+    height: var(--au-key-h);
+    margin: 0;
+    padding: 0;
+    display: grid;
+    place-items: center;
+    appearance: none;
+    border: 1px solid var(--au-seam);
+    border-radius: 0;
+    background: var(--au-key);
+    color: var(--au-ink);
+    font-family: "IBM Plex Sans", ui-sans-serif, system-ui, sans-serif;
+    font-size: 1.45rem;
+    font-weight: 400;
+    line-height: 1;
+    transition: background 120ms ease;
+  }
+  .ls-prev {
+    grid-area: prev;
+    border-radius: 2px 0 0 2px;
+    padding-bottom: 0.1em; /* guillemets sit on the x-height: lift to the optical centre */
+  }
+  .ls-next {
+    grid-area: next;
+    border-radius: 0 2px 2px 0;
+    padding-bottom: 0.1em;
+  }
+  .ls-key:disabled {
+    color: var(--au-ghost); /* engraved-dim: the keys stay, one track today */
+    cursor: default;
+  }
+  .ls-key:not(:disabled) {
+    cursor: pointer;
+  }
+  .ls-key:not(:disabled):hover,
+  .ls-key:focus-visible {
+    background: var(--au-key-down);
+  }
+  #soundlab .ls-deck :global(.tp-btn) {
+    grid-area: play;
+    position: relative;
+    width: var(--au-play-w);
+    border-left: 0;
+    border-right: 0;
+    cursor: pointer;
+  }
+  #soundlab .ls-deck :global(.tp-btn svg) {
+    width: 18px;
+    height: 18px;
+    fill: currentColor;
+  }
+  #soundlab .ls-deck :global(.tp-btn:hover),
+  #soundlab .ls-deck :global(.tp-btn:active),
+  #soundlab .ls-deck :global(.tp-btn:focus-visible) {
+    border-color: var(--au-seam);
+    background: var(--au-key-down);
+  }
+  .ls-key:focus-visible,
+  #soundlab .ls-deck :global(.tp-btn:focus-visible),
+  #soundlab .ls-deck :global(.tp-wave:focus-visible) {
+    outline: 1px solid var(--au-ink);
+    outline-offset: 2px;
+  }
+  /* the ONE lamp: an ember dot on the live key, only while playing */
+  #soundlab .ls-deck :global(.tp-btn)::before {
+    content: "";
+    position: absolute;
+    top: 8px;
+    left: 8px;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--au-lamp);
+    opacity: 0;
+  }
+  #soundlab .ls-deck :global(.tp[data-playing] .tp-btn)::before {
+    opacity: 1;
+  }
+  /* the rule: a 44px seek band, one hairline centred in it, a 1px tick at
+     the playhead, no fill — the bars are the Transport's, flattened */
+  #soundlab .ls-deck :global(.tp-wave) {
+    grid-area: wave;
+    width: auto;
+    min-width: 0;
+    height: 44px;
+    margin: 0 20px;
+    display: flex;
+    align-items: center;
+    gap: 0;
+    border-radius: 0;
+    cursor: pointer;
+    overflow: hidden;
+  }
+  #soundlab .ls-deck :global(.tp-wave i) {
+    position: relative;
+    flex: 1;
+    min-width: 1px;
+    height: 1px;
+    border-radius: 0;
+    background: var(--au-hair);
+    transition: none;
+  }
+  #soundlab .ls-deck :global(.tp-wave i[data-played]) {
+    background: var(--au-hair);
+  }
+  #soundlab .ls-deck :global(.tp-wave i)::before {
+    content: none;
+    position: absolute;
+    top: -7px;
+    left: 0;
+    width: 1px;
+    height: 15px;
+    background: var(--au-ink);
+  }
+  /* the tick = the first unplayed bar's left edge (the origin at rest) */
+  #soundlab .ls-deck :global(.tp-wave i:first-child:not([data-played]))::before,
+  #soundlab .ls-deck :global(.tp-wave i[data-played] + i:not([data-played]))::before {
+    content: "";
+  }
+  #soundlab .ls-deck :global(.tp-wave i:last-child[data-played])::before {
+    content: "";
+    left: auto;
+    right: 0;
+  }
+  /* the counter pane: a recessed window, mono, tabular */
+  #soundlab .ls-deck :global(.tp-time) {
+    grid-area: time;
+    justify-self: end;
+    padding: 8px 14px 7px;
     font-family: "IBM Plex Mono", ui-monospace, monospace;
-    font-size: 0.72rem;
-    letter-spacing: 0.05em;
-    color: var(--night-dim);
+    font-size: 0.85rem;
+    line-height: 1;
+    letter-spacing: 0.06em;
+    font-feature-settings: "tnum";
+    font-variant-numeric: tabular-nums;
+    color: var(--au-ink);
+    background: var(--au-pane);
+    border: 1px solid var(--au-seam);
+    box-shadow: inset 0 1px 0 var(--au-seam);
+    border-radius: 2px;
+    white-space: nowrap;
   }
-  .ls-tp {
-    margin-top: 18px;
-  }
-  /* the player's arrows as keycaps — the gear face's controls (clothing
-     only; Carousel mechanics untouched) */
-  .gear-audio :global(.car-btn) {
-    border-radius: 4px;
-    background: linear-gradient(180deg, #262b34, #1a1f27);
-    border: 1px solid rgba(0, 0, 0, 0.65);
-    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.07);
-    color: #e8ecf4;
-  }
-  .gear-audio :global(.car-btn:hover:not(:disabled)),
-  .gear-audio :global(.car-btn:focus-visible) {
-    border-color: rgba(232, 236, 244, 0.35);
-    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12);
-  }
-  .gear-audio :global(.car-counter) {
-    color: #7d8798;
+  /* phones: the same face; the machine folds once — the rule full width,
+     the key strip and the counter on the row beneath */
+  @media (max-width: 720px) {
+    .ls-cover {
+      aspect-ratio: 1 / 1;
+    }
+    .ls-deck {
+      grid-template-areas:
+        "wave wave wave wave wave"
+        "prev play next . time";
+      row-gap: 8px;
+    }
+    #soundlab .ls-deck :global(.tp-wave) {
+      margin: 0;
+    }
   }
 
   /* look: just the artwork on the site's own ground — no frame, no dark
      band; arrows flank the image at the sides (Jon, 2026-08-19) */
   .look-band {
     width: 100%;
-    margin: 0 0 clamp(72px, 12vh, 140px);
-    scroll-margin-top: 76px;
+    margin: 0;
   }
   .look-band :global(.car) {
     position: relative;
@@ -1729,7 +1935,7 @@ const SHOW = new Set(MARKS.map((m) => m.id));
      was being overridden by this base — QA 2026-08-28) */
   @media (min-width: 900px) {
     .lk-img {
-      height: 88svh;
+      height: 80svh;
     }
   }
   .lk-cap {
@@ -1773,18 +1979,6 @@ const SHOW = new Set(MARKS.map((m) => m.id));
     .one {
       --railw: 110px;
       padding-left: var(--railw);
-    }
-  }
-  @media (min-width: 900px) and (max-width: 1320px) {
-    .gear {
-      margin-left: 24px;
-      margin-right: 24px;
-    }
-  }
-  @media (max-width: 899px) {
-    .gear {
-      margin-left: 14px;
-      margin-right: 14px;
     }
   }
 
@@ -2107,6 +2301,65 @@ const SHOW = new Set(MARKS.map((m) => m.id));
         applyNight();
       }
     }, { threshold: [0, 0.35] }).observe(host);
+  }
+
+  // ── the instrument's FIT zoom (styled from outside the sacred file):
+  // zoom = min(cap, available / 1120), where `available` is the CONTENT box
+  // of the component's own wrapper around `.sgm` (its `.inner` carries
+  // ~55px side padding — sizing to the host box overflowed that padding
+  // and broke the auto-centering). The cap mirrors the file's own HEIGHT
+  // rules (grow on tall monitors, shrink on short ones); its width steps
+  // (.82/.6/.44/.33) are replaced by the continuous fit, which reproduces
+  // them where they were right and never lets a module overflow the casing
+  // between them. Re-fires resize when the zoom changes so the comet's
+  // knots and the rail map re-measure the new page height.
+  const sigHost = document.querySelector<HTMLElement>(".live-signal");
+  const sigBox = sigHost?.querySelector<HTMLElement>(".sig-desktop");
+  const sigWrap = sigBox?.querySelector<HTMLElement>(".sgm")?.parentElement ?? null;
+  if (sigHost && sigBox && sigWrap) {
+    const REF = 1120;
+    const mm = (q: string) => window.matchMedia(q).matches;
+    const cap = () => {
+      let z = 1;
+      if (mm("(min-width: 1640px) and (min-height: 1060px)")) z = 1.1;
+      if (mm("(min-width: 1900px) and (min-height: 1130px)")) z = 1.18;
+      if (mm("(min-width: 2200px) and (min-height: 1200px)")) z = 1.26;
+      if (mm("(min-width: 2500px) and (min-height: 1260px)")) z = 1.34;
+      if (mm("(max-height: 960px)")) z = 0.91;
+      if (mm("(max-height: 900px)")) z = 0.84;
+      if (mm("(max-height: 840px)")) z = 0.77;
+      if (mm("(max-height: 780px)")) z = 0.69;
+      if (mm("(max-height: 720px)")) z = 0.62;
+      if (mm("(max-height: 660px)")) z = 0.55;
+      return z;
+    };
+    let last = "";
+    const fit = () => {
+      const cs = getComputedStyle(sigWrap);
+      const w = sigWrap.clientWidth - (parseFloat(cs.paddingLeft) || 0) - (parseFloat(cs.paddingRight) || 0);
+      if (w <= 0) return; // hidden (touch layout) — nothing to fit
+      const z = Math.max(0.25, Math.min(cap(), w / REF)).toFixed(4);
+      if (z === last) return;
+      last = z;
+      sigHost.style.setProperty("--sig-zoom", z);
+      window.dispatchEvent(new Event("resize"));
+    };
+    fit();
+    new ResizeObserver(fit).observe(sigWrap);
+    window.addEventListener("resize", fit, { passive: true });
+  }
+
+  // ── AUDIO deck: the recorder's prev/next keys drive the carousel's own
+  // chassis buttons (Carousel mechanics untouched); with one track the
+  // chassis renders no nav and the keys ship disabled + engraved-dim.
+  const auRoom = document.getElementById("soundlab");
+  if (auRoom) {
+    const drive = (keyAttr: string, navAttr: string) =>
+      auRoom.querySelectorAll<HTMLButtonElement>(`[${keyAttr}]`).forEach((b) =>
+        b.addEventListener("click", () => auRoom.querySelector<HTMLButtonElement>(`[${navAttr}]`)?.click())
+      );
+    drive("data-au-prev", "data-car-prev");
+    drive("data-au-next", "data-car-next");
   }
 
   // ── BUILDS folds: opening one changes the document's height (the comet

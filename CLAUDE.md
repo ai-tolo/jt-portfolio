@@ -73,8 +73,45 @@ session must follow.
 - Chrome is quiet IBM Plex Mono; case studies use the `--cs-mono` token.
 - Night mode: `html[data-night]`, two sources (manual switch OR instrument
   power). Dark-until-power is lighting only.
-- Gear objects (homepage `.gear`: Builds, Audios) are dark machine-family
-  panels borrowing the instrument's material language from OUTSIDE, and
-  stay IDENTICAL in day and night — dark gear in a sunlit room is the
-  site's physics. Homepage nav is 🎹 (emoji-only chip, aria "play") ·
-  builds · audios · visuals; section ids stay work/soundlab/illustrations.
+- The GEAR family is GONE from the homepage (round 3e, 2026-09-02): no
+  dark panels remain; the instrument is the only dark object in the room.
+- AUDIO is THE FIELD RECORDER (round 3e, Jon's pick from three rendered
+  players after a research sweep): art first (a real cover fills
+  `.ls-cover`; an honest ordinal sits in the empty window until then), the
+  placard under it, then ONE machine row — abutting keys (prev · PLAY ·
+  next, play the one heavy mass), a hairline rule with a 1px tick as the
+  seek (no fill), a recessed mono counter. Materials are value steps of
+  ink over `--bg` via color-mix; every seam 1px; ONE lamp (ember) only on
+  the live key. Inks come from the section-local `--au-ink`/`--au-dim`
+  pair on `.au` (night override), same law as the ledger. Transport.astro
+  is untouched: its parts are re-laid from StudioOne with `#soundlab`
+  specificity and `display: contents` on `.tp`; the deck's `.ls-key`
+  buttons drive the Carousel's own prev/next (disabled with one track).
+  Never scrub in a circle; never bring back a dark card by day.
+- Builds is THE LEDGER (round 3, 2026-09-02, Jon's pick from rendered
+  directions): an index printed straight on the room ground, no panel or
+  background anywhere, open or closed; rules run off the RIGHT edge of the
+  page; one baseline per row. Its inks come from the section-local
+  `--mx-ink`/`--mx-dim` pair on `.ledger` (day = `.one`'s --ink/--dim,
+  night override = --night-ink/--night-dim) — never a hardcoded ink there
+  (`.one` shadows the global --ink, so plain `var(--ink)` does NOT flip).
+  Homepage nav is 🎹 (emoji-only chip, aria "play") · builds · audio ·
+  🖼️ (emoji-only visuals stop); section ids stay work/soundlab/illustrations.
+- ROOMS (2026-09-02, Jon: "each section has its own viewport"): the four
+  homepage sections (`#play`, `#work`, `#soundlab`, `#illustrations`) carry
+  `.room` — min-height 100svh (minus the 64px bar below 900px), flex-centered
+  object, scroll-margin 0, rooms abut. At any room's framed position no
+  neighbor is on screen (proof: scratch rooms-proof.mjs pattern — scroll
+  each room to offsetTop and assert no other room intersects the visible
+  viewport). Audio's dark `.gear` panel lives INSIDE its room as a
+  panel-sized object; never make the panel itself viewport-tall. Adding a
+  section = add `.room` and keep it abutting; section-to-section margins
+  are gone by design.
+- The instrument is FIT from the host (2026-09-02): `.live-signal` is
+  1248px wide (= the sacred file's 1120px reference + its `.inner` 128px
+  gutter), the host pins `.sgm`/`.device` to the reference at EVERY width
+  and sets `--sig-zoom` from a ResizeObserver (min(the file's own height
+  caps, wrapper content width ÷ 1120)). No horizontal scroller exists any
+  more, so nothing clips the device shadow at any width. Verified 700 →
+  1920 with zero module overflow and page scrollWidth == viewport. Never
+  edit SignalMachine.astro for scaling; adjust the host fit instead.
