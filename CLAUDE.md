@@ -115,3 +115,30 @@ session must follow.
   more, so nothing clips the device shadow at any width. Verified 700 →
   1920 with zero module overflow and page scrollWidth == viewport. Never
   edit SignalMachine.astro for scaling; adjust the host fit instead.
+
+## Build + deploy facts (2026-09-09 QA pass, shipped 0e66b18)
+- `site` is `https://www.uxjon.com` (the apex 308-redirects to www). Every
+  canonical / og:url / og:image / sitemap entry derives from `Astro.site`;
+  never hardcode the apex (CSLayout used to; it is fixed).
+- `@astrojs/sitemap` runs on build (excludes `/more` and the off-shelf
+  momence page); `robots.txt` carries the Sitemap line.
+- `postbuild` = `scripts/vercel-cache-headers.mjs`: the Vercel adapter emits
+  the `/_astro` immutable cache rule AFTER `{ handle: filesystem }`, where it
+  never fires; the script moves it above. Verify after a deploy with
+  `curl -I https://www.uxjon.com/_astro/<hashed>.css` → `max-age=31536000,
+  immutable`.
+- The Notion image sync is NOT wired to predev/prebuild any more (nothing
+  reachable reads Notion; `npm run sync-images` still exists by hand).
+  `@notionhq/client` is a devDependency.
+- `inlineStylesheets: 'auto'` with a CSS-only `assetsInlineLimit` function;
+  a plain numeric limit base64-inlines fontsource woff2 subsets into the
+  homepage sheet (131 KB → 249 KB). Keep it a function.
+- `src/pages/404.astro` is the site's 404 (away-page chrome); `/more` is the
+  phone exhibit iframed into `#play` (noindex, root-absolute script path).
+- Case-study images are WebP on the page; `ogImage=` stays on `cover.png`
+  (share scrapers). Any new case-study art lands as webp.
+- Phone verification MUST enable touch emulation
+  (`Emulation.setTouchEmulationEnabled`) — the instrument gates on
+  `pointer: fine`; a narrow viewport alone renders a state no phone gets.
+- The flagship's round count reads `judge-ledger.json` (`blind.rounds`);
+  never type the number by hand.
