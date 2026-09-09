@@ -712,10 +712,22 @@ const BUILD_MARKS: Record<string, string> = { archive: "🗂️", studio: "🎛�
   :global(html[data-night]) .look-band :global(.car-counter) {
     color: #7d8798;
   }
-  :global(html[data-night]) .look-band :global(.car-btn) {
-    border-color: rgba(232, 236, 244, 0.3);
-    background: rgba(16, 18, 22, 0.6);
-    color: #e8ecf4;
+  /* the Visuals keys at night: carbon — the same recipe, the ink now
+     light so the steps invert; the contact shadow is the night ground */
+  :global(html[data-night]) .look-band {
+    --kc-ink: var(--night-ink);
+    --kc-face-hi: color-mix(in srgb, var(--kc-ink) 15%, var(--bg));
+    --kc-face: color-mix(in srgb, var(--kc-ink) 10%, var(--bg));
+    --kc-face-hover-hi: color-mix(in srgb, var(--kc-ink) 22%, var(--bg));
+    --kc-face-hover: color-mix(in srgb, var(--kc-ink) 15%, var(--bg));
+    --kc-face-down: color-mix(in srgb, var(--kc-ink) 8%, var(--bg));
+    --kc-bevel-hi: color-mix(in srgb, var(--kc-ink) 26%, var(--bg));
+    --kc-bevel-lo: color-mix(in srgb, var(--kc-ink) 5%, var(--bg));
+    --kc-seam: color-mix(in srgb, var(--kc-ink) 30%, transparent);
+    --kc-skirt-c: color-mix(in srgb, var(--kc-ink) 6.5%, var(--bg));
+    --kc-lip: color-mix(in srgb, var(--kc-ink) 17%, var(--bg));
+    --kc-contact: rgb(0 0 0 / 0.7);
+    --kc-ghost: color-mix(in srgb, var(--kc-ink) 30%, transparent);
   }
   /* (round 3: the ledger and the recorder carry their own section-local
      ink pairs — --mx-* and --au-* — which are the only night flips they
@@ -1689,26 +1701,174 @@ const BUILD_MARKS: Record<string, string> = { archive: "🗂️", studio: "🎛�
   .look-band :global(.car-counter) {
     display: none;
   }
-  .look-band :global(.car-btn) {
-    position: absolute;
-    top: 50%;
-    transform: translateY(-50%);
-    z-index: 2;
-    border-color: rgba(20, 18, 16, 0.3);
-    background: rgba(233, 232, 229, 0.6);
-    color: var(--ink);
-    backdrop-filter: blur(3px);
+  /* ── VISUALS KEYS (2026-09-09, Jon's pick from three rendered
+     directions: B's cap, A's arrow): the recorder's key material given
+     depth. Value steps of the room's ink over --bg via color-mix, every
+     seam 1px, a 9px stacked body + a soft contact shadow; press collapses
+     the body to 2px and the face drops the difference. Day = paper, night
+     = carbon through the section-local --kc-ink (.one shadows --ink, so
+     night resolves here — the ledger's law). The pair stands 20px outside
+     the PAINTED picture, bodies 24px above its bottom: --lk-half and
+     --lk-bottom are measured per slide by the script below (the 4:3 @
+     80svh default holds until it runs). Desk only; phones swipe + pinch. */
+  .look-band {
+    --kc: 76px;
+    --kc-skirt: 9px;
+    --kc-r: 7px;
+    --kc-gap: 20px;
+    --kc-rise: 24px;
+    --kc-glyph: 36px;
+    --kc-lift: 7px;
+    --lk-half: 53.333svh;
+    --lk-bottom: 80svh;
+    --kc-ink: var(--ink);
+    --kc-face-hi: color-mix(in srgb, var(--kc-ink) 2%, var(--bg));
+    --kc-face: color-mix(in srgb, var(--kc-ink) 5%, var(--bg));
+    --kc-face-hover-hi: var(--bg);
+    --kc-face-hover: color-mix(in srgb, var(--kc-ink) 1.5%, var(--bg));
+    --kc-face-down: color-mix(in srgb, var(--kc-ink) 8%, var(--bg));
+    --kc-bevel-hi: color-mix(in srgb, var(--kc-ink) 0%, var(--bg));
+    --kc-bevel-lo: color-mix(in srgb, var(--kc-ink) 14%, var(--bg));
+    --kc-seam: color-mix(in srgb, var(--kc-ink) 26%, transparent);
+    --kc-skirt-c: color-mix(in srgb, var(--kc-ink) 15%, var(--bg));
+    --kc-lip: color-mix(in srgb, var(--kc-ink) 26%, var(--bg));
+    --kc-contact: color-mix(in srgb, var(--kc-ink) 22%, transparent);
+    --kc-ghost: color-mix(in srgb, var(--kc-ink) 34%, transparent);
   }
-  .look-band :global(.car-btn:hover:not(:disabled)),
-  .look-band :global(.car-btn:focus-visible) {
-    border-color: var(--ink);
-    background: rgba(233, 232, 229, 0.85);
+  @media (min-width: 900px) {
+    .look-band :global(.car-btn) {
+      position: absolute;
+      z-index: 2;
+      box-sizing: border-box;
+      width: var(--kc);
+      height: var(--kc);
+      margin: 0;
+      padding: 0;
+      top: calc(var(--lk-bottom) - var(--kc-rise) - var(--kc-skirt) - var(--kc));
+      transform: none;
+      display: grid;
+      place-items: center;
+      appearance: none;
+      border: 1px solid var(--kc-seam);
+      border-radius: var(--kc-r);
+      color: var(--kc-ink);
+      background: linear-gradient(180deg, var(--kc-face-hi), var(--kc-face));
+      backdrop-filter: none;
+      -webkit-backdrop-filter: none;
+      opacity: 1;
+      cursor: pointer;
+      box-shadow:
+        inset 0 1px 0 var(--kc-bevel-hi),
+        inset 0 -1px 0 var(--kc-bevel-lo),
+        0 1px 0 var(--kc-skirt-c),
+        0 2px 0 var(--kc-skirt-c),
+        0 3px 0 var(--kc-skirt-c),
+        0 4px 0 var(--kc-skirt-c),
+        0 5px 0 var(--kc-skirt-c),
+        0 6px 0 var(--kc-skirt-c),
+        0 7px 0 var(--kc-skirt-c),
+        0 8px 0 var(--kc-skirt-c),
+        0 9px 0 var(--kc-lip),
+        0 11px 6px -4px var(--kc-contact);
+      transition: transform 70ms cubic-bezier(0.2, 0.7, 0.3, 1), box-shadow 70ms cubic-bezier(0.2, 0.7, 0.3, 1), background 120ms ease;
+    }
+    .look-band :global([data-car-prev]) {
+      left: auto;
+      right: calc(50% + var(--lk-half) + var(--kc-gap));
+    }
+    .look-band :global([data-car-next]) {
+      right: auto;
+      left: calc(50% + var(--lk-half) + var(--kc-gap));
+    }
+    /* the chassis chevron goes; the glyph is the photo's arrow — a stem
+       with a filled triangle head, drawn as a mask in the key's ink, set
+       high on the face the way the photo's arrow sits on its key */
+    .look-band :global(.car-btn > svg) {
+      display: none;
+    }
+    .look-band :global(.car-btn)::before {
+      content: "";
+      position: absolute;
+      inset: -4px;
+    }
+    .look-band :global(.car-btn)::after {
+      content: "";
+      position: relative;
+      top: calc(-1 * var(--kc-lift));
+      width: var(--kc-glyph);
+      height: var(--kc-glyph);
+      background: currentColor;
+      -webkit-mask: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect x='3.5' y='14.4' width='15' height='3.2' rx='1.6'/><path d='M16.5 6.4 29 16 16.5 25.6z'/></svg>") center / contain no-repeat;
+      mask: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect x='3.5' y='14.4' width='15' height='3.2' rx='1.6'/><path d='M16.5 6.4 29 16 16.5 25.6z'/></svg>") center / contain no-repeat;
+      transition: opacity 120ms ease;
+    }
+    .look-band :global([data-car-prev])::after {
+      transform: scaleX(-1);
+    }
+    .look-band :global(.car-btn:hover:not(:disabled)) {
+      border-color: var(--kc-seam);
+      background: linear-gradient(180deg, var(--kc-face-hover-hi), var(--kc-face-hover));
+    }
+    .look-band :global(.car-btn:active:not(:disabled)),
+    .look-band :global(.car-btn[data-pressed]) {
+      transform: translateY(calc(var(--kc-skirt) - 2px));
+      background: linear-gradient(180deg, var(--kc-face), var(--kc-face-down));
+      box-shadow:
+        inset 0 1px 0 var(--kc-bevel-hi),
+        inset 0 -1px 0 var(--kc-bevel-lo),
+        0 1px 0 var(--kc-skirt-c),
+        0 2px 0 var(--kc-lip),
+        0 3px 2px -1px var(--kc-contact);
+    }
+    .look-band :global(.car-btn:focus-visible) {
+      border-color: var(--kc-seam);
+      background: linear-gradient(180deg, var(--kc-face-hi), var(--kc-face));
+      outline: 2px solid var(--kc-ink);
+      outline-offset: 3px;
+    }
+    .look-band :global(.car-btn:disabled) {
+      opacity: 1;
+      cursor: default;
+      background: linear-gradient(180deg, var(--kc-face-hi), var(--kc-face));
+    }
+    .look-band :global(.car-btn:disabled)::after {
+      background: var(--kc-ghost);
+    }
   }
-  .look-band :global([data-car-prev]) {
-    left: 16px;
+  /* phones: no keys — the picture swipes (the chassis's own touch) and
+     pinches; while a pinch is live the zoomed picture lifts over the
+     placard, the view opens, and the section clips sideways so nothing
+     widens the page */
+  @media (max-width: 899px) {
+    .look-band :global(.car-nav) {
+      display: none;
+    }
   }
-  .look-band :global([data-car-next]) {
-    right: 16px;
+  @media (pointer: coarse) {
+    .lk-img {
+      touch-action: pan-y;
+    }
+  }
+  .lk-img[data-zoom] {
+    position: relative;
+    z-index: 3;
+    transform-origin: 0 0;
+  }
+  .lk-img[data-ease] {
+    transition: transform 220ms ease;
+  }
+  .look-band[data-pinch] {
+    overflow-x: clip;
+  }
+  .look-band[data-pinch] :global(.car-view) {
+    overflow: visible;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .look-band :global(.car-btn),
+    .look-band :global(.car-btn)::after,
+    .lk-img[data-ease] {
+      transition: none;
+    }
   }
   .lk {
     margin: 0;
@@ -2145,6 +2305,108 @@ const BUILD_MARKS: Record<string, string> = { archive: "🗂️", studio: "🎛�
       );
     drive("data-au-prev", "data-car-prev");
     drive("data-au-next", "data-car-next");
+  }
+
+  // ── VISUALS: the keys stand off the PAINTED picture, not its box (the
+  // box is the column's width with object-fit: contain; 4:3 and square
+  // pieces paint different widths). Measure the active slide's painted
+  // width + bottom and hand them to the chassis as --lk-half/--lk-bottom;
+  // re-measure on image load, on the box resizing, and on every slide
+  // change (the chassis writes track.style.transform in show()).
+  const lkRoom = document.getElementById("illustrations");
+  const lkCar = lkRoom?.querySelector<HTMLElement>("[data-carousel]") ?? null;
+  const lkTrack = lkCar?.querySelector<HTMLElement>("[data-car-track]") ?? null;
+  if (lkRoom && lkCar && lkTrack) {
+    const lkImgs = Array.from(lkRoom.querySelectorAll<HTMLImageElement>(".lk-img"));
+    const lkActive = () => {
+      const slide = Array.from(lkTrack.children).find((s) => !s.hasAttribute("aria-hidden")) ?? lkTrack.children[0];
+      return slide?.querySelector<HTMLImageElement>(".lk-img") ?? null;
+    };
+    const lkMeasure = () => {
+      const img = lkActive();
+      if (!img || !img.naturalWidth || !img.naturalHeight) return;
+      const bw = img.clientWidth;
+      const bh = img.clientHeight;
+      if (!bw || !bh) return;
+      const pw = Math.min(bw, (bh * img.naturalWidth) / img.naturalHeight);
+      const ph = Math.min(bh, (bw * img.naturalHeight) / img.naturalWidth);
+      const top = img.getBoundingClientRect().top - lkCar.getBoundingClientRect().top;
+      lkCar.style.setProperty("--lk-half", `${(pw / 2).toFixed(2)}px`);
+      lkCar.style.setProperty("--lk-bottom", `${(top + (bh + ph) / 2).toFixed(2)}px`);
+    };
+    lkMeasure();
+    lkImgs.forEach((im) => im.addEventListener("load", lkMeasure));
+    const lkRO = new ResizeObserver(lkMeasure);
+    lkImgs.forEach((im) => lkRO.observe(im));
+    new MutationObserver(lkMeasure).observe(lkTrack, { attributes: true, attributeFilter: ["style"] });
+
+    // phones: pinch the picture (the photo app's grammar — two fingers
+    // scale it about the pinch point, 1×–3×, it lifts over the placard,
+    // and it eases home on release). Captured at the room so the pinch
+    // never reaches the chassis's swipe; one-finger swipes still do.
+    if (window.matchMedia("(pointer: coarse)").matches) {
+      const still = window.matchMedia("(prefers-reduced-motion: reduce)");
+      let pImg: HTMLImageElement | null = null;
+      let pinched = false;
+      let d0 = 1, px = 0, py = 0, rx = 0, ry = 0;
+      let settle = 0;
+      const span = (t: TouchList) => Math.hypot(t[0].clientX - t[1].clientX, t[0].clientY - t[1].clientY);
+      const mid = (t: TouchList) => [(t[0].clientX + t[1].clientX) / 2, (t[0].clientY + t[1].clientY) / 2];
+      const release = () => {
+        const img = pImg;
+        if (!img) return;
+        pImg = null;
+        img.style.transform = "";
+        if (still.matches) {
+          img.removeAttribute("data-zoom");
+          lkRoom.removeAttribute("data-pinch");
+          return;
+        }
+        img.setAttribute("data-ease", "");
+        settle = window.setTimeout(() => {
+          img.removeAttribute("data-ease");
+          img.removeAttribute("data-zoom");
+          lkRoom.removeAttribute("data-pinch");
+        }, 240);
+      };
+      lkRoom.addEventListener("touchstart", (e) => {
+        if (e.touches.length !== 2) return;
+        const img = (e.target as Element | null)?.closest?.(".lk") ? lkActive() : null;
+        if (!img) return;
+        e.stopPropagation();
+        window.clearTimeout(settle);
+        pinched = true;
+        pImg = img;
+        img.removeAttribute("data-ease");
+        img.style.transform = "";
+        img.setAttribute("data-zoom", "");
+        lkRoom.setAttribute("data-pinch", "");
+        const r = img.getBoundingClientRect();
+        rx = r.left;
+        ry = r.top;
+        [px, py] = mid(e.touches);
+        d0 = span(e.touches) || 1;
+      }, { capture: true, passive: true });
+      lkRoom.addEventListener("touchmove", (e) => {
+        const img = pImg;
+        if (!img || e.touches.length < 2) return;
+        e.preventDefault();
+        const s = Math.min(3, Math.max(1, span(e.touches) / d0));
+        const [mx, my] = mid(e.touches);
+        // the point that was under the fingers stays under them
+        const tx = mx - rx - (px - rx) * s;
+        const ty = my - ry - (py - ry) * s;
+        img.style.transform = `translate(${tx.toFixed(1)}px, ${ty.toFixed(1)}px) scale(${s.toFixed(3)})`;
+      }, { capture: true, passive: false });
+      const lkEnd = (e: TouchEvent) => {
+        if (!pinched) return;
+        e.stopPropagation();
+        if (e.touches.length < 2) release();
+        if (e.touches.length === 0) pinched = false;
+      };
+      lkRoom.addEventListener("touchend", lkEnd, { capture: true });
+      lkRoom.addEventListener("touchcancel", lkEnd, { capture: true });
+    }
   }
 
   // ── BUILDS folds: opening one changes the document's height (the comet
