@@ -18,6 +18,14 @@ import ProofDbtPipeline from "../../components/resume/ProofDbtPipeline.astro";
 import ProofSignalKeys from "../../components/resume/ProofSignalKeys.astro";
 import { CASE_LINKS } from "../../lib/case-links";
 
+// The sheet's chrome is IBM Plex Mono (bundled locally, house rule: no CDN
+// fonts). 120+ elements on this page declared the face without the page ever
+// loading it — the screen résumé was falling back to Menlo. Same weights the
+// homepage imports; PrintResume.astro declares no mono, so the print/ATS
+// sheet is untouched.
+import "@fontsource/ibm-plex-mono/400.css";
+import "@fontsource/ibm-plex-mono/500.css";
+
 export const prerender = true;
 
 // The marks: drawn marginalia in the editor's red — one ink, like a
@@ -464,7 +472,11 @@ const MARKS = [
     .r-mark {
       display: none;
     }
-    @media (min-width: 900px) {
+    /* 1000px, not 900px: the marks hang off the sheet at `left/right: -30px`,
+       which pushed the document past the viewport from 900 to 999px
+       (horizontal overflow is this repo's most-recurring regression). Parity
+       begins at 1000px, so that is where the margin annotations turn on. */
+    @media (min-width: 1000px) {
       .r-mark {
         display: inline-flex;
         align-items: center;

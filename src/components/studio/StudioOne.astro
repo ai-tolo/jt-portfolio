@@ -824,6 +824,11 @@ const BUILD_MARKS: Record<string, string> = { archive: "🗂️", studio: "🎛�
   :global(html[data-night]) .rail-night:focus-visible {
     outline-color: #e8ecf4;
   }
+  /* the rail links need the same night ring: .one shadows --ink with a day
+     value, so `outline: 2px solid var(--ink)` is invisible on the night rail */
+  :global(html[data-night]) .rail-item:focus-visible {
+    outline-color: #e8ecf4;
+  }
 
   /* ── the MOBILE bar (2026-08-24): five words at the thumb + the moon.
      Screen-only; the desktop rail owns >=900px. */
@@ -978,17 +983,11 @@ const BUILD_MARKS: Record<string, string> = { archive: "🗂️", studio: "🎛�
   }
 
   /* the exhibit's honest frame: what this is, where the real one lives.
-     DRAFT — Jon's voice owns this line. Width-gated like the rest of the
-     mobile pass. */
+     DRAFT — Jon's voice owns this line. It lives INSIDE .sig-mobile, so it
+     rides the same POINTER gate as the exhibit itself (a width gate printed
+     it above the working instrument on a narrowed desktop window). */
   .sig-mobile-note {
-    display: none;
-  }
-  @media screen and (max-width: 899px) {
-    .sig-mobile-note {
-      display: block;
-    }
-  }
-  .sig-mobile-note {
+    display: block;
     margin: 0 4px 10px;
     font-family: "IBM Plex Mono", ui-monospace, monospace;
     font-size: 0.68rem;
@@ -1626,7 +1625,7 @@ const BUILD_MARKS: Record<string, string> = { archive: "🗂️", studio: "🎛�
     --au-pane: color-mix(in srgb, var(--au-ink) 10%, var(--bg));
     --au-seam: color-mix(in srgb, var(--au-ink) 26%, transparent);
     --au-hair: color-mix(in srgb, var(--au-ink) 40%, transparent);
-    --au-mute: color-mix(in srgb, var(--au-ink) 50%, transparent);
+    --au-mute: color-mix(in srgb, var(--au-ink) 62%, transparent);
     --au-ghost: color-mix(in srgb, var(--au-ink) 38%, transparent);
     --au-lamp: var(--ember);
     --au-key-w: 56px; /* prev / next */
@@ -2302,6 +2301,23 @@ const BUILD_MARKS: Record<string, string> = { archive: "🗂️", studio: "🎛�
       }
     }, { threshold: [0, 0.35] }).observe(host);
   }
+
+  // ── the instrument's a11y roles, patched from the HOST (the sacred file is
+  // never edited). Two axe failures on the homepage:
+  //   #afnode declares role="slider" but is a pointer-only XY handle — not
+  //     focusable, no aria-valuenow. It is decoration for assistive tech; the
+  //     filter is not operable by keyboard at all, so hide it rather than
+  //     advertise a control that does not exist.
+  //   #readout is a generic div carrying aria-live + aria-label (aria-label is
+  //     prohibited on a div). role="status" makes the label legal and keeps the
+  //     polite live region.
+  const afnode = document.getElementById("afnode");
+  if (afnode) {
+    afnode.removeAttribute("role");
+    afnode.removeAttribute("aria-label");
+    afnode.setAttribute("aria-hidden", "true");
+  }
+  document.getElementById("readout")?.setAttribute("role", "status");
 
   // ── the instrument's FIT zoom (styled from outside the sacred file):
   // zoom = min(cap, available / 1120), where `available` is the CONTENT box
