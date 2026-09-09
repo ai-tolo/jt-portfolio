@@ -73,11 +73,12 @@ export const printContent: PrintResumeContent = {
     "Minneapolis, MN",
     "remote (US)",
   ],
+  // Jon's words (approved 2026-09-09): the one human paragraph. No numbers,
+  // no stack (Skills and the bullets carry those), present tense for CHS.
   summary:
-    "Design engineer working the seam between interface design, front-end, and applied AI. " +
-    "Sole designer, builder, and shipper of an agentic audio-mastering system, and of the blind evaluation harness that gates it, " +
-    "built after hitting the known failure mode of these systems: the evaluator, not the model, sets the ceiling on quality. " +
-    "Before that, enterprise AI at a Fortune 500 cooperative, a B2B SaaS AI platform, and a bilingual banking launch that cut onboarding bounce from 40% to 25%, designing with engineers rather than handing off.",
+    "I'm a design engineer who makes music, and most of what I build is a tool I wished existed for it. " +
+    "I do the interface, the front-end, and the applied AI myself, so nothing gets lost between the idea and the thing you can press. " +
+    "Right now that's enterprise AI at a Fortune 500 cooperative, and the builds below are the ones I made for myself.",
   builds: [
     {
       org: "Finishable: the Engineer",
