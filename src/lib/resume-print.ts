@@ -71,6 +71,7 @@ export const printContent: PrintResumeContent = {
     "uxjon.com",
     "linkedin.com/in/jtollefson123",
     "Minneapolis, MN",
+    "remote (US)",
   ],
   summary:
     "Design engineer working the seam between interface design, front-end, and applied AI. " +
@@ -79,7 +80,7 @@ export const printContent: PrintResumeContent = {
     "Before that, enterprise AI at a Fortune 500 cooperative, a B2B SaaS AI platform, and a bilingual banking launch that cut onboarding bounce from 40% to 25%, designing with engineers rather than handing off.",
   builds: [
     {
-      org: "Finishable — the Engineer",
+      org: "Finishable: the Engineer",
       pos: "AI mastering agent",
       dates: "2026 – Present",
       bullets: [
@@ -91,11 +92,11 @@ export const printContent: PrintResumeContent = {
       link: {
         label: "Interactive case study:",
         text: "uxjon.com/case-studies/the-console",
-        href: "https://uxjon.com/case-studies/the-console",
+        href: "https://www.uxjon.com/case-studies/the-console",
       },
     },
     {
-      org: "Finishable — the Catalog",
+      org: "Finishable: the Catalog",
       pos: "audio catalog and search",
       dates: "2026 – Present",
       bullets: [
@@ -112,7 +113,7 @@ export const printContent: PrintResumeContent = {
       link: {
         label: "Play it:",
         text: "uxjon.com/#play",
-        href: "https://uxjon.com/#play",
+        href: "https://www.uxjon.com/#play",
       },
     },
   ],
@@ -162,7 +163,7 @@ export const printContent: PrintResumeContent = {
   ],
   skillRows: [
     [
-      { label: "Build", items: "TypeScript, React, Astro, Python, FastAPI" },
+      { label: "Build", items: "TypeScript, React, Astro, HTML/CSS, Python, FastAPI, Claude Code" },
       { label: "Design", items: "Figma, Framer, Adobe Creative Suite" },
     ],
     [
