@@ -271,7 +271,7 @@ const BUILD_MARKS: Record<string, string> = { archive: "🗂️", studio: "🎛�
 
   {SHOW.has("illustrations") && <section class="look-band room" id="illustrations" aria-labelledby="illustrations-t">
     <h2 id="illustrations-t" class="sr-only">Visuals</h2>
-    <Carousel count={illos.length} label="Visual work" accent="var(--brand-yellow, #ffc94d)">
+    <Carousel count={illos.length} label="Visual work" accent="var(--brand-yellow, #ffc94d)" dots titles={illos.map((it) => it.title)}>
       {illos.map((it, i) => (
         <figure class="lk">
           <img class="lk-img" src={it.src} alt={it.alt} loading="lazy" />
@@ -1715,7 +1715,10 @@ const BUILD_MARKS: Record<string, string> = { archive: "🗂️", studio: "🎛�
     /* 2026-09-09, Jon: the whole build 20% smaller; arrow centred
        vertically and nudged toward the picture (--kc-inset). */
     --kc: 61px;
-    --kc-skirt: 7px;
+    /* oblique body (Jon's mock, 2026-09-09): the block sits down AND to the
+       right of the face, so a side and a bottom show, not just a lip */
+    --kc-sx: 7px;
+    --kc-sy: 9px;
     --kc-r: 6px;
     --kc-gap: 20px;
     --kc-rise: 24px;
@@ -1737,6 +1740,14 @@ const BUILD_MARKS: Record<string, string> = { archive: "🗂️", studio: "🎛�
     --kc-contact: color-mix(in srgb, var(--kc-ink) 22%, transparent);
     --kc-ghost: color-mix(in srgb, var(--kc-ink) 34%, transparent);
   }
+  /* phones: the picture is width-bound (4:3 first slide, 14px gutters), so
+     the dot row has a sane place before the lazy image loads and the script
+     measures the real bottom */
+  @media (max-width: 899px) {
+    .look-band {
+      --lk-bottom: calc((100vw - 28px) * 0.75);
+    }
+  }
   @media (min-width: 900px) {
     .look-band :global(.car-btn) {
       position: absolute;
@@ -1746,7 +1757,7 @@ const BUILD_MARKS: Record<string, string> = { archive: "🗂️", studio: "🎛�
       height: var(--kc);
       margin: 0;
       padding: 0;
-      top: calc(var(--lk-bottom) - var(--kc-rise) - var(--kc-skirt) - var(--kc));
+      top: calc(var(--lk-bottom) - var(--kc-rise) - var(--kc-sy) - var(--kc));
       transform: none;
       display: grid;
       place-items: center;
@@ -1760,21 +1771,25 @@ const BUILD_MARKS: Record<string, string> = { archive: "🗂️", studio: "🎛�
       opacity: 1;
       cursor: pointer;
       box-shadow:
-        inset 0 1px 0 var(--kc-bevel-hi),
-        inset 0 -1px 0 var(--kc-bevel-lo),
-        0 1px 0 var(--kc-skirt-c),
-        0 2px 0 var(--kc-skirt-c),
-        0 3px 0 var(--kc-skirt-c),
-        0 4px 0 var(--kc-skirt-c),
-        0 5px 0 var(--kc-skirt-c),
-        0 6px 0 var(--kc-skirt-c),
-        0 7px 0 var(--kc-lip),
-        0 9px 5px -3px var(--kc-contact);
+        inset 1px 1px 0 var(--kc-bevel-hi),
+        inset -1px -1px 0 var(--kc-bevel-lo),
+        1px 1px 0 var(--kc-skirt-c),
+        2px 2px 0 var(--kc-skirt-c),
+        2px 3px 0 var(--kc-skirt-c),
+        3px 4px 0 var(--kc-skirt-c),
+        4px 5px 0 var(--kc-skirt-c),
+        5px 6px 0 var(--kc-skirt-c),
+        5px 7px 0 var(--kc-skirt-c),
+        6px 8px 0 var(--kc-skirt-c),
+        7px 9px 0 var(--kc-lip),
+        9px 12px 6px -3px var(--kc-contact);
       transition: transform 70ms cubic-bezier(0.2, 0.7, 0.3, 1), box-shadow 70ms cubic-bezier(0.2, 0.7, 0.3, 1), background 120ms ease;
     }
     .look-band :global([data-car-prev]) {
       left: auto;
-      right: calc(50% + var(--lk-half) + var(--kc-gap));
+      /* the body extends toward the picture on this side; keep the 20px
+         from the body's edge, not the face's */
+      right: calc(50% + var(--lk-half) + var(--kc-gap) + var(--kc-sx));
     }
     .look-band :global([data-car-next]) {
       right: auto;
@@ -1813,14 +1828,14 @@ const BUILD_MARKS: Record<string, string> = { archive: "🗂️", studio: "🎛�
     }
     .look-band :global(.car-btn:active:not(:disabled)),
     .look-band :global(.car-btn[data-pressed]) {
-      transform: translateY(calc(var(--kc-skirt) - 2px));
+      transform: translate(calc(var(--kc-sx) - 1px), calc(var(--kc-sy) - 2px));
       background: linear-gradient(180deg, var(--kc-face), var(--kc-face-down));
       box-shadow:
-        inset 0 1px 0 var(--kc-bevel-hi),
-        inset 0 -1px 0 var(--kc-bevel-lo),
-        0 1px 0 var(--kc-skirt-c),
-        0 2px 0 var(--kc-lip),
-        0 3px 2px -1px var(--kc-contact);
+        inset 1px 1px 0 var(--kc-bevel-hi),
+        inset -1px -1px 0 var(--kc-bevel-lo),
+        1px 1px 0 var(--kc-skirt-c),
+        1px 2px 0 var(--kc-lip),
+        2px 3px 2px -1px var(--kc-contact);
     }
     .look-band :global(.car-btn:focus-visible) {
       border-color: var(--kc-seam);
@@ -1877,7 +1892,9 @@ const BUILD_MARKS: Record<string, string> = { archive: "🗂️", studio: "🎛�
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 10px;
+    /* room for the dot row between the picture and the placard
+       (8px + 24px hit row + 8px), 2026-09-09 */
+    gap: 40px;
   }
   .lk-img {
     width: 100%;
@@ -1900,10 +1917,20 @@ const BUILD_MARKS: Record<string, string> = { archive: "🗂️", studio: "🎛�
     text-align: center;
   }
   .lk-title {
-    font-size: 0.78rem;
-    font-weight: 500;
-    letter-spacing: 0.03em;
+    font-size: 1.05rem;
+    font-weight: 700;
+    letter-spacing: 0.01em;
     color: var(--ink);
+  }
+  /* the dot row sits in the gap under the picture, centred; ink through
+     the section-local pair so night flips (.one shadows --ink) */
+  .look-band :global(.car-dots) {
+    position: absolute;
+    left: 50%;
+    top: calc(var(--lk-bottom) + 8px);
+    transform: translateX(-50%);
+    z-index: 2;
+    color: var(--kc-ink);
   }
   .lk-meta {
     font-size: 0.66rem;
