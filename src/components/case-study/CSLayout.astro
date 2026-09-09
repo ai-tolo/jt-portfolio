@@ -24,6 +24,9 @@ interface Props {
 }
 
 const { title, description, ogImage = "/og-image.png" } = Astro.props;
+// Same source of truth as Layout.astro: astro.config `site` (the www host —
+// the apex 308-redirects to it, so canonical/og URLs must not name the apex).
+const siteOrigin = Astro.site?.origin ?? "https://www.uxjon.com";
 ---
 
 <!doctype html>
@@ -35,10 +38,10 @@ const { title, description, ogImage = "/og-image.png" } = Astro.props;
     {description && <meta name="description" content={description} />}
     <meta property="og:title" content={title} />
     {description && <meta property="og:description" content={description} />}
-    <link rel="canonical" href={new URL(Astro.url.pathname, "https://uxjon.com").href} />
-    <meta property="og:url" content={new URL(Astro.url.pathname, "https://uxjon.com").href} />
+    <link rel="canonical" href={new URL(Astro.url.pathname, siteOrigin).href} />
+    <meta property="og:url" content={new URL(Astro.url.pathname, siteOrigin).href} />
     <meta property="og:site_name" content="Jonathan Tollefson" />
-    <meta property="og:image" content={new URL(ogImage, "https://uxjon.com").href} />
+    <meta property="og:image" content={new URL(ogImage, siteOrigin).href} />
     <meta property="og:type" content="article" />
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="theme-color" content="#e9e8e5" />
@@ -112,10 +115,11 @@ const { title, description, ogImage = "/og-image.png" } = Astro.props;
     --cs-surface-2: #eceae6;
     --cs-text: #141210;
     --cs-text-muted: rgba(20, 18, 16, 0.66);
-    /* 0.56, not a mirror of night's 0.38: the dim tier must keep the
-       ~4:1 read it has on the dark ground (three converters flagged
-       0.44 at ~2.8:1 on day) */
-    --cs-text-dim: rgba(20, 18, 16, 0.56);
+    /* 0.62 = #605f5d on the canvas, 4.87:1 (AA for the 10.5-11px chapter
+       chrome this tier sets: .ch-num, .sx-gear-label, .tb-caption). The
+       earlier 0.56 read ~4.0:1 and failed axe on every case study; night's
+       0.50 clears the same bar on #07060c (2026-09-09 QA audit). */
+    --cs-text-dim: rgba(20, 18, 16, 0.62);
     --cs-line: rgba(20, 18, 16, 0.14);
     --cs-line-strong: rgba(20, 18, 16, 0.32);
     /* Prose ink (was a hardcoded cream on .cs-main p). */
@@ -129,7 +133,7 @@ const { title, description, ogImage = "/og-image.png" } = Astro.props;
     --cs-accent: #b33a2a;
     --cs-pink-text: #c2184c;
     --cs-cyan-text: #0b6e96;
-    --cs-green-text: #0a7a33;
+    --cs-green-text: #0a6e2d; /* 5.22:1 on the canvas; #0a7a33 was 4.45:1 */
     --cs-yellow-text: #7a6000;
     /* the brand gradient for background-clip:text titles — deepened on
        day so the amber end doesn't wash out. The end stop is SIENNA, not
@@ -154,7 +158,7 @@ const { title, description, ogImage = "/og-image.png" } = Astro.props;
       --cs-surface-2: #15101a;
       --cs-text: #f5f1e8;
       --cs-text-muted: rgba(245, 241, 232, 0.62);
-      --cs-text-dim: rgba(245, 241, 232, 0.38);
+      --cs-text-dim: rgba(245, 241, 232, 0.50);
       --cs-line: rgba(245, 241, 232, 0.10);
       --cs-line-strong: rgba(245, 241, 232, 0.22);
       --cs-prose: rgba(245, 241, 232, 0.88);

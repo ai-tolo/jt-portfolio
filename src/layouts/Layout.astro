@@ -21,8 +21,9 @@ const {
   ogImage = "/og-image.png",
 } = Astro.props;
 
-// Astro.site is set in astro.config.mjs. Falls back to uxjon.com if missing.
-const siteOrigin = Astro.site?.origin ?? "https://uxjon.com";
+// Astro.site is set in astro.config.mjs (the www host: the apex 308-redirects
+// to it, so canonical/og URLs must never name the apex). Fallback matches.
+const siteOrigin = Astro.site?.origin ?? "https://www.uxjon.com";
 const canonical = new URL(Astro.url.pathname, siteOrigin).toString();
 const ogImageUrl = new URL(ogImage, siteOrigin).toString();
 ---
@@ -65,6 +66,30 @@ const ogImageUrl = new URL(ogImage, siteOrigin).toString();
     <meta name="twitter:title" content={title} />
     <meta name="twitter:description" content={description} />
     <meta name="twitter:image" content={ogImageUrl} />
+
+    {/* Structured data: one Person record carrying only facts the résumé
+        already states (no ratings, no invented fields). set:html because
+        Astro does not interpolate inside <script> bodies. */}
+    <script
+      type="application/ld+json"
+      set:html={JSON.stringify({
+        "@context": "https://schema.org",
+        "@type": "Person",
+        name: "Jonathan Tollefson",
+        jobTitle: "Design Engineer",
+        url: `${siteOrigin}/`,
+        sameAs: [
+          "https://www.linkedin.com/in/jtollefson123",
+          "https://jontolo.substack.com",
+        ],
+        address: {
+          "@type": "PostalAddress",
+          addressLocality: "Minneapolis",
+          addressRegion: "MN",
+          addressCountry: "US",
+        },
+      })}
+    />
 
     {/* One theme axis sitewide: day by default, html[data-night] via the
         switch. Applied pre-paint (the old 4-theme cycler is retired). */}

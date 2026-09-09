@@ -24,6 +24,20 @@ interface Post {
   paragraphs: string[];
 }
 const { post } = Astro.props as { post: Post };
+// Meta description: a bare subtitle ("Oranges in the Shower", 21 chars) is
+// what every search snippet and link preview showed. Short subtitles now
+// yield to the essay's first sentence, trimmed to snippet length.
+const firstSentence = (html: string | undefined) => {
+  const text = (html ?? "").replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
+  if (!text) return "";
+  const cut = text.search(/[.!?](\s|$)/);
+  const sentence = cut > 40 ? text.slice(0, cut + 1) : text;
+  return sentence.length > 155 ? sentence.slice(0, 152).trimEnd() + "…" : sentence;
+};
+const description =
+  post.subtitle && post.subtitle.length >= 60
+    ? post.subtitle
+    : firstSentence(post.paragraphs?.[0]) || `Diary of a Soundbender — ${post.title}`;
 const fmtDate = (iso: string) => {
   const d = new Date(iso + "T12:00:00");
   return isNaN(d.getTime()) ? iso : d.toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" });
@@ -32,7 +46,7 @@ const fmtDate = (iso: string) => {
 
 <Layout
   title={`${post.title} — Jonathan Tollefson`}
-  description={post.subtitle || `Diary of a Soundbender — ${post.title}`}
+  description={description}
   ogImage={post.cover || undefined}
 >
   <AwayRail />
