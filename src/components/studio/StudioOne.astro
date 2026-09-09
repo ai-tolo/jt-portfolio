@@ -30,8 +30,81 @@ const pub = (f: string) => path.join(process.cwd(), "public", "studio", f);
 const exists = (f: string) => fs.existsSync(pub(f));
 const etchAsset = ["etch.svg", "etch.webp", "etch.png"].filter(exists).map((f) => `/studio/${f}`)[0];
 
-interface Track { src: string | null; title: string; note?: string; year?: number; duration?: string; peaks?: string | null; cover?: string | null; }
+interface Track { src: string | null; title: string; note?: string; year?: number; duration?: string; peaks?: string | null; cover?: string | null; tint?: string | null; }
 const tracks: Track[] = ((soundlab as any).tracks ?? []).filter((t: Track) => t.src);
+
+// ── TAPE TINT (2026-09-09, Jon: "the fill should automatically populate
+// with different colors, to add identity to each tape"). Every cassette's
+// label gets its own colour at build time. IDENTITY = the title: FNV-1a of
+// the (NFC, trimmed) title → a hue, +190 so the first tape lands on the
+// mock's coral (oklch hue 22 ≈ #ff8888). LEGIBILITY = spacing: all the
+// tapes' hues are then relaxed around the colour circle together — sorted
+// by hue and pushed apart until neighbours sit ≥ GAP apart, with GAP =
+// min(24°, ~(360 − 16) / n) so twelve tapes still get 24° — around two
+// kinds of fixed anchor that never move: the ember lamp's hue (33, kept 8°
+// clear) and any tape pinned by a manifest `tint` (its hue is read when it
+// is an oklch() colour; any other CSS colour is honoured as-is, outside
+// the spacing). The relaxation depends only on the SET of titles, so the
+// manifest's order is irrelevant, appending a tape moves at most its
+// hue-neighbours, and no two tapes can share a colour. One register for
+// the shelf: L .76 / C .145 by day (the chroma clips a little on the
+// cyan–violet arc in sRGB; accepted, the coral is what is calibrated), the
+// same hue at L .66 / C .13 by night for the near-black ground.
+const hueOf = (str: string) => {
+  let h = 2166136261;
+  for (const ch of str.normalize("NFC").trim()) {
+    h ^= ch.codePointAt(0)!;
+    h = Math.imul(h, 16777619) >>> 0;
+  }
+  return h % 360;
+};
+const HUE_SHIFT = 190; // calibrated: "Head to Toe — Side A" → 22, the mock's coral
+const EMBER_HUE = 33; // oklch hue of --ember (#ff5432, set on .one below) — move this if --ember ever moves
+const EMBER_GAP = 8;
+const wrap = (h: number) => ((h % 360) + 360) % 360;
+const oklchHue = (css: string) => {
+  const m = /^oklch\(\s*[\d.]+%?\s+[\d.]+%?\s+(-?[\d.]+)(deg)?\s*[)/]/i.exec(css.trim());
+  return m ? wrap(Number(m[1])) : null;
+};
+interface HueNode { h: number; fixed: boolean; ember: boolean; i: number }
+const GAP = Math.min(24, (0.98 * (360 - 2 * EMBER_GAP)) / Math.max(1, tracks.length)); // 2% slack so a full shelf converges
+const hueNodes: HueNode[] = [{ h: EMBER_HUE, fixed: true, ember: true, i: -1 }];
+tracks.forEach((t, i) => {
+  const pinned = t.tint ? oklchHue(t.tint) : null;
+  if (t.tint && pinned === null) return; // an opaque colour: honoured as-is, outside the spacing
+  hueNodes.push(
+    pinned !== null
+      ? { h: pinned, fixed: true, ember: false, i }
+      : { h: wrap(hueOf(t.title) + HUE_SHIFT), fixed: false, ember: false, i }
+  );
+});
+const hueNeed = (a: HueNode, b: HueNode) => (a.fixed && b.fixed ? 0 : a.ember || b.ember ? EMBER_GAP : GAP);
+for (let pass = 0; pass < 400; pass++) {
+  hueNodes.sort((a, b) => a.h - b.h || a.i - b.i);
+  let moved = false;
+  for (let k = 0; k < hueNodes.length; k++) {
+    const a = hueNodes[k];
+    const b = hueNodes[(k + 1) % hueNodes.length];
+    if (a === b) break;
+    const gap = k === hueNodes.length - 1 ? b.h + 360 - a.h : b.h - a.h;
+    const short = hueNeed(a, b) - gap;
+    if (short <= 0.01) continue;
+    moved = true;
+    if (!a.fixed && !b.fixed) {
+      a.h = wrap(a.h - short / 2);
+      b.h = wrap(b.h + short / 2);
+    } else if (!a.fixed) a.h = wrap(a.h - short);
+    else b.h = wrap(b.h + short);
+  }
+  if (!moved) break;
+}
+const tapeTint = (t: Track, i: number): { day: string; night: string } => {
+  const node = hueNodes.find((n) => n.i === i);
+  if (t.tint && (!node || node.fixed)) return { day: t.tint, night: t.tint };
+  const hue = node!.h.toFixed(1);
+  return { day: `oklch(0.76 0.145 ${hue})`, night: `oklch(0.66 0.13 ${hue})` };
+};
+const tapes = tracks.map((t, i) => ({ t, fill: tapeTint(t, i) }));
 
 interface Illo { src: string; alt: string; title?: string; year?: number; medium?: string; }
 const illos: Illo[] = (illustrations as any).items ?? [];
@@ -233,32 +306,38 @@ const BUILD_MARKS: Record<string, string> = { archive: "🗂️", studio: "🎛�
   </section>}
 
 
-  {/* ── AUDIO — THE FIELD RECORDER (round 3e, 2026-09-02: Jon's pick from
-      three rendered players; the gear panel and the radial cover are
-      retired). A TP-7 face laid flat on the sunlit ground: media first,
-      the placard directly under it, then ONE machine row — an abutting key
-      strip (prev · PLAY · next), a hairline rule with a 1px tick as the
-      seek, and a recessed mono counter. Transport + Carousel mechanics are
-      untouched: the deck's prev/next keys drive the chassis buttons; with
-      one track they are engraved-dim and disabled. */}
+  {/* ── AUDIO — THE CASSETTE (2026-09-09: Jon's mock + his blank tape;
+      the field recorder's cover window is retired — the cassette IS the
+      art object). The placard sits ABOVE — mono title, the note — then
+      the tape, centred, its label filled with the tape's own colour (see
+      tapeTint), then the seek rule and the recessed counter. No keys: the
+      cassette is the play switch — tap it and the hubs turn; prev/next
+      keys appear only once there are two tapes. Transport + Carousel
+      mechanics are untouched: the tape's button clicks the Transport's
+      own (hidden) toggle, and the deck's keys drive the chassis buttons.
+      A manifest `cover` now prints ON the label. */}
   {SHOW.has("soundlab") && <section class="room" id="soundlab" aria-labelledby="soundlab-t"><div class="au">
     <h2 id="soundlab-t" class="sr-only">Audio</h2>
     <Carousel count={tracks.length} label="Music" accent="var(--ember)">
-      {tracks.map((t, i) => (
-        <article class="ls">
-          <div class="ls-cover" aria-hidden="true">
-            {t.cover ? (
-              <img src={t.cover} alt="" loading={i === 0 ? "eager" : "lazy"} />
-            ) : (
-              <span class="ls-cat">{String(i + 1).padStart(2, "0")}</span>
-            )}
-          </div>
+      {tapes.map(({ t, fill }, i) => (
+        <article class="ls" style={`--cs-tint:${fill.day};--cs-tint-night:${fill.night}`}>
           <h3 class="ls-title">{t.title}</h3>
           {t.note && <p class="ls-note">{t.note}</p>}
-          <div class="ls-deck">
-            <button class="ls-key ls-prev" type="button" data-au-prev aria-label="Previous track" disabled={tracks.length < 2}>«</button>
+          <button class="cs" type="button" data-cs-tape aria-label={`Play ${t.title}`}>
+            <span class="cs-label" aria-hidden="true">
+              {t.cover && <img src={t.cover} alt="" loading={i === 0 ? "eager" : "lazy"} decoding="async" />}
+            </span>
+            <img class="cs-shell" src="/studio/cassette-800.webp"
+              srcset="/studio/cassette-800.webp 800w, /studio/cassette-1600.webp 1600w"
+              sizes="(max-width: 720px) calc(100vw - 28px), 760px"
+              width="1600" height="979" alt="" loading={i === 0 ? "eager" : "lazy"} decoding="async" />
+            <img class="cs-reel cs-reel-l" src="/studio/cassette-reel-l.webp" width="170" height="170" alt="" loading={i === 0 ? "eager" : "lazy"} decoding="async" />
+            <img class="cs-reel cs-reel-r" src="/studio/cassette-reel-r.webp" width="170" height="170" alt="" loading={i === 0 ? "eager" : "lazy"} decoding="async" />
+          </button>
+          <div class="ls-deck" data-keys={tracks.length > 1 ? "" : undefined}>
+            {tracks.length > 1 && <button class="ls-key ls-prev" type="button" data-au-prev aria-label="Previous track">«</button>}
             <Transport src={t.src!} peaks={t.peaks ?? undefined} title={t.title} accent="var(--ember)" compact />
-            <button class="ls-key ls-next" type="button" data-au-next aria-label="Next track" disabled={tracks.length < 2}>»</button>
+            {tracks.length > 1 && <button class="ls-key ls-next" type="button" data-au-next aria-label="Next track">»</button>}
           </div>
         </article>
       ))}
@@ -1407,35 +1486,34 @@ const BUILD_MARKS: Record<string, string> = { archive: "🗂️", studio: "🎛�
     }
   }
 
-  /* ── AUDIO: THE FIELD RECORDER (round 3e, 2026-09-02). The TP-7's face
-     laid flat on the room ground: media first and biggest; the placard
-     (title, note) directly beneath, full width; then the machine on ONE
-     row — a strip of abutting keys hard-left (prev · PLAY · next, one heavy
-     mass), a single hairline rule with a 1px playhead tick spanning the
-     middle (no fill — the tick is the position), and the counter in a
-     recessed pane hard-right. Every part shares one left edge. Materials
-     are value steps of the room's ink over the room's ground (tokens.css
-     --bg flips at night by itself); every seam 1px; ONE lamp (ember) only
-     on the live key. The section-local --au-ink/--au-dim pair is the only
-     place that flips — everything below reads through it (same law as the
-     ledger's --mx-*). Transport's own styles are overridden from here with
-     the room id for specificity; its mechanics are untouched. */
+  /* ── AUDIO: THE CASSETTE (2026-09-09; Jon's mock + his blank tape; the
+     field recorder's cover window is retired). The placard first — mono
+     title, the note, both on the column's left edge — then the tape
+     itself, centred and as wide as the room allows, then ONE machine row:
+     the hairline rule with a 1px playhead tick as the seek (no fill) and
+     the counter in a recessed pane hard-right. The tape IS the switch: the
+     whole cassette is a button that clicks the Transport's own (hidden)
+     toggle; while playing the two hubs turn — the same discs cut from the
+     PNG and rotated in place — the counter runs, and the one ember lamp
+     lights in the counter pane. The label is the tape's identity: a colour
+     rect (--cs-tint per tape, from tapeTint above) sits behind the PNG's
+     transparent label area and the shell prints over it; a manifest cover
+     prints on the label instead. Materials otherwise as the recorder's:
+     value steps of the room's ink over --bg via color-mix, every seam 1px;
+     the section-local --au-ink/--au-dim pair is the only place that flips
+     (the ledger's law). Transport's own styles are overridden from here
+     with the room id for specificity; its mechanics are untouched. */
   .au {
     --au-ink: var(--ink);
     --au-dim: var(--dim);
     --au-key: color-mix(in srgb, var(--au-ink) 5%, var(--bg));
     --au-key-down: color-mix(in srgb, var(--au-ink) 11%, var(--bg));
-    --au-well: color-mix(in srgb, var(--au-ink) 7%, var(--bg));
     --au-pane: color-mix(in srgb, var(--au-ink) 10%, var(--bg));
     --au-seam: color-mix(in srgb, var(--au-ink) 26%, transparent);
-    --au-hair: color-mix(in srgb, var(--au-ink) 40%, transparent);
-    --au-mute: color-mix(in srgb, var(--au-ink) 62%, transparent);
-    --au-ghost: color-mix(in srgb, var(--au-ink) 38%, transparent);
+    --au-hair: color-mix(in srgb, var(--au-ink) 50%, transparent); /* 3.35:1 on the day ground (WCAG 1.4.11 wants 3:1 for the slider's only boundary) */
     --au-lamp: var(--ember);
-    --au-key-w: 56px; /* prev / next */
-    --au-play-w: 96px; /* the one heavy mass */
-    --au-key-h: 56px;
-    --au-gap: 22px; /* placard → machine */
+    --au-key-w: 56px; /* prev / next, only once there are two tapes */
+    --au-key-h: 44px;
     box-sizing: border-box;
     width: min(860px, calc(100% - 28px));
     margin: 0 auto;
@@ -1454,80 +1532,179 @@ const BUILD_MARKS: Record<string, string> = { archive: "🗂️", studio: "🎛�
   .au :global(.car-nav) {
     display: none;
   }
+  /* the slide: placard rows, then the tape's row, then the machine. The
+     carousel stretches every slide to the tallest, and the machine row
+     sits at the BOTTOM of that box (the tape closes up against it), so the
+     rule, the counter and the tape hold one y across tapes whose placards
+     differ in height — only the space under the placard varies */
   .ls {
+    display: grid;
+    grid-template-rows: auto auto 1fr auto;
     padding: 0;
   }
 
-  /* media: first, biggest — a recessed window; a real cover fills it, an
-     honest ordinal sits in the empty one until then */
-  .ls-cover {
-    position: relative;
-    box-sizing: border-box;
-    width: 100%;
-    aspect-ratio: 16 / 10;
-    max-height: calc(100svh - 300px); /* the face stays inside its room on short screens */
-    border-radius: 2px;
-    overflow: hidden;
-    background: var(--au-well);
-    border: 1px solid var(--au-seam);
-    box-shadow: inset 0 1px 0 var(--au-seam);
+  /* the placard: above the tape, on the column's left edge (Jon's mock) */
+  .ls-title {
+    margin: 0;
+    min-width: 0;
+    font-family: "IBM Plex Mono", ui-monospace, monospace;
+    font-size: clamp(1.5rem, 2.4vw, 2rem);
+    font-weight: 500;
+    line-height: 1.2;
+    letter-spacing: -0.01em;
+    color: var(--au-ink);
+    overflow-wrap: anywhere;
   }
-  .ls-cover img {
+  .ls-note {
+    margin: 12px 0 0;
+    min-width: 0;
+    font-family: "IBM Plex Mono", ui-monospace, monospace;
+    font-size: clamp(1rem, 1.7vw, 1.4rem);
+    line-height: 1.45;
+    color: var(--au-ink);
+    text-wrap: pretty;
+  }
+
+  /* the tape: centred, 760 wide at most, and never taller than the room
+     leaves for it — the reserve is the placard (a two-line note), the
+     machine row and the room's own padding on a laptop screen (measured
+     336px at 1366 × 768; 350 keeps the rooms abutting), plus the phone
+     bar under 900px wide; 1.634 is the PNG's aspect */
+  .cs {
+    --cs-reserve: 350px;
+    --cs-w: min(760px, 100%, calc((100svh - var(--cs-reserve)) * 1.634));
+    position: relative;
+    display: block;
+    box-sizing: border-box;
+    width: var(--cs-w);
+    margin: clamp(28px, 6vh, 64px) auto 0;
+    align-self: end;
+    padding: 0;
+    border: 0;
+    border-radius: 12px;
+    background: none;
+    color: inherit;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+    transition: transform 70ms cubic-bezier(0.2, 0.7, 0.3, 1);
+  }
+  @media (max-width: 899px) {
+    .cs {
+      --cs-reserve: 410px; /* + the pinned phone bar (--mbar-h) */
+    }
+  }
+  .cs:active {
+    transform: translateY(1px);
+  }
+  .cs:focus-visible {
+    outline: 1px solid var(--au-ink);
+    outline-offset: 8px;
+  }
+  .cs-shell {
+    position: relative;
+    z-index: 1;
+    display: block;
+    width: 100%;
+    height: auto;
+    pointer-events: none;
+  }
+  /* the label: the PNG's label area is transparent; this rect sits under
+     it, a hair larger than the cut-out so the shell's inner edge covers
+     the seam — the tape's colour, or its cover when the manifest has one.
+     Both tints ride inline on .ls (a stylesheet rule can't override an
+     inline custom property on that element), so night doesn't re-declare
+     --cs-tint: it swaps which token this rule reads */
+  .cs-label {
+    position: absolute;
+    z-index: 0;
+    left: 5.95%;
+    top: 8.65%;
+    width: 87.95%;
+    height: 59.85%;
+    background: var(--cs-tint);
+    overflow: hidden;
+  }
+  :global(html[data-night]) .cs-label {
+    background: var(--cs-tint-night);
+  }
+  .cs-label img {
     display: block;
     width: 100%;
     height: 100%;
     object-fit: cover;
   }
-  .ls-cat {
+  /* the hubs: the toothed CORE of each hub (the black disc + its six
+     teeth, radius 85 of 2132 × 1305 around 622,595 / 1500,595 — just
+     inside the silver ring's inner edge at r≈87), cut from the same PNG
+     and laid exactly over itself so it can turn while the shell, and the
+     ring with its fixed highlight, stand still (a disc cut with the ring
+     carried the shell's lighting around with it) */
+  .cs-reel {
     position: absolute;
-    left: 14px;
-    bottom: 12px;
-    font-family: "IBM Plex Mono", ui-monospace, monospace;
-    font-size: 0.66rem;
-    letter-spacing: 0.12em;
-    color: var(--au-mute);
+    z-index: 2;
+    left: 25.188%;
+    top: 39.080%;
+    width: 7.974%;
+    height: 13.027%;
+    pointer-events: none;
+    /* the turn runs always and is PAUSED at rest, so a pause holds the
+       hubs where they are and play resumes from there (dropping the
+       animation snapped them back to 0°) */
+    animation: cs-turn 2.2s linear infinite;
+    animation-play-state: paused;
+  }
+  .cs-reel-r {
+    left: 66.370%;
+    animation-duration: 1.5s;
+  }
+  /* playing: both hubs turn counter-clockwise (the tape runs left to right
+     across the head); the full supply reel turns slower than the take-up,
+     as on the machine */
+  .ls[data-playing] .cs-reel {
+    animation-play-state: running;
+  }
+  @keyframes cs-turn {
+    to {
+      transform: rotate(-360deg);
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .cs-reel {
+      animation: none;
+    }
+    .cs {
+      transition: none;
+    }
   }
 
-  /* the placard: directly under the art, one left edge with the machine */
-  .ls-title {
-    margin: 18px 0 0;
-    min-width: 0;
-    font-family: "IBM Plex Sans", ui-sans-serif, system-ui, sans-serif;
-    font-size: clamp(1.1rem, 1.5vw, 1.3rem);
-    font-weight: 600;
-    line-height: 1.2;
-    letter-spacing: -0.01em;
-    color: var(--au-ink);
-  }
-  .ls-note {
-    margin: 6px 0 0;
-    min-width: 0;
-    max-width: 60ch;
-    font-size: 0.9rem;
-    line-height: 1.5;
-    color: var(--au-dim);
-  }
-
-  /* the machine: ONE row. The Transport dissolves into the deck's grid so
-     its play key, rule, and counter sit between the deck's own keys */
+  /* the machine: ONE row under the tape — the rule, then the counter; the
+     Transport dissolves into the deck's grid and its own play key is
+     hidden (the tape is the switch). With two tapes the prev/next keys
+     lead the row */
   .ls-deck {
     display: grid;
-    grid-template-columns: var(--au-key-w) var(--au-play-w) var(--au-key-w) 1fr auto;
-    grid-template-areas: "prev play next wave time";
+    grid-template-columns: 1fr auto;
+    grid-template-areas: "wave time";
     align-items: center;
-    margin-top: var(--au-gap);
+    margin-top: clamp(24px, 7vh, 72px);
+  }
+  .ls-deck[data-keys] {
+    grid-template-columns: var(--au-key-w) var(--au-key-w) 1fr auto;
+    grid-template-areas: "prev next wave time";
   }
   #soundlab .ls-deck :global(.tp) {
     display: contents;
   }
-  /* the key strip: abutting keys, hairline seams, one heavy mass */
-  .ls-key,
   #soundlab .ls-deck :global(.tp-btn) {
+    display: none;
+  }
+  /* the key strip (two tapes or more): abutting keys, hairline seams */
+  .ls-key {
     box-sizing: border-box;
     width: var(--au-key-w);
     height: var(--au-key-h);
     margin: 0;
-    padding: 0;
+    padding: 0 0 0.1em; /* guillemets sit on the x-height: lift to the optical centre */
     display: grid;
     place-items: center;
     appearance: none;
@@ -1539,68 +1716,32 @@ const BUILD_MARKS: Record<string, string> = { archive: "🗂️", studio: "🎛�
     font-size: 1.45rem;
     font-weight: 400;
     line-height: 1;
+    cursor: pointer;
     transition: background 120ms ease;
   }
   .ls-prev {
     grid-area: prev;
     border-radius: 2px 0 0 2px;
-    padding-bottom: 0.1em; /* guillemets sit on the x-height: lift to the optical centre */
   }
   .ls-next {
     grid-area: next;
+    border-left: 0;
     border-radius: 0 2px 2px 0;
-    padding-bottom: 0.1em;
   }
-  .ls-key:disabled {
-    color: var(--au-ghost); /* engraved-dim: the keys stay, one track today */
-    cursor: default;
-  }
-  .ls-key:not(:disabled) {
-    cursor: pointer;
-  }
-  .ls-key:not(:disabled):hover,
+  .ls-key:hover:not(:disabled),
   .ls-key:focus-visible {
     background: var(--au-key-down);
   }
-  #soundlab .ls-deck :global(.tp-btn) {
-    grid-area: play;
-    position: relative;
-    width: var(--au-play-w);
-    border-left: 0;
-    border-right: 0;
-    cursor: pointer;
-  }
-  #soundlab .ls-deck :global(.tp-btn svg) {
-    width: 18px;
-    height: 18px;
-    fill: currentColor;
-  }
-  #soundlab .ls-deck :global(.tp-btn:hover),
-  #soundlab .ls-deck :global(.tp-btn:active),
-  #soundlab .ls-deck :global(.tp-btn:focus-visible) {
-    border-color: var(--au-seam);
-    background: var(--au-key-down);
+  /* the chassis disables its own arrow at either end of the set; the key
+     mirrors it (script below): engraved-dim, no press */
+  .ls-key:disabled {
+    color: var(--au-dim);
+    cursor: default;
   }
   .ls-key:focus-visible,
-  #soundlab .ls-deck :global(.tp-btn:focus-visible),
   #soundlab .ls-deck :global(.tp-wave:focus-visible) {
     outline: 1px solid var(--au-ink);
     outline-offset: 2px;
-  }
-  /* the ONE lamp: an ember dot on the live key, only while playing */
-  #soundlab .ls-deck :global(.tp-btn)::before {
-    content: "";
-    position: absolute;
-    top: 8px;
-    left: 8px;
-    width: 6px;
-    height: 6px;
-    border-radius: 50%;
-    background: var(--au-lamp);
-    opacity: 0;
-  }
-  #soundlab .ls-deck :global(.tp[data-playing] .tp-btn)::before {
-    opacity: 1;
   }
   /* the rule: a 44px seek band, one hairline centred in it, a 1px tick at
      the playhead, no fill — the bars are the Transport's, flattened */
@@ -1609,13 +1750,16 @@ const BUILD_MARKS: Record<string, string> = { archive: "🗂️", studio: "🎛�
     width: auto;
     min-width: 0;
     height: 44px;
-    margin: 0 20px;
+    margin: 0 20px 0 0;
     display: flex;
     align-items: center;
     gap: 0;
     border-radius: 0;
     cursor: pointer;
     overflow: hidden;
+  }
+  #soundlab .ls-deck[data-keys] :global(.tp-wave) {
+    margin: 0 20px;
   }
   #soundlab .ls-deck :global(.tp-wave i) {
     position: relative;
@@ -1648,11 +1792,16 @@ const BUILD_MARKS: Record<string, string> = { archive: "🗂️", studio: "🎛�
     left: auto;
     right: 0;
   }
-  /* the counter pane: a recessed window, mono, tabular */
+  /* the counter pane: a recessed window, mono, tabular; the ONE lamp — an
+     ember dot at its left — lights only while the tape runs (the space is
+     always reserved so the digits never shift) */
   #soundlab .ls-deck :global(.tp-time) {
     grid-area: time;
     justify-self: end;
-    padding: 8px 14px 7px;
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 14px 7px 12px;
     font-family: "IBM Plex Mono", ui-monospace, monospace;
     font-size: 0.85rem;
     line-height: 1;
@@ -1666,19 +1815,35 @@ const BUILD_MARKS: Record<string, string> = { archive: "🗂️", studio: "🎛�
     border-radius: 2px;
     white-space: nowrap;
   }
+  #soundlab .ls-deck :global(.tp-time)::before {
+    content: "";
+    flex: none;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--au-lamp);
+    opacity: 0;
+    transition: opacity 160ms ease;
+  }
+  #soundlab .ls-deck :global(.tp[data-playing] .tp-time)::before {
+    opacity: 1;
+  }
   /* phones: the same face; the machine folds once — the rule full width,
-     the key strip and the counter on the row beneath */
+     the counter (and the keys, with two tapes) on the row beneath */
   @media (max-width: 720px) {
-    .ls-cover {
-      aspect-ratio: 1 / 1;
-    }
     .ls-deck {
       grid-template-areas:
-        "wave wave wave wave wave"
-        "prev play next . time";
+        "wave wave"
+        ". time";
       row-gap: 8px;
     }
-    #soundlab .ls-deck :global(.tp-wave) {
+    .ls-deck[data-keys] {
+      grid-template-areas:
+        "wave wave wave wave"
+        "prev next . time";
+    }
+    #soundlab .ls-deck :global(.tp-wave),
+    #soundlab .ls-deck[data-keys] :global(.tp-wave) {
       margin: 0;
     }
   }
@@ -2348,15 +2513,51 @@ const BUILD_MARKS: Record<string, string> = { archive: "🗂️", studio: "🎛�
     window.addEventListener("resize", fit, { passive: true });
   }
 
-  // ── AUDIO deck: the recorder's prev/next keys drive the carousel's own
-  // chassis buttons (Carousel mechanics untouched); with one track the
-  // chassis renders no nav and the keys ship disabled + engraved-dim.
+  // ── AUDIO: the cassette is the switch. Each tape's button clicks the
+  // Transport's own (hidden) toggle inside the same slide, so the tap
+  // keeps its activation for audio.play(); the slide mirrors the audio's
+  // play/pause as data-playing (the hubs turn on it, the lamp lights) and
+  // the button's name flips. The deck's prev/next keys (two tapes or
+  // more) drive the carousel's own chassis buttons; mechanics untouched.
   const auRoom = document.getElementById("soundlab");
   if (auRoom) {
-    const drive = (keyAttr: string, navAttr: string) =>
-      auRoom.querySelectorAll<HTMLButtonElement>(`[${keyAttr}]`).forEach((b) =>
-        b.addEventListener("click", () => auRoom.querySelector<HTMLButtonElement>(`[${navAttr}]`)?.click())
-      );
+    auRoom.querySelectorAll<HTMLElement>(".ls").forEach((ls) => {
+      const tape = ls.querySelector<HTMLButtonElement>("[data-cs-tape]");
+      const toggle = ls.querySelector<HTMLButtonElement>("[data-tp-toggle]");
+      const audio = ls.querySelector<HTMLAudioElement>("[data-tp-audio]");
+      if (!tape || !toggle || !audio) return;
+      const title = tape.getAttribute("aria-label")?.replace(/^Play /, "") ?? "";
+      tape.addEventListener("click", () => toggle.click());
+      const live = (on: boolean) => {
+        ls.toggleAttribute("data-playing", on);
+        tape.setAttribute("aria-label", `${on ? "Pause" : "Play"} ${title}`);
+      };
+      audio.addEventListener("play", () => live(true));
+      audio.addEventListener("pause", () => live(false));
+      audio.addEventListener("ended", () => live(false));
+      // the seek slider announces what the counter shows ("0:10 of 3:30"),
+      // not a bare second count (Transport untouched: mirrored from here)
+      const wave = ls.querySelector<HTMLElement>("[data-tp-wave]");
+      const time = ls.querySelector<HTMLElement>("[data-tp-time]");
+      if (wave && time) {
+        const say = () => wave.setAttribute("aria-valuetext", time.textContent!.trim().replace(/\s*\/\s*/, " of "));
+        say();
+        audio.addEventListener("timeupdate", say);
+        audio.addEventListener("ended", say);
+      }
+    });
+    // the deck's keys proxy to the chassis arrows and mirror their
+    // disabled state (the chassis disables an arrow at either end of the
+    // set), so a dead key looks dead and is not offered to a keyboard
+    const drive = (keyAttr: string, navAttr: string) => {
+      const nav = auRoom.querySelector<HTMLButtonElement>(`[${navAttr}]`);
+      const keys = Array.from(auRoom.querySelectorAll<HTMLButtonElement>(`[${keyAttr}]`));
+      if (!nav || !keys.length) return;
+      const mirror = () => keys.forEach((k) => (k.disabled = nav.disabled));
+      keys.forEach((k) => k.addEventListener("click", () => nav.click()));
+      new MutationObserver(mirror).observe(nav, { attributes: true, attributeFilter: ["disabled"] });
+      mirror();
+    };
     drive("data-au-prev", "data-car-prev");
     drive("data-au-next", "data-car-next");
   }

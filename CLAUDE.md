@@ -74,20 +74,38 @@ session must follow.
 - Night mode: `html[data-night]`, two sources (manual switch OR instrument
   power). Dark-until-power is lighting only.
 - The GEAR family is GONE from the homepage (round 3e, 2026-09-02): no
-  dark panels remain; the instrument is the only dark object in the room.
-- AUDIO is THE FIELD RECORDER (round 3e, Jon's pick from three rendered
-  players after a research sweep): art first (a real cover fills
-  `.ls-cover`; an honest ordinal sits in the empty window until then), the
-  placard under it, then ONE machine row — abutting keys (prev · PLAY ·
-  next, play the one heavy mass), a hairline rule with a 1px tick as the
-  seek (no fill), a recessed mono counter. Materials are value steps of
-  ink over `--bg` via color-mix; every seam 1px; ONE lamp (ember) only on
-  the live key. Inks come from the section-local `--au-ink`/`--au-dim`
-  pair on `.au` (night override), same law as the ledger. Transport.astro
-  is untouched: its parts are re-laid from StudioOne with `#soundlab`
-  specificity and `display: contents` on `.tp`; the deck's `.ls-key`
-  buttons drive the Carousel's own prev/next (disabled with one track).
-  Never scrub in a circle; never bring back a dark card by day.
+  dark panels remain; the instrument is the only dark object in the room
+  (the cassette, 2026-09-09, is the named exception: a photographed
+  object of Jon's own, not a panel or a card).
+- AUDIO is THE CASSETTE (2026-09-09, Jon's mock + his blank tape PNG;
+  supersedes the field recorder's cover window and key strip): the
+  placard ABOVE (mono title, the note, on the column's left edge), then
+  the tape centred (`.cs`, a `<button>`: `public/studio/cassette-*.webp`
+  with a transparent label area over `.cs-label`, the tape's own colour;
+  two reel discs `.cs-reel-*` cut from the same PNG, laid over the hubs),
+  then ONE machine row — the hairline rule with a 1px tick as the seek
+  (no fill) and the recessed mono counter. The tape IS the play switch:
+  its button clicks the Transport's own (hidden, `display: none`) toggle;
+  `.ls[data-playing]` turns the reels and lights the ONE ember lamp in the
+  counter pane. Label colour = `tapeTint()` in the frontmatter: FNV hash
+  of the title → oklch hue (L .76 day / .66 night), then every tape's hue
+  is relaxed around the circle together (≥ min(24°, (360−16)/n) between
+  tapes, 8° clear of the ember hue, pinned oklch `tint`s are fixed
+  anchors) — order-independent, no duplicates; any CSS `tint` is honoured,
+  `cover` prints on the label. prev/next `.ls-key` buttons render only with two or more tracks
+  and drive the Carousel's own chassis buttons. Materials are value steps
+  of ink over `--bg` via color-mix; every seam 1px. Inks come from the
+  section-local `--au-ink`/`--au-dim` pair on `.au` (night override), same
+  law as the ledger; the tints ride inline on `.ls` and `.cs-label` reads
+  `--cs-tint` by day and `--cs-tint-night` at night (an inline custom
+  property can't be re-declared by a stylesheet rule on that element). Transport.astro is
+  untouched: its parts are re-laid from StudioOne with `#soundlab`
+  specificity and `display: contents` on `.tp`. Never scrub in a circle;
+  never bring back a dark card by day; never scale the tape by editing
+  the PNG — the reel geometry (hub cores: centres 622,595 / 1500,595,
+  radius 85 of 2132 × 1305; the ring stays in the shell so its highlight
+  holds still) is baked into `.cs-reel`'s percentages. The turn animation
+  runs always and is paused at rest (a pause holds the angle).
 - Builds is THE LEDGER (round 3, 2026-09-02, Jon's pick from rendered
   directions): an index printed straight on the room ground, no panel or
   background anywhere, open or closed; rules run off the RIGHT edge of the
@@ -137,6 +155,11 @@ session must follow.
   phone exhibit iframed into `#play` (noindex, root-absolute script path).
 - Case-study images are WebP on the page; `ogImage=` stays on `cover.png`
   (share scrapers). Any new case-study art lands as webp.
+- Media seeking needs a Range-capable static server: python's
+  `http.server` serves no byte ranges, so every seek lands at 0 there
+  (a probe artifact, not a site bug). Serve `dist/client` with the range
+  server pattern (scratch `range-server.mjs`, 2026-09-09) for playback
+  probes.
 - Phone verification MUST enable touch emulation
   (`Emulation.setTouchEmulationEnabled`) — the instrument gates on
   `pointer: fine`; a narrow viewport alone renders a state no phone gets.
