@@ -1793,7 +1793,21 @@ const BUILD_MARKS: Record<string, string> = { archive: "🗂️", studio: "🎛�
     }
     .look-band :global([data-car-next]) {
       right: auto;
-      left: calc(50% + var(--lk-half) + var(--kc-gap));
+      /* mirrored: this body extends LEFT, toward the picture (Jon) */
+      left: calc(50% + var(--lk-half) + var(--kc-gap) + var(--kc-sx));
+      box-shadow:
+        inset -1px 1px 0 var(--kc-bevel-hi),
+        inset 1px -1px 0 var(--kc-bevel-lo),
+        -1px 1px 0 var(--kc-skirt-c),
+        -2px 2px 0 var(--kc-skirt-c),
+        -2px 3px 0 var(--kc-skirt-c),
+        -3px 4px 0 var(--kc-skirt-c),
+        -4px 5px 0 var(--kc-skirt-c),
+        -5px 6px 0 var(--kc-skirt-c),
+        -5px 7px 0 var(--kc-skirt-c),
+        -6px 8px 0 var(--kc-skirt-c),
+        -7px 9px 0 var(--kc-lip),
+        -9px 12px 6px -3px var(--kc-contact);
     }
     /* the chassis chevron goes; the glyph is the photo's arrow — a stem
        with a filled triangle head, drawn as a mask in the key's ink, set
@@ -1836,6 +1850,16 @@ const BUILD_MARKS: Record<string, string> = { archive: "🗂️", studio: "🎛�
         1px 1px 0 var(--kc-skirt-c),
         1px 2px 0 var(--kc-lip),
         2px 3px 2px -1px var(--kc-contact);
+    }
+    .look-band :global([data-car-next]:active:not(:disabled)),
+    .look-band :global([data-car-next][data-pressed]) {
+      transform: translate(calc(1px - var(--kc-sx)), calc(var(--kc-sy) - 2px));
+      box-shadow:
+        inset -1px 1px 0 var(--kc-bevel-hi),
+        inset 1px -1px 0 var(--kc-bevel-lo),
+        -1px 1px 0 var(--kc-skirt-c),
+        -1px 2px 0 var(--kc-lip),
+        -2px 3px 2px -1px var(--kc-contact);
     }
     .look-band :global(.car-btn:focus-visible) {
       border-color: var(--kc-seam);
@@ -1931,6 +1955,7 @@ const BUILD_MARKS: Record<string, string> = { archive: "🗂️", studio: "🎛�
     transform: translateX(-50%);
     z-index: 2;
     color: var(--kc-ink);
+    --car-dot-on: var(--ember); /* the lit dot is the lamp, not ink (Jon) */
   }
   .lk-meta {
     font-size: 0.66rem;
@@ -2351,16 +2376,24 @@ const BUILD_MARKS: Record<string, string> = { archive: "🗂️", studio: "🎛�
       const slide = Array.from(lkTrack.children).find((s) => !s.hasAttribute("aria-hidden")) ?? lkTrack.children[0];
       return slide?.querySelector<HTMLImageElement>(".lk-img") ?? null;
     };
+    // Jon (2026-09-09): the keys must NOT move between slides. They stand
+    // off the WIDEST picture the set paints (4:3 here; grows if a wider
+    // piece loads), so square pieces get a larger gap instead of pulling
+    // the keys in. --lk-bottom still follows the active picture (the dots).
+    let lkWidest = 4 / 3;
     const lkMeasure = () => {
       const img = lkActive();
       if (!img || !img.naturalWidth || !img.naturalHeight) return;
       const bw = img.clientWidth;
       const bh = img.clientHeight;
       if (!bw || !bh) return;
-      const pw = Math.min(bw, (bh * img.naturalWidth) / img.naturalHeight);
+      lkImgs.forEach((im) => {
+        if (im.naturalWidth && im.naturalHeight) lkWidest = Math.max(lkWidest, im.naturalWidth / im.naturalHeight);
+      });
+      const pwMax = Math.min(bw, bh * lkWidest);
       const ph = Math.min(bh, (bw * img.naturalHeight) / img.naturalWidth);
       const top = img.getBoundingClientRect().top - lkCar.getBoundingClientRect().top;
-      lkCar.style.setProperty("--lk-half", `${(pw / 2).toFixed(2)}px`);
+      lkCar.style.setProperty("--lk-half", `${(pwMax / 2).toFixed(2)}px`);
       lkCar.style.setProperty("--lk-bottom", `${(top + (bh + ph) / 2).toFixed(2)}px`);
     };
     lkMeasure();
