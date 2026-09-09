@@ -74,12 +74,12 @@ const isPhone = (s: string) => /^\(?\d{3}\)?[\s.-]?\d{3}[\s.-]?\d{4}$/.test(s.tr
     { heading: "Selected Builds", entries: c.builds },
     { heading: "Experience", entries: c.experience },
   ].map(({ heading, entries }) => (
-    <section>
+    <section id={heading === "Experience" ? "experience" : undefined}>
       <h2>{heading}</h2>
       {entries.map((e) => (
         <div class="pr-entry" data-pr-org={e.org}>
           <div class="pr-entry-head">
-            <div class="pr-org">{e.org}{e.pos && <span class="pr-pos"> · {e.pos}</span>}</div>
+            <div class="pr-org">{e.href ? <a class="pr-org-link" href={e.href}>{e.org}</a> : e.org}{e.pos && <span class="pr-pos"> · {e.pos}</span>}</div>
             <div class="pr-dates">{e.dates}</div>
           </div>
           <ul>
@@ -200,6 +200,22 @@ const isPhone = (s: string) => /^\(?\d{3}\)?[\s.-]?\d{3}[\s.-]?\d{4}$/.test(s.tr
   .print-resume .pr-entry:last-child { margin-bottom: 0; }
   .print-resume .pr-entry-head { display: flex; justify-content: space-between; align-items: baseline; gap: 12pt; }
   .print-resume .pr-org { font-size: 10.5pt; font-weight: 700; letter-spacing: -0.005em; color: #16161c; }
+  /* an org with a case study IS the link to it (Jon, 2026-09-09): the
+     sheet's own red, same weight, underline only under the hand. Static
+     text in normal flow, so the ATS contract above holds; print puts it
+     back in the org ink (the PDF keeps the link annotation). */
+  .print-resume .pr-org-link { color: #B33A2A; text-decoration: none; }
+  .print-resume .pr-org-link:hover,
+  .print-resume .pr-org-link:focus-visible { text-decoration: underline; text-underline-offset: 2pt; text-decoration-thickness: 1pt; }
+  .print-resume .pr-org-link:focus-visible { outline: 2px solid #B33A2A; outline-offset: 3px; border-radius: 2px; }
+  @media print {
+    .print-resume .pr-org-link,
+    .print-resume .pr-org-link:hover,
+    .print-resume .pr-org-link:focus-visible { color: #16161c; text-decoration: none; outline: none; }
+  }
+  @media screen {
+    #experience { scroll-margin-top: 28px; }
+  }
   .print-resume .pr-pos { font-weight: 500; color: #56565e; }
   .print-resume .pr-dates { font-size: 8.5pt; color: #71717a; white-space: nowrap; font-variant-numeric: tabular-nums; }
 
@@ -242,7 +258,9 @@ const isPhone = (s: string) => /^\(?\d{3}\)?[\s.-]?\d{3}[\s.-]?\d{4}$/.test(s.tr
     :global(html[data-night]) .print-resume h2,
     :global(html[data-night]) .print-resume li::before,
     :global(html[data-night]) .print-resume .pr-link a,
+    :global(html[data-night]) .print-resume .pr-org-link,
     :global(html[data-night]) .print-resume .pr-outside-k { color: #ff6a4e; }
+    :global(html[data-night]) .print-resume .pr-org-link:focus-visible { outline-color: #ff6a4e; }
     :global(html[data-night]) .print-resume .pr-header { border-bottom-color: #ff6a4e; }
     :global(html[data-night]) .print-resume .pr-contact,
     :global(html[data-night]) .print-resume .pr-pos,

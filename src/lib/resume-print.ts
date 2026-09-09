@@ -33,6 +33,8 @@ export interface PrintEntry {
   dates: string;
   bullets: string[];
   link?: PrintLink;
+  /** the org name becomes this link (its case study); absolute so the PDF annotation resolves */
+  href?: string;
 }
 
 export interface PrintSchool {
@@ -82,6 +84,7 @@ export const printContent: PrintResumeContent = {
   builds: [
     {
       org: "Finishable: the Engineer",
+      href: "https://www.uxjon.com/case-studies/the-console",
       pos: "AI mastering agent",
       dates: "2026 – Present",
       bullets: [
@@ -121,6 +124,7 @@ export const printContent: PrintResumeContent = {
   experience: [
     {
       org: "CHS Inc.",
+      href: "https://www.uxjon.com/case-studies/chs",
       pos: "Business Analyst, AI & BI Engineering",
       dates: "Aug 2023 – Present",
       bullets: [
@@ -131,6 +135,7 @@ export const printContent: PrintResumeContent = {
     },
     {
       org: "Raylu, Inc.",
+      href: "https://www.uxjon.com/case-studies/raylu",
       pos: "Product Designer (Freelance)",
       dates: "Jan – Oct 2023",
       bullets: [
@@ -140,6 +145,7 @@ export const printContent: PrintResumeContent = {
     },
     {
       org: "Crediverso",
+      href: "https://www.uxjon.com/case-studies/crediverso",
       pos: "UX Design Lead",
       dates: "Feb 2021 – Jan 2023",
       bullets: [
