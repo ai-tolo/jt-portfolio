@@ -62,7 +62,7 @@ const MARKS = [
 const SHOW = new Set(MARKS.map((m) => m.id));
 // The builds' marks (Jon's picks, 2026-09-02): the same emoji language as
 // the rail, one per piece; lives here so builds-copy.ts stays untouched.
-const BUILD_MARKS: Record<string, string> = { archive: "🗂️", studio: "🎛️", watch: "⌚" };
+const BUILD_MARKS: Record<string, string> = { archive: "🗂️", studio: "🎛️", watch: "⌚", catalog: "🗃️" };
 ---
 
 <a class="skip" href="#work">Skip to the work</a>
@@ -178,7 +178,19 @@ const BUILD_MARKS: Record<string, string> = { archive: "🗂️", studio: "🎛�
   {SHOW.has("work") && <section class="ledger room" id="work" aria-labelledby="work-t">
     <h2 id="work-t" class="sr-only">Builds</h2>
     <div class="builds">
-      {BUILDS.map((b) => (
+      {BUILDS.map((b) => b.href ? (
+        /* a DOOR row (2026-09-09, the catalog): the same closed-row form,
+           but the whole row is a link to its page — no fold, no read */
+        <a class="bp bp-link" id={`build-${b.id}`} href={b.href}>
+          <span class="bp-head">
+            <span class="bp-mark" aria-hidden="true">{BUILD_MARKS[b.id] ?? "🗂️"}</span>
+            <span class="sr-only">{b.name}: </span>
+            <span class="bp-hookwrap">
+              <h3 class="bp-hook">{b.headline}</h3>
+            </span>
+          </span>
+        </a>
+      ) : (
         <details class="bp" id={`build-${b.id}`}>
           <summary class="bp-head">
             <span class="bp-mark" aria-hidden="true">{BUILD_MARKS[b.id] ?? "🗂️"}</span>
@@ -1121,6 +1133,17 @@ const BUILD_MARKS: Record<string, string> = { archive: "🗂️", studio: "🎛�
     background: color-mix(in srgb, var(--mx-ink) 5%, transparent);
   }
   .bp-head:focus-visible {
+    outline: 2px solid var(--mx-ink);
+    outline-offset: -2px;
+  }
+  /* the door row: a link wearing the closed row's exact form (the anchor
+     is the focus target, so it carries the ring the summary would) */
+  .bp-link {
+    display: block;
+    color: inherit;
+    text-decoration: none;
+  }
+  .bp-link:focus-visible {
     outline: 2px solid var(--mx-ink);
     outline-offset: -2px;
   }
@@ -2129,7 +2152,7 @@ const BUILD_MARKS: Record<string, string> = { archive: "🗂️", studio: "🎛�
   // (the recurring class of bug — a future Transport drop-in must re-run
   // its resize path). One fix for both: re-fire window resize on toggle,
   // then once more after the 340ms fold animation settles.
-  document.querySelectorAll(".bp").forEach((d) =>
+  document.querySelectorAll("details.bp").forEach((d) =>
     d.addEventListener("toggle", () => {
       window.dispatchEvent(new Event("resize"));
       window.setTimeout(() => window.dispatchEvent(new Event("resize")), 420);

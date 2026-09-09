@@ -28,6 +28,9 @@ export interface BuildPiece {
   name: string;
   headline: string;
   dek?: string;
+  // a piece with `href` is a DOOR, not a fold: the ledger renders its row
+  // as a link to that page instead of an in-place read (2026-09-09)
+  href?: string;
   draft: boolean;
   blocks: BuildBlock[];
 }
@@ -158,5 +161,18 @@ export const BUILDS: BuildPiece[] = [
         caption: "the pipe in one quiet diagram-breath",
       },
     ],
+  },
+  // THE CATALOG — row added 2026-09-09 on Jon's ask ("add it to the matrix
+  // list on the main page and I'll flesh it out"). The headline is his own
+  // title from /catalog (its Chapter job line); the row is a door to that
+  // page, no fold. Jon will flesh the story out; `blocks` stays empty until
+  // his words land.
+  {
+    id: "catalog",
+    name: "the catalog",
+    headline: "Know what you have.",
+    href: "/catalog",
+    draft: false,
+    blocks: [],
   },
 ];
