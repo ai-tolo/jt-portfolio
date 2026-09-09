@@ -456,7 +456,10 @@ const ORDER = ["46", "47", "48"];
       window.clearTimeout(timer);
       timer = window.setTimeout(() => { root.dataset.state = "done"; sync(); }, 2200);
     };
-    picks.forEach((p) => p.addEventListener("click", () => select(p.dataset.ftPick || "")));
+    // under 700px the kiln is gone from the layout (the rows are a tap list),
+    // so a row tap selects AND fires: same select, same run, same readout
+    const phone = window.matchMedia("(max-width: 699px)");
+    picks.forEach((p) => p.addEventListener("click", () => { select(p.dataset.ftPick || ""); if (phone.matches) run(); }));
     fire?.addEventListener("click", run);
 
     root.querySelectorAll<HTMLElement>(".ft-card").forEach((card) => {
@@ -995,5 +998,52 @@ const ORDER = ["46", "47", "48"];
     .ft-scan, .ft-screen-wake, .ft-cell-rainbow { display: none; }
     .ft-forge-label::before { opacity: 1; }
     .ft-body, .ft-tx-body { transition: none; }
+  }
+
+  /* ════ PHONE (< 700px) — the device chrome is dropped. The three Finder rows
+     become a plain tap list printed on the page ground in the page's own inks
+     (day + night via the --cs-* tokens); a tap selects and fires through the
+     same handler, and the same record surface lands underneath at full width.
+     Nothing here touches ≥ 700px. ════ */
+  @media (max-width: 699px) {
+    .ft { min-height: 0; display: block; padding: 0 20px 28px; color: var(--cs-text); }
+    :global(html[data-night]) .ft { background: none; }
+    .ft-stage { display: block; height: auto; }
+    .ft-console { position: static; width: auto; height: auto; transform: none; border-radius: 0; background: none; border: 0; box-shadow: none; }
+    .ft-console::before { display: none; }
+    .ft-stage-inner { position: static; width: auto; height: auto; }
+    .ft-devplate, .ft-devports, .ft-chassis-vents, .ft-bolt, .ft-traces, .ft-cell, .ft-forge,
+    .ft-scan, .ft-finder-bar, .ft-finder-cols, .dev-foot, .ft-standby, .ft-screen-wake { display: none; }
+    .ft-source-dev, .ft-out-dev { position: static; width: auto; }
+    .dev { border-radius: 0; padding: 0; background: none; border: 0; box-shadow: none; }
+    .dev-screen { border-radius: 0; overflow: visible; background: none; box-shadow: none; }
+    .dev-screen::after { display: none; }
+
+    /* the tap list */
+    .ft-finder { font-family: var(--cs-mono); }
+    .ft-finder-list { padding: 0; background: none; border-top: 1px solid var(--cs-line); }
+    .ft-frow { min-height: 52px; padding: 14px 0; gap: 14px; font-size: 15px; color: var(--cs-text); border: 0; border-bottom: 1px solid var(--cs-line); border-radius: 0; box-shadow: none; }
+    .ft-fname { gap: 12px; }
+    .ft-fic { width: 16px; height: 16px; color: var(--cs-text-dim); }
+    .ft-fdate { font-size: 13px; color: var(--cs-text-muted); }
+    .ft-frow:hover { background: transparent; border-color: var(--cs-line); }
+    .ft-frow:active { background: var(--cs-line); }
+    .ft-frow:focus-visible { border-color: var(--cs-line); box-shadow: none; outline: 2px solid var(--cs-cyan-text); outline-offset: -2px; }
+    .ft-frow[aria-selected="true"] { background: transparent; border-color: var(--cs-line); color: var(--cs-cyan-text); }
+    .ft-frow[aria-selected="true"] .ft-fic { color: var(--cs-cyan-text); }
+    .ft-frow[aria-selected="true"] .ft-fdate { color: var(--cs-cyan-text); }
+    .ft[data-state="running"] .ft-frow[aria-selected="true"] { box-shadow: none; color: var(--cs-text-muted); }
+    .ft[data-state="running"] .ft-frow[aria-selected="true"] .ft-fic,
+    .ft[data-state="running"] .ft-frow[aria-selected="true"] .ft-fdate { color: var(--cs-text-muted); }
+
+    /* the record surface: status line, then the card at page width */
+    .ft-out-dev { margin-top: 24px; }
+    .dev-top { gap: 10px; padding: 12px 0; border-bottom: 1px solid var(--cs-line); }
+    .dev-brand { font-size: 13px; color: var(--cs-text-muted); }
+    .dev-readout { font-size: 11px; color: var(--cs-text-dim); border-color: var(--cs-line-strong); }
+    .ft[data-state="running"] .dev-readout { color: var(--cs-cyan-text); border-color: var(--cs-cyan-text); }
+    .ft[data-state="done"] .dev-readout { color: var(--cs-green-text); border-color: var(--cs-green-text); }
+    .ft-screen { min-height: 0; }
+    .ft-card { margin: 16px 0 0; color: #f5f1e8; }
   }
 </style>
