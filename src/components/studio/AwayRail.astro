@@ -6,27 +6,58 @@
 // top, résumé + the night switch at the foot. Below 900px it becomes the
 // bottom bar (home · résumé · moon). Screen-only throughout: letter
 // paper is narrower than 900px, and the bar must never print.
+//
+// back="resume" (case studies, Jon 2026-09-09): a recruiter reading a
+// case study came from the résumé, so the arrow rides the résumé word
+// on top (→ /resume#experience, the section they left) and home becomes
+// a house-glyph chip directly beneath it. Bar order: 🡐 résumé · ⌂ · moon.
 import NightSwitch from "./NightSwitch.astro";
 
 interface Props {
   /** Show the résumé link (omit on /resume itself). */
   resume?: boolean;
+  /** Which exit carries the back arrow on top. "home" is today's rail. */
+  back?: "home" | "resume";
 }
-const { resume = true } = Astro.props;
+const { resume = true, back = "home" } = Astro.props;
+const backResume = back === "resume";
 ---
 
 <nav class="awayrail" aria-label="Site">
-  <a class="ar-home" href="/" aria-label="Home — the studio">
-    <span class="ar-chip" aria-hidden="true">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"
-        stroke-linecap="round" stroke-linejoin="round">
-        <path d="M19 12H6" /><path d="M11.5 6.5 6 12l5.5 5.5" />
-      </svg>
-    </span>
-    <span class="ar-word" aria-hidden="true">home</span>
-  </a>
+  {backResume ? (
+    <a class="ar-home ar-back" href="/resume#experience" aria-label="Back to the résumé">
+      <span class="ar-chip" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"
+          stroke-linecap="round" stroke-linejoin="round">
+          <path d="M19 12H6" /><path d="M11.5 6.5 6 12l5.5 5.5" />
+        </svg>
+      </span>
+      <span class="ar-word ar-exit" aria-hidden="true">résumé</span>
+    </a>
+  ) : (
+    <a class="ar-home" href="/" aria-label="Home — the studio">
+      <span class="ar-chip" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"
+          stroke-linecap="round" stroke-linejoin="round">
+          <path d="M19 12H6" /><path d="M11.5 6.5 6 12l5.5 5.5" />
+        </svg>
+      </span>
+      <span class="ar-word" aria-hidden="true">home</span>
+    </a>
+  )}
   {/* the two exits cluster at the top; accent so it reads (Jon, 2026-08-28) */}
-  {resume && <a class="ar-resume" href="/resume">résumé</a>}
+  {backResume ? (
+    <a class="ar-home ar-house" href="/" aria-label="Home — the studio">
+      <span class="ar-chip" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"
+          stroke-linecap="round" stroke-linejoin="round">
+          <path d="M4 11 12 4.5 20 11" /><path d="M6.5 9.5V19.5h11V9.5" />
+        </svg>
+      </span>
+    </a>
+  ) : (
+    resume && <a class="ar-resume" href="/resume">résumé</a>
+  )}
   <div class="ar-foot">
     <NightSwitch />
   </div>
@@ -253,5 +284,34 @@ const { resume = true } = Astro.props;
   .ar-resume:hover,
   .ar-resume:focus-visible {
     color: var(--text);
+  }
+
+  /* back="resume": the accent that made the résumé word read as an exit
+     stays on the word, now riding inside the arrow chip (same hover flip
+     as .ar-resume). The house chip beneath is icon-only; a house does
+     not nudge sideways on hover the way the arrow does. */
+  .ar-exit,
+  :global(html[data-night]) .ar-exit {
+    color: var(--accent);
+    font-weight: 700;
+  }
+  .ar-back:hover .ar-word,
+  .ar-back:focus-visible .ar-word {
+    color: currentColor;
+  }
+  .ar-house .ar-chip svg,
+  .ar-house:hover .ar-chip svg,
+  .ar-house:focus-visible .ar-chip svg {
+    transform: none;
+  }
+  @media screen and (min-width: 900px) {
+    .ar-exit,
+    :global(html[data-night]) .ar-exit {
+      color: var(--accent);
+    }
+    .ar-house {
+      margin-top: 10px;
+      padding: 0 14px;
+    }
   }
 </style>
