@@ -99,7 +99,7 @@ session must follow.
   signal. No keys, no dots: the TITLE is the shelf's menu (`.ls-pick`
   button → `.ls-menu` listbox, one option per tape with its label
   colour as a chip; choosing dispatches `car:show`); swipe and arrow
-  keys still turn the chassis. The hub cores turn at 4.4s / 3s. Label colour
+  keys still turn the chassis. Both hub cores turn at 4.4s. Label colour
   = `tapeTint()` in the frontmatter: FNV hash of the title → oklch hue
   (L .76 day / .66 night), then every tape's hue is relaxed around the
   circle together (≥ min(24°, ~(360−16)/n) between tapes, 8° clear of the
