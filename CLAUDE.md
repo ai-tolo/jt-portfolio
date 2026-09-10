@@ -77,35 +77,48 @@ session must follow.
   dark panels remain; the instrument is the only dark object in the room
   (the cassette, 2026-09-09, is the named exception: a photographed
   object of Jon's own, not a panel or a card).
-- AUDIO is THE CASSETTE (2026-09-09, Jon's mock + his blank tape PNG;
+- AUDIO is THE CASSETTE (2026-09-09, Jon's mock + his cut tape render V3;
   supersedes the field recorder's cover window and key strip): the
   placard ABOVE (mono title, the note, on the column's left edge), then
-  the tape centred (`.cs`, a `<button>`: `public/studio/cassette-*.webp`
-  with a transparent label area over `.cs-label`, the tape's own colour;
-  two reel discs `.cs-reel-*` cut from the same PNG, laid over the hubs),
-  then ONE machine row — the hairline rule with a 1px tick as the seek
-  (no fill) and the recessed mono counter. The tape IS the play switch:
-  its button clicks the Transport's own (hidden, `display: none`) toggle;
-  `.ls[data-playing]` turns the reels and lights the ONE ember lamp in the
-  counter pane. Label colour = `tapeTint()` in the frontmatter: FNV hash
-  of the title → oklch hue (L .76 day / .66 night), then every tape's hue
-  is relaxed around the circle together (≥ min(24°, (360−16)/n) between
-  tapes, 8° clear of the ember hue, pinned oklch `tint`s are fixed
-  anchors) — order-independent, no duplicates; any CSS `tint` is honoured,
-  `cover` prints on the label. prev/next `.ls-key` buttons render only with two or more tracks
-  and drive the Carousel's own chassis buttons. Materials are value steps
-  of ink over `--bg` via color-mix; every seam 1px. Inks come from the
-  section-local `--au-ink`/`--au-dim` pair on `.au` (night override), same
-  law as the ledger; the tints ride inline on `.ls` and `.cs-label` reads
-  `--cs-tint` by day and `--cs-tint-night` at night (an inline custom
-  property can't be re-declared by a stylesheet rule on that element). Transport.astro is
-  untouched: its parts are re-laid from StudioOne with `#soundlab`
-  specificity and `display: contents` on `.tp`. Never scrub in a circle;
-  never bring back a dark card by day; never scale the tape by editing
-  the PNG — the reel geometry (hub cores: centres 622,595 / 1500,595,
-  radius 85 of 2132 × 1305; the ring stays in the shell so its highlight
-  holds still) is baked into `.cs-reel`'s percentages. The turn animation
-  runs always and is paused at rest (a pause holds the angle).
+  the tape centred (`.cs`, a `<button>` and a size container, ~half the
+  viewport wide up to 760px, height-capped by `--cs-reserve`):
+  `public/studio/cassette-*.webp` is Jon's render with the label area,
+  both hub circles and the display rectangle cut to alpha, painted LAST
+  over `.cs-label` (the tape's colour), the two hubs (`.cs-hub` still
+  base + `.cs-reel` turning core, both cut from the ORIGINAL uncut render
+  at r150 / r85 and placed at the holes) and `.cs-screen` (the recessed
+  pane in the window: an outlined play mark at rest, the running counter
+  while playing — Jon's Game-Boy window; type in cqw); then the rail
+  alone, exactly the tape's width; then the chassis dots. The tape IS the
+  play switch: its button clicks the Transport's own hidden toggle (its
+  counter is hidden too and mirrored into the screen and into the
+  slider's aria-valuetext); `.ls[data-playing]` turns the cores, shows
+  the counter and seats the tape 2px. No lamp: the display is the live
+  signal. No keys: dots, swipe and arrow keys switch tapes. Label colour
+  = `tapeTint()` in the frontmatter: FNV hash of the title → oklch hue
+  (L .76 day / .66 night), then every tape's hue is relaxed around the
+  circle together (≥ min(24°, ~(360−16)/n) between tapes, 8° clear of the
+  ember hue, pinned oklch `tint`s are fixed anchors) — order-independent,
+  no duplicates; any CSS `tint` is honoured, `cover` prints on the label.
+  Materials are value steps of ink over `--bg` via color-mix; every seam
+  1px. Inks come from the section-local `--au-ink`/`--au-dim` pair on
+  `.au` (night override), same law as the ledger; the tints ride inline
+  on `.ls` and `.cs-label` reads `--cs-tint` by day and `--cs-tint-night`
+  at night (an inline custom property can't be re-declared by a
+  stylesheet rule on that element). Transport.astro is untouched: its
+  parts are re-laid from StudioOne with `#soundlab` specificity and
+  `display: contents` on `.tp`. Never scrub in a circle; never bring back
+  a dark card by day; never scale the tape by editing the PNG — the
+  cut-out geometry (hub holes: centres 630.5,570 / 1507,570, radius 133;
+  display 814..1318 × 437..703, of 2132 × 1305) is baked into the
+  `.cs-hub`/`.cs-reel`/`.cs-screen` percentages. The turn animation runs
+  always and is paused at rest (a pause holds the angle).
+- Carousel.astro has two modes: `slide` (translate) and `dissolve`
+  (slides stacked in one grid cell, crossfade + a 300ms top-down render
+  with a scan on the arriving slide, `data-on` on the active slide, a
+  `car:change` event). Both homepage rooms use `dissolve` (Jon,
+  2026-09-09: sliding pictures went under the keycaps and broke the
+  physical feel). The Visuals key measurer listens for `car:change`.
 - Builds is THE LEDGER (round 3, 2026-09-02, Jon's pick from rendered
   directions): an index printed straight on the room ground, no panel or
   background anywhere, open or closed; rules run off the RIGHT edge of the

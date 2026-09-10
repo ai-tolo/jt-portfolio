@@ -318,7 +318,7 @@ const BUILD_MARKS: Record<string, string> = { archive: "🗂️", studio: "🎛�
       A manifest `cover` now prints ON the label. */}
   {SHOW.has("soundlab") && <section class="room" id="soundlab" aria-labelledby="soundlab-t"><div class="au">
     <h2 id="soundlab-t" class="sr-only">Audio</h2>
-    <Carousel count={tracks.length} label="Music" accent="var(--ember)">
+    <Carousel count={tracks.length} label="Music" accent="var(--ember)" mode="dissolve" dots titles={tracks.map((t) => t.title)}>
       {tapes.map(({ t, fill }, i) => (
         <article class="ls" style={`--cs-tint:${fill.day};--cs-tint-night:${fill.night}`}>
           <h3 class="ls-title">{t.title}</h3>
@@ -327,17 +327,22 @@ const BUILD_MARKS: Record<string, string> = { archive: "🗂️", studio: "🎛�
             <span class="cs-label" aria-hidden="true">
               {t.cover && <img src={t.cover} alt="" loading={i === 0 ? "eager" : "lazy"} decoding="async" />}
             </span>
+            {/* under the shell's cut-outs: the two hubs (a still base, a turning core) and the display */}
+            <img class="cs-hub cs-hub-l" src="/studio/cassette-hub-l.webp" width="300" height="300" alt="" loading={i === 0 ? "eager" : "lazy"} decoding="async" />
+            <img class="cs-hub cs-hub-r" src="/studio/cassette-hub-r.webp" width="300" height="300" alt="" loading={i === 0 ? "eager" : "lazy"} decoding="async" />
+            <img class="cs-reel cs-reel-l" src="/studio/cassette-reel-l.webp" width="170" height="170" alt="" loading={i === 0 ? "eager" : "lazy"} decoding="async" />
+            <img class="cs-reel cs-reel-r" src="/studio/cassette-reel-r.webp" width="170" height="170" alt="" loading={i === 0 ? "eager" : "lazy"} decoding="async" />
+            <span class="cs-screen" aria-hidden="true">
+              <svg class="cs-go" viewBox="0 0 32 32"><path d="M9.5 6.5v19l16-9.5z" /></svg>
+              <span class="cs-time" data-cs-time></span>
+            </span>
             <img class="cs-shell" src="/studio/cassette-800.webp"
               srcset="/studio/cassette-800.webp 800w, /studio/cassette-1600.webp 1600w"
               sizes="(max-width: 720px) calc(100vw - 28px), 760px"
               width="1600" height="979" alt="" loading={i === 0 ? "eager" : "lazy"} decoding="async" />
-            <img class="cs-reel cs-reel-l" src="/studio/cassette-reel-l.webp" width="170" height="170" alt="" loading={i === 0 ? "eager" : "lazy"} decoding="async" />
-            <img class="cs-reel cs-reel-r" src="/studio/cassette-reel-r.webp" width="170" height="170" alt="" loading={i === 0 ? "eager" : "lazy"} decoding="async" />
           </button>
-          <div class="ls-deck" data-keys={tracks.length > 1 ? "" : undefined}>
-            {tracks.length > 1 && <button class="ls-key ls-prev" type="button" data-au-prev aria-label="Previous track">«</button>}
+          <div class="ls-deck">
             <Transport src={t.src!} peaks={t.peaks ?? undefined} title={t.title} accent="var(--ember)" compact />
-            {tracks.length > 1 && <button class="ls-key ls-next" type="button" data-au-next aria-label="Next track">»</button>}
           </div>
         </article>
       ))}
@@ -350,7 +355,7 @@ const BUILD_MARKS: Record<string, string> = { archive: "🗂️", studio: "🎛�
 
   {SHOW.has("illustrations") && <section class="look-band room" id="illustrations" aria-labelledby="illustrations-t">
     <h2 id="illustrations-t" class="sr-only">Visuals</h2>
-    <Carousel count={illos.length} label="Visual work" accent="var(--brand-yellow, #ffc94d)" dots titles={illos.map((it) => it.title)}>
+    <Carousel count={illos.length} label="Visual work" accent="var(--brand-yellow, #ffc94d)" mode="dissolve" dots titles={illos.map((it) => it.title)}>
       {illos.map((it, i) => (
         <figure class="lk">
           <img class="lk-img" src={it.src} alt={it.alt} loading="lazy" />
@@ -1506,14 +1511,9 @@ const BUILD_MARKS: Record<string, string> = { archive: "🗂️", studio: "🎛�
   .au {
     --au-ink: var(--ink);
     --au-dim: var(--dim);
-    --au-key: color-mix(in srgb, var(--au-ink) 5%, var(--bg));
-    --au-key-down: color-mix(in srgb, var(--au-ink) 11%, var(--bg));
     --au-pane: color-mix(in srgb, var(--au-ink) 10%, var(--bg));
     --au-seam: color-mix(in srgb, var(--au-ink) 26%, transparent);
     --au-hair: color-mix(in srgb, var(--au-ink) 50%, transparent); /* 3.35:1 on the day ground (WCAG 1.4.11 wants 3:1 for the slider's only boundary) */
-    --au-lamp: var(--ember);
-    --au-key-w: 56px; /* prev / next, only once there are two tapes */
-    --au-key-h: 44px;
     box-sizing: border-box;
     width: min(860px, calc(100% - 28px));
     margin: 0 auto;
@@ -1522,8 +1522,6 @@ const BUILD_MARKS: Record<string, string> = { archive: "🗂️", studio: "🎛�
   :global(html[data-night]) .au {
     --au-ink: var(--night-ink);
     --au-dim: var(--night-dim);
-    --au-key: color-mix(in srgb, var(--au-ink) 10%, var(--bg));
-    --au-key-down: color-mix(in srgb, var(--au-ink) 16%, var(--bg));
     --au-pane: color-mix(in srgb, var(--au-ink) 12%, var(--bg));
     --au-seam: color-mix(in srgb, var(--au-ink) 30%, transparent);
     --au-hair: color-mix(in srgb, var(--au-ink) 42%, transparent);
@@ -1538,9 +1536,30 @@ const BUILD_MARKS: Record<string, string> = { archive: "🗂️", studio: "🎛�
      rule, the counter and the tape hold one y across tapes whose placards
      differ in height — only the space under the placard varies */
   .ls {
+    /* the tape's width, read by the tape AND the rail under it (Jon: the
+       rail in line with the cassette): 760 at most, about half the
+       viewport on a desk (Jon: it should scale down), full width on a
+       phone, and never taller than the room leaves for it — the reserve
+       is the placard (a two-line note), the rail, the dots and the room's
+       own padding on a laptop screen (measured 336px at 1366 × 768; 350
+       keeps the rooms abutting), plus the phone bar under 900px wide;
+       1.634 is the PNG's aspect */
+    --cs-reserve: 350px;
+    --cs-vw: 100%;
+    --cs-w: min(760px, 100%, var(--cs-vw), calc((100svh - var(--cs-reserve)) * 1.634));
     display: grid;
     grid-template-rows: auto auto 1fr auto;
     padding: 0;
+  }
+  @media (max-width: 899px) {
+    .ls {
+      --cs-reserve: 410px; /* + the pinned phone bar (--mbar-h) */
+    }
+  }
+  @media (min-width: 900px) {
+    .ls {
+      --cs-vw: 52vw;
+    }
   }
 
   /* the placard: above the tape, on the column's left edge (Jon's mock) */
@@ -1565,14 +1584,10 @@ const BUILD_MARKS: Record<string, string> = { archive: "🗂️", studio: "🎛�
     text-wrap: pretty;
   }
 
-  /* the tape: centred, 760 wide at most, and never taller than the room
-     leaves for it — the reserve is the placard (a two-line note), the
-     machine row and the room's own padding on a laptop screen (measured
-     336px at 1366 × 768; 350 keeps the rooms abutting), plus the phone
-     bar under 900px wide; 1.634 is the PNG's aspect */
+  /* the tape: centred; a size container so the display's type scales
+     with it */
   .cs {
-    --cs-reserve: 350px;
-    --cs-w: min(760px, 100%, calc((100svh - var(--cs-reserve)) * 1.634));
+    container-type: inline-size;
     position: relative;
     display: block;
     box-sizing: border-box;
@@ -1588,21 +1603,24 @@ const BUILD_MARKS: Record<string, string> = { archive: "🗂️", studio: "🎛�
     -webkit-tap-highlight-color: transparent;
     transition: transform 70ms cubic-bezier(0.2, 0.7, 0.3, 1);
   }
-  @media (max-width: 899px) {
-    .cs {
-      --cs-reserve: 410px; /* + the pinned phone bar (--mbar-h) */
-    }
-  }
+  /* the click: a hard press on tap; while the tape runs it sits seated,
+     2px lower, and lifts again on pause */
   .cs:active {
-    transform: translateY(1px);
+    transform: translateY(3px);
+  }
+  .ls[data-playing] .cs {
+    transform: translateY(2px);
   }
   .cs:focus-visible {
     outline: 1px solid var(--au-ink);
     outline-offset: 8px;
   }
+  /* the shell is Jon's V3 render: the label area, the two hub circles and
+     the display rectangle are cut to alpha, so it paints LAST, over the
+     colour rect, the hubs and the display, and its cut edges frame them */
   .cs-shell {
     position: relative;
-    z-index: 1;
+    z-index: 3;
     display: block;
     width: 100%;
     height: auto;
@@ -1633,17 +1651,29 @@ const BUILD_MARKS: Record<string, string> = { archive: "🗂️", studio: "🎛�
     height: 100%;
     object-fit: cover;
   }
-  /* the hubs: the toothed CORE of each hub (the black disc + its six
-     teeth, radius 85 of 2132 × 1305 around 622,595 / 1500,595 — just
-     inside the silver ring's inner edge at r≈87), cut from the same PNG
-     and laid exactly over itself so it can turn while the shell, and the
-     ring with its fixed highlight, stand still (a disc cut with the ring
-     carried the shell's lighting around with it) */
+  /* the hubs, under the shell's two circular cut-outs (centres 630.5,570
+     and 1507,570 of 2132 × 1305, radius 133): a still BASE disc (the
+     original render's hub — ring, highlight and all, radius 150 so it
+     overfills the hole) and, over it, the toothed CORE (radius 85, just
+     inside the ring's inner edge) that turns. The light stays put; only
+     the teeth move; the hole's edge is the shell's own */
+  .cs-hub {
+    position: absolute;
+    z-index: 1;
+    left: 22.537%;
+    top: 32.184%;
+    width: 14.071%;
+    height: 22.989%;
+    pointer-events: none;
+  }
+  .cs-hub-r {
+    left: 63.649%;
+  }
   .cs-reel {
     position: absolute;
     z-index: 2;
-    left: 25.188%;
-    top: 39.080%;
+    left: 25.586%;
+    top: 37.165%;
     width: 7.974%;
     height: 13.027%;
     pointer-events: none;
@@ -1654,8 +1684,50 @@ const BUILD_MARKS: Record<string, string> = { archive: "🗂️", studio: "🎛�
     animation-play-state: paused;
   }
   .cs-reel-r {
-    left: 66.370%;
+    left: 66.698%;
     animation-duration: 1.5s;
+  }
+  /* the display, under the shell's rectangular cut-out (814..1318 ×
+     437..703 of 2132 × 1305; the pane overfills it a hair): the recessed
+     pane material, and on it the tape's readout — the outlined play
+     mark at rest, the running counter while the tape plays (Jon's
+     Game-Boy / Etch-a-Sketch window, 2026-09-09). Type scales with the
+     tape through container units */
+  .cs-screen {
+    position: absolute;
+    z-index: 1;
+    left: 37.9%;
+    top: 33.1%;
+    width: 24.2%;
+    height: 21.2%;
+    display: grid;
+    place-items: center;
+    background: var(--au-pane);
+    color: var(--au-ink);
+    font-family: "IBM Plex Mono", ui-monospace, monospace;
+    font-size: 2.7cqw;
+    letter-spacing: 0.06em;
+    line-height: 1;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+    pointer-events: none;
+  }
+  .cs-go {
+    width: 5.6cqw;
+    height: 5.6cqw;
+    fill: none;
+    stroke: var(--au-dim);
+    stroke-width: 1.3;
+    stroke-linejoin: round;
+  }
+  .cs-time {
+    display: none;
+  }
+  .ls[data-playing] .cs-go {
+    display: none;
+  }
+  .ls[data-playing] .cs-time {
+    display: block;
   }
   /* playing: both hubs turn counter-clockwise (the tape runs left to right
      across the head); the full supply reel turns slower than the take-up,
@@ -1677,68 +1749,27 @@ const BUILD_MARKS: Record<string, string> = { archive: "🗂️", studio: "🎛�
     }
   }
 
-  /* the machine: ONE row under the tape — the rule, then the counter; the
-     Transport dissolves into the deck's grid and its own play key is
-     hidden (the tape is the switch). With two tapes the prev/next keys
-     lead the row */
+  /* the machine: the rail alone under the tape, exactly the tape's width
+     (Jon: in line with the cassette) — the Transport dissolves into it;
+     its own play key is hidden (the tape is the switch) and its counter
+     is hidden too (the display in the window is the readout). The
+     chassis dots sit under the rail: one per tape, the lit one ember */
   .ls-deck {
-    display: grid;
-    grid-template-columns: 1fr auto;
-    grid-template-areas: "wave time";
-    align-items: center;
-    margin-top: clamp(24px, 7vh, 72px);
-  }
-  .ls-deck[data-keys] {
-    grid-template-columns: var(--au-key-w) var(--au-key-w) 1fr auto;
-    grid-template-areas: "prev next wave time";
+    width: var(--cs-w);
+    margin: clamp(24px, 7vh, 72px) auto 0;
   }
   #soundlab .ls-deck :global(.tp) {
     display: contents;
   }
-  #soundlab .ls-deck :global(.tp-btn) {
+  #soundlab .ls-deck :global(.tp-btn),
+  #soundlab .ls-deck :global(.tp-time) {
     display: none;
   }
-  /* the key strip (two tapes or more): abutting keys, hairline seams */
-  .ls-key {
-    box-sizing: border-box;
-    width: var(--au-key-w);
-    height: var(--au-key-h);
-    margin: 0;
-    padding: 0 0 0.1em; /* guillemets sit on the x-height: lift to the optical centre */
-    display: grid;
-    place-items: center;
-    appearance: none;
-    border: 1px solid var(--au-seam);
-    border-radius: 0;
-    background: var(--au-key);
+  .au :global(.car-dots) {
+    margin-top: 14px;
     color: var(--au-ink);
-    font-family: "IBM Plex Sans", ui-sans-serif, system-ui, sans-serif;
-    font-size: 1.45rem;
-    font-weight: 400;
-    line-height: 1;
-    cursor: pointer;
-    transition: background 120ms ease;
+    --car-dot-on: var(--ember); /* the lit dot is the lamp, not ink (Jon) */
   }
-  .ls-prev {
-    grid-area: prev;
-    border-radius: 2px 0 0 2px;
-  }
-  .ls-next {
-    grid-area: next;
-    border-left: 0;
-    border-radius: 0 2px 2px 0;
-  }
-  .ls-key:hover:not(:disabled),
-  .ls-key:focus-visible {
-    background: var(--au-key-down);
-  }
-  /* the chassis disables its own arrow at either end of the set; the key
-     mirrors it (script below): engraved-dim, no press */
-  .ls-key:disabled {
-    color: var(--au-dim);
-    cursor: default;
-  }
-  .ls-key:focus-visible,
   #soundlab .ls-deck :global(.tp-wave:focus-visible) {
     outline: 1px solid var(--au-ink);
     outline-offset: 2px;
@@ -1750,16 +1781,13 @@ const BUILD_MARKS: Record<string, string> = { archive: "🗂️", studio: "🎛�
     width: auto;
     min-width: 0;
     height: 44px;
-    margin: 0 20px 0 0;
+    margin: 0;
     display: flex;
     align-items: center;
     gap: 0;
     border-radius: 0;
     cursor: pointer;
     overflow: hidden;
-  }
-  #soundlab .ls-deck[data-keys] :global(.tp-wave) {
-    margin: 0 20px;
   }
   #soundlab .ls-deck :global(.tp-wave i) {
     position: relative;
@@ -1791,61 +1819,6 @@ const BUILD_MARKS: Record<string, string> = { archive: "🗂️", studio: "🎛�
     content: "";
     left: auto;
     right: 0;
-  }
-  /* the counter pane: a recessed window, mono, tabular; the ONE lamp — an
-     ember dot at its left — lights only while the tape runs (the space is
-     always reserved so the digits never shift) */
-  #soundlab .ls-deck :global(.tp-time) {
-    grid-area: time;
-    justify-self: end;
-    display: inline-flex;
-    align-items: center;
-    gap: 10px;
-    padding: 8px 14px 7px 12px;
-    font-family: "IBM Plex Mono", ui-monospace, monospace;
-    font-size: 0.85rem;
-    line-height: 1;
-    letter-spacing: 0.06em;
-    font-feature-settings: "tnum";
-    font-variant-numeric: tabular-nums;
-    color: var(--au-ink);
-    background: var(--au-pane);
-    border: 1px solid var(--au-seam);
-    box-shadow: inset 0 1px 0 var(--au-seam);
-    border-radius: 2px;
-    white-space: nowrap;
-  }
-  #soundlab .ls-deck :global(.tp-time)::before {
-    content: "";
-    flex: none;
-    width: 6px;
-    height: 6px;
-    border-radius: 50%;
-    background: var(--au-lamp);
-    opacity: 0;
-    transition: opacity 160ms ease;
-  }
-  #soundlab .ls-deck :global(.tp[data-playing] .tp-time)::before {
-    opacity: 1;
-  }
-  /* phones: the same face; the machine folds once — the rule full width,
-     the counter (and the keys, with two tapes) on the row beneath */
-  @media (max-width: 720px) {
-    .ls-deck {
-      grid-template-areas:
-        "wave wave"
-        ". time";
-      row-gap: 8px;
-    }
-    .ls-deck[data-keys] {
-      grid-template-areas:
-        "wave wave wave wave"
-        "prev next . time";
-    }
-    #soundlab .ls-deck :global(.tp-wave),
-    #soundlab .ls-deck[data-keys] :global(.tp-wave) {
-      margin: 0;
-    }
   }
 
   /* look: just the artwork on the site's own ground — no frame, no dark
@@ -2549,31 +2522,23 @@ const BUILD_MARKS: Record<string, string> = { archive: "🗂️", studio: "🎛�
       audio.addEventListener("play", () => live(true));
       audio.addEventListener("pause", () => live(false));
       audio.addEventListener("ended", () => live(false));
-      // the seek slider announces what the counter shows ("0:10 of 3:30"),
-      // not a bare second count (Transport untouched: mirrored from here)
+      // the display in the window shows the Transport's (hidden) counter,
+      // and the seek slider announces the same ("0:10 of 3:30") rather
+      // than a bare second count (Transport untouched: mirrored from here)
       const wave = ls.querySelector<HTMLElement>("[data-tp-wave]");
       const time = ls.querySelector<HTMLElement>("[data-tp-time]");
+      const screen = ls.querySelector<HTMLElement>("[data-cs-time]");
       if (wave && time) {
-        const say = () => wave.setAttribute("aria-valuetext", time.textContent!.trim().replace(/\s*\/\s*/, " of "));
+        const say = () => {
+          const now = time.textContent!.trim();
+          if (screen) screen.textContent = now;
+          wave.setAttribute("aria-valuetext", now.replace(/\s*\/\s*/, " of "));
+        };
         say();
         audio.addEventListener("timeupdate", say);
         audio.addEventListener("ended", say);
       }
     });
-    // the deck's keys proxy to the chassis arrows and mirror their
-    // disabled state (the chassis disables an arrow at either end of the
-    // set), so a dead key looks dead and is not offered to a keyboard
-    const drive = (keyAttr: string, navAttr: string) => {
-      const nav = auRoom.querySelector<HTMLButtonElement>(`[${navAttr}]`);
-      const keys = Array.from(auRoom.querySelectorAll<HTMLButtonElement>(`[${keyAttr}]`));
-      if (!nav || !keys.length) return;
-      const mirror = () => keys.forEach((k) => (k.disabled = nav.disabled));
-      keys.forEach((k) => k.addEventListener("click", () => nav.click()));
-      new MutationObserver(mirror).observe(nav, { attributes: true, attributeFilter: ["disabled"] });
-      mirror();
-    };
-    drive("data-au-prev", "data-car-prev");
-    drive("data-au-next", "data-car-next");
   }
 
   // ── VISUALS: the keys stand off the PAINTED picture, not its box (the
@@ -2616,6 +2581,7 @@ const BUILD_MARKS: Record<string, string> = { archive: "🗂️", studio: "🎛�
     const lkRO = new ResizeObserver(lkMeasure);
     lkImgs.forEach((im) => lkRO.observe(im));
     new MutationObserver(lkMeasure).observe(lkTrack, { attributes: true, attributeFilter: ["style"] });
+    lkCar.addEventListener("car:change", lkMeasure); // dissolve mode writes no transform
 
     // phones: pinch the picture (the photo app's grammar — two fingers
     // scale it about the pinch point, 1×–3×, it lifts over the placard,

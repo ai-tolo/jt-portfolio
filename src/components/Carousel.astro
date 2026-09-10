@@ -13,11 +13,16 @@ interface Props {
   dots?: boolean;
   /** Accessible names for the dots, one per slide. */
   titles?: string[];
+  /** "slide" translates the track; "dissolve" stacks the slides and
+   *  crossfades, the incoming one rendering in top-down (Jon, 2026-09-09:
+   *  the slide pushed pictures under the keycaps and broke the physical
+   *  feel). */
+  mode?: "slide" | "dissolve";
 }
-const { count, label, accent = "var(--brand-cyan, #6ee0ff)", dots = false, titles = [] } = Astro.props;
+const { count, label, accent = "var(--brand-cyan, #6ee0ff)", dots = false, titles = [], mode = "slide" } = Astro.props;
 ---
 
-<div class="car" data-carousel data-count={String(count)} style={`--car-accent:${accent}`}
+<div class="car" data-carousel data-count={String(count)} data-mode={mode} style={`--car-accent:${accent}`}
   role="group" aria-roledescription="carousel" aria-label={label}>
   <div class="car-view">
     <div class="car-track" data-car-track>
@@ -111,9 +116,62 @@ const { count, label, accent = "var(--brand-cyan, #6ee0ff)", dots = false, title
     flex: 0 0 100%;
     min-width: 0;
   }
+  /* dissolve: the slides keep the slide mode's exact widths (each 100% of
+     the track, flex) but overlap — every slide after the first pulls back
+     by one track width — so they stack in one place; the leaving one
+     fades, the arriving one renders in from the top (~300ms) and fades
+     up. Nothing moves, so nothing slides under the room's keys, and the
+     pictures measure exactly as they did (a grid stack shrank them at
+     mid widths) */
+  .car[data-mode="dissolve"] .car-track {
+    transition: none;
+  }
+  .car[data-mode="dissolve"] .car-track > :global(*) {
+    position: relative;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 260ms ease, visibility 0s linear 260ms;
+  }
+  .car[data-mode="dissolve"] .car-track > :global(* + *) {
+    margin-left: -100%;
+  }
+  .car[data-mode="dissolve"] .car-track > :global([data-on]) {
+    opacity: 1;
+    visibility: visible;
+    transition: opacity 200ms ease, visibility 0s;
+  }
+  /* the render: the arriving slide wipes in from the top through a
+     scanline mask (its own pixels only — the picture materialises, the
+     ground around it never flickers), then the mask lifts */
+  .car[data-mode="dissolve"][data-live] .car-track > :global([data-on]) {
+    animation: car-render 320ms linear;
+  }
+  @keyframes car-render {
+    0% {
+      clip-path: inset(0 0 100% 0);
+      -webkit-mask-image: repeating-linear-gradient(0deg, #000 0 2px, transparent 2px 3px);
+      mask-image: repeating-linear-gradient(0deg, #000 0 2px, transparent 2px 3px);
+    }
+    85% {
+      clip-path: inset(0 0 0 0);
+      -webkit-mask-image: repeating-linear-gradient(0deg, #000 0 2px, transparent 2px 3px);
+      mask-image: repeating-linear-gradient(0deg, #000 0 2px, transparent 2px 3px);
+    }
+    100% {
+      clip-path: inset(0 0 0 0);
+      -webkit-mask-image: none;
+      mask-image: none;
+    }
+  }
   @media (prefers-reduced-motion: reduce) {
     .car-track {
       transition: none;
+    }
+    .car[data-mode="dissolve"] .car-track > :global(*) {
+      transition: none;
+    }
+    .car[data-mode="dissolve"][data-live] .car-track > :global([data-on]) {
+      animation: none;
     }
   }
   .car-nav {
@@ -191,12 +249,18 @@ const { count, label, accent = "var(--brand-cyan, #6ee0ff)", dots = false, title
     const dots = Array.from(car.querySelectorAll<HTMLButtonElement>("[data-car-dot]"));
     let i = 0;
 
+    const dissolve = car.dataset.mode === "dissolve";
     const show = (n: number) => {
       i = Math.max(0, Math.min(slides.length - 1, n));
-      track.style.transform = `translateX(-${i * 100}%)`;
+      if (!dissolve) track.style.transform = `translateX(-${i * 100}%)`;
       slides.forEach((s, k) => {
-        if (k === i) s.removeAttribute("aria-hidden");
-        else s.setAttribute("aria-hidden", "true");
+        if (k === i) {
+          s.removeAttribute("aria-hidden");
+          s.setAttribute("data-on", "");
+        } else {
+          s.setAttribute("aria-hidden", "true");
+          s.removeAttribute("data-on");
+        }
         // keep focus + tab order inside the visible slide only — RESTORE
         // each element's authored tabindex (removeAttribute broke the
         // transport's role=slider wave, which needs tabindex=0 — QA)
@@ -223,6 +287,7 @@ const { count, label, accent = "var(--brand-cyan, #6ee0ff)", dots = false, title
       });
       if (prev) prev.disabled = i === 0;
       if (next) next.disabled = i === slides.length - 1;
+      car.dispatchEvent(new CustomEvent("car:change", { detail: { index: i } }));
     };
 
     prev?.addEventListener("click", () => show(i - 1));
@@ -253,6 +318,8 @@ const { count, label, accent = "var(--brand-cyan, #6ee0ff)", dots = false, title
       if (Math.abs(dx) > 48 && Math.abs(dx) > Math.abs(dy) * 1.4) show(i + (dx < 0 ? 1 : -1));
     }, { passive: true });
     show(0);
+    // the render-in plays on changes, not on the first paint
+    requestAnimationFrame(() => car.setAttribute("data-live", ""));
   }
 
   if (registry.length > 0) {
