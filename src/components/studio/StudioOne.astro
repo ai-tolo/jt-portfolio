@@ -318,10 +318,30 @@ const BUILD_MARKS: Record<string, string> = { archive: "🗂️", studio: "🎛�
       A manifest `cover` now prints ON the label. */}
   {SHOW.has("soundlab") && <section class="room" id="soundlab" aria-labelledby="soundlab-t"><div class="au">
     <h2 id="soundlab-t" class="sr-only">Audio</h2>
-    <Carousel count={tracks.length} label="Music" accent="var(--ember)" mode="dissolve" dots titles={tracks.map((t) => t.title)}>
+    <Carousel count={tracks.length} label="Music" accent="var(--ember)" mode="dissolve">
       {tapes.map(({ t, fill }, i) => (
         <article class="ls" style={`--cs-tint:${fill.day};--cs-tint-night:${fill.night}`}>
-          <h3 class="ls-title">{t.title}</h3>
+          {/* the title is the shelf: press it and the tapes list under it,
+              each with its own label colour; choosing one turns the
+              carousel (Jon, 2026-09-09: a drop-down instead of arrows
+              and dots) */}
+          <div class="ls-head">
+            <h3 class="ls-title">
+              <button class="ls-pick" type="button" aria-haspopup="listbox" aria-expanded="false" aria-controls={`ls-menu-${i}`} data-cs-pick>
+                <span class="ls-pick-name">{t.title}</span>
+                <svg class="ls-pick-mark" viewBox="0 0 16 16" aria-hidden="true"><path d="M3.5 6 8 10.5 12.5 6" /></svg>
+              </button>
+            </h3>
+            <ul class="ls-menu" id={`ls-menu-${i}`} role="listbox" aria-label="Tapes" hidden data-cs-menu>
+              {tapes.map(({ t: u, fill: f }, k) => (
+                <li class="ls-option" role="option" aria-selected={k === i ? "true" : "false"} tabindex="-1" data-cs-option={String(k)}
+                  style={`--cs-chip:${f.day};--cs-chip-night:${f.night}`}>
+                  <span class="ls-chip" aria-hidden="true"></span>
+                  <span class="ls-option-name">{u.title}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
           {t.note && <p class="ls-note">{t.note}</p>}
           <button class="cs" type="button" data-cs-tape aria-label={`Play ${t.title}`}>
             <span class="cs-label" aria-hidden="true">
@@ -1562,7 +1582,12 @@ const BUILD_MARKS: Record<string, string> = { archive: "🗂️", studio: "🎛�
     }
   }
 
-  /* the placard: above the tape, on the column's left edge (Jon's mock) */
+  /* the placard: above the tape, on the column's left edge (Jon's mock).
+     The title is a button — the shelf's menu hangs from it */
+  .ls-head {
+    position: relative;
+    min-width: 0;
+  }
   .ls-title {
     margin: 0;
     min-width: 0;
@@ -1573,6 +1598,108 @@ const BUILD_MARKS: Record<string, string> = { archive: "🗂️", studio: "🎛�
     letter-spacing: -0.01em;
     color: var(--au-ink);
     overflow-wrap: anywhere;
+  }
+  .ls-pick {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4em;
+    max-width: 100%;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    background: none;
+    font: inherit;
+    letter-spacing: inherit;
+    color: inherit;
+    text-align: left;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .ls-pick-name {
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
+  .ls-pick-mark {
+    flex: none;
+    width: 0.55em;
+    height: 0.55em;
+    fill: none;
+    stroke: var(--au-dim);
+    stroke-width: 1.6;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    transition: transform 160ms ease, stroke 120ms ease;
+  }
+  .ls-pick:hover .ls-pick-mark,
+  .ls-pick:focus-visible .ls-pick-mark,
+  .ls-pick[aria-expanded="true"] .ls-pick-mark {
+    stroke: var(--au-ink);
+  }
+  .ls-pick[aria-expanded="true"] .ls-pick-mark {
+    transform: rotate(180deg);
+  }
+  .ls-pick:focus-visible {
+    outline: 1px solid var(--au-ink);
+    outline-offset: 6px;
+  }
+  /* the shelf: the tapes in a recessed pane under the title, each with
+     its label colour as a chip; the current one in full ink */
+  .ls-menu {
+    position: absolute;
+    z-index: 6;
+    top: calc(100% + 10px);
+    left: 0;
+    min-width: min(100%, 22ch);
+    max-width: 100%;
+    margin: 0;
+    padding: 6px 0;
+    list-style: none;
+    background: var(--au-pane);
+    border: 1px solid var(--au-seam);
+    border-radius: 2px;
+    box-shadow:
+      inset 0 1px 0 var(--au-seam),
+      0 14px 28px -14px color-mix(in srgb, var(--au-ink) 40%, transparent);
+  }
+  .ls-option {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 9px 16px 9px 14px;
+    font-family: "IBM Plex Mono", ui-monospace, monospace;
+    font-size: 0.92rem;
+    line-height: 1.3;
+    letter-spacing: 0.01em;
+    color: var(--au-dim);
+    cursor: pointer;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .ls-option[aria-selected="true"] {
+    color: var(--au-ink);
+  }
+  .ls-option:hover,
+  .ls-option:focus-visible {
+    color: var(--au-ink);
+    background: color-mix(in srgb, var(--au-ink) 6%, var(--bg));
+    outline: none;
+  }
+  .ls-chip {
+    flex: none;
+    width: 14px;
+    height: 9px;
+    border-radius: 1.5px;
+    background: var(--cs-chip);
+    box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--au-ink) 18%, transparent);
+  }
+  :global(html[data-night]) .ls-chip {
+    background: var(--cs-chip-night);
+  }
+  .ls-option-name {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
   .ls-note {
     margin: 12px 0 0;
@@ -1684,12 +1811,12 @@ const BUILD_MARKS: Record<string, string> = { archive: "🗂️", studio: "🎛�
     /* the turn runs always and is PAUSED at rest, so a pause holds the
        hubs where they are and play resumes from there (dropping the
        animation snapped them back to 0°) */
-    animation: cs-turn 2.2s linear infinite;
+    animation: cs-turn 4.4s linear infinite; /* half the first cut's speed (Jon) */
     animation-play-state: paused;
   }
   .cs-reel-r {
     left: 66.135%;
-    animation-duration: 1.5s;
+    animation-duration: 3s;
   }
   /* the display, under the shell's rectangular cut-out (814..1318 ×
      437..703 of 2132 × 1305; the pane overfills it a hair): the recessed
@@ -1756,8 +1883,7 @@ const BUILD_MARKS: Record<string, string> = { archive: "🗂️", studio: "🎛�
   /* the machine: the rail alone under the tape, exactly the tape's width
      (Jon: in line with the cassette) — the Transport dissolves into it;
      its own play key is hidden (the tape is the switch) and its counter
-     is hidden too (the display in the window is the readout). The
-     chassis dots sit under the rail: one per tape, the lit one ember */
+     is hidden too (the display in the window is the readout) */
   .ls-deck {
     width: var(--cs-w);
     margin: clamp(24px, 7vh, 72px) auto 0;
@@ -1768,11 +1894,6 @@ const BUILD_MARKS: Record<string, string> = { archive: "🗂️", studio: "🎛�
   #soundlab .ls-deck :global(.tp-btn),
   #soundlab .ls-deck :global(.tp-time) {
     display: none;
-  }
-  .au :global(.car-dots) {
-    margin-top: 14px;
-    color: var(--au-ink);
-    --car-dot-on: var(--ember); /* the lit dot is the lamp, not ink (Jon) */
   }
   #soundlab .ls-deck :global(.tp-wave:focus-visible) {
     outline: 1px solid var(--au-ink);
@@ -1876,6 +1997,7 @@ const BUILD_MARKS: Record<string, string> = { archive: "🗂️", studio: "🎛�
        Next key ran off the page from 900 to 1240). */
     --lk-room: calc(var(--kc-gap) + var(--kc-sx) + var(--kc) + var(--kc-gap));
     --lk-half: min(53.333svh, 50% - var(--lk-room));
+    --lk-top: 0px;
     --lk-bottom: 80svh;
     --kc-ink: var(--ink);
     --kc-face-hi: color-mix(in srgb, var(--kc-ink) 2%, var(--bg));
@@ -2067,9 +2189,9 @@ const BUILD_MARKS: Record<string, string> = { archive: "🗂️", studio: "🎛�
     display: flex;
     flex-direction: column;
     align-items: center;
-    /* room for the dot row between the picture and the placard
-       (8px + 24px hit row + 8px), 2026-09-09 */
-    gap: 40px;
+    /* the placard sits right under the picture; the dot row moved above
+       it (Jon, 2026-09-09) */
+    gap: 14px;
   }
   .lk-img {
     width: 100%;
@@ -2102,12 +2224,13 @@ const BUILD_MARKS: Record<string, string> = { archive: "🗂️", studio: "🎛�
     letter-spacing: 0.01em;
     color: var(--ink);
   }
-  /* the dot row sits in the gap under the picture, centred; ink through
-     the section-local pair so night flips (.one shadows --ink) */
+  /* the dot row sits ABOVE the painted picture, centred (Jon, 2026-09-09:
+     the placard goes adjacent to the picture, the dots above it); ink
+     through the section-local pair so night flips (.one shadows --ink) */
   .look-band :global(.car-dots) {
     position: absolute;
     left: 50%;
-    top: calc(var(--lk-bottom) + 8px);
+    top: calc(var(--lk-top) - 8px - 24px);
     transform: translateX(-50%);
     z-index: 2;
     color: var(--kc-ink);
@@ -2543,6 +2666,64 @@ const BUILD_MARKS: Record<string, string> = { archive: "🗂️", studio: "🎛�
         audio.addEventListener("ended", say);
       }
     });
+    // ── the title is the shelf's menu: press → the tapes list under it;
+    // choose → the chassis turns (car:show); Esc / outside / Tab close.
+    // Every slide carries the same list; car:change keeps them in step.
+    const auCar = auRoom.querySelector<HTMLElement>("[data-carousel]");
+    const auSlides = Array.from(auRoom.querySelectorAll<HTMLElement>(".ls"));
+    const auMenus = auSlides.map((ls) => ({
+      ls,
+      pick: ls.querySelector<HTMLButtonElement>("[data-cs-pick]"),
+      menu: ls.querySelector<HTMLElement>("[data-cs-menu]"),
+      options: Array.from(ls.querySelectorAll<HTMLElement>("[data-cs-option]")),
+    }));
+    const closeAll = (focusPick = false) =>
+      auMenus.forEach((m) => {
+        if (!m.pick || !m.menu || m.menu.hidden) return;
+        m.menu.hidden = true;
+        m.pick.setAttribute("aria-expanded", "false");
+        if (focusPick) m.pick.focus();
+      });
+    auMenus.forEach((m) => {
+      const { pick, menu, options } = m;
+      if (!pick || !menu) return;
+      const open = () => {
+        closeAll();
+        menu.hidden = false;
+        pick.setAttribute("aria-expanded", "true");
+        (options.find((o) => o.getAttribute("aria-selected") === "true") ?? options[0])?.focus();
+      };
+      pick.addEventListener("click", () => (menu.hidden ? open() : closeAll(true)));
+      pick.addEventListener("keydown", (e) => {
+        if (e.key === "ArrowDown" || e.key === "ArrowUp") { e.preventDefault(); open(); }
+      });
+      const choose = (k: number) => {
+        closeAll();
+        auCar?.dispatchEvent(new CustomEvent("car:show", { detail: { index: k } }));
+        requestAnimationFrame(() => auMenus[k]?.pick?.focus());
+      };
+      options.forEach((o, k) => {
+        o.addEventListener("click", () => choose(k));
+        o.addEventListener("keydown", (e) => {
+          const n = options.length;
+          if (e.key === "ArrowDown") { e.preventDefault(); options[(k + 1) % n].focus(); }
+          else if (e.key === "ArrowUp") { e.preventDefault(); options[(k - 1 + n) % n].focus(); }
+          else if (e.key === "Home") { e.preventDefault(); options[0].focus(); }
+          else if (e.key === "End") { e.preventDefault(); options[n - 1].focus(); }
+          else if (e.key === "Enter" || e.key === " ") { e.preventDefault(); choose(k); }
+          else if (e.key === "Escape") { e.preventDefault(); closeAll(true); }
+          else if (e.key === "Tab") closeAll();
+        });
+      });
+    });
+    document.addEventListener("pointerdown", (e) => {
+      if (!(e.target as Element | null)?.closest?.(".ls-head")) closeAll();
+    });
+    auCar?.addEventListener("car:change", (e) => {
+      const k = (e as CustomEvent).detail?.index ?? 0;
+      closeAll();
+      auMenus.forEach((m) => m.options.forEach((o, j) => o.setAttribute("aria-selected", j === k ? "true" : "false")));
+    });
   }
 
   // ── VISUALS: the keys stand off the PAINTED picture, not its box (the
@@ -2578,6 +2759,7 @@ const BUILD_MARKS: Record<string, string> = { archive: "🗂️", studio: "🎛�
       const ph = Math.min(bh, (bw * img.naturalHeight) / img.naturalWidth);
       const top = img.getBoundingClientRect().top - lkCar.getBoundingClientRect().top;
       lkCar.style.setProperty("--lk-half", `${(pwMax / 2).toFixed(2)}px`);
+      lkCar.style.setProperty("--lk-top", `${(top + (bh - ph) / 2).toFixed(2)}px`);
       lkCar.style.setProperty("--lk-bottom", `${(top + (bh + ph) / 2).toFixed(2)}px`);
     };
     lkMeasure();

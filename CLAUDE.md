@@ -96,7 +96,10 @@ session must follow.
   counter is hidden too and mirrored into the screen and into the
   slider's aria-valuetext); `.ls[data-playing]` turns the cores, shows
   the counter and seats the tape 2px. No lamp: the display is the live
-  signal. No keys: dots, swipe and arrow keys switch tapes. Label colour
+  signal. No keys, no dots: the TITLE is the shelf's menu (`.ls-pick`
+  button → `.ls-menu` listbox, one option per tape with its label
+  colour as a chip; choosing dispatches `car:show`); swipe and arrow
+  keys still turn the chassis. The hub cores turn at 4.4s / 3s. Label colour
   = `tapeTint()` in the frontmatter: FNV hash of the title → oklch hue
   (L .76 day / .66 night), then every tape's hue is relaxed around the
   circle together (≥ min(24°, ~(360−16)/n) between tapes, 8° clear of the
@@ -120,7 +123,10 @@ session must follow.
   with a scan on the arriving slide, `data-on` on the active slide, a
   `car:change` event). Both homepage rooms use `dissolve` (Jon,
   2026-09-09: sliding pictures went under the keycaps and broke the
-  physical feel). The Visuals key measurer listens for `car:change`.
+  physical feel). The Visuals key measurer listens for `car:change`;
+  `car:show` (detail.index) asks a chassis for a slide. In Visuals the
+  dots sit ABOVE the painted picture (`--lk-top`, measured) and the
+  placard sits right under it (Jon, 2026-09-09).
 - Builds is THE LEDGER (round 3, 2026-09-02, Jon's pick from rendered
   directions): an index printed straight on the room ground, no panel or
   background anywhere, open or closed; rules run off the RIGHT edge of the
