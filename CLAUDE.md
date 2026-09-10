@@ -82,11 +82,13 @@ session must follow.
   placard ABOVE (mono title, the note, on the column's left edge), then
   the tape centred (`.cs`, a `<button>` and a size container, ~half the
   viewport wide up to 760px, height-capped by `--cs-reserve`):
-  `public/studio/cassette-*.webp` is Jon's render with the label area,
+  `public/studio/tape-shell-*.webp` is Jon's render with the label area,
   both hub circles and the display rectangle cut to alpha, painted LAST
   over `.cs-label` (the tape's colour), the two hubs (`.cs-hub` still
-  base + `.cs-reel` turning core, both cut from the ORIGINAL uncut render
-  at r150 / r85 and placed at the holes) and `.cs-screen` (the recessed
+  base + `.cs-reel` turning core — `tape-hub-*` / `tape-core-*`, both cut
+  from the ORIGINAL uncut render at r150 / r97 about the hub's true
+  centre, 628.0,568.3 / 1501.5,568.7, a circle fit to the ring's inner
+  edge — and placed at the holes) and `.cs-screen` (the recessed
   pane in the window: an outlined play mark at rest, the running counter
   while playing — Jon's Game-Boy window; type in cqw); then the rail
   alone, exactly the tape's width; then the chassis dots. The tape IS the
