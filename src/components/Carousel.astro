@@ -18,11 +18,14 @@ interface Props {
    *  the slide pushed pictures under the keycaps and broke the physical
    *  feel). */
   mode?: "slide" | "dissolve";
+  /** The set wraps: past the last slide comes the first, before the
+   *  first comes the last; the keys never grey out (Jon, 2026-09-15). */
+  loop?: boolean;
 }
-const { count, label, accent = "var(--brand-cyan, #6ee0ff)", dots = false, titles = [], mode = "slide" } = Astro.props;
+const { count, label, accent = "var(--brand-cyan, #6ee0ff)", dots = false, titles = [], mode = "slide", loop = false } = Astro.props;
 ---
 
-<div class="car" data-carousel data-count={String(count)} data-mode={mode} style={`--car-accent:${accent}`}
+<div class="car" data-carousel data-count={String(count)} data-mode={mode} data-car-loop={loop ? "" : undefined} style={`--car-accent:${accent}`}
   role="group" aria-roledescription="carousel" aria-label={label}>
   <div class="car-view">
     <div class="car-track" data-car-track>
@@ -250,8 +253,10 @@ const { count, label, accent = "var(--brand-cyan, #6ee0ff)", dots = false, title
     let i = 0;
 
     const dissolve = car.dataset.mode === "dissolve";
+    const loop = car.hasAttribute("data-car-loop");
     const show = (n: number) => {
-      i = Math.max(0, Math.min(slides.length - 1, n));
+      const n0 = slides.length;
+      i = loop ? ((n % n0) + n0) % n0 : Math.max(0, Math.min(n0 - 1, n));
       if (!dissolve) track.style.transform = `translateX(-${i * 100}%)`;
       slides.forEach((s, k) => {
         if (k === i) {
@@ -285,22 +290,28 @@ const { count, label, accent = "var(--brand-cyan, #6ee0ff)", dots = false, title
         if (k === i) d.setAttribute("data-on", "");
         else d.removeAttribute("data-on");
       });
-      if (prev) prev.disabled = i === 0;
-      if (next) next.disabled = i === slides.length - 1;
+      if (prev) prev.disabled = !loop && i === 0;
+      if (next) next.disabled = !loop && i === slides.length - 1;
       car.dispatchEvent(new CustomEvent("car:change", { detail: { index: i } }));
     };
 
     prev?.addEventListener("click", () => show(i - 1));
     next?.addEventListener("click", () => show(i + 1));
     dots.forEach((d, k) => d.addEventListener("click", () => show(k)));
+    // an arrow key steps the set AND seats the matching key, the way a
+    // click does; the key lifts on keyup (Jon, 2026-09-15)
+    const step = (d: number) => {
+      show(i + d);
+      (d > 0 ? next : prev)?.setAttribute("data-pressed", "");
+    };
     car.addEventListener("keydown", (e) => {
       // the transport's wave owns ←/→ for seeking when focused
       const el = document.activeElement as HTMLElement | null;
       if (el?.hasAttribute?.("data-tp-wave")) return;
-      if (e.key === "ArrowRight") show(i + 1);
-      if (e.key === "ArrowLeft") show(i - 1);
+      if (e.key === "ArrowRight") step(1);
+      if (e.key === "ArrowLeft") step(-1);
     });
-    registry.push({ car, go: (d) => show(i + d) });
+    registry.push({ car, go: step });
     // a host may ask for a slide by index (the audio room's title menu)
     car.addEventListener("car:show", (e) => show(Number((e as CustomEvent).detail?.index ?? i)));
 
@@ -346,5 +357,11 @@ const { count, label, accent = "var(--brand-cyan, #6ee0ff)", dots = false, title
       e.preventDefault();
       best.go(e.key === "ArrowRight" ? 1 : -1);
     });
+    // the seated key lifts when the arrow is released (or the page loses focus)
+    const lift = () => document.querySelectorAll<HTMLElement>("[data-carousel] [data-pressed]").forEach((b) => b.removeAttribute("data-pressed"));
+    window.addEventListener("keyup", (e) => {
+      if (e.key === "ArrowLeft" || e.key === "ArrowRight") lift();
+    });
+    window.addEventListener("blur", lift);
   }
 </script>
