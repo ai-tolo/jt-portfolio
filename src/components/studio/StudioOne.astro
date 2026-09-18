@@ -117,20 +117,21 @@ const illos: Illo[] = (illustrations as any).items ?? [];
 // The writing section left the homepage the same day ("for now" — Jon's
 // round-2 call): manifests + /writing/<slug> pages stay live at their URLs.
 
-// The nav (Jon's round-2 overhaul, 2026-08-31): plain nouns for the rooms
-// — builds · audio — plus the visual room's emoji-only stop —
-// plus ONE wordless object: the instrument as an emoji-only chip, first.
+// The nav (Jon, 2026-09-18): four verbs in page order — play · look ·
+// listen · learn — each with its emoji; the builds' mark is a pencil now.
 // `word: ""` = wordless chip (aria carries the name). A word renders ONLY
 // when its room has something in it. Section ids are stable internals
 // (work/soundlab/illustrations) so deep links and the spy survive renames.
+// The rail reads DOCUMENT order (getDocIds), so this order is also the
+// order the rooms sit in below.
 const MARKS = [
   // id "play" = the .live-signal HOST (has a box at every width); the
   // machine's own #signal root is display:none on coarse pointers, which
   // made the chip a dead link on phones (review, 2026-08-25)
-  { id: "play", word: "", aria: "play", emoji: "🎹", ethereal: true, has: true },
-  { id: "work", word: "builds", aria: "builds", emoji: "🛠️", ethereal: false, has: BUILDS.length > 0 },
-  { id: "soundlab", word: "audio", aria: "audio", emoji: "🎧", ethereal: false, has: tracks.length > 0 },
-  { id: "illustrations", word: "", aria: "visuals", emoji: "🖼️", ethereal: false, has: illos.length > 0 },
+  { id: "play", word: "play", aria: "play", emoji: "🎹", ethereal: true, has: true },
+  { id: "illustrations", word: "look", aria: "look", emoji: "🖼️", ethereal: false, has: illos.length > 0 },
+  { id: "soundlab", word: "listen", aria: "listen", emoji: "🎧", ethereal: false, has: tracks.length > 0 },
+  { id: "work", word: "learn", aria: "learn", emoji: "✏️", ethereal: false, has: BUILDS.length > 0 },
 ].filter((m) => m.has);
 const SHOW = new Set(MARKS.map((m) => m.id));
 // The builds' marks (Jon's picks, 2026-09-02): the same emoji language as
@@ -241,6 +242,94 @@ const BUILD_MARKS: Record<string, string> = { archive: "🗂️", studio: "🎛�
     </div>
   </section>
 
+  {/* the writing section left the homepage 2026-08-31 ("for now" — Jon's
+      round-2 call). The tiles, manifests, and /writing/<slug> pages all
+      stay in the tree, live at their URLs; only this room is unrouted. */}
+
+  {SHOW.has("illustrations") && <section class="look-band room" id="illustrations" aria-labelledby="illustrations-t">
+    <h2 id="illustrations-t" class="sr-only">Look</h2>
+    <Carousel count={illos.length} label="Visual work" accent="var(--brand-yellow, #ffc94d)" mode="dissolve" dots loop titles={illos.map((it) => it.title)}>
+      {illos.map((it, i) => (
+        <figure class="lk">
+          <img class="lk-img" src={it.src} alt={it.alt} loading="lazy" />
+          {/* the placard: title carries the weight; medium, year, and the
+              piece's place in the set share one quiet line beneath it
+              (Jon, 2026-08-23 — hierarchy without competing with the art) */}
+          <figcaption class="lk-cap">
+            <span class="lk-title">{it.title}</span>
+            <span class="lk-meta">
+              {/* the dots carry the position now (Jon, 2026-09-09) */}
+              {[it.medium, it.year].filter(Boolean).join(" · ")}
+            </span>
+          </figcaption>
+        </figure>
+      ))}
+    </Carousel>
+  </section>}
+
+  {/* ── AUDIO — THE CASSETTE (2026-09-09: Jon's mock + his blank tape;
+      the field recorder's cover window is retired — the cassette IS the
+      art object). The placard sits ABOVE — mono title, the note — then
+      the tape, centred, its label filled with the tape's own colour (see
+      tapeTint), then the seek rule and the recessed counter. No keys: the
+      cassette is the play switch — tap it and the hubs turn; prev/next
+      keys appear only once there are two tapes. Transport + Carousel
+      mechanics are untouched: the tape's button clicks the Transport's
+      own (hidden) toggle, and the deck's keys drive the chassis buttons.
+      A manifest `cover` now prints ON the label. */}
+  {SHOW.has("soundlab") && <section class="room" id="soundlab" aria-labelledby="soundlab-t"><div class="au">
+    <h2 id="soundlab-t" class="sr-only">Listen</h2>
+    <Carousel count={tracks.length} label="Music" accent="var(--ember)" mode="dissolve">
+      {tapes.map(({ t, fill }, i) => (
+        <article class="ls" style={`--cs-tint:${fill.day};--cs-tint-night:${fill.night}`}>
+          {/* the title is the shelf: press it and the tapes list under it,
+              each with its own label colour; choosing one turns the
+              carousel (Jon, 2026-09-09: a drop-down instead of arrows
+              and dots) */}
+          <div class="ls-head">
+            <h3 class="ls-title">
+              <button class="ls-pick" type="button" aria-haspopup="listbox" aria-expanded="false" aria-controls={`ls-menu-${i}`} data-cs-pick>
+                <span class="ls-pick-name">{t.title}</span>
+                <svg class="ls-pick-mark" viewBox="0 0 16 16" aria-hidden="true"><path d="M3.5 6 8 10.5 12.5 6" /></svg>
+              </button>
+            </h3>
+            <ul class="ls-menu" id={`ls-menu-${i}`} role="listbox" aria-label="Tapes" hidden data-cs-menu>
+              {tapes.map(({ t: u, fill: f }, k) => (
+                <li class="ls-option" role="option" aria-selected={k === i ? "true" : "false"} tabindex="-1" data-cs-option={String(k)}
+                  style={`--cs-chip:${f.day};--cs-chip-night:${f.night}`}>
+                  <span class="ls-chip" aria-hidden="true"></span>
+                  <span class="ls-option-name">{u.title}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+          {t.note && <p class="ls-note">{t.note}</p>}
+          <button class="cs" type="button" data-cs-tape aria-label={`Play ${t.title}`}>
+            <span class="cs-label" aria-hidden="true">
+              {t.cover && <img src={t.cover} alt="" loading={i === 0 ? "eager" : "lazy"} decoding="async" />}
+            </span>
+            {/* under the shell's cut-outs: the two hubs (a still base, a turning core) and the display */}
+            <img class="cs-hub cs-hub-l" src="/studio/tape-hub-l.webp" width="300" height="300" alt="" loading={i === 0 ? "eager" : "lazy"} decoding="async" />
+            <img class="cs-hub cs-hub-r" src="/studio/tape-hub-r.webp" width="300" height="300" alt="" loading={i === 0 ? "eager" : "lazy"} decoding="async" />
+            <img class="cs-reel cs-reel-l" src="/studio/tape-core-l.webp" width="194" height="194" alt="" loading={i === 0 ? "eager" : "lazy"} decoding="async" />
+            <img class="cs-reel cs-reel-r" src="/studio/tape-core-r.webp" width="194" height="194" alt="" loading={i === 0 ? "eager" : "lazy"} decoding="async" />
+            <span class="cs-screen" aria-hidden="true">
+              <svg class="cs-go" viewBox="0 0 32 32"><path d="M9 5.5v21l17.5-10.5z" /></svg>
+              <span class="cs-time" data-cs-time></span>
+            </span>
+            <img class="cs-shell" src="/studio/tape-shell-800.webp"
+              srcset="/studio/tape-shell-800.webp 800w, /studio/tape-shell-1600.webp 1600w"
+              sizes="(max-width: 720px) calc(100vw - 28px), 760px"
+              width="1600" height="979" alt="" loading={i === 0 ? "eager" : "lazy"} decoding="async" />
+          </button>
+          <div class="ls-deck">
+            <Transport src={t.src!} peaks={t.peaks ?? undefined} title={t.title} accent="var(--ember)" compact />
+          </div>
+        </article>
+      ))}
+    </Carousel>
+  </div></section>}
+
   {/* ── BUILDS — three story pieces, headline row → continuous-read fold.
       Words LOCKED in builds-copy.ts (Jon-owned — never edit there). Round 3
       (2026-09-02): THE LEDGER, Jon's pick from three rendered directions —
@@ -249,7 +338,7 @@ const BUILD_MARKS: Record<string, string> = { archive: "🗂️", studio: "🎛�
       open read is text on the ground too. Inks follow the room: dark by
       day, light at night. */}
   {SHOW.has("work") && <section class="ledger room" id="work" aria-labelledby="work-t">
-    <h2 id="work-t" class="sr-only">Builds</h2>
+    <h2 id="work-t" class="sr-only">Learn</h2>
     <div class="builds">
       {BUILDS.map((b) => b.href ? (
         /* a DOOR row (2026-09-09, the catalog): the same closed-row form,
@@ -305,94 +394,6 @@ const BUILD_MARKS: Record<string, string> = { archive: "🗂️", studio: "🎛�
     </div>
   </section>}
 
-
-  {/* ── AUDIO — THE CASSETTE (2026-09-09: Jon's mock + his blank tape;
-      the field recorder's cover window is retired — the cassette IS the
-      art object). The placard sits ABOVE — mono title, the note — then
-      the tape, centred, its label filled with the tape's own colour (see
-      tapeTint), then the seek rule and the recessed counter. No keys: the
-      cassette is the play switch — tap it and the hubs turn; prev/next
-      keys appear only once there are two tapes. Transport + Carousel
-      mechanics are untouched: the tape's button clicks the Transport's
-      own (hidden) toggle, and the deck's keys drive the chassis buttons.
-      A manifest `cover` now prints ON the label. */}
-  {SHOW.has("soundlab") && <section class="room" id="soundlab" aria-labelledby="soundlab-t"><div class="au">
-    <h2 id="soundlab-t" class="sr-only">Audio</h2>
-    <Carousel count={tracks.length} label="Music" accent="var(--ember)" mode="dissolve">
-      {tapes.map(({ t, fill }, i) => (
-        <article class="ls" style={`--cs-tint:${fill.day};--cs-tint-night:${fill.night}`}>
-          {/* the title is the shelf: press it and the tapes list under it,
-              each with its own label colour; choosing one turns the
-              carousel (Jon, 2026-09-09: a drop-down instead of arrows
-              and dots) */}
-          <div class="ls-head">
-            <h3 class="ls-title">
-              <button class="ls-pick" type="button" aria-haspopup="listbox" aria-expanded="false" aria-controls={`ls-menu-${i}`} data-cs-pick>
-                <span class="ls-pick-name">{t.title}</span>
-                <svg class="ls-pick-mark" viewBox="0 0 16 16" aria-hidden="true"><path d="M3.5 6 8 10.5 12.5 6" /></svg>
-              </button>
-            </h3>
-            <ul class="ls-menu" id={`ls-menu-${i}`} role="listbox" aria-label="Tapes" hidden data-cs-menu>
-              {tapes.map(({ t: u, fill: f }, k) => (
-                <li class="ls-option" role="option" aria-selected={k === i ? "true" : "false"} tabindex="-1" data-cs-option={String(k)}
-                  style={`--cs-chip:${f.day};--cs-chip-night:${f.night}`}>
-                  <span class="ls-chip" aria-hidden="true"></span>
-                  <span class="ls-option-name">{u.title}</span>
-                </li>
-              ))}
-            </ul>
-          </div>
-          {t.note && <p class="ls-note">{t.note}</p>}
-          <button class="cs" type="button" data-cs-tape aria-label={`Play ${t.title}`}>
-            <span class="cs-label" aria-hidden="true">
-              {t.cover && <img src={t.cover} alt="" loading={i === 0 ? "eager" : "lazy"} decoding="async" />}
-            </span>
-            {/* under the shell's cut-outs: the two hubs (a still base, a turning core) and the display */}
-            <img class="cs-hub cs-hub-l" src="/studio/tape-hub-l.webp" width="300" height="300" alt="" loading={i === 0 ? "eager" : "lazy"} decoding="async" />
-            <img class="cs-hub cs-hub-r" src="/studio/tape-hub-r.webp" width="300" height="300" alt="" loading={i === 0 ? "eager" : "lazy"} decoding="async" />
-            <img class="cs-reel cs-reel-l" src="/studio/tape-core-l.webp" width="194" height="194" alt="" loading={i === 0 ? "eager" : "lazy"} decoding="async" />
-            <img class="cs-reel cs-reel-r" src="/studio/tape-core-r.webp" width="194" height="194" alt="" loading={i === 0 ? "eager" : "lazy"} decoding="async" />
-            <span class="cs-screen" aria-hidden="true">
-              <svg class="cs-go" viewBox="0 0 32 32"><path d="M9 5.5v21l17.5-10.5z" /></svg>
-              <span class="cs-time" data-cs-time></span>
-            </span>
-            <img class="cs-shell" src="/studio/tape-shell-800.webp"
-              srcset="/studio/tape-shell-800.webp 800w, /studio/tape-shell-1600.webp 1600w"
-              sizes="(max-width: 720px) calc(100vw - 28px), 760px"
-              width="1600" height="979" alt="" loading={i === 0 ? "eager" : "lazy"} decoding="async" />
-          </button>
-          <div class="ls-deck">
-            <Transport src={t.src!} peaks={t.peaks ?? undefined} title={t.title} accent="var(--ember)" compact />
-          </div>
-        </article>
-      ))}
-    </Carousel>
-  </div></section>}
-
-  {/* the writing section left the homepage 2026-08-31 ("for now" — Jon's
-      round-2 call). The tiles, manifests, and /writing/<slug> pages all
-      stay in the tree, live at their URLs; only this room is unrouted. */}
-
-  {SHOW.has("illustrations") && <section class="look-band room" id="illustrations" aria-labelledby="illustrations-t">
-    <h2 id="illustrations-t" class="sr-only">Visuals</h2>
-    <Carousel count={illos.length} label="Visual work" accent="var(--brand-yellow, #ffc94d)" mode="dissolve" dots loop titles={illos.map((it) => it.title)}>
-      {illos.map((it, i) => (
-        <figure class="lk">
-          <img class="lk-img" src={it.src} alt={it.alt} loading="lazy" />
-          {/* the placard: title carries the weight; medium, year, and the
-              piece's place in the set share one quiet line beneath it
-              (Jon, 2026-08-23 — hierarchy without competing with the art) */}
-          <figcaption class="lk-cap">
-            <span class="lk-title">{it.title}</span>
-            <span class="lk-meta">
-              {/* the dots carry the position now (Jon, 2026-09-09) */}
-              {[it.medium, it.year].filter(Boolean).join(" · ")}
-            </span>
-          </figcaption>
-        </figure>
-      ))}
-    </Carousel>
-  </section>}
 
   {/* the floor: reachable + placeable — email with the city beneath it */}
   <footer class="floor">
@@ -1000,9 +1001,6 @@ const BUILD_MARKS: Record<string, string> = { archive: "🗂️", studio: "🎛�
     }
     /* the bar mirrors the PHONE page order (play last);
        DOM order stays the desktop document order for honest tab order */
-    .mbar-item[data-for="illustrations"] {
-      order: 3;
-    }
     .mbar-item[data-for="play"] {
       order: 6;
     }
@@ -1094,9 +1092,9 @@ const BUILD_MARKS: Record<string, string> = { archive: "🗂️", studio: "🎛�
       scroll-margin-bottom: calc(64px + env(safe-area-inset-bottom));
     }
     .one > .hero { order: 0; }
-    .one > #work { order: 1; }
+    .one > .look-band { order: 1; }
     .one > #soundlab { order: 2; }
-    .one > .look-band { order: 3; }
+    .one > #work { order: 3; }
     .one > .live-signal { order: 5; }
     .one > .floor { order: 6; }
     .one > [data-end] { order: 7; }
