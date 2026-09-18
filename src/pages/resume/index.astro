@@ -1,8 +1,8 @@
 ---
 // /resume — the ANNOTATED SHEET (Jon, 2026-08-25). One document: the
 // ATS one-pager is the only résumé on the page, and the interactive
-// proofs hang off it as Post-it flags. Tap a flag and its proof module
-// unfolds in a dock under the sheet. This retires the paper/interactive
+// proofs hang off it as index tabs cut from the sheet's edge (Jon,
+// 2026-09-18). Press a tab and its proof module unfolds in place. This retires the paper/interactive
 // toggle and the Notion-driven screen résumé — resume-print.ts is the
 // single source of truth for résumé prose.
 //
@@ -27,9 +27,10 @@ import "@fontsource/ibm-plex-mono/500.css";
 
 export const prerender = true;
 
-// The marks: drawn marginalia in the editor's red — one ink, like a
-// careful reader annotated the document. Each opens its proof IN PLACE
-// beneath the bullet it backs (set finalized per the panel verdict).
+// The marks: four index tabs standing off the sheet's outer edge, each
+// on the first line of the bullet it backs; press one and its proof opens
+// IN PLACE beneath that bullet. Wordless to the eye — `word` is the tab's
+// accessible name only (the pen ovals + words were retired 2026-09-18).
 const MARKS = [
   { key: "agent", word: "watch it", side: "right",
     target: '[data-pr-org="Finishable: the Engineer"] li[data-bi="0"]' },
@@ -79,15 +80,7 @@ const MARKS = [
               aria-expanded="false"
               aria-controls={`proof-${m.key}`}
             >
-              <svg class="r-mark-oval" viewBox="0 0 100 42" preserveAspectRatio="none" fill="none"
-                stroke="currentColor" stroke-width="3.2" stroke-linecap="round" aria-hidden="true">
-                <path pathLength="1" d="M50 5.5C26 4 7 11 6.2 21c-.8 10.5 17.5 16.5 43 15.5 25.6-1 45-7.5 44.6-16.5C93.4 11 76 4.6 56 5.2" />
-              </svg>
-              {/* the leader: a hairline from the oval to the baseline of the
-                  line it annotates; its path is laid by place() every frame */}
-              <svg class="r-mark-lead" aria-hidden="true">
-                <path pathLength="1" d="" />
-              </svg>
+              {/* nothing to read on the tab; the word is its accessible name */}
               <span class="r-mark-word">{m.word}</span>
             </button>
           ))}
@@ -129,110 +122,40 @@ const MARKS = [
 </Layout>
 
 <script>
-  // Marginalia mechanics: each mark sits in the sheet margin at its bullet;
-  // opening one reserves a gap under the bullet's entry (the paper parts)
-  // and floats the proof panel into it, with focus mode dimming the rest.
-  // The sheet's DOM is never touched — the print/ATS contract stays sealed.
+  // Tab mechanics: each tab sits at the sheet's edge on its bullet's first
+  // line; opening one reserves a gap under the bullet's entry (the paper
+  // parts) and floats the proof panel into it, with focus mode dimming the
+  // rest. The sheet's DOM is never touched — the print/ATS contract stays
+  // sealed.
   const wrap = document.querySelector<HTMLElement>("[data-sheet]");
   const marks = Array.from(document.querySelectorAll<HTMLButtonElement>("[data-mark]"));
   const panels = Array.from(document.querySelectorAll<HTMLElement>("[data-proof-panel]"));
 
   const entryOf = (sel: string) => document.querySelector(sel)?.closest<HTMLElement>(".pr-entry") ?? null;
 
-  // Geometry of a mark (form pass, Jon: yes, 2026-09-09): the oval sits in
-  // the margin a hand's breadth above the FIRST line of its bullet, and a
-  // hairline leader leaves its lower inner quadrant for the baseline of that
-  // line, ending in the gutter before the bullet glyph (left marks) or just
-  // past the line's last glyph (right marks). Horizontally each mark keeps
-  // GAP px of paper between the oval and the text column; when the viewport
-  // (right) or the fixed rail (left) has no room for that, the mark slides
-  // in and the leader shortens rather than the page growing a scrollbar.
-  const GAP = 26;
-  const LIFT = 14;
-  const rail = document.querySelector<HTMLElement>(".awayrail");
-  const sheet = document.querySelector<HTMLElement>(".print-resume");
+  // A tab's vertical centre sits on the FIRST line of the bullet it backs
+  // — the position is the pointer, so there is no leader. The seat off the
+  // sheet's edge is a CSS constant (right: 100% / left: 100%): nothing here
+  // writes left or right, so nothing can push the page wider than the
+  // viewport (this repo's most-recurring regression).
   const rangeOf = document.createRange();
   const firstLineOf = (t: Element) => {
     rangeOf.selectNodeContents(t);
     const rects = rangeOf.getClientRects();
     return rects.length ? rects[0] : t.getBoundingClientRect();
   };
-  const leadPath = (x0: number, y0: number, x1: number, y1: number, bow: number) => {
-    // a lazy S: two control points nudged off the chord in opposite
-    // directions, so the hairline reads as a hand stroke, not a ruler
-    const dx = x1 - x0, dy = y1 - y0;
-    const len = Math.hypot(dx, dy) || 1;
-    const nx = -dy / len, ny = dx / len;
-    const c1x = x0 + dx * 0.34 + nx * len * 0.09 * bow;
-    const c1y = y0 + dy * 0.34 + ny * len * 0.09 * bow;
-    const c2x = x0 + dx * 0.7 - nx * len * 0.05 * bow;
-    const c2y = y0 + dy * 0.7 - ny * len * 0.05 * bow;
-    const f = (n: number) => n.toFixed(1);
-    return `M${f(x0)} ${f(y0)}C${f(c1x)} ${f(c1y)} ${f(c2x)} ${f(c2y)} ${f(x1)} ${f(y1)}`;
-  };
-
   const place = () => {
     if (!wrap) return;
     const base = wrap.getBoundingClientRect();
-    const docW = document.documentElement.clientWidth;
-    const railRight = rail && getComputedStyle(rail).position === "fixed" && window.innerWidth >= 900
-      ? rail.getBoundingClientRect().right : 0;
-    const scs = sheet ? getComputedStyle(sheet) : null;
-    const padL = scs ? parseFloat(scs.paddingLeft) || 0 : 0;
-    const padR = scs ? parseFloat(scs.paddingRight) || 0 : 0;
     for (const m of marks) {
       const t = document.querySelector(m.dataset.markTarget || "");
       if (!t) {
         m.removeAttribute("data-placed");
         continue;
       }
-      const r = t.getBoundingClientRect();
       const line = firstLineOf(t);
-      const lineMid = line.top + line.height / 2;
-      const baseline = line.bottom - 0.275 * (parseFloat(getComputedStyle(t).fontSize) || 13);
-      const mw = m.offsetWidth, mh = m.offsetHeight;
-      const left = m.classList.contains("r-mark-left");
-      m.style.top = `${Math.round(lineMid - LIFT - base.top)}px`;
+      m.style.top = `${Math.round(line.top + line.height / 2 - base.top)}px`;
       m.setAttribute("data-placed", "");
-      const lead = m.querySelector<SVGPathElement>(".r-mark-lead path");
-      if (!mw || !mh || !lead) continue;
-
-      // horizontal seat: GAP of paper before the column, clamped to the room
-      let ext: number;
-      if (left) {
-        const want = mw + GAP - padL;
-        const room = base.left - railRight - 2;
-        ext = Math.min(want, room);
-        m.style.left = `${Math.round(-ext)}px`;
-        m.style.right = "";
-      } else {
-        const want = mw + GAP - padR;
-        const room = docW - base.right - 2;
-        ext = Math.min(want, room);
-        m.style.right = `${Math.round(-ext)}px`;
-        m.style.left = "";
-      }
-
-      // the leader, in the button's own (pre-transform) coordinates
-      const bx = m.offsetLeft;
-      const by = m.offsetTop - mh / 2;
-      const rot = (parseFloat(getComputedStyle(m).getPropertyValue("--r-rot")) || 0) * Math.PI / 180;
-      const cx = mw / 2, cy = mh / 2;
-      const toLocal = (wx: number, wy: number) => {
-        const vx = wx - bx - cx, vy = wy - by - cy;
-        const c = Math.cos(-rot), s = Math.sin(-rot);
-        return [cx + vx * c - vy * s, cy + vx * s + vy * c];
-      };
-      // start: the oval's lower inner quadrant (ellipse fitted to the path)
-      const rx = 0.442 * mw, ry = 0.39 * mh, ocy = 0.495 * mh;
-      const sx = left ? cx + rx * 0.766 : cx - rx * 0.766;
-      const sy = ocy + ry * 0.643;
-      // end: on the baseline, in the gutter (left) or past the last glyph (right)
-      let ex: number;
-      if (left) ex = r.left - 5 - base.left;
-      else ex = Math.min(r.right + 2, Math.max(line.right + 9, r.right - 56)) - base.left;
-      const [lx, ly] = toLocal(ex, baseline - 1 - base.top);
-      lead.setAttribute("d", leadPath(sx, sy, lx, ly, left ? 1 : -1));
     }
   };
 
@@ -334,27 +257,6 @@ const MARKS = [
     const sheetEl = document.querySelector(".print-resume");
     if (sheetEl) ro.observe(sheetEl);
     document.querySelectorAll(".pr-entry").forEach((e) => ro.observe(e));
-    // the marks themselves re-measure when their face loads (the leader
-    // hangs off the oval's edge, so a wider word moves its start point)
-    marks.forEach((m) => ro.observe(m));
-  }
-
-  // The pen: once, when the sheet enters the viewport, each oval is drawn
-  // (stroke-dashoffset 1 → 0 on a pathLength=1 path) and its leader is
-  // stroked after it, marks staggered 120ms apart. Under reduced motion
-  // nothing is armed: the ovals are simply present from the first paint.
-  const still = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
-  if (!still && wrap && "IntersectionObserver" in window) {
-    marks.forEach((m, i) => {
-      m.style.setProperty("--r-delay", `${i * 120}ms`);
-      m.setAttribute("data-draw", "");
-    });
-    const io = new IntersectionObserver((entries) => {
-      if (!entries.some((e) => e.isIntersecting)) return;
-      io.disconnect();
-      marks.forEach((m) => m.setAttribute("data-draw", "on"));
-    }, { threshold: 0 });
-    io.observe(wrap);
   }
 </script>
 
@@ -512,113 +414,101 @@ const MARKS = [
       color: var(--accent);
     }
 
-    /* ── the marks: a reader's red pen circling a word in the margin,
-       half on the paper, half on the desk ── */
+    /* ── the marks: index tabs cut from the sheet's outer edge (Jon,
+       2026-09-18; the pen ovals, leaders and words are retired). One
+       material, two channels, no redundancy: FILL is state — ink means
+       closed, paper means open — and DEPTH is the hand — 17px at rest,
+       24 under the pointer, 30 open. A tab's vertical centre sits on the
+       first line of the bullet it backs, so its position is the pointer.
+       Nothing to read on it; the word inside is the accessible name. ── */
     .r-mark {
       display: none;
     }
-    /* 1000px, not 900px: the marks hang off the sheet at `left/right: -30px`,
-       which pushed the document past the viewport from 900 to 999px
-       (horizontal overflow is this repo's most-recurring regression). Parity
-       begins at 1000px, so that is where the margin annotations turn on. */
+    .r-mark-word {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      overflow: hidden;
+      clip-path: inset(50%);
+      white-space: nowrap;
+    }
+    /* 1000px, not 900px: parity with the sheet's margins begins there
+       (900–999px left no room beside the fixed rail). */
     @media (min-width: 1000px) {
       .r-mark {
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
+        --tab-d: 17px;
+        --tab-h: 28px;
+        --tab-ink: #16161c;
+        --tab-paper: #ffffff;
+        display: block;
         position: absolute;
         z-index: 2;
-        padding: 7px 11px;
-        border: 0;
-        background: transparent;
+        box-sizing: border-box;
+        width: var(--tab-d);
+        height: var(--tab-h);
+        padding: 0;
+        border: 0 solid var(--tab-ink);
+        border-radius: 0;
+        background: var(--tab-ink);
         cursor: pointer;
-        color: var(--accent);
-        white-space: nowrap;
-        --r-rot: -2;
-        transform: translateY(-50%) rotate(-2deg);
+        transform: translateY(-50%);
         opacity: 0;
         visibility: hidden;
-        transition: opacity 300ms ease, transform 160ms ease;
+        transition:
+          width 160ms cubic-bezier(0.2, 0.7, 0.3, 1),
+          border-width 160ms cubic-bezier(0.2, 0.7, 0.3, 1),
+          background-color 140ms ease,
+          opacity 300ms ease;
       }
       .r-mark[data-placed] {
         opacity: 1;
         visibility: visible;
       }
-      /* the seat (left/right) is written by place(): GAP of paper before
-         the column, clamped to the room the rail / viewport leaves */
+      /* the seat: flush with the paper, overlapping its 1px border so tab
+         and sheet share one surface; the tab grows AWAY from the paper */
       .r-mark-left {
-        left: -30px;
+        right: calc(100% - 1px);
       }
       .r-mark-right {
-        right: -30px;
-        --r-rot: 1.6;
-        transform: translateY(-50%) rotate(1.6deg);
+        left: calc(100% - 1px);
       }
-      .r-mark-oval {
+      /* a ≥24×24 target without growing the drawn form */
+      .r-mark::after {
+        content: "";
         position: absolute;
-        inset: 0;
-        width: 100%;
-        height: 100%;
-        overflow: visible;
+        inset: -9px -7px;
       }
-      .r-mark-oval path,
-      .r-mark-lead path {
-        stroke-dasharray: 1;
-        stroke-dashoffset: 0;
+      .r-mark:hover,
+      .r-mark:focus-visible {
+        --tab-d: 24px;
       }
-      .r-mark-lead {
-        position: absolute;
-        left: 0;
-        top: 0;
-        width: 1px;
-        height: 1px;
-        overflow: visible;
-        pointer-events: none;
-        fill: none;
-        stroke: currentColor;
-        stroke-width: 1.3;
-        stroke-linecap: round;
+      /* open: the paper's own fill with a hard 2px ink edge on the three
+         OUTER sides; the inner side stays open — the page you pulled out */
+      .r-mark[aria-expanded="true"] {
+        --tab-d: 30px;
+        background: var(--tab-paper);
+        border-width: 2px;
       }
-      /* the pen draws: armed marks hold the stroke back until the sheet is
-         in view, then draw the oval and stroke the leader after it */
-      @media (prefers-reduced-motion: no-preference) {
-        .r-mark[data-draw] .r-mark-oval path,
-        .r-mark[data-draw] .r-mark-lead path {
-          stroke-dashoffset: 1;
-        }
-        .r-mark[data-draw="on"] .r-mark-oval path {
-          animation: r-pen 620ms cubic-bezier(0.55, 0.05, 0.35, 1) var(--r-delay, 0ms) forwards;
-        }
-        .r-mark[data-draw="on"] .r-mark-lead path {
-          animation: r-pen 240ms cubic-bezier(0.4, 0, 0.3, 1) calc(var(--r-delay, 0ms) + 600ms) forwards;
-        }
+      .r-mark-left[aria-expanded="true"] {
+        border-right-width: 0;
       }
-      @keyframes r-pen {
-        from { stroke-dashoffset: 1; }
-        to { stroke-dashoffset: 0; }
-      }
-      .r-mark-word {
-        font-family: "IBM Plex Mono", ui-monospace, monospace;
-        font-size: 9.7pt; /* = the sheet's body size (12.93px) */
-        letter-spacing: 0.05em;
-        line-height: 1;
-      }
-      .r-mark:hover {
-        transform: translateY(-50%) rotate(-2deg) scale(1.07);
-      }
-      .r-mark-right:hover {
-        transform: translateY(-50%) rotate(1.6deg) scale(1.07);
+      .r-mark-right[aria-expanded="true"] {
+        border-left-width: 0;
       }
       .r-mark:focus-visible {
-        outline: 2px solid var(--accent);
+        outline: 2px solid var(--tab-ink);
         outline-offset: 3px;
-        border-radius: 999px;
       }
-      .r-mark[aria-expanded="true"] {
-        color: #8c2417;
+      html[data-night] .r-mark {
+        --tab-ink: #e8ecf4;
+        --tab-paper: #0b0e14;
       }
-      html[data-night] .r-mark[aria-expanded="true"] {
-        color: #ff8a70;
+      /* the depth move is the whole motion; the states still differ,
+         they just arrive at once */
+      @media (prefers-reduced-motion: reduce) {
+        .r-mark {
+          transition: none;
+        }
       }
     }
 
@@ -646,25 +536,15 @@ const MARKS = [
        mode and as a hover preview from its mark */
     .print-resume li[data-lit-line],
     .print-resume li[data-hover-line] {
-      background: linear-gradient(
-        transparent 10%,
-        rgba(179, 58, 42, 0.12) 10%,
-        rgba(179, 58, 42, 0.12) 90%,
-        transparent 90%
-      );
-      border-radius: 2px;
+      background: rgba(22, 22, 28, 0.065);
+      border-radius: 0;
     }
     html[data-night] .print-resume li[data-lit-line],
     html[data-night] .print-resume li[data-hover-line] {
-      background: linear-gradient(
-        transparent 10%,
-        rgba(255, 90, 60, 0.16) 10%,
-        rgba(255, 90, 60, 0.16) 90%,
-        transparent 90%
-      );
+      background: rgba(232, 236, 244, 0.09);
     }
 
-    /* ── the dock: dark card under the sheet — the studio under the paper ── */
+    /* ── the dock: the dark slab under the parted paper — the studio under it ── */
     .proof-dock {
       /* panels float into the parted paper; the dock itself has no box */
       display: contents;
@@ -681,13 +561,12 @@ const MARKS = [
       z-index: 3;
       padding: clamp(16px, 3vw, 28px);
       background: #101216;
-      border: 1px solid rgba(160, 190, 230, 0.16);
-      border-radius: 8px;
-      box-shadow: 0 26px 60px -30px rgba(20, 12, 4, 0.5);
+      border: 1px solid rgba(160, 190, 230, 0.24);
+      border-radius: 0;
     }
     /* on the dark sheet the dark panel needs a firmer edge */
     html[data-night] .proof-panel {
-      border-color: rgba(160, 190, 230, 0.3);
+      border-color: rgba(160, 190, 230, 0.32);
     }
   }
 

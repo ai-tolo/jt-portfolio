@@ -200,14 +200,40 @@ const isPhone = (s: string) => /^\(?\d{3}\)?[\s.-]?\d{3}[\s.-]?\d{4}$/.test(s.tr
   .print-resume .pr-entry:last-child { margin-bottom: 0; }
   .print-resume .pr-entry-head { display: flex; justify-content: space-between; align-items: baseline; gap: 12pt; }
   .print-resume .pr-org { font-size: 10.5pt; font-weight: 700; letter-spacing: -0.005em; color: #16161c; }
-  /* an org with a case study IS the link to it (Jon, 2026-09-09): the
-     sheet's own red, same weight, underline only under the hand. Static
-     text in normal flow, so the ATS contract above holds; print puts it
-     back in the org ink (the PDF keeps the link annotation). */
-  .print-resume .pr-org-link { color: #B33A2A; text-decoration: none; }
-  .print-resume .pr-org-link:hover,
-  .print-resume .pr-org-link:focus-visible { text-decoration: underline; text-underline-offset: 2pt; text-decoration-thickness: 1pt; }
-  .print-resume .pr-org-link:focus-visible { outline: 2px solid #B33A2A; outline-offset: 3px; border-radius: 2px; }
+  /* an org with a case study IS the link to it (Jon, 2026-09-09). On
+     screen it is the org name in the document's own ink carrying a
+     hairline rule — red on this sheet means structure only (role, section
+     heads, bullet glyphs), never "click here" (Jon, 2026-09-18). Under the
+     hand the rule goes to full ink and doubles. Static text in normal
+     flow, so the ATS contract above holds; print puts it back in the org
+     ink with no rule (the PDF keeps the link annotation). */
+  @media screen {
+    .print-resume .pr-org-link {
+      color: #16161c;
+      text-decoration: underline;
+      text-decoration-color: rgba(22, 22, 28, 0.32);
+      text-decoration-thickness: 1px;
+      text-underline-offset: 3px;
+      text-decoration-skip-ink: none;
+      transition: text-decoration-color 140ms ease;
+    }
+    .print-resume .pr-org-link:hover,
+    .print-resume .pr-org-link:focus-visible { text-decoration-color: #16161c; text-decoration-thickness: 2px; }
+    .print-resume .pr-org-link:focus-visible { outline: 2px solid #16161c; outline-offset: 2px; }
+    /* the small "Interactive case study:" / "Play it:" links — the same
+       grammar one size down (print keeps its own rule below) */
+    .print-resume .pr-link a {
+      color: #16161c;
+      text-decoration: underline;
+      text-decoration-color: rgba(22, 22, 28, 0.32);
+      text-decoration-thickness: 1px;
+      text-underline-offset: 3px;
+      text-decoration-skip-ink: none;
+      transition: text-decoration-color 140ms ease;
+    }
+    .print-resume .pr-link a:hover,
+    .print-resume .pr-link a:focus-visible { text-decoration-color: #16161c; text-decoration-thickness: 2px; }
+  }
   @media print {
     .print-resume .pr-org-link,
     .print-resume .pr-org-link:hover,
@@ -224,7 +250,10 @@ const isPhone = (s: string) => /^\(?\d{3}\)?[\s.-]?\d{3}[\s.-]?\d{4}$/.test(s.tr
   .print-resume li:last-child { margin-bottom: 0; }
   .print-resume li::before { content: "\203A"; display: inline-block; width: 12pt; margin-left: -12pt; color: #B33A2A; font-weight: 700; }
   .print-resume .pr-link { font-size: 8.75pt; color: #56565e; margin-top: 4pt; }
-  .print-resume .pr-link a { color: #B33A2A; font-weight: 600; }
+  .print-resume .pr-link a { font-weight: 600; }
+  /* print keeps the sheet's red on these small links (the PDF asset is
+     unchanged); on screen they take the org-link grammar above */
+  @media print { .print-resume .pr-link a { color: #B33A2A; } }
 
   .print-resume .pr-edu-grid { display: grid; grid-template-columns: 1fr 1fr; column-gap: 26pt; }
   /* the phone stack must live HERE in the scoped block: the is:global
@@ -257,10 +286,14 @@ const isPhone = (s: string) => /^\(?\d{3}\)?[\s.-]?\d{3}[\s.-]?\d{4}$/.test(s.tr
     :global(html[data-night]) .print-resume .pr-role,
     :global(html[data-night]) .print-resume h2,
     :global(html[data-night]) .print-resume li::before,
-    :global(html[data-night]) .print-resume .pr-link a,
-    :global(html[data-night]) .print-resume .pr-org-link,
     :global(html[data-night]) .print-resume .pr-outside-k { color: #ff6a4e; }
-    :global(html[data-night]) .print-resume .pr-org-link:focus-visible { outline-color: #ff6a4e; }
+    :global(html[data-night]) .print-resume .pr-org-link,
+    :global(html[data-night]) .print-resume .pr-link a { color: #e8ecf4; text-decoration-color: rgba(232, 236, 244, 0.42); }
+    :global(html[data-night]) .print-resume .pr-org-link:hover,
+    :global(html[data-night]) .print-resume .pr-org-link:focus-visible,
+    :global(html[data-night]) .print-resume .pr-link a:hover,
+    :global(html[data-night]) .print-resume .pr-link a:focus-visible { text-decoration-color: #e8ecf4; }
+    :global(html[data-night]) .print-resume .pr-org-link:focus-visible { outline-color: #e8ecf4; }
     :global(html[data-night]) .print-resume .pr-header { border-bottom-color: #ff6a4e; }
     :global(html[data-night]) .print-resume .pr-contact,
     :global(html[data-night]) .print-resume .pr-pos,
