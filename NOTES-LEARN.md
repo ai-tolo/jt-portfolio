@@ -52,6 +52,12 @@ Ship = fast-forward main from ~/sites/jt-portfolio on Jon's "push it".
   Mechanics lifted from the parked `audio-shelf` branch; form is Jon's new
   design. Gate: build 0 · rest/open/preview/choose verified · night ·
   375 · sw==vw · no leftover clones.
+- R5 (2026-09-18): play's aurora ring removed from the rail (Jon: same as
+  the rest); `ethereal` field + CSS deleted.
+- 🚀 SHIPPED 2026-09-18 evening on Jon's "push it": main fast-forwarded
+  2b8c0ae → d45460e → d052c58 from ~/sites/jt-portfolio, pushed; backup ref
+  `backup/main-pre-2026-09-18b`. Live check on www.uxjon.com in the same
+  session (see memory).
 
 ## Assets
 | object | source | file | state |
