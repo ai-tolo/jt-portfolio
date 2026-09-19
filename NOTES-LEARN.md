@@ -16,16 +16,31 @@ Ship = fast-forward main from ~/sites/jt-portfolio on Jon's "push it".
   there) → `class:list`. Outfit font link added once in Layout.astro.
   Gate: build 0 · sw==vw at 1024 + 375 · night render looked at · 0 JS errors.
 
+- R2 (2026-09-18): Jon's `intake-hero.zip` (Claude Design) installed whole:
+  `src/components/IntakeHero.astro` + `src/data/intake-run.json` (memo
+  "Cinder 32", verbatim transcript, verdict surface, 2 task tickets) replace
+  the static watch in the room. At rest the watch is mid-recording; tap stop
+  → saved face → transcript types (24 ms/word) → verdict → ticket stubs →
+  both cards drop into the deck → replay. Host fit only: page inset dropped
+  (watch starts AT the column edge), width = the 1080 column, watch column
+  capped at min(521px, 76svh-tall). Integration edits to the module: the
+  site's `html[data-night]` joined its explicit dark selectors and the OS
+  prefers-color-scheme rule was dropped (the site is day until its switch).
+  Fonts (Instrument Sans · JetBrains Mono · Outfit) load once from
+  Layout.astro. `IntakeWatch.astro` stays in-tree, unused (the hero carries
+  its own watch). Gate: build 0 · full run completes (s1→s6) · sw==vw ·
+  fonts resolved.
+
 ## Assets
 | object | source | file | state |
 |---|---|---|---|
-| the Watch (Intake) | Claude Design, Jon | `src/components/IntakeWatch.astro` + `public/intake/watch-blank.png` (521×781, 1x) | LIVE in the room |
+| the Watch (Intake) | Claude Design, Jon | `src/components/IntakeHero.astro` + `src/data/intake-run.json` + `public/intake/watch-blank.png` (521×781, 1x); `IntakeWatch.astro` = static spare | LIVE in the room, runs on tap |
 | object 2 | Jon designs | — | pending |
 | object 3 | Jon designs | — | pending |
 Make-list: a 2x export of watch-blank.png (1042×1562) for retina; the PNG is
 soft above ~520px wide.
 
 ## Open
-- The click schema (what clicking the watch does, what Jon says, how he explains it).
+- The click is BUILT (the module). Open: where the locked story words print (under the run, per the module README: "put the prose directly under it"), and whether the verdict/tickets match what Intake actually did with Cinder 32 (`verdict` assumed surface).
 - Objects 2–3 (Console = the M1+T7 / library galaxy; Engineer = the phone-in-hand vote), per the job chat's layout Jon is not sold on.
 - Ship at the end or when it makes sense.
