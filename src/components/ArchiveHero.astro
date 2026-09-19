@@ -1,0 +1,724 @@
+---
+/**
+ * ArchiveHero — the second "work" room object.
+ * A photographed phone (public/archive/phone-blank.png, screen cut to alpha)
+ * with a live screen drawn in CSS. At rest: the stock Voice Memos list.
+ * A tap replays a real run: library → typed search → results → moment → kept.
+ *
+ * Everything on screen and on the rail is rendered at build time from
+ * src/data/archive-run.json. No counts are invented: a recordings count
+ * of 0 is simply not shown.
+ *
+ * Stage classes s1…s6 are added cumulatively to the <section> as the run
+ * advances (s3 means s1, s2 and s3 are all present). data-stage holds the
+ * current number. Removing them all returns the phone to rest.
+ */
+import run from '../data/archive-run.json';
+
+interface Props {
+  /** Render the headline and story paragraph inside the hero. Default true. */
+  story?: boolean;
+}
+const { story = true } = Astro.props;
+
+const { library, rest, query, results, moment } = run;
+
+const toSeconds = (clock: string | number): number => {
+  if (typeof clock === 'number') return clock;
+  return String(clock)
+    .split(':')
+    .map(Number)
+    .reduce((acc, v) => acc * 60 + v, 0);
+};
+const fmtClock = (sec: number): string => {
+  const m = Math.floor(sec / 60);
+  const s = Math.floor(sec % 60);
+  return `${m}:${String(s).padStart(2, '0')}`;
+};
+const fmtLen = (sec: number): string =>
+  sec >= 60 ? fmtClock(sec) : `${Number(sec.toFixed(1))}s`;
+
+const recordingsCount = Number(library.recordings) || 0;
+const countLabel = recordingsCount ? `${recordingsCount.toLocaleString('en-US')} recordings` : '';
+
+const momentSeconds = toSeconds(moment.duration);
+const [trimStart, trimEnd] = moment.trim;
+const trimLen = Math.max(0, trimEnd - trimStart);
+
+// The waveform shows `window` (seconds, optional). Without it, peaks span the whole recording.
+const m: Record<string, any> = moment;
+const win: [number, number] =
+  Array.isArray(m.window) && m.window.length === 2 ? [Number(m.window[0]), Number(m.window[1])] : [0, momentSeconds];
+const [winA, winB] = win;
+const winLen = Math.max(0.001, winB - winA);
+const clamp = (v: number) => Math.min(100, Math.max(0, v));
+const pctIn = (sec: number) => clamp(((sec - winA) / winLen) * 100);
+const trimA = pctIn(trimStart);
+const trimB = pctIn(trimEnd);
+const zoomed = winLen < momentSeconds - 0.5; // show the scope strip only when the window is a slice
+const scopeA = momentSeconds ? clamp((winA / momentSeconds) * 100) : 0;
+const scopeB = momentSeconds ? clamp((winB / momentSeconds) * 100) : 100;
+
+const peaks: number[] = Array.isArray(moment.peaks) ? moment.peaks : [];
+const bars = peaks.map((p, i) => {
+  const t = winA + ((i + 0.5) / peaks.length) * winLen;
+  const h = Math.max(2, Math.min(96, p * 96));
+  return { y: 50 - h / 2, h, inTrim: t >= trimStart && t <= trimEnd };
+});
+const waveWidth = Math.max(1, peaks.length) * 3;
+
+/** Split a transcript line around the first occurrence of the query. */
+const splitLine = (line: string): [string, string, string] => {
+  const i = line.toLowerCase().indexOf(query.toLowerCase());
+  if (i < 0 || !query) return [line, '', ''];
+  return [line.slice(0, i), line.slice(i, i + query.length), line.slice(i + query.length)];
+};
+const momentParts = splitLine(moment.line);
+const chars = Array.from(query);
+const hasClip = Boolean(moment.src);
+---
+
+<section
+  class="archive-hero"
+  data-archive-hero
+  data-stage="0"
+  data-query={query}
+  data-count={results.length}
+  data-title={moment.title}
+  data-trim={`${fmtClock(trimStart)} to ${fmtClock(trimEnd)}`}
+  data-kept={fmtLen(trimLen)}
+  data-clip={hasClip ? '1' : ''}
+>
+  <div class="grid">
+    {story && (
+      <div class="story">
+        <p class="kicker">
+          <span>Archive</span>
+          <span class="mono">{library.years}{countLabel ? ` · ${countLabel}` : ''}</span>
+        </p>
+        <h2 class="headline">Years of my life, trapped in files named ‘New Recording.’</h2>
+        <p class="lede">
+          I document with sound. Audio is how I remember. Recordings pile up as “New Recording 47” with a
+          timestamp and a duration and nothing else, technically saved, practically gone. So I built the
+          library I wished existed: every recording read and named by what’s actually inside it, transcripts
+          I can search the way people search photos, waveforms I can see, touch, trim, keep. The quote, the
+          laugh, the idea from three summers ago: seconds away now.
+        </p>
+      </div>
+    )}
+
+    <div class="stage">
+      <div class="phone">
+        <i class="shadow" aria-hidden="true"></i>
+
+        <div class="screen" aria-hidden="true">
+          <!-- AT REST: the stock list, as boring as it is -->
+          <div class="face face-rest">
+            <div class="vm-top"><span>Edit</span></div>
+            <p class="vm-title">All Recordings</p>
+            <div class="vm-search">
+              <svg viewBox="0 0 20 20" class="ico"><circle cx="8.5" cy="8.5" r="5.5" fill="none" stroke="currentColor" stroke-width="2"/><path d="M13 13l4.5 4.5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+              <span>Search</span>
+            </div>
+            <ul class="vm-list">
+              {rest.map((r) => (
+                <li class="vm-row">
+                  <span class="vm-name">{r.name}</span>
+                  <span class="vm-meta"><span>{r.date}</span><span class="mono">{r.duration}</span></span>
+                </li>
+              ))}
+            </ul>
+            <p class="vm-count">{recordingsCount ? `${recordingsCount.toLocaleString('en-US')} Recordings` : ''}</p>
+            <div class="vm-bar"><span class="vm-rec"></span></div>
+          </div>
+
+          <!-- THE RUN: the library -->
+          <div class="face face-lib">
+            <div class="lib-top">
+              <span class="lib-name">Library</span>
+              <span class="lib-meta mono">{library.years}{countLabel ? ` · ${countLabel}` : ''}</span>
+            </div>
+            <div class="lib-search">
+              <svg viewBox="0 0 20 20" class="ico"><circle cx="8.5" cy="8.5" r="5.5" fill="none" stroke="currentColor" stroke-width="2"/><path d="M13 13l4.5 4.5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+              <span class="q" data-query>
+                {chars.map((c, i) => <span class="ch" style={`--i:${i}`}>{c}</span>)}
+              </span>
+              <span class="caret"></span>
+              <span class="q-ph">Search transcripts</span>
+            </div>
+
+            <div class="lib-body">
+              <p class="lib-count">{results.length} {results.length === 1 ? 'match' : 'matches'} in transcripts</p>
+              <ul class="lib-results">
+                {results.map((r, i) => {
+                  const [pre, hit, post] = splitLine(r.line);
+                  return (
+                    <li class="res" style={`--i:${i}`}>
+                      <span class="res-title">{r.title}</span>
+                      <span class="res-meta"><span>{r.date}</span><span class="mono">{r.duration}</span></span>
+                      <span class="res-line">{pre}{hit && <mark>{hit}</mark>}{post}</span>
+                    </li>
+                  );
+                })}
+              </ul>
+
+              <div class="moment">
+                <div class="m-head">
+                  <span class="m-title">{moment.title}</span>
+                  <span class="m-meta"><span>{moment.date}</span><span class="mono">{moment.duration}</span></span>
+                </div>
+                {zoomed && (
+                  <div class="scope" style={`--sa:${scopeA}%; --sb:${scopeB}%`}>
+                    <i class="track"><b></b></i>
+                    <span class="mono">{moment.duration}</span>
+                  </div>
+                )}
+                <div class="ticks mono"><span>{fmtClock(winA)}</span><span>{fmtClock(winB)}</span></div>
+                <div class="wave" style={`--a:${trimA}%; --b:${trimB}%`}>
+                  <svg viewBox={`0 0 ${waveWidth} 100`} preserveAspectRatio="none">
+                    {bars.map((b, i) => (
+                      <rect x={i * 3} y={b.y} width="2" height={b.h} class={b.inTrim ? 'in' : undefined} style={`--i:${i}`} />
+                    ))}
+                  </svg>
+                  <span class="trim"><i class="h h-a"></i><i class="h h-b"></i></span>
+                  <span class="trim-time mono">{fmtClock(trimStart)} – {fmtClock(trimEnd)}</span>
+                </div>
+                <p class="m-line">{momentParts[0]}{momentParts[1] && <mark>{momentParts[1]}</mark>}{momentParts[2]}</p>
+                <div class="m-actions">
+                  <span class="kept">
+                    <svg viewBox="0 0 20 20" class="ico"><path d="M10 17s-6.5-4.1-6.5-8.6A3.6 3.6 0 0 1 10 6.3a3.6 3.6 0 0 1 6.5 2.1C16.5 12.9 10 17 10 17z" fill="currentColor"/></svg>
+                    Kept
+                  </span>
+                  <button
+                    class="play"
+                    type="button"
+                    data-play
+                    data-start={trimStart}
+                    data-end={trimEnd}
+                    aria-label={hasClip ? 'Play the kept moment' : 'No clip attached'}
+                    aria-disabled={hasClip ? undefined : 'true'}
+                    tabindex={hasClip ? undefined : -1}
+                  >
+                    <span class="play-ico">
+                      <svg viewBox="0 0 20 20" class="i-play"><path d="M6 3.5v13l10-6.5z" fill="currentColor"/></svg>
+                      <svg viewBox="0 0 20 20" class="i-pause"><path d="M5 4h3.5v12H5zM11.5 4H15v12h-3.5z" fill="currentColor"/></svg>
+                    </span>
+                    <span class="mono">{fmtLen(trimLen)}</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <img class="body" src="/archive/phone-blank.png" alt="" width="864" height="1760" decoding="async" loading="lazy" draggable="false" />
+
+        <button class="tap" type="button" data-tap aria-label={`Tap the list: search the library for “${query}”`}>
+          <span class="tap-label" aria-hidden="true">
+            <svg viewBox="0 0 20 20" class="ico"><path d="M4 10a6 6 0 1 0 1.8-4.3" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M4 3v3.5h3.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            Replay
+          </span>
+        </button>
+
+        {hasClip && <audio preload="metadata" src={moment.src}></audio>}
+      </div>
+      <p class="hint" aria-hidden="true">tap the list</p>
+    </div>
+
+    <ol class="rail" aria-label="The run, step by step">
+      <li class="step step-search">
+        <span class="label">search</span>
+        <span class="val">“{query}”</span>
+      </li>
+      <li class="step step-results">
+        <span class="label">results</span>
+        <span class="val">{results.length} {results.length === 1 ? 'recording' : 'recordings'}, named by what’s inside</span>
+        {results[0] && <span class="sub">first: {results[0].title}</span>}
+      </li>
+      <li class="step step-moment">
+        <span class="label">moment</span>
+        <span class="val">{moment.title}</span>
+        <span class="sub">{moment.date} · <span class="mono">{moment.duration}</span></span>
+      </li>
+      <li class="step step-kept">
+        <span class="label">kept</span>
+        <span class="val">{fmtLen(trimLen)}, <span class="mono">{fmtClock(trimStart)}–{fmtClock(trimEnd)}</span></span>
+        {hasClip && <span class="sub">play it on the phone</span>}
+      </li>
+    </ol>
+  </div>
+
+  <p class="sr" role="status" aria-live="polite" data-status></p>
+</section>
+
+<style>
+  /* ---------- tokens (remap to the site's if it has them) ---------- */
+  .archive-hero {
+    --ink: #141210;
+    --ground: #e9e8e5;
+    --accent: var(--archive-accent, #b9701a);
+    --char: 110ms; /* per-character typing delay; mirrored in the script */
+
+    --oled: #000;
+    --sfg: #f5f5f7;
+    --sdim: #98989e;
+    --sline: rgba(255, 255, 255, 0.14);
+    --sfield: #1c1c1e;
+    --sacc: #f2b25b;
+    --rec: #ff453a;
+
+    --sans: 'Instrument Sans', system-ui, sans-serif;
+    --mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+    --display: 'Outfit', var(--sans);
+
+    container-type: inline-size;
+    container-name: hero;
+    color: var(--ink);
+    font-family: var(--sans);
+  }
+  :global(html[data-night]) .archive-hero {
+    --ink: #e8ecf4;
+    --ground: #0b0e14;
+    --accent: var(--archive-accent-night, #f0b35c);
+  }
+
+  .mono { font-family: var(--mono); font-variant-numeric: tabular-nums; }
+  .sr {
+    position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0;
+    overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0;
+  }
+  .ico { width: 1em; height: 1em; flex: none; }
+
+  /* ---------- layout ---------- */
+  .grid {
+    display: grid;
+    grid-template-columns: minmax(0, 38%) minmax(0, 1fr);
+    grid-template-rows: auto 1fr;
+    grid-template-areas: 'phone story' 'phone rail';
+    column-gap: 7%;
+    row-gap: 3rem;
+    align-items: start;
+  }
+  .story { grid-area: story; }
+  .stage { grid-area: phone; }
+  .rail { grid-area: rail; align-self: end; }
+
+  /* ---------- story ---------- */
+  .kicker {
+    display: flex; flex-wrap: wrap; gap: 0.4em 1.2em; margin: 0 0 1rem;
+    font: 500 0.72rem/1 var(--mono); letter-spacing: 0.14em; text-transform: uppercase;
+    color: color-mix(in oklab, var(--ink) 62%, transparent);
+  }
+  .headline {
+    margin: 0 0 1rem;
+    font: 500 clamp(1.65rem, 3.4cqw, 2.6rem) / 1.08 var(--display);
+    letter-spacing: -0.015em;
+    text-wrap: balance;
+  }
+  .lede {
+    margin: 0; max-width: 36em;
+    font-size: clamp(0.98rem, 1.3cqw, 1.08rem); line-height: 1.55;
+    color: color-mix(in oklab, var(--ink) 84%, transparent);
+    text-wrap: pretty;
+  }
+
+  /* ---------- phone ---------- */
+  .phone {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 864 / 1760;
+    container-type: inline-size;
+    container-name: phone;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .shadow {
+    position: absolute; inset: 0.6% 1.2%; z-index: 0;
+    border-radius: 16.2% / 7.95%;
+    box-shadow: 0 2.2cqw 5cqw rgba(20, 16, 10, 0.26), 0 0.6cqw 1.4cqw rgba(20, 16, 10, 0.16);
+  }
+  :global(html[data-night]) .archive-hero .shadow {
+    box-shadow: 0 2.6cqw 6cqw rgba(0, 0, 0, 0.7), 0 0.6cqw 1.4cqw rgba(0, 0, 0, 0.5);
+  }
+  .screen {
+    position: absolute; z-index: 1;
+    left: 4.745%; top: 1.875%; width: 90.51%; height: 96.25%;
+    border-radius: 13.8% / 6.38%;
+    background: var(--oled);
+    color: var(--sfg);
+    overflow: hidden;
+    -webkit-font-smoothing: antialiased;
+  }
+  .body {
+    position: absolute; inset: 0; z-index: 2;
+    width: 100%; height: 100%;
+    pointer-events: none; user-select: none;
+  }
+  .tap {
+    position: absolute; z-index: 3;
+    left: 4.745%; top: 1.875%; width: 90.51%; height: 96.25%;
+    margin: 0; padding: 0; border: 0; background: transparent;
+    border-radius: 13.8% / 6.38%;
+    color: var(--sfg);
+    font: 500 3.5cqw/1 var(--sans);
+    cursor: pointer;
+  }
+  .tap:focus-visible { outline: 0.7cqw solid var(--sacc); outline-offset: -0.7cqw; }
+  .tap-label {
+    display: inline-flex; align-items: center; gap: 1.4cqw;
+    padding: 2.4cqw 4.6cqw; border-radius: 999px;
+    background: rgba(255, 255, 255, 0.14);
+    opacity: 0;
+  }
+  .tap-label .ico { width: 1.1em; height: 1.1em; }
+  .s1 .tap { pointer-events: none; cursor: default; }
+  .s6 .tap {
+    pointer-events: auto; cursor: pointer;
+    top: auto; left: 50%; width: auto; height: auto; bottom: 5.6%;
+    transform: translateX(-50%);
+    border-radius: 999px;
+  }
+  .s6 .tap:focus-visible { outline-offset: 0.4cqw; }
+  .s6 .tap-label { opacity: 1; transition: opacity 0.35s 0.25s; }
+
+  .hint {
+    margin: 1rem 0 0; text-align: center;
+    font: 500 0.68rem/1 var(--mono); letter-spacing: 0.16em; text-transform: uppercase;
+    color: color-mix(in oklab, var(--ink) 55%, transparent);
+    transition: opacity 0.3s;
+  }
+  .s1 .hint { opacity: 0; }
+
+  /* ---------- faces ---------- */
+  .face {
+    position: absolute; inset: 0;
+    display: flex; flex-direction: column;
+    padding: 13cqw 5.4cqw 0;
+    font-size: 3.9cqw; line-height: 1.25;
+  }
+  .face-lib { opacity: 0; transition: opacity 0.45s; }
+  .s1 .face-lib { opacity: 1; }
+  .face-rest { transition: opacity 0.45s; }
+  .s1 .face-rest { opacity: 0; }
+  .rewind .face-lib { opacity: 0 !important; }
+  .rewind .face-rest { opacity: 1 !important; }
+
+  /* Voice Memos, deadpan */
+  .vm-top { display: flex; justify-content: flex-end; color: var(--rec); font-size: 3.9cqw; margin-bottom: 1.2cqw; }
+  .vm-title { margin: 0 0 3cqw; font-size: 7.6cqw; font-weight: 700; letter-spacing: -0.02em; line-height: 1.1; }
+  .vm-search {
+    display: flex; align-items: center; gap: 1.6cqw;
+    padding: 1.9cqw 2.6cqw; border-radius: 2.4cqw;
+    background: var(--sfield); color: var(--sdim);
+    margin-bottom: 1.6cqw;
+  }
+  .vm-list { list-style: none; margin: 0; padding: 0; }
+  .vm-row { display: grid; gap: 0.9cqw; padding: 2.7cqw 0; border-bottom: 1px solid var(--sline); }
+  .vm-name { font-weight: 500; }
+  .vm-meta { display: flex; justify-content: space-between; font-size: 3.3cqw; color: var(--sdim); }
+  .vm-count { margin: auto 0 0; padding: 3cqw 0; text-align: center; font-size: 3.2cqw; color: var(--sdim); min-height: 3.2cqw; }
+  .vm-bar {
+    margin: 0 -5.4cqw; padding: 3.2cqw 0 6.5cqw;
+    background: var(--sfield);
+    display: flex; justify-content: center;
+  }
+  .vm-rec {
+    width: 13cqw; height: 13cqw; border-radius: 50%;
+    background: var(--rec);
+    box-shadow: 0 0 0 1cqw var(--sfield), 0 0 0 1.6cqw #f5f5f7;
+  }
+
+  /* the library */
+  .lib-top { display: flex; justify-content: space-between; align-items: baseline; gap: 2cqw; margin-bottom: 2.6cqw; }
+  .lib-name { font-size: 5.4cqw; font-weight: 600; letter-spacing: -0.01em; }
+  .lib-meta { font-size: 2.8cqw; font-weight: 500; letter-spacing: 0.04em; color: var(--sdim); }
+  .lib-search {
+    display: flex; align-items: center; gap: 1.6cqw;
+    min-height: 8.4cqw; padding: 1.9cqw 2.6cqw; border-radius: 2.4cqw;
+    background: var(--sfield); color: var(--sfg);
+  }
+  .lib-search .ico { color: var(--sdim); }
+  .q { display: inline-flex; white-space: pre; }
+  .ch { display: inline-block; max-width: 0; opacity: 0; }
+  .s2 .ch {
+    max-width: 1.6em; opacity: 1;
+    transition: max-width 0s calc(var(--i) * var(--char)), opacity 0s calc(var(--i) * var(--char));
+  }
+  .caret { display: none; width: 0.11em; height: 1.05em; margin-left: 0.08em; background: var(--sacc); }
+  .s2 .caret { display: block; animation: blink 1s steps(1, end) infinite; }
+  .s3 .caret { display: none; }
+  .q-ph { color: var(--sdim); }
+  .s2 .q-ph { display: none; }
+  @keyframes blink { 50% { opacity: 0; } }
+
+  .lib-body { position: relative; flex: 1; min-height: 0; }
+  .lib-count { position: absolute; top: 0; left: 0; margin: 0; padding-top: 2.6cqw; font-size: 3cqw; color: var(--sdim); opacity: 0; }
+  .s3 .lib-count { opacity: 1; transition: opacity 0.3s; }
+  .s4 .lib-count { opacity: 0; }
+  .lib-results { position: absolute; inset: 7.4cqw 0 0; list-style: none; margin: 0; padding: 0; }
+  .s4 .lib-results { opacity: 0; transition: opacity 0.3s; }
+  .res {
+    display: grid; gap: 1cqw; padding: 2.9cqw 0;
+    border-bottom: 1px solid var(--sline);
+    opacity: 0; transform: translateY(2cqw);
+  }
+  .s3 .res {
+    opacity: 1; transform: none;
+    transition: opacity 0.4s calc(var(--i) * 110ms), transform 0.55s cubic-bezier(0.2, 0.8, 0.2, 1) calc(var(--i) * 110ms);
+  }
+  .res-title { font-weight: 600; }
+  .res-meta, .m-meta { display: flex; gap: 1.6cqw; font-size: 3.1cqw; color: var(--sdim); }
+  .res-line { font-size: 3.4cqw; line-height: 1.35; color: #c7c7cc; }
+  .res-line::before, .m-line::before { content: '“'; }
+  .res-line::after, .m-line::after { content: '”'; }
+  mark { background: transparent; color: var(--sacc); font-weight: 600; }
+
+  .moment {
+    position: absolute; inset: 0;
+    display: flex; flex-direction: column; gap: 2.2cqw;
+    padding: 1.6cqw 0 14cqw;
+    opacity: 0; transform: translateY(3cqw); pointer-events: none;
+  }
+  .s4 .moment {
+    opacity: 1; transform: none; pointer-events: auto;
+    transition: opacity 0.45s 0.25s, transform 0.55s 0.25s cubic-bezier(0.2, 0.8, 0.2, 1);
+  }
+  .m-head { display: grid; gap: 1cqw; }
+  .m-title { font-size: 4.3cqw; font-weight: 600; line-height: 1.2; }
+  .scope { display: flex; align-items: center; gap: 2.4cqw; margin: 2.2cqw 0 0; opacity: 0; }
+  .scope .track { position: relative; flex: 1; height: 0.7cqw; border-radius: 1cqw; background: rgba(255, 255, 255, 0.12); }
+  .scope b { position: absolute; top: -0.5cqw; bottom: -0.5cqw; left: var(--sa); width: calc(var(--sb) - var(--sa)); border-radius: 1cqw; background: var(--sdim); }
+  .scope span { font-size: 2.5cqw; color: var(--sdim); }
+  .s4 .scope { opacity: 1; transition: opacity 0.3s 0.55s; }
+  .ticks { display: flex; justify-content: space-between; margin-top: 3.4cqw; font-size: 2.5cqw; color: var(--sdim); opacity: 0; }
+  .s4 .ticks { opacity: 1; transition: opacity 0.3s 0.45s; }
+  .wave { position: relative; height: 22cqw; margin: 1.2cqw 0 5cqw; }
+  .wave svg { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; color: #6e6e73; }
+  .wave rect { fill: currentColor; transform-box: fill-box; transform-origin: center; transform: scaleY(0.08); }
+  .wave rect.in { fill: var(--sacc); }
+  .s4 .wave rect { transform: none; transition: transform 0.45s cubic-bezier(0.2, 0.8, 0.2, 1) calc(var(--i) * 7ms); }
+  .trim {
+    position: absolute; top: -1.2cqw; bottom: -1.2cqw;
+    left: var(--a); width: calc(var(--b) - var(--a));
+    background: color-mix(in oklab, var(--sacc) 14%, transparent);
+    border-inline: 0.5cqw solid var(--sacc); border-radius: 0.8cqw;
+    opacity: 0;
+  }
+  .trim .h { position: absolute; top: 50%; width: 1.6cqw; height: 5cqw; border-radius: 1cqw; background: var(--sacc); transform: translateY(-50%); }
+  .trim .h-a { left: -1.05cqw; }
+  .trim .h-b { right: -1.05cqw; }
+  .s4 .trim { opacity: 1; transition: opacity 0.35s 0.65s; }
+  .trim-time {
+    position: absolute; top: 100%; left: clamp(0%, var(--a), 72%);
+    margin-top: 1.8cqw; font-size: 2.7cqw; font-weight: 500; color: var(--sacc); white-space: nowrap;
+    opacity: 0;
+  }
+  .s4 .trim-time { opacity: 1; transition: opacity 0.35s 0.8s; }
+  .m-line {
+    margin: 0; padding: 2.4cqw 2.8cqw; border-radius: 2cqw;
+    background: #141416; font-size: 3.8cqw; line-height: 1.4;
+  }
+  .m-line mark { background: color-mix(in oklab, var(--sacc) 28%, transparent); border-radius: 0.6cqw; padding: 0 0.4cqw; }
+
+  .m-actions { display: flex; align-items: center; gap: 2.4cqw; margin-top: 1.2cqw; }
+  .kept {
+    display: inline-flex; align-items: center; gap: 1.2cqw;
+    padding: 1.7cqw 2.9cqw; border-radius: 999px;
+    border: 0.4cqw solid var(--sacc); color: var(--sacc);
+    font-size: 3.2cqw; font-weight: 600; line-height: 1;
+    opacity: 0; transform: scale(0.85);
+  }
+  .s5 .kept { opacity: 1; transform: none; transition: opacity 0.3s, transform 0.45s cubic-bezier(0.2, 0.9, 0.3, 1.35); }
+  .play {
+    display: inline-flex; align-items: center; gap: 1.8cqw; margin-left: auto;
+    padding: 0; border: 0; background: transparent; color: var(--sfg);
+    font-size: 3.1cqw; font-weight: 500; line-height: 1; cursor: pointer;
+    opacity: 0; border-radius: 999px;
+  }
+  .play:focus-visible { outline: 0.6cqw solid var(--sacc); outline-offset: 0.6cqw; }
+  .play-ico { display: grid; place-items: center; width: 9cqw; height: 9cqw; border-radius: 50%; background: var(--sfg); color: #000; }
+  .play-ico svg { width: 50%; height: 50%; }
+  .play .i-pause { display: none; }
+  .play.is-playing .i-play { display: none; }
+  .play.is-playing .i-pause { display: block; }
+  .play .i-play { margin-left: 8%; }
+  .s5 .play { opacity: 1; transition: opacity 0.35s 0.55s; }
+  .s5 .play[aria-disabled='true'] { opacity: 0.32; cursor: default; }
+
+  /* ---------- rail ---------- */
+  .rail {
+    position: relative; list-style: none; margin: 0; padding: 0;
+    display: grid; row-gap: 1.6rem;
+  }
+  .rail::before {
+    content: ''; position: absolute; left: 0.28rem; top: 0.9rem; bottom: 0.9rem; width: 1px;
+    background: color-mix(in oklab, var(--ink) 16%, transparent);
+  }
+  .step {
+    position: relative; display: grid; row-gap: 0.3rem; padding-left: 1.7rem;
+    opacity: 0.42; transition: opacity 0.4s;
+  }
+  .step::before {
+    content: ''; position: absolute; left: 0; top: 0.12rem;
+    width: 0.58rem; height: 0.58rem; border-radius: 50%;
+    box-sizing: border-box; border: 1.5px solid currentColor; background: var(--ground);
+    transition: background 0.3s, border-color 0.3s, box-shadow 0.3s;
+  }
+  .label {
+    font: 500 0.68rem/1 var(--mono); letter-spacing: 0.16em; text-transform: uppercase;
+    color: color-mix(in oklab, var(--ink) 66%, transparent);
+  }
+  .val { font-size: 1rem; line-height: 1.35; }
+  .sub { font-size: 0.82rem; line-height: 1.35; color: color-mix(in oklab, var(--ink) 66%, transparent); }
+  .s2 .step-search, .s3 .step-results, .s4 .step-moment, .s5 .step-kept { opacity: 1; }
+  .s2 .step-search::before, .s3 .step-results::before, .s4 .step-moment::before, .s5 .step-kept::before {
+    background: var(--accent); border-color: var(--accent);
+  }
+  .s2:not(.s3) .step-search::before, .s3:not(.s4) .step-results::before,
+  .s4:not(.s5) .step-moment::before, .s5 .step-kept::before {
+    box-shadow: 0 0 0 4px color-mix(in oklab, var(--accent) 22%, transparent);
+  }
+
+  /* ---------- one column under 820px of container width ---------- */
+  @container hero (width < 820px) {
+    .grid {
+      grid-template-columns: minmax(0, 1fr);
+      grid-template-rows: auto;
+      grid-template-areas: 'story' 'phone' 'rail';
+      row-gap: 2.5rem;
+    }
+    .phone { width: min(100%, 78cqw); margin-inline: auto; }
+    .rail { align-self: start; }
+  }
+
+  /* ---------- reduced motion: no typing, no travel, short fades ---------- */
+  @media (prefers-reduced-motion: reduce) {
+    .face-lib, .face-rest, .s4 .lib-results { transition-duration: 0.2s; }
+    .s2 .ch { transition-delay: 0s; }
+    .s2 .caret { animation: none; }
+    .res, .moment, .kept { transform: none; }
+    .s3 .res, .s4 .moment, .s5 .kept { transition: opacity 0.2s; }
+    .wave rect { transform: none; }
+    .s4 .wave rect { transition: none; }
+    .s4 .trim, .s4 .trim-time, .s4 .ticks, .s4 .scope, .s5 .play, .s6 .tap-label { transition: opacity 0.2s; }
+    .hint, .step, .step::before { transition: none; }
+  }
+</style>
+
+<script>
+  /* Drives every [data-archive-hero] on the page. Plain JS, no framework. */
+  const STAGES = ['s1', 's2', 's3', 's4', 's5', 's6'];
+  const CHAR_MS = 110; // keep equal to --char in the styles
+
+  // Offsets (ms) at which each stage class is added.
+  function schedule(chars, reduced) {
+    const t1 = 0;
+    const t2 = t1 + (reduced ? 450 : 800);
+    const t3 = t2 + (reduced ? 0 : chars * CHAR_MS) + (reduced ? 500 : 650);
+    const t4 = t3 + (reduced ? 900 : 1750);
+    const t5 = t4 + (reduced ? 900 : 1800);
+    const t6 = t5 + (reduced ? 900 : 1600);
+    return [t1, t2, t3, t4, t5, t6];
+  }
+
+  function init(root) {
+    if (root.dataset.ready) return;
+    root.dataset.ready = '1';
+
+    const tap = root.querySelector('[data-tap]');
+    const status = root.querySelector('[data-status]');
+    const play = root.querySelector('[data-play]');
+    const audio = root.querySelector('audio');
+    if (!tap) return;
+
+    const chars = root.querySelectorAll('[data-query] .ch').length;
+    const reduce = window.matchMedia('(prefers-reduced-motion: reduce)');
+    const d = root.dataset;
+    const messages = {
+      1: 'Library open.',
+      3: `${d.count} ${d.count === '1' ? 'recording' : 'recordings'} found for “${d.query}”, named by what’s inside.`,
+      4: `Opened “${d.title}”. Trim marked, ${d.trim}.`,
+      5: `Moment kept, ${d.kept}.${d.clip ? ' Play is available.' : ''}`,
+      6: 'Run complete. Tap to replay.',
+    };
+
+    let timers = [];
+    let running = false;
+    let playing = false;
+
+    const say = (msg) => {
+      if (!status || !msg) return;
+      status.textContent = '';
+      window.setTimeout(() => { status.textContent = msg; }, 30);
+    };
+    const clear = () => { timers.forEach(clearTimeout); timers = []; };
+    const restLabel = tap.getAttribute('aria-label') || '';
+
+    const stopClip = () => {
+      if (!audio || !play) return;
+      audio.pause();
+      playing = false;
+      play.classList.remove('is-playing');
+      play.setAttribute('aria-label', 'Play the kept moment');
+    };
+
+    const setStage = (n) => {
+      root.classList.add(STAGES[n - 1]);
+      root.dataset.stage = String(n);
+      say(messages[n]);
+      if (n === 6) {
+        running = false;
+        tap.removeAttribute('aria-disabled');
+        tap.setAttribute('aria-label', 'Replay the run');
+      }
+    };
+
+    const run = () => {
+      if (running) return;
+      running = true;
+      clear();
+      stopClip();
+      tap.setAttribute('aria-disabled', 'true');
+      tap.setAttribute('aria-label', restLabel);
+
+      // Replay: fade the library out to the stock list first, then start clean.
+      const replaying = root.classList.contains('s6');
+      const lead = replaying ? (reduce.matches ? 220 : 480) : 0;
+      if (replaying) root.classList.add('rewind');
+
+      timers.push(window.setTimeout(() => {
+        root.classList.remove('rewind', ...STAGES);
+        root.dataset.stage = '0';
+        schedule(chars, reduce.matches).forEach((t, i) => {
+          timers.push(window.setTimeout(() => setStage(i + 1), t));
+        });
+      }, lead));
+    };
+
+    tap.addEventListener('click', run);
+
+    /* Playback: only when the JSON gave the moment a src. Otherwise the button stays quiet. */
+    if (audio && play && play.getAttribute('aria-disabled') !== 'true') {
+      const a = Number(play.dataset.start) || 0;
+      const b = Number(play.dataset.end) || Infinity;
+      const seekAndPlay = () => {
+        try { audio.currentTime = a; } catch (e) { /* metadata not ready; play from start */ }
+        audio.play().then(() => {
+          playing = true;
+          play.classList.add('is-playing');
+          play.setAttribute('aria-label', 'Pause');
+        }).catch(() => { /* autoplay policy or missing file: stay quiet */ });
+      };
+      play.addEventListener('click', () => {
+        if (playing) { stopClip(); return; }
+        if (audio.readyState >= 1) seekAndPlay();
+        else audio.addEventListener('loadedmetadata', seekAndPlay, { once: true });
+      });
+      audio.addEventListener('timeupdate', () => { if (playing && audio.currentTime >= b) stopClip(); });
+      audio.addEventListener('ended', stopClip);
+    }
+  }
+
+  const initAll = () => document.querySelectorAll('[data-archive-hero]').forEach(init);
+  initAll();
+  document.addEventListener('astro:page-load', initAll); // no-op unless the ClientRouter is in use
+</script>

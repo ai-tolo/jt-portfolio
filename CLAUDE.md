@@ -146,8 +146,13 @@ session must follow.
   hero (`IntakeHero.astro` + `src/data/intake-run.json`; its memo cue
   "Cinder 32" is Intake's real alias for capture 31, length 3:52, seven
   tickets of which the module shows two). Object two = the Archive
-  (`src/data/archive-run.json` is mined and TRUE; the module comes from
-  Jon's Claude Design prompt). Inks come from the section-local
+  (`ArchiveHero.astro` with `story={false}` — the room frames it with the
+  locked words — + `src/data/archive-run.json`, mined TRUE from the M1:
+  Voice Memos' own titles at rest, the "laugh" search's eight real hits,
+  the kept trim = the loudest 8 s of the opened recording by RMS, a
+  17 s window each side, 80 peaks; `src` null so play stays dimmed).
+  Objects stack in `.objects` with the room gap between them
+  (`.wk + .wk`). Rail words are set flush RIGHT (2026-09-18). Inks come from the section-local
   `--mx-ink`/`--mx-dim` pair on `.work` (day = `.one`'s --ink/--dim, night
   override = --night-ink/--night-dim) — never a hardcoded ink there
   (`.one` shadows the global --ink, so plain `var(--ink)` does NOT flip).

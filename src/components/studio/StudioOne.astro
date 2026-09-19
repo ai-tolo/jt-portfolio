@@ -22,7 +22,8 @@ import Transport from "../Transport.astro";
 import Carousel from "../Carousel.astro";
 import { BUILDS } from "./builds-copy";
 import IntakeHero from "../IntakeHero.astro";
-import { WATCH_COPY } from "./objects-copy";
+import ArchiveHero from "../ArchiveHero.astro";
+import { WATCH_COPY, ARCHIVE_COPY } from "./objects-copy";
 
 // The one-liner. Jon rewrites this string at will (his voice: plain,
 // human-centered function; explicitly NOT music-dramatic).
@@ -164,6 +165,7 @@ const MARKS = [
 const SHOW = new Set(MARKS.map((m) => m.id));
 // the watch piece's locked words (headline + paragraphs) frame its object
 const WATCH = BUILDS.find((b) => b.id === "watch")!;
+const ARCHIVE = BUILDS.find((b) => b.id === "archive")!;
 ---
 
 <a class="skip" href="#work">Skip to the work</a>
@@ -276,6 +278,21 @@ const WATCH = BUILDS.find((b) => b.id === "watch")!;
         <p class="wk-cap">{WATCH_COPY.caption}</p>
         <div class="wk-read">
           {WATCH.blocks.map((blk) => blk.type === "p" && <p class="wk-p" set:html={blk.html} />)}
+        </div>
+      </article>
+      {/* object two: THE ARCHIVE (Jon's Claude Design module, 2026-09-18) —
+          the phone at rest is the stock Voice Memos list; a tap searches
+          the real library. The words around it are the locked archive
+          piece; the module's own story is off (story={false}) */}
+      <article class="wk" id="build-archive">
+        <header class="wk-head">
+          <h3 class="wk-hook">{ARCHIVE.headline}</h3>
+          <p class="wk-dek">{ARCHIVE_COPY.dek}</p>
+        </header>
+        <ArchiveHero story={false} />
+        <p class="wk-cap">{ARCHIVE_COPY.caption}</p>
+        <div class="wk-read">
+          {ARCHIVE.blocks.map((blk) => blk.type === "p" && <p class="wk-p" set:html={blk.html} />)}
         </div>
       </article>
     </div>
@@ -636,12 +653,13 @@ const WATCH = BUILDS.find((b) => b.id === "watch")!;
     border-right: 1px solid rgba(20, 18, 16, 0.14);
   }
   .rail-item {
-    /* the word alone, flush left (Jon, 2026-09-18: no emojis in the nav) */
+    /* the word alone, set RIGHT against the rail's edge (Jon, 2026-09-18:
+       no emojis, text justified right) */
     display: flex;
     align-items: center;
-    justify-content: flex-start;
+    justify-content: flex-end;
     width: 94px;
-    padding: 11px 8px 11px 12px;
+    padding: 11px 14px 11px 8px;
     border-radius: 11px;
     text-decoration: none;
     font-family: "IBM Plex Mono", ui-monospace, monospace;
@@ -1157,8 +1175,16 @@ const WATCH = BUILDS.find((b) => b.id === "watch")!;
   }
   .objects {
     display: flex;
-    align-items: center;
+    flex-direction: column;
+    align-items: flex-start;
     justify-content: flex-start;
+  }
+  /* the same air between two objects as between two rooms */
+  .wk + .wk {
+    margin-top: clamp(96px, 18vh, 200px);
+  }
+  .work :global(.archive-hero) {
+    width: min(100%, 1080px);
   }
   /* the words around the object: the hook and the read wear the ledger's
      type (Jon's approved hook size; 62ch reads), the dek and the caption

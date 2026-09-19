@@ -102,6 +102,23 @@ soft above ~520px wide.
 - (4) nav words only; the phone bar's moon/sun = drawn glyphs.
 - (5) résumé corner fixed on desks; résumé item in the phone bar.
 
+## R6 (2026-09-18 late): the ARCHIVE lands + rail flush right
+- `archive-hero.zip` (Jon, Claude Design) installed whole: `ArchiveHero.astro`,
+  `public/archive/phone-blank.png` (864×1760, screen cut to alpha). Wired as
+  object two under the watch with `story={false}`; the room frames it with the
+  locked archive headline + DRAFT dek/caption (objects-copy.ts) + the four
+  locked paragraphs. `.wk + .wk` carries the room gap between objects.
+- Data: my mined `archive-run.json` replaced the placeholders. The module
+  destructures `moment.trim`, so a real trim was derived on the M1: loudest
+  8 s by RMS (2:40–2:48 of the 5:15 "wyd vocal room" recording), window
+  2:23–3:05, 80 peaks. Rest-list dates fixed to LOCAL time (the Core Data
+  epoch read as UTC put two late-night memos on the next day). Play stays
+  dimmed (`src` null) until Jon says a clip plays.
+- Jon's cut: the watch dek loses "inside a small system I own…".
+- Rail words justify RIGHT (flex-end, 14px off the rail's edge).
+- Gate: build 0 · run stage 6 (8 results, kept 8s, 2:40 to 2:48, play
+  aria-disabled) · 12 rest rows · phone 375 sw==vw (module 361 wide at 14px).
+
 ## Open
 - The click is BUILT (the module). Open: where the locked story words print (under the run, per the module README: "put the prose directly under it"), and whether the verdict/tickets match what Intake actually did with Cinder 32 (`verdict` assumed surface).
 - Objects 2–3 (Console = the M1+T7 / library galaxy; Engineer = the phone-in-hand vote), per the job chat's layout Jon is not sold on.
