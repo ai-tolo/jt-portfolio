@@ -121,6 +121,8 @@ soft above ~520px wide.
 - R7 (2026-09-18 late): the watch's four paragraphs re-installed VERBATIM
   from Jon's chat text (builds-copy.ts; headline + dek unchanged). Build 0,
   words present in dist.
+- R8 (2026-09-19): the archive's four paragraphs re-installed VERBATIM from
+  Jon's chat text (builds-copy.ts; headline unchanged). Build 0.
 
 ## Open
 - The click is BUILT (the module). Open: where the locked story words print (under the run, per the module README: "put the prose directly under it"), and whether the verdict/tickets match what Intake actually did with Cinder 32 (`verdict` assumed surface).

@@ -41,22 +41,23 @@ export const BUILDS: BuildPiece[] = [
     name: "the archive",
     draft: false,
     headline: 'Years of my life, trapped in files named "New Recording."',
+    // paragraphs re-installed VERBATIM from Jon's chat text, 2026-09-19
     blocks: [
       {
         type: "p",
-        html: "I document with sound. Where other people reach for the camera, I hit record: ideas hummed into a phone, songs starting in parking lots, laughter I didn't want to lose. Audio is how I remember.",
+        html: "I record everything. That's my line, anyway, delivered to a friend right after they've said something they'll regret. The truth is less menacing. A college class called Sound Studies is where I started noticing how much of a moment lives in the sound of it, and I've been hitting record ever since: an idea hummed into my phone, a song starting in a parking lot, a laugh I wasn't ready to lose.",
       },
       {
         type: "p",
-        html: "The problem is that our tech treats sound like a second-class memory. Photos get faces, places, search. Recordings get a timestamp and a duration. Mine piled up for years across phones, laptops, and drives: hundreds of moments, technically saved, practically gone. Every so often I'd stumble into one and be wrecked by how good it felt to be back there. Then I wouldn't find another one for a year.",
+        html: "My phone never caught on. Photos get faces, places, and search. Recordings get a date, a duration, and a name like New Recording 47. Mine spent years that way, hundreds of them, spread across phones and laptops and drives: technically saved, practically gone. Every so often I'd open one by accident and be wrecked by how good it felt to be back there. Then a year would pass before I found another.",
       },
       {
         type: "p",
-        html: "So I built the library I wished existed. Every recording read and named by what's actually inside it. Transcripts I can search the way everyone else searches their photos. Waveforms I can see, touch, trim, keep. The quote, the laugh, the idea from three summers ago: seconds away now.",
+        html: "I built the library I kept expecting someone to sell me. Every recording is listened to and named for what's actually in it. Every word is searchable, the way everyone else searches their photos. Every waveform is something I can see, touch, trim, and keep. The quote, the laugh, the idea from three summers ago: seconds away now.",
       },
       {
         type: "p",
-        html: "The archive stopped being storage. It became a place I go.",
+        html: "The Archive stopped being storage. It's somewhere I go.",
       },
       {
         type: "media",
