@@ -118,6 +118,9 @@ soft above ~520px wide.
 - Rail words justify RIGHT (flex-end, 14px off the rail's edge).
 - Gate: build 0 · run stage 6 (8 results, kept 8s, 2:40 to 2:48, play
   aria-disabled) · 12 rest rows · phone 375 sw==vw (module 361 wide at 14px).
+- R7 (2026-09-18 late): the watch's four paragraphs re-installed VERBATIM
+  from Jon's chat text (builds-copy.ts; headline + dek unchanged). Build 0,
+  words present in dist.
 
 ## Open
 - The click is BUILT (the module). Open: where the locked story words print (under the run, per the module README: "put the prose directly under it"), and whether the verdict/tickets match what Intake actually did with Cinder 32 (`verdict` assumed surface).

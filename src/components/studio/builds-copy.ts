@@ -131,22 +131,23 @@ export const BUILDS: BuildPiece[] = [
     name: "the watch",
     draft: false,
     headline: "My best ideas never survived the walk to the computer.",
+    // paragraphs re-installed VERBATIM from Jon's chat text, 2026-09-18 late
     blocks: [
       {
         type: "p",
-        html: "Ideas don't wait until you're at a desk. Mine show up on the couch, at the window, halfway through a walk: fully formed, in my own voice, ready to go. Capturing one used to mean killing the moment it came from. Sit down. Open a screen. Fight voice-to-text. Shrink the thought into a note, clean up the note, and only then tell the machine what to do. Half my ideas didn't survive the trip.",
+        html: "My best ideas show up while I'm doing something else. They arrive whole, in my own voice, and they do not care that I'm on a walk. For years, keeping one meant going to find a screen, which is the same as leaving the room the idea lives in. By the time I'd typed it, fought the autocorrect, and shaped it into something a machine could act on, I had a note about an idea. The idea itself had left.",
       },
       {
         type: "p",
-        html: "Now I talk to my watch. That's the whole gesture. I stay where the thought found me and say it while it's still alive. A system I own catches it, understands it, and files it into what it wanted to be: a task, a calendar event, a change to make. By the time I sit back down, my thinking is already work.",
+        html: "Now I raise my wrist and say it. Tap stop. The watch says saved. That's all I do. Behind it, a small system I wrote takes the recording, writes down exactly what I said, decides what kind of thing it is (something to do, something to show me later, something to keep) and puts it where it goes: a task, a calendar entry, a note. I keep walking. The work is already moving.",
       },
       {
         type: "p",
-        html: "The device I needed famously doesn't exist to buy. I looked: rings on preorder, mics that die by lunch, wearables that fail one simple sentence: record when I say record, keep what I said. Building it myself took a weekend, because the hard parts (the transcription, the server, the understanding) were already mine, humming in a closet.",
+        html: "I tried to buy this. Humane's AI Pin overheated, died before lunch, and then the servers went dark. The Limitless Pendant came closest, until Meta bought it and stopped selling it. Bee records everything, which is less listening than surveillance with a summary. The Stream Ring has the right gesture and has been \"shipping this summer\" since last November. Every one of them wanted to be a companion. I wanted a button. Record when I say record. Keep what I said.",
       },
       {
         type: "p",
-        html: "The distance between thinking something and it happening has collapsed to the length of a sentence. This very page was partly built that way.",
+        html: "So I took an old Apple Watch, deleted everything else it could do, and left it that one job. Building the rest took a weekend.",
       },
       {
         type: "media",
