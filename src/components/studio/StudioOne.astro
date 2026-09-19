@@ -34,6 +34,31 @@ const etchAsset = ["etch.svg", "etch.webp", "etch.png"].filter(exists).map((f) =
 interface Track { src: string | null; title: string; note?: string; year?: number; duration?: string; peaks?: string | null; cover?: string | null; tint?: string | null; }
 const tracks: Track[] = ((soundlab as any).tracks ?? []).filter((t: Track) => t.src);
 
+// ── STAND-INS FOR THE PAD (dev only; Jon asked for dummy tapes to test with,
+// 2026-09-10): with one real track the wallet holds one sleeve, so in
+// `astro dev` (import.meta.env.DEV) the shelf fills to 12 stand-ins that
+// reuse the real side's src + peaks under their own titles (tints derive
+// from titles, so each gets its own colour) and short, varied notes.
+// SHELF_FILL overrides the count either way (`SHELF_FILL=0` in dev = the
+// production truth). Vercel's build has neither, so prod ships the real tapes.
+const shelfFillRaw = import.meta.env.SHELF_FILL ?? process.env.SHELF_FILL;
+const SHELF_FILL =
+  shelfFillRaw !== undefined && String(shelfFillRaw).trim() !== "" ? Number(shelfFillRaw) : import.meta.env.DEV ? 12 : 0;
+const STAND_IN_NOTES = [
+  "a stand-in: the same side again, under another label.",
+  "a stand-in tape. it plays the first side — the wallet, the preview and the room's reserve are what this one is for, not the sound.",
+  "a stand-in with a longer note, so the placard runs to three lines on a desk and the tape still holds its y across the deck. the side is the same as the first; only the label and these words differ.",
+  "a stand-in with the longest note the placard is asked to hold: four lines on a desk, more on a phone. it plays the first side again. the point is the room — does the placard, the tape and the rail all fit inside one viewport with this much to read above the deck, at every size?",
+  "a stand-in. one line.",
+  "a stand-in: two lines of note here, enough to push the tape down a little and check that the rail still lands where the loaded tapes' rails land.",
+];
+if (tracks.length > 0 && Number.isFinite(SHELF_FILL)) {
+  const real = tracks[0];
+  for (let n = tracks.length + 1; n <= SHELF_FILL; n++) {
+    tracks.push({ ...real, title: `Stand-in ${String(n).padStart(2, "0")}`, note: STAND_IN_NOTES[(n - 2) % STAND_IN_NOTES.length], cover: null, tint: null });
+  }
+}
+
 // ── TAPE TINT (2026-09-09, Jon: "the fill should automatically populate
 // with different colors, to add identity to each tape"). Every cassette's
 // label gets its own colour at build time. IDENTITY = the title: FNV-1a of
@@ -289,43 +314,97 @@ const SHOW = new Set(MARKS.map((m) => m.id));
       keys appear only once there are two tapes. Transport + Carousel
       mechanics are untouched: the tape's button clicks the Transport's
       own (hidden) toggle, and the deck's keys drive the chassis buttons.
-      A manifest `cover` now prints ON the label. */}
+      A manifest `cover` now prints ON the label. 2026-09-18 (Jon): the deck
+      is EMPTY by default (slide 0, a blank tape); the dropdown is a
+      MINIATURE TAPE at the placard's left — press it and the tapes drop
+      down under it as a vertical strip of sleeves, a wallet's photo
+      insert; hovering a sleeve prints that tape's title and note into the
+      placard; pressing one loads it into the deck, where the tape itself
+      is the play switch. */}
   {SHOW.has("soundlab") && <section class="room" id="soundlab" aria-labelledby="soundlab-t"><div class="au">
     <h2 id="soundlab-t" class="sr-only">Listen</h2>
-    <Carousel count={tracks.length} label="Music" accent="var(--ember)" mode="dissolve">
+    <Carousel count={tracks.length + 1} label="Music" accent="var(--ember)" mode="dissolve">
+      {/* slide 0: the EMPTY DECK — the shell with its label unprinted, its
+          window dark, hubs still; an empty placard behind a blank mini; a
+          dead rail; the tape button inert (Jon, 2026-09-18: blank by default) */}
+      <article class="ls ls-blank" data-ls-blank>
+        <div class="ls-head" data-ls-placard data-wl>
+          <button class="wl-pick" type="button" aria-haspopup="listbox" aria-expanded="false" aria-controls="wl-strip-0" aria-label="Tapes" data-wl-pick>
+            <span class="mini" aria-hidden="true">
+              <span class="mini-label"></span>
+              <img class="mini-shell" src="/studio/tape-shell-800.webp" width="1600" height="979" alt="" loading="eager" decoding="async" />
+            </span>
+          </button>
+          <ul class="wl-strip" id="wl-strip-0" role="listbox" aria-label="Tapes" hidden data-wl-strip>
+              {tapes.map(({ t: u, fill: f }, k) => (
+                <li class="wl-sleeve" role="option" aria-selected={k + 1 === 0 ? "true" : "false"} tabindex="-1" data-wl-option={String(k)}
+                  style={`--mini-tint:${f.day};--mini-tint-night:${f.night};--k:${k}`}>
+                  <span class="mini" aria-hidden="true">
+                    <span class="mini-label">{u.cover && <img src={u.cover} alt="" loading="lazy" decoding="async" />}</span>
+                    <img class="mini-shell" src="/studio/tape-shell-800.webp" width="1600" height="979" alt="" loading="lazy" decoding="async" />
+                  </span>
+                  <span class="sr-only">{u.title}</span>
+                </li>
+              ))}
+          </ul>
+          <div class="ls-words">
+            <h3 class="ls-title" data-ls-title aria-hidden="true"></h3>
+            <p class="ls-note" data-ls-note></p>
+          </div>
+        </div>
+        <button class="cs" type="button" disabled aria-label="Empty deck">
+          <span class="cs-label" aria-hidden="true"></span>
+          <img class="cs-hub cs-hub-l" src="/studio/tape-hub-l.webp" width="300" height="300" alt="" loading="eager" decoding="async" />
+          <img class="cs-hub cs-hub-r" src="/studio/tape-hub-r.webp" width="300" height="300" alt="" loading="eager" decoding="async" />
+          <img class="cs-reel cs-reel-l" src="/studio/tape-core-l.webp" width="194" height="194" alt="" loading="eager" decoding="async" />
+          <img class="cs-reel cs-reel-r" src="/studio/tape-core-r.webp" width="194" height="194" alt="" loading="eager" decoding="async" />
+          <span class="cs-screen" aria-hidden="true"></span>
+          <img class="cs-shell" src="/studio/tape-shell-800.webp"
+            srcset="/studio/tape-shell-800.webp 800w, /studio/tape-shell-1600.webp 1600w"
+            sizes="(max-width: 720px) calc(100vw - 28px), 760px"
+            width="1600" height="979" alt="" loading="eager" decoding="async" />
+        </button>
+        <div class="ls-deck ls-deck-dead" aria-hidden="true"><i class="ls-rail"></i></div>
+      </article>
       {tapes.map(({ t, fill }, i) => (
         <article class="ls" style={`--cs-tint:${fill.day};--cs-tint-night:${fill.night}`}>
-          {/* the title is the shelf: press it and the tapes list under it,
-              each with its own label colour; choosing one turns the
-              carousel (Jon, 2026-09-09: a drop-down instead of arrows
-              and dots) */}
-          <div class="ls-head">
-            <h3 class="ls-title">
-              <button class="ls-pick" type="button" aria-haspopup="listbox" aria-expanded="false" aria-controls={`ls-menu-${i}`} data-cs-pick>
-                <span class="ls-pick-name">{t.title}</span>
-                <svg class="ls-pick-mark" viewBox="0 0 16 16" aria-hidden="true"><path d="M3.5 6 8 10.5 12.5 6" /></svg>
-              </button>
-            </h3>
-            <ul class="ls-menu" id={`ls-menu-${i}`} role="listbox" aria-label="Tapes" hidden data-cs-menu>
+          {/* the placard: the wallet's mini (this tape, small) at the left,
+              the title and the note beside it; a sleeve's hover or focus
+              previews another tape's words here (data-preview) */}
+          <div class="ls-head" data-ls-placard data-wl>
+            <button class="wl-pick" type="button" aria-haspopup="listbox" aria-expanded="false" aria-controls={`wl-strip-${i + 1}`} aria-label="Tapes" data-wl-pick
+              style={`--mini-tint:${fill.day};--mini-tint-night:${fill.night}`}>
+              <span class="mini" aria-hidden="true">
+                <span class="mini-label">{t.cover && <img src={t.cover} alt="" loading="lazy" decoding="async" />}</span>
+                <img class="mini-shell" src="/studio/tape-shell-800.webp" width="1600" height="979" alt="" loading="lazy" decoding="async" />
+              </span>
+            </button>
+            <ul class="wl-strip" id={`wl-strip-${i + 1}`} role="listbox" aria-label="Tapes" hidden data-wl-strip>
               {tapes.map(({ t: u, fill: f }, k) => (
-                <li class="ls-option" role="option" aria-selected={k === i ? "true" : "false"} tabindex="-1" data-cs-option={String(k)}
-                  style={`--cs-chip:${f.day};--cs-chip-night:${f.night}`}>
-                  <span class="ls-chip" aria-hidden="true"></span>
-                  <span class="ls-option-name">{u.title}</span>
+                <li class="wl-sleeve" role="option" aria-selected={k + 1 === i + 1 ? "true" : "false"} tabindex="-1" data-wl-option={String(k)}
+                  style={`--mini-tint:${f.day};--mini-tint-night:${f.night};--k:${k}`}>
+                  <span class="mini" aria-hidden="true">
+                    <span class="mini-label">{u.cover && <img src={u.cover} alt="" loading="lazy" decoding="async" />}</span>
+                    <img class="mini-shell" src="/studio/tape-shell-800.webp" width="1600" height="979" alt="" loading="lazy" decoding="async" />
+                  </span>
+                  <span class="sr-only">{u.title}</span>
                 </li>
               ))}
             </ul>
+            <div class="ls-words">
+              <h3 class="ls-title" data-ls-title>{t.title}</h3>
+              <p class="ls-note" data-ls-note>{t.note}</p>
+            </div>
           </div>
-          {t.note && <p class="ls-note">{t.note}</p>}
           <button class="cs" type="button" data-cs-tape aria-label={`Play ${t.title}`}>
             <span class="cs-label" aria-hidden="true">
-              {t.cover && <img src={t.cover} alt="" loading={i === 0 ? "eager" : "lazy"} decoding="async" />}
+              {t.cover && <img src={t.cover} alt="" loading="lazy" decoding="async" />}
             </span>
             {/* under the shell's cut-outs: the two hubs (a still base, a turning core) and the display */}
-            <img class="cs-hub cs-hub-l" src="/studio/tape-hub-l.webp" width="300" height="300" alt="" loading={i === 0 ? "eager" : "lazy"} decoding="async" />
-            <img class="cs-hub cs-hub-r" src="/studio/tape-hub-r.webp" width="300" height="300" alt="" loading={i === 0 ? "eager" : "lazy"} decoding="async" />
-            <img class="cs-reel cs-reel-l" src="/studio/tape-core-l.webp" width="194" height="194" alt="" loading={i === 0 ? "eager" : "lazy"} decoding="async" />
-            <img class="cs-reel cs-reel-r" src="/studio/tape-core-r.webp" width="194" height="194" alt="" loading={i === 0 ? "eager" : "lazy"} decoding="async" />
+            <img class="cs-hub cs-hub-l" src="/studio/tape-hub-l.webp" width="300" height="300" alt="" loading="lazy" decoding="async" />
+            <img class="cs-hub cs-hub-r" src="/studio/tape-hub-r.webp" width="300" height="300" alt="" loading="lazy" decoding="async" />
+            <img class="cs-reel cs-reel-l" src="/studio/tape-core-l.webp" width="194" height="194" alt="" loading="lazy" decoding="async" />
+            <img class="cs-reel cs-reel-r" src="/studio/tape-core-r.webp" width="194" height="194" alt="" loading="lazy" decoding="async" />
             <span class="cs-screen" aria-hidden="true">
               <svg class="cs-go" viewBox="0 0 32 32"><path d="M9 5.5v21l17.5-10.5z" /></svg>
               <span class="cs-time" data-cs-time></span>
@@ -333,7 +412,7 @@ const SHOW = new Set(MARKS.map((m) => m.id));
             <img class="cs-shell" src="/studio/tape-shell-800.webp"
               srcset="/studio/tape-shell-800.webp 800w, /studio/tape-shell-1600.webp 1600w"
               sizes="(max-width: 720px) calc(100vw - 28px), 760px"
-              width="1600" height="979" alt="" loading={i === 0 ? "eager" : "lazy"} decoding="async" />
+              width="1600" height="979" alt="" loading="lazy" decoding="async" />
           </button>
           <div class="ls-deck">
             <Transport src={t.src!} peaks={t.peaks ?? undefined} title={t.title} accent="var(--ember)" compact />
@@ -1230,6 +1309,11 @@ const SHOW = new Set(MARKS.map((m) => m.id));
   .au :global(.car-nav) {
     display: none;
   }
+  /* the wallet's strip drops over the deck: the chassis must not clip it
+     (dissolve mode never translates the track, so nothing else escapes) */
+  .au :global(.car-view) {
+    overflow: visible;
+  }
   /* the slide: placard rows, then the tape's row, then the machine. The
      carousel stretches every slide to the tallest, and the machine row
      sits at the BOTTOM of that box (the tape closes up against it), so the
@@ -1249,7 +1333,7 @@ const SHOW = new Set(MARKS.map((m) => m.id));
     --cs-vw: 100%;
     --cs-w: min(760px, 100%, var(--cs-vw), calc((100svh - var(--cs-reserve)) * 1.634));
     display: grid;
-    grid-template-rows: auto auto 1fr auto;
+    grid-template-rows: auto 1fr auto;
     padding: 0;
   }
   @media (max-width: 899px) {
@@ -1263,10 +1347,25 @@ const SHOW = new Set(MARKS.map((m) => m.id));
     }
   }
 
-  /* the placard: above the tape, on the column's left edge (Jon's mock).
-     The title is a button — the shelf's menu hangs from it */
+  /* the placard: above the tape, on the column's left edge (Jon's mock) —
+     THE WALLET's mini at the left (this tape, small: the shell render over
+     dark plastic over its tint at the label geometry; blank paper on the
+     empty deck), the title and the note beside it. The mini is exactly one
+     title line tall. Press it and the STRIP drops under it: the tapes as
+     sleeves in a recessed pocket, one mini each, seams between (a wallet's
+     photo insert), unfolding top-down. Hover / focus on a sleeve previews
+     that tape's words in the placard in the dim ink (data-preview) */
   .ls-head {
+    --mini-w: calc(1.2 * clamp(1.5rem, 2.4vw, 2rem) * 1.634);
+    --mini-h: calc(var(--mini-w) / 1.634);
     position: relative;
+    min-width: 0;
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    column-gap: 16px;
+    align-items: start;
+  }
+  .ls-words {
     min-width: 0;
   }
   .ls-title {
@@ -1280,61 +1379,84 @@ const SHOW = new Set(MARKS.map((m) => m.id));
     color: var(--au-ink);
     overflow-wrap: anywhere;
   }
-  .ls-pick {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.4em;
-    max-width: 100%;
+  .ls-head[data-preview] .ls-title,
+  .ls-head[data-preview] .ls-note {
+    color: var(--au-dim);
+  }
+  /* the mini: the cassette, small — plastic, label, shell */
+  .mini {
+    position: relative;
+    display: block;
+    width: var(--mini-w);
+    aspect-ratio: 1600 / 979;
+    border-radius: calc(var(--mini-w) * 0.0375); /* the shell's own corner */
+    background: var(--night); /* the plastic: a photographed object's own dark, never flips */
+    overflow: hidden;
+  }
+  .mini-label {
+    position: absolute;
+    left: 5.95%;
+    top: 8.65%;
+    width: 87.95%;
+    height: 59.85%;
+    /* the tape's tint; unprinted paper when no tape is in (the empty deck) */
+    background: var(--mini-tint, color-mix(in srgb, var(--au-ink) 14%, var(--bg)));
+    overflow: hidden;
+  }
+  :global(html[data-night]) .mini-label {
+    background: var(--mini-tint-night, color-mix(in srgb, var(--au-ink) 14%, var(--bg)));
+  }
+  .mini-label img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+  .mini-shell {
+    position: relative;
+    display: block;
+    width: 100%;
+    height: auto;
+    pointer-events: none;
+  }
+  /* the pick: the mini as a button; hover lifts, a press seats */
+  .wl-pick {
+    display: block;
     margin: 0;
     padding: 0;
     border: 0;
     background: none;
-    font: inherit;
-    letter-spacing: inherit;
     color: inherit;
-    text-align: left;
     cursor: pointer;
+    border-radius: calc(var(--mini-w) * 0.0375);
     -webkit-tap-highlight-color: transparent;
+    transition: transform 70ms cubic-bezier(0.2, 0.7, 0.3, 1);
   }
-  .ls-pick-name {
-    min-width: 0;
-    overflow-wrap: anywhere;
+  .wl-pick:hover,
+  .wl-pick[aria-expanded="true"] {
+    transform: translateY(-2px);
   }
-  .ls-pick-mark {
-    flex: none;
-    width: 0.55em;
-    height: 0.55em;
-    fill: none;
-    stroke: var(--au-dim);
-    stroke-width: 1.6;
-    stroke-linecap: round;
-    stroke-linejoin: round;
-    transition: transform 160ms ease, stroke 120ms ease;
+  .wl-pick:active {
+    transform: translateY(1px);
   }
-  .ls-pick:hover .ls-pick-mark,
-  .ls-pick:focus-visible .ls-pick-mark,
-  .ls-pick[aria-expanded="true"] .ls-pick-mark {
-    stroke: var(--au-ink);
-  }
-  .ls-pick[aria-expanded="true"] .ls-pick-mark {
-    transform: rotate(180deg);
-  }
-  .ls-pick:focus-visible {
+  .wl-pick:focus-visible {
     outline: 1px solid var(--au-ink);
-    outline-offset: 6px;
+    outline-offset: 4px;
   }
-  /* the shelf: the tapes in a recessed pane under the title, each with
-     its label colour as a chip; the current one in full ink */
-  .ls-menu {
+  /* the strip: a recessed pocket under the mini, the sleeves stacked with
+     a seam between each, dropping over the deck */
+  .wl-strip {
     position: absolute;
     z-index: 6;
-    top: calc(100% + 10px);
+    top: calc(var(--mini-h) + 10px);
     left: 0;
-    min-width: min(100%, 22ch);
-    max-width: 100%;
     margin: 0;
-    padding: 6px 0;
+    padding: 4px;
     list-style: none;
+    display: flex;
+    flex-direction: column;
+    max-height: calc(100svh - var(--mini-h) - 180px);
+    overflow-y: auto;
     background: var(--au-pane);
     border: 1px solid var(--au-seam);
     border-radius: 2px;
@@ -1342,45 +1464,97 @@ const SHOW = new Set(MARKS.map((m) => m.id));
       inset 0 1px 0 var(--au-seam),
       0 14px 28px -14px color-mix(in srgb, var(--au-ink) 40%, transparent);
   }
-  .ls-option {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    padding: 9px 16px 9px 14px;
-    font-family: "IBM Plex Mono", ui-monospace, monospace;
-    font-size: 0.92rem;
-    line-height: 1.3;
-    letter-spacing: 0.01em;
-    color: var(--au-dim);
+  .wl-strip[hidden] {
+    display: none; /* the author display above would beat the attribute */
+  }
+  /* on a desk the strip hangs to the LEFT of the mini, top-aligned with it,
+     in the empty ground beside the column — never over the tape (Jon,
+     2026-09-18); the column's left margin has the room from ~1160px up,
+     below that it drops under the mini */
+  @media (min-width: 1160px) {
+    .wl-strip {
+      top: 0;
+      left: auto;
+      right: calc(100% + 12px);
+      max-height: calc(100svh - 120px);
+    }
+  }
+  /* the chosen sleeve's mini flies into the slot (a clone, then gone) */
+  .wl-fly {
+    position: absolute;
+    z-index: 7;
+    pointer-events: none;
+    transition: transform 260ms cubic-bezier(0.2, 0.7, 0.3, 1);
+  }
+  .wl-sleeve {
+    padding: 5px;
+    border-top: 1px solid var(--au-seam);
     cursor: pointer;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
+    -webkit-tap-highlight-color: transparent;
   }
-  .ls-option[aria-selected="true"] {
-    color: var(--au-ink);
+  .wl-sleeve:first-child {
+    border-top: 0;
   }
-  .ls-option:hover,
-  .ls-option:focus-visible {
-    color: var(--au-ink);
+  .wl-sleeve:hover,
+  .wl-sleeve:focus-visible {
     background: color-mix(in srgb, var(--au-ink) 6%, var(--bg));
     outline: none;
   }
-  .ls-chip {
-    flex: none;
-    width: 14px;
-    height: 9px;
-    border-radius: 1.5px;
-    background: var(--cs-chip);
-    box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--au-ink) 18%, transparent);
+  .wl-sleeve:focus-visible .mini {
+    outline: 1px solid var(--au-ink);
+    outline-offset: 1px;
   }
-  :global(html[data-night]) .ls-chip {
-    background: var(--cs-chip-night);
+  /* the tape already in the deck: a ghost in its sleeve */
+  .wl-sleeve[aria-selected="true"] .mini {
+    opacity: 0.4;
   }
-  .ls-option-name {
-    min-width: 0;
-    overflow: hidden;
-    text-overflow: ellipsis;
+  @media (prefers-reduced-motion: no-preference) {
+    .wl-strip:not([hidden]) {
+      transform-origin: 50% 0;
+      animation: wl-open 160ms cubic-bezier(0.2, 0.7, 0.3, 1) both;
+    }
+    .wl-strip:not([hidden]) .wl-sleeve {
+      animation: wl-drop 220ms cubic-bezier(0.2, 0.7, 0.3, 1) both;
+      animation-delay: calc(var(--k, 0) * 28ms);
+    }
+  }
+  @keyframes wl-open {
+    from { opacity: 0; transform: scaleY(0.94); }
+    to { opacity: 1; transform: none; }
+  }
+  @keyframes wl-drop {
+    from { opacity: 0; transform: translateY(-6px); }
+    to { opacity: 1; transform: none; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .wl-pick {
+      transition: none;
+    }
+  }
+  /* the empty deck: its tape is inert (no press, no seat), its label is
+     UNPRINTED — the faintest value step of the room's ink over the ground
+     (the tint arrives with a tape) — and its rail is DEAD: the same 44px
+     band and hairline, no tick, so the blank tape holds the loaded tapes' y */
+  .ls-blank .cs {
+    cursor: default;
+  }
+  .ls-blank .cs:active {
+    transform: none;
+  }
+  .ls-blank .cs-label,
+  :global(html[data-night]) .ls-blank .cs-label {
+    background: color-mix(in srgb, var(--au-ink) 6%, var(--bg));
+  }
+  .ls-deck-dead {
+    height: 44px;
+    display: flex;
+    align-items: center;
+  }
+  .ls-rail {
+    display: block;
+    width: 100%;
+    height: 1px;
+    background: var(--au-hair);
   }
   .ls-note {
     margin: 10px 0 0;
@@ -2347,44 +2521,98 @@ const SHOW = new Set(MARKS.map((m) => m.id));
         audio.addEventListener("ended", say);
       }
     });
-    // ── the title is the shelf's menu: press → the tapes list under it;
-    // choose → the chassis turns (car:show); Esc / outside / Tab close.
-    // Every slide carries the same list; car:change keeps them in step.
+    // ── THE WALLET (2026-09-18, Jon): the dropdown is a miniature tape at
+    // the placard's left; press it and the tapes drop down under it as a
+    // vertical strip of sleeves. Hover / focus on a sleeve prints that
+    // tape's title and note into the placard (data-preview → the dim ink);
+    // choosing one loads it into the deck (car:show k + 1 — slide 0 is the
+    // empty deck), where the tape itself is the play switch. Every slide
+    // carries its own wallet; car:change keeps them in step. A mouse press
+    // opens without moving focus (a hover is the preview); the keyboard
+    // opens INTO the strip. Esc / outside / Tab close.
     const auCar = auRoom.querySelector<HTMLElement>("[data-carousel]");
     const auSlides = Array.from(auRoom.querySelectorAll<HTMLElement>(".ls"));
-    const auMenus = auSlides.map((ls) => ({
-      ls,
-      pick: ls.querySelector<HTMLButtonElement>("[data-cs-pick]"),
-      menu: ls.querySelector<HTMLElement>("[data-cs-menu]"),
-      options: Array.from(ls.querySelectorAll<HTMLElement>("[data-cs-option]")),
+    const wallets = auSlides.map((ls) => ({
+      head: ls.querySelector<HTMLElement>("[data-ls-placard]"),
+      title: ls.querySelector<HTMLElement>("[data-ls-title]"),
+      note: ls.querySelector<HTMLElement>("[data-ls-note]"),
+      pick: ls.querySelector<HTMLButtonElement>("[data-wl-pick]"),
+      strip: ls.querySelector<HTMLElement>("[data-wl-strip]"),
+      options: Array.from(ls.querySelectorAll<HTMLElement>("[data-wl-option]")),
     }));
+    // each slide's own words, kept so a preview can be undone
+    const own = wallets.map((w) => ({ title: w.title?.textContent ?? "", note: w.note?.textContent ?? "" }));
+    let active = 0;
+    const print = (slide: number, words: number, preview: boolean) => {
+      const w = wallets[slide];
+      const o = own[words];
+      if (!w || !o) return;
+      if (w.title) w.title.textContent = o.title;
+      if (w.note) w.note.textContent = o.note;
+      w.head?.toggleAttribute("data-preview", preview);
+    };
+    const restore = () => print(active, active, false);
+    // sleeve k holds tape k, which lives in slide k + 1; the tape already
+    // in the deck is no preview — the words are the slide's own
+    const preview = (k: number) => (k + 1 === active ? restore() : print(active, k + 1, true));
     const closeAll = (focusPick = false) =>
-      auMenus.forEach((m) => {
-        if (!m.pick || !m.menu || m.menu.hidden) return;
-        m.menu.hidden = true;
-        m.pick.setAttribute("aria-expanded", "false");
-        if (focusPick) m.pick.focus();
+      wallets.forEach((w) => {
+        if (!w.pick || !w.strip || w.strip.hidden) return;
+        w.strip.hidden = true;
+        w.pick.setAttribute("aria-expanded", "false");
+        if (focusPick) w.pick.focus();
       });
-    auMenus.forEach((m) => {
-      const { pick, menu, options } = m;
-      if (!pick || !menu) return;
-      const open = () => {
+    const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    // the chosen sleeve's mini takes the slot: a clone slides from the
+    // sleeve to the pick while the deck prints (it rides the departing
+    // slide, so the crossfade retires it as the new slide's mini arrives)
+    const fly = (k: number) => {
+      const w = wallets[active];
+      const from = w?.options[k]?.querySelector<HTMLElement>(".mini");
+      const to = w?.pick?.querySelector<HTMLElement>(".mini");
+      if (reduce || !w?.head || !from || !to) return;
+      const hb = w.head.getBoundingClientRect();
+      const fb = from.getBoundingClientRect();
+      const tb = to.getBoundingClientRect();
+      const ghost = from.cloneNode(true) as HTMLElement;
+      ghost.classList.add("wl-fly");
+      ghost.style.left = `${fb.left - hb.left}px`;
+      ghost.style.top = `${fb.top - hb.top}px`;
+      const opt = w.options[k];
+      ghost.style.setProperty("--mini-tint", opt.style.getPropertyValue("--mini-tint"));
+      ghost.style.setProperty("--mini-tint-night", opt.style.getPropertyValue("--mini-tint-night"));
+      w.head.appendChild(ghost);
+      requestAnimationFrame(() => (ghost.style.transform = `translate(${tb.left - fb.left}px, ${tb.top - fb.top}px)`));
+      ghost.addEventListener("transitionend", () => ghost.remove(), { once: true });
+      window.setTimeout(() => ghost.remove(), 700);
+    };
+    const choose = (k: number) => {
+      if (k + 1 !== active) fly(k);
+      closeAll();
+      if (k + 1 !== active) auCar?.dispatchEvent(new CustomEvent("car:show", { detail: { index: k + 1 } }));
+      requestAnimationFrame(() => wallets[k + 1]?.pick?.focus());
+    };
+    const isTouch = (e: PointerEvent) => e.pointerType === "touch";
+    wallets.forEach((w) => {
+      const { pick, strip, options } = w;
+      if (!pick || !strip) return;
+      const open = (into: boolean) => {
         closeAll();
-        menu.hidden = false;
+        strip.hidden = false;
         pick.setAttribute("aria-expanded", "true");
-        (options.find((o) => o.getAttribute("aria-selected") === "true") ?? options[0])?.focus();
+        if (into) (options.find((o) => o.getAttribute("aria-selected") === "true") ?? options[0])?.focus();
       };
-      pick.addEventListener("click", () => (menu.hidden ? open() : closeAll(true)));
+      // a keyboard "click" (Enter / Space) arrives with detail 0
+      pick.addEventListener("click", (e) => (strip.hidden ? open(e.detail === 0) : closeAll(true)));
       pick.addEventListener("keydown", (e) => {
-        if (e.key === "ArrowDown" || e.key === "ArrowUp") { e.preventDefault(); open(); }
+        if (e.key === "ArrowDown" || e.key === "ArrowUp") { e.preventDefault(); open(true); }
       });
-      const choose = (k: number) => {
-        closeAll();
-        auCar?.dispatchEvent(new CustomEvent("car:show", { detail: { index: k } }));
-        requestAnimationFrame(() => auMenus[k]?.pick?.focus());
-      };
       options.forEach((o, k) => {
         o.addEventListener("click", () => choose(k));
+        o.addEventListener("pointerenter", (e) => { if (!isTouch(e)) preview(k); });
+        o.addEventListener("pointerleave", (e) => { if (!isTouch(e)) restore(); });
+        o.addEventListener("focus", () => preview(k));
+        o.addEventListener("blur", restore);
         o.addEventListener("keydown", (e) => {
           const n = options.length;
           if (e.key === "ArrowDown") { e.preventDefault(); options[(k + 1) % n].focus(); }
@@ -2398,12 +2626,15 @@ const SHOW = new Set(MARKS.map((m) => m.id));
       });
     });
     document.addEventListener("pointerdown", (e) => {
-      if (!(e.target as Element | null)?.closest?.(".ls-head")) closeAll();
+      if (!(e.target as Element | null)?.closest?.("[data-wl]")) closeAll();
     });
     auCar?.addEventListener("car:change", (e) => {
-      const k = (e as CustomEvent).detail?.index ?? 0;
+      active = Number((e as CustomEvent).detail?.index ?? 0);
       closeAll();
-      auMenus.forEach((m) => m.options.forEach((o, j) => o.setAttribute("aria-selected", j === k ? "true" : "false")));
+      wallets.forEach((w) => w.options.forEach((o, j) => o.setAttribute("aria-selected", j + 1 === active ? "true" : "false")));
+      // every placard back to its own words (a departing slide may still
+      // carry a preview)
+      wallets.forEach((_, i) => print(i, i, false));
     });
   }
 

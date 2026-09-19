@@ -118,6 +118,17 @@ session must follow.
   display 814..1318 × 437..703, of 2132 × 1305) is baked into the
   `.cs-hub`/`.cs-reel`/`.cs-screen` percentages. The turn animation runs
   always and is paused at rest (a pause holds the angle).
+  2026-09-18 (Jon): the deck starts EMPTY — slide 0 is a blank tape
+  (`.ls-blank`: unprinted label, dark window, inert button, dead rail) and
+  `count = tracks + 1`. The title dropdown is RETIRED for THE WALLET: a
+  miniature tape (`.wl-pick > .mini`, the shell over dark plastic over the
+  tint at the label geometry) at the placard's left, one title-line tall;
+  pressing it drops `.wl-strip` (sleeves, one mini each) to the LEFT of
+  the mini on desks ≥1160px, under it below that; hover/focus previews a
+  tape's words in the placard (`data-preview`); a press flies the mini
+  into the slot and `car:show`s slide k+1. `.wl-strip[hidden]` must keep
+  `display: none` (the strip's own display rule beats the attribute).
+  Dev shows 12 stand-in tapes (`SHELF_FILL=0` = prod truth).
 - Carousel.astro has two modes: `slide` (translate) and `dissolve`
   (slides stacked in one grid cell, crossfade + a 300ms top-down render
   with a scan on the arriving slide, `data-on` on the active slide, a

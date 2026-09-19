@@ -36,6 +36,22 @@ Ship = fast-forward main from ~/sites/jt-portfolio on Jon's "push it".
   last: work · look · listen · play (`.one` orders 1/2/3/5). Room class
   `.learn` → `.work`. Gate: build 0 · rail/DOM order verified · click "work"
   frames the room · sw==vw at 1274 + 375.
+- R4 (2026-09-18, the LISTEN room, Jon): the deck starts EMPTY (slide 0 = a
+  blank tape: unprinted label, dark window, inert button, dead rail); the
+  title dropdown is retired for THE WALLET — a miniature tape at the
+  placard's left (this tape, small; blank paper on the empty deck), one
+  title-line tall. Press it → the tapes drop as a vertical strip of sleeves
+  (recessed pocket, seams between, staggered unfold) hanging to the LEFT of
+  the mini on desks ≥1160px (never over the tape; under the mini below
+  that and on phones). Hover/focus a sleeve → its title + note print in the
+  placard in the dim ink (data-preview). Press a sleeve → its mini flies
+  into the slot, the deck prints the tape (car:show k+1), the tape is the
+  play switch, arriving at ▷. Keyboard: pick opens INTO the strip
+  (mouse press opens without moving focus), ↑/↓/Home/End/Enter/Esc/Tab.
+  Dev stand-ins: 12 tapes in `astro dev` (SHELF_FILL=0 = prod truth).
+  Mechanics lifted from the parked `audio-shelf` branch; form is Jon's new
+  design. Gate: build 0 · rest/open/preview/choose verified · night ·
+  375 · sw==vw · no leftover clones.
 
 ## Assets
 | object | source | file | state |
