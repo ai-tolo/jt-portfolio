@@ -21,6 +21,7 @@ import SignalMachine from "../SignalMachine.astro";
 import Transport from "../Transport.astro";
 import Carousel from "../Carousel.astro";
 import { BUILDS } from "./builds-copy";
+import IntakeWatch from "../IntakeWatch.astro";
 
 // The one-liner. Jon rewrites this string at will (his voice: plain,
 // human-centered function; explicitly NOT music-dramatic).
@@ -134,9 +135,6 @@ const MARKS = [
   { id: "work", word: "learn", aria: "learn", emoji: "✏️", ethereal: false, has: BUILDS.length > 0 },
 ].filter((m) => m.has);
 const SHOW = new Set(MARKS.map((m) => m.id));
-// The builds' marks (Jon's picks, 2026-09-02): the same emoji language as
-// the rail, one per piece; lives here so builds-copy.ts stays untouched.
-const BUILD_MARKS: Record<string, string> = { archive: "🗂️", studio: "🎛️", watch: "⌚", catalog: "🗃️" };
 ---
 
 <a class="skip" href="#work">Skip to the work</a>
@@ -330,67 +328,15 @@ const BUILD_MARKS: Record<string, string> = { archive: "🗂️", studio: "🎛�
     </Carousel>
   </div></section>}
 
-  {/* ── BUILDS — three story pieces, headline row → continuous-read fold.
-      Words LOCKED in builds-copy.ts (Jon-owned — never edit there). Round 3
-      (2026-09-02): THE LEDGER, Jon's pick from three rendered directions —
-      an index printed straight on the room ground, no panel, no gear (the
-      gear family retired from the homepage entirely in round 3e); the
-      open read is text on the ground too. Inks follow the room: dark by
-      day, light at night. */}
-  {SHOW.has("work") && <section class="ledger room" id="work" aria-labelledby="work-t">
+  {/* ── LEARN — the story told through OBJECTS (2026-09-18, Jon: the matrix
+      is scrapped). Object one: the Watch (Jon's Claude Design component,
+      IntakeWatch.astro + public/intake/watch-blank.png), justified to the
+      left of the room. What a click does, and the story it opens, is the
+      next round's schema — the words stay locked in builds-copy.ts. */}
+  {SHOW.has("work") && <section class="learn room" id="work" aria-labelledby="work-t">
     <h2 id="work-t" class="sr-only">Learn</h2>
-    <div class="builds">
-      {BUILDS.map((b) => b.href ? (
-        /* a DOOR row (2026-09-09, the catalog): the same closed-row form,
-           but the whole row is a link to its page — no fold, no read */
-        <a class="bp bp-link" id={`build-${b.id}`} href={b.href}>
-          <span class="bp-head">
-            <span class="bp-mark" aria-hidden="true">{BUILD_MARKS[b.id] ?? "🗂️"}</span>
-            <span class="sr-only">{b.name}: </span>
-            <span class="bp-hookwrap">
-              <h3 class="bp-hook">{b.headline}</h3>
-            </span>
-          </span>
-        </a>
-      ) : (
-        <details class="bp" id={`build-${b.id}`}>
-          <summary class="bp-head">
-            <span class="bp-mark" aria-hidden="true">{BUILD_MARKS[b.id] ?? "🗂️"}</span>
-            <span class="sr-only">{b.name}: </span>
-            <span class="bp-hookwrap">
-              <h3 class="bp-hook">{b.headline}</h3>
-              {b.dek && <span class="bp-dek">{b.dek}</span>}
-              {b.draft && <em class="bp-draft">draft copy</em>}
-            </span>
-          </summary>
-          <div class="bp-read">
-            {b.blocks.map((blk) =>
-              blk.type === "p" ? (
-                <p class="bp-p" set:html={blk.html} />
-              ) : (
-                <figure class="bp-media" data-kind={blk.kind}>
-                  {blk.src ? (
-                    blk.kind === "film" ? (
-                      <video controls preload="metadata" playsinline poster={blk.poster ?? undefined} src={blk.src} />
-                    ) : blk.kind === "audio" ? (
-                      <Transport src={blk.src} title={blk.caption} accent="var(--sapphire)" compact />
-                    ) : (
-                      <img src={blk.src} alt={blk.alt ?? ""} loading="lazy" />
-                    )
-                  ) : (
-                    <span class="bp-slot">
-                      <span class="bp-slot-kind">{blk.kind}</span>
-                      <span class="bp-slot-note">{blk.caption}</span>
-                      <span class="bp-slot-pending">pending</span>
-                    </span>
-                  )}
-                  {blk.src && <figcaption class="bp-cap">{blk.caption}</figcaption>}
-                </figure>
-              )
-            )}
-          </div>
-        </details>
-      ))}
+    <div class="objects">
+      <IntakeWatch class="obj obj-watch" />
     </div>
   </section>}
 
@@ -1154,308 +1100,33 @@ const BUILD_MARKS: Record<string, string> = { archive: "🗂️", studio: "🎛�
     }
   }
 
-  /* ── BUILDS: THE LEDGER (round 3, 2026-09-02 — Jon's pick from three
-     rendered directions; the carbon matrix + the Codex bare-matrix pass
-     are both retired). An index printed straight on the room ground: one
-     baseline per row (mono number · tracked name · headline), 2px ink
-     rules bracketing the index, hairlines between rows, every rule running
-     from the 1080 column's left edge off the RIGHT EDGE of the page. Open
-     = the read prints below its row at the headline's left edge; pending
-     media = quiet mono index lines. Two inks only, on the room's tokens:
-     `.one`'s --ink/--dim by day, its --night-ink/--night-dim when the room
-     is dark (the section-local --mx-* pair is the ONLY place that flips —
-     everything below reads through it). Nothing here has a background. */
-  .ledger {
-    --mx-ink: var(--ink);
-    --mx-dim: var(--dim);
-    --mx-hair: color-mix(in srgb, var(--mx-ink) 24%, transparent);
-    --mx-hair-soft: color-mix(in srgb, var(--mx-ink) 18%, transparent);
+  /* ── LEARN: objects on the room ground (2026-09-18). The room's left
+     edge = the 1080 column's left edge (flush with the other rooms); the
+     watch sits there, sized by the room's height so it reads as one object
+     under the lamp, never centred. Nothing here has a background. */
+  .learn {
     max-width: none;
-    /* left edge = where the 1080 column starts (flush with Audio below);
-       right edge = the page, so the rules run off it */
     margin: 0 0 0 max(24px, calc((100% - 1080px) / 2));
     padding-inline: 0;
-    color: var(--mx-ink);
   }
-  :global(html[data-night]) .ledger {
-    --mx-ink: var(--night-ink);
-    --mx-dim: var(--night-dim);
+  .objects {
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
   }
-  .ledger h2 {
-    margin: 0 0 28px;
-    font-family: "IBM Plex Mono", ui-monospace, monospace;
-    font-weight: 600;
-    font-size: clamp(1.05rem, 1.8vw, 1.3rem);
-    letter-spacing: 0.22em;
-    text-transform: uppercase;
-    color: var(--mx-ink);
-    transition: color 560ms ease;
+  .learn :global(.obj-watch) {
+    /* the component sizes by width; give it the width that makes it
+       clamp(320px, 66svh, 640px) tall at its 521:781 aspect */
+    width: calc(clamp(320px, 66svh, 640px) * 521 / 781);
+    max-width: 100%;
+    flex: none;
   }
-
-  /* the rules: ink brackets, hairlines between */
-  .builds {
-    border-top: 2px solid var(--mx-ink);
-    transition: border-color 560ms ease;
-  }
-  .bp {
-    border-bottom: 1px solid var(--mx-hair);
-    transition: border-color 560ms ease;
-  }
-  .bp:last-child {
-    border-bottom: 2px solid var(--mx-ink);
-  }
-
-  /* the row: the headline IS the row; its mark sits INSIDE the rules in a
-     first column (Jon, 2026-09-02: not hanging outside) and is the switch —
-     quiet monochrome at rest, in colour on hover and while its read is
-     open (one lit lamp at a time). The mark's box is exactly one headline
-     line tall, so it centres on the first line however the hook wraps. */
-  .bp-head {
-    display: grid;
-    grid-template-columns: 48px minmax(0, 1fr);
-    grid-template-areas: "mark hook";
-    column-gap: 20px;
-    align-items: start;
-    padding: 34px 0 36px;
-    cursor: pointer;
-    list-style: none;
-    transition: background-color 160ms ease;
-  }
-  .bp-mark {
-    grid-area: mark;
-    width: 48px;
-    height: calc(1.75rem * 1.2);
-    display: grid;
-    place-items: center;
-    font-size: 26px;
-    line-height: 1;
-    filter: grayscale(1);
-    opacity: 0.55;
-    transition: filter 220ms ease, opacity 220ms ease;
-  }
-  .bp-head:hover .bp-mark,
-  .bp[open] .bp-mark {
-    filter: none;
-    opacity: 1;
-  }
-  .bp-head::-webkit-details-marker {
-    display: none;
-  }
-  .bp-head::marker {
-    content: "";
-  }
-  .bp-head:hover {
-    background: color-mix(in srgb, var(--mx-ink) 5%, transparent);
-  }
-  .bp-head:focus-visible {
-    outline: 2px solid var(--mx-ink);
-    outline-offset: -2px;
-  }
-  /* the door row: a link wearing the closed row's exact form (the anchor
-     is the focus target, so it carries the ring the summary would) */
-  .bp-link {
-    display: block;
-    color: inherit;
-    text-decoration: none;
-  }
-  .bp-link:focus-visible {
-    outline: 2px solid var(--mx-ink);
-    outline-offset: -2px;
-  }
-  .bp-hookwrap {
-    grid-area: hook;
-    display: block;
-    padding-right: 56px;
-    min-width: 0;
-  }
-  .bp-hook {
-    margin: 0;
-    font-family: "IBM Plex Sans", ui-sans-serif, system-ui, sans-serif;
-    font-size: 1.75rem;
-    font-weight: 500;
-    line-height: 1.2;
-    letter-spacing: -0.014em;
-    text-wrap: balance;
-    color: var(--mx-ink);
-    transition: color 560ms ease;
-  }
-  .bp-dek {
-    display: block;
-    margin-top: 6px;
-    max-width: 62ch;
-    font-size: 0.9rem;
-    line-height: 1.5;
-    color: var(--mx-dim);
-    transition: color 560ms ease;
-  }
-  .bp-draft {
-    display: inline-block;
-    margin-top: 8px;
-    font-family: "IBM Plex Mono", ui-monospace, monospace;
-    font-style: normal;
-    font-size: 0.56rem;
-    letter-spacing: 0.12em;
-    text-transform: uppercase;
-    border: 1px solid currentColor;
-    padding: 2px 7px;
-    color: var(--mx-dim);
-  }
-
-  /* the read: text on the ground below the row, from the headline's left
-     edge (the mark column stays outside the text); the headline row stays
-     in place as its title */
-  .bp-read {
-    margin: 0 56px 0 68px;
-    padding: 24px 0 84px;
-    font-size: 1.05rem;
-    color: var(--mx-ink);
-  }
-  .bp-p {
-    margin: 0 0 1.15em;
-    max-width: 62ch;
-    font-size: 1.05rem;
-    line-height: 1.7;
-    text-wrap: pretty;
-    color: var(--mx-ink);
-    transition: color 560ms ease;
-  }
-  .bp-p:last-child {
-    margin-bottom: 0;
-  }
-  .bp-p strong {
-    font-weight: 600;
-    color: var(--mx-ink);
-  }
-
-  /* media: real media prints full-width with its caption once src lands;
-     until then an HONEST index line — kind · what will live there ·
-     pending — never a faked frame */
-  .bp-media {
-    margin: 0;
-    max-width: 62ch;
-  }
-  .bp-p + .bp-media {
-    margin-top: 2.6em;
-  }
-  .bp-media:has(img, video) {
-    margin: 2.4em 0;
-    max-width: none;
-  }
-  .bp-media video,
-  .bp-media img {
-    display: block;
-    width: 100%;
-  }
-  .bp-cap {
-    margin-top: 10px;
-    font-family: "IBM Plex Mono", ui-monospace, monospace;
-    font-size: 0.66rem;
-    letter-spacing: 0.05em;
-    line-height: 1.5;
-    color: var(--mx-dim);
-    transition: color 560ms ease;
-  }
-  .bp-slot {
-    display: grid;
-    grid-template-columns: 64px minmax(0, 1fr) auto;
-    grid-template-areas: "kind note pending";
-    column-gap: 16px;
-    align-items: baseline;
-    padding: 11px 0;
-    border-top: 1px solid var(--mx-hair-soft);
-    font-family: "IBM Plex Mono", ui-monospace, monospace;
-    transition: border-color 560ms ease;
-  }
-  .bp-media:last-child .bp-slot {
-    border-bottom: 1px solid var(--mx-hair-soft);
-  }
-  .bp-slot-kind {
-    grid-area: kind;
-    font-size: 0.64rem;
-    letter-spacing: 0.14em;
-    text-transform: uppercase;
-    color: var(--mx-dim);
-    transition: color 560ms ease;
-  }
-  .bp-slot-note {
-    grid-area: note;
-    font-size: 0.72rem;
-    letter-spacing: 0.02em;
-    line-height: 1.55;
-    text-wrap: pretty;
-    color: var(--mx-ink);
-    transition: color 560ms ease;
-  }
-  .bp-slot-pending {
-    grid-area: pending;
-    justify-self: end;
-    font-size: 0.64rem;
-    letter-spacing: 0.14em;
-    text-transform: uppercase;
-    color: var(--mx-dim);
-    transition: color 560ms ease;
-  }
-  /* the fold: height-animated where the platform can (Chromium 131+);
-     everywhere else it snaps open — honest, and reduced-motion clean */
-  @media (prefers-reduced-motion: no-preference) {
-    .bp {
-      interpolate-size: allow-keywords;
-    }
-    .bp::details-content {
-      height: 0;
-      overflow: clip;
-      transition: height 340ms cubic-bezier(0.3, 0.8, 0.3, 1), content-visibility 340ms allow-discrete;
-    }
-    .bp[open]::details-content {
-      height: auto;
-    }
-  }
-  /* no rail below 900px: the column starts near the edge; rules still
-     run off the right */
   @media (max-width: 899px) {
-    .ledger {
+    .learn {
       margin-left: 14px; /* = the room's phone gutter */
-      margin-right: 0;
     }
-  }
-  /* phones: number + name + marker on one mono line, headline under it,
-     the read full width; pending lines stack kind/pending over the note */
-  @media (max-width: 899px) {
-    .bp-head {
-      grid-template-columns: 44px minmax(0, 1fr);
-      column-gap: 14px;
-    }
-    .bp-mark {
-      width: 44px;
-      font-size: 24px;
-    }
-  }
-  @media (max-width: 720px) {
-    .bp-head {
-      padding: 22px 0 26px;
-    }
-    .bp-hookwrap {
-      padding-right: 20px;
-    }
-    .bp-hook {
-      font-size: 1.35rem;
-      line-height: 1.28;
-    }
-    .bp-mark {
-      height: calc(1.35rem * 1.28);
-    }
-    .bp-read {
-      margin: 0;
-      padding: 6px 16px 40px 0;
-    }
-    .bp-p {
-      font-size: 1rem;
-      line-height: 1.65;
-    }
-    .bp-slot {
-      grid-template-columns: auto minmax(0, 1fr);
-      grid-template-areas: "kind pending" "note note";
-      row-gap: 4px;
+    .learn :global(.obj-watch) {
+      width: calc(clamp(260px, 56svh, 520px) * 521 / 781);
     }
   }
 
@@ -2837,18 +2508,6 @@ const BUILD_MARKS: Record<string, string> = { archive: "🗂️", studio: "🎛�
       lkRoom.addEventListener("touchcancel", lkEnd, { capture: true });
     }
   }
-
-  // ── BUILDS folds: opening one changes the document's height (the comet
-  // span + rail map go stale) and reveals media that measured while hidden
-  // (the recurring class of bug — a future Transport drop-in must re-run
-  // its resize path). One fix for both: re-fire window resize on toggle,
-  // then once more after the 340ms fold animation settles.
-  document.querySelectorAll("details.bp").forEach((d) =>
-    d.addEventListener("toggle", () => {
-      window.dispatchEvent(new Event("resize"));
-      window.setTimeout(() => window.dispatchEvent(new Event("resize")), 420);
-    })
-  );
 
   // touch devices: load the /more exhibit only when the reader nears it —
   // on mobile the exhibit sits last, so most triage visits never pay for it
