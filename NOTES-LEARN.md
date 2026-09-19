@@ -68,6 +68,23 @@ Ship = fast-forward main from ~/sites/jt-portfolio on Jon's "push it".
 Make-list: a 2x export of watch-blank.png (1042×1562) for retina; the PNG is
 soft above ~520px wide.
 
+## THE LAUNDRY LIST (Jon, 2026-09-18 late; NOT executed yet, he is collecting)
+1. Vertical spacing BETWEEN THE ROOMS (work / play / look / listen) — they abut
+   today; a gap (~20vh) between rooms; spy + comet follow (measured at runtime).
+2. Watch context: headline (locked) above the module, DRAFT dek under it
+   ("I talk to my watch. It comes back as a calendar event, an organized idea,
+   or a prompt for Claude, inside a small system I own that never changes
+   unless I change it."), DRAFT caption after the run ("A real memo, and the
+   tickets it became."), the four locked paragraphs beneath. Truth item: the
+   face's "0:07" / "Cinder 32" are Claude Design placeholders → pull the real
+   memo id + duration from intake.db on the M1 into intake-run.json.
+3. Archive object (build 2): Jon runs the Claude Design prompt (phone, Voice
+   Memos list at rest, search → results → moment → kept); I mine
+   archive-run.json from inventory.db and wire it like the watch.
+4. NO EMOJIS in the nav: rail + phone bar = words only (work · play · look · listen).
+5. Résumé link STICKS on the homepage (always visible): the hero corner
+   (dot · minneapolis, mn · résumé) becomes fixed top-right; phone bar gets résumé.
+
 ## Open
 - The click is BUILT (the module). Open: where the locked story words print (under the run, per the module README: "put the prose directly under it"), and whether the verdict/tickets match what Intake actually did with Cinder 32 (`verdict` assumed surface).
 - Objects 2–3 (Console = the M1+T7 / library galaxy; Engineer = the phone-in-hand vote), per the job chat's layout Jon is not sold on.
