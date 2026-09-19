@@ -30,6 +30,12 @@ Ship = fast-forward main from ~/sites/jt-portfolio on Jon's "push it".
   Layout.astro. `IntakeWatch.astro` stays in-tree, unused (the hero carries
   its own watch). Gate: build 0 · full run completes (s1→s6) · sw==vw ·
   fonts resolved.
+- R3 (2026-09-18): nav word "learn" → WORK, and the room moves FIRST:
+  work · play · look · listen (MARKS reordered; the section sits right after
+  the hero because the rail reads document order). Phone keeps the exhibit
+  last: work · look · listen · play (`.one` orders 1/2/3/5). Room class
+  `.learn` → `.work`. Gate: build 0 · rail/DOM order verified · click "work"
+  frames the room · sw==vw at 1274 + 375.
 
 ## Assets
 | object | source | file | state |
