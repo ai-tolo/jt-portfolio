@@ -85,6 +85,23 @@ soft above ~520px wide.
 5. Résumé link STICKS on the homepage (always visible): the hero corner
    (dot · minneapolis, mn · résumé) becomes fixed top-right; phone bar gets résumé.
 
+## LIST EXECUTED (2026-09-18 late, Jon: "go"; committed on `learn`, NOT pushed)
+- (1) rooms: 138px of ground between rooms at 768 tall (`.one > .room`
+  margin-top clamp(96px, 18vh, 200px)); verified all four gaps equal, sw==vw.
+- (2) watch context: locked headline + DRAFT dek above the module, DRAFT
+  caption + four locked paragraphs beneath (`objects-copy.ts`). TRUTH: the
+  memo is capture 31 in intake.db, 3:51.6 long (JSON now says 3:52), seven
+  tickets (module shows two → caption says so); "Cinder 32" = Intake's real
+  alias (`source_identity(31)`), so the id stands.
+- (3) archive data MINED into `src/data/archive-run.json` (true rows: 266
+  voice memos 2022–2026 in a 24,597-asset library; the Voice Memos app's own
+  titles as the rest list; query "laugh" → 8 hits with the library's own
+  sentence per hit; the moment = the vocal-room laughter, 120 peaks via
+  ffmpeg on the M1; trim null (transcripts carry no timestamps), src null).
+  Module = Jon's Claude Design prompt (handed over); I wire it when the zip lands.
+- (4) nav words only; the phone bar's moon/sun = drawn glyphs.
+- (5) résumé corner fixed on desks; résumé item in the phone bar.
+
 ## Open
 - The click is BUILT (the module). Open: where the locked story words print (under the run, per the module README: "put the prose directly under it"), and whether the verdict/tickets match what Intake actually did with Cinder 32 (`verdict` assumed surface).
 - Objects 2–3 (Console = the M1+T7 / library galaxy; Engineer = the phone-in-hand vote), per the job chat's layout Jon is not sold on.

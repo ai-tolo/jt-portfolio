@@ -138,19 +138,34 @@ session must follow.
   `car:show` (detail.index) asks a chassis for a slide. In Visuals the
   dots sit ABOVE the painted picture (`--lk-top`, measured) and the
   placard sits right under it (Jon, 2026-09-09).
-- Builds is THE LEDGER (round 3, 2026-09-02, Jon's pick from rendered
-  directions): an index printed straight on the room ground, no panel or
-  background anywhere, open or closed; rules run off the RIGHT edge of the
-  page; one baseline per row. Its inks come from the section-local
-  `--mx-ink`/`--mx-dim` pair on `.ledger` (day = `.one`'s --ink/--dim,
-  night override = --night-ink/--night-dim) — never a hardcoded ink there
+- WORK is OBJECTS (2026-09-18; the ledger/matrix is DEAD): the room holds
+  Jon's Claude Design modules, one per build, framed by words — the locked
+  headline from builds-copy.ts above, a DRAFT dek from
+  `src/components/studio/objects-copy.ts` (Jon-editable), the module, a
+  DRAFT caption, the locked paragraphs beneath. Object one = the Intake
+  hero (`IntakeHero.astro` + `src/data/intake-run.json`; its memo cue
+  "Cinder 32" is Intake's real alias for capture 31, length 3:52, seven
+  tickets of which the module shows two). Object two = the Archive
+  (`src/data/archive-run.json` is mined and TRUE; the module comes from
+  Jon's Claude Design prompt). Inks come from the section-local
+  `--mx-ink`/`--mx-dim` pair on `.work` (day = `.one`'s --ink/--dim, night
+  override = --night-ink/--night-dim) — never a hardcoded ink there
   (`.one` shadows the global --ink, so plain `var(--ink)` does NOT flip).
-  Homepage nav is 🎹 (emoji-only chip, aria "play") · builds · audio ·
-  🖼️ (emoji-only visuals stop); section ids stay work/soundlab/illustrations.
+  Homepage nav (2026-09-18): WORDS ONLY — work · play · look · listen, no
+  emojis on the rail or the phone bar (the bar's night switch draws the
+  rail's sun/moon glyphs); the #work room comes first; the hero corner
+  (dot · minneapolis, mn · résumé) is `position: fixed` on desks so the
+  résumé is always one click away, and the phone bar carries a résumé
+  item. Section ids stay work/soundlab/illustrations.
 - ROOMS (2026-09-02, Jon: "each section has its own viewport"): the four
   homepage sections (`#play`, `#work`, `#soundlab`, `#illustrations`) carry
   `.room` — min-height 100svh (minus the 64px bar below 900px), flex-centered
-  object, scroll-margin 0, rooms abut. At any room's framed position no
+  object, scroll-margin 0. Since 2026-09-18 (Jon: "spacing between the
+  modules") the rooms NO LONGER ABUT: `.one > .room { margin-top:
+  clamp(96px, 18vh, 200px) }` puts ground between them — declared on the
+  column's child on purpose, because `.work`, `.live-signal` and
+  `.look-band` set their own `margin` shorthand and would zero a plain
+  `.room` margin. At any room's framed position no
   neighbor is on screen (proof: scratch rooms-proof.mjs pattern — scroll
   each room to offsetTop and assert no other room intersects the visible
   viewport). Audio's dark `.gear` panel lives INSIDE its room as a
