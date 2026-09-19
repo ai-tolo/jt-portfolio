@@ -22,6 +22,7 @@ import Transport from "../Transport.astro";
 import Carousel from "../Carousel.astro";
 import { BUILDS } from "./builds-copy";
 import IntakeHero from "../IntakeHero.astro";
+import { WATCH_COPY } from "./objects-copy";
 
 // The one-liner. Jon rewrites this string at will (his voice: plain,
 // human-centered function; explicitly NOT music-dramatic).
@@ -155,12 +156,14 @@ const MARKS = [
   // id "play" = the .live-signal HOST (has a box at every width); the
   // machine's own #signal root is display:none on coarse pointers, which
   // made the chip a dead link on phones (review, 2026-08-25)
-  { id: "work", word: "work", aria: "work", emoji: "✏️", has: BUILDS.length > 0 },
-  { id: "play", word: "play", aria: "play", emoji: "🎹", has: true },
-  { id: "illustrations", word: "look", aria: "look", emoji: "🖼️", has: illos.length > 0 },
-  { id: "soundlab", word: "listen", aria: "listen", emoji: "🎧", has: tracks.length > 0 },
+  { id: "work", word: "work", aria: "work", has: BUILDS.length > 0 },
+  { id: "play", word: "play", aria: "play", has: true },
+  { id: "illustrations", word: "look", aria: "look", has: illos.length > 0 },
+  { id: "soundlab", word: "listen", aria: "listen", has: tracks.length > 0 },
 ].filter((m) => m.has);
 const SHOW = new Set(MARKS.map((m) => m.id));
+// the watch piece's locked words (headline + paragraphs) frame its object
+const WATCH = BUILDS.find((b) => b.id === "watch")!;
 ---
 
 <a class="skip" href="#work">Skip to the work</a>
@@ -202,11 +205,8 @@ const SHOW = new Set(MARKS.map((m) => m.id));
         class="rail-item"
         href={`#${m.id}`}
         data-for={m.id}
-        data-solo={m.word === "" ? "" : undefined}
-        aria-label={m.word === "" ? m.aria : undefined}
       >
-        <span class="rail-art" aria-hidden="true">{m.emoji}</span>
-        {m.word !== "" && <span class="rail-word">{m.word}</span>}
+        <span class="rail-word">{m.word}</span>
       </a>
     ))}
     <span class="comet" data-comet aria-hidden="true">
@@ -236,16 +236,21 @@ const SHOW = new Set(MARKS.map((m) => m.id));
         class="mbar-item"
         href={`#${m.id}`}
         data-for={m.id}
-        data-solo={m.word === "" ? "" : undefined}
-        aria-label={m.word === "" ? m.aria : undefined}
       >
-        <span class="mbar-emoji" aria-hidden="true">{m.emoji}</span>
-        {m.word !== "" && <span class="mbar-word">{m.word}</span>}
+        <span class="mbar-word">{m.word}</span>
       </a>
     ))}
+    <a class="mbar-item mbar-resume" href="/resume"><span class="mbar-word">résumé</span></a>
     <button class="mbar-night" type="button" data-night-toggle aria-pressed="false" aria-label="Night mode">
-      <span class="mn-moon" aria-hidden="true">🌙</span>
-      <span class="mn-sun" aria-hidden="true">☀️</span>
+      <svg class="mn-moon" viewBox="0 0 12 12" fill="none" stroke="currentColor"
+        stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d="M9.8 7.6A4.4 4.4 0 0 1 4.4 2.2a4.4 4.4 0 1 0 5.4 5.4Z" />
+      </svg>
+      <svg class="mn-sun" viewBox="0 0 12 12" fill="none" stroke="currentColor"
+        stroke-width="1.3" stroke-linecap="round" aria-hidden="true">
+        <circle cx="6" cy="6" r="2.6" />
+        <path d="M6 0.6v1.6M6 9.8v1.6M0.6 6h1.6M9.8 6h1.6" />
+      </svg>
     </button>
   </nav>
 
@@ -260,7 +265,19 @@ const SHOW = new Set(MARKS.map((m) => m.id));
   {SHOW.has("work") && <section class="work room" id="work" aria-labelledby="work-t">
     <h2 id="work-t" class="sr-only">Work</h2>
     <div class="objects">
-      <IntakeHero class="obj obj-intake" />
+      {/* hook (locked) → dek (draft) → the object → caption (draft) → the
+          read (locked): the story around the thing, in Jon's voice */}
+      <article class="wk" id="build-watch">
+        <header class="wk-head">
+          <h3 class="wk-hook">{WATCH.headline}</h3>
+          <p class="wk-dek">{WATCH_COPY.dek}</p>
+        </header>
+        <IntakeHero class="obj obj-intake" />
+        <p class="wk-cap">{WATCH_COPY.caption}</p>
+        <div class="wk-read">
+          {WATCH.blocks.map((blk) => blk.type === "p" && <p class="wk-p" set:html={blk.html} />)}
+        </div>
+      </article>
     </div>
   </section>}
 
@@ -530,7 +547,10 @@ const SHOW = new Set(MARKS.map((m) => m.id));
     position: relative;
   }
   .corner {
-    position: absolute;
+    /* pinned to the viewport on a desk so the résumé is always one click
+       away on the homepage (Jon, 2026-09-18); phones carry it in the bar */
+    position: fixed;
+    z-index: 55;
     top: 22px;
     right: 26px;
     margin: 0;
@@ -616,14 +636,12 @@ const SHOW = new Set(MARKS.map((m) => m.id));
     border-right: 1px solid rgba(20, 18, 16, 0.14);
   }
   .rail-item {
-    /* emoji + word in a row, everything flush left so the emoji column
-       reads as one straight line down the rail (Jon, 2026-08-20) */
+    /* the word alone, flush left (Jon, 2026-09-18: no emojis in the nav) */
     display: flex;
     align-items: center;
     justify-content: flex-start;
-    gap: 9px;
     width: 94px;
-    padding: 10px 8px 10px 10px;
+    padding: 11px 8px 11px 12px;
     border-radius: 11px;
     text-decoration: none;
     font-family: "IBM Plex Mono", ui-monospace, monospace;
@@ -641,35 +659,11 @@ const SHOW = new Set(MARKS.map((m) => m.id));
     outline: 2px solid var(--ink);
     outline-offset: 2px;
   }
-  .rail-art {
-    font-size: 17px;
-    line-height: 1;
-    width: 20px;
-    flex: none;
-    display: grid;
-    place-items: center;
-  }
-  .rail-art img {
-    width: 20px;
-    height: 20px;
-    object-fit: contain;
-  }
   .rail-word {
     font-size: 0.74rem;
     font-weight: 500;
     letter-spacing: 0.07em;
     white-space: nowrap;
-  }
-  /* the wordless chip: the instrument as a small standalone object — snug
-     around its emoji, centered on the rail's axis. Sitting off the word
-     column is deliberate: it is not a word, it is a thing. */
-  .rail-item[data-solo] {
-    width: auto;
-    padding: 11px 13px;
-  }
-  .rail-item[data-solo] .rail-art {
-    width: auto;
-    font-size: 19px;
   }
 
   /* SCROLL-MAP mode (Jon, 2026-08-18): each item sits at the comet-track
@@ -984,8 +978,13 @@ const SHOW = new Set(MARKS.map((m) => m.id));
     .mbar-item[data-for="play"] {
       order: 6;
     }
-    .mbar-night {
+    .mbar-resume {
       order: 7;
+      border-left: 1px solid rgba(20, 18, 16, 0.14);
+      border-radius: 0;
+    }
+    .mbar-night {
+      order: 8;
     }
     .mbar-item:focus-visible,
     .mbar-night:focus-visible {
@@ -996,17 +995,9 @@ const SHOW = new Set(MARKS.map((m) => m.id));
     :global(html[data-night]) .mbar-night:focus-visible {
       outline-color: #e8ecf4;
     }
-    .mbar-emoji {
-      font-size: 16px;
-      line-height: 1;
-    }
     .mbar-word {
       font-size: 0.66rem;
       letter-spacing: 0.05em;
-    }
-    /* the wordless chip carries a slightly larger object */
-    .mbar-item[data-solo] .mbar-emoji {
-      font-size: 19px;
     }
     .mbar-item[data-on] {
       background: var(--ink);
@@ -1020,9 +1011,13 @@ const SHOW = new Set(MARKS.map((m) => m.id));
       border-left: 1px solid rgba(20, 18, 16, 0.14);
       border-radius: 0;
       background: transparent;
-      font-size: 16px;
-      line-height: 1;
+      color: #45423c;
       cursor: pointer;
+    }
+    .mn-moon,
+    .mn-sun {
+      width: 16px;
+      height: 16px;
     }
     .mn-sun {
       display: none;
@@ -1046,6 +1041,7 @@ const SHOW = new Set(MARKS.map((m) => m.id));
     }
     :global(html[data-night]) .mbar-night {
       border-left-color: rgba(160, 190, 230, 0.12);
+      color: #8f98a8;
     }
 
     /* triage order: the page leads with proof; the exhibit closes the show.
@@ -1079,8 +1075,10 @@ const SHOW = new Set(MARKS.map((m) => m.id));
     .one > .floor { order: 6; }
     .one > [data-end] { order: 7; }
 
-    /* bigger thumb targets on the hero corner */
+    /* bigger thumb targets on the hero corner; on a phone it stays with
+       the hero (the bar carries the résumé) */
     .corner {
+      position: absolute;
       font-size: 0.78rem;
       gap: 14px;
     }
@@ -1133,20 +1131,103 @@ const SHOW = new Set(MARKS.map((m) => m.id));
       min-height: calc(100svh - var(--mbar-h) - env(safe-area-inset-bottom, 0px));
     }
   }
+  /* the rooms no longer abut: air between the modules (Jon, 2026-09-18);
+     each still owns a viewport when framed, the gap is ground. Declared on
+     the column's child so a room's own margin shorthand (.work,
+     .live-signal, .look-band) cannot zero it */
+  .one > .room {
+    margin-top: clamp(96px, 18vh, 200px);
+  }
 
   /* ── WORK: objects on the room ground (2026-09-18; the nav word was "learn" until that evening). The room's left
      edge = the 1080 column's left edge (flush with the other rooms); the
      watch sits there, sized by the room's height so it reads as one object
      under the lamp, never centred. Nothing here has a background. */
   .work {
+    --mx-ink: var(--ink);
+    --mx-dim: var(--dim);
     max-width: none;
     margin: 0 0 0 max(24px, calc((100% - 1080px) / 2));
     padding-inline: 0;
+    color: var(--mx-ink);
+  }
+  :global(html[data-night]) .work {
+    --mx-ink: var(--night-ink);
+    --mx-dim: var(--night-dim);
   }
   .objects {
     display: flex;
     align-items: center;
     justify-content: flex-start;
+  }
+  /* the words around the object: the hook and the read wear the ledger's
+     type (Jon's approved hook size; 62ch reads), the dek and the caption
+     sit in the dim ink; all on the room's ink pair so night flips them */
+  .wk {
+    width: 100%;
+    max-width: 1080px;
+  }
+  .wk-head {
+    margin: 0 0 clamp(28px, 4vh, 44px);
+    max-width: 62ch;
+  }
+  .wk-hook {
+    margin: 0;
+    font-family: "IBM Plex Sans", ui-sans-serif, system-ui, sans-serif;
+    font-size: 1.75rem;
+    font-weight: 500;
+    line-height: 1.2;
+    letter-spacing: -0.014em;
+    text-wrap: balance;
+    color: var(--mx-ink);
+    transition: color 560ms ease;
+  }
+  .wk-dek {
+    margin: 12px 0 0;
+    font-size: 1rem;
+    line-height: 1.55;
+    text-wrap: pretty;
+    color: var(--mx-dim);
+    transition: color 560ms ease;
+  }
+  .wk-cap {
+    margin: clamp(20px, 3vh, 32px) 0 0;
+    font-family: "IBM Plex Mono", ui-monospace, monospace;
+    font-size: 0.66rem;
+    letter-spacing: 0.05em;
+    line-height: 1.5;
+    color: var(--mx-dim);
+    transition: color 560ms ease;
+  }
+  .wk-read {
+    margin-top: clamp(32px, 5vh, 56px);
+    max-width: 62ch;
+  }
+  .wk-p {
+    margin: 0 0 1.15em;
+    font-size: 1.05rem;
+    line-height: 1.7;
+    text-wrap: pretty;
+    color: var(--mx-ink);
+    transition: color 560ms ease;
+  }
+  .wk-p:last-child {
+    margin-bottom: 0;
+  }
+  @media (max-width: 720px) {
+    .wk-head,
+    .wk-read,
+    .wk-cap {
+      padding-right: 14px;
+    }
+    .wk-hook {
+      font-size: 1.35rem;
+      line-height: 1.28;
+    }
+    .wk-p {
+      font-size: 1rem;
+      line-height: 1.65;
+    }
   }
   /* host fit only (the module's own language is Jon's): its page inset is
      dropped so the watch starts AT the column's edge, its width is the
