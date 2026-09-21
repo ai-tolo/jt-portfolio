@@ -152,12 +152,33 @@ session must follow.
   the kept trim = the loudest 8 s of the opened recording by RMS, a
   17 s window each side, 80 peaks; `src` null so play stays dimmed).
   Objects stack in `.objects` with the room gap between them
-  (`.wk + .wk`). Rail words are set flush RIGHT (2026-09-18). Inks come from the section-local
+  (`.wk + .wk`). Inks come from the section-local
   `--mx-ink`/`--mx-dim` pair on `.work` (day = `.one`'s --ink/--dim, night
   override = --night-ink/--night-dim) — never a hardcoded ink there
   (`.one` shadows the global --ink, so plain `var(--ink)` does NOT flip).
-  Homepage nav (2026-09-18): WORDS ONLY — work · play · look · listen, no
-  emojis on the rail or the phone bar (the bar's night switch draws the
+  PRESENTATION PASS (2026-09-21, branch `polish/builds-pass`): the room's
+  type is the modules' own three faces and no fourth — Instrument Sans
+  body 1rem/1.6 on a 36rem measure (~64ch), JetBrains Mono captions
+  0.75rem/0.04em and labels 0.6875rem/0.12em/500 lowercase (the hints,
+  the run + rail labels, replay), Outfit 500 hooks 1.75rem (1.5rem
+  ≤720px) — on one 4/8 scale (`--sp-*` on `.work`: hook→dek 12 ·
+  dek→object 32 · object→caption 24 · caption→read 48 · ¶ 16; the phone
+  gutter is 14px both sides). Both modules share ONE grid, in container
+  units of the module (`container-name: hero`): object column
+  `minmax(0, 44cqw)`, 6cqw gutter, 48px rows, node/dot 10px on a 1px line
+  with the text 32px in; collapse under 820px of MODULE width; stacked,
+  the watch is 70cqw and the phone 80cqw, centred. The host caps both
+  devices at 76svh so they stand the same height under the lamp. The
+  watch PNG's transparent frame (70/68/67/61 px of 521×781) is trimmed in
+  IntakeHero with proportional negative margins (ratios of the visible
+  383×653) so the visible watch sits on the axis and rhythm — never edit
+  the PNG. Lesson: a grid item with `margin: 0 auto` and no intrinsic
+  width shrink-wraps to its text (the 64px phone watch) — size it.
+  Homepage nav: work · play · look · listen, no emojis; since 2026-09-21
+  the desktop rail sets a small inline Lucide glyph (hammer · keyboard ·
+  eye · headphones; paths in `ICONS`, no package; 1.1em, stroke 1.5,
+  square caps, miter joins, one fixed slot) before each word, labels
+  left-aligned; the phone bar stays words-only (its night switch draws the
   rail's sun/moon glyphs); the #work room comes first; the hero corner
   (dot · minneapolis, mn · résumé) is `position: fixed` on desks so the
   résumé is always one click away, and the phone bar carries a résumé

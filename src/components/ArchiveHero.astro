@@ -79,7 +79,7 @@ const hasClip = Boolean(moment.src);
 ---
 
 <section
-  class="archive-hero"
+  class:list={['archive-hero', { 'no-story': !story }]}
   data-archive-hero
   data-stage="0"
   data-query={query}
@@ -290,18 +290,32 @@ const hasClip = Boolean(moment.src);
   .ico { width: 1em; height: 1em; flex: none; }
 
   /* ---------- layout ---------- */
+  /* the same grid as the Intake (presentation pass, 2026-09-21): the object
+     column (44cqw) on the left axis, the words on the right axis, one 6cqw
+     gutter; 48px rows when stacked. With the story off (the room frames it)
+     the rail sits at the top, level with the phone, as the Intake's run does */
   .grid {
     display: grid;
-    grid-template-columns: minmax(0, 38%) minmax(0, 1fr);
+    grid-template-columns: minmax(0, 44cqw) minmax(0, 1fr);
     grid-template-rows: auto 1fr;
     grid-template-areas: 'phone story' 'phone rail';
-    column-gap: 7%;
-    row-gap: 3rem;
+    column-gap: 6cqw;
+    row-gap: 48px;
     align-items: start;
   }
+  .no-story .grid {
+    grid-template-rows: auto;
+    grid-template-areas: 'phone rail';
+  }
   .story { grid-area: story; }
-  .stage { grid-area: phone; }
+  .stage {
+    grid-area: phone;
+    /* the phone at 38cqw of the module, its hint centred beneath it */
+    display: flex; flex-direction: column; gap: 16px;
+    width: 38cqw; max-width: 100%;
+  }
   .rail { grid-area: rail; align-self: end; }
+  .no-story .rail { align-self: start; }
 
   /* ---------- story ---------- */
   .kicker {
@@ -381,8 +395,8 @@ const hasClip = Boolean(moment.src);
   .s6 .tap-label { opacity: 1; transition: opacity 0.35s 0.25s; }
 
   .hint {
-    margin: 1rem 0 0; text-align: center;
-    font: 500 0.68rem/1 var(--mono); letter-spacing: 0.16em; text-transform: uppercase;
+    margin: 0; text-align: center;
+    font: 500 0.6875rem/1.5 var(--mono); letter-spacing: 0.12em;
     color: color-mix(in oklab, var(--ink) 55%, transparent);
     transition: opacity 0.3s;
   }
@@ -546,29 +560,33 @@ const hasClip = Boolean(moment.src);
 
   /* ---------- rail ---------- */
   .rail {
-    position: relative; list-style: none; margin: 0; padding: 0;
-    display: grid; row-gap: 1.6rem;
+    position: relative; list-style: none; margin: 0; padding: 8px 0 0;
+    display: grid; row-gap: 24px;
   }
+  /* the line behind the dots, fading out through the last step (as the Intake's does) */
   .rail::before {
-    content: ''; position: absolute; left: 0.28rem; top: 0.9rem; bottom: 0.9rem; width: 1px;
+    content: ''; position: absolute; left: 4.5px; top: 16px; bottom: 0; width: 1px;
     background: color-mix(in oklab, var(--ink) 16%, transparent);
+    -webkit-mask-image: linear-gradient(to bottom, #000 calc(100% - 48px), transparent);
+    mask-image: linear-gradient(to bottom, #000 calc(100% - 48px), transparent);
   }
+  /* a step = a 10px dot on the line at the left, its text 32px in (the Intake's run draws the same) */
   .step {
-    position: relative; display: grid; row-gap: 0.3rem; padding-left: 1.7rem;
+    position: relative; display: grid; row-gap: 4px; padding-left: 32px;
     opacity: 0.42; transition: opacity 0.4s;
   }
   .step::before {
-    content: ''; position: absolute; left: 0; top: 0.12rem;
-    width: 0.58rem; height: 0.58rem; border-radius: 50%;
+    content: ''; position: absolute; left: 0; top: 3px;
+    width: 10px; height: 10px; border-radius: 50%;
     box-sizing: border-box; border: 1.5px solid currentColor; background: var(--ground);
     transition: background 0.3s, border-color 0.3s, box-shadow 0.3s;
   }
   .label {
-    font: 500 0.68rem/1 var(--mono); letter-spacing: 0.16em; text-transform: uppercase;
+    font: 500 0.6875rem/1.5 var(--mono); letter-spacing: 0.12em;
     color: color-mix(in oklab, var(--ink) 66%, transparent);
   }
-  .val { font-size: 1rem; line-height: 1.35; }
-  .sub { font-size: 0.82rem; line-height: 1.35; color: color-mix(in oklab, var(--ink) 66%, transparent); }
+  .val { font-size: 1rem; line-height: 1.5; }
+  .sub { font-size: 0.875rem; line-height: 1.5; color: color-mix(in oklab, var(--ink) 66%, transparent); }
   .s2 .step-search, .s3 .step-results, .s4 .step-moment, .s5 .step-kept { opacity: 1; }
   .s2 .step-search::before, .s3 .step-results::before, .s4 .step-moment::before, .s5 .step-kept::before {
     background: var(--accent); border-color: var(--accent);
@@ -584,9 +602,11 @@ const hasClip = Boolean(moment.src);
       grid-template-columns: minmax(0, 1fr);
       grid-template-rows: auto;
       grid-template-areas: 'story' 'phone' 'rail';
-      row-gap: 2.5rem;
+      row-gap: 48px;
     }
-    .phone { width: min(100%, 78cqw); margin-inline: auto; }
+    .no-story .grid { grid-template-areas: 'phone' 'rail'; }
+    /* the phone fills ~80% of the module, centred */
+    .stage { width: 80cqw; margin-inline: auto; }
     .rail { align-self: start; }
   }
 

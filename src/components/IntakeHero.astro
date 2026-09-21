@@ -21,6 +21,7 @@ const runJson = JSON.stringify(run);
 ---
 <section class={`intake-hero${theme !== 'auto' ? ' ' + theme : ''}${cls ? ' ' + cls : ''}`} data-intake-hero data-step={step} aria-label="Intake: one voice memo becoming tickets">
   <script type="application/json" data-intake-run set:html={runJson}></script>
+  <div class="grid">
     <div class="watch-col">
       <figure class="watch" aria-hidden="true">
         <div class="screen">
@@ -130,6 +131,7 @@ const runJson = JSON.stringify(run);
       </div>
       <button type="button" class="replay">replay</button>
     </div>
+  </div>
     <div class="fly"></div>
     <div class="sr" role="status" aria-live="polite"></div>
 </section>
@@ -158,24 +160,48 @@ const runJson = JSON.stringify(run);
    until its own switch, html[data-night], which is wired above) */
 .intake-hero {
   position: relative;
-  display: grid;
-  grid-template-columns: minmax(260px, 521px) minmax(0, 1fr);
-  gap: clamp(32px, 6vw, 80px);
-  align-items: start;
-  padding: clamp(24px, 4vw, 50px) clamp(20px, 3vw, 40px);
+  /* the module is its own query container: the object is sized in cqw of
+     the module's width, never in fixed pixels (presentation pass, 2026-09-21) */
+  container-type: inline-size;
+  container-name: hero;
+  padding: 0;
   background: transparent;
   color: var(--ink);
   font-family: 'Outfit', 'Avenir Next', 'Segoe UI', sans-serif;
   overflow: hidden;
 }
-@media (max-width: 820px) {
-  .intake-hero { grid-template-columns: 1fr; }
-  .intake-hero .watch-col { max-width: 360px; margin: 0 auto; }
+/* the same grid as the Archive: the object column (44cqw) on the left axis,
+   the run on the right axis, one 6cqw gutter between; 48px rows when stacked */
+.intake-hero .grid {
+  display: grid;
+  grid-template-columns: minmax(0, 44cqw) minmax(0, 1fr);
+  column-gap: 6cqw;
+  row-gap: 48px;
+  align-items: start;
+}
+/* one column under 820px of module width: the watch fills ~70% of it, centred */
+@container hero (width < 820px) {
+  .intake-hero .grid { grid-template-columns: minmax(0, 1fr); }
+  .intake-hero .watch-col { width: 70cqw; margin-inline: auto; }
 }
 
 /* ---- watch ---- */
-.intake-hero .watch-col { display: flex; flex-direction: column; gap: 6px; }
-.intake-hero .watch { position: relative; width: 100%; aspect-ratio: 521 / 781; margin: 0; container-type: inline-size; }
+.intake-hero .watch-col { display: flex; flex-direction: column; gap: 16px; }
+/* the blank watch PNG (521 × 781) carries transparent margins around the band —
+   70 left, 68 right, 67 top, 61 bottom — so the VISIBLE watch is 383 × 653. The
+   figure keeps the PNG's frame (the screen is placed in cqw of it) but is scaled
+   and pulled by those ratios so the visible watch fills the column and sits on
+   the module's rhythm and left axis exactly as the phone does. Percent margins
+   resolve against the column's width, hence the /383. The figure itself takes
+   no pointer events (its transparent frame overhangs the run); the stop does. */
+.intake-hero .watch {
+  position: relative;
+  width: calc(100% * 521 / 383);
+  aspect-ratio: 521 / 781;
+  margin: calc(-100% * 67 / 383) 0 calc(-100% * 61 / 383) calc(-100% * 70 / 383);
+  container-type: inline-size;
+  pointer-events: none;
+}
 .intake-hero .watch > img { position: absolute; inset: 0; width: 100%; height: 100%; z-index: 2; pointer-events: none; user-select: none; }
 .intake-hero .screen {
   position: absolute; left: 20.35cqw; top: 40.88cqw; width: 60.65cqw; height: 69.87cqw;
@@ -194,6 +220,7 @@ const runJson = JSON.stringify(run);
   position: absolute; left: 39.87cqw; top: 87.97cqw; width: 20.25cqw; height: 20.25cqw; box-sizing: border-box; padding: 0; margin: 0;
   border: 0.79cqw solid color-mix(in oklab, var(--accent) 45%, transparent); border-radius: 50%; background: transparent; cursor: pointer;
   display: flex; align-items: center; justify-content: center;
+  pointer-events: auto;
 }
 .intake-hero .stop:focus-visible { outline: 2px solid #F2F0EA; outline-offset: 3px; }
 .intake-hero .stop span { display: block; width: 8.23cqw; height: 8.23cqw; border-radius: 2.22cqw; background: var(--accent); }
@@ -202,19 +229,20 @@ const runJson = JSON.stringify(run);
 .intake-hero .check svg { width: 8.86cqw; height: 8.86cqw; }
 .intake-hero .saved { position: absolute; left: 0; top: 63.29cqw; width: 100%; text-align: center; font-size: 7.59cqw; font-weight: 400; letter-spacing: 0.01em; line-height: 1; color: #F2F0EA; animation: ih-in .5s ease-out .3s both; }
 .intake-hero .meta { position: absolute; left: 0; top: 75.32cqw; width: 100%; text-align: center; font-family: var(--mono); font-size: 3.48cqw; letter-spacing: 0.08em; color: #8C8A84; animation: ih-in .5s ease-out .4s both; }
-.intake-hero .hint { text-align: center; font-family: var(--mono); font-size: 10px; letter-spacing: 0.2em; color: var(--dim); }
+.intake-hero .hint { text-align: center; font: 500 0.6875rem/1.5 var(--mono); letter-spacing: 0.12em; color: var(--dim); }
 .intake-hero.s1 .hint { visibility: hidden; }
 .intake-hero .fly { display: none; position: absolute; width: 12px; height: 12px; border-radius: 50%; background: var(--accent); box-shadow: 0 0 18px var(--accent); z-index: 3; pointer-events: none; }
 .intake-hero.s1:not(.s3) .fly { display: block; animation: ih-fly 1s cubic-bezier(.4, 0, .2, 1) both; }
 
 /* ---- run column ---- */
-.intake-hero .run { position: relative; display: flex; flex-direction: column; gap: 26px; padding-top: 14px; }
-.intake-hero .row { position: relative; display: flex; gap: 22px; align-items: flex-start; }
-.intake-hero .row::before { content: ""; position: absolute; left: 4.5px; top: 20px; bottom: -26px; width: 1px; background: var(--line); }
+.intake-hero .run { position: relative; display: flex; flex-direction: column; gap: 24px; padding-top: 8px; }
+/* a row = a 10px node on the line at the left, its text 32px in (the Archive's rail draws the same) */
+.intake-hero .row { position: relative; padding-left: 32px; }
+.intake-hero .row::before { content: ""; position: absolute; left: 4.5px; top: 16px; bottom: -24px; width: 1px; background: var(--line); }
 .intake-hero .row:last-of-type::before { bottom: 0; background: linear-gradient(to bottom, var(--line), transparent); }
-.intake-hero .node { width: 10px; height: 10px; margin-top: 4px; flex-shrink: 0; border-radius: 50%; background: var(--line); transition: background .4s; }
-.intake-hero .body { flex-grow: 1; min-width: 0; display: flex; flex-direction: column; gap: 10px; }
-.intake-hero .label { font-family: var(--mono); font-size: 10px; letter-spacing: 0.2em; color: var(--dim); line-height: 18px; }
+.intake-hero .node { position: absolute; left: 0; top: 3px; width: 10px; height: 10px; border-radius: 50%; background: var(--line); transition: background .4s; }
+.intake-hero .body { min-width: 0; display: flex; flex-direction: column; gap: 8px; }
+.intake-hero .label { font: 500 0.6875rem/1.5 var(--mono); letter-spacing: 0.12em; color: var(--dim); }
 
 .intake-hero .stream { display: none; height: 156px; overflow: hidden; flex-direction: column; justify-content: flex-end; font-family: var(--mono); font-size: 13px; line-height: 1.65; color: var(--ink-2); transition: opacity .6s; -webkit-mask-image: linear-gradient(to bottom, transparent, #000 36px); mask-image: linear-gradient(to bottom, transparent, #000 36px); }
 .intake-hero.s2 .stream { display: flex; animation: ih-in .4s ease-out both; }
@@ -258,7 +286,7 @@ const runJson = JSON.stringify(run);
 .intake-hero .act.primary { color: var(--amber); border-color: color-mix(in oklab, var(--amber) 50%, transparent); }
 .intake-hero .card-src { font-size: 11px; color: var(--dim); }
 
-.intake-hero .replay { display: none; align-self: flex-end; border: 0; background: transparent; color: var(--dim); font-family: var(--mono); font-size: 10px; letter-spacing: 0.2em; cursor: pointer; padding: 6px 0; }
+.intake-hero .replay { display: none; align-self: flex-end; border: 0; background: transparent; color: var(--dim); font: 500 0.6875rem/1.5 var(--mono); letter-spacing: 0.12em; cursor: pointer; padding: 8px 0; }
 .intake-hero.s6 .replay { display: flex; animation: ih-in .4s ease-out .5s both; }
 .intake-hero .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 
