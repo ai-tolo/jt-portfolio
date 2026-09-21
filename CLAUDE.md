@@ -247,6 +247,22 @@ session must follow.
   more, so nothing clips the device shadow at any width. Verified 700 →
   1920 with zero module overflow and page scrollWidth == viewport. Never
   edit SignalMachine.astro for scaling; adjust the host fit instead.
+- THE FLOOR is ONE object sitewide (2026-09-21, Jon's reference shot):
+  `src/components/studio/SiteFloor.astro` = the email + the LinkedIn mark,
+  centred, nothing else (the city and the résumé link are gone from every
+  floor; the rail / bottom bar and the homepage corner carry résumé).
+  Pages own placement only (margins, hairline, max-width, order) through
+  `:global(.floor)` in a scoped block, or a plain `.floor` inside a
+  `<style is:global>` block (`:global()` is NOT compiled there and the
+  rule silently dies: /resume, 2026-09-21), and hand in inks through
+  `--floor-ink` / `--floor-dim` / `--floor-hot`. Never re-inline a footer.
+- The homepage corner (top right) is the résumé link alone with its ember
+  bead; no city. The "back to selected work" end-line is retired from
+  every case study (dead link); the rail carries every exit. AwayRail
+  order on case studies: the house chip on TOP, 🡐 résumé MID-RAIL (auto
+  margins split the column), the switch at the foot; phone bar ⌂ · 🡐
+  résumé · moon.
+
 
 ## Build + deploy facts (2026-09-09 QA pass, shipped 0e66b18)
 - `site` is `https://www.uxjon.com` (the apex 308-redirects to www). Every
