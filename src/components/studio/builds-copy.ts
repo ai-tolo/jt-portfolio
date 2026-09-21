@@ -53,7 +53,12 @@ export const BUILDS: BuildPiece[] = [
       },
       {
         type: "p",
-        html: "So I built the library I kept expecting someone to sell me. Every recording gets listened to and named for what's in it. Every word is searchable, the way photos are. Every waveform is something I can see, trim, and keep. The quote, the laugh, the idea from three summers ago: seconds away.",
+        html: "So I built the library I kept expecting someone to sell me. Every recording gets listened to and named for what's in it. Every word is searchable, the way photos are. Every waveform is something I can see, trim, and keep.",
+      },
+      {
+        // the last sentence stands alone (Jon, 2026-09-21)
+        type: "p",
+        html: "The quote, the laugh, the idea from three summers ago: seconds away.",
       },
       {
         type: "media",

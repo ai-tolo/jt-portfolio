@@ -31,6 +31,10 @@ session must follow.
   numbers. Captures go to `~/Documents/studio-build/`.
 - After any change, assert `scrollWidth <= viewport` at 375 and 1440 on the
   touched pages — horizontal overflow has been the most-recurring regression.
+  On the homepage under 900px the scroller is `<main>`, not the document
+  (2026-09-21): read `main.scrollWidth`, scroll with `main.scrollTo` /
+  `main.scrollTop` (window.scrollTo silently no-ops), and keep touch
+  emulation on.
 
 ## Sacred / hazard files
 - `src/components/SignalMachine.astro` is **SACRED**: observe it (its root is
@@ -198,6 +202,26 @@ session must follow.
   panel-sized object; never make the panel itself viewport-tall. Adding a
   section = add `.room` and keep it abutting; section-to-section margins
   are gone by design.
+- PHONE SCROLL MODEL (2026-09-21, Jon: the pinned bar lifted with iOS's
+  document rubber-band; `overscroll-behavior` on html/body did not stop it
+  on the real phone): under 900px the document is frozen (`html, body {
+  height: 100%; min-height: 0; overflow: hidden }` — body's global
+  `min-height: 100vh` is the iOS LARGE viewport and must be zeroed) and
+  `<main>` is the scroll container (`height: 100%; overflow-y: auto;
+  overscroll-behavior-y: contain; scroll-behavior: smooth` under
+  no-preference), all `@media screen` so print keeps a flowing document.
+  The block lives in `src/pages/index.astro`. `.one` stays the untouched
+  flex column with its `order` rules and custom properties; `.mbar` stays a
+  fixed DESCENDANT of the scroller and is viewport-pinned only while main,
+  .one and body carry NO transform / filter / backdrop-filter /
+  perspective / contain / will-change. Consequences to expect, not fix:
+  Safari's toolbar never collapses (the visible height is the small
+  viewport for the whole visit), scroll position is not restored on
+  reload/back on phones, and rotating across 900px lands at the top. Script
+  side: the spy's settle listeners are capture-phase on `document` (element
+  scroll events do not bubble to window); the lazy exhibit iframe observer
+  roots on `main` when it scrolls. Desks (≥900px) keep the document
+  scroller: the rail, the comet and keyboard scrolling are untouched.
 - The instrument is FIT from the host (2026-09-02): `.live-signal` is
   1248px wide (= the sacred file's 1120px reference + its `.inner` 128px
   gutter), the host pins `.sgm`/`.device` to the reference at EVERY width

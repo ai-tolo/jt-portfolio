@@ -1088,13 +1088,12 @@ const ARCHIVE = BUILDS.find((b) => b.id === "archive")!;
     }
 
     /* the phone page ends where it ends (Jon, 2026-09-21: "you can scroll
-       too far"): no rubber-band past the floor, so the pinned bar never
-       lifts off the bottom with the bounce. Propagated from html/body to
-       the viewport like overflow; desks keep their trackpad bounce. */
-    :global(html),
-    :global(body) {
-      overscroll-behavior-y: none;
-    }
+       too far", then "the bar still lifts"): iOS ignores overscroll-behavior
+       on the root, so under 900px the DOCUMENT is frozen and <main> is the
+       scroller — the block lives in src/pages/index.astro. The bar (fixed, a
+       descendant of the scroller) stays on the viewport as long as main,
+       .one and body never carry a transform / filter / backdrop-filter /
+       perspective / contain / will-change. Desks keep the document scroll. */
     /* triage order: the page leads with proof; the exhibit closes the show.
        Visual order only — the spy and the map read layout, not source. */
     .one {
@@ -2346,17 +2345,20 @@ const ARCHIVE = BUILDS.find((b) => b.id === "archive")!;
     // IO crossings can all fire before a smooth scroll settles; recompute
     // once more when scrolling ends (scrollend where supported, else a
     // debounced passive listener — no per-frame work either way).
+    // Capture phase on the document: scroll/scrollend do not bubble, and on
+    // phones the scroller is <main>, not the document (2026-09-21) — capture
+    // hears the inner scroller and, at target, the desk's document alike.
     if ("onscrollend" in window) {
-      window.addEventListener("scrollend", recompute, { passive: true });
+      document.addEventListener("scrollend", recompute, { capture: true, passive: true });
     } else {
       let t = 0;
-      window.addEventListener(
+      document.addEventListener(
         "scroll",
         () => {
           window.clearTimeout(t);
           t = window.setTimeout(recompute, 120);
         },
-        { passive: true }
+        { capture: true, passive: true }
       );
     }
     recompute();
@@ -2854,6 +2856,10 @@ const ARCHIVE = BUILDS.find((b) => b.id === "archive")!;
   if (!window.matchMedia("(pointer: fine)").matches) {
     const f = document.querySelector<HTMLIFrameElement>(".sig-mobile-frame");
     if (f && !f.src) {
+      // rootMargin only widens the ROOT's box: on phones <main> is the
+      // scroller (2026-09-21), so it must be the root or the 300px lookahead
+      // is clipped away by the scrollport before the viewport ever sees it
+      const scroller = document.querySelector("main");
       new IntersectionObserver(
         ([e], obs) => {
           if (e.isIntersecting) {
@@ -2861,7 +2867,7 @@ const ARCHIVE = BUILDS.find((b) => b.id === "archive")!;
             obs.disconnect();
           }
         },
-        { rootMargin: "300px" }
+        { root: scroller && getComputedStyle(scroller).overflowY !== "visible" ? scroller : null, rootMargin: "300px" }
       ).observe(f);
     }
   }

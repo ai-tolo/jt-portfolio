@@ -59,4 +59,35 @@ export const prerender = true;
        sticky header. No page padding of its own. */
     padding: 0;
   }
+  /* PHONES SCROLL INSIDE MAIN (2026-09-21, Jon: the pinned bar lifted with
+     iOS's document rubber-band, and overscroll-behavior on html/body did
+     not stop it on the real phone). Under 900px the document is frozen and
+     <main> is the scroll container, so the bounce happens in main's own
+     content layer and the fixed .mbar — a descendant, still pinned to the
+     viewport — never moves. Laws: main, .one and body must never carry a
+     transform / filter / backdrop-filter / perspective / contain /
+     will-change (it would re-root the fixed bar into the scroller); body's
+     global min-height: 100vh (tokens.css) is the iOS LARGE viewport, so it
+     is zeroed here or the column runs taller than the screen. Screen-only:
+     a print page box is narrower than 899px and an overflow:hidden root
+     would print a single page. Desks keep the document scroller (rail,
+     comet, keyboard scrolling). */
+  @media screen and (max-width: 899px) {
+    :global(html),
+    :global(body) {
+      height: 100%;
+      min-height: 0;
+      overflow: hidden;
+    }
+    main {
+      height: 100%;
+      overflow-y: auto;
+      overscroll-behavior-y: contain;
+    }
+  }
+  @media screen and (max-width: 899px) and (prefers-reduced-motion: no-preference) {
+    main {
+      scroll-behavior: smooth; /* html's rule does not reach an inner scroller */
+    }
+  }
 </style>
