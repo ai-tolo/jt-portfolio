@@ -261,7 +261,10 @@ session must follow.
   every case study (dead link); the rail carries every exit. AwayRail
   order on case studies: the house chip on TOP, 🡐 résumé MID-RAIL (auto
   margins split the column), the switch at the foot; phone bar ⌂ · 🡐
-  résumé · moon.
+  résumé · moon. /resume uses the SAME house chip on top (`home="house"`)
+  and nothing else above the switch. The homepage rail's items read word
+  THEN glyph, flush right inside one 94px block, so the glyphs stand in a
+  single column (Jon, 2026-09-21).
 
 
 ## Build + deploy facts (2026-09-09 QA pass, shipped 0e66b18)
