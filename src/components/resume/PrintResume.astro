@@ -1,9 +1,9 @@
 ---
-// The curated one-page PDF resume. Invisible on screen; in print it is the
-// ONLY thing on the page (the interactive sheet, header, and footer all hide).
-// This decouples the "Download PDF" path (window.print in ResumeShell) from
-// the Notion-driven screen content: edit src/lib/resume-print.ts to change
-// the PDF, edit Notion to change the screen.
+// The one-page résumé sheet. On screen it is /resume's paper view; in print
+// it is the ONLY thing on the page (the page chrome, marks, and dock hide).
+// All prose comes from src/lib/resume-print.ts (the single source; the old
+// Notion-driven screen résumé is retired). The PDF asset is a headless-Chrome
+// print of this sheet; regenerate it after any content change.
 //
 // ATS contract (verified with headless Chrome + pypdf, do not regress):
 // - STATIC Geist, not the variable build. Chrome's PDF export of variable
@@ -34,28 +34,18 @@ const isPhone = (s: string) => /^\(?\d{3}\)?[\s.-]?\d{3}[\s.-]?\d{4}$/.test(s.tr
       <div class="pr-name">{c.name}</div>
       <div class="pr-role">{c.title}</div>
     </div>
-    {/* Contact policy (Jon, 2026-08-25): phone is PRINT-ONLY; LinkedIn is an
-        icon on screen but stays a text URL in print (ATS parses text). */}
+    {/* Contact policy (Jon, 2026-09-21): phone is PRINT-ONLY (its separator
+        hides with it, so no capture path can read a doubled dot); no
+        LinkedIn on the sheet, the page's actions row and floor carry the
+        icon. Every item is a real text node, so DOM and PDF extraction read
+        the same line. */}
     <div class="pr-contact">
       {c.contact.map((item, i) => {
         const phone = isPhone(item);
-        const li = item.startsWith("linkedin.com");
         return (
           <span class={phone ? "pr-ct pr-print-only" : "pr-ct"}>
             {i > 0 && <span class="pr-ct-sep"> · </span>}
-            {li ? (
-              <>
-                <a class="pr-li-text" href={`https://${item}`}>{item}</a>
-                <a class="pr-li-icon" href={`https://${item}`} aria-label="LinkedIn" target="_blank" rel="noopener noreferrer">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
-                    stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                    <rect x="3" y="3" width="18" height="18" rx="3" />
-                    <path d="M8 11v5" /><path d="M8 8v.01" />
-                    <path d="M12 16v-5" /><path d="M16 16v-3a2 2 0 0 0-4 0" />
-                  </svg>
-                </a>
-              </>
-            ) : isUrl(item) ? <a href={`https://${item}`}>{item}</a>
+            {isUrl(item) ? <a href={`https://${item}`}>{item}</a>
               : isEmail(item) ? <a href={`mailto:${item}`}>{item}</a>
               : phone ? <a href={`tel:+1${item.replace(/\D/g, "")}`}>{item}</a>
               : item}
@@ -79,14 +69,14 @@ const isPhone = (s: string) => /^\(?\d{3}\)?[\s.-]?\d{3}[\s.-]?\d{4}$/.test(s.tr
       {entries.map((e) => (
         <div class="pr-entry" data-pr-org={e.org}>
           <div class="pr-entry-head">
-            <div class="pr-org">{e.href ? <a class="pr-org-link" href={e.href}>{e.org}</a> : e.org}{e.pos && <span class="pr-pos"> · {e.pos}</span>}</div>
+            <div class="pr-org">{e.org}{e.pos && <span class="pr-pos"> · {e.pos}</span>}</div>
             <div class="pr-dates">{e.dates}</div>
           </div>
           <ul>
             {e.bullets.map((b, bi) => <li data-bi={bi}>{b}</li>)}
           </ul>
-          {e.link && (
-            <div class="pr-link">{e.link.label} <a href={e.link.href}>{e.link.text}</a></div>
+          {e.url && (
+            <div class="pr-link"><a href={e.url.href}>{e.url.text}</a></div>
           )}
         </div>
       ))}
@@ -122,7 +112,9 @@ const isPhone = (s: string) => /^\(?\d{3}\)?[\s.-]?\d{3}[\s.-]?\d{4}$/.test(s.tr
     </div>
   </section>
 
-  <div class="pr-outside"><span class="pr-outside-k">Outside</span><span set:html={c.outside} /></div>
+  {/* the label and the prose are separated by a REAL space: extractors that
+      read the DOM (not the print) used to join them ("OutsideDiary"). */}
+  <div class="pr-outside"><span class="pr-outside-k">{c.closer.label}</span>{" "}<span set:html={c.closer.html} /></div>
 </div>
 
 <style is:global>
@@ -134,11 +126,6 @@ const isPhone = (s: string) => /^\(?\d{3}\)?[\s.-]?\d{3}[\s.-]?\d{4}$/.test(s.tr
     .print-resume { display: none !important; }
     [data-resume-view="paper"] .print-resume { display: block !important; }
     .print-resume .pr-print-only { display: none !important; }
-    .print-resume .pr-li-text { display: none !important; }
-    .print-resume .pr-li-icon svg { width: 13px; height: 13px; vertical-align: -2px; }
-  }
-  @media print {
-    .print-resume .pr-li-icon { display: none !important; }
   }
   @media print {
     @page { size: letter; margin: 0.34in 0.48in; }
@@ -200,28 +187,14 @@ const isPhone = (s: string) => /^\(?\d{3}\)?[\s.-]?\d{3}[\s.-]?\d{4}$/.test(s.tr
   .print-resume .pr-entry:last-child { margin-bottom: 0; }
   .print-resume .pr-entry-head { display: flex; justify-content: space-between; align-items: baseline; gap: 12pt; }
   .print-resume .pr-org { font-size: 10.5pt; font-weight: 700; letter-spacing: -0.005em; color: #16161c; }
-  /* an org with a case study IS the link to it (Jon, 2026-09-09). On
-     screen it is the org name in the document's own ink carrying a
-     hairline rule — red on this sheet means structure only (role, section
-     heads, bullet glyphs), never "click here" (Jon, 2026-09-18). Under the
-     hand the rule goes to full ink and doubles. Static text in normal
-     flow, so the ATS contract above holds; print puts it back in the org
-     ink with no rule (the PDF keeps the link annotation). */
+  /* Org names are static text (Jon, 2026-09-21: the case studies live in a
+     row UNDER the sheet, not inside it). The one bare URL line under the
+     mastering agent keeps the document's link grammar on screen: the
+     document's own ink with a hairline rule — red on this sheet means
+     structure only (role, section heads, bullet glyphs), never "click
+     here" (Jon, 2026-09-18). Static text in normal flow, so the ATS
+     contract above holds. */
   @media screen {
-    .print-resume .pr-org-link {
-      color: #16161c;
-      text-decoration: underline;
-      text-decoration-color: rgba(22, 22, 28, 0.32);
-      text-decoration-thickness: 1px;
-      text-underline-offset: 3px;
-      text-decoration-skip-ink: none;
-      transition: text-decoration-color 140ms ease;
-    }
-    .print-resume .pr-org-link:hover,
-    .print-resume .pr-org-link:focus-visible { text-decoration-color: #16161c; text-decoration-thickness: 2px; }
-    .print-resume .pr-org-link:focus-visible { outline: 2px solid #16161c; outline-offset: 2px; }
-    /* the small "Interactive case study:" / "Play it:" links — the same
-       grammar one size down (print keeps its own rule below) */
     .print-resume .pr-link a {
       color: #16161c;
       text-decoration: underline;
@@ -233,11 +206,6 @@ const isPhone = (s: string) => /^\(?\d{3}\)?[\s.-]?\d{3}[\s.-]?\d{4}$/.test(s.tr
     }
     .print-resume .pr-link a:hover,
     .print-resume .pr-link a:focus-visible { text-decoration-color: #16161c; text-decoration-thickness: 2px; }
-  }
-  @media print {
-    .print-resume .pr-org-link,
-    .print-resume .pr-org-link:hover,
-    .print-resume .pr-org-link:focus-visible { color: #16161c; text-decoration: none; outline: none; }
   }
   @media screen {
     #experience { scroll-margin-top: 28px; }
@@ -271,7 +239,7 @@ const isPhone = (s: string) => /^\(?\d{3}\)?[\s.-]?\d{3}[\s.-]?\d{4}$/.test(s.tr
   .print-resume .pr-skill-k { font-weight: 700; color: #16161c; }
 
   .print-resume .pr-outside { font-size: 8.5pt; color: #56565e; margin-top: 2pt; padding-top: 2pt; border-top: 0.75pt solid #e3dfda; }
-  .print-resume .pr-outside-k { font-weight: 700; color: #B33A2A; text-transform: uppercase; letter-spacing: 0.1em; font-size: 7.75pt; margin-right: 7pt; }
+  .print-resume .pr-outside-k { font-weight: 700; color: #B33A2A; text-transform: uppercase; letter-spacing: 0.1em; font-size: 7.75pt; margin-right: 5pt; }
   .print-resume .pr-outside :global(em) { font-style: italic; }
 
   /* Night inks — the sheet goes dark with the room (sitewide axis,
@@ -287,13 +255,9 @@ const isPhone = (s: string) => /^\(?\d{3}\)?[\s.-]?\d{3}[\s.-]?\d{4}$/.test(s.tr
     :global(html[data-night]) .print-resume h2,
     :global(html[data-night]) .print-resume li::before,
     :global(html[data-night]) .print-resume .pr-outside-k { color: #ff6a4e; }
-    :global(html[data-night]) .print-resume .pr-org-link,
     :global(html[data-night]) .print-resume .pr-link a { color: #e8ecf4; text-decoration-color: rgba(232, 236, 244, 0.42); }
-    :global(html[data-night]) .print-resume .pr-org-link:hover,
-    :global(html[data-night]) .print-resume .pr-org-link:focus-visible,
     :global(html[data-night]) .print-resume .pr-link a:hover,
     :global(html[data-night]) .print-resume .pr-link a:focus-visible { text-decoration-color: #e8ecf4; }
-    :global(html[data-night]) .print-resume .pr-org-link:focus-visible { outline-color: #e8ecf4; }
     :global(html[data-night]) .print-resume .pr-header { border-bottom-color: #ff6a4e; }
     :global(html[data-night]) .print-resume .pr-contact,
     :global(html[data-night]) .print-resume .pr-pos,

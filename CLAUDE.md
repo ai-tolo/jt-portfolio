@@ -64,13 +64,30 @@ session must follow.
 - Proof numbers come from `src/lib/judge-ledger.json`, a dated snapshot of
   the real harness DB (`~/automation/data/inventory.db` on the M1:
   `mix_judgements` / `mix_jobs` / `mix_variants`). Refresh by re-querying;
-  never invent or "round" these numbers.
+  never invent or "round" these numbers. The sheet's evidence clause
+  IMPORTS them inside resume-print.ts (votes, originals kept, date range);
+  never type them into the prose.
+- Names on the sheet (Jon, 2026-09-21): each build leads with a plain
+  descriptor ("AI mastering agent", "Audio catalog and search", "Browser
+  instrument"). Finishable / the Engineer / the Catalog / SIGNAL never
+  appear on the résumé; the naming law below is for the site's surfaces,
+  not the sheet. The reader is a cold design/engineering lead who will not
+  click: every bullet stands without the site.
+- Org names do NOT link (2026-09-21). The case studies sit in a screen-only
+  row under the sheet (`.r-studies` in resume/index.astro: the flagship plus
+  the three canon ledes from case-links.ts). The one bare URL line under the
+  mastering agent is the sheet's only link.
+- Contact: phone is print-only (its separator hides with it); no LinkedIn on
+  the sheet (the actions row and the floor carry the icon). The proof marks
+  key on `data-pr-org` strings + bullet indexes in `MARKS`; re-check them
+  after any rewording or the tabs silently detach.
 
 ## Copy + design laws
 - Honesty first: no "live"/"the actual" labels over authored data; real
   numbers only; claims a skeptic can check. The naming law: **Finishable**
   with the Catalog / the Studio / the Engineer ("console", "bucket", "crown a
-  king" are retired nouns in visible copy).
+  king" are retired nouns in visible copy); the résumé sheet is the one
+  exception (plain descriptors, see "Résumé subsystem").
 - Voice: plain, understated, first-person, lowercase chrome, no em dashes in
   résumé/application copy. Jon-voiced surfaces (hero lines, ledes, bio) are
   HIS: draft only when asked, flag as DRAFT, never committee-polish.
