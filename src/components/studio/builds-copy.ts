@@ -41,23 +41,19 @@ export const BUILDS: BuildPiece[] = [
     name: "the archive",
     draft: false,
     headline: 'Years of my life, trapped in files named "New Recording."',
-    // paragraphs re-installed VERBATIM from Jon's chat text, 2026-09-19
+    // paragraphs re-installed VERBATIM from Jon's chat text ("Script 2 (Archive)"), 2026-09-21
     blocks: [
       {
         type: "p",
-        html: "I record everything. That's my line, anyway, delivered to a friend right after they've said something they'll regret. The truth is less menacing. A college class called Sound Studies is where I started noticing how much of a moment lives in the sound of it, and I've been hitting record ever since: an idea hummed into my phone, a song starting in a parking lot, a laugh I wasn't ready to lose.",
+        html: "I record everything. That's the line, anyway, usually delivered right after a friend says something they'll regret. The truth is less menacing. A college class called Sound Studies taught me how much of a moment lives in its sound, and I've been hitting record ever since: an idea hummed into my phone, a song starting in a parking lot, a laugh I wasn't ready to lose.",
       },
       {
         type: "p",
-        html: "My phone never caught on. Photos get faces, places, and search. Recordings get a date, a duration, and a name like New Recording 47. Mine spent years that way, hundreds of them, spread across phones and laptops and drives: technically saved, practically gone. Every so often I'd open one by accident and be wrecked by how good it felt to be back there. Then a year would pass before I found another.",
+        html: "My phone never caught on. Photos get faces, places, and search. Recordings get a date, a duration, and a name like New Recording 47. I had hundreds, spread across phones and laptops and drives: technically saved, practically gone. Every so often I'd open one by accident and be wrecked by how good it felt to be back there. Then a year would pass before I found another.",
       },
       {
         type: "p",
-        html: "I built the library I kept expecting someone to sell me. Every recording is listened to and named for what's actually in it. Every word is searchable, the way everyone else searches their photos. Every waveform is something I can see, touch, trim, and keep. The quote, the laugh, the idea from three summers ago: seconds away now.",
-      },
-      {
-        type: "p",
-        html: "The Archive stopped being storage. It's somewhere I go.",
+        html: "So I built the library I kept expecting someone to sell me. Every recording gets listened to and named for what's in it. Every word is searchable, the way photos are. Every waveform is something I can see, trim, and keep. The quote, the laugh, the idea from three summers ago: seconds away.",
       },
       {
         type: "media",
@@ -132,23 +128,23 @@ export const BUILDS: BuildPiece[] = [
     name: "the watch",
     draft: false,
     headline: "My best ideas never survived the walk to the computer.",
-    // paragraphs re-installed VERBATIM from Jon's chat text, 2026-09-18 late
+    // paragraphs re-installed VERBATIM from Jon's chat text ("Script 1 (Intake)"), 2026-09-21
     blocks: [
       {
         type: "p",
-        html: "My best ideas show up while I'm doing something else. They arrive whole, in my own voice, and they do not care that I'm on a walk. For years, keeping one meant going to find a screen, which is the same as leaving the room the idea lives in. By the time I'd typed it, fought the autocorrect, and shaped it into something a machine could act on, I had a note about an idea. The idea itself had left.",
+        html: "My best ideas show up while I'm doing something else. They arrive whole, in my own voice, and they don't care that I'm on a walk. Keeping one used to mean finding a screen, which meant leaving the room the idea lives in. By the time I'd typed it, I had a note about an idea. The idea itself had left.",
       },
       {
         type: "p",
-        html: "Now I raise my wrist and say it. Tap stop. The watch says saved. That's all I do. Behind it, a small system I wrote takes the recording, writes down exactly what I said, decides what kind of thing it is (something to do, something to show me later, something to keep) and puts it where it goes: a task, a calendar entry, a note. I keep walking. The work is already moving.",
+        html: "Now I raise my wrist and say it. Tap stop. The watch says saved. Behind that, a small system I wrote transcribes what I said, decides what kind of thing it is (something to do, something to show me later, something to keep), and files it: a task, a calendar entry, a note. I keep walking. The work is already moving.",
       },
       {
         type: "p",
-        html: "I tried to buy this. Humane's AI Pin overheated, died before lunch, and then the servers went dark. The Limitless Pendant came closest, until Meta bought it and stopped selling it. Bee records everything, which is less listening than surveillance with a summary. The Stream Ring has the right gesture and has been \"shipping this summer\" since last November. Every one of them wanted to be a companion. I wanted a button. Record when I say record. Keep what I said.",
+        html: "I tried to buy this. Humane's AI Pin overheated, then its servers went dark. The Limitless Pendant came closest, until Meta bought it and stopped selling it. Bee records everything, which is surveillance with a summary. The Stream Ring has the right gesture and a ship date I'm still waiting on. They all wanted to be a companion. I wanted a button.",
       },
       {
         type: "p",
-        html: "So I took an old Apple Watch, deleted everything else it could do, and left it that one job. Building the rest took a weekend.",
+        html: "So I took an old Apple Watch, stripped it down to that one job, and built the rest in a weekend.",
       },
       {
         type: "media",
