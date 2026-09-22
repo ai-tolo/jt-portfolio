@@ -302,10 +302,9 @@ const ARCHIVE = BUILDS.find((b) => b.id === "archive")!;
     <div class="sig-desktop">
       <SignalMachine />
     </div>
-    <div class="sig-mobile">
-      <p class="sig-mobile-note">a blind listening test, pocket-sized — the instrument itself plays on the desktop site</p>
-      <iframe class="sig-mobile-frame" data-src="/more/index.html" title="Interactive audio exhibit" loading="lazy" allow="autoplay"></iframe>
-    </div>
+    {/* the phone exhibit that stood in here (a note + the lazy /more iframe)
+        is gone (Jon, 2026-09-22): the room exists only where the instrument
+        can play; /more stays live at its own URL */}
   </section>
 
   {/* the writing section left the homepage 2026-08-31 ("for now" — Jon's
@@ -1019,7 +1018,7 @@ const ARCHIVE = BUILDS.find((b) => b.id === "archive")!;
       outline-color: #e8ecf4;
     }
     .mbar-word {
-      font-size: 0.66rem;
+      font-size: 0.7rem; /* four words since the play room left phones (2026-09-22) */
       letter-spacing: 0.05em;
     }
     .mbar-item[data-on] {
@@ -1117,23 +1116,23 @@ const ARCHIVE = BUILDS.find((b) => b.id === "archive")!;
     .corner a {
       padding: 8px 2px;
     }
-  }
-
-  /* the exhibit's honest frame: what this is, where the real one lives.
-     DRAFT — Jon's voice owns this line. It lives INSIDE .sig-mobile, so it
-     rides the same POINTER gate as the exhibit itself (a width gate printed
-     it above the working instrument on a narrowed desktop window). */
-  .sig-mobile-note {
-    display: block;
-    margin: 0 4px 10px;
-    font-family: "IBM Plex Mono", ui-monospace, monospace;
-    font-size: 0.68rem;
-    letter-spacing: 0.05em;
-    line-height: 1.55;
-    color: var(--dim);
-  }
-  :global(html[data-night]) .sig-mobile-note {
-    color: #7d8798;
+    /* THE HERO ON A PHONE (round 3, 2026-09-22): one left-aligned stack on
+       the rooms' 14px gutter — the name, the role line, the liner — so the
+       first screen reads on one axis; the role line balances its two lines
+       instead of dropping its last word alone */
+    .hero {
+      padding: 24px 14px;
+    }
+    .hero-name {
+      width: 100%;
+    }
+    .role-line {
+      text-wrap: balance;
+    }
+    .liner {
+      margin-left: 0;
+      text-align: left;
+    }
   }
 
   /* ── ROOMS (Jon, 2026-09-02: "each section has its own viewport — when
@@ -1400,22 +1399,22 @@ const ARCHIVE = BUILDS.find((b) => b.id === "archive")!;
     inset: -20px;
     background: radial-gradient(circle, rgba(255, 90, 90, 0.55), transparent 70%);
   }
-  .sig-mobile {
-    display: block;
-    padding: 0 14px;
-  }
-  .sig-mobile-frame {
-    width: 100%;
-    height: 78svh;
-    border: 1px solid var(--night-line);
-    border-radius: 10px;
-    background: var(--night);
-  }
   @media (pointer: fine) {
     .sig-desktop {
       display: block;
     }
-    .sig-mobile {
+  }
+  /* the play room exists only where the instrument can play (Jon,
+     2026-09-22: the phone exhibit is deleted): on phones — the bar's width —
+     and on any screen without a fine pointer the room is gone, and "play"
+     leaves the bar and the rail with it (the nav trio reads only the rooms
+     that are laid out — getDocIds). Desks keep everything. */
+  @media (max-width: 899px), not all and (pointer: fine) {
+    .live-signal {
+      display: none;
+    }
+    .mbar-item[data-for="play"],
+    .rail-item[data-for="play"] {
       display: none;
     }
   }
@@ -1489,6 +1488,12 @@ const ARCHIVE = BUILDS.find((b) => b.id === "archive")!;
   @media (max-width: 899px) {
     .ls {
       --cs-reserve: 440px; /* + the pinned phone bar (--mbar-h) */
+    }
+    /* on a phone the wallet's mini is the room's only control: a thumb-sized
+       object (80 × 49, the strip drops under it), not a title-line chip
+       (round 3, 2026-09-22) */
+    .au .ls-head {
+      --mini-w: 80px; /* .au for weight: the base .ls-head rule sits later in the sheet */
     }
   }
   @media (min-width: 900px) {
@@ -2331,10 +2336,14 @@ const ARCHIVE = BUILDS.find((b) => b.id === "archive")!;
   // Computed FRESH each call: the mobile flex order makes layout position
   // width-dependent, so a one-time snapshot goes stale when the viewport
   // crosses 900px (tablet rotation — review, 2026-08-25).
+  // Only rooms that are laid out count: the play room is display:none where
+  // the instrument cannot play (phones, coarse pointers — 2026-09-22), and a
+  // hidden room would sort first at offsetTop 0 and take a knot and a word.
   const getDocIds = () =>
     rail
       ? Array.from(rail.querySelectorAll<HTMLElement>("[data-for]"))
           .map((el) => el.dataset.for as string)
+          .filter((id) => document.getElementById(id)?.offsetParent != null)
           .sort((a, b) => (document.getElementById(a)?.offsetTop ?? 0) - (document.getElementById(b)?.offsetTop ?? 0))
       : [];
   // Words occupy the rail's top three quarters; the bottom quarter is the
@@ -2914,27 +2923,6 @@ const ARCHIVE = BUILDS.find((b) => b.id === "archive")!;
       };
       lkRoom.addEventListener("touchend", lkEnd, { capture: true });
       lkRoom.addEventListener("touchcancel", lkEnd, { capture: true });
-    }
-  }
-
-  // touch devices: load the /more exhibit only when the reader nears it —
-  // on mobile the exhibit sits last, so most triage visits never pay for it
-  if (!window.matchMedia("(pointer: fine)").matches) {
-    const f = document.querySelector<HTMLIFrameElement>(".sig-mobile-frame");
-    if (f && !f.src) {
-      // rootMargin only widens the ROOT's box: on phones <main> is the
-      // scroller (2026-09-21), so it must be the root or the 300px lookahead
-      // is clipped away by the scrollport before the viewport ever sees it
-      const scroller = document.querySelector("main");
-      new IntersectionObserver(
-        ([e], obs) => {
-          if (e.isIntersecting) {
-            f.src = f.getAttribute("data-src") || "";
-            obs.disconnect();
-          }
-        },
-        { root: scroller && getComputedStyle(scroller).overflowY !== "visible" ? scroller : null, rootMargin: "300px" }
-      ).observe(f);
     }
   }
 </script>
