@@ -190,14 +190,32 @@ session must follow.
   gutter is 14px both sides). Both modules share ONE grid, in container
   units of the module (`container-name: hero`): object column
   `minmax(0, 44cqw)`, 6cqw gutter, 48px rows (since 2026-09-22 the Archive's
-  object column is the RIGHT one — `'rail phone'`, columns `1fr / max-content` so
-  the phone (38cqw, height-capped by the host) sits on the module's right edge and its rail MIRRORS the watch's
-  run beside it: dots on the phone's side one gutter away, words running
-  left, right-aligned; stacked it reads left-to-right again), node/dot
+  object column is the RIGHT one — `'rail phone'`, both dot columns on the
+  module's centre line (50cqw), the phone starting at 56cqw, height-capped
+  by the host, its rail MIRRORING the watch's run beside it: dots on the
+  phone's side one gutter away, words running left, right-aligned; stacked
+  it reads left-to-right again). THE ARCHIVE'S WORDS (round 2, 2026-09-22):
+  the title over the phone on its left edge (56cqw); the caption and the
+  story beneath, left-aligned from the dots' left edge (50cqw − 5px) to the
+  module's right edge — the watch's width. Node/dot
   10px on a 1px line
   with the text 32px in; collapse under 820px of MODULE width; stacked,
   the watch is 70cqw and the phone 80cqw, centred. The host caps both
-  devices at 76svh so they stand the same height under the lamp. The
+  devices at 76svh on desks only (the cap lives inside the ≥820 container
+  query; unscoped it shrank the stacked phone) so they stand the same height
+  under the lamp. THE TOUCH SIGNAL (2026-09-22) is ONE vocabulary on both
+  objects: `::after` the blue→purple gradient edge (masked ring / rim),
+  `::before` its light (the watch's outward, the phone's inward), both on
+  `touch-breathe` 2s ease-in-out 0.45↔1 — an EXACT COPY of the keyframe in
+  each module, change both or neither; hover = still + full, `.s1` = off,
+  reduced motion = still at 0.75; no halo, no ping. The mono CAPTIONS arrive
+  with the run (`.wk:has(.intake-hero.s1, .archive-hero.s1)`), space held
+  at rest. Beside the watch the run column RESERVES its stage-six height
+  (`--run-final`, measured by IntakeHero's script under a motion-free
+  `measuring` class, re-measured on fonts/resize) so the words under the
+  module never move while it runs; stacked, no reservation. The rail's
+  comet re-measures its knots on any body height change (ResizeObserver).
+  The instrument's intro line (`.sgm-intro`) is hidden from the host. The
   watch PNG's transparent frame (70/68/67/61 px of 521×781) is trimmed in
   IntakeHero with proportional negative margins (ratios of the visible
   383×653) so the visible watch sits on the axis and rhythm — never edit
