@@ -297,8 +297,13 @@ session must follow.
 - `site` is `https://www.uxjon.com` (the apex 308-redirects to www). Every
   canonical / og:url / og:image / sitemap entry derives from `Astro.site`;
   never hardcode the apex (CSLayout used to; it is fixed).
-- `@astrojs/sitemap` runs on build (excludes `/more` and the off-shelf
-  momence page); `robots.txt` carries the Sitemap line.
+- `@astrojs/sitemap` runs on build (excludes the off-shelf momence page);
+  `robots.txt` carries the Sitemap line.
+- THE SITE IS THREE THINGS (Jon, 2026-09-22): the homepage, the résumé, and
+  the case studies under it. The Catalog + Judge doors, the /writing posts
+  and the /more phone exhibit are in `junkyard/` (not built, not imported,
+  not in the sitemap; their URLs redirect in astro.config.mjs). Never route
+  them back or spend context on them unless Jon asks.
 - `postbuild` = `scripts/vercel-cache-headers.mjs`: the Vercel adapter emits
   the `/_astro` immutable cache rule AFTER `{ handle: filesystem }`, where it
   never fires; the script moves it above. Verify after a deploy with
@@ -310,13 +315,11 @@ session must follow.
 - `inlineStylesheets: 'auto'` with a CSS-only `assetsInlineLimit` function;
   a plain numeric limit base64-inlines fontsource woff2 subsets into the
   homepage sheet (131 KB → 249 KB). Keep it a function.
-- `src/pages/404.astro` is the site's 404 (away-page chrome); `/more` is the
-  phone exhibit, live at its own URL only (noindex, root-absolute script
-  path) — since 2026-09-22 it is NOT iframed into `#play` any more: the
-  play room is `display: none` on phones (≤899px) and on any screen without
-  a fine pointer, "play" leaves the bar and the rail with it, and
-  `getDocIds()` counts only rooms that are laid out (`offsetParent`). Never
-  bring an instrument back to phones (see memory signal_mobile_halo).
+- `src/pages/404.astro` is the site's 404 (away-page chrome). The play room
+  is `display: none` on phones (≤899px) and on any screen without a fine
+  pointer, "play" leaves the bar and the rail with it, and `getDocIds()`
+  counts only rooms that are laid out (`offsetParent`). Never bring an
+  instrument back to phones (see memory signal_mobile_halo).
 - PHONES (round 3, 2026-09-22): the hero is one left-aligned stack on the
   rooms' 14px gutter (the liner's right alignment is a desk gesture; the
   role line balances); the work room lands title + object + hint on one

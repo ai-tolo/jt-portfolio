@@ -14,15 +14,24 @@ import sitemap from '@astrojs/sitemap';
 //
 // https://astro.build/config
 export default defineConfig({
-  redirects: { '/signal': '/#play' },
+  redirects: {
+    '/signal': '/#play',
+    // the doors and the orphans went to the junkyard (2026-09-22); links
+    // already out in the world land on the story or the homepage
+    '/catalog': '/case-studies/the-console',
+    '/judge': '/case-studies/the-console',
+    '/more': '/',
+    '/writing/pushin-paper': '/',
+    '/writing/sound': '/',
+    '/writing/32-in-minneapolis-83-in-dakar': '/',
+  },
   site: 'https://www.uxjon.com',
   output: 'server',
   adapter: vercel(),
   integrations: [
     sitemap({
-      // /more is the phone-only exhibit iframed into the homepage (noindex);
       // momence is deliberately off-shelf: live at its URL, not advertised.
-      filter: (page) => !page.includes('/more') && !page.includes('/case-studies/momence'),
+      filter: (page) => !page.includes('/case-studies/momence'),
     }),
   ],
   build: {
