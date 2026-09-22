@@ -273,7 +273,15 @@ const runJson = JSON.stringify(run);
 .intake-hero.s1:not(.s3) .fly { display: block; animation: ih-fly 1s cubic-bezier(.4, 0, .2, 1) both; }
 
 /* ---- run column ---- */
-.intake-hero .run { position: relative; display: flex; flex-direction: column; gap: 24px; padding-top: 8px; }
+.intake-hero .run { position: relative; display: flex; flex-direction: column; gap: 24px; padding-top: 8px; box-sizing: border-box; }
+/* beside the watch the run holds its FINAL height from the start (Jon,
+   2026-09-22: the tickets and the deck must not move the words under the
+   module — "have that text appear where it currently lands at the end"):
+   the script measures the run at stage six and writes --run-final */
+@container hero (min-width: 820px) {
+  .intake-hero .run { min-height: var(--run-final); }
+}
+.intake-hero.measuring, .intake-hero.measuring * { transition: none !important; animation: none !important; }
 /* a row = a 10px node on the line at the left, its text 32px in (the Archive's rail draws the same) */
 .intake-hero .row { position: relative; padding-left: 32px; }
 .intake-hero .row::before { content: ""; position: absolute; left: 4.5px; top: 16px; bottom: -24px; width: 1px; background: var(--line); }
@@ -405,5 +413,25 @@ document.querySelectorAll('[data-intake-hero]').forEach((hero) => {
   }
   stopBtn.addEventListener('click', play);
   hero.querySelector('.replay').addEventListener('click', reset);
+
+  // the run's final height, measured with every stage on and no motion, so
+  // the column can reserve it beside the watch (see --run-final in the styles);
+  // re-measured when fonts land and when the module's width changes
+  const runEl = hero.querySelector('.run');
+  const reserve = () => {
+    const had = Array.from(hero.classList).filter((c) => /^s[1-6]$/.test(c));
+    hero.classList.add('measuring', 's1', 's2', 's3', 's4', 's5', 's6');
+    runEl.style.removeProperty('--run-final');
+    const h = runEl.getBoundingClientRect().height;
+    hero.classList.remove('s1', 's2', 's3', 's4', 's5', 's6');
+    had.forEach((c) => hero.classList.add(c));
+    void runEl.offsetHeight; // settle the stage styles before motion returns
+    hero.classList.remove('measuring');
+    runEl.style.setProperty('--run-final', Math.ceil(h) + 'px');
+  };
+  reserve();
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(reserve);
+  let rt = 0;
+  new ResizeObserver(() => { clearTimeout(rt); rt = setTimeout(reserve, 80); }).observe(hero);
 });
 </script>
