@@ -190,8 +190,10 @@ session must follow.
   gutter is 14px both sides). Both modules share ONE grid, in container
   units of the module (`container-name: hero`): object column
   `minmax(0, 44cqw)`, 6cqw gutter, 48px rows (since 2026-09-22 the Archive's
-  object column is the RIGHT one — `'rail phone'`, the phone `justify-self:
-  end` on the module's right edge; the watch keeps the left axis), node/dot
+  object column is the RIGHT one — `'rail phone'`, columns `1fr / max-content` so
+  the phone (38cqw, height-capped by the host) sits on the module's right edge and its rail MIRRORS the watch's
+  run beside it: dots on the phone's side one gutter away, words running
+  left, right-aligned; stacked it reads left-to-right again), node/dot
   10px on a 1px line
   with the text 32px in; collapse under 820px of MODULE width; stacked,
   the watch is 70cqw and the phone 80cqw, centred. The host caps both

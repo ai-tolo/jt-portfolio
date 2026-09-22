@@ -303,15 +303,21 @@ const hasClip = Boolean(moment.src);
     row-gap: 48px;
     align-items: start;
   }
-  /* without the story the phone takes the RIGHT column and the rail the left
-     (Jon, 2026-09-22): the two objects bookend the room — the watch on the
-     left axis, the phone on the module's right edge */
+  /* without the story the phone takes the RIGHT column, on the module's right
+     edge, and the rail MIRRORS the watch's run beside it (Jon, 2026-09-22:
+     "the vertical bars still need to be near the phone"): the dots on the
+     phone's side, one gutter from it, the words running left, right-aligned */
   .no-story .grid {
-    grid-template-columns: minmax(0, 1fr) minmax(0, 44cqw);
+    /* the phone's column is the phone itself (its width is 38cqw, height-capped
+       by the host), so it sits on the module's right edge with the rail's dots
+       exactly one gutter from it */
+    grid-template-columns: minmax(0, 1fr) max-content;
     grid-template-rows: auto;
     grid-template-areas: 'rail phone';
   }
-  .no-story .stage { justify-self: end; }
+  .no-story .rail::before { left: auto; right: 4.5px; }
+  .no-story .step { padding: 0 32px 0 0; justify-items: end; text-align: right; }
+  .no-story .step::before { left: auto; right: 0; }
   .story { grid-area: story; }
   .stage {
     grid-area: phone;
@@ -387,14 +393,15 @@ const hasClip = Boolean(moment.src);
      brightens under the pointer and goes out once the run starts */
   .tap::after {
     content: ''; position: absolute; inset: 0; border-radius: inherit; pointer-events: none;
-    box-shadow: inset 0 0 0 0.45cqw color-mix(in oklab, var(--accent) 85%, transparent),
-                inset 0 0 6cqw color-mix(in oklab, var(--accent) 55%, transparent);
-    animation: ah-breathe 3.2s ease-in-out infinite;
+    box-shadow: inset 0 0 0 0.55cqw color-mix(in oklab, var(--accent) 95%, transparent),
+                inset 0 0 7cqw color-mix(in oklab, var(--accent) 65%, transparent);
+    animation: ah-ping 4s cubic-bezier(0.2, 0.6, 0.4, 1) infinite;
     transition: opacity 0.35s;
   }
   .tap:hover::after { animation: none; opacity: 1; }
   .s1 .tap::after { animation: none; opacity: 0; }
-  @keyframes ah-breathe { 0%, 100% { opacity: 0.55; } 50% { opacity: 1; } }
+  /* the ping: full at once, a slow taper to dark, then straight back to full */
+  @keyframes ah-ping { 0% { opacity: 1; } 100% { opacity: 0; } }
   .tap-label {
     display: inline-flex; align-items: center; gap: 1.4cqw;
     padding: 2.4cqw 4.6cqw; border-radius: 999px;
@@ -626,7 +633,9 @@ const hasClip = Boolean(moment.src);
       row-gap: 48px;
     }
     .no-story .grid { grid-template-columns: minmax(0, 1fr); grid-template-areas: 'phone' 'rail'; }
-    .no-story .stage { justify-self: auto; }
+    .no-story .rail::before { left: 4.5px; right: auto; }
+    .no-story .step { padding: 0 0 0 32px; justify-items: start; text-align: left; }
+    .no-story .step::before { left: 0; right: auto; }
     /* the phone fills ~80% of the module, centred */
     .stage { width: 80cqw; margin-inline: auto; }
     .rail { align-self: start; }
@@ -643,7 +652,7 @@ const hasClip = Boolean(moment.src);
     .s4 .wave rect { transition: none; }
     .s4 .trim, .s4 .trim-time, .s4 .ticks, .s4 .scope, .s5 .play, .s6 .tap-label { transition: opacity 0.2s; }
     .hint, .step, .step::before, .step > * { transition: none; }
-    .tap::after { animation: none; opacity: 0.75; }
+    .tap::after { animation: none; opacity: 0.85; }
   }
 </style>
 
