@@ -367,7 +367,7 @@ const ARCHIVE = BUILDS.find((b) => b.id === "archive")!;
           </button>
           <ul class="wl-strip" id="wl-strip-0" role="listbox" aria-label="Tapes" hidden data-wl-strip>
               {tapes.map(({ t: u, fill: f }, k) => (
-                <li class="wl-sleeve" role="option" aria-selected={k + 1 === 0 ? "true" : "false"} tabindex="-1" data-wl-option={String(k)}
+                <li class="wl-sleeve" role="option" aria-selected={k + 1 === 0 ? "true" : "false"} tabindex="-1" data-wl-option={String(k)} data-wl-length={u.duration ?? ""}
                   style={`--mini-tint:${f.day};--mini-tint-night:${f.night};--k:${k}`}>
                   <span class="mini" aria-hidden="true">
                     <span class="mini-label">{u.cover && <img src={u.cover} alt="" loading="lazy" decoding="async" />}</span>
@@ -388,7 +388,7 @@ const ARCHIVE = BUILDS.find((b) => b.id === "archive")!;
           <img class="cs-hub cs-hub-r" src="/studio/tape-hub-r.webp" width="300" height="300" alt="" loading="eager" decoding="async" />
           <img class="cs-reel cs-reel-l" src="/studio/tape-core-l.webp" width="194" height="194" alt="" loading="eager" decoding="async" />
           <img class="cs-reel cs-reel-r" src="/studio/tape-core-r.webp" width="194" height="194" alt="" loading="eager" decoding="async" />
-          <span class="cs-screen" aria-hidden="true"></span>
+          <span class="cs-screen" aria-hidden="true"><span class="cs-len" data-cs-len></span></span>
           <img class="cs-shell" src="/studio/tape-shell-800.webp"
             srcset="/studio/tape-shell-800.webp 800w, /studio/tape-shell-1600.webp 1600w"
             sizes="(max-width: 720px) calc(100vw - 28px), 760px"
@@ -411,7 +411,7 @@ const ARCHIVE = BUILDS.find((b) => b.id === "archive")!;
             </button>
             <ul class="wl-strip" id={`wl-strip-${i + 1}`} role="listbox" aria-label="Tapes" hidden data-wl-strip>
               {tapes.map(({ t: u, fill: f }, k) => (
-                <li class="wl-sleeve" role="option" aria-selected={k + 1 === i + 1 ? "true" : "false"} tabindex="-1" data-wl-option={String(k)}
+                <li class="wl-sleeve" role="option" aria-selected={k + 1 === i + 1 ? "true" : "false"} tabindex="-1" data-wl-option={String(k)} data-wl-length={u.duration ?? ""}
                   style={`--mini-tint:${f.day};--mini-tint-night:${f.night};--k:${k}`}>
                   <span class="mini" aria-hidden="true">
                     <span class="mini-label">{u.cover && <img src={u.cover} alt="" loading="lazy" decoding="async" />}</span>
@@ -438,6 +438,7 @@ const ARCHIVE = BUILDS.find((b) => b.id === "archive")!;
             <span class="cs-screen" aria-hidden="true">
               <svg class="cs-go" viewBox="0 0 32 32"><path d="M9 5.5v21l17.5-10.5z" /></svg>
               <span class="cs-time" data-cs-time></span>
+              <span class="cs-len" data-cs-len></span>
             </span>
             <img class="cs-shell" src="/studio/tape-shell-800.webp"
               srcset="/studio/tape-shell-800.webp 800w, /studio/tape-shell-1600.webp 1600w"
@@ -1807,6 +1808,21 @@ const ARCHIVE = BUILDS.find((b) => b.id === "archive")!;
   .cs-time {
     display: none;
   }
+  /* a sleeve's hover / focus prints the hovered tape's LENGTH in the
+     window at the play mark's scale (Jon, 2026-09-22); while the tape
+     plays the running counter keeps the window */
+  .cs-len {
+    display: none;
+    font-size: 7.4cqw;
+    letter-spacing: 0.02em;
+    color: var(--au-dim);
+  }
+  .ls[data-len]:not([data-playing]) .cs-go {
+    display: none;
+  }
+  .ls[data-len]:not([data-playing]) .cs-len {
+    display: block;
+  }
   .ls[data-playing] .cs-go {
     display: none;
   }
@@ -2582,6 +2598,8 @@ const ARCHIVE = BUILDS.find((b) => b.id === "archive")!;
     const auCar = auRoom.querySelector<HTMLElement>("[data-carousel]");
     const auSlides = Array.from(auRoom.querySelectorAll<HTMLElement>(".ls"));
     const wallets = auSlides.map((ls) => ({
+      ls,
+      len: ls.querySelector<HTMLElement>("[data-cs-len]"),
       head: ls.querySelector<HTMLElement>("[data-ls-placard]"),
       title: ls.querySelector<HTMLElement>("[data-ls-title]"),
       note: ls.querySelector<HTMLElement>("[data-ls-note]"),
@@ -2600,10 +2618,21 @@ const ARCHIVE = BUILDS.find((b) => b.id === "archive")!;
       if (w.note) w.note.textContent = o.note;
       w.head?.toggleAttribute("data-preview", preview);
     };
-    const restore = () => print(active, active, false);
+    // the window reads the hovered tape's length at the play mark's scale
+    // (Jon, 2026-09-22); null clears it back to the mark (or the counter)
+    const lengths = (wallets[0]?.options ?? []).map((o) => o.getAttribute("data-wl-length") ?? "");
+    const showLen = (slide: number, k: number | null) => {
+      const w = wallets[slide];
+      if (!w) return;
+      const len = k === null ? "" : lengths[k] ?? "";
+      if (w.len) w.len.textContent = len;
+      w.ls.toggleAttribute("data-len", len !== "");
+    };
+    const restore = () => { print(active, active, false); showLen(active, null); };
     // sleeve k holds tape k, which lives in slide k + 1; the tape already
-    // in the deck is no preview — the words are the slide's own
-    const preview = (k: number) => (k + 1 === active ? restore() : print(active, k + 1, true));
+    // in the deck is no preview — the words are the slide's own — but the
+    // window still reads its length
+    const preview = (k: number) => { print(active, k + 1 === active ? active : k + 1, k + 1 !== active); showLen(active, k); };
     const closeAll = (focusPick = false) =>
       wallets.forEach((w) => {
         if (!w.pick || !w.strip || w.strip.hidden) return;
@@ -2683,7 +2712,7 @@ const ARCHIVE = BUILDS.find((b) => b.id === "archive")!;
       wallets.forEach((w) => w.options.forEach((o, j) => o.setAttribute("aria-selected", j + 1 === active ? "true" : "false")));
       // every placard back to its own words (a departing slide may still
       // carry a preview)
-      wallets.forEach((_, i) => print(i, i, false));
+      wallets.forEach((_, i) => { print(i, i, false); showLen(i, null); });
     });
   }
 
