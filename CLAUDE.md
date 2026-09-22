@@ -189,7 +189,10 @@ session must follow.
   dek→object 32 · object→caption 24 · caption→read 48 · ¶ 16; the phone
   gutter is 14px both sides). Both modules share ONE grid, in container
   units of the module (`container-name: hero`): object column
-  `minmax(0, 44cqw)`, 6cqw gutter, 48px rows, node/dot 10px on a 1px line
+  `minmax(0, 44cqw)`, 6cqw gutter, 48px rows (since 2026-09-22 the Archive's
+  object column is the RIGHT one — `'rail phone'`, the phone `justify-self:
+  end` on the module's right edge; the watch keeps the left axis), node/dot
+  10px on a 1px line
   with the text 32px in; collapse under 820px of MODULE width; stacked,
   the watch is 70cqw and the phone 80cqw, centred. The host caps both
   devices at 76svh so they stand the same height under the lamp. The
