@@ -311,7 +311,21 @@ session must follow.
   a plain numeric limit base64-inlines fontsource woff2 subsets into the
   homepage sheet (131 KB → 249 KB). Keep it a function.
 - `src/pages/404.astro` is the site's 404 (away-page chrome); `/more` is the
-  phone exhibit iframed into `#play` (noindex, root-absolute script path).
+  phone exhibit, live at its own URL only (noindex, root-absolute script
+  path) — since 2026-09-22 it is NOT iframed into `#play` any more: the
+  play room is `display: none` on phones (≤899px) and on any screen without
+  a fine pointer, "play" leaves the bar and the rail with it, and
+  `getDocIds()` counts only rooms that are laid out (`offsetParent`). Never
+  bring an instrument back to phones (see memory signal_mobile_halo).
+- PHONES (round 3, 2026-09-22): the hero is one left-aligned stack on the
+  rooms' 14px gutter (the liner's right alignment is a desk gesture; the
+  role line balances); the work room lands title + object + hint on one
+  screen at 375×812 and 390×844 (the phone at 80cqw is the largest that
+  still fits with its hint — keep it); the wallet's mini is 80px wide on
+  phones (the room's only control); the bar's words are 0.7rem. The run
+  column does NOT reserve its final height stacked (the desk's `--run-final`
+  is inside the ≥820 container query) — a reservation would be ~850px of
+  blank ground on a phone.
 - Case-study images are WebP on the page; `ogImage=` stays on `cover.png`
   (share scrapers). Any new case-study art lands as webp.
 - Media seeking needs a Range-capable static server: python's
