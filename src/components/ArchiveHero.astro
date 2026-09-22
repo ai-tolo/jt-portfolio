@@ -257,6 +257,8 @@ const hasClip = Boolean(moment.src);
     --ink: #141210;
     --ground: #e9e8e5;
     --accent: var(--archive-accent, #b9701a);
+    /* the screen's rim: intense bright blue to purple, the watch's ring's pair (Jon, 2026-09-22) */
+    --ring-a: var(--archive-ring-a, #47B6FF); --ring-b: var(--archive-ring-b, #8A5CF6);
     --char: 110ms; /* per-character typing delay; mirrored in the script */
 
     --oled: #000;
@@ -391,21 +393,33 @@ const hasClip = Boolean(moment.src);
     cursor: pointer;
   }
   .tap:focus-visible { outline: 0.7cqw solid var(--sacc); outline-offset: -0.7cqw; }
-  /* at rest the screen's edge breathes a faint rim of the accent: the phone
-     is the button (Jon, 2026-09-22, "communicate interaction subtly"); it
-     brightens under the pointer and goes out once the run starts */
-  .tap::after {
+  /* at rest the screen's edge breathes: the phone is the button (Jon,
+     2026-09-22). ::after is the rim itself — the blue→purple gradient under a
+     rim-shaped mask — and ::before the inner glow, blue from the top-left,
+     purple from the bottom-right; both brighten under the pointer and go out
+     once the run starts */
+  .tap::before, .tap::after {
     content: ''; position: absolute; inset: 0; border-radius: inherit; pointer-events: none;
-    box-shadow: inset 0 0 0 0.4cqw color-mix(in oklab, var(--accent) 70%, transparent),
-                inset 0 0 5cqw color-mix(in oklab, var(--accent) 40%, transparent);
     animation: ah-breathe 2s ease-in-out infinite;
     transition: opacity 0.35s;
   }
-  .tap:hover::after { animation: none; opacity: 1; }
-  .s1 .tap::after { animation: none; opacity: 0; }
+  .tap::after {
+    box-sizing: border-box; padding: 0.7cqw;
+    background: linear-gradient(135deg, var(--ring-a), var(--ring-b));
+    -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+    -webkit-mask-composite: xor;
+    mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+    mask-composite: exclude;
+  }
+  .tap::before {
+    box-shadow: inset 2.5cqw 2.5cqw 6cqw color-mix(in oklab, var(--ring-a) 55%, transparent),
+                inset -2.5cqw -2.5cqw 6cqw color-mix(in oklab, var(--ring-b) 55%, transparent);
+  }
+  .tap:hover::before, .tap:hover::after { animation: none; opacity: 1; }
+  .s1 .tap::before, .s1 .tap::after { animation: none; opacity: 0; }
   /* a casual breath (Jon, 2026-09-22: the ping read aggressive and slow):
      two seconds, never fully out, never blazing */
-  @keyframes ah-breathe { 0%, 100% { opacity: 0.35; } 50% { opacity: 0.85; } }
+  @keyframes ah-breathe { 0%, 100% { opacity: 0.45; } 50% { opacity: 1; } }
   .tap-label {
     display: inline-flex; align-items: center; gap: 1.4cqw;
     padding: 2.4cqw 4.6cqw; border-radius: 999px;
@@ -656,7 +670,7 @@ const hasClip = Boolean(moment.src);
     .s4 .wave rect { transition: none; }
     .s4 .trim, .s4 .trim-time, .s4 .ticks, .s4 .scope, .s5 .play, .s6 .tap-label { transition: opacity 0.2s; }
     .hint, .step, .step::before, .step > * { transition: none; }
-    .tap::after { animation: none; opacity: 0.6; }
+    .tap::before, .tap::after { animation: none; opacity: 0.75; }
   }
 </style>
 
