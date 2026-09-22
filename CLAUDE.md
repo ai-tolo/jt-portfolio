@@ -149,7 +149,8 @@ session must follow.
   tape's words in the placard (`data-preview`); a press flies the mini
   into the slot and `car:show`s slide k+1. `.wl-strip[hidden]` must keep
   `display: none` (the strip's own display rule beats the attribute).
-  Dev shows 12 stand-in tapes (`SHELF_FILL=0` = prod truth).
+  The wallet holds exactly the manifest's tapes in every environment (the
+  dev-only stand-in fill was removed 2026-09-22).
 - Carousel.astro has two modes: `slide` (translate) and `dissolve`
   (slides stacked in one grid cell, crossfade + a 300ms top-down render
   with a scan on the arriving slide, `data-on` on the active slide, a

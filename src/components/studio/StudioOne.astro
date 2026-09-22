@@ -37,30 +37,10 @@ const etchAsset = ["etch.svg", "etch.webp", "etch.png"].filter(exists).map((f) =
 interface Track { src: string | null; title: string; note?: string; year?: number; duration?: string; peaks?: string | null; cover?: string | null; tint?: string | null; }
 const tracks: Track[] = ((soundlab as any).tracks ?? []).filter((t: Track) => t.src);
 
-// ── STAND-INS FOR THE PAD (dev only; Jon asked for dummy tapes to test with,
-// 2026-09-10): with one real track the wallet holds one sleeve, so in
-// `astro dev` (import.meta.env.DEV) the shelf fills to 12 stand-ins that
-// reuse the real side's src + peaks under their own titles (tints derive
-// from titles, so each gets its own colour) and short, varied notes.
-// SHELF_FILL overrides the count either way (`SHELF_FILL=0` in dev = the
-// production truth). Vercel's build has neither, so prod ships the real tapes.
-const shelfFillRaw = import.meta.env.SHELF_FILL ?? process.env.SHELF_FILL;
-const SHELF_FILL =
-  shelfFillRaw !== undefined && String(shelfFillRaw).trim() !== "" ? Number(shelfFillRaw) : import.meta.env.DEV ? 12 : 0;
-const STAND_IN_NOTES = [
-  "a stand-in: the same side again, under another label.",
-  "a stand-in tape. it plays the first side — the wallet, the preview and the room's reserve are what this one is for, not the sound.",
-  "a stand-in with a longer note, so the placard runs to three lines on a desk and the tape still holds its y across the deck. the side is the same as the first; only the label and these words differ.",
-  "a stand-in with the longest note the placard is asked to hold: four lines on a desk, more on a phone. it plays the first side again. the point is the room — does the placard, the tape and the rail all fit inside one viewport with this much to read above the deck, at every size?",
-  "a stand-in. one line.",
-  "a stand-in: two lines of note here, enough to push the tape down a little and check that the rail still lands where the loaded tapes' rails land.",
-];
-if (tracks.length > 0 && Number.isFinite(SHELF_FILL)) {
-  const real = tracks[0];
-  for (let n = tracks.length + 1; n <= SHELF_FILL; n++) {
-    tracks.push({ ...real, title: `Stand-in ${String(n).padStart(2, "0")}`, note: STAND_IN_NOTES[(n - 2) % STAND_IN_NOTES.length], cover: null, tint: null });
-  }
-}
+// The wallet holds exactly the manifest's tapes in every environment. The
+// dev-only dummy-tape fill of 2026-09-10 was removed 2026-09-22 once the real
+// tapes landed (Jon: "get rid of the stand in cassettes so it's only the
+// selected tracks").
 
 // ── TAPE TINT (2026-09-09, Jon: "the fill should automatically populate
 // with different colors, to add identity to each tape"). Every cassette's
