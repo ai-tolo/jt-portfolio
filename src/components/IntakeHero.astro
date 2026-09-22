@@ -232,25 +232,34 @@ const runJson = JSON.stringify(run);
   border: 0; border-radius: 11.13cqw; background: transparent; cursor: pointer;
   pointer-events: auto;
 }
-/* the ring wears the blue→purple gradient (Jon, 2026-09-22): ::after is the ring
-   itself (the gradient under a ring-shaped mask), ::before keeps the halo, which
-   breathes in the ring's blue */
-.intake-hero .stop::before {
+/* THE TOUCH SIGNAL — one vocabulary with the Archive's phone (2026-09-22):
+   ::after is the ring itself (the blue→purple gradient under a ring-shaped
+   mask) and ::before its light, blue from the top-left, purple from the
+   bottom-right — the gradient's direction, thrown onto the face (the phone's
+   rim throws the same light inward onto its screen). Both breathe together:
+   2s ease-in-out, 0.45↔1; full and still under the pointer; out once the run
+   starts; still at 0.75 under reduced motion. The keyframe is an EXACT COPY of
+   the phone's (touch-breathe in ArchiveHero.astro): change both or neither. */
+.intake-hero .stop::before, .intake-hero .stop::after {
   content: ""; position: absolute; left: 39.87cqw; top: 87.97cqw; width: 20.25cqw; height: 20.25cqw; box-sizing: border-box;
-  border-radius: 50%;
-  animation: ih-pulse 2.4s ease-out infinite;
+  border-radius: 50%; pointer-events: none;
+  animation: touch-breathe 2s ease-in-out infinite;
+  transition: opacity .35s;
 }
 .intake-hero .stop::after {
-  content: ""; position: absolute; left: 39.87cqw; top: 87.97cqw; width: 20.25cqw; height: 20.25cqw; box-sizing: border-box;
-  border-radius: 50%; padding: 0.79cqw;
+  padding: 0.79cqw;
   background: linear-gradient(135deg, var(--ring-a), var(--ring-b));
   -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
   -webkit-mask-composite: xor;
   mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
   mask-composite: exclude;
-  transition: filter .25s;
 }
-.intake-hero .stop:hover::after { filter: brightness(1.25) saturate(1.1); }
+.intake-hero .stop::before {
+  box-shadow: -1.4cqw -1.4cqw 4cqw color-mix(in oklab, var(--ring-a) 55%, transparent),
+              1.4cqw 1.4cqw 4cqw color-mix(in oklab, var(--ring-b) 55%, transparent);
+}
+.intake-hero .stop:hover::before, .intake-hero .stop:hover::after { animation: none; opacity: 1; }
+.intake-hero.s1 .stop::before, .intake-hero.s1 .stop::after { animation: none; opacity: 0; }
 .intake-hero .stop:focus-visible { outline: 2px solid #F2F0EA; outline-offset: -3px; }
 .intake-hero .stop span { position: absolute; left: 45.88cqw; top: 93.98cqw; display: block; width: 8.23cqw; height: 8.23cqw; border-radius: 2.22cqw; background: var(--accent); }
 .intake-hero .flat { position: absolute; left: 7.91cqw; top: 43.99cqw; width: 84.18cqw; height: 0.63cqw; border-radius: 1px; background: color-mix(in oklab, var(--accent) 40%, transparent); animation: ih-in .5s ease-out both; }
@@ -336,13 +345,11 @@ const runJson = JSON.stringify(run);
 @keyframes ih-drop { 0% { opacity: 0; transform: translateY(-28px); } 70% { transform: translateY(4px); } 100% { opacity: 1; transform: translateY(0); } }
 @keyframes ih-pop { 0% { transform: scale(.6); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
 @keyframes ih-fly { 0% { transform: translate(0, 0); opacity: 0; } 12% { opacity: 1; } 100% { transform: translate(var(--fx, 300px), var(--fy, -400px)); opacity: 0; } }
-/* the recording halo: a ring that leaves the stop and fades, every 2.4s */
-@keyframes ih-pulse {
-  0% { box-shadow: 0 0 0 0 color-mix(in oklab, var(--ring-a) 55%, transparent); }
-  70%, 100% { box-shadow: 0 0 0 3.2cqw color-mix(in oklab, var(--ring-a) 0%, transparent); }
-}
+/* the touch signal's breath — an EXACT COPY of the phone's (ArchiveHero.astro) */
+@keyframes touch-breathe { 0%, 100% { opacity: 0.45; } 50% { opacity: 1; } }
 @media (prefers-reduced-motion: reduce) {
-  .intake-hero .wave i, .intake-hero .caret, .intake-hero .fly, .intake-hero .stop::before { animation: none; }
+  .intake-hero .wave i, .intake-hero .caret, .intake-hero .fly { animation: none; }
+  .intake-hero .stop::before, .intake-hero .stop::after { animation: none; opacity: 0.75; }
   .intake-hero .card, .intake-hero .stream, .intake-hero .tickets, .intake-hero .replay, .intake-hero .flat, .intake-hero .check, .intake-hero .saved, .intake-hero .meta { animation-duration: .01s !important; animation-delay: 0s !important; }
 }
 </style>
