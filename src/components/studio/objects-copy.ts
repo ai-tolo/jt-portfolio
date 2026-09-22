@@ -2,6 +2,8 @@
 // builds-copy.ts (Jon's locked script: the headline and the paragraphs come
 // from there, unchanged). ⚠️ DRAFTS (written 2026-09-18 on Jon's "write the
 // text for me, I'll edit later"): Jon owns every word here; edit freely.
+// 2026-09-22 (Jon): the dek is NOT rendered any more — the room goes
+// title → object; the strings stay here for the record.
 export const WATCH_COPY = {
   // one line under the locked headline: what the object is, in his voice
   dek: "I talk to my watch. It comes back as a calendar event, an organized idea, or a prompt for Claude.",

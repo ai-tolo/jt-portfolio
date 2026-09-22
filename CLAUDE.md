@@ -162,9 +162,11 @@ session must follow.
   placard sits right under it (Jon, 2026-09-09).
 - WORK is OBJECTS (2026-09-18; the ledger/matrix is DEAD): the room holds
   Jon's Claude Design modules, one per build, framed by words — the locked
-  headline from builds-copy.ts above, a DRAFT dek from
-  `src/components/studio/objects-copy.ts` (Jon-editable), the module, a
-  DRAFT caption, the locked paragraphs beneath. Object one = the Intake
+  headline from builds-copy.ts above (the DRAFT dek under it was removed
+  2026-09-22: title → object), the module, a DRAFT caption from
+  `src/components/studio/objects-copy.ts` (Jon-editable), the locked
+  paragraphs beneath. At rest each module shows only its title, its greyed
+  nodes and the object: a node's words arrive with its stage (2026-09-22). Object one = the Intake
   hero (`IntakeHero.astro` + `src/data/intake-run.json`; its memo cue
   "Cinder 32" is Intake's real alias for capture 31, length 3:52, seven
   tickets of which the module shows two). Object two = the Archive
