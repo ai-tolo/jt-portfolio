@@ -1184,6 +1184,9 @@ const ARCHIVE = BUILDS.find((b) => b.id === "archive")!;
     --sp-6: 24px;
     --sp-8: 32px;
     --sp-12: 48px;
+    /* the phone's width as the host sizes it (38cqw of the module, height-capped):
+       the stage's cap AND the Archive title's right edge read the same number */
+    --wk-phone-w: min(38cqw, calc(76svh * 864 / 1760));
     max-width: none;
     /* the room is CENTRED in the column beside the rail — the same gutter both
        sides — so the modules' centre line (where both objects' dots stand,
@@ -1223,7 +1226,12 @@ const ARCHIVE = BUILDS.find((b) => b.id === "archive")!;
      once the module runs two columns; stacked, every title sits left */
   .wk { container-type: inline-size; }
   @container (min-width: 820px) {
-    #build-archive .wk-head { margin-left: auto; text-align: right; }
+    /* the title's right edge on the phone's: the phone starts at 56cqw and is
+       --wk-phone-w wide, so the head keeps the module's remaining slack as its
+       right margin (Jon, 2026-09-22) */
+    #build-archive .wk-head { margin-left: auto; margin-right: calc(44cqw - var(--wk-phone-w)); text-align: right; }
+    /* the caption too: under the phone, its right edge on the phone's (Jon, 2026-09-22) */
+    #build-archive .wk-cap { margin-left: auto; margin-right: calc(44cqw - var(--wk-phone-w)); text-align: right; }
   }
   .wk-hook {
     margin: 0;
@@ -1273,10 +1281,16 @@ const ARCHIVE = BUILDS.find((b) => b.id === "archive")!;
     width: min(100%, 1080px);
   }
   .work :global(.obj-intake .watch-col) {
-    max-width: calc(76svh * 383 / 653); /* the VISIBLE watch's ratio (the PNG's frame is trimmed in the module) */
+    max-width: calc(68.4svh * 383 / 653); /* the VISIBLE watch's ratio (the PNG's frame is trimmed in the module); 0.9 × the phone's 76svh (Jon, 2026-09-22: ten percent smaller) */
+  }
+  /* ten percent smaller on desks (Jon, 2026-09-22): 90% of its 44cqw column
+     (the column itself stays, so the run's nodes keep the centre line); the
+     stacked 70cqw watch is untouched */
+  @container hero (min-width: 820px) {
+    .work :global(.obj-intake .watch-col) { width: 90%; }
   }
   .work :global(.archive-hero .stage) {
-    max-width: calc(76svh * 864 / 1760);
+    max-width: var(--wk-phone-w);
   }
   @media (max-width: 899px) {
     .work {
