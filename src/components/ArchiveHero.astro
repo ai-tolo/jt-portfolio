@@ -308,13 +308,16 @@ const hasClip = Boolean(moment.src);
      "the vertical bars still need to be near the phone"): the dots on the
      phone's side, one gutter from it, the words running left, right-aligned */
   .no-story .grid {
-    /* the phone's column is the phone itself (its width is 38cqw, height-capped
-       by the host), so it sits on the module's right edge with the rail's dots
-       exactly one gutter from it */
-    grid-template-columns: minmax(0, 1fr) max-content;
+    /* the phone's column mirrors the watch's (44cqw) and the gutter is one
+       gutter less half a dot, so the dot's CENTRE lands on 50cqw — the module's
+       centre line, where the watch's nodes land too (Jon, 2026-09-22); the
+       phone (38cqw, height-capped by the host) starts one gutter from the dots */
+    grid-template-columns: minmax(0, 1fr) minmax(0, 44cqw);
+    column-gap: calc(6cqw - 5px);
     grid-template-rows: auto;
     grid-template-areas: 'rail phone';
   }
+  .no-story .stage { justify-self: start; }
   .no-story .rail::before { left: auto; right: 4.5px; }
   .no-story .step { padding: 0 32px 0 0; justify-items: end; text-align: right; }
   .no-story .step::before { left: auto; right: 0; }
@@ -395,13 +398,18 @@ const hasClip = Boolean(moment.src);
     content: ''; position: absolute; inset: 0; border-radius: inherit; pointer-events: none;
     box-shadow: inset 0 0 0 0.55cqw color-mix(in oklab, var(--accent) 95%, transparent),
                 inset 0 0 7cqw color-mix(in oklab, var(--accent) 65%, transparent);
-    animation: ah-ping 4s cubic-bezier(0.2, 0.6, 0.4, 1) infinite;
+    animation: ah-ping 3.2s linear infinite;
     transition: opacity 0.35s;
   }
   .tap:hover::after { animation: none; opacity: 1; }
   .s1 .tap::after { animation: none; opacity: 0; }
-  /* the ping: full at once, a slow taper to dark, then straight back to full */
-  @keyframes ah-ping { 0% { opacity: 1; } 100% { opacity: 0; } }
+  /* the ping: full at once, a slow taper to a quarter, the last quarter gone
+     fast, then straight back to full (Jon, 2026-09-22) */
+  @keyframes ah-ping {
+    0% { opacity: 1; animation-timing-function: cubic-bezier(0.25, 0.45, 0.55, 0.95); }
+    88% { opacity: 0.25; animation-timing-function: ease-in; }
+    100% { opacity: 0; }
+  }
   .tap-label {
     display: inline-flex; align-items: center; gap: 1.4cqw;
     padding: 2.4cqw 4.6cqw; border-radius: 999px;
