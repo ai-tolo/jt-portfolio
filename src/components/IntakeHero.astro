@@ -261,7 +261,9 @@ const runJson = JSON.stringify(run);
 .intake-hero .stop:hover::before, .intake-hero .stop:hover::after { animation: none; opacity: 1; }
 .intake-hero.s1 .stop::before, .intake-hero.s1 .stop::after { animation: none; opacity: 0; }
 .intake-hero .stop:focus-visible { outline: 2px solid #F2F0EA; outline-offset: -3px; }
-.intake-hero .stop span { position: absolute; left: 45.88cqw; top: 93.98cqw; display: block; width: 8.23cqw; height: 8.23cqw; border-radius: 2.22cqw; background: var(--accent); }
+.intake-hero .stop span { position: absolute; left: 45.88cqw; top: 93.98cqw; display: block; width: 8.23cqw; height: 8.23cqw; border-radius: 2.22cqw; background: var(--accent); transition: transform 120ms ease-out; }
+/* the object presses itself (the host's first settle, 2026-09-22): the square dips as a finger would */
+.intake-hero[data-ghost] .stop span { transform: scale(0.86); }
 .intake-hero .flat { position: absolute; left: 7.91cqw; top: 43.99cqw; width: 84.18cqw; height: 0.63cqw; border-radius: 1px; background: color-mix(in oklab, var(--accent) 40%, transparent); animation: ih-in .5s ease-out both; }
 .intake-hero .check { position: absolute; left: 39.87cqw; top: 34.18cqw; width: 20.25cqw; height: 20.25cqw; box-sizing: border-box; border-radius: 50%; border: 0.79cqw solid color-mix(in oklab, var(--glow) 55%, transparent); background: #000; display: flex; align-items: center; justify-content: center; animation: ih-pop .5s ease-out .15s both; }
 .intake-hero .check svg { width: 8.86cqw; height: 8.86cqw; }
@@ -413,6 +415,16 @@ document.querySelectorAll('[data-intake-hero]').forEach((hero) => {
   }
   stopBtn.addEventListener('click', play);
   hero.querySelector('.replay').addEventListener('click', reset);
+  // the host (StudioOne's first settle) may FINISH a run it started — the
+  // visitor pressed during it, so it lands on its end frame at once — or
+  // REWIND one the visitor scrolled away from before it said anything
+  hero.addEventListener('hero:finish', () => {
+    if (!hero.classList.contains('s1') || hero.classList.contains('s6')) return;
+    timers.forEach(clearTimeout); timers = [];
+    typed.textContent = words.join(' '); caret.hidden = true;
+    stage(6); status.textContent = run.tickets.length + ' tickets in the deck.';
+  });
+  hero.addEventListener('hero:reset', reset);
 
   // the run's final height, measured with every stage on and no motion, so
   // the column can reserve it beside the watch (see --run-final in the styles);

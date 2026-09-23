@@ -472,7 +472,11 @@ const hasClip = Boolean(moment.src);
     padding: 1.9cqw 2.6cqw; border-radius: 2.4cqw;
     background: var(--sfield); color: var(--sdim);
     margin-bottom: 1.6cqw;
+    transition: background 120ms;
   }
+  /* the object presses itself (the host's first settle, 2026-09-22): the
+     search field takes iOS's pressed grey, as a finger on it would */
+  [data-ghost] .vm-search { background: #3a3a3c; }
   .vm-list { list-style: none; margin: 0; padding: 0; }
   .vm-row { display: grid; gap: 0.9cqw; padding: 2.7cqw 0; border-bottom: 1px solid var(--sline); }
   .vm-name { font-weight: 500; }
@@ -770,6 +774,29 @@ const hasClip = Boolean(moment.src);
     };
 
     tap.addEventListener('click', run);
+
+    // the host (StudioOne's first settle) may FINISH a run it started — the
+    // visitor pressed during it, so it lands on its end frame at once — or
+    // REWIND one the visitor scrolled away from before it said anything
+    root.addEventListener('hero:finish', () => {
+      if (!running) return;
+      clear();
+      root.classList.remove('rewind');
+      root.classList.add(...STAGES);
+      root.dataset.stage = '6';
+      running = false;
+      tap.removeAttribute('aria-disabled');
+      tap.setAttribute('aria-label', 'Replay the run');
+    });
+    root.addEventListener('hero:reset', () => {
+      clear();
+      stopClip();
+      root.classList.remove('rewind', ...STAGES);
+      root.dataset.stage = '0';
+      running = false;
+      tap.removeAttribute('aria-disabled');
+      tap.setAttribute('aria-label', restLabel);
+    });
 
     /* Playback: only when the JSON gave the moment a src. Otherwise the button stays quiet. */
     if (audio && play && play.getAttribute('aria-disabled') !== 'true') {

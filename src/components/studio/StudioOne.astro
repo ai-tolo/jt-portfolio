@@ -354,7 +354,7 @@ const ARCHIVE = BUILDS.find((b) => b.id === "archive")!;
       is the play switch. */}
   {SHOW.has("soundlab") && <section class="room" id="soundlab" aria-labelledby="soundlab-t"><div class="au">
     <h2 id="soundlab-t" class="sr-only">Listen</h2>
-    <Carousel count={tracks.length + 1} label="Music" accent="var(--ember)" mode="dissolve">
+    <Carousel count={tracks.length + 1} label="Music" accent="var(--ember)" mode="dissolve" keys={false}>
       {/* slide 0: the EMPTY DECK — the shell with its label unprinted, its
           window dark, hubs still; an empty placard behind a blank mini; a
           dead rail; the tape button inert (Jon, 2026-09-18: blank by default) */}
@@ -383,7 +383,9 @@ const ARCHIVE = BUILDS.find((b) => b.id === "archive")!;
             <p class="ls-note" data-ls-note></p>
           </div>
         </div>
-        <button class="cs" type="button" disabled aria-label="Empty deck">
+        {/* the empty tape is the wallet's second door (2026-09-22): the
+            biggest object in the room opens the same strip the mini does */}
+        <button class="cs" type="button" aria-haspopup="listbox" aria-expanded="false" aria-controls="wl-strip-0" aria-label="Tapes" data-wl data-blank-tape>
           <span class="cs-label" aria-hidden="true"></span>
           <img class="cs-hub cs-hub-l" src="/studio/tape-hub-l.webp" width="300" height="300" alt="" loading="eager" decoding="async" />
           <img class="cs-hub cs-hub-r" src="/studio/tape-hub-r.webp" width="300" height="300" alt="" loading="eager" decoding="async" />
@@ -1673,6 +1675,17 @@ const ARCHIVE = BUILDS.find((b) => b.id === "archive")!;
       animation-delay: calc(var(--k, 0) * 28ms);
     }
   }
+  /* a peek folds back the way it opened (the first settle on phones and
+     narrow desks, where the open strip would cover the tape) */
+  @media (prefers-reduced-motion: no-preference) {
+    .wl-strip[data-fold]:not([hidden]) {
+      animation: wl-fold 160ms cubic-bezier(0.4, 0, 0.8, 0.3) both;
+    }
+  }
+  @keyframes wl-fold {
+    from { opacity: 1; transform: none; }
+    to { opacity: 0; transform: scaleY(0.94); }
+  }
   @keyframes wl-open {
     from { opacity: 0; transform: scaleY(0.94); }
     to { opacity: 1; transform: none; }
@@ -1686,15 +1699,18 @@ const ARCHIVE = BUILDS.find((b) => b.id === "archive")!;
       transition: none;
     }
   }
-  /* the empty deck: its tape is inert (no press, no seat), its label is
-     UNPRINTED — the faintest value step of the room's ink over the ground
-     (the tint arrives with a tape) — and its rail is DEAD: the same 44px
-     band and hairline, no tick, so the blank tape holds the loaded tapes' y */
-  .ls-blank .cs {
-    cursor: default;
+  /* the empty deck: its label is UNPRINTED — the faintest value step of the
+     room's ink over the ground (the tint arrives with a tape) — and its rail
+     is DEAD: the same 44px band and hairline, no tick, so the blank tape
+     holds the loaded tapes' y. Its tape is no longer inert (2026-09-22): a
+     press opens the wallet, with the tape's own seat, and on a desk the
+     pointer on it wakes the mini (the mini's own hover lift) */
+  .ls-blank:has(> .cs:hover) .wl-pick {
+    transform: translateY(-2px);
   }
-  .ls-blank .cs:active {
-    transform: none;
+  /* the wallet's first settle: the mini seats as if pressed, then opens */
+  .wl-pick[data-seat] {
+    transform: translateY(1px);
   }
   .ls-blank .cs-label,
   :global(html[data-night]) .ls-blank .cs-label {
@@ -2645,6 +2661,150 @@ const ARCHIVE = BUILDS.find((b) => b.id === "archive")!;
     window.addEventListener("resize", fit, { passive: true });
   }
 
+  // ── FIRST SETTLE (2026-09-22, Jon: "guarantee the exhibits' info is seen
+  // … what if someone doesn't understand step one"). When an object settles
+  // in view — mostly on screen, the scroll at rest, a beat of stillness — it
+  // takes its own first step, ONCE per visit (sessionStorage), and any touch
+  // hands it back. No words, no loops; reduced motion takes each module's own
+  // reduced path. A pointer that MOVES over an object is reaching for it and
+  // cancels the beat (a still pointer the page merely scrolls under is not).
+  const settleMem = new Set<string>();
+  const wasShown = (k: string) => {
+    try { if (sessionStorage.getItem(k) === "1") return true; } catch {}
+    return settleMem.has(k);
+  };
+  const markShown = (k: string) => {
+    settleMem.add(k);
+    try { sessionStorage.setItem(k, "1"); } catch {}
+  };
+  let lastScroll = 0;
+  document.addEventListener("scroll", () => { lastScroll = performance.now(); }, { capture: true, passive: true });
+  const reachAt = new WeakMap<Element, number>();
+  const watchReach = (el: Element) =>
+    el.addEventListener("pointermove", (e) => {
+      const p = e as PointerEvent;
+      if (p.pointerType === "mouse" && (p.movementX || p.movementY)) reachAt.set(el, performance.now());
+    }, { passive: true });
+  const reaching = (el: Element) => el.matches(":hover") && performance.now() - (reachAt.get(el) ?? -1e9) < 1500;
+  const settleReduce = window.matchMedia("(prefers-reduced-motion: reduce)");
+  const firstSettle = (target: Element, o: {
+    ratio: number; grace: number; settle?: boolean; rootMargin?: string;
+    ok: () => boolean; fire: () => void; leave?: () => void;
+  }) => {
+    let timer = 0;
+    let inView = false;
+    const arm = () => {
+      window.clearTimeout(timer);
+      if (!inView) return;
+      if (o.settle !== false) {
+        const idle = performance.now() - lastScroll;
+        if (idle < 160) { timer = window.setTimeout(arm, 170 - idle); return; }
+      }
+      const t0 = performance.now();
+      timer = window.setTimeout(() => {
+        if (!inView) return;
+        if (o.settle !== false && lastScroll > t0) return arm(); // they moved again: start the beat over
+        if (document.visibilityState !== "visible" || !o.ok()) return;
+        o.fire();
+      }, o.grace);
+    };
+    new IntersectionObserver((entries) => {
+      const r = entries[entries.length - 1].intersectionRatio;
+      inView = r >= o.ratio;
+      if (inView) arm();
+      else window.clearTimeout(timer);
+      if (r < 0.3) o.leave?.();
+    }, { threshold: [0, 0.01, 0.3, o.ratio], rootMargin: o.rootMargin ?? "0px" }).observe(target);
+    return { cancel: () => window.clearTimeout(timer) };
+  };
+
+  // THE EXHIBITS run themselves once: the object presses its own control
+  // (the watch's stop square dips; the phone's search field takes the pressed
+  // grey), then the module's real run plays on its real clock. A visitor who
+  // touched it first keeps today's ceremony exactly; a tap during the
+  // automatic run lands it on its end frame (WCAG 2.2.2); a run left before it
+  // said anything rewinds and waits for their return. Screen readers hear
+  // nothing they did not ask for: the module's status goes quiet until the end.
+  const phoneMq = window.matchMedia("(max-width: 899px)");
+  const selfRun = (hero: HTMLElement | null, object: HTMLElement | null, control: HTMLElement | null, key: string) => {
+    if (!hero || !object || !control) return null;
+    const status = hero.querySelector<HTMLElement>('[role="status"]');
+    let auto = false;
+    let byUser = false;
+    watchReach(object);
+    const quiet = (on: boolean) => status?.setAttribute("aria-live", on ? "off" : "polite");
+    const done = () => { auto = false; hero.removeAttribute("data-auto"); quiet(false); };
+    // a desk press is theirs from then on; on a phone a touch may be a scroll,
+    // so only a real tap (the run starting) takes it
+    hero.addEventListener("pointerdown", (e) => { if (!auto && (e as PointerEvent).pointerType === "mouse") byUser = true; }, true);
+    // (only a real hand: the object's own programmatic press is not a tap)
+    hero.addEventListener("click", (e) => { if (auto && e.isTrusted) hero.dispatchEvent(new CustomEvent("hero:finish")); }, true);
+    document.addEventListener("keydown", (e) => { if (auto && e.key === "Escape") hero.dispatchEvent(new CustomEvent("hero:finish")); });
+    new MutationObserver(() => {
+      if (hero.classList.contains("s2")) markShown(key); // it has spoken: this visit is spent
+      if (hero.classList.contains("s6") && auto) done();
+    }).observe(hero, { attributes: true, attributeFilter: ["class"] });
+    // pinned: a run started by the phone's transcript row, not the object —
+    // the object leaving the screen is the point, so it never rewinds that one
+    let pinned = false;
+    const fire = (fromRow = false) => {
+      auto = true;
+      pinned = fromRow;
+      quiet(true);
+      hero.setAttribute("data-auto", "");
+      if (settleReduce.matches) { control.click(); return; }
+      hero.setAttribute("data-ghost", "");
+      window.setTimeout(() => { hero.removeAttribute("data-ghost"); control.click(); }, 160);
+    };
+    const ok = () => !hero.classList.contains("s1") && !byUser && !wasShown(key) && !reaching(object);
+    const leave = () => {
+      if (auto && !pinned && !hero.classList.contains("s2")) { hero.dispatchEvent(new CustomEvent("hero:reset")); done(); }
+    };
+    firstSettle(object, { ratio: 0.6, grace: phoneMq.matches ? 400 : 700, ok, fire: () => fire(), leave });
+    return { fire, ok, isAuto: () => auto };
+  };
+  const intakeHero = document.querySelector<HTMLElement>(".intake-hero");
+  const watchRun = selfRun(intakeHero, intakeHero?.querySelector<HTMLElement>(".watch-col") ?? null, intakeHero?.querySelector<HTMLElement>(".stop") ?? null, "uxj-ran-intake");
+  const archiveHero = document.querySelector<HTMLElement>(".archive-hero");
+  selfRun(archiveHero, archiveHero?.querySelector<HTMLElement>(".stage") ?? null, archiveHero?.querySelector<HTMLElement>("[data-tap]") ?? null, "uxj-ran-archive");
+
+  // PHONES, the watch: stacked, its run prints a screen below the watch. A
+  // second trigger fires as soon as the run's first row enters the top two
+  // thirds of the screen (no beat: thumbs don't settle), so a thumb flicking
+  // past the watch lands on the transcript as it prints. And a run started
+  // up at the watch (a tap, or the watch's own settle) is FOLLOWED: the page
+  // eases down to the transcript as it starts and to the first card as the
+  // deck fills, and lets go at any touch, wheel or key.
+  if (intakeHero && watchRun) {
+    let fromRow = false;
+    const row = intakeHero.querySelector<HTMLElement>(".run > .row");
+    if (row) firstSettle(row, {
+      ratio: 0.01, grace: 0, settle: false, rootMargin: "0px 0px -35% 0px",
+      ok: () => phoneMq.matches && watchRun.ok(),
+      fire: () => { fromRow = true; watchRun.fire(true); },
+    });
+    let following = false;
+    const letGo = () => { following = false; };
+    const stages = new Set<string>();
+    const glide = (el: Element | null, at: number) => {
+      const m = document.querySelector<HTMLElement>("main");
+      if (!following || !el || !m || getComputedStyle(m).overflowY === "visible") return;
+      const dy = el.getBoundingClientRect().top - window.innerHeight * at;
+      if (dy > 8) m.scrollTo({ top: m.scrollTop + dy, behavior: settleReduce.matches ? "instant" : "smooth" });
+    };
+    new MutationObserver(() => {
+      const on = (s: string) => intakeHero.classList.contains(s);
+      if (!on("s1")) { stages.clear(); fromRow = false; following = false; return; }
+      if (!stages.has("s1")) {
+        stages.add("s1");
+        following = phoneMq.matches && !fromRow;
+        if (following) ["touchstart", "wheel", "keydown"].forEach((t) => document.addEventListener(t, letGo, { capture: true, once: true, passive: true }));
+      }
+      if (on("s2") && !stages.has("s2")) { stages.add("s2"); glide(intakeHero.querySelector(".node-transcript"), 0.28); }
+      if (on("s5") && !stages.has("s5")) { stages.add("s5"); window.setTimeout(() => { glide(intakeHero.querySelector(".deck .card"), 0.35); following = false; }, 120); }
+    }).observe(intakeHero, { attributes: true, attributeFilter: ["class"] });
+  }
+
   // ── AUDIO: the cassette is the switch. Each tape's button clicks the
   // Transport's own (hidden) toggle inside the same slide, so the tap
   // keeps its activation for audio.play(); the slide mirrors the audio's
@@ -2704,7 +2864,19 @@ const ARCHIVE = BUILDS.find((b) => b.id === "archive")!;
       pick: ls.querySelector<HTMLButtonElement>("[data-wl-pick]"),
       strip: ls.querySelector<HTMLElement>("[data-wl-strip]"),
       options: Array.from(ls.querySelectorAll<HTMLElement>("[data-wl-option]")),
+      open: null as null | ((into: boolean) => void),
     }));
+    const WL_KEY = "uxj-wl-shown";
+    // every control of a strip (the mini; on the empty deck the blank tape
+    // too) reports the same state
+    const expanded = (w: (typeof wallets)[number], on: boolean) => {
+      if (!w.strip) return;
+      w.ls.querySelectorAll(`[aria-controls="${w.strip.id}"]`).forEach((b) => b.setAttribute("aria-expanded", on ? "true" : "false"));
+    };
+    // a hand that lands on the wallet while it is peeking takes it over
+    // (the press that follows must not toggle it shut)
+    let tookOver = 0;
+    const tookIt = () => performance.now() - tookOver < 700;
     // each slide's own words, kept so a preview can be undone
     const own = wallets.map((w) => ({ title: w.title?.textContent ?? "", note: w.note?.textContent ?? "" }));
     let active = 0;
@@ -2735,7 +2907,8 @@ const ARCHIVE = BUILDS.find((b) => b.id === "archive")!;
       wallets.forEach((w) => {
         if (!w.pick || !w.strip || w.strip.hidden) return;
         w.strip.hidden = true;
-        w.pick.setAttribute("aria-expanded", "false");
+        w.strip.removeAttribute("data-fold");
+        expanded(w, false);
         if (focusPick) w.pick.focus();
       });
     const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -2775,11 +2948,17 @@ const ARCHIVE = BUILDS.find((b) => b.id === "archive")!;
       const open = (into: boolean) => {
         closeAll();
         strip.hidden = false;
-        pick.setAttribute("aria-expanded", "true");
+        expanded(w, true);
+        markShown(WL_KEY); // opened (by a hand or by its own settle): never peeks again this visit
         if (into) (options.find((o) => o.getAttribute("aria-selected") === "true") ?? options[0])?.focus();
       };
+      w.open = open;
       // a keyboard "click" (Enter / Space) arrives with detail 0
-      pick.addEventListener("click", (e) => (strip.hidden ? open(e.detail === 0) : closeAll(true)));
+      pick.addEventListener("click", (e) => {
+        if (!strip.hidden && tookIt()) return;
+        if (strip.hidden) open(e.detail === 0);
+        else closeAll(true);
+      });
       pick.addEventListener("keydown", (e) => {
         if (e.key === "ArrowDown" || e.key === "ArrowUp") { e.preventDefault(); open(true); }
       });
@@ -2804,6 +2983,78 @@ const ARCHIVE = BUILDS.find((b) => b.id === "archive")!;
     document.addEventListener("pointerdown", (e) => {
       if (!(e.target as Element | null)?.closest?.("[data-wl]")) closeAll();
     });
+
+    // THE WALLET SHOWS ITSELF ONCE (first settle, 2026-09-22): when the empty
+    // deck settles in view, the mini seats as if pressed and the strip drops
+    // open with its own animation. Where it would cover the tape (phones,
+    // desks under 1160px) it folds back after a moment; on wide desks it
+    // hangs open in the empty ground beside the column until an outside
+    // press, Esc, or the room leaves. Any hand ends the peek: on the wallet
+    // it becomes theirs, anywhere else it closes. No words change.
+    let peeking = false;
+    let peekTimers: number[] = [];
+    const endPeek = () => {
+      peekTimers.forEach((t) => window.clearTimeout(t));
+      peekTimers = [];
+      peeking = false;
+      wallets[0]?.pick?.removeAttribute("data-seat");
+    };
+    const fold = () => {
+      const w = wallets[0];
+      if (!w?.strip || w.strip.hidden || settleReduce.matches) { closeAll(); return endPeek(); }
+      w.strip.setAttribute("data-fold", "");
+      peekTimers.push(window.setTimeout(() => { closeAll(); endPeek(); }, 170));
+    };
+    ["pointerdown", "keydown"].forEach((t) =>
+      document.addEventListener(t, (e) => {
+        if (!peeking) return;
+        const inside = (e.target as Element | null)?.closest?.("[data-wl]");
+        endPeek();
+        if (inside && !wallets[0]?.strip?.hidden) tookOver = performance.now();
+        else closeAll();
+      }, { capture: true })
+    );
+    // the empty tape is the wallet's second door: a press opens (or closes)
+    // the same strip the mini does; a mouse press opens without moving focus,
+    // a keyboard press (detail 0) opens into the strip
+    const blankTape = auRoom.querySelector<HTMLButtonElement>("[data-blank-tape]");
+    blankTape?.addEventListener("click", (e) => {
+      const w = wallets[0];
+      if (!w?.strip || !w.open) return;
+      if (!w.strip.hidden && tookIt()) return;
+      if (w.strip.hidden) w.open(e.detail === 0);
+      else closeAll();
+    });
+    // the sleeves' covers are lazy inside a hidden strip: warm them when the
+    // room first shows, so the peek never opens on blank labels
+    let warmed = false;
+    new IntersectionObserver((es, obs) => {
+      if (warmed || !es.some((e) => e.isIntersecting)) return;
+      warmed = true;
+      obs.disconnect();
+      wallets[0]?.strip?.querySelectorAll<HTMLImageElement>("img[loading=lazy]").forEach((i) => (i.loading = "eager"));
+    }, { threshold: 0.1 }).observe(auRoom);
+    if (blankTape) {
+      watchReach(blankTape);
+      firstSettle(blankTape, {
+        ratio: 0.6, grace: 600,
+        ok: () => active === 0 && !!wallets[0]?.strip?.hidden && !wasShown(WL_KEY) && !reaching(blankTape),
+        fire: () => {
+          const w = wallets[0];
+          if (!w?.pick || !w.open) return;
+          peeking = true;
+          const go = () => {
+            w.pick!.removeAttribute("data-seat");
+            w.open!(false);
+            if (window.innerWidth < 1160) peekTimers.push(window.setTimeout(fold, 2400));
+          };
+          if (settleReduce.matches) return go();
+          w.pick.setAttribute("data-seat", "");
+          peekTimers.push(window.setTimeout(go, 120));
+        },
+        leave: () => { if (peeking) { closeAll(); endPeek(); } },
+      });
+    }
     auCar?.addEventListener("car:change", (e) => {
       active = Number((e as CustomEvent).detail?.index ?? 0);
       closeAll();
