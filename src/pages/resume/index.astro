@@ -88,7 +88,16 @@ const STUDIES = [
       </div>
 
       <div class="paper-stage">
-        <div class="sheet-wrap" data-sheet>
+        <div class="sheet-wrap" data-sheet data-riffle>
+          {/* THE STACK (2026-09-22): the résumé is the top page; the four
+              case studies are the sheets beneath it — their edges show under
+              its bottom edge, their tabs above its top edge. Screen-only. */}
+          <div class="r-stack" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
+          <div class="r-stack-tabs">
+            {STUDIES.map((c, k) => (
+              <a class="r-stack-tab" href={`#study-${c.slug}`} style={`--k:${k}`}><span class="r-stack-word">{c.name}</span></a>
+            ))}
+          </div>
           <PrintResume />
           {MARKS.map((m) => (
             <button
@@ -128,7 +137,7 @@ const STUDIES = [
           <p class="r-studies-t">case studies</p>
           <ul>
             {STUDIES.map((c) => (
-              <li>
+              <li id={`study-${c.slug}`}>
                 <a href={`/case-studies/${c.slug}`}>{c.name}</a>
                 <p set:html={c.lede} />
               </li>
@@ -144,6 +153,37 @@ const STUDIES = [
 </Layout>
 
 <script>
+  // THE STACK: on the first visit (per session) the study tabs rise from
+  // behind the sheet and the edges beneath slide out, once, after the type
+  // has landed; any hand completes it at once. Seen or reduced motion: it is
+  // simply drawn. A tab scrolls to its study and holds that row's underline.
+  {
+    const wrap = document.querySelector<HTMLElement>(".sheet-wrap[data-riffle]");
+    const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    let seen = false;
+    try { seen = sessionStorage.getItem("r-riffle") === "1"; sessionStorage.setItem("r-riffle", "1"); } catch {}
+    if (wrap) {
+      const settle = () => { wrap.setAttribute("data-riffle-skip", ""); wrap.removeAttribute("data-riffle"); };
+      if (seen || reduce) settle();
+      else {
+        const now = () => { settle(); off(); };
+        const off = () => ["pointerdown", "keydown", "wheel", "touchstart"].forEach((t) => window.removeEventListener(t, now, true));
+        ["pointerdown", "keydown", "wheel", "touchstart"].forEach((t) => window.addEventListener(t, now, { capture: true, passive: true }));
+        (document.fonts?.ready ?? Promise.resolve()).then(() => window.setTimeout(() => { wrap.removeAttribute("data-riffle"); window.setTimeout(off, 900); }, 250));
+      }
+    }
+    document.querySelectorAll<HTMLAnchorElement>(".r-stack-tab").forEach((a) => {
+      a.addEventListener("click", (e) => {
+        const li = document.getElementById((a.getAttribute("href") ?? "").slice(1));
+        if (!li) return;
+        e.preventDefault();
+        li.scrollIntoView({ behavior: reduce ? "instant" : "smooth", block: "start" });
+        li.setAttribute("data-hit", "");
+        window.setTimeout(() => li.removeAttribute("data-hit"), 1600);
+      });
+    });
+  }
+
   // Tab mechanics: each tab sits at the sheet's edge on its bullet's first
   // line; opening one reserves a gap under the bullet's entry (the paper
   // parts) and floats the proof panel into it, with focus mode dimming the
@@ -416,6 +456,138 @@ const STUDIES = [
       border-top-color: #1c222e;
     }
 
+    /* ── THE STACK (2026-09-22, Jon: "knowing that case studies are beneath
+       the résumé"): the sheet is the top page of a stack. Four sheets lie
+       under it — their edges show below the résumé's bottom edge, where the
+       page used to simply end — and each wears a paper tab above the
+       résumé's top edge, one per case study, left to right in the list's
+       order: the index-tab language one level up. A tab is a same-page link
+       to its study; hover deepens it (depth is the hand), a press scrolls to
+       the row and holds its underline. On a first visit the tabs rise and
+       the edges slide out once. Screen-only: print hides both. ── */
+    .sheet-wrap {
+      isolation: isolate; /* the stack paints under the sheet, over the ground */
+    }
+    .r-stack i {
+      position: absolute;
+      /* each sheet a touch narrower than the one above it, so every edge
+         reads as its own page rather than one thick slab */
+      inset: 0 calc(var(--n) * 4px);
+      z-index: -1;
+      background: #ffffff;
+      border: 1px solid rgba(90, 74, 50, 0.25);
+      border-radius: 4px;
+      transform: translateY(calc(var(--n) * 5px));
+      transition: transform 320ms cubic-bezier(0.2, 0.7, 0.3, 1) calc(var(--n) * 60ms), background 560ms ease, border-color 560ms ease;
+    }
+    /* the higher the sheet, the higher it paints: each edge shows below the
+       one above it */
+    .r-stack i:nth-child(1) { --n: 1; z-index: -1; }
+    .r-stack i:nth-child(2) { --n: 2; z-index: -2; }
+    .r-stack i:nth-child(3) { --n: 3; z-index: -3; }
+    .r-stack i:nth-child(4) { --n: 4; z-index: -4; box-shadow: 0 26px 60px -30px rgba(20, 12, 4, 0.45); }
+    /* the stack's foot carries the drop shadow now; the top page keeps only a
+       contact shadow, so the edges beneath it stay paper-white */
+    .paper-stage .sheet-wrap .print-resume {
+      box-shadow: 0 1px 3px rgba(20, 12, 4, 0.1);
+    }
+    html[data-night] .r-stack i {
+      background: #0b0e14;
+      border-color: #1c222e;
+    }
+    .r-stack-tabs {
+      position: absolute;
+      top: 0;
+      left: 50%;
+      z-index: -1;
+      display: flex;
+      gap: 6px;
+      transform: translateX(-50%);
+    }
+    .r-stack-tab {
+      position: relative;
+      display: block;
+      width: 28px;
+      height: 24px;
+      margin-top: -12px; /* 12px stands above the résumé's top edge; the rest is tucked under it */
+      background: #ffffff;
+      border: 1px solid rgba(90, 74, 50, 0.25);
+      border-radius: 3px 3px 0 0;
+      transition: transform 160ms cubic-bezier(0.2, 0.7, 0.3, 1), background 560ms ease, border-color 560ms ease;
+    }
+    /* a 34 × 44 hand, reaching up into the clear ground above the paper */
+    .r-stack-tab::after {
+      content: "";
+      position: absolute;
+      inset: -20px -3px 0;
+    }
+    .r-stack-tab:hover,
+    .r-stack-tab:focus-visible {
+      transform: translateY(-6px);
+    }
+    .r-stack-tab:focus-visible {
+      outline: 2px solid var(--text);
+      outline-offset: 2px;
+    }
+    html[data-night] .r-stack-tab {
+      background: #0b0e14;
+      border-color: #1c222e;
+    }
+    .r-stack-word {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      overflow: hidden;
+      clip-path: inset(50%);
+      white-space: nowrap;
+    }
+    /* the first visit's riffle: tabs start tucked under the sheet and the
+       edges flush with it; releasing data-riffle lets both come out, the tabs
+       one after another */
+    .sheet-wrap[data-riffle] .r-stack-tab {
+      transform: translateY(13px);
+    }
+    .sheet-wrap[data-riffle] .r-stack i {
+      transform: none;
+    }
+    .sheet-wrap:not([data-riffle-skip]) .r-stack-tab {
+      transition: transform 240ms cubic-bezier(0.2, 0.7, 0.3, 1) calc(160ms + var(--k) * 110ms), background 560ms ease, border-color 560ms ease;
+    }
+    .sheet-wrap[data-riffle-skip] .r-stack-tab,
+    .sheet-wrap[data-riffle-skip] .r-stack i {
+      transition-delay: 0s;
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .sheet-wrap[data-riffle] .r-stack-tab {
+        transform: none;
+      }
+      .sheet-wrap[data-riffle] .r-stack i {
+        transform: translateY(calc(var(--n) * 5px));
+      }
+      .r-stack i,
+      .r-stack-tab {
+        transition: background 560ms ease, border-color 560ms ease;
+      }
+    }
+    /* the row a tab sent you to holds its underline a moment */
+    .r-studies li {
+      scroll-margin-top: 24px;
+    }
+    .r-studies li[data-hit] a {
+      color: var(--accent);
+      text-decoration-color: currentColor;
+    }
+    /* phones: a flick past the paper's end settles on the case studies */
+    @media (max-width: 899px) {
+      html:has(.resume-world) {
+        scroll-snap-type: y proximity;
+      }
+      .r-studies {
+        scroll-snap-align: start;
+        scroll-margin-top: 24px;
+      }
+    }
+
     /* ── the sheet, as paper ── */
     .paper-stage {
       display: grid;
@@ -601,6 +773,8 @@ const STUDIES = [
 
   @media print {
     .r-actions,
+    .r-stack,
+    .r-stack-tabs,
     .r-mark,
     .proof-dock,
     .r-studies,
