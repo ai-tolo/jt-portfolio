@@ -1,0 +1,664 @@
+---
+// SIGNAL R0 contact sheet · LOOK A — THE STUDIO'S OWN LOOK BROUGHT OVER.
+// Material lifted recipe-for-recipe from signal-studio-v6lib (2a9e4a7) styles/{chrome,time,drums,keys,
+// bass,hands}.ts + style.css :root: the carbon chassis with its noise tile and bezel, lit towers with
+// accent headers on brushed steel rails, glass with true EQ curves + nodes, ring-arc knobs with static
+// machined caps, recessed segs, the LCD FX towers, the graphite keybed with printed letters + bracket,
+// the elastomer gate pads, .si-etch engraving. Laid out on the shared anatomy (NOTES-SIGNAL-R0.md §6).
+// Static: no script, no audio, no assets. A PLAYING MOMENT: FLOOR rolling with the playhead on step 5,
+// E4 + G4 held, pad 1 = Cmaj7 (I), the keys low-pass at 60% with MOTION on, bass SEQ.
+
+// the EQ glasses: eq-response.ts's biquad law (48 kHz, node dB 3, the slope cascade) sampled into the
+// Studio's 600x200 viewBox; 0 dB = y 75. ONE low-pass per glass (Law 1: the one filter), so the Studio's
+// low-cut node is not drawn. Flat runs pruned.
+const EQ = {
+  drums: "M0 75L288 75L294 74L336 74L342 73L360 73L366 72L372 72L378 71L384 71L390 70L396 69L402 69L408 68L414 67L420 66L426 64L432 63L438 61L444 60L450 58L462 58L468 62L474 69L480 79L486 90L492 102L498 115L504 128L510 141L516 154L522 167L528 181L534 194L540 200L600 200",
+  keys: "M0 75L180 75L186 74L228 74L234 73L246 73L252 72L264 72L270 71L276 71L282 70L288 69L294 68L300 68L306 67L312 65L318 64L324 63L330 61L336 60L342 59L348 58L354 59L360 63L366 69L372 78L378 89L384 100L390 112L396 124L402 135L408 147L414 158L420 170L426 181L432 192L438 200L600 200",
+  ghost: "M0 75L90 75L96 74L138 74L144 73L156 73L162 72L174 72L180 71L186 71L192 70L198 69L204 68L210 68L216 67L222 65L228 64L234 63L240 61L246 60L252 59L258 58L264 59L270 63L276 69L282 78L288 89L294 100L300 111L306 123L312 134L318 146L324 157L330 168L336 179L342 190L348 200L600 200",
+  bass: "M0 75L102 75L108 74L150 74L156 73L168 73L174 72L186 72L192 71L198 71L204 70L210 69L216 68L222 68L228 67L234 65L240 64L246 63L252 61L258 60L264 59L270 58L276 59L282 63L288 69L294 78L300 89L306 100L312 111L318 123L324 134L330 146L336 157L342 168L348 179L354 190L360 200L600 200",
+};
+const shut = (d: string) => d + "L600 200L0 200Z";
+const MAJ = [140, 340, 540]; // 100 Hz · 1 kHz · 10 kHz on the 20 Hz–20 kHz log axis
+const MIN = [80, 200, 280, 400, 480]; // 50 · 200 · 500 · 2k · 5k (the keys glass prints these too)
+const ticks = (n: number) => Array.from({ length: n }, (_, i) => (-135 + (i / (n - 1)) * 270).toFixed(1));
+
+// the drum grid: FLOOR at DENSITY .7 / GROOVE .3 (drum-pattern.ts), 3 accent · 2 mid · 1 ghost
+const LANES: [string, number[]][] = [
+  ["KICK", [3, 0, 0, 0, 3, 0, 0, 0, 3, 0, 0, 0, 3, 0, 0, 0]],
+  ["SNARE", [0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0]],
+  ["HAT", [0, 1, 2, 1, 0, 1, 2, 1, 0, 1, 2, 1, 0, 1, 2, 1]],
+  ["OPEN", [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 0]],
+  ["CLAP", [0, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 2, 0, 0, 0]],
+  ["SHKR", [0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1]],
+];
+const STEP = 4; // the playhead: step 5
+const PATS: [string, number[], boolean][] = [
+  ["FLOOR", [0, 4, 8, 12], true], ["BACK", [0, 8, 10], false], ["HALF", [0], false], ["BREAK", [0, 7, 10], false],
+];
+
+// the bass strip (SEQ): velocity 0..3 → height 7/32/64/100 % (bass.ts BAR_H); six steps sound
+const BASS = [3, 0, 0, 1, 0, 0, 2, 0, 3, 0, 0, 1, 0, 0, 2, 0];
+const BAR_H = [7, 32, 64, 100];
+
+// the FX towers: DRIVE .4 · MOD .6 · DEL .25 · REV .35, each with its flavour seg (effects.ts)
+const FX = [
+  { l: "DRIVE", v: 0.4, acc: "var(--la-drive)", opts: ["WARM", "CRUNCH", "TAPE", "FUZZ"], on: 0 },
+  { l: "MOD", v: 0.6, acc: "var(--la-mod)", opts: ["PHS", "FLNG", "DBL", "CHRS"], on: 3 },
+  { l: "DEL", v: 0.25, acc: "var(--la-delay)", opts: ["4", "8", "8d", "16"], on: 1 },
+  { l: "REV", v: 0.35, acc: "var(--la-reverb)", opts: ["SM", "MED", "HALL", "VAST"], on: 0 },
+];
+
+// the keybed: C2–C6 = 29 whites; octave 0 puts `a` on C4 (letters on whites 14..22, blacks after 14/15/17/18/19/21)
+const W = 29;
+const NOTE = "CDEFGAB";
+const WHITES = Array.from({ length: W }, (_, i) => ({ i, name: NOTE[i % 7] + (2 + Math.floor(i / 7)), c: i % 7 === 0 }));
+const BLACKS = WHITES.filter((w) => [0, 1, 3, 4, 5].includes(w.i % 7) && w.i < W - 1);
+const WQ: Record<number, string> = { 14: "A", 15: "S", 16: "D", 17: "F", 18: "G", 19: "H", 20: "J", 21: "K", 22: "L" };
+const BQ: Record<number, string> = { 14: "W", 15: "E", 17: "T", 18: "Y", 19: "U", 21: "O" };
+const HELD = [16, 18]; // E4 · G4
+const at = (n: number) => ((n / W) * 100).toFixed(3) + "%";
+---
+
+<div class="look look-a" data-look="a" role="img" aria-label="SIGNAL, look a: the studio's own">
+  {/* 1 · TOP STRIP: wordmark · tempo glass + TAP · the master stop */}
+  <div class="la-top">
+    <div class="la-brand"><span class="la-word la-etch">SIGNAL</span></div>
+    <div class="la-glass la-tempo">
+      <b class="la-bpm">120</b><small class="la-bpml">BPM</small>
+      <span class="la-cap la-tap"><i class="la-led"></i>TAP<kbd class="la-kbd">=</kbd></span>
+    </div>
+    <span class="la-cap la-stop"><i class="la-stopm"></i>STOP</span>
+  </div>
+
+  {/* 2 · THE TOWERS */}
+  <div class="la-towers">
+    {/* DRUMS */}
+    <section class="la-tw la-tw-d">
+      <div class="la-head la-rail">
+        <span class="la-cap la-pow la-on"><i class="la-led"></i><span class="la-pnm">DRUMS</span></span>
+        <div class="la-glass la-node"><i class="la-nlamp"></i><span class="la-nm">HOUSE</span></div>
+      </div>
+      <div class="la-body">
+        <div class="la-glass la-fc" style="--fc:var(--la-drums)">
+          <svg viewBox="0 0 600 200" preserveAspectRatio="none" aria-hidden="true">
+            {MAJ.map((x) => <line class="la-gl la-maj" x1={x} y1="0" x2={x} y2="200" />)}
+            <line class="la-gz" x1="0" y1="75" x2="600" y2="75" />
+            <path class="la-ffill" d={shut(EQ.drums)} /><path class="la-fpath" d={EQ.drums} />
+          </svg>
+          <i class="la-fnode" style="left:78%;top:31%"></i>
+        </div>
+        <div class="la-grid">
+          <i class="la-phd" style={`--s:${STEP}`}></i>
+          {LANES.map(([name, cells]) => (
+            <div class="la-lane">
+              <span class="la-ln la-etch">{name}</span>
+              {cells.map((v, s) => <i class={`la-st la-v${v}${s === STEP && v ? " la-hit" : ""}`}></i>)}
+            </div>
+          ))}
+          <div class="la-lane"><span></span>{Array.from({ length: 16 }, (_, s) => <i class={`la-bt${s % 4 ? "" : " la-beat"}`}></i>)}</div>
+        </div>
+        <div class="la-dsplit">
+          <div class="la-dmain">
+            <div class="la-dknobs">
+              <div class="la-knob" style="--v:.62;--a0:.5;--a1:.62"><div class="la-dial la-anch"><i class="la-tick"></i><i class="la-ptr"></i></div><span class="la-kl la-etch">SWING</span></div>
+              <div class="la-knob" style="--v:.7"><div class="la-dial"><i class="la-ptr"></i></div><span class="la-kl la-etch">DENSITY</span></div>
+            </div>
+            <div class="la-seg la-pat">
+              {PATS.map(([l, k, on]) => (
+                <b class={on ? "la-on" : ""}><span class="la-dots">{Array.from({ length: 16 }, (_, s) => <i class={k.includes(s) ? "la-k" : ""}></i>)}</span><em class="la-pate">{l}</em></b>
+              ))}
+            </div>
+            <div class="la-tex">
+              <div class="la-knob" style="--v:.45"><div class="la-dial"><i class="la-ptr"></i></div><span class="la-kl la-etch">TEXTURE</span></div>
+              <div class="la-seg la-texseg"><b class="la-on">TAPE</b><b>DRIVE</b></div>
+            </div>
+          </div>
+          <i class="la-ddiv"></i>
+          <div class="la-dly">
+            <span class="la-dlycap la-etch">DELAY</span>
+            <div class="la-dlyk">
+              <div class="la-knob" style="--v:.3"><div class="la-dial"><i class="la-ptr"></i></div><span class="la-kl la-etch">MIX</span></div>
+              <div class="la-knob" style="--v:.35"><div class="la-dial"><i class="la-ptr"></i></div><span class="la-kl la-etch">FB</span></div>
+              <div class="la-knob la-stepped" style="--v:.25"><div class="la-dial">{ticks(5).map((a) => <i class="la-stick" style={`--ta:${a}deg`}></i>)}<i class="la-ptr"></i></div><span class="la-kl la-etch">TIME</span><span class="la-lcd la-lcd-s">1/8</span></div>
+            </div>
+          </div>
+        </div>
+        <div class="la-scrow">
+          <div class="la-knob la-sc" style="--v:.4"><div class="la-dial"><i class="la-ptr"></i></div><span class="la-kl la-etch">SIDECHAIN</span></div>
+        </div>
+      </div>
+      <div class="la-foot la-rail">
+        <span class="la-msq">M</span><span class="la-msq">S</span><i class="la-fdiv"></i>
+        <div class="la-trim" style="--v:.8;--a0:.8;--a1:.8"><span class="la-trimring"></span><span class="la-well"></span><span class="la-utick"></span><span class="la-slot"></span></div>
+      </div>
+    </section>
+
+    {/* KEYS */}
+    <section class="la-tw la-tw-k">
+      <div class="la-head la-rail">
+        <span class="la-cap la-pow"><span class="la-pnm">KEYS</span></span>
+        <div class="la-seg la-voice"><b class="la-on">RHODES</b><b>PIANO</b><b>PAD</b><b>LEAD</b><b>SYNTH</b></div>
+      </div>
+      <div class="la-body">
+        <div class="la-glass la-kf">
+          <svg viewBox="0 0 600 200" preserveAspectRatio="none" aria-hidden="true">
+            {MIN.map((x) => <line class="la-gl" x1={x} y1="0" x2={x} y2="200" />)}
+            {MAJ.map((x) => <line class="la-gl la-maj" x1={x} y1="0" x2={x} y2="200" />)}
+            <line class="la-gz" x1="0" y1="75" x2="600" y2="75" />
+            <path class="la-kfill" d={shut(EQ.keys)} /><path class="la-kghost" d={EQ.ghost} /><path class="la-kpath" d={EQ.keys} />
+          </svg>
+          <span class="la-flab" style="left:23.3%">100</span><span class="la-flab" style="left:56.6%">1k</span><span class="la-flab" style="left:90%">10k</span>
+          <i class="la-afnode" style="left:60%;top:31.3%"></i>
+        </div>
+        <div class="la-band">
+          <div class="la-lfo">
+            <div class="la-lfod">
+              <div class="la-kg la-motion" style="--v:.42;--a0:0;--a1:.42;--acc:var(--la-amber)">
+                <div class="la-dial la-anch"><i class="la-tick" style="--ta:-135deg"></i><i class="la-ptr"></i></div>
+                <span class="la-kl la-etch">MOTION</span><span class="la-lcd">42</span>
+              </div>
+              <div class="la-kg la-rate la-stepped" style="--v:.5556;--acc:var(--la-steel)">
+                <div class="la-dial">{ticks(10).map((a) => <i class="la-stick" style={`--ta:${a}deg`}></i>)}<i class="la-ptr"></i></div>
+                <span class="la-kl la-etch">RATE</span><span class="la-lcd la-lcd-r">1/8</span>
+              </div>
+            </div>
+            <div class="la-waves">
+              <span class="la-cap la-on"><i class="la-led"></i><svg viewBox="0 0 22 13" aria-hidden="true"><path d="M1 6.5 Q5 1 9 6.5 T21 6.5" /></svg></span>
+              <span class="la-cap"><i class="la-led"></i><svg viewBox="0 0 22 13" aria-hidden="true"><path d="M1 2 L10 11 L10 2 L21 11" /></svg></span>
+              <span class="la-cap"><i class="la-led"></i><svg viewBox="0 0 22 13" aria-hidden="true"><path d="M1 11 L10 2 L10 11 L21 2" /></svg></span>
+              <span class="la-cap"><i class="la-led"></i><svg viewBox="0 0 22 13" aria-hidden="true"><path d="M1 11 L1 2 L11 2 L11 11 L21 11 L21 2" /></svg></span>
+            </div>
+          </div>
+          <div class="la-fx">
+            {FX.map((f) => (
+              <div class="la-fxcol">
+                <div class={`la-fxcard${f.l === "DEL" ? " la-fxdel" : ""}`} style={`--v:${f.v}`}><i class="la-fill"></i><span class="la-fl">{f.l}</span></div>
+                <div class={`la-seg la-col la-sub${f.l === "DEL" ? " la-glyphs" : ""}`} style={`--acc:${f.acc}`}>
+                  {f.opts.map((o, i) => (
+                    <b class={i === f.on ? "la-on" : ""}>
+                      {f.l !== "DEL" && o}
+                      {o === "4" && <svg width="9" height="16" viewBox="0 0 9 16" aria-hidden="true"><ellipse cx="3.4" cy="13" rx="3" ry="2.2" /><rect x="5.6" y="1" width="1.3" height="12" /></svg>}
+                      {o === "8" && <svg width="11" height="16" viewBox="0 0 11 16" aria-hidden="true"><ellipse cx="3.4" cy="13" rx="3" ry="2.2" /><rect x="5.6" y="1" width="1.3" height="12" /><path d="M6.9 1 q3.4 1.8 3.4 4.6 q-1.8-1.5-3.4-1.7z" /></svg>}
+                      {o === "8d" && <svg width="14" height="16" viewBox="0 0 14 16" aria-hidden="true"><ellipse cx="3.4" cy="13" rx="3" ry="2.2" /><rect x="5.6" y="1" width="1.3" height="12" /><path d="M6.9 1 q3.4 1.8 3.4 4.6 q-1.8-1.5-3.4-1.7z" /><circle cx="12" cy="13.4" r="1.4" /></svg>}
+                      {o === "16" && <svg width="11" height="16" viewBox="0 0 11 16" aria-hidden="true"><ellipse cx="3.4" cy="13" rx="3" ry="2.2" /><rect x="5.6" y="1" width="1.3" height="12" /><path d="M6.9 1 q3.4 1.6 3.4 4 q-1.8-1.4-3.4-1.5z" /><path d="M6.9 4.5 q3.4 1.6 3.4 4 q-1.8-1.4-3.4-1.5z" /></svg>}
+                    </b>
+                  ))}
+                  {f.l === "MOD" && (
+                    <div class="la-modrate"><div class="la-mrtrack"><span class="la-mrdet"></span><span class="la-mrfill"></span></div><span class="la-mrcap la-etch">RATE</span></div>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+      <div class="la-foot la-rail">
+        <span class="la-msq">M</span><span class="la-msq">S</span><i class="la-fdiv"></i>
+        <div class="la-trim" style="--v:.74;--a0:.74;--a1:.8"><span class="la-trimring"></span><span class="la-well"></span><span class="la-utick"></span><span class="la-slot"></span></div>
+      </div>
+    </section>
+
+    {/* BASS */}
+    <section class="la-tw la-tw-b">
+      <div class="la-head la-rail">
+        <span class="la-cap la-pow la-on"><i class="la-led"></i><span class="la-pnm">BASS</span></span>
+        <div class="la-glass la-node"><span class="la-nm la-dim">SYNTH</span></div>
+      </div>
+      <div class="la-body">
+        <div class="la-cmd">
+          <div class="la-glass la-fc" style="--fc:var(--la-bass)">
+            <svg viewBox="0 0 600 200" preserveAspectRatio="none" aria-hidden="true">
+              {MAJ.map((x) => <line class="la-gl la-maj" x1={x} y1="0" x2={x} y2="200" />)}
+              <line class="la-gz" x1="0" y1="75" x2="600" y2="75" />
+              <path class="la-ffill" d={shut(EQ.bass)} /><path class="la-fpath" d={EQ.bass} />
+            </svg>
+            <i class="la-fnode" style="left:47%;top:31.3%"></i>
+          </div>
+          <div class="la-bmrow">
+            <div class="la-seg la-bmode"><b>DRONE</b><b>PLUCK</b><b class="la-on">SEQ</b></div>
+            <span class="la-cap la-lock la-on"><i class="la-led"></i><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M4.6 7 V4.6 a3.4 3.4 0 0 1 6.8 0 V7" /><rect x="3.3" y="7" width="9.4" height="6.3" rx="1.3" /></svg></span>
+            <span class="la-bnote la-etch">C1</span>
+          </div>
+          <div class="la-bpat">
+            <div class="la-bbars">
+              {BASS.map((v, s) => <i class={`la-bar${v ? " la-on" : ""}${v === 3 ? " la-acc" : ""}${s % 4 ? "" : " la-beat"}${s === 14 ? " la-slide" : ""}`} style={`--h:${BAR_H[v]}%`}></i>)}
+            </div>
+            <div class="la-bprow">
+              <div class="la-knob" style="--v:.55"><div class="la-dial"><i class="la-ptr"></i></div><span class="la-kl">DENSITY</span></div>
+              <div class="la-knob" style="--v:.35"><div class="la-dial"><i class="la-ptr"></i></div><span class="la-kl">GROOVE</span></div>
+            </div>
+          </div>
+          <div class="la-bkrow">
+            <div class="la-knob" style="--v:.62"><div class="la-dial"><i class="la-ptr"></i></div><span class="la-kl">INTENSITY</span></div>
+            <div class="la-knob" style="--v:.5"><div class="la-dial"><i class="la-ptr"></i></div><span class="la-kl">SUB</span></div>
+            <div class="la-knob" style="--v:.24"><div class="la-dial"><i class="la-ptr"></i></div><span class="la-kl">GLIDE</span></div>
+          </div>
+        </div>
+      </div>
+      <div class="la-foot la-rail">
+        <span class="la-msq">M</span><span class="la-msq">S</span><i class="la-fdiv"></i>
+        <div class="la-trim" style="--v:.88;--a0:.8;--a1:.88"><span class="la-trimring"></span><span class="la-well"></span><span class="la-utick"></span><span class="la-slot"></span></div>
+      </div>
+    </section>
+  </div>
+
+  {/* 3 · HANDS ROW */}
+  <div class="la-ph">
+    <div class="la-phsec">
+      <span class="la-cap la-oct"><svg viewBox="0 0 8 8" aria-hidden="true"><path d="M6 1 L2 4 L6 7Z" /></svg></span>
+      <div class="la-oh"><b>0</b><small>OCTAVE</small></div>
+      <span class="la-cap la-oct"><svg viewBox="0 0 8 8" aria-hidden="true"><path d="M2 1 L6 4 L2 7Z" /></svg></span>
+    </div>
+    <i class="la-divh"></i>
+    <div class="la-oh la-keyscr"><b>C MAJ</b><small>KEY</small></div>
+    <div class="la-phmid"><div class="la-glass la-chord"><b class="la-cl">Cmaj7</b><span class="la-cd">I</span></div></div>
+    <div class="la-phsec"><span class="la-cap la-tog"><i class="la-led"></i>CHORD</span><span class="la-cap la-tog"><i class="la-led"></i>HOLD</span></div>
+    <i class="la-divh"></i>
+    <div class="la-arp">
+      <span class="la-cap la-tog la-on"><i class="la-led"></i>ARPEGGIATOR</span>
+      <div class="la-knob la-arpk la-stepped" style="--v:.714"><div class="la-dial">{ticks(8).map((a) => <i class="la-stick" style={`--ta:${a}deg`}></i>)}<i class="la-ptr"></i></div><span class="la-kl">RATE</span></div>
+      <div class="la-knob la-arpk" style="--v:.38"><div class="la-dial"><i class="la-ptr"></i></div><span class="la-kl">LENGTH</span></div>
+      <div class="la-knob la-arpk" style="--v:.3"><div class="la-dial"><i class="la-ptr"></i></div><span class="la-kl">GROOVE</span></div>
+    </div>
+  </div>
+
+  {/* 4 · CHORD RACK */}
+  <div class="la-rack">
+    {Array.from({ length: 8 }, (_, i) => (
+      <div class={`la-pad${i === 0 ? " la-full la-sel" : ""}`}>
+        <span class="la-crk">{i + 1}</span>
+        {i === 0 && <b class="la-crl">Cmaj7</b>}
+        {i === 0 && <span class="la-crd">I</span>}
+      </div>
+    ))}
+  </div>
+
+  {/* 5 · KEYBED: C2–C6, letters on the mapped octave, the bracket under it */}
+  <div class="la-kb">
+    <div class="la-piano">
+      {WHITES.map((w) => (
+        <span class={`la-wk${WQ[w.i] ? " la-inb" : ""}${HELD.includes(w.i) ? " la-press" : ""}`} style={`--i:${w.i}`}>
+          {WQ[w.i] && <span class="la-ql">{WQ[w.i]}</span>}
+          {HELD.includes(w.i) && <span class="la-nl">{w.name}</span>}
+          {w.c && <i class="la-cdot"></i>}
+        </span>
+      ))}
+      {BLACKS.map((w) => (
+        <span class={`la-bk${BQ[w.i] ? " la-inb la-color" : ""}`} style={`--i:${w.i}`}>{BQ[w.i] && <span class="la-ql">{BQ[w.i]}</span>}</span>
+      ))}
+    </div>
+    <div class="la-kbr">
+      {WHITES.filter((w) => w.c).map((w) => [<i class="la-kbt" style={`left:${at(w.i + 0.5)}`}></i>, <b class="la-kbo la-etch" style={`left:${at(w.i + 0.5)}`}>{w.name}</b>])}
+      <div class="la-kbwin" style={`left:${at(14)};width:${at(9)}`}><i class="la-jaw"></i><i class="la-jaw"></i></div>
+    </div>
+  </div>
+
+  {/* 6 · GATE ROW */}
+  <div class="la-gate">
+    <div class="la-gz">
+      <span class="la-gpad la-gpz"><span class="la-gsub">GATE</span><b>Z</b></span>
+      <div class="la-gk la-stepped" style="--v:.5"><div class="la-dial">{ticks(5).map((a) => <i class="la-stick" style={`--ta:${a}deg`}></i>)}<i class="la-ptr"></i></div><span class="la-kl">RATE</span><span class="la-kv">1/16</span></div>
+      <div class="la-gk" style="--v:0"><div class="la-dial"><i class="la-ptr"></i></div><span class="la-kl">SWING</span><span class="la-kv">0</span></div>
+    </div>
+    <span class="la-badge la-etch">SIGNAL</span>
+    <div class="la-gm">
+      <span class="la-gpad la-dive"><b>M</b><span class="la-gsub">DIVE</span></span>
+      <div class="la-gk" style="--v:.72"><div class="la-dial"><i class="la-ptr"></i></div><span class="la-kl">SPEED</span><span class="la-kv">0.45</span></div>
+      <div class="la-gk" style="--v:.65"><div class="la-dial"><i class="la-ptr"></i></div><span class="la-kl">DIST</span><span class="la-kv">24</span></div>
+    </div>
+  </div>
+</div>
+
+<style>
+  /* ── tokens (style.css :root + chrome.ts), scoped to the look ── */
+  .look-a {
+    --la-drums: #fffd77; --la-keys: #00cecb; --la-bass: #88498f; --la-amber: #ff9a4a; --la-sapph: #0ec4fc;
+    --la-steel: #48515f; --la-warn: #ed254e; --la-curve: #5ec8f0;
+    --la-lamp: color-mix(in srgb, var(--la-steel) 30%, #dce8f5);
+    --la-drive: color-mix(in srgb, var(--la-keys) 92%, #fff); --la-mod: color-mix(in srgb, var(--la-keys) 80%, #fff);
+    --la-delay: var(--la-keys); --la-reverb: color-mix(in srgb, var(--la-keys) 64%, #fff);
+    --la-noise: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)' opacity='0.5'/%3E%3C/svg%3E");
+    --la-face: linear-gradient(180deg, #464e5c 0%, #2c333f 47%, #1f2630 100%);
+    --la-face-dn: linear-gradient(180deg, #2d343f, #1a212b);
+    --la-edge: rgba(255, 255, 255, .13); --la-edge-dn: rgba(255, 255, 255, .06); --la-wall: #0a0d12;
+    --la-mono: "IBM Plex Mono", ui-monospace, Menlo, Consolas, monospace;
+    --la-disp: "Orbitron", "IBM Plex Mono", ui-monospace, monospace;
+    /* the carbon chassis: noise tile at soft-light + the two hairline weaves + the top-centre lamp */
+    position: relative; width: 1120px; padding: 10px; border-radius: 22px;
+    font: 400 13px/1.4 var(--la-mono); color: #e7e7ea; -webkit-user-select: none; user-select: none;
+    background-color: #090a0d;
+    background-image: var(--la-noise),
+      repeating-linear-gradient(45deg, rgba(190, 210, 240, .011) 0 1px, transparent 1px 4px),
+      repeating-linear-gradient(-45deg, rgba(0, 0, 0, .2) 0 1px, transparent 1px 4px),
+      radial-gradient(150% 95% at 50% -8%, rgba(120, 150, 195, .045), transparent 55%);
+    background-repeat: repeat, repeat, repeat, no-repeat;
+    background-blend-mode: soft-light, normal, normal, normal;
+    border: 1px solid rgba(0, 0, 0, .72);
+    box-shadow: 0 60px 110px -48px rgba(0, 0, 0, .95), inset 0 1px 0 rgba(255, 255, 255, .07), inset 0 -3px 2px rgba(0, 0, 0, .6), inset 0 0 0 1px rgba(90, 110, 140, .05);
+  }
+  .look-a::after { content: ""; position: absolute; inset: 6px; border-radius: 17px; pointer-events: none; border: 1px solid rgba(0, 0, 0, .35); box-shadow: inset 0 1px 0 rgba(255, 255, 255, .04); }
+
+  /* ── shared material vocabulary ── */
+  .la-etch { color: rgba(200, 215, 235, .32); text-shadow: 0 -1px 0 rgba(0, 0, 0, .8), 0 1px 0 rgba(255, 255, 255, .06); }
+  .la-rail { position: relative; background-image: repeating-linear-gradient(0deg, rgba(255, 255, 255, .018) 0 1px, transparent 1px 2px), radial-gradient(140% 220% at 50% -40%, rgba(255, 255, 255, .06), transparent 55%), linear-gradient(180deg, #20262f, #161b22); }
+  /* glass: sharp, recessed, one lamp top-centre, phosphor scan, a 4% accent tint */
+  .la-glass { position: relative; overflow: hidden; border-radius: 2px; border: 1px solid rgba(155, 167, 187, .16);
+    background: radial-gradient(130% 130% at 50% 0%, color-mix(in srgb, var(--acc, var(--la-steel)) 4%, #080e16), #04060b 80%);
+    box-shadow: inset 0 0 0 1px rgba(0, 0, 0, .8), inset 0 2px 10px rgba(0, 0, 0, .62), inset 0 -1px 0 color-mix(in srgb, var(--acc, var(--la-steel)) 10%, transparent), 0 1px 0 rgba(255, 255, 255, .045), 0 2px 5px rgba(0, 0, 0, .4); }
+  .la-glass::before { content: ""; position: absolute; inset: 0; z-index: 6; pointer-events: none; background: radial-gradient(120% 78% at 50% -12%, rgba(255, 255, 255, .06), transparent 45%); }
+  .la-glass::after { content: ""; position: absolute; inset: 0; z-index: 5; pointer-events: none; mix-blend-mode: screen; background: repeating-linear-gradient(0deg, rgba(150, 195, 240, .04) 0 1px, transparent 1px 2px); }
+  /* the proud keycap: 4px drop-wall, same-frame press, latch rests down with its corner LED struck */
+  .la-cap { position: relative; display: inline-flex; align-items: center; justify-content: center; gap: 6px; border-radius: 9px;
+    font: 400 .56rem/1 var(--la-mono); letter-spacing: .06em; color: #b3bdc9; background: var(--la-face); border-top: 1px solid var(--la-edge);
+    box-shadow: inset 0 1.5px .5px rgba(255, 255, 255, .26), inset 0 -5px 7px rgba(0, 0, 0, .5), inset 0 0 0 1px rgba(255, 255, 255, .03), 0 4px 0 var(--la-wall), 0 7px 9px rgba(0, 0, 0, .6);
+    transition: transform .09s cubic-bezier(.2, .7, .3, 1), box-shadow .09s cubic-bezier(.2, .7, .3, 1), color .12s; }
+  .la-cap:active { transform: translateY(2px); box-shadow: inset 0 1.5px .5px rgba(255, 255, 255, .2), inset 0 -3px 5px rgba(0, 0, 0, .5), 0 2px 0 var(--la-wall), 0 3px 5px rgba(0, 0, 0, .6); transition: none; }
+  .la-cap.la-on { color: #eafaff; border-top-color: var(--la-edge-dn); transform: translateY(2px); background: var(--la-face-dn);
+    box-shadow: inset 0 2px 5px rgba(0, 0, 0, .6), inset 0 0 13px -4px var(--acc, var(--la-steel)), 0 1px 0 var(--la-wall), 0 2px 3px rgba(0, 0, 0, .55); }
+  .la-led { position: absolute; top: 4px; right: 5px; width: 4px; height: 4px; border-radius: 50%; background: #1a2630; box-shadow: inset 0 0 0 1px rgba(0, 0, 0, .6); }
+  .la-on > .la-led { background: var(--acc, var(--la-lamp)); box-shadow: 0 0 8px var(--acc, var(--la-lamp)), 0 0 2px #cdeeff; }
+  .la-cap svg { width: 14px; height: 9px; }
+  .la-cap svg path { stroke: #9aa6b4; stroke-width: 1.5; fill: none; stroke-linecap: round; stroke-linejoin: round; }
+  .la-cap.la-on svg path { stroke: #eaf6ff; filter: drop-shadow(0 0 3px var(--acc, var(--la-steel))); }
+  /* the seg: a recessed housing of proud caps; selection snaps, the LED strikes */
+  .la-seg { --acc: var(--la-steel); display: flex; gap: 4px; border-radius: 9px; padding: 3px; background: linear-gradient(180deg, #0a0d12, #060809); border: 1px solid rgba(0, 0, 0, .7); box-shadow: inset 0 1px 3px rgba(0, 0, 0, .75), inset 0 0 0 1px rgba(0, 0, 0, .5); }
+  .la-seg > b { position: relative; flex: 1; min-width: 0; display: flex; align-items: center; justify-content: center; font: 400 .56rem/1 var(--la-mono); color: #b3bdc9; padding: 6px 0; border-radius: 6px;
+    background: var(--la-face); border-top: 1px solid var(--la-edge); box-shadow: inset 0 1.2px .5px rgba(255, 255, 255, .22), inset 0 -4px 6px rgba(0, 0, 0, .5), 0 3px 0 var(--la-wall), 0 5px 7px rgba(0, 0, 0, .55); }
+  .la-seg > b:active { transform: translateY(2px); box-shadow: inset 0 1px .5px rgba(255, 255, 255, .18), inset 0 -3px 5px rgba(0, 0, 0, .5), 0 1px 0 var(--la-wall), 0 2px 4px rgba(0, 0, 0, .55); }
+  .la-seg > b.la-on { color: #eafaff; border-top-color: var(--la-edge-dn); background: var(--la-face-dn); box-shadow: inset 0 2px 5px rgba(0, 0, 0, .6), inset 0 0 12px -4px var(--acc), 0 1px 0 var(--la-wall), 0 2px 3px rgba(0, 0, 0, .5); }
+  .la-seg > b::after { content: ""; position: absolute; top: 4px; right: 5px; width: 4px; height: 4px; border-radius: 50%; background: var(--acc); box-shadow: 0 0 7px var(--acc), 0 0 2px #cdeeff; opacity: 0; }
+  .la-seg > b.la-on::after { opacity: 1; }
+  /* the ring-arc knob: a 2px value collar round a STATIC machined cap; only the pointer turns */
+  .la-knob { position: relative; display: flex; flex-direction: column; align-items: center; gap: 3px; }
+  .la-dial { --d: 44px; position: relative; flex: none; width: var(--d); height: var(--d); border-radius: 50%;
+    background: conic-gradient(from 225deg, var(--acc, var(--la-amber)) 0 calc(var(--v, 0) * 270deg), #262c35 calc(var(--v, 0) * 270deg) 270deg, #0a0d12 270deg 360deg);
+    box-shadow: inset 0 0 0 1px rgba(0, 0, 0, .6), 0 1px 2px rgba(0, 0, 0, .5); }
+  .la-dial.la-anch { background: conic-gradient(from 225deg, #262c35 0 calc(var(--a0, 0) * 270deg), var(--acc, var(--la-amber)) calc(var(--a0, 0) * 270deg) calc(var(--a1, 0) * 270deg), #262c35 calc(var(--a1, 0) * 270deg) 270deg, #0a0d12 270deg 360deg); }
+  .la-dial::before { content: ""; position: absolute; inset: 2px; border-radius: 50%;
+    background: radial-gradient(circle at 50% 32%, rgba(255, 255, 255, .10), transparent 46%), repeating-conic-gradient(from 0deg, rgba(255, 255, 255, .02) 0 2deg, transparent 2deg 5deg), radial-gradient(circle at 50% 40%, #2b323d, #10141c 78%);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, .12), inset 0 -2px 3px rgba(0, 0, 0, .55), 0 1px 2px rgba(0, 0, 0, .6); }
+  .la-ptr { position: absolute; inset: 0; transform: rotate(calc(-135deg + var(--v, 0) * 270deg)); }
+  /* the touch-glow ring: contact, not proximity. Grip warms in 40ms, releases with a 500ms phosphor tail */
+  .la-dial::after { content: ""; position: absolute; inset: -3px; border-radius: 50%; opacity: 0; pointer-events: none; box-shadow: 0 0 13px -2px color-mix(in srgb, var(--acc, var(--la-amber)) 55%, transparent); transition: opacity .5s cubic-bezier(.2, 0, .58, 1); }
+  .la-knob:active .la-dial::after, .la-kg:active .la-dial::after, .la-gk:active .la-dial::after { opacity: 1; transition-duration: 40ms; }
+  .la-ptr::after { content: ""; position: absolute; left: 50%; top: calc(var(--d) * .11); width: 2px; height: calc(var(--d) * .205); margin-left: -1px; border-radius: 1px; background: #e7edf3; box-shadow: 0 0 4px rgba(230, 240, 255, .5); }
+  .la-tick { position: absolute; inset: 0; pointer-events: none; transform: rotate(var(--ta, 0deg)); }
+  .la-tick::before { content: ""; position: absolute; left: calc(50% - 1px); top: -3px; width: 2px; height: 4px; background: rgba(200, 215, 235, .22); box-shadow: 0 -1px 0 rgba(0, 0, 0, .8); }
+  /* the stepped switch: flag pointer + a printed tick ring (a smooth arc for a quantized value is a lie) */
+  .la-stepped .la-ptr::after { width: 4px; margin-left: -2px; top: calc(var(--d) * .09); height: calc(var(--d) * .25); clip-path: polygon(50% 0, 100% 100%, 0 100%); background: #f2f6fb; box-shadow: 0 0 6px rgba(230, 240, 255, .55); }
+  .la-stick { position: absolute; inset: -6px; pointer-events: none; transform: rotate(var(--ta)); }
+  .la-stick::before { content: ""; position: absolute; left: calc(50% - .5px); top: 0; width: 1px; height: 4px; background: rgba(200, 215, 235, .22); }
+  .la-kl { font: 400 .5rem/1 var(--la-mono); letter-spacing: .1em; color: #8593a2; text-transform: uppercase; white-space: nowrap; }
+  /* amber LCD chips: recessed lit glass, tabular digits, a 1/3px scan */
+  .la-lcd { position: relative; padding: 3px 4px; border-radius: 5px; min-width: 34px; text-align: center; white-space: nowrap;
+    font: 400 .72rem/1 var(--la-mono); letter-spacing: .05em; font-variant-numeric: tabular-nums; color: #ffcf8f; text-shadow: 0 0 6px color-mix(in srgb, var(--la-amber) 75%, transparent);
+    background: radial-gradient(120% 120% at 50% 0%, #241606, #150c03 85%); box-shadow: inset 0 0 0 1px rgba(0, 0, 0, .8), inset 0 1px 3px rgba(0, 0, 0, .7); }
+  .la-lcd::before { content: ""; position: absolute; inset: 0; border-radius: inherit; pointer-events: none; background: repeating-linear-gradient(0deg, rgba(0, 0, 0, .22) 0 1px, transparent 1px 3px); }
+  .la-lcd-s { min-width: 30px; padding: 2px 4px; border-radius: 4px; font-size: .56rem; letter-spacing: .04em; text-shadow: 0 0 5px color-mix(in srgb, var(--la-amber) 70%, transparent); }
+  .la-lcd-r { padding-right: 13px; }
+  .la-lcd-r::after { content: "⇄"; position: absolute; right: 3px; top: 50%; transform: translateY(-50%); font-size: .5rem; line-height: 1; opacity: .42; }
+
+  /* ── 1 · top strip ── */
+  .la-top { height: 40px; display: flex; align-items: center; gap: 12px; }
+  .la-brand { flex: 0 0 290px; padding-left: 16px; }
+  .la-word { font: 500 .8rem/1 var(--la-mono); letter-spacing: .5em; }
+  .la-tempo { --acc: var(--la-amber); flex: none; width: 232px; height: 36px; display: flex; align-items: center; gap: 10px; padding: 0 5px 0 14px; border-radius: 9px;
+    box-shadow: inset 0 0 0 1px rgba(255, 176, 74, .13), inset 0 3px 12px rgba(0, 0, 0, .72), inset 0 0 24px -9px color-mix(in srgb, var(--la-amber) 55%, transparent), inset 0 0 15px 5px rgba(0, 0, 0, .4); }
+  .la-tempo::before { border-radius: 9px; background: radial-gradient(120% 78% at 50% -12%, rgba(255, 255, 255, .18), rgba(255, 255, 255, .05) 26%, transparent 52%); }
+  .la-tempo::after { background: repeating-linear-gradient(0deg, rgba(255, 176, 74, .06) 0 1px, transparent 1px 3px); }
+  .la-bpm { font: 500 1.45rem/1 var(--la-disp); letter-spacing: .06em; color: rgba(202, 160, 99, .1); -webkit-text-stroke: 1.3px #caa063; text-shadow: 0 0 8px rgba(202, 160, 99, .12); }
+  .la-bpml { font: 500 .42rem/1 var(--la-mono); letter-spacing: .22em; align-self: flex-end; margin: 0 0 10px 0; color: color-mix(in srgb, var(--la-amber) 62%, #6a5d40); text-shadow: 0 0 5px color-mix(in srgb, var(--la-amber) 30%, transparent); }
+  .la-tap { z-index: 7; margin-left: auto; height: 28px; padding: 0 10px; font: 500 .54rem/1 var(--la-mono); letter-spacing: .1em; }
+  .la-kbd { font: 500 .46rem/1.1 var(--la-mono); letter-spacing: 0; color: #8a94a4; background: #12161d; border: 1px solid #0e1218; border-radius: 3px; padding: 2px 4px; }
+  .la-stop { --acc: var(--la-warn); margin-left: auto; margin-right: 6px; height: 30px; padding: 0 14px 0 12px; gap: 9px; font: 500 .56rem/1 var(--la-mono); letter-spacing: .14em; color: #d5dde6; }
+  .la-stopm { width: 10px; height: 10px; border-radius: 2px; background: var(--la-warn); box-shadow: 0 0 7px -1px var(--la-warn), inset 0 0 0 1px rgba(0, 0, 0, .3); }
+
+  /* ── 2 · towers: one anatomy, three accents ── */
+  .la-towers { margin-top: 10px; height: 520px; display: grid; grid-template-columns: 289px 496px 289px; gap: 12px; }
+  .la-tw { position: relative; min-width: 0; min-height: 0; display: flex; flex-direction: column; padding: 8px; border-radius: 11px;
+    background: radial-gradient(130% 110% at 50% 0%, #0c141e 0%, #05080e 70%); border: 1px solid color-mix(in srgb, var(--acc) 26%, #141922); box-shadow: inset 0 0 34px -22px var(--acc); }
+  .la-tw-d { --acc: var(--la-drums); } .la-tw-k { --acc: var(--la-keys); } .la-tw-b { --acc: var(--la-bass); }
+  .la-head { flex: none; height: 40px; display: flex; align-items: center; gap: 8px; margin-bottom: 6px; box-shadow: inset 0 1px 0 rgba(255, 255, 255, .07), 0 1px 0 rgba(0, 0, 0, .8), 0 2px 0 rgba(255, 255, 255, .03); }
+  .la-pow { flex: none; width: 64px; height: 32px; }
+  .la-pnm { font: 500 .54rem/1 var(--la-mono); letter-spacing: .14em; color: var(--acc); }
+  .la-on > .la-pnm { color: color-mix(in srgb, var(--acc) 70%, #fff); }
+  .la-node { flex: 1; min-width: 0; height: 40px; display: flex; align-items: center; gap: 10px; padding: 0 8px 0 12px; border-color: color-mix(in srgb, var(--acc) 42%, transparent); }
+  .la-nlamp { position: relative; z-index: 7; flex: none; width: 8px; height: 8px; border-radius: 50%; background: var(--acc); box-shadow: 0 0 7px var(--acc); }
+  .la-nm { position: relative; z-index: 7; font: 500 .86rem/1 var(--la-mono); letter-spacing: .02em; color: #e6eaef; white-space: nowrap; }
+  .la-nm.la-dim { color: #6b7683; letter-spacing: .15em; font-size: .72rem; }
+  .la-body { flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 6px; overflow: hidden; }
+  .la-foot { flex: none; height: 46px; margin-top: 6px; padding-top: 5px; display: flex; align-items: center; justify-content: center; gap: 10px; border-radius: 0 0 8px 8px;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, .06), 0 -1px 0 rgba(0, 0, 0, .8), inset 0 -1px 0 rgba(0, 0, 0, .5); }
+  .la-msq { width: 32px; height: 26px; display: inline-flex; align-items: center; justify-content: center; font: 500 .68rem/1 var(--la-mono); color: #cfd8e4; border-top: 1px solid var(--la-edge); border-radius: 6px;
+    background: var(--la-face); box-shadow: inset 0 1.2px .5px rgba(255, 255, 255, .22), inset 0 -3px 5px rgba(0, 0, 0, .5), 0 2px 0 var(--la-wall); transition: transform .09s cubic-bezier(.2, .7, .3, 1); }
+  .la-msq:active { transform: translateY(1px); transition: none; }
+  .la-fdiv { width: 1px; height: 24px; background: #1d2430; }
+  /* the gain trimpot: a screwdriver slot in a machined well, the arc = deviation from the .8 unity tick */
+  .la-trim { position: relative; flex: none; width: 42px; height: 42px; display: flex; align-items: center; justify-content: center; }
+  .la-trimring { position: absolute; width: 39px; height: 39px; border-radius: 50%; background: conic-gradient(from 225deg, transparent 0 calc(var(--a0) * 270deg), var(--acc) calc(var(--a0) * 270deg) calc(var(--a1) * 270deg), transparent calc(var(--a1) * 270deg) 360deg); }
+  .la-trimring::before { content: ""; position: absolute; inset: 2px; border-radius: 50%; background: linear-gradient(180deg, #20262f, #161b22); }
+  .la-well { position: absolute; width: 34px; height: 34px; border-radius: 50%; background: #0b0e13; box-shadow: inset 0 2px 5px rgba(0, 0, 0, .75), inset 0 -1px 0 rgba(255, 255, 255, .04), 0 1px 0 rgba(255, 255, 255, .05); }
+  .la-utick { position: absolute; inset: 0; transform: rotate(81deg); }
+  .la-utick::before { content: ""; position: absolute; left: calc(50% - 1px); top: 1px; width: 2px; height: 4px; background: rgba(200, 215, 235, .30); box-shadow: 0 -1px 0 rgba(0, 0, 0, .8); }
+  .la-slot { position: absolute; inset: 0; transform: rotate(calc(-135deg + var(--v) * 270deg)); }
+  .la-slot::after { content: ""; position: absolute; left: calc(50% - 1px); top: 9px; width: 2px; height: 22px; border-radius: 1px; background: linear-gradient(180deg, #9aa5b3, #5d6673); box-shadow: 0 0 0 1px rgba(0, 0, 0, .55), 0 1px 1px rgba(0, 0, 0, .6); }
+  /* the EQ glass: log grid, the true curve with its glow, two nodes */
+  .la-fc { flex: none; height: 72px; }
+  .la-fc svg, .la-kf svg { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+  .la-gl { stroke: rgba(120, 170, 210, .05); stroke-width: 1; vector-effect: non-scaling-stroke; }
+  .la-gl.la-maj { stroke: rgba(120, 170, 210, .11); }
+  .la-gz { stroke: color-mix(in srgb, var(--fc) 22%, transparent); stroke-width: 1; stroke-dasharray: 3 5; vector-effect: non-scaling-stroke; }
+  .la-fpath { fill: none; stroke: var(--fc); stroke-width: 2; stroke-linejoin: round; vector-effect: non-scaling-stroke; filter: drop-shadow(0 0 5px color-mix(in srgb, var(--fc) 65%, transparent)); }
+  .la-ffill { fill: color-mix(in srgb, var(--fc) 12%, transparent); }
+  .la-fnode { position: absolute; z-index: 4; width: 12px; height: 12px; border-radius: 50%; transform: translate(-50%, -50%); background: var(--fc); box-shadow: 0 0 8px var(--fc), 0 0 0 2px color-mix(in srgb, var(--fc) 35%, transparent); }
+
+  /* ── drums ── */
+  .la-grid { position: relative; flex: none; display: grid; grid-template-columns: 30px repeat(16, minmax(0, 1fr)); grid-template-rows: repeat(6, 11px) 4px; gap: 3px 2px; }
+  .la-lane { display: contents; }
+  .la-ln { font: 500 .4rem/11px var(--la-mono); letter-spacing: .08em; }
+  .la-st { position: relative; z-index: 1; border-radius: 2px; background: linear-gradient(180deg, #161a23, #0d0f16); box-shadow: inset 0 1px 2px rgba(0, 0, 0, .7); }
+  .la-st.la-v1 { background: linear-gradient(180deg, color-mix(in srgb, var(--acc) 34%, #252c36), color-mix(in srgb, var(--acc) 14%, #131820)); box-shadow: inset 0 1px 0 rgba(255, 255, 255, .10); }
+  .la-st.la-v2 { background: linear-gradient(180deg, color-mix(in srgb, var(--acc) 92%, #fff), color-mix(in srgb, var(--acc) 58%, #000)); box-shadow: 0 0 12px -2px var(--acc), inset 0 1px 0 rgba(255, 255, 255, .35); }
+  .la-st.la-v3 { background: linear-gradient(180deg, color-mix(in srgb, var(--acc) 55%, #fff), color-mix(in srgb, var(--acc) 78%, #000)); box-shadow: 0 0 16px 0 var(--acc), inset 0 1px 0 rgba(255, 255, 255, .5); }
+  .la-st.la-hit { filter: brightness(1.45); }
+  .la-bt { align-self: start; height: 2px; border-radius: 1px; }
+  .la-bt.la-beat { background: color-mix(in srgb, var(--acc) 28%, transparent); }
+  /* the step playhead: the sanctioned mover, snapped to the 16th, a column tint + the lit beat rail */
+  .la-phd { --cw: calc((100% - 62px) / 16); position: absolute; top: -2px; bottom: 0; z-index: 0; width: var(--cw); left: calc(32px + var(--s) * (var(--cw) + 2px)); border-radius: 3px; background: color-mix(in srgb, var(--acc) 14%, transparent); }
+  .la-phd::after { content: ""; position: absolute; left: 0; right: 0; bottom: 2px; height: 2px; border-radius: 1px; background: var(--acc); box-shadow: 0 0 7px -1px var(--acc); }
+  .la-dsplit { flex: none; height: 150px; display: flex; align-items: stretch; }
+  .la-dmain { flex: 1; min-width: 0; display: flex; flex-direction: column; justify-content: space-between; }
+  .la-dknobs { height: 50px; display: flex; justify-content: space-around; align-items: flex-start; padding: 0 12px; }
+  .la-dknobs .la-dial { --d: 38px; }
+  .la-kl.la-etch, .la-etch .la-kl { color: #8593a2; }
+  .la-pat { flex: none; height: 30px; }
+  .la-pat > b { flex-direction: column; gap: 3px; padding: 0; }
+  .la-pat > b::after { content: none; }
+  .la-dots { display: flex; gap: .5px; }
+  .la-dots i { width: 2px; height: 2px; border-radius: 50%; background: rgba(200, 215, 235, .14); }
+  .la-dots i.la-k { background: rgba(200, 215, 235, .32); }
+  .la-pat > b.la-on .la-dots i.la-k { background: var(--la-drums); box-shadow: 0 0 4px var(--la-drums); }
+  .la-pate { font-style: normal; font-size: .4rem; letter-spacing: .14em; color: rgba(200, 215, 235, .56); text-shadow: 0 -1px 0 rgba(0, 0, 0, .8), 0 1px 0 rgba(255, 255, 255, .06); }
+  .la-pat > b.la-on .la-pate { color: rgba(236, 244, 248, .9); }
+  .la-tw-d .la-seg { --acc: var(--la-drums); }
+  .la-tex { flex: none; display: flex; align-items: center; gap: 8px; padding: 3px 10px; border-radius: 9px; background: linear-gradient(180deg, #1b212b, #10141b); border: 1px solid rgba(0, 0, 0, .55); box-shadow: inset 0 1px 0 rgba(255, 255, 255, .05); }
+  .la-tex .la-dial { --d: 34px; }
+  .la-tex .la-kl { font-size: .44rem; }
+  .la-texseg { flex: 1; min-width: 0; height: 22px; }
+  .la-texseg > b { padding: 0; font-size: .5rem; letter-spacing: .04em; }
+  .la-ddiv { flex: none; align-self: stretch; width: 1px; margin: 2px 3px; background: linear-gradient(180deg, transparent, rgba(255, 255, 255, .12) 14%, rgba(255, 255, 255, .12) 86%, transparent); }
+  .la-dly { flex: none; width: 80px; display: flex; flex-direction: column; gap: 4px; }
+  .la-dlycap { text-align: center; font: 500 .5rem/1 var(--la-mono); letter-spacing: .22em; padding-top: 2px; color: color-mix(in srgb, var(--la-drums) 55%, #8a94a4); }
+  .la-dlyk { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: space-evenly; gap: 2px; }
+  .la-dlyk .la-knob { gap: 2px; }
+  .la-dlyk .la-dial { --d: 30px; }
+  .la-dlyk .la-kl { font-size: .44rem; letter-spacing: .12em; }
+  .la-scrow { flex: 1; display: flex; justify-content: center; align-items: center; }
+  .la-sc .la-dial { --d: 46px; }
+
+  /* ── keys ── */
+  .la-voice { --acc: var(--la-keys); flex: 1; min-width: 0; height: 32px; }
+  .la-voice > b { padding: 0; letter-spacing: .08em; }
+  .la-kf { flex: none; height: 72px; border-radius: 7px; border-color: color-mix(in srgb, var(--la-keys) 26%, rgba(155, 167, 187, .16));
+    box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--la-keys) 24%, transparent), inset 0 3px 12px rgba(0, 0, 0, .72), inset 0 0 44px 10px rgba(0, 0, 0, .5); }
+  .la-kf .la-gl.la-maj { stroke: rgba(120, 170, 210, .13); }
+  .la-kf .la-gz { stroke: rgba(120, 170, 210, .16); stroke-dasharray: 3 4; }
+  .la-kpath { fill: none; stroke: var(--la-curve); stroke-width: 2; stroke-linejoin: round; vector-effect: non-scaling-stroke; filter: drop-shadow(0 0 5px color-mix(in srgb, var(--la-curve) 70%, transparent)); }
+  .la-kfill { fill: color-mix(in srgb, var(--la-curve) 10%, transparent); }
+  .la-kghost { fill: none; stroke: var(--la-keys); stroke-width: 1.6; opacity: .3; vector-effect: non-scaling-stroke; filter: drop-shadow(0 0 4px color-mix(in srgb, var(--la-keys) 50%, transparent)); }
+  .la-flab { position: absolute; bottom: 3px; z-index: 2; transform: translateX(3px); font: 400 9px/1 var(--la-mono); letter-spacing: .02em; color: #4f6f8c; }
+  .la-afnode { position: absolute; z-index: 5; width: 20px; height: 20px; border-radius: 50%; transform: translate(-50%, -50%); border: 2.5px solid var(--la-keys);
+    background: radial-gradient(circle at 50% 25%, color-mix(in srgb, var(--la-keys) 50%, transparent), rgba(4, 14, 14, .4) 70%); box-shadow: 0 0 14px -1px var(--la-keys); }
+  .la-band { flex: 1; min-height: 0; display: grid; grid-template-columns: 150px minmax(0, 1fr); gap: 8px; }
+  .la-lfo { display: flex; flex-direction: column; align-items: center; gap: 5px; padding: 8px 6px 6px; border-radius: 8px; background: linear-gradient(180deg, rgba(0, 0, 0, .26), rgba(0, 0, 0, .1)); border: 1px solid rgba(255, 255, 255, .03); box-shadow: inset 0 1px 4px rgba(0, 0, 0, .5); }
+  .la-lfod { flex: 1; min-height: 0; align-self: stretch; display: flex; flex-direction: column; align-items: center; justify-content: space-evenly; }
+  .la-kg { position: relative; display: grid; grid-template-columns: auto auto; grid-template-areas: "d d" "l n"; justify-items: center; align-items: center; column-gap: 5px; row-gap: 6px; }
+  .la-kg .la-dial { grid-area: d; } .la-kg .la-kl { grid-area: l; font-size: .48rem; } .la-kg .la-lcd { grid-area: n; }
+  .la-motion .la-dial { --d: 56px; }
+  .la-rate .la-dial { --d: 38px; background: radial-gradient(circle at 50% 38%, #12161e, #0a0d12 80%); }
+  .la-waves { flex: none; align-self: stretch; display: grid; grid-template-columns: 1fr 1fr; gap: 7px 5px; padding: 0 4px 4px; }
+  .la-waves .la-cap { height: 22px; }
+  .la-waves .la-on { --acc: var(--la-amber); }
+  .la-fx { min-width: 0; display: flex; gap: 8px; }
+  .la-fxcol { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 6px; }
+  /* the LCD FX tower: a monochrome keys-ink meter; the fader IS the readout */
+  .la-fxcard { position: relative; flex: 1 1 auto; min-height: 96px; border-radius: 6px; overflow: hidden;
+    background: linear-gradient(180deg, color-mix(in srgb, var(--la-keys) 9%, #0b0e0e), color-mix(in srgb, var(--la-keys) 4%, #0b0e0e)); box-shadow: inset 0 0 0 1px rgba(0, 0, 0, .8), inset 0 2px 6px rgba(0, 0, 0, .6); }
+  .la-fxcard::before { content: ""; position: absolute; inset: 0; z-index: 3; pointer-events: none; background: repeating-linear-gradient(0deg, rgba(0, 0, 0, .16) 0 1px, transparent 1px 3px), repeating-linear-gradient(90deg, rgba(0, 0, 0, .1) 0 1px, transparent 1px 3px); }
+  .la-fill { position: absolute; left: 4px; right: 4px; bottom: 4px; z-index: 1; height: calc(var(--v) * 100%); max-height: calc(100% - 30px); border-radius: 1px;
+    background: repeating-linear-gradient(0deg, var(--la-keys) 0 3px, color-mix(in srgb, var(--la-keys) 12%, transparent) 3px 5px); box-shadow: 0 0 8px color-mix(in srgb, var(--la-keys) 45%, transparent); }
+  .la-fill::before { content: ""; position: absolute; left: 0; right: 0; top: 0; height: 2px; background: color-mix(in srgb, var(--la-keys) 55%, #fff); box-shadow: 0 0 6px color-mix(in srgb, var(--la-keys) 70%, transparent); }
+  .la-fxdel .la-fill { background-image: repeating-linear-gradient(0deg, var(--la-keys) 0 8px, color-mix(in srgb, var(--la-keys) 12%, transparent) 8px 10px); }
+  .la-fl { position: absolute; left: 0; right: 0; top: 7px; z-index: 2; text-align: center; font: 500 .52rem/1 var(--la-mono); letter-spacing: .14em; color: color-mix(in srgb, var(--la-keys) 72%, #fff); text-shadow: 0 0 6px color-mix(in srgb, var(--la-keys) 70%, transparent); }
+  .la-seg.la-col { flex-direction: column; gap: 3px; }
+  .la-sub { flex: none; min-height: 114px; }
+  .la-sub > b { flex: none; height: 18px; padding: 0; font-size: .46rem; letter-spacing: .03em; }
+  .la-glyphs > b svg { fill: currentColor; opacity: .7; }
+  .la-glyphs > b.la-on svg { opacity: 1; filter: drop-shadow(0 0 3px var(--acc)); }
+  .la-modrate { flex: none; display: flex; flex-direction: column; gap: 2px; margin-top: 4px; }
+  .la-mrtrack { position: relative; height: 9px; border-radius: 5px; background: linear-gradient(180deg, #0a0f14, #070b10); box-shadow: inset 0 1px 3px rgba(0, 0, 0, .7), inset 0 0 0 1px rgba(0, 0, 0, .5); }
+  .la-mrfill { position: absolute; left: 2px; top: 2px; bottom: 2px; width: 58%; z-index: 1; border-radius: 4px 1px 1px 4px; background: repeating-linear-gradient(90deg, var(--la-mod) 0 3px, color-mix(in srgb, var(--la-mod) 12%, transparent) 3px 5px); box-shadow: 0 0 8px -1px var(--la-mod); }
+  .la-mrdet { position: absolute; left: 50%; top: 2px; bottom: 2px; width: 1px; margin-left: -.5px; z-index: 2; background: rgba(255, 255, 255, .22); box-shadow: 0 0 0 .5px rgba(0, 0, 0, .6); }
+  .la-mrcap { text-align: center; font: 500 .42rem/1 var(--la-mono); letter-spacing: .16em; color: color-mix(in srgb, var(--la-mod) 52%, #8d99a6); }
+
+  /* ── bass ── */
+  .la-cmd { --acc: var(--la-bass); flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 6px; padding: 0 12px 9px; border-radius: 11px;
+    background: radial-gradient(130% 120% at 50% 0%, #0c141e, #05080e 84%); border: 1px solid color-mix(in srgb, var(--la-bass) 58%, #000);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, .06), inset 0 0 0 1px color-mix(in srgb, var(--la-bass) 44%, #000), inset 0 2px 9px rgba(0, 0, 0, .5), inset 0 0 22px -6px var(--la-bass); }
+  .la-bmrow { flex: none; height: 36px; display: flex; align-items: center; gap: 8px; }
+  .la-bmode { flex: 1; }
+  .la-bmode > b { letter-spacing: .1em; }
+  .la-lock { flex: none; width: 36px; height: 32px; padding: 0; }
+  .la-lock svg { width: 15px; height: 15px; }
+  .la-lock svg path { stroke-width: 1.4; }
+  .la-lock svg rect { fill: #9aa6b4; }
+  .la-lock.la-on svg rect { fill: #eafaff; filter: drop-shadow(0 0 3px var(--acc)); }
+  .la-bnote { flex: none; min-width: 30px; text-align: center; font: 500 .62rem/1 var(--la-mono); letter-spacing: .05em; color: color-mix(in srgb, var(--la-bass) 72%, #fff); text-shadow: 0 0 8px color-mix(in srgb, var(--la-bass) 50%, transparent); }
+  .la-bpat { flex: 1; min-height: 64px; display: flex; flex-direction: column; justify-content: center; gap: 14px; padding: 8px 8px 2px; }
+  .la-bbars { flex: none; height: 72px; display: flex; align-items: flex-end; gap: 3px; }
+  .la-bar { position: relative; flex: 1; height: var(--h); border-radius: 3px 3px 2px 2px; background: linear-gradient(180deg, #161a23, #0d0f16); box-shadow: inset 0 1px 2px rgba(0, 0, 0, .7); }
+  .la-bar.la-on { background: linear-gradient(180deg, color-mix(in srgb, var(--acc) 92%, #fff), color-mix(in srgb, var(--acc) 58%, #000)); box-shadow: 0 0 12px -2px var(--acc), inset 0 1px 0 rgba(255, 255, 255, .35); }
+  .la-bar.la-acc { background: linear-gradient(180deg, color-mix(in srgb, var(--acc) 55%, #fff), color-mix(in srgb, var(--acc) 78%, #000)); box-shadow: 0 0 16px 0 var(--acc), inset 0 1px 0 rgba(255, 255, 255, .5); }
+  .la-bar.la-beat::after { content: ""; position: absolute; left: 0; right: 0; bottom: -5px; height: 2px; border-radius: 1px; background: color-mix(in srgb, var(--acc) 28%, transparent); }
+  .la-bar.la-slide::before { content: "→"; position: absolute; top: -12px; left: 50%; transform: translateX(-50%); font: 8px/1 var(--la-mono); color: color-mix(in srgb, var(--acc) 65%, #cfd4e2); }
+  .la-bprow { flex: none; display: flex; justify-content: space-around; align-items: flex-start; }
+  .la-bkrow { flex: none; height: 58px; display: flex; align-items: center; justify-content: space-around; padding: 0 4px; }
+  .la-cmd .la-dial { --d: 38px; }
+  .la-cmd .la-kl { color: #ece6ff; text-shadow: 0 0 8px color-mix(in srgb, var(--la-bass) 60%, transparent); }
+  .la-cmd .la-seg { --acc: var(--la-bass); }
+
+  /* ── 3 · hands row (the pianohead) ── */
+  .la-ph { margin-top: 10px; height: 44px; display: flex; align-items: center; gap: 12px; padding: 0 12px; border-radius: 11px;
+    font: 400 .5rem/1 var(--la-mono); letter-spacing: .16em; text-transform: uppercase; color: #7d8a99;
+    background: radial-gradient(130% 130% at 50% 0%, #121a26, #080c12 86%); border: 1px solid rgba(255, 255, 255, .05);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, .05), inset 0 0 0 1px rgba(0, 0, 0, .6), inset 0 3px 11px rgba(0, 0, 0, .56); }
+  .la-phsec { display: flex; align-items: center; gap: 8px; }
+  .la-oct { width: 28px; height: 28px; border-radius: 8px; box-shadow: inset 0 1.2px .5px rgba(255, 255, 255, .22), inset 0 -4px 6px rgba(0, 0, 0, .5), 0 4px 0 var(--la-wall), 0 5px 7px rgba(0, 0, 0, .55); }
+  .la-oct:active { transform: translateY(3px); }
+  .la-oct svg { width: 8px; height: 8px; }
+  .la-oct svg path { fill: #bcc7d3; stroke: none; }
+  .la-oh { position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center; line-height: 1; min-width: 48px; height: 34px; padding: 0 9px; border-radius: 2px;
+    background: radial-gradient(130% 130% at 50% 0%, #080e16, #04060b 80%); border: 1px solid rgba(255, 255, 255, .05); box-shadow: inset 0 0 0 1px rgba(0, 0, 0, .82), inset 0 2px 8px rgba(0, 0, 0, .7), inset 0 -1px 0 rgba(255, 255, 255, .03); }
+  .la-oh > b { font: 400 1rem/1 var(--la-mono); letter-spacing: .04em; color: #ffcf8f; text-shadow: 0 0 7px color-mix(in srgb, var(--la-amber) 70%, transparent); }
+  .la-oh > small { margin-top: 3px; font: 400 .4rem/1 var(--la-mono); letter-spacing: .2em; color: #52606f; text-shadow: 0 -1px 0 rgba(0, 0, 0, .8), 0 1px 0 rgba(255, 255, 255, .05); }
+  .la-keyscr { min-width: 70px; }
+  .la-keyscr > b { font-size: .78rem; letter-spacing: .06em; }
+  .la-phmid { flex: 1; min-width: 0; display: flex; align-items: center; justify-content: center; }
+  .la-chord { --acc: var(--la-sapph); flex: none; width: 220px; height: 36px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; text-transform: none; }
+  .la-cl { font: 400 1.08rem/1 var(--la-mono); letter-spacing: .02em; color: #cfefff; text-shadow: 0 0 7px color-mix(in srgb, var(--la-sapph) 68%, transparent); }
+  .la-cd { font: 400 .56rem/1 var(--la-mono); letter-spacing: .13em; color: color-mix(in srgb, var(--la-sapph) 60%, #93b8ca); text-shadow: 0 0 5px color-mix(in srgb, var(--la-sapph) 38%, transparent); }
+  .la-tog { --acc: var(--la-sapph); height: 28px; padding: 0 14px; font-size: .55rem; letter-spacing: .06em; text-transform: uppercase; }
+  .la-tog.la-on { transform: none; }
+  .la-divh { flex: none; width: 1px; height: 24px; background: linear-gradient(180deg, transparent, rgba(255, 255, 255, .16) 22%, rgba(255, 255, 255, .16) 78%, transparent); }
+  .la-arp { display: flex; align-items: center; gap: 12px; }
+  .la-arpk { --acc: var(--la-sapph); gap: 2px; }
+  .la-arpk .la-dial { --d: 28px; box-shadow: 0 0 8px -2px var(--la-sapph), inset 0 0 0 1px rgba(0, 0, 0, .6), 0 1px 2px rgba(0, 0, 0, .5); }
+  .la-arpk .la-kl { font-size: .4rem; text-shadow: 0 -1px 0 rgba(0, 0, 0, .8), 0 1px 0 rgba(255, 255, 255, .06); }
+  .la-arpk .la-stick { inset: -4px; }
+
+  /* ── 4 · the chord rack: recessed wells; a stamped pad stands proud, sapphire-lit ── */
+  .la-rack { margin-top: 8px; height: 36px; display: flex; gap: 5px; padding: 0 8px; }
+  .la-pad { position: relative; flex: 1; min-width: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; border: 1px solid rgba(0, 0, 0, .6); border-radius: 8px;
+    background-image: var(--la-noise), radial-gradient(120% 120% at 50% 0%, #10151d, #090c11); background-blend-mode: soft-light, normal; background-size: 80px 80px, auto;
+    box-shadow: inset 0 2px 6px rgba(0, 0, 0, .66), inset 0 0 0 1px rgba(0, 0, 0, .5), inset 0 -1px 0 rgba(255, 255, 255, .02); transition: transform .09s cubic-bezier(.2, .7, .3, 1); }
+  .la-crk { position: absolute; top: 3px; left: 6px; font: 500 .72rem/1 var(--la-mono); letter-spacing: .02em; color: rgba(150, 167, 187, .5); text-shadow: 0 -1px 0 rgba(0, 0, 0, .85), 0 1px 0 rgba(255, 255, 255, .05); }
+  .la-pad.la-full { background-image: var(--la-noise), linear-gradient(180deg, #333c49 0%, #252c37 47%, #1b212b 100%); border-top: 1px solid rgba(255, 255, 255, .1);
+    box-shadow: inset 0 1.4px .5px rgba(255, 255, 255, .18), inset 0 -4px 6px rgba(0, 0, 0, .46), 0 3px 0 #0a0d12, 0 5px 7px rgba(0, 0, 0, .5); }
+  .la-pad.la-full:active { transform: translateY(2px); }
+  .la-pad.la-sel { border-color: color-mix(in srgb, var(--la-sapph) 55%, rgba(0, 0, 0, .6));
+    box-shadow: inset 0 1.4px .5px rgba(255, 255, 255, .18), inset 0 -4px 6px rgba(0, 0, 0, .46), 0 0 0 1px color-mix(in srgb, var(--la-sapph) 45%, transparent), 0 3px 0 #0a0d12, 0 5px 7px rgba(0, 0, 0, .5); }
+  .la-crl { font: 400 .66rem/1 var(--la-mono); letter-spacing: .01em; color: #cfefff; text-shadow: 0 0 6px color-mix(in srgb, var(--la-sapph) 62%, transparent); }
+  .la-crd { font: 400 .44rem/1 var(--la-mono); letter-spacing: .1em; color: color-mix(in srgb, var(--la-sapph) 58%, #93b8ca); }
+
+  /* ── 5 · the keybed: graphite naturals, one sapphire lamp where state calls for it ── */
+  .la-kb { margin-top: 8px; height: 100px; }
+  .la-piano { position: relative; height: 84px; padding-top: 6px; border-radius: 12px 12px 0 0;
+    background: linear-gradient(180deg, color-mix(in srgb, var(--la-sapph) 14%, #0a0d12), #05070a); border: 1px solid rgba(0, 0, 0, .65);
+    box-shadow: inset 0 3px 12px rgba(0, 0, 0, .7), inset 0 0 0 1px color-mix(in srgb, var(--la-sapph) 55%, transparent); }
+  .la-wk { position: absolute; top: 6px; bottom: 0; left: calc(var(--i) * 100% / 29); width: calc(100% / 29); display: flex; flex-direction: column; justify-content: flex-end; align-items: center; padding-bottom: 8px; border-radius: 0 0 7px 7px;
+    background: linear-gradient(180deg, #3b444f 0%, #2b333d 55%, #222932 100%); border: 1px solid rgba(255, 255, 255, .2); border-top: none;
+    box-shadow: inset 0 7px 11px -7px rgba(255, 255, 255, .13), inset 0 -7px 11px -6px rgba(0, 0, 0, .4), 0 2px 4px rgba(0, 0, 0, .5); }
+  .la-bk { position: absolute; top: 6px; z-index: 3; height: 52px; width: calc(100% / 29 * .62); left: calc((var(--i) + 1) * 100% / 29 - 100% / 29 * .31); opacity: .8; border-radius: 0 0 5px 5px;
+    background: linear-gradient(180deg, #12171f, #080b10 82%); border: 1px solid rgba(255, 255, 255, .14); box-shadow: inset 0 1px 0 rgba(255, 255, 255, .08), inset 0 -8px 9px rgba(0, 0, 0, .7), 0 4px 6px rgba(0, 0, 0, .7); }
+  .la-ql { position: absolute; top: 5px; left: 0; right: 0; text-align: center; font: 500 .46rem/1 var(--la-mono); letter-spacing: .06em; color: rgba(214, 226, 240, .62); }
+  .la-bk .la-ql { top: 4px; font-size: .4rem; letter-spacing: .04em; }
+  .la-nl { font: 500 .82rem/1 var(--la-mono); letter-spacing: .02em; color: #f2fdff; text-shadow: 0 0 9px color-mix(in srgb, var(--la-sapph) 75%, transparent); }
+  .la-cdot { position: absolute; bottom: 3px; left: 4px; width: 3px; height: 3px; border-radius: 50%; background: rgba(170, 190, 212, .6); }
+  .la-wk.la-inb { box-shadow: inset 0 -3px 0 -1px color-mix(in srgb, var(--la-sapph) 34%, transparent); }
+  .la-bk.la-inb { box-shadow: inset 0 -3px 0 -1px color-mix(in srgb, var(--la-sapph) 28%, transparent); }
+  .la-bk.la-color { background: linear-gradient(180deg, #2b2317, #100b05 82%); border-color: color-mix(in srgb, var(--la-amber) 30%, rgba(255, 255, 255, .10)); }
+  .la-bk.la-color .la-ql { color: rgba(255, 220, 174, .6); }
+  .la-wk.la-press, .la-wk:active { background: linear-gradient(180deg, #1d5f7c, #0d2d3d); border-color: var(--la-sapph);
+    box-shadow: 0 0 0 1.5px var(--la-sapph), inset 0 -18px 24px -8px color-mix(in srgb, var(--la-sapph) 70%, transparent), 0 0 26px -3px var(--la-sapph); }
+  .la-wk.la-press .la-ql { color: rgba(226, 248, 255, .6); }
+  .la-bk:active { background: linear-gradient(180deg, #14a0d2, #06465f 80%); border-color: #cdeffb; box-shadow: 0 0 0 1.5px rgba(180, 238, 255, .95), 0 0 28px -1px var(--la-sapph), inset 0 1px 0 rgba(255, 255, 255, .3); }
+  /* the bracket rail: printed C ticks, the lit window over the mapped octave, two brushed jaws */
+  .la-kbr { position: relative; height: 16px; overflow: hidden; border-radius: 0 0 12px 12px; background: linear-gradient(180deg, #0b0f15, #070a0e); border: 1px solid rgba(0, 0, 0, .6); border-top: none; box-shadow: inset 0 1px 0 rgba(255, 255, 255, .04); }
+  .la-kbt { position: absolute; top: 0; bottom: 0; width: 1px; background: rgba(150, 167, 187, .16); }
+  .la-kbo { position: absolute; top: 4px; transform: translateX(-50%); padding-left: 10px; font: 500 .4rem/1 var(--la-mono); letter-spacing: .08em; white-space: nowrap; }
+  .la-kbwin { position: absolute; top: 2px; bottom: 2px; border-radius: 3px; background: color-mix(in srgb, var(--la-sapph) 15%, transparent); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--la-sapph) 52%, transparent), 0 0 10px -3px var(--la-sapph); }
+  .la-jaw { position: absolute; top: 1px; bottom: 1px; left: 0; width: 3px; border-radius: 2px; background: linear-gradient(180deg, #5a6675, #2b333d); }
+  .la-jaw + .la-jaw { left: auto; right: 0; }
+
+  /* ── 6 · gate row: elastomer pads, amber strike, the engraved badge ── */
+  .la-gate { position: relative; margin-top: 8px; height: 44px; border-radius: 10px; background: linear-gradient(180deg, #0e1218, #090c11); border: 1px solid rgba(255, 255, 255, .04);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, .03), inset 0 2px 8px rgba(0, 0, 0, .5), inset 0 0 0 1px rgba(0, 0, 0, .4); }
+  .la-gz, .la-gm { position: absolute; top: 50%; display: flex; align-items: center; transform: translate(-22px, -50%); }
+  .la-gz { left: 11.53%; gap: 16px; } .la-gm { left: 77.48%; gap: 14px; }
+  .la-gpad { position: relative; display: flex; align-items: center; gap: 8px; }
+  .la-gpad > b { position: relative; width: 44px; height: 32px; display: flex; align-items: center; justify-content: center; border-radius: 9px; font: 500 .82rem/1 var(--la-mono); letter-spacing: .04em; color: #9aa6b4;
+    background-image: var(--la-noise), radial-gradient(circle at 50% 32%, #222b35, #0e131a); background-blend-mode: soft-light, normal; background-size: 80px 80px, auto; border: 1px solid rgba(0, 0, 0, .6);
+    box-shadow: inset 0 2px 5px -2px rgba(255, 255, 255, .14), inset 0 -3px 6px rgba(0, 0, 0, .45), 0 2px 0 #0a0d12, 0 3px 5px rgba(0, 0, 0, .5); transition: transform .09s cubic-bezier(.2, .7, .3, 1); }
+  .la-gpad > b::after { content: ""; position: absolute; inset: 0; border-radius: inherit; opacity: 0; pointer-events: none; box-shadow: inset 0 0 12px -4px var(--la-amber), 0 0 12px -2px var(--la-amber); transition: opacity .15s linear; }
+  .la-gpad:active > b { transform: translateY(2px); transition: none; }
+  .la-gpad:active > b::after { opacity: 1; transition: none; }
+  .la-gsub { font: 400 .44rem/1 var(--la-mono); letter-spacing: .1em; color: color-mix(in srgb, var(--la-amber) 45%, #7d8a99); }
+  .la-gpz .la-gsub { position: absolute; right: calc(100% + 8px); top: 50%; transform: translateY(-50%); }
+  .la-dive > b { color: color-mix(in srgb, var(--la-amber) 60%, #cfd8e4); border-color: color-mix(in srgb, var(--la-amber) 22%, rgba(0, 0, 0, .6)); }
+  .la-gk { --acc: var(--la-amber); position: relative; display: grid; grid-template-columns: auto auto; grid-template-areas: "d l" "d v"; align-items: center; column-gap: 6px; row-gap: 3px; }
+  .la-gk .la-dial { grid-area: d; --d: 30px; }
+  .la-gk .la-kl { grid-area: l; align-self: end; font-size: .4rem; letter-spacing: .06em; }
+  .la-gk .la-kv { grid-area: v; align-self: start; font: 500 .56rem/1 var(--la-mono); color: color-mix(in srgb, var(--la-amber) 72%, #e6eef4); }
+  .la-gk .la-stick { inset: -5px; }
+  .la-badge { position: absolute; left: 56%; top: 50%; transform: translate(-50%, -50%); pointer-events: none; font: 500 .5rem/1 var(--la-mono); letter-spacing: .52em; color: rgba(220, 232, 248, .055); white-space: nowrap; }
+</style>

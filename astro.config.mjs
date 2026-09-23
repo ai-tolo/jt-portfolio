@@ -15,7 +15,7 @@ import sitemap from '@astrojs/sitemap';
 // https://astro.build/config
 export default defineConfig({
   redirects: {
-    '/signal': '/#play',
+    // '/signal' is a real page on branch signal (the rebuild, 2026-09-23)
     // the doors and the orphans went to the junkyard (2026-09-22); links
     // already out in the world land on the story or the homepage
     '/catalog': '/case-studies/the-console',

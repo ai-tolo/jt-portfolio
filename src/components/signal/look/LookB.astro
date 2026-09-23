@@ -1,0 +1,496 @@
+---
+// SIGNAL R0 contact sheet · LOOK B · carbon · glass · keycaps.
+// The Studio's layout (NOTES-SIGNAL-R0.md section 6) in the site's own material, lifted from the old homepage
+// instrument (src/components/SignalMachine.astro on main: observed, never edited): the carbon weave, the recessed
+// glass that lights from within (scanlines, inset glow), the proud keycaps that press in and light an LED, the
+// murky green-grey LCD effect towers, the amber Orbitron tempo. Laws: the casing never glows (no outer bloom
+// anywhere); colour is sparing (amber = tempo, sapphire = live and harmony, drums orange, bass midnight violet,
+// effects one green family). Rendered POWERED, mid-loop: playhead on step 5, E + G held, pad 1 = Cmaj7 (I).
+// Static by law: no script, no audio, no assets; every class carries lb-, every token lives under .look-b.
+const LANES: [string, string][] = [
+  ["kick", "3000200030002010"],
+  ["snare", "0000300000003001"],
+  ["hat", "0201020102010202"],
+  ["open", "0030003000300030"],
+  ["clap", "0000200000002000"],
+  ["shkr", "1001001010010010"],
+];
+const PLAY = 4; // the playhead: step 5
+const BASS = [3, 0, 0, 2, 0, 0, 2, 0, 3, 0, 1, 0, 0, 0, 2, 0]; // SEQ: six lit steps, height = velocity
+const BAR_H = ["0%", "44%", "72%", "100%"];
+const FX = [
+  { k: "drive", v: 0.4, g: "#3ddc84", seg: ["warm", "crunch", "tape", "fuzz"], on: 0 },
+  { k: "mod", v: 0.6, g: "#54e6a6", seg: ["phs", "flng", "dbl", "chrs"], on: 3 },
+  { k: "del", v: 0.25, g: "#2fc7a0", seg: ["1/4", "1/8", "1/8·", "1/16"], on: 1 },
+  { k: "rev", v: 0.35, g: "#8af0bf", seg: ["sm", "med", "hall", "vast"], on: 1 },
+];
+// a knob: [label, value 0..1, value chip?, anchor?]
+type K = [string, number, string?, number?];
+const DRUM_K1: K[] = [["swing", 0.58, undefined, 0.5], ["density", 0.62]];
+const DELAY_K: K[] = [["mix", 0.3], ["fb", 0.35]];
+const BASS_K1: K[] = [["density", 0.5], ["groove", 0.3]];
+const BASS_K2: K[] = [["intensity", 0.55], ["sub", 0.5], ["glide", 0.2]];
+const ARP_K: K[] = [["rate", 0.5, "1/16"], ["length", 0.5, "0.50"], ["groove", 0.3, "0.30"]];
+const GATE_K: K[] = [["rate", 0.5, "1/16"], ["swing", 0, "0"]];
+const DIVE_K: K[] = [["speed", 0.55, "0.45"], ["dist", 0.64, "24"]];
+const kv = (k: K) => `--lb-v:${k[1]}` + (k[3] !== undefined ? `;--lb-a0:${k[3]}` : "");
+// the keybed: C2..C6 (MIDI 36..84) = 29 whites, 2px apart; octave 0 maps a..l onto C4..D5, w e t y u o onto the blacks
+const PC = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
+const QW: Record<number, string> = { 60: "a", 61: "w", 62: "s", 63: "e", 64: "d", 65: "f", 66: "t", 67: "g", 68: "y", 69: "h", 70: "u", 71: "j", 72: "k", 73: "o", 74: "l" };
+const HELD = [64, 67]; // E4 + G4
+const whites: number[] = [];
+const blacks: { m: number; seam: number }[] = [];
+for (let m = 36; m <= 84; m++) {
+  if ([1, 3, 6, 8, 10].includes(m % 12)) blacks.push({ m, seam: whites.length });
+  else whites.push(m);
+}
+const NW = whites.length;
+const x = (i: number, off = 0) => `calc((100% + 2px) * ${(i / NW).toFixed(5)} + ${off}px)`; // left edge of white i
+const noteName = (m: number) => PC[m % 12] + (Math.floor(m / 12) - 1);
+const WIN0 = whites.indexOf(60);
+const WIN1 = whites.indexOf(74);
+const GRID_MIN = "M80 0V200M200 0V200M280 0V200M400 0V200M480 0V200";
+const GRID_MAJ = "M140 0V200M340 0V200M540 0V200";
+const EQ_DRUMS = "M0 196C30 160 58 90 94 74C102 72 112 72 120 72H486C506 72 516 76 530 88C552 108 572 150 590 200";
+const EQ_KEYS = "M0 72H300C334 72 344 48 362 48C382 48 392 92 412 126C430 158 448 184 466 200";
+const EQ_GHOST = "M0 72H220C254 72 264 48 282 48C302 48 312 92 332 126C350 158 368 184 386 200";
+const EQ_BASS = "M0 168C14 122 28 82 46 74C52 72 58 72 64 72H232C260 72 272 52 292 52C312 52 322 96 344 134C364 168 382 190 398 200";
+const SHAPES = ["M1 6.5Q5 1 9 6.5T21 6.5", "M1 2L10 11V2L21 11", "M1 11L10 2V11L21 2", "M1 11V2H11V11H21V2"];
+---
+
+<div class="look look-b" data-look="b">
+  <div class="lb-dev">
+    <!-- 1 · top strip -->
+    <div class="lb-top">
+      <span class="lb-mark"><i class="lb-lamp"></i>signal</span>
+      <span class="lb-tempocl">
+        <span class="lb-glass lb-tempo"><i class="lb-pls"></i><b>120</b><small>bpm</small></span>
+        <span class="lb-cap lb-tap lb-on"><i class="lb-led"></i>tap<em>=</em></span>
+      </span>
+      <span class="lb-cap lb-stop"><i class="lb-sq"></i>stop<em>esc</em></span>
+    </div>
+
+    <!-- 2 · towers -->
+    <div class="lb-towers">
+      <div class="lb-tower lb-t-drums">
+        <div class="lb-head">
+          <span class="lb-cap lb-pow lb-on"><i class="lb-led"></i>drums</span>
+          <span class="lb-glass lb-tint lb-name"><b>house</b><small>kit</small></span>
+        </div>
+        <div class="lb-glass lb-tint lb-eq">
+          <svg viewBox="0 0 600 200" preserveAspectRatio="none" aria-hidden="true">
+            <path class="lb-gmin" d={GRID_MIN} /><path class="lb-gmaj" d={GRID_MAJ} /><path class="lb-g0" d="M0 72H600" />
+            <path class="lb-fillp" d={EQ_DRUMS + "H0Z"} /><path class="lb-line" d={EQ_DRUMS} />
+          </svg>
+          <i class="lb-node lb-hollow" style="left:15.7%;top:37%"></i>
+          <i class="lb-node" style="left:87%;top:40%"></i>
+        </div>
+        <div class="lb-glass lb-tint lb-grid">
+          {LANES.map(([lane, pat]) => (
+            <div class="lb-lane">
+              <span>{lane}</span>
+              {[...pat].map((c, i) => <i class={`lb-cell lb-v${c}${i === PLAY ? " lb-ph" : ""}`} />)}
+            </div>
+          ))}
+        </div>
+        <div class="lb-seg">{["floor", "back", "half", "break"].map((w, i) => <b class={i === 0 ? "lb-on" : ""}>{w}</b>)}</div>
+        <div class="lb-dbody">
+          <div class="lb-dleft">
+            <div class="lb-krow">
+              {DRUM_K1.map((k) => <span class="lb-knob" style={kv(k)}><i class="lb-dial"><i class="lb-ptr"></i></i><small>{k[0]}</small></span>)}
+            </div>
+            <div class="lb-texgrp">
+              <span class="lb-knob lb-ks" style="--lb-v:.35"><i class="lb-dial"><i class="lb-ptr"></i></i><small>texture</small></span>
+              <div class="lb-seg lb-segsm"><b class="lb-on">tape</b><b>drive</b></div>
+            </div>
+            <div class="lb-krow">
+              <span class="lb-knob lb-kl" style="--lb-v:.3"><i class="lb-dial"><i class="lb-ptr"></i></i><small>sidechain</small></span>
+            </div>
+          </div>
+          <i class="lb-vdiv"></i>
+          <div class="lb-delay">
+            <span class="lb-cap-t">delay</span>
+            {DELAY_K.map((k) => <span class="lb-knob lb-ks" style={kv(k)}><i class="lb-dial"><i class="lb-ptr"></i></i><small>{k[0]}</small></span>)}
+            <span class="lb-knob lb-ks lb-steel" style="--lb-v:.25"><i class="lb-dial"><i class="lb-ptr"></i></i><small>time</small><b class="lb-chip">1/8</b></span>
+          </div>
+        </div>
+        <div class="lb-foot">
+          <span class="lb-cap lb-ms">m</span><span class="lb-cap lb-ms">s</span><i class="lb-fdiv"></i>
+          <span class="lb-knob lb-kx lb-side" style="--lb-v:.8"><i class="lb-dial"><i class="lb-ptr"></i></i><small>gain</small></span>
+        </div>
+      </div>
+
+      <div class="lb-tower lb-t-keys">
+        <div class="lb-head">
+          <span class="lb-cap lb-pow lb-on"><i class="lb-led"></i>keys</span>
+          <div class="lb-seg lb-voices">{["rhodes", "piano", "pad", "lead", "synth"].map((w, i) => <b class={i === 0 ? "lb-on" : ""}>{w}</b>)}</div>
+        </div>
+        <div class="lb-glass lb-tint lb-eq lb-eqk">
+          <svg viewBox="0 0 600 200" preserveAspectRatio="none" aria-hidden="true">
+            <path class="lb-gmin" d={GRID_MIN} /><path class="lb-gmaj" d={GRID_MAJ} /><path class="lb-g0" d="M0 72H600" />
+            <path class="lb-fillp" d={EQ_KEYS + "H0Z"} /><path class="lb-ghost" d={EQ_GHOST} /><path class="lb-line" d={EQ_KEYS} />
+          </svg>
+          <span class="lb-fq" style="left:23.3%">100</span><span class="lb-fq" style="left:56.6%">1k</span><span class="lb-fq" style="left:90%">10k</span>
+          <i class="lb-node lb-lp" style="left:60.3%;top:24%"></i>
+        </div>
+        <div class="lb-kbody">
+          <div class="lb-lfo">
+            <span class="lb-knob lb-kxl lb-motion" style="--lb-v:.4"><i class="lb-dial"><i class="lb-ptr"></i></i><small>motion</small><b class="lb-chip">40</b></span>
+            <span class="lb-knob lb-km lb-steel" style="--lb-v:.4"><i class="lb-dial"><i class="lb-ptr"></i></i><small>rate</small><b class="lb-chip">1/8</b></span>
+            <div class="lb-shapes">
+              {SHAPES.map((d, i) => <span class={`lb-cap lb-shape${i === 0 ? " lb-on" : ""}`}><i class="lb-led"></i><svg viewBox="0 0 22 13" aria-hidden="true"><path d={d} /></svg></span>)}
+            </div>
+          </div>
+          <div class="lb-fx">
+            {FX.map((f) => (
+              <div class="lb-fxcol" style={`--lb-g:${f.g}`}>
+                <div class="lb-lcd"><i class="lb-fill" style={`--lb-v:${f.v}`}></i><span class="lb-fl">{f.k}</span></div>
+                <div class="lb-seg lb-col">{f.seg.map((w, i) => <b class={i === f.on ? "lb-on" : ""}>{w}</b>)}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+        <div class="lb-foot">
+          <span class="lb-cap lb-ms">m</span><span class="lb-cap lb-ms">s</span><i class="lb-fdiv"></i>
+          <span class="lb-knob lb-kx lb-side" style="--lb-v:.8"><i class="lb-dial"><i class="lb-ptr"></i></i><small>gain</small></span>
+        </div>
+      </div>
+
+      <div class="lb-tower lb-t-bass">
+        <div class="lb-head">
+          <span class="lb-cap lb-pow lb-on"><i class="lb-led"></i>bass</span>
+          <span class="lb-glass lb-tint lb-name"><b>synth</b><small>voice</small></span>
+        </div>
+        <div class="lb-glass lb-tint lb-eq">
+          <svg viewBox="0 0 600 200" preserveAspectRatio="none" aria-hidden="true">
+            <path class="lb-gmin" d={GRID_MIN} /><path class="lb-gmaj" d={GRID_MAJ} /><path class="lb-g0" d="M0 72H600" />
+            <path class="lb-fillp" d={EQ_BASS + "H0Z"} /><path class="lb-line" d={EQ_BASS} />
+          </svg>
+          <i class="lb-node lb-hollow" style="left:7.7%;top:37%"></i>
+          <i class="lb-node" style="left:48.7%;top:26%"></i>
+        </div>
+        <div class="lb-bmode">
+          <div class="lb-seg">{["drone", "pluck", "seq"].map((w, i) => <b class={i === 2 ? "lb-on" : ""}>{w}</b>)}</div>
+          <span class="lb-cap lb-pin"><i class="lb-led"></i><svg viewBox="0 0 14 16" aria-hidden="true"><rect x="2.5" y="7" width="9" height="7.5" rx="1.5" /><path d="M4.5 7V5a2.5 2.5 0 0 1 5 0v2" /></svg></span>
+          <span class="lb-note">C1</span>
+        </div>
+        <div class="lb-glass lb-tint lb-bars">
+          {BASS.map((v, i) => <i class={`lb-bar${i % 4 === 0 ? " lb-dn" : ""}`}>{v > 0 && <i class={`lb-bv lb-bv${v}`} style={`height:${BAR_H[v]}`}></i>}</i>)}
+        </div>
+        <div class="lb-bknobs">
+          <div class="lb-krow">{BASS_K1.map((k) => <span class="lb-knob lb-km" style={kv(k)}><i class="lb-dial"><i class="lb-ptr"></i></i><small>{k[0]}</small></span>)}</div>
+          <div class="lb-krow">{BASS_K2.map((k) => <span class="lb-knob lb-km" style={kv(k)}><i class="lb-dial"><i class="lb-ptr"></i></i><small>{k[0]}</small></span>)}</div>
+        </div>
+        <div class="lb-foot">
+          <span class="lb-cap lb-ms">m</span><span class="lb-cap lb-ms">s</span><i class="lb-fdiv"></i>
+          <span class="lb-knob lb-kx lb-side" style="--lb-v:.8"><i class="lb-dial"><i class="lb-ptr"></i></i><small>gain</small></span>
+        </div>
+      </div>
+    </div>
+
+    <!-- 3 · hands row -->
+    <div class="lb-hands">
+      <span class="lb-cap lb-ob"><svg viewBox="0 0 10 10" aria-hidden="true"><path d="M7 2L3 5L7 8Z" /></svg></span>
+      <span class="lb-glass lb-scr"><b>0</b><small>octave</small></span>
+      <span class="lb-cap lb-ob"><svg viewBox="0 0 10 10" aria-hidden="true"><path d="M3 2L7 5L3 8Z" /></svg></span>
+      <i class="lb-hdiv"></i>
+      <span class="lb-glass lb-scr lb-keyscr"><b>C MAJ</b><small>key</small></span>
+      <span class="lb-glass lb-chord"><b>Cmaj7</b><small>I</small></span>
+      <span class="lb-cap lb-tog lb-on"><i class="lb-led"></i>chord</span>
+      <span class="lb-cap lb-tog"><i class="lb-led"></i>hold</span>
+      <i class="lb-hdiv"></i>
+      <span class="lb-cap lb-tog lb-on"><i class="lb-led"></i>arpeggiator</span>
+      {ARP_K.map((k) => <span class="lb-knob lb-kx lb-side" style={kv(k)}><i class="lb-dial"><i class="lb-ptr"></i></i><span class="lb-kv"><small>{k[0]}</small><b>{k[2]}</b></span></span>)}
+    </div>
+
+    <!-- 4 · chord rack -->
+    <div class="lb-rack">
+      {[1, 2, 3, 4, 5, 6, 7, 8].map((n) => n === 1
+        ? <span class="lb-pad lb-lit"><em>1</em><b>Cmaj7</b><i class="lb-deg">I</i><i class="lb-led"></i></span>
+        : <span class="lb-pad"><em>{n}</em></span>)}
+    </div>
+
+    <!-- 5 · keybed -->
+    <div class="lb-keybed">
+      <div class="lb-bed">
+        <div class="lb-keys">
+          {whites.map((m, i) => (
+            <span class={`lb-w${HELD.includes(m) ? " lb-held" : ""}${i >= WIN0 && i <= WIN1 ? " lb-in" : ""}`}>
+              {QW[m] && <b class="lb-q">{QW[m]}</b>}
+              {HELD.includes(m) && <small class="lb-nn">{noteName(m)}</small>}
+              {m % 12 === 0 && <i class="lb-cdot"></i>}
+            </span>
+          ))}
+          {blacks.map(({ m, seam }) => (
+            <span class={`lb-b${QW[m] ? " lb-in" : ""}`} style={`left:${x(seam, -12)}`}>{QW[m] && <b class="lb-q">{QW[m]}</b>}</span>
+          ))}
+        </div>
+      </div>
+      <div class="lb-rail">
+        <div class="lb-railin">
+          {whites.map((m, i) => m % 12 === 0 && <span class="lb-oct" style={`left:${x(i, 6)}`}>{noteName(m)}</span>)}
+          <i class="lb-win" style={`left:${x(WIN0, -1)};width:calc((100% + 2px) * ${((WIN1 - WIN0 + 1) / NW).toFixed(5)})`}></i>
+        </div>
+      </div>
+    </div>
+
+    <!-- 6 · gate row -->
+    <div class="lb-gate">
+      <div class="lb-ggrp">
+        <small class="lb-etch">gate</small>
+        <span class="lb-gp">z</span>
+        {GATE_K.map((k) => <span class="lb-knob lb-kx lb-side" style={kv(k)}><i class="lb-dial"><i class="lb-ptr"></i></i><span class="lb-kv"><small>{k[0]}</small><b>{k[2]}</b></span></span>)}
+      </div>
+      <span class="lb-badge">signal</span>
+      <div class="lb-ggrp">
+        <span class="lb-gp lb-dive">m</span>
+        <small class="lb-etch">dive</small>
+        {DIVE_K.map((k) => <span class="lb-knob lb-kx lb-side" style={kv(k)}><i class="lb-dial"><i class="lb-ptr"></i></i><span class="lb-kv"><small>{k[0]}</small><b>{k[2]}</b></span></span>)}
+      </div>
+    </div>
+  </div>
+</div>
+
+<style>
+  /* ── tokens: all on the look root; the page and the other looks never see them ── */
+  .look-b {
+    --lb-amber: #ff9a4a; --lb-sapphire: #0ec4fc; --lb-curve: #5ec8f0; --lb-red: #ff463a;
+    --lb-drums: #ff7a3c; --lb-bass: #3914c0; --lb-bass-lit: #7a4fe0;
+    --lb-mono: "IBM Plex Mono", ui-monospace, Menlo, monospace;
+    --lb-orb: "Orbitron", "IBM Plex Mono", ui-monospace, monospace;
+    --lb-face: linear-gradient(180deg, #464e5c 0%, #2c333f 47%, #1f2630 100%);
+    --lb-face-dn: linear-gradient(180deg, #2d343f, #1a212b);
+    --lb-glassbg: radial-gradient(130% 130% at 50% 0%, #080e16, #04060b 80%);
+    --lb-housing: radial-gradient(130% 130% at 50% 0%, #121a26, #080c12 86%);
+    --lb-wall: inset 0 1.5px .5px rgba(255,255,255,.26), inset 0 -5px 7px rgba(0,0,0,.5), inset 0 0 0 1px rgba(255,255,255,.03), 0 4px 0 #0a0d12, 0 7px 9px rgba(0,0,0,.6);
+    --lb-wall-dn: inset 0 1.5px .5px rgba(255,255,255,.2), inset 0 -3px 5px rgba(0,0,0,.5), 0 2px 0 #0a0d12, 0 3px 5px rgba(0,0,0,.6);
+    --lb-acc: var(--lb-sapphire);
+    /* the carbon-fibre body: the casing never glows, the screens do */
+    position: relative; width: 1120px; box-sizing: border-box; padding: 14px 14px 16px; border-radius: 22px;
+    background-color: #090a0d;
+    background-image: repeating-linear-gradient(45deg, rgba(190,210,240,.011) 0 1px, transparent 1px 4px), repeating-linear-gradient(-45deg, rgba(0,0,0,.2) 0 1px, transparent 1px 4px), radial-gradient(150% 95% at 50% -8%, rgba(120,150,195,.045), transparent 55%);
+    border: 1px solid rgba(0,0,0,.72);
+    box-shadow: 0 60px 110px -48px rgba(0,0,0,.95), inset 0 1px 0 rgba(255,255,255,.07), inset 0 -3px 2px rgba(0,0,0,.6), inset 0 0 0 1px rgba(90,110,140,.05);
+    font: 400 9px/1.2 var(--lb-mono); color: #b3bdc9; text-align: left;
+    -webkit-font-smoothing: antialiased; user-select: none; cursor: default;
+  }
+  .look-b::after { content: ""; position: absolute; inset: 6px; border-radius: 17px; pointer-events: none; border: 1px solid rgba(0,0,0,.35); box-shadow: inset 0 1px 0 rgba(255,255,255,.04); }
+  .look-b *, .look-b *::before, .look-b *::after { box-sizing: border-box; }
+  .look-b b, .look-b small, .look-b em, .look-b i { font-style: normal; font-weight: 500; }
+  .lb-dev { position: relative; z-index: 1; display: flex; flex-direction: column; gap: 10px; }
+  .look-b .lb-t-drums { --lb-acc: var(--lb-drums); }
+  .look-b .lb-t-bass { --lb-acc: var(--lb-bass-lit); }
+  .look-b .lb-t-keys { --lb-acc: var(--lb-sapphire); }
+
+  /* ── glass: dark recessed, lights from WITHIN (scanlines + inset glow); never an outer bloom ── */
+  .lb-glass { position: relative; overflow: hidden; border-radius: 2px; background: var(--lb-glassbg); border: 1px solid rgba(155,167,187,.16); box-shadow: inset 0 0 0 1px rgba(0,0,0,.8), inset 0 2px 10px rgba(0,0,0,.62), inset 0 -1px 0 rgba(255,255,255,.03), 0 1px 0 rgba(255,255,255,.045), 0 2px 5px rgba(0,0,0,.4); }
+  .lb-glass::before { content: ""; position: absolute; inset: 0; z-index: 6; pointer-events: none; background: linear-gradient(152deg, rgba(255,255,255,.05) 0%, transparent 28%); }
+  .lb-glass::after { content: ""; position: absolute; inset: 0; z-index: 5; pointer-events: none; mix-blend-mode: screen; background: repeating-linear-gradient(0deg, rgba(150,195,240,.085) 0 1px, transparent 1px 2px); }
+  .lb-tint { border-color: color-mix(in srgb, var(--lb-acc) 26%, rgba(155,167,187,.16)); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--lb-acc) 22%, transparent), inset 0 3px 12px rgba(0,0,0,.72), inset 0 0 40px 8px rgba(0,0,0,.45), 0 1px 0 rgba(255,255,255,.04); }
+
+  /* ── keycaps: proud, a 4px wall; engaged = pressed in place, inset glow, lit LED ── */
+  .lb-cap { position: relative; display: inline-flex; align-items: center; justify-content: center; gap: 6px; height: 26px; padding: 0 12px; border-radius: 8px; font: 500 8.5px/1 var(--lb-mono); letter-spacing: .1em; text-transform: uppercase; color: #b3bdc9; background: var(--lb-face); border-top: 1px solid rgba(255,255,255,.13); box-shadow: var(--lb-wall); cursor: pointer; white-space: nowrap; transition: transform .07s, box-shadow .12s, color .12s; }
+  .lb-cap:not(.lb-on):hover { color: #dce5ee; }
+  .lb-cap:active { transform: translateY(2px); box-shadow: var(--lb-wall-dn); }
+  .lb-cap.lb-on { color: #eafaff; border-top-color: rgba(255,255,255,.06); background: var(--lb-face-dn); box-shadow: inset 0 2px 5px rgba(0,0,0,.6), inset 0 0 13px -4px var(--lb-acc), 0 1px 0 #0a0d12, 0 2px 3px rgba(0,0,0,.55); }
+  .lb-led { position: absolute; top: 4px; right: 5px; width: 4px; height: 4px; border-radius: 50%; background: #1a2630; box-shadow: inset 0 0 0 1px rgba(0,0,0,.6); }
+  .lb-on > .lb-led, .lb-lit > .lb-led { background: var(--lb-acc); box-shadow: 0 0 4px var(--lb-acc), 0 0 1px #fff; }
+  .lb-cap em { font: 500 7px/1 var(--lb-mono); letter-spacing: .06em; text-transform: lowercase; color: #7d8a99; padding: 2px 4px; border-radius: 3px; background: #12161d; box-shadow: inset 0 1px 2px rgba(0,0,0,.7); }
+
+  /* ── seg: keycaps recessed in a dark housing; the chosen one is the pressed, lit cap ── */
+  .lb-seg { display: flex; gap: 4px; padding: 3px; border-radius: 9px; background: linear-gradient(180deg, #0a0d12, #060809); border: 1px solid rgba(0,0,0,.7); box-shadow: inset 0 1px 3px rgba(0,0,0,.75), inset 0 0 0 1px rgba(0,0,0,.5), 0 1px 0 rgba(255,255,255,.03); }
+  .lb-seg > b { position: relative; flex: 1; min-width: 0; display: flex; align-items: center; justify-content: center; height: 20px; border-radius: 6px; font: 500 7.5px/1 var(--lb-mono); letter-spacing: .08em; text-transform: uppercase; color: #aab5c2; background: var(--lb-face); border-top: 1px solid rgba(255,255,255,.12); box-shadow: inset 0 1.2px .5px rgba(255,255,255,.22), inset 0 -4px 6px rgba(0,0,0,.5), 0 3px 0 #0a0d12, 0 4px 5px rgba(0,0,0,.5); cursor: pointer; white-space: nowrap; transition: transform .07s, box-shadow .12s; }
+  .lb-seg > b:active { transform: translateY(2px); box-shadow: inset 0 1px .5px rgba(255,255,255,.18), inset 0 -3px 5px rgba(0,0,0,.5), 0 1px 0 #0a0d12; }
+  .lb-seg > b.lb-on { color: #eafaff; border-top-color: rgba(255,255,255,.06); background: var(--lb-face-dn); box-shadow: inset 0 2px 5px rgba(0,0,0,.6), inset 0 0 12px -4px var(--lb-acc), 0 1px 0 #0a0d12; }
+  .lb-seg > b.lb-on::after { content: ""; position: absolute; top: 3px; right: 4px; width: 3px; height: 3px; border-radius: 50%; background: var(--lb-acc); box-shadow: 0 0 4px var(--lb-acc), 0 0 1px #fff; }
+  .lb-seg.lb-col { flex-direction: column; gap: 3px; }
+  .lb-seg.lb-col > b { flex: none; height: 17px; font-size: 7px; letter-spacing: .05em; box-shadow: inset 0 1px .5px rgba(255,255,255,.2), inset 0 -3px 5px rgba(0,0,0,.5), 0 2px 0 #0a0d12; }
+  .lb-seg.lb-col > b.lb-on { box-shadow: inset 0 2px 5px rgba(0,0,0,.6), inset 0 0 11px -4px var(--lb-acc); }
+
+  /* ── knobs: ring-arc in the module's colour, machined cap, the bottom wedge stays dark ── */
+  .look-b .lb-knob { --lb-d: 34px; }
+  .lb-knob { display: inline-flex; flex-direction: column; align-items: center; gap: 5px; cursor: ns-resize; }
+  .lb-dial { position: relative; display: block; flex: none; width: var(--lb-d); height: var(--lb-d); border-radius: 50%; background: conic-gradient(from 225deg, #262c35 0 calc(var(--lb-a0, 0) * 270deg), var(--lb-arc, var(--lb-acc)) calc(var(--lb-a0, 0) * 270deg) calc(var(--lb-v) * 270deg), #262c35 calc(var(--lb-v) * 270deg) 270deg, #0a0d12 270deg 360deg); box-shadow: inset 0 0 0 1px rgba(0,0,0,.6), 0 1px 2px rgba(0,0,0,.5); }
+  .lb-dial::before { content: ""; position: absolute; inset: 4px; border-radius: 50%; background: radial-gradient(circle at 50% 32%, #2c333e, #11151d); box-shadow: inset 0 1px 0 rgba(255,255,255,.12), 0 1px 2px rgba(0,0,0,.6); }
+  .lb-ptr { position: absolute; inset: 0; transform: rotate(calc(-135deg + var(--lb-v) * 270deg)); }
+  .lb-ptr::after { content: ""; position: absolute; left: 50%; top: 5px; width: 2px; height: 30%; margin-left: -1px; border-radius: 1px; background: #e7edf3; box-shadow: 0 0 2px var(--lb-arc, var(--lb-acc)); }
+  .lb-knob > small { font: 500 7px/1 var(--lb-mono); letter-spacing: .13em; text-transform: uppercase; color: #8593a2; }
+  .lb-knob:hover .lb-dial::before { background: radial-gradient(circle at 50% 32%, #353d49, #141920); }
+  .look-b .lb-kx { --lb-d: 24px; } .look-b .lb-ks { --lb-d: 30px; } .look-b .lb-km { --lb-d: 38px; } .look-b .lb-kl { --lb-d: 42px; } .look-b .lb-kxl { --lb-d: 54px; }
+  .lb-kx .lb-dial::before { inset: 3px; } .lb-kx .lb-ptr::after { top: 3px; }
+  .lb-kxl .lb-dial::before { inset: 6px; } .lb-kxl .lb-ptr::after { top: 7px; height: 22%; }
+  .look-b .lb-steel { --lb-arc: #48515f; }
+  .lb-side { flex-direction: row; gap: 7px; }
+  .lb-kv { display: flex; flex-direction: column; gap: 4px; min-width: 30px; }
+  .lb-kv small { font: 500 6.5px/1 var(--lb-mono); letter-spacing: .13em; text-transform: uppercase; color: #8593a2; }
+  .lb-kv b { font: 500 9px/1 var(--lb-mono); letter-spacing: .03em; color: #ffc98a; }
+  .lb-chip { position: relative; display: inline-flex; align-items: center; justify-content: center; min-width: 40px; height: 17px; padding: 0 7px; border-radius: 3px; overflow: hidden; font: 500 10.5px/1 var(--lb-mono); letter-spacing: .04em; color: #ffcf8f; text-shadow: 0 0 6px color-mix(in srgb, var(--lb-amber) 70%, transparent); background: radial-gradient(120% 120% at 50% 0%, #241606, #150c03 85%); box-shadow: inset 0 0 0 1px rgba(0,0,0,.8), inset 0 1px 3px rgba(0,0,0,.7), 0 1px 0 rgba(255,255,255,.04); }
+  .lb-chip::before { content: ""; position: absolute; inset: 0; background: repeating-linear-gradient(0deg, rgba(0,0,0,.22) 0 1px, transparent 1px 3px); }
+
+  /* ── 1 · top strip ── */
+  .lb-top { position: relative; height: 40px; display: flex; align-items: center; padding: 0 0 0 10px; }
+  .lb-mark { display: inline-flex; align-items: center; gap: 10px; font: 500 13px/1 var(--lb-mono); letter-spacing: .44em; text-transform: uppercase; color: #c3cedb; text-shadow: 0 1px 0 rgba(0,0,0,.6); }
+  .lb-lamp { width: 5px; height: 5px; border-radius: 50%; background: var(--lb-sapphire); box-shadow: 0 0 4px var(--lb-sapphire), 0 0 1px #dff6ff; }
+  .lb-tempocl { position: absolute; left: 304px; top: 50%; transform: translateY(-50%); display: flex; align-items: center; gap: 10px; }
+  .lb-tempo { display: flex; align-items: center; height: 34px; width: 112px; padding: 0 30px 0 22px; border-radius: 10px; box-shadow: inset 0 0 0 1px rgba(255,176,74,.13), inset 0 3px 12px rgba(0,0,0,.72), inset 0 0 24px -9px color-mix(in srgb, var(--lb-amber) 55%, transparent), inset 0 0 15px 5px rgba(0,0,0,.4); border-color: rgba(155,167,187,.14); }
+  .lb-tempo::before { border-radius: 10px; background: radial-gradient(120% 78% at 50% -12%, rgba(255,255,255,.16), rgba(255,255,255,.04) 26%, transparent 52%); }
+  .lb-tempo::after { background: repeating-linear-gradient(0deg, rgba(255,176,74,.06) 0 1px, transparent 1px 3px); }
+  .lb-tempo b { font: 500 21px/1 var(--lb-orb); letter-spacing: .06em; color: rgba(202,160,99,.1); -webkit-text-stroke: 1.2px #caa063; text-shadow: 0 0 8px rgba(202,160,99,.14); }
+  .lb-tempo small { position: absolute; right: 8px; bottom: 7px; font: 500 6px/1 var(--lb-orb); letter-spacing: .22em; text-transform: uppercase; color: color-mix(in srgb, var(--lb-amber) 62%, #6a5d40); }
+  .lb-pls { position: absolute; left: 8px; top: 8px; width: 7px; height: 4px; border-radius: 1px; background: #ffc06a; box-shadow: 0 0 5px rgba(255,178,74,.55), inset 0 0 0 1px rgba(255,210,150,.4); }
+  .look-b .lb-tap { --lb-acc: var(--lb-amber); }
+  .lb-tap { height: 26px; padding: 0 10px 0 12px; }
+  .lb-stop { margin-left: auto; height: 28px; padding: 0 10px 0 12px; gap: 8px; color: var(--lb-red); letter-spacing: .16em; box-shadow: inset 0 0 0 1px rgba(255,70,58,.32), inset 0 0 7px -2px rgba(255,70,58,.42), inset 0 1.5px .4px rgba(255,255,255,.12), inset 0 -4px 6px rgba(0,0,0,.5), 0 3px 0 #0a0d12, 0 4px 7px rgba(0,0,0,.55); }
+  .lb-stop:hover { color: #ff6a5e; }
+  .lb-sq { width: 8px; height: 8px; border-radius: 1.5px; background: linear-gradient(180deg, #ff7a6e, #d8281c); box-shadow: inset 0 0 0 1px rgba(80,0,0,.35); }
+
+  /* ── 2 · towers: recessed housings, the module colour lights the rim from within ── */
+  .lb-towers { display: grid; grid-template-columns: minmax(0, 1fr) 496px minmax(0, 1fr); gap: 12px; height: 520px; }
+  .lb-tower { position: relative; min-width: 0; display: flex; flex-direction: column; gap: 8px; padding: 10px; border-radius: 12px; background: radial-gradient(130% 120% at 50% 0%, #0c141e, #05080e 84%); border: 1px solid color-mix(in srgb, var(--lb-acc) 20%, #07090c); box-shadow: inset 0 1px 0 rgba(255,255,255,.05), inset 0 0 0 1px color-mix(in srgb, var(--lb-acc) 11%, #000), inset 0 2px 9px rgba(0,0,0,.5), inset 0 0 20px -12px color-mix(in srgb, var(--lb-acc) 75%, transparent); }
+  .lb-head { display: flex; align-items: center; gap: 8px; height: 30px; flex: none; }
+  .lb-pow { flex: none; width: 70px; height: 26px; letter-spacing: .16em; }
+  .lb-pow.lb-on { color: color-mix(in srgb, var(--lb-acc) 42%, #fff); }
+  .lb-name { flex: 1; height: 28px; display: flex; align-items: center; justify-content: space-between; padding: 0 10px 0 12px; }
+  .lb-name b { font: 500 12px/1 var(--lb-mono); letter-spacing: .2em; text-transform: uppercase; color: color-mix(in srgb, var(--lb-acc) 30%, #eef6ff); text-shadow: 0 0 7px color-mix(in srgb, var(--lb-acc) 60%, transparent); }
+  .lb-name small { font: 500 6.5px/1 var(--lb-mono); letter-spacing: .24em; text-transform: uppercase; color: #52606f; }
+  .lb-voices { flex: 1; }
+  .lb-eq { flex: none; height: 58px; }
+  .lb-eq svg { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+  .lb-eq path { fill: none; vector-effect: non-scaling-stroke; }
+  .lb-gmin { stroke: rgba(120,170,210,.05); stroke-width: 1; }
+  .lb-gmaj { stroke: rgba(120,170,210,.11); stroke-width: 1; }
+  .lb-g0 { stroke: rgba(120,170,210,.1); stroke-width: 1; stroke-dasharray: 3 3; }
+  .lb-eq .lb-line { stroke: var(--lb-acc); stroke-width: 1.8; stroke-linejoin: round; filter: drop-shadow(0 0 3px color-mix(in srgb, var(--lb-acc) 70%, transparent)); }
+  .lb-eq .lb-fillp { fill: color-mix(in srgb, var(--lb-acc) 11%, transparent); }
+  .lb-node { position: absolute; z-index: 4; width: 11px; height: 11px; margin: -5.5px 0 0 -5.5px; border-radius: 50%; border: 2px solid var(--lb-acc); background: radial-gradient(circle at 40% 35%, color-mix(in srgb, var(--lb-acc) 55%, #fff), color-mix(in srgb, var(--lb-acc) 30%, #000) 72%); box-shadow: 0 0 8px -1px var(--lb-acc); cursor: grab; }
+  .lb-node.lb-hollow { background: #05080d; }
+  .look-b .lb-eqk { --lb-acc: var(--lb-curve); }
+  .lb-eqk { height: 88px; border-radius: 7px; }
+  .lb-eqk .lb-ghost { stroke: var(--lb-sapphire); stroke-width: 1.3; opacity: .5; stroke-dasharray: 5 4; filter: drop-shadow(0 0 3px color-mix(in srgb, var(--lb-sapphire) 50%, transparent)); }
+  .lb-node.lb-lp { width: 18px; height: 18px; margin: -9px 0 0 -9px; border: 2.5px solid var(--lb-amber); background: radial-gradient(circle at 40% 35%, rgba(255,200,120,.55), rgba(20,12,4,.4) 70%); box-shadow: 0 0 12px -1px var(--lb-amber); }
+  .lb-fq { position: absolute; bottom: 4px; z-index: 3; transform: translateX(3px); font: 400 8px/1 var(--lb-mono); color: #4f6f8c; }
+
+  /* drums: the step grid is an LED matrix under glass; the playhead column is lit, the hits white-hot */
+  .lb-grid { flex: none; display: flex; flex-direction: column; gap: 3px; padding: 6px 7px 6px 7px; }
+  .lb-lane { display: flex; align-items: stretch; gap: 2px; height: 11px; }
+  .lb-lane > span { flex: none; width: 31px; align-self: center; font: 500 6.5px/1 var(--lb-mono); letter-spacing: .1em; text-transform: uppercase; color: #7d8fa3; }
+  .lb-cell { position: relative; z-index: 2; flex: 1; border-radius: 2px; background: #0f151d; box-shadow: inset 0 0 0 1px rgba(0,0,0,.55), inset 0 1px 0 rgba(255,255,255,.03); }
+  .lb-cell:nth-of-type(4n+1):not(:nth-of-type(1)) { margin-left: 3px; }
+  .lb-cell.lb-v1 { background: color-mix(in srgb, var(--lb-drums) 30%, #0f151d); }
+  .lb-cell.lb-v2 { background: linear-gradient(180deg, #ffaa78, #ff7a3c 70%, #d8581f); box-shadow: inset 0 1px 0 rgba(255,230,210,.5); }
+  .lb-cell.lb-v3 { background: linear-gradient(180deg, #ffd0b0, #ff9555 60%, #ff7a3c); box-shadow: inset 0 1px 0 rgba(255,245,235,.7); }
+  .lb-cell.lb-ph { background: color-mix(in srgb, var(--lb-drums) 16%, #121922); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--lb-drums) 30%, transparent); }
+  .lb-cell.lb-ph.lb-v2, .lb-cell.lb-ph.lb-v3 { background: radial-gradient(circle at 50% 40%, #fffaf5, #ffc9a2 55%, #ff8a48); box-shadow: 0 0 6px 1px color-mix(in srgb, var(--lb-drums) 80%, transparent), inset 0 0 0 1px rgba(255,255,255,.5); }
+  .lb-cell:hover { outline: 1px solid color-mix(in srgb, var(--lb-drums) 50%, transparent); outline-offset: 0; }
+
+  .lb-dbody { flex: 1; min-height: 0; display: flex; gap: 10px; }
+  .lb-dleft { flex: 1; display: flex; flex-direction: column; justify-content: space-between; padding: 4px 0 2px; }
+  .lb-krow { display: flex; justify-content: space-evenly; align-items: flex-start; }
+  .lb-texgrp { display: flex; align-items: center; gap: 10px; padding: 7px 10px 6px; border-radius: 9px; background: linear-gradient(180deg, #1b212b, #10141b); border: 1px solid rgba(0,0,0,.55); box-shadow: inset 0 1px 0 rgba(255,255,255,.06), 0 1px 2px rgba(0,0,0,.4); }
+  .lb-segsm { flex: 1; }
+  .lb-segsm > b { height: 18px; font-size: 7px; }
+  .lb-vdiv { flex: none; width: 1px; margin: 6px 0; background: linear-gradient(180deg, transparent, rgba(255,255,255,.12) 20%, rgba(255,255,255,.12) 80%, transparent); }
+  .lb-delay { flex: none; width: 76px; display: flex; flex-direction: column; align-items: center; justify-content: space-between; padding: 2px 0; }
+  .lb-cap-t { font: 500 7.5px/1 var(--lb-mono); letter-spacing: .24em; text-transform: uppercase; color: color-mix(in srgb, var(--lb-drums) 60%, #8593a2); }
+  .lb-delay .lb-chip { min-width: 36px; height: 15px; font-size: 9.5px; margin-top: 1px; }
+
+  .lb-foot { flex: none; height: 36px; display: flex; align-items: center; justify-content: center; gap: 10px; border-radius: 8px; background: repeating-linear-gradient(90deg, rgba(255,255,255,.014) 0 1px, transparent 1px 3px), linear-gradient(180deg, #1c222c, #11151c); border: 1px solid rgba(0,0,0,.6); box-shadow: inset 0 1px 0 rgba(255,255,255,.07), 0 1px 2px rgba(0,0,0,.4); }
+  .lb-ms { width: 30px; height: 21px; padding: 0; font-size: 9px; letter-spacing: 0; border-radius: 6px; box-shadow: inset 0 1.2px .5px rgba(255,255,255,.22), inset 0 -3px 5px rgba(0,0,0,.5), 0 2px 0 #0a0d12, 0 3px 5px rgba(0,0,0,.55); }
+  .lb-fdiv { width: 1px; height: 18px; background: #0b0e13; box-shadow: 1px 0 0 rgba(255,255,255,.05); }
+
+  /* keys: the LFO deck + four LCD towers (murky green-grey backlight, segmented ink, no glow) */
+  .lb-kbody { flex: 1; min-height: 0; display: flex; gap: 10px; }
+  .lb-lfo { flex: none; width: 138px; display: flex; flex-direction: column; align-items: center; justify-content: space-evenly; padding: 8px 10px; border-radius: 8px; background: linear-gradient(180deg, rgba(0,0,0,.26), rgba(0,0,0,.1)); border: 1px solid rgba(255,255,255,.03); box-shadow: inset 0 1px 4px rgba(0,0,0,.5); }
+  .look-b .lb-motion { --lb-arc: color-mix(in srgb, var(--lb-amber) 78%, #140d04); }
+  .lb-motion .lb-dial { box-shadow: inset 0 0 9px color-mix(in srgb, var(--lb-amber) 40%, transparent), inset 0 0 0 1px rgba(0,0,0,.6), 0 1px 2px rgba(0,0,0,.5); }
+  .lb-lfo .lb-chip { min-width: 56px; margin-top: 1px; }
+  .lb-shapes { display: grid; grid-template-columns: 1fr 1fr; gap: 7px 8px; width: 100%; }
+  .look-b .lb-shape { --lb-acc: var(--lb-amber); }
+  .lb-shape { height: 22px; padding: 0; }
+  .lb-shape svg { width: 18px; height: 11px; }
+  .lb-shape path { fill: none; stroke: #9aa6b4; stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round; }
+  .lb-shape.lb-on path { stroke: #fff1dc; }
+  .lb-fx { flex: 1; min-width: 0; display: flex; gap: 8px; }
+  .look-b .lb-fxcol { --lb-acc: var(--lb-g); }
+  .lb-fxcol { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 7px; }
+  .lb-lcd { position: relative; flex: 1; border-radius: 6px; overflow: hidden; cursor: ns-resize; background: linear-gradient(180deg, #1c251d, #10150f); box-shadow: inset 0 0 0 1px rgba(0,0,0,.8), inset 0 2px 6px rgba(0,0,0,.6), 0 1px 0 rgba(255,255,255,.04); }
+  .lb-lcd::before { content: ""; position: absolute; inset: 0; z-index: 3; pointer-events: none; background: repeating-linear-gradient(0deg, rgba(0,0,0,.16) 0 1px, transparent 1px 3px), repeating-linear-gradient(90deg, rgba(0,0,0,.1) 0 1px, transparent 1px 3px); }
+  .lb-lcd::after { content: ""; position: absolute; left: 5px; right: 5px; bottom: 5px; top: 26px; z-index: 0; background: repeating-linear-gradient(0deg, color-mix(in srgb, var(--lb-g) 7%, transparent) 0 3px, transparent 3px 5px); }
+  .lb-fill { position: absolute; z-index: 1; left: 5px; right: 5px; bottom: 5px; height: calc(var(--lb-v) * (100% - 31px)); border-radius: 1px; background: repeating-linear-gradient(0deg, color-mix(in srgb, var(--lb-g) 82%, #1c251d) 0 3px, transparent 3px 5px); }
+  .lb-fill::before { content: ""; position: absolute; left: 0; right: 0; top: 0; height: 2px; background: color-mix(in srgb, var(--lb-g) 60%, #e8fff0); }
+  .lb-fl { position: absolute; left: 0; right: 0; top: 9px; z-index: 2; text-align: center; font: 500 8px/1 var(--lb-mono); letter-spacing: .16em; text-transform: uppercase; color: color-mix(in srgb, var(--lb-g) 62%, #d9f5e2); }
+
+  /* bass: modes + padlock + root; the 16 bars light from inside the glass */
+  .lb-bmode { flex: none; display: flex; align-items: center; gap: 8px; height: 28px; }
+  .lb-bmode .lb-seg { flex: 1; }
+  .lb-pin { width: 30px; height: 24px; padding: 0; }
+  .lb-pin svg { width: 11px; height: 13px; }
+  .lb-pin rect, .lb-pin path { fill: none; stroke: #9aa6b4; stroke-width: 1.4; }
+  .lb-note { min-width: 24px; font: 500 10px/1 var(--lb-mono); letter-spacing: .04em; color: rgba(200,215,235,.4); text-shadow: 0 -1px 0 rgba(0,0,0,.8), 0 1px 0 rgba(255,255,255,.06); }
+  .lb-bars { flex: none; height: 118px; display: flex; align-items: stretch; gap: 3px; padding: 8px 8px 12px; }
+  .lb-bar { position: relative; z-index: 2; flex: 1; border-radius: 3px 3px 2px 2px; background: linear-gradient(180deg, #161a23, #0d0f16); box-shadow: inset 0 0 0 1px rgba(0,0,0,.55), inset 0 1px 0 rgba(255,255,255,.03); cursor: pointer; }
+  .lb-bar.lb-dn::after { content: ""; position: absolute; left: 1px; right: 1px; bottom: -6px; height: 2px; border-radius: 1px; background: color-mix(in srgb, var(--lb-bass-lit) 45%, #1a2030); }
+  .lb-bv { position: absolute; left: 0; right: 0; bottom: 0; border-radius: inherit; background: linear-gradient(180deg, #9c82ff, var(--lb-bass-lit) 30%, var(--lb-bass) 85%); box-shadow: inset 0 1px 0 rgba(220,210,255,.45), inset 0 0 0 1px rgba(20,8,60,.5); }
+  .lb-bv1 { background: linear-gradient(180deg, #6d4ee6, #4a22cc 50%, var(--lb-bass)); opacity: .75; }
+  .lb-bv3 { background: linear-gradient(180deg, #bba8ff, #8a66f4 26%, var(--lb-bass) 88%); }
+  .lb-bknobs { flex: 1; display: flex; flex-direction: column; justify-content: space-evenly; }
+
+  /* ── 3 · hands row: one recessed housing; amber digits, sapphire harmony ── */
+  .lb-hands { display: flex; align-items: center; gap: 10px; height: 44px; padding: 0 14px 0 10px; border-radius: 11px; background: var(--lb-housing); border: 1px solid rgba(255,255,255,.05); box-shadow: inset 0 1px 0 rgba(255,255,255,.05), inset 0 0 0 1px rgba(0,0,0,.6), inset 0 3px 11px rgba(0,0,0,.56); }
+  .lb-ob { width: 28px; height: 28px; padding: 0; margin-bottom: 3px; border-radius: 8px; }
+  .lb-ob svg { width: 11px; height: 11px; }
+  .lb-ob path { fill: #bcc7d3; }
+  .lb-scr { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; min-width: 50px; height: 34px; padding: 0 9px; }
+  .lb-scr b { font: 500 15px/1 var(--lb-mono); letter-spacing: .04em; color: #ffcf8f; text-shadow: 0 0 7px color-mix(in srgb, var(--lb-amber) 70%, transparent); }
+  .lb-scr small { font: 500 6px/1 var(--lb-mono); letter-spacing: .22em; text-transform: uppercase; color: #52606f; }
+  .lb-keyscr { min-width: 70px; }
+  .lb-keyscr b { font-size: 13px; letter-spacing: .08em; }
+  .lb-hdiv { flex: none; align-self: stretch; width: 1px; margin: 9px 2px; background: linear-gradient(180deg, transparent, rgba(255,255,255,.14) 22%, rgba(255,255,255,.14) 78%, transparent); }
+  .lb-chord { flex: 0 0 216px; margin: 0 auto; height: 34px; display: flex; align-items: center; justify-content: center; gap: 12px; border-color: color-mix(in srgb, var(--lb-sapphire) 26%, rgba(155,167,187,.16)); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--lb-sapphire) 22%, transparent), inset 0 2px 9px rgba(0,0,0,.8), inset 0 0 22px -8px var(--lb-sapphire); }
+  .lb-chord b { font: 500 17px/1 var(--lb-mono); letter-spacing: .03em; color: #d6f3ff; text-shadow: 0 0 8px color-mix(in srgb, var(--lb-sapphire) 70%, transparent); }
+  .lb-chord small { font: 500 8.5px/1 var(--lb-mono); letter-spacing: .14em; color: color-mix(in srgb, var(--lb-sapphire) 70%, #cfefff); }
+  .lb-tog { height: 26px; padding: 0 14px; margin-bottom: 3px; }
+  .lb-hands .lb-side, .lb-gate .lb-side { align-items: center; }
+
+  /* ── 4 · chord rack: empty wells, one matte cap pressed and lit ── */
+  .lb-rack { display: flex; gap: 6px; height: 36px; padding: 0 2px; }
+  .lb-pad { position: relative; flex: 1; height: 31px; display: flex; align-items: center; justify-content: center; gap: 8px; border-radius: 8px; background: linear-gradient(180deg, #0c1016, #121821); box-shadow: inset 0 2px 4px rgba(0,0,0,.8), inset 0 0 0 1px rgba(0,0,0,.6), inset 0 -1px 0 rgba(255,255,255,.035), 0 1px 0 rgba(255,255,255,.05); cursor: pointer; }
+  .lb-pad:hover { background: linear-gradient(180deg, #0f141b, #161d27); }
+  .lb-pad > em { position: absolute; top: 5px; left: 8px; font: 500 9px/1 var(--lb-mono); color: rgba(200,215,235,.3); text-shadow: 0 -1px 0 rgba(0,0,0,.8), 0 1px 0 rgba(255,255,255,.06); }
+  .lb-pad.lb-lit { background: var(--lb-face-dn); border-top: 1px solid rgba(255,255,255,.06); box-shadow: inset 0 2px 5px rgba(0,0,0,.6), inset 0 0 16px -4px var(--lb-sapphire), 0 1px 0 #0a0d12, 0 2px 3px rgba(0,0,0,.55); }
+  .lb-pad.lb-lit > em { color: color-mix(in srgb, var(--lb-sapphire) 55%, #cfefff); text-shadow: none; }
+  .lb-pad > b { font: 500 12px/1 var(--lb-mono); letter-spacing: .02em; color: #d6f3ff; text-shadow: 0 0 7px color-mix(in srgb, var(--lb-sapphire) 60%, transparent); }
+  .lb-deg { position: relative; overflow: hidden; padding: 3px 6px; border-radius: 3px; font: 500 8px/1 var(--lb-mono); letter-spacing: .08em; color: #bfeeff; background: var(--lb-glassbg); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--lb-sapphire) 35%, rgba(0,0,0,.8)), inset 0 1px 3px rgba(0,0,0,.8); }
+
+  /* ── 5 · keybed: tron keys (near-black, outlined, letters in the mapped octave) + the bracket rail ── */
+  .lb-keybed { display: flex; flex-direction: column; gap: 4px; height: 100px; }
+  .lb-bed { flex: none; height: 80px; padding: 6px 6px 0; border-radius: 12px 12px 3px 3px; background: linear-gradient(180deg, #0a0d12, #05070a); border: 1px solid rgba(0,0,0,.65); box-shadow: inset 0 3px 12px rgba(0,0,0,.7), inset 0 0 0 1px rgba(90,120,160,.05); }
+  .lb-keys { position: relative; height: 100%; display: flex; gap: 2px; }
+  .lb-w { position: relative; flex: 1; min-width: 0; border-radius: 0 0 6px 6px; background: linear-gradient(180deg, #222c39 0%, #141b25 55%, #0c121b 100%); border: 1px solid rgba(255,255,255,.2); border-top: none; box-shadow: inset 0 7px 11px -7px rgba(255,255,255,.14), inset 0 -7px 11px -6px rgba(0,0,0,.55), 0 2px 4px rgba(0,0,0,.5); cursor: pointer; }
+  .lb-w.lb-in { border-color: rgba(255,255,255,.34); }
+  .lb-w:hover { background: linear-gradient(180deg, #283345 0%, #18202b 55%, #0e1520 100%); }
+  .lb-b { position: absolute; top: 0; z-index: 3; width: 22px; height: 46px; border-radius: 0 0 4px 4px; background: linear-gradient(180deg, #0b0f16, #020305 82%); border: 1px solid rgba(255,255,255,.18); border-top: none; box-shadow: inset 0 1px 0 rgba(255,255,255,.1), inset 0 -8px 9px rgba(0,0,0,.7), 0 4px 6px rgba(0,0,0,.7); cursor: pointer; }
+  .lb-b.lb-in { border-color: rgba(255,255,255,.3); }
+  .lb-q { position: absolute; left: 0; right: 0; bottom: 9px; text-align: center; font: 500 11px/1 var(--lb-mono); text-transform: uppercase; color: rgba(243,248,252,.86); }
+  .lb-b .lb-q { bottom: 6px; font-size: 8.5px; color: rgba(243,248,252,.7); }
+  .lb-nn { position: absolute; left: 0; right: 0; bottom: 24px; text-align: center; font: 500 7px/1 var(--lb-mono); letter-spacing: .06em; color: rgba(202,242,255,.8); }
+  .lb-cdot { position: absolute; left: 5px; bottom: 5px; width: 3px; height: 3px; border-radius: 50%; background: rgba(200,215,235,.22); }
+  .lb-w.lb-held { background: linear-gradient(180deg, #1f6f8f, #0c2f40); border-color: var(--lb-sapphire); box-shadow: inset 0 0 0 1px var(--lb-sapphire), inset 0 -16px 22px -8px color-mix(in srgb, var(--lb-sapphire) 85%, transparent), inset 0 7px 11px -7px rgba(255,255,255,.2); }
+  .lb-w.lb-held .lb-q { color: #f1ffff; text-shadow: 0 0 7px color-mix(in srgb, var(--lb-sapphire) 80%, transparent); }
+  .lb-rail { flex: none; height: 16px; padding: 0 7px; border-radius: 3px 3px 10px 10px; background: linear-gradient(180deg, #0b0f15, #070a0e); box-shadow: inset 0 1px 3px rgba(0,0,0,.8), inset 0 0 0 1px rgba(0,0,0,.5), 0 1px 0 rgba(255,255,255,.03); }
+  .lb-railin { position: relative; height: 100%; }
+  .lb-oct { position: absolute; top: 5px; font: 500 6.5px/1 var(--lb-mono); letter-spacing: .08em; color: #566b80; }
+  .lb-win { position: absolute; top: 2px; bottom: 2px; border-radius: 3px; background: color-mix(in srgb, var(--lb-sapphire) 15%, transparent); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--lb-sapphire) 52%, transparent), inset 0 0 8px -2px var(--lb-sapphire); cursor: ew-resize; }
+  .lb-win::before, .lb-win::after { content: ""; position: absolute; top: 1px; bottom: 1px; width: 3px; border-radius: 1px; background: linear-gradient(180deg, #cfd9e3, #8b95a2); }
+  .lb-win::before { left: 1px; } .lb-win::after { right: 1px; }
+
+  /* ── 6 · gate row: elastomer pads, amber arcs, the engraved badge that never lights ── */
+  .look-b .lb-gate { --lb-acc: var(--lb-amber); }
+  .lb-gate { position: relative; display: flex; align-items: center; justify-content: space-between; height: 44px; padding: 0 18px; border-radius: 11px; background: var(--lb-housing); border: 1px solid rgba(255,255,255,.05); box-shadow: inset 0 1px 0 rgba(255,255,255,.05), inset 0 0 0 1px rgba(0,0,0,.6), inset 0 3px 11px rgba(0,0,0,.56); }
+  .lb-ggrp { display: flex; align-items: center; gap: 14px; }
+  .lb-etch { font: 500 7.5px/1 var(--lb-mono); letter-spacing: .22em; text-transform: uppercase; color: rgba(200,215,235,.42); text-shadow: 0 -1px 0 rgba(0,0,0,.8), 0 1px 0 rgba(255,255,255,.06); }
+  .lb-gp { display: inline-flex; align-items: center; justify-content: center; min-width: 46px; height: 30px; margin-bottom: 3px; border-radius: 8px; font: 500 12px/1 var(--lb-mono); text-transform: uppercase; color: #9aa6b4; background: radial-gradient(circle at 50% 32%, #222b35, #0e131a); border: 1px solid rgba(0,0,0,.6); box-shadow: inset 0 1px 1px rgba(255,255,255,.06), inset 0 -3px 6px rgba(0,0,0,.45), 0 3px 0 #0a0d12, 0 4px 7px rgba(0,0,0,.5); cursor: pointer; transition: transform .07s; }
+  .lb-gp:active { transform: translateY(2px); color: #ffd9ad; box-shadow: inset 0 2px 5px rgba(0,0,0,.6), inset 0 0 12px -4px var(--lb-amber), 0 1px 0 #0a0d12; }
+  .lb-gp.lb-dive { color: color-mix(in srgb, var(--lb-amber) 55%, #9aa6b4); }
+  .lb-badge { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); font: 500 9px/1 var(--lb-mono); letter-spacing: .6em; margin-right: -.6em; text-transform: uppercase; color: rgba(220,232,248,.12); text-shadow: 0 -1px 0 rgba(0,0,0,.9), 0 1px 0 rgba(255,255,255,.06); }
+</style>

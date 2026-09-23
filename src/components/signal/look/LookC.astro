@@ -1,0 +1,652 @@
+---
+// SIGNAL R0 contact sheet · LOOK C · THE PANEL (the planner's own direction).
+// A printed front panel photographed flat: matte warm paper, every part named by silkscreen, ink
+// hairlines, printed scales round the knobs and beside the faders. The only dark things are the
+// displays (three filter glasses, the 6×16 grid, tempo, chord); colour is only signal: drums
+// yellow, keys cyan, bass violet as lit states, amber only inside the tempo display.
+// Static by law: no script, no audio, no images. One frame, a loop playing: playhead on step 5,
+// E + G held, Cmaj7 on pad 1, MOTION on, bass in SEQ. Anatomy = NOTES-SIGNAL-R0.md §6.
+
+// drums: 6 lanes × 16 steps, velocity 0..3 (the FLOOR kick + house lanes)
+const LANES: [string, string][] = [
+  ["kick", "3000300030003000"],
+  ["snare", "0000000100000010"],
+  ["hat", "0102010201020102"],
+  ["open", "0020002000200020"],
+  ["clap", "0000300000003000"],
+  ["shkr", "0011001100110011"],
+];
+const HEAD = 4; // the playhead: step 5
+const STEPS = Array.from({ length: 16 }, (_, i) => i);
+
+// bass SEQ: six steps with velocity (bar height = velocity)
+const BASS = [3, 0, 0, 2, 0, 0, 2, 0, 3, 0, 1, 0, 0, 2, 0, 0];
+const VH = [0, 0.38, 0.68, 1];
+
+// keybed C2..C6 (MIDI 36..84): 29 whites; octave 0 maps a → C4 (white 14)
+const WN = ["C", "D", "E", "F", "G", "A", "B"];
+const WHITES = Array.from({ length: 29 }, (_, i) => ({ i, n: WN[i % 7], o: 2 + Math.floor(i / 7) }));
+const WL: Record<number, string> = { 14: "a", 15: "s", 16: "d", 17: "f", 18: "g", 19: "h", 20: "j", 21: "k", 22: "l" };
+const HELD = new Set([16, 18]); // E4 · G4
+const BLACKS = WHITES.filter((w) => "CDFGA".includes(w.n) && w.i < 28).map((w) => w.i);
+const BL: Record<number, string> = { 14: "w", 15: "e", 17: "t", 18: "y", 19: "u", 21: "o" };
+
+// filter curves, viewBox 600×200 (log x: 100 Hz = 140, 1k = 340, 10k = 540)
+const CV = {
+  drums: "M0 200 C10 118 20 84 40 84 L470 84 C520 84 550 98 600 152",
+  keys: "M0 200 C6 126 14 98 32 98 L262 98 C318 98 338 60 360 60 C382 60 398 104 428 154 C446 184 458 200 476 200",
+  ghost: "M0 200 C6 126 14 98 32 98 L178 98 C234 98 254 60 276 60 C298 60 314 104 344 154 C362 184 374 200 392 200",
+  bass: "M0 200 C8 124 16 92 34 92 L196 92 C252 92 292 114 352 150 C414 186 480 200 600 200",
+};
+const FILL = (d: string) => `${d} L600 200 L0 200Z`;
+const GRID = "M140 0V200M340 0V200M540 0V200M0 100H600";
+
+const WAVES = [
+  ["sine", "M1 6.5 Q5 1 9 6.5 T21 6.5"],
+  ["sawi", "M1 2 L10 11 L10 2 L21 11"],
+  ["saw", "M1 11 L10 2 L10 11 L21 2"],
+  ["sqr", "M1 11 L1 2 L11 2 L11 11 L21 11 L21 2"],
+];
+const FX = [
+  { l: "DRIVE", v: 0.4, on: 0, o: ["warm", "crunch", "tape", "fuzz"] },
+  { l: "MOD", v: 0.6, on: 3, o: ["phs", "flng", "dbl", "chrs"] },
+  { l: "DEL", v: 0.25, on: 1, o: ["1/4", "1/8", "1/8.", "1/16"] },
+  { l: "REV", v: 0.35, on: 0, o: ["sm", "med", "hall", "vast"] },
+];
+const NOTE: Record<string, string> = {
+  "1/4": "",
+  "1/8": "M6.9 1q3.4 1.8 3.4 4.6q-1.8-1.5-3.4-1.7z",
+  "1/8.": "M6.9 1q3.4 1.8 3.4 4.6q-1.8-1.5-3.4-1.7z",
+  "1/16": "M6.9 1q3.4 1.6 3.4 4q-1.8-1.4-3.4-1.5zM6.9 4.5q3.4 1.6 3.4 4q-1.8-1.4-3.4-1.5z",
+};
+const v = (x: number, d?: number) => `--lc-v:${x}` + (d ? `;--lc-d:${d}px` : "");
+---
+
+<div class="look look-c" data-look="c">
+  <i class="lc-screw" style="left:7px;top:7px;--lc-r:18deg"></i>
+  <i class="lc-screw" style="right:7px;top:7px;--lc-r:62deg"></i>
+  <i class="lc-screw" style="left:7px;bottom:7px;--lc-r:81deg"></i>
+  <i class="lc-screw" style="right:7px;bottom:7px;--lc-r:33deg"></i>
+
+  <!-- 1 · TOP STRIP: wordmark · tempo + tap · stop -->
+  <header class="lc-top">
+    <span class="lc-mark">SIGNAL</span>
+    <div class="lc-tempo">
+      <div class="lc-disp lc-bpm"><b>120</b><small>bpm</small></div>
+      <span class="lc-cap lc-tap"><i class="lc-led"></i>tap<kbd>=</kbd></span>
+    </div>
+    <span class="lc-cap lc-stop"><i class="lc-sq"></i>stop<kbd>esc</kbd></span>
+  </header>
+
+  <!-- 2 · TOWERS -->
+  <div class="lc-towers">
+    <section class="lc-tower lc-drums">
+      <div class="lc-head">
+        <span class="lc-cap lc-on lc-pow"><i class="lc-led lc-lit"></i>DRUMS</span>
+        <span class="lc-plate"><small>kit</small>house</span>
+      </div>
+      <div class="lc-disp lc-glass">
+        <svg viewBox="0 0 600 200" preserveAspectRatio="none" aria-hidden="true">
+          <path class="lc-gl" d={GRID} /><path class="lc-fl" d={FILL(CV.drums)} /><path class="lc-cv" d={CV.drums} />
+        </svg>
+        <i class="lc-node lc-hollow" style="left:6.7%;top:42%"></i>
+        <i class="lc-node" style="left:86%;top:45%"></i>
+      </div>
+      <div class="lc-steps">
+        <span class="lc-nums">{STEPS.map((i) => <i class:list={[{ "lc-dn": i % 4 === 0 }]}>{i % 4 === 0 ? i + 1 : "·"}</i>)}</span>
+        <span class="lc-lanes">{LANES.map(([n]) => <i>{n}</i>)}</span>
+        <div class="lc-disp lc-g16">
+          {LANES.map(([, row]) => STEPS.map((i) => (
+            <i class:list={["lc-c", `lc-v${row[i]}`, { "lc-now": i === HEAD, "lc-dn": i % 4 === 0 }]}></i>
+          )))}
+        </div>
+      </div>
+      <div class="lc-krow">
+        <span class="lc-kn"><i class="lc-k" style={v(0.56)}></i><b>swing</b></span>
+        <span class="lc-kn"><i class="lc-k" style={v(0.5)}></i><b>density</b></span>
+      </div>
+      <fieldset class="lc-box">
+        <legend>PATTERN</legend>
+        <div class="lc-seg">
+          <span class="lc-cap lc-on">floor</span><span class="lc-cap">back</span><span class="lc-cap">half</span><span class="lc-cap">break</span>
+        </div>
+      </fieldset>
+      <div class="lc-low">
+        <div class="lc-lcol">
+          <fieldset class="lc-box lc-tex">
+            <legend>TEXTURE</legend>
+            <span class="lc-kn"><i class="lc-k" style={v(0.35, 24)}></i></span>
+            <div class="lc-seg"><span class="lc-cap lc-on">tape</span><span class="lc-cap">drive</span></div>
+          </fieldset>
+          <span class="lc-kn"><i class="lc-k" style={v(0.3, 32)}></i><b>sidechain</b></span>
+        </div>
+        <fieldset class="lc-box lc-dly">
+          <legend>DELAY</legend>
+          <span class="lc-kn"><i class="lc-k" style={v(0.3, 22)}></i><b>mix</b></span>
+          <span class="lc-kn"><i class="lc-k" style={v(0.35, 22)}></i><b>fb</b></span>
+          <span class="lc-kn lc-wide"><i class="lc-k lc-step" style={v(0.1667, 22)}></i><b>time <em class="lc-chip">1/8</em></b></span>
+        </fieldset>
+      </div>
+      <div class="lc-foot">
+        <span class="lc-cap lc-ms">M</span><span class="lc-cap lc-ms">S</span><i class="lc-vr"></i>
+        <span class="lc-kn lc-kr"><i class="lc-k" style={v(0.8, 18)}></i><b>gain</b></span>
+      </div>
+    </section>
+
+    <section class="lc-tower lc-keys">
+      <div class="lc-head">
+        <span class="lc-pow lc-stat"><i class="lc-led lc-lit"></i>KEYS</span>
+        <div class="lc-seg lc-voice">
+          <span class="lc-cap lc-on">rhodes</span><span class="lc-cap">piano</span><span class="lc-cap">pad</span><span class="lc-cap">lead</span><span class="lc-cap">synth</span>
+        </div>
+      </div>
+      <div class="lc-disp lc-glass lc-kglass">
+        <svg viewBox="0 0 600 200" preserveAspectRatio="none" aria-hidden="true">
+          <path class="lc-gl" d={GRID} /><path class="lc-fl" d={FILL(CV.keys)} />
+          <path class="lc-gh" d={CV.ghost} /><path class="lc-cv" d={CV.keys} />
+        </svg>
+        <i class="lc-node lc-hollow" style="left:4%;top:49%"></i>
+        <i class="lc-node lc-big" style="left:60%;top:30%"></i>
+      </div>
+      <div class="lc-hz"><i style="left:0">20</i><i style="left:23.3%">100</i><i style="left:56.7%">1k</i><i style="left:90%">10k</i><i style="left:100%">hz</i></div>
+      <div class="lc-kbody">
+        <div class="lc-lfo">
+          <span class="lc-kn"><i class="lc-k" style={v(0.45, 46)}></i><b><i class="lc-led lc-lit"></i>motion <em class="lc-chip">45</em></b></span>
+          <span class="lc-kn"><i class="lc-k lc-step" style={v(0.3333, 24)}></i><b>rate <em class="lc-chip">1/8</em></b></span>
+          <div class="lc-waves">
+            {WAVES.map(([n, d], i) => (
+              <span class:list={["lc-cap", { "lc-on": i === 0 }]} data-wave={n}><svg viewBox="0 0 22 13" aria-hidden="true"><path d={d} /></svg></span>
+            ))}
+          </div>
+        </div>
+        <i class="lc-vr"></i>
+        {FX.map((f) => (
+          <div class="lc-fx">
+            <span class="lc-fxl">{f.l}</span>
+            <span class="lc-fad" style={v(f.v)}></span>
+            <div class="lc-col">
+              {f.o.map((o, i) => (
+                <span class:list={["lc-cap", { "lc-on": i === f.on }]}>
+                  {f.l === "DEL"
+                    ? <svg class="lc-note" viewBox="0 0 14 16" aria-hidden="true"><ellipse cx="3.4" cy="13" rx="3" ry="2.2" /><rect x="5.6" y="1" width="1.3" height="12" /><path d={NOTE[o]} />{o === "1/8." && <circle cx="12" cy="13.4" r="1.4" />}</svg>
+                    : o}
+                </span>
+              ))}
+            </div>
+          </div>
+        ))}
+      </div>
+      <div class="lc-foot">
+        <span class="lc-cap lc-ms">M</span><span class="lc-cap lc-ms">S</span><i class="lc-vr"></i>
+        <span class="lc-kn lc-kr"><i class="lc-k" style={v(0.8, 18)}></i><b>gain</b></span>
+      </div>
+    </section>
+
+    <section class="lc-tower lc-bass">
+      <div class="lc-head">
+        <span class="lc-cap lc-on lc-pow"><i class="lc-led lc-lit"></i>BASS</span>
+        <span class="lc-plate"><small>voice</small>synth</span>
+      </div>
+      <div class="lc-disp lc-glass">
+        <svg viewBox="0 0 600 200" preserveAspectRatio="none" aria-hidden="true">
+          <path class="lc-gl" d={GRID} /><path class="lc-fl" d={FILL(CV.bass)} /><path class="lc-cv" d={CV.bass} />
+        </svg>
+        <i class="lc-node lc-hollow" style="left:5.7%;top:46%"></i>
+        <i class="lc-node" style="left:38%;top:47%"></i>
+      </div>
+      <div class="lc-modes">
+        <div class="lc-seg"><span class="lc-cap">drone</span><span class="lc-cap">pluck</span><span class="lc-cap lc-on">seq</span></div>
+        <span class="lc-cap lc-lock"><svg viewBox="0 0 12 14" aria-hidden="true"><path class="lc-shackle" d="M3.6 6.2V4.3a2.4 2.4 0 0 1 4.8 0v1.9" /><rect x="2" y="6.2" width="8" height="6.6" rx="1" /></svg></span>
+        <span class="lc-win">C1</span>
+      </div>
+      <fieldset class="lc-box lc-bseq">
+        <legend>STEPS</legend>
+        <div class="lc-bars">
+          {BASS.map((b, i) => <i class:list={["lc-bar", { "lc-lit": b > 0, "lc-dn": i % 4 === 0 }]} style={`--lc-h:${VH[b]}`}></i>)}
+        </div>
+        <span class="lc-nums lc-bnums">{STEPS.map((i) => <i class:list={[{ "lc-dn": i % 4 === 0 }]}>{i % 4 === 0 ? i + 1 : "·"}</i>)}</span>
+      </fieldset>
+      <div class="lc-bknobs">
+        <div class="lc-krow">
+          <span class="lc-kn"><i class="lc-k" style={v(0.42, 30)}></i><b>density</b></span>
+          <span class="lc-kn"><i class="lc-k" style={v(0.3, 30)}></i><b>groove</b></span>
+        </div>
+        <div class="lc-krow">
+          <span class="lc-kn"><i class="lc-k" style={v(0.62)}></i><b>intensity</b></span>
+          <span class="lc-kn"><i class="lc-k" style={v(0.5)}></i><b>sub</b></span>
+          <span class="lc-kn"><i class="lc-k" style={v(0.18)}></i><b>glide</b></span>
+        </div>
+      </div>
+      <div class="lc-foot">
+        <span class="lc-cap lc-ms">M</span><span class="lc-cap lc-ms">S</span><i class="lc-vr"></i>
+        <span class="lc-kn lc-kr"><i class="lc-k" style={v(0.8, 18)}></i><b>gain</b></span>
+      </div>
+    </section>
+  </div>
+
+  <!-- 3 · HANDS ROW -->
+  <div class="lc-row lc-hands">
+    <div class="lc-grp">
+      <span class="lc-cap lc-arrow"><svg viewBox="0 0 8 8" aria-hidden="true"><path d="M6 1 2 4 6 7Z" /></svg></span>
+      <span class="lc-win">0</span>
+      <span class="lc-cap lc-arrow"><svg viewBox="0 0 8 8" aria-hidden="true"><path d="M2 1 6 4 2 7Z" /></svg></span>
+      <b class="lc-lab">octave</b>
+    </div>
+    <i class="lc-vr"></i>
+    <div class="lc-grp"><span class="lc-win lc-key">C MAJ</span><b class="lc-lab">key</b></div>
+    <div class="lc-disp lc-chord"><b>Cmaj7</b><small>I</small></div>
+    <div class="lc-grp">
+      <span class="lc-cap lc-on"><i class="lc-led lc-lit"></i>chord</span>
+      <span class="lc-cap"><i class="lc-led"></i>hold</span>
+    </div>
+    <i class="lc-vr"></i>
+    <div class="lc-grp">
+      <span class="lc-cap"><i class="lc-led"></i>arpeggiator</span>
+      <span class="lc-kn lc-kr"><i class="lc-k lc-step" style={v(0.5, 20)}></i><b>rate<em>1/16</em></b></span>
+      <span class="lc-kn lc-kr"><i class="lc-k" style={v(0.5, 20)}></i><b>length</b></span>
+      <span class="lc-kn lc-kr"><i class="lc-k" style={v(0.3, 20)}></i><b>groove</b></span>
+    </div>
+  </div>
+
+  <!-- 4 · CHORD RACK -->
+  <div class="lc-rack">
+    {[1, 2, 3, 4, 5, 6, 7, 8].map((n) => (
+      <span class:list={["lc-pad", { "lc-lit": n === 1 }]}>
+        <small>{n}</small>
+        {n === 1 && <b>Cmaj7</b>}
+        {n === 1 && <em>I</em>}
+      </span>
+    ))}
+  </div>
+
+  <!-- 5 · KEYBED C2–C6 -->
+  <div class="lc-bed">
+    <div class="lc-piano">
+      {WHITES.map((w) => (
+        <span class:list={["lc-w", { "lc-held": HELD.has(w.i) }]}>{WL[w.i] && <b>{WL[w.i]}</b>}</span>
+      ))}
+      {BLACKS.map((i) => (
+        <span class="lc-b" style={`--lc-i:${i + 1}`}>{BL[i] && <b>{BL[i]}</b>}</span>
+      ))}
+    </div>
+    <div class="lc-rule">
+      {WHITES.filter((w) => w.n === "C").map((w) => <i style={`--lc-i:${w.i}`}>{`C${w.o}`}</i>)}
+      <span class="lc-bracket" style="--lc-a:14;--lc-b:23"></span>
+    </div>
+  </div>
+
+  <!-- 6 · GATE ROW -->
+  <div class="lc-row lc-gate">
+    <div class="lc-grp">
+      <b class="lc-lab">gate</b>
+      <span class="lc-cap lc-gpad">Z</span>
+      <span class="lc-kn lc-kr"><i class="lc-k lc-step" style={v(0.5, 20)}></i><b>rate<em>1/16</em></b></span>
+      <span class="lc-kn lc-kr"><i class="lc-k" style={v(0, 20)}></i><b>swing<em>0</em></b></span>
+    </div>
+    <span class="lc-badge">SIGNAL</span>
+    <div class="lc-grp">
+      <span class="lc-cap lc-gpad">M</span>
+      <b class="lc-lab">dive</b>
+      <span class="lc-kn lc-kr"><i class="lc-k" style={v(0.62, 20)}></i><b>speed<em>.45</em></b></span>
+      <span class="lc-kn lc-kr"><i class="lc-k" style={v(0.65, 20)}></i><b>dist<em>24</em></b></span>
+    </div>
+  </div>
+</div>
+
+<style>
+  /* THE PANEL. Tokens live on the root; per-part values (--lc-v knob/fader, --lc-d size, --lc-i key
+     index, --lc-h bar height, --lc-sig / --lc-glow a tower's signal colour) ride on the parts. */
+  .look-c {
+    --lc-paper: #eeede9;
+    --lc-cap: #f8f7f4;
+    --lc-well: #e5e3de;
+    --lc-ink: #1b1917;
+    --lc-ink2: #6d6861;
+    --lc-hair: rgba(27, 25, 23, 0.26);
+    --lc-rule: rgba(27, 25, 23, 0.5);
+    --lc-tick: rgba(27, 25, 23, 0.58);
+    --lc-disp: #0e1014;
+    --lc-y: #ffe45e;
+    --lc-c: #3fd0cc;
+    --lc-c-lit: #72e8e4;
+    --lc-vi: #8e55a8;
+    --lc-vi-lit: #c898f0;
+    --lc-amber: #ffad4f;
+    --lc-red: #d6412b;
+    --lc-mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+    --lc-sh-cap: 0 0 0 1px rgba(27, 25, 23, 0.26), 0 1px 0 rgba(27, 25, 23, 0.2), 0 2px 3px -1px rgba(27, 25, 23, 0.3), inset 0 1px 0 #fff;
+    --lc-sh-knob: 0 0 0 1px rgba(27, 25, 23, 0.24), 0 1px 1px rgba(27, 25, 23, 0.24), 0 3px 6px -2px rgba(27, 25, 23, 0.36), inset 0 1px 0 #fff, inset 0 -1px 1px rgba(27, 25, 23, 0.08);
+    position: relative;
+    box-sizing: border-box;
+    width: 1120px;
+    padding: 18px;
+    border-radius: 12px;
+    color: var(--lc-ink);
+    font: 400 10px/1 var(--lc-mono);
+    letter-spacing: 0.08em;
+    font-feature-settings: normal;
+    text-align: left;
+    background-color: var(--lc-paper);
+    /* daylight from the upper left, then a faint warm grain: seven sparse speck fields on prime,
+       non-square periods, so no lattice reads at any zoom */
+    background-image:
+      radial-gradient(130% 100% at 24% -10%, rgba(255, 255, 255, 0.5), rgba(255, 255, 255, 0) 60%),
+      radial-gradient(circle, rgba(70, 58, 44, 0.14) 0 0.5px, transparent 0.9px),
+      radial-gradient(circle, rgba(70, 58, 44, 0.11) 0 0.5px, transparent 0.9px),
+      radial-gradient(circle, rgba(70, 58, 44, 0.13) 0 0.5px, transparent 0.9px),
+      radial-gradient(circle, rgba(70, 58, 44, 0.1) 0 0.6px, transparent 1px),
+      radial-gradient(circle, rgba(255, 255, 255, 0.9) 0 0.5px, transparent 0.9px),
+      radial-gradient(circle, rgba(255, 255, 255, 0.8) 0 0.5px, transparent 0.9px),
+      radial-gradient(circle, rgba(255, 255, 255, 0.9) 0 0.6px, transparent 1px);
+    background-size: 100% 100%, 13px 17px, 19px 11px, 29px 23px, 37px 31px, 17px 7px, 23px 13px, 31px 19px;
+    background-position: 0 0, 3px 7px, 11px 2px, 17px 13px, 5px 29px, 9px 4px, 2px 11px, 21px 8px;
+    box-shadow:
+      0 0 0 1px rgba(27, 25, 23, 0.1),
+      inset 0 1px 0 rgba(255, 255, 255, 0.85),
+      inset 0 -1px 0 rgba(27, 25, 23, 0.07),
+      0 1px 2px rgba(27, 25, 23, 0.1),
+      0 14px 28px -12px rgba(27, 25, 23, 0.3),
+      0 38px 70px -34px rgba(27, 25, 23, 0.4);
+    -webkit-user-select: none;
+    user-select: none;
+  }
+  .look-c i, .look-c em, .look-c b { font-style: normal; }
+
+  .lc-screw {
+    position: absolute; width: 10px; height: 10px; border-radius: 50%;
+    background: radial-gradient(circle at 38% 32%, #f7f6f3, #d0cdc6 62%, #b6b2aa);
+    box-shadow: 0 0 0 1px rgba(27, 25, 23, 0.2), 0 1px 1.5px rgba(27, 25, 23, 0.3);
+  }
+  .lc-screw::before, .lc-screw::after {
+    content: ""; position: absolute; left: 2px; right: 2px; top: 50%; height: 1.2px; margin-top: -0.6px;
+    border-radius: 1px; background: rgba(27, 25, 23, 0.5); transform: rotate(var(--lc-r));
+  }
+  .lc-screw::after { transform: rotate(calc(var(--lc-r) + 90deg)); }
+
+  /* ── keycaps: flat light caps, ink legends; pressed = ink fill, paper legend ── */
+  .lc-cap {
+    position: relative; display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+    box-sizing: border-box; height: 22px; padding: 0 9px; border-radius: 4px;
+    background: var(--lc-cap); color: var(--lc-ink); font-size: 10px; letter-spacing: 0.08em; white-space: nowrap;
+    box-shadow: var(--lc-sh-cap);
+    transition: transform 0.09s cubic-bezier(0.2, 0.7, 0.3, 1), box-shadow 0.09s, background-color 0.12s;
+  }
+  .lc-cap:hover { background: #fdfcfa; }
+  .lc-cap:active { transform: translateY(1px); box-shadow: 0 0 0 1px rgba(27, 25, 23, 0.3), inset 0 1px 1px rgba(27, 25, 23, 0.12); }
+  .lc-cap.lc-on {
+    background: var(--lc-ink); color: var(--lc-paper); transform: translateY(0.5px);
+    box-shadow: 0 0 0 1px var(--lc-ink), inset 0 1px 2px rgba(0, 0, 0, 0.55), 0 1px 0 rgba(255, 255, 255, 0.6);
+  }
+  .lc-cap.lc-on:hover { background: #2a2724; }
+  .lc-cap kbd { font: inherit; font-size: 8px; letter-spacing: 0.04em; color: var(--lc-ink2); margin-left: 1px; }
+  .lc-led {
+    display: inline-block; flex: none; width: 4px; height: 4px; border-radius: 50%;
+    background: rgba(27, 25, 23, 0.14); box-shadow: inset 0 0 0 0.5px rgba(27, 25, 23, 0.4);
+  }
+  .lc-on .lc-led { background: #3b3834; box-shadow: none; }
+  .lc-led.lc-lit, .lc-on .lc-led.lc-lit {
+    background: var(--lc-sig);
+    box-shadow: 0 0 0 0.5px rgba(0, 0, 0, 0.25), 0 0 5px 1px color-mix(in srgb, var(--lc-sig) 65%, transparent);
+  }
+  .lc-seg { display: flex; gap: 3px; }
+  .lc-seg > .lc-cap { flex: 1; padding: 0 4px; }
+  .lc-win {
+    display: inline-flex; align-items: center; justify-content: center; box-sizing: border-box;
+    height: 22px; min-width: 30px; padding: 0 7px; border: 1px solid var(--lc-ink); border-radius: 3px;
+    font-weight: 500; font-size: 10px; letter-spacing: 0.06em;
+  }
+  .lc-chip {
+    display: inline-block; padding: 2px 4px 2px 5px; border: 1px solid var(--lc-ink); border-radius: 2px;
+    font-weight: 500; font-size: 9px; line-height: 1; letter-spacing: 0.04em;
+  }
+  .lc-vr { display: block; flex: none; width: 1px; height: 20px; background: var(--lc-hair); }
+  .lc-box { margin: 0; min-width: 0; padding: 3px 6px 6px; border: 1px solid var(--lc-rule); border-radius: 5px; }
+  .lc-box > legend { margin-left: 4px; padding: 0 5px; font-weight: 500; font-size: 8.5px; letter-spacing: 0.18em; }
+
+  /* ── knobs: flat discs, one ink pointer, a printed 11-tick scale over 270° ── */
+  .lc-kn { display: inline-flex; flex-direction: column; align-items: center; gap: 3px; }
+  .lc-kn > b { display: inline-flex; align-items: center; gap: 5px; font-weight: 400; font-size: 10px; white-space: nowrap; }
+  .lc-k {
+    position: relative; display: block; flex: none; box-sizing: border-box;
+    width: var(--lc-d, 26px); height: var(--lc-d, 26px); margin: 7px; border-radius: 50%;
+    background: var(--lc-cap); box-shadow: var(--lc-sh-knob);
+  }
+  .lc-k::before {
+    content: ""; position: absolute; inset: -7px; border-radius: 50%;
+    background: conic-gradient(from -136.2deg,
+      var(--lc-tick) 0 2.4deg, #0000 0 27deg, var(--lc-tick) 0 29.4deg, #0000 0 54deg,
+      var(--lc-tick) 0 56.4deg, #0000 0 81deg, var(--lc-tick) 0 83.4deg, #0000 0 108deg,
+      var(--lc-tick) 0 110.4deg, #0000 0 135deg, var(--lc-tick) 0 137.4deg, #0000 0 162deg,
+      var(--lc-tick) 0 164.4deg, #0000 0 189deg, var(--lc-tick) 0 191.4deg, #0000 0 216deg,
+      var(--lc-tick) 0 218.4deg, #0000 0 243deg, var(--lc-tick) 0 245.4deg, #0000 0 270deg,
+      var(--lc-tick) 0 272.4deg, #0000 0);
+    -webkit-mask: radial-gradient(closest-side, #0000 calc(100% - 4.5px), #000 calc(100% - 4px));
+    mask: radial-gradient(closest-side, #0000 calc(100% - 4.5px), #000 calc(100% - 4px));
+  }
+  .lc-k::after {
+    content: ""; position: absolute; inset: 0; border-radius: 50%;
+    background: linear-gradient(var(--lc-ink), var(--lc-ink)) 50% 2px / 1.6px 44% no-repeat;
+    transform: rotate(calc(var(--lc-v, 0) * 270deg - 135deg));
+  }
+  /* a stepped knob prints its detents as dots, seven over the same 270° */
+  .lc-k.lc-step::before {
+    background: conic-gradient(from -138deg,
+      var(--lc-ink) 0 6deg, #0000 0 45deg, var(--lc-ink) 0 51deg, #0000 0 90deg, var(--lc-ink) 0 96deg, #0000 0 135deg,
+      var(--lc-ink) 0 141deg, #0000 0 180deg, var(--lc-ink) 0 186deg, #0000 0 225deg, var(--lc-ink) 0 231deg, #0000 0 270deg,
+      var(--lc-ink) 0 276deg, #0000 0);
+    -webkit-mask: radial-gradient(closest-side, #0000 calc(100% - 4px), #000 calc(100% - 3.5px) calc(100% - 1.5px), #0000 calc(100% - 1px));
+    mask: radial-gradient(closest-side, #0000 calc(100% - 4px), #000 calc(100% - 3.5px) calc(100% - 1.5px), #0000 calc(100% - 1px));
+  }
+  .lc-k:hover { background: #fdfcfa; }
+  .lc-krow { display: flex; justify-content: space-around; align-items: flex-start; flex: none; }
+  .lc-kr { flex-direction: row; gap: 4px; }
+  .lc-kr > b { flex-direction: column; align-items: flex-start; gap: 4px; }
+  .lc-kr em { font-weight: 500; }
+
+  /* ── displays: recessed near-black windows, content lit ── */
+  .lc-disp {
+    position: relative; overflow: hidden; box-sizing: border-box; flex: none; border-radius: 3px;
+    background: var(--lc-disp) linear-gradient(180deg, rgba(255, 255, 255, 0.04), rgba(255, 255, 255, 0) 45%);
+    box-shadow: inset 0 1px 0 #000, inset 0 2px 5px rgba(0, 0, 0, 0.55), 0 0 0 1px rgba(27, 25, 23, 0.62), 0 1px 0 1px rgba(255, 255, 255, 0.6);
+  }
+  .lc-glass { height: 54px; }
+  .lc-glass svg { position: absolute; inset: 0; width: 100%; height: 100%; }
+  .lc-glass path { fill: none; vector-effect: non-scaling-stroke; }
+  .lc-glass .lc-gl { stroke: rgba(150, 185, 200, 0.1); stroke-width: 1; }
+  .lc-glass .lc-fl { fill: var(--lc-glow); opacity: 0.1; }
+  .lc-glass .lc-cv { stroke: var(--lc-glow); stroke-width: 1.6; filter: drop-shadow(0 0 3px var(--lc-glow)); }
+  .lc-glass .lc-gh { stroke: var(--lc-glow); stroke-width: 1; opacity: 0.4; stroke-dasharray: 3 3; }
+  .lc-node {
+    position: absolute; width: 9px; height: 9px; margin: -4.5px 0 0 -4.5px; border-radius: 50%;
+    background: var(--lc-glow); box-shadow: 0 0 0 2px rgba(14, 16, 20, 0.9), 0 0 8px var(--lc-glow);
+  }
+  .lc-node.lc-hollow { background: var(--lc-disp); box-shadow: inset 0 0 0 1.5px var(--lc-glow); opacity: 0.75; }
+  .lc-node.lc-big { width: 12px; height: 12px; margin: -6px 0 0 -6px; }
+
+  /* ── top strip ── */
+  .lc-top { display: grid; grid-template-columns: 282px 1fr auto; column-gap: 12px; align-items: center; height: 40px; }
+  .lc-mark { padding-left: 12px; font-weight: 500; font-size: 15px; letter-spacing: 0.3em; }
+  .lc-tempo { display: flex; align-items: center; gap: 10px; }
+  .lc-bpm { display: flex; align-items: center; justify-content: flex-end; gap: 7px; width: 128px; height: 34px; padding: 0 12px; }
+  .lc-bpm b { font: 500 22px/1 "Orbitron", var(--lc-mono); letter-spacing: 0.08em; color: var(--lc-amber); text-shadow: 0 0 10px rgba(255, 160, 60, 0.5); }
+  .lc-bpm small { align-self: flex-end; margin-bottom: 9px; font-size: 7.5px; letter-spacing: 0.22em; text-transform: uppercase; color: rgba(255, 173, 79, 0.6); }
+  .lc-tap { height: 28px; padding: 0 10px; }
+  .lc-stop {
+    height: 28px; padding: 0 12px; gap: 8px; margin-right: 6px; background: var(--lc-red); color: #fff4ef;
+    font-weight: 500; letter-spacing: 0.12em;
+    box-shadow: 0 0 0 1px rgba(110, 28, 14, 0.55), 0 1px 0 rgba(90, 20, 10, 0.35), 0 2px 4px -1px rgba(90, 20, 10, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.3);
+  }
+  .lc-stop:hover { background: #e04a33; }
+  .lc-stop kbd { color: rgba(255, 244, 239, 0.7); }
+  .lc-sq { display: block; width: 7px; height: 7px; border-radius: 1px; background: currentColor; }
+
+  /* ── towers ── */
+  .lc-towers { display: grid; grid-template-columns: 282px 496px 282px; column-gap: 12px; height: 520px; margin-top: 12px; }
+  .lc-tower {
+    display: flex; flex-direction: column; gap: 8px; min-width: 0; box-sizing: border-box;
+    padding: 10px; border: 1px solid var(--lc-ink); border-radius: 6px;
+  }
+  .lc-drums { --lc-sig: #f2cf00; --lc-glow: var(--lc-y); }
+  .lc-keys, .lc-hands, .lc-rack { --lc-sig: var(--lc-c); --lc-glow: var(--lc-c-lit); }
+  .lc-bass { --lc-sig: #b47ce6; --lc-glow: var(--lc-vi-lit); }
+  .lc-head { display: flex; gap: 8px; height: 26px; flex: none; }
+  .lc-pow { height: 26px; min-width: 78px; justify-content: flex-start; gap: 8px; padding: 0 10px; font-weight: 500; letter-spacing: 0.16em; }
+  .lc-stat { display: inline-flex; align-items: center; box-sizing: border-box; border: 1px solid var(--lc-ink); border-radius: 4px; }
+  .lc-plate {
+    flex: 1; display: flex; align-items: center; gap: 10px; padding: 0 10px;
+    border: 1px solid var(--lc-rule); border-radius: 4px; font-size: 11px; letter-spacing: 0.06em;
+  }
+  .lc-plate small { font-size: 8px; letter-spacing: 0.16em; text-transform: uppercase; color: var(--lc-ink2); }
+  .lc-voice { flex: 1; }
+  .lc-voice .lc-cap { height: 26px; }
+  .lc-foot {
+    display: flex; align-items: center; justify-content: center; gap: 8px; flex: none;
+    height: 34px; margin-top: auto; padding-top: 8px; border-top: 1px solid var(--lc-hair);
+  }
+  .lc-ms { width: 28px; height: 22px; padding: 0; font-weight: 500; font-size: 10px; }
+  .lc-foot .lc-vr { margin: 0 4px; }
+
+  /* drums */
+  .lc-steps { display: grid; grid-template-columns: 32px 1fr; gap: 3px 5px; flex: none; }
+  .lc-nums {
+    grid-column: 2; display: grid; grid-template-columns: repeat(16, 1fr); column-gap: 3px; padding: 0 6px;
+    height: 8px; font-size: 8px; line-height: 8px; letter-spacing: 0; text-align: center; color: var(--lc-ink2);
+  }
+  .lc-nums .lc-dn { color: var(--lc-ink); font-weight: 500; }
+  .lc-lanes { display: grid; grid-template-rows: repeat(6, 9px); row-gap: 4px; padding: 6px 0; font-size: 9px; line-height: 9px; letter-spacing: 0.02em; text-align: right; }
+  .lc-g16 { display: grid; grid-template-columns: repeat(16, 1fr); grid-template-rows: repeat(6, 9px); gap: 4px 3px; padding: 6px; isolation: isolate; }
+  /* the playhead: a lit column behind step 5 and its rail along the foot */
+  .lc-g16::before, .lc-g16::after {
+    content: ""; position: absolute; z-index: -1; left: calc(6px + 4 * ((100% - 57px) / 16 + 3px) - 1.5px);
+    width: calc((100% - 57px) / 16 + 3px); top: 3px; bottom: 3px; border-radius: 2px; background: rgba(255, 228, 94, 0.1);
+  }
+  .lc-g16::after { z-index: 0; top: auto; bottom: 1px; height: 2px; border-radius: 1px; background: var(--lc-y); box-shadow: 0 0 6px rgba(255, 228, 94, 0.8); }
+  .lc-c { display: block; border-radius: 1.5px; background: #1a1d22; }
+  .lc-c.lc-dn { background: #23272d; }
+  .lc-c.lc-now { background: #353941; }
+  .lc-g16 .lc-v1 { background: color-mix(in srgb, var(--lc-y) 30%, #1a1d22); }
+  .lc-g16 .lc-v2 { background: color-mix(in srgb, var(--lc-y) 62%, #1a1d22); }
+  .lc-g16 .lc-v3 { background: var(--lc-y); box-shadow: 0 0 5px rgba(255, 228, 94, 0.35); }
+  .lc-g16 .lc-now.lc-v3 { background: #fffbe4; box-shadow: 0 0 6px 1px rgba(255, 228, 94, 0.9), 0 0 14px rgba(255, 228, 94, 0.5); }
+  .lc-low { display: grid; grid-template-columns: 1fr 96px; gap: 8px; flex: 1; min-height: 0; }
+  .lc-lcol { display: flex; flex-direction: column; justify-content: space-between; align-items: center; }
+  .lc-tex { display: flex; align-items: center; gap: 6px; width: 100%; box-sizing: border-box; }
+  .lc-tex .lc-seg { flex: 1; }
+  .lc-tex .lc-cap { height: 20px; font-size: 9.5px; }
+  .lc-dly { display: grid; grid-template-columns: 1fr 1fr; justify-items: center; align-content: space-evenly; padding: 0 2px 4px; }
+  .lc-dly .lc-wide { grid-column: 1 / -1; }
+
+  /* keys */
+  .lc-kglass { height: 70px; }
+  .lc-hz { position: relative; height: 9px; margin-top: -3px; flex: none; font-size: 8px; letter-spacing: 0.04em; color: var(--lc-ink2); }
+  .lc-hz i { position: absolute; top: 0; transform: translateX(-50%); }
+  .lc-hz i:first-child { transform: none; }
+  .lc-hz i:last-child { transform: translateX(-100%); }
+  .lc-kbody { display: flex; gap: 10px; flex: 1; min-height: 0; }
+  .lc-lfo { display: flex; flex-direction: column; align-items: center; justify-content: space-around; flex: none; width: 128px; }
+  .lc-waves { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; width: 104px; }
+  .lc-waves .lc-cap { height: 20px; padding: 0; }
+  .lc-waves svg { width: 22px; height: 13px; fill: none; stroke: currentColor; stroke-width: 1.3; stroke-linejoin: round; }
+  .lc-kbody > .lc-vr { height: auto; margin: 4px 2px; }
+  .lc-fx { display: flex; flex-direction: column; gap: 8px; flex: 1; min-width: 0; }
+  .lc-fxl { font-weight: 500; font-size: 8.5px; letter-spacing: 0.18em; text-align: center; }
+  .lc-fad {
+    position: relative; display: block; flex: 1; width: 58px; margin: 0 auto;
+    background:
+      repeating-linear-gradient(to bottom, var(--lc-hair) 0 1px, #0000 1px calc((100% - 1px) / 10)) 4px 6px / 5px calc(100% - 11px) no-repeat,
+      repeating-linear-gradient(to bottom, var(--lc-hair) 0 1px, #0000 1px calc((100% - 1px) / 10)) right 4px top 6px / 5px calc(100% - 11px) no-repeat,
+      repeating-linear-gradient(to bottom, var(--lc-ink) 0 1px, #0000 1px calc((100% - 1px) / 2)) 0 6px / 9px calc(100% - 11px) no-repeat,
+      repeating-linear-gradient(to bottom, var(--lc-ink) 0 1px, #0000 1px calc((100% - 1px) / 2)) right 0 top 6px / 9px calc(100% - 11px) no-repeat;
+  }
+  .lc-fad::before {
+    content: ""; position: absolute; left: 50%; top: 2px; bottom: 2px; width: 5px; margin-left: -2.5px; border-radius: 3px;
+    background: linear-gradient(to top, var(--lc-c) 0 calc(var(--lc-v) * (100% - 8px) + 4px), rgba(27, 25, 23, 0.2) 0);
+    box-shadow: inset 0 1px 2px rgba(27, 25, 23, 0.45), 0 1px 0 rgba(255, 255, 255, 0.7);
+  }
+  .lc-fad::after {
+    content: ""; position: absolute; left: 50%; bottom: calc(var(--lc-v) * (100% - 12px)); width: 30px; height: 12px; margin-left: -15px;
+    border-radius: 2.5px; background: linear-gradient(var(--lc-ink), var(--lc-ink)) center / 18px 1.5px no-repeat, var(--lc-cap);
+    box-shadow: var(--lc-sh-cap);
+  }
+  .lc-col { display: flex; flex-direction: column; gap: 3px; flex: none; }
+  .lc-col .lc-cap { height: 18px; padding: 0; font-size: 9px; }
+  .lc-note { width: 12px; height: 14px; fill: currentColor; }
+
+  /* bass */
+  .lc-modes { display: flex; align-items: center; gap: 6px; flex: none; }
+  .lc-modes .lc-seg { flex: 1; }
+  .lc-lock { width: 28px; padding: 0; }
+  .lc-lock svg { width: 11px; height: 13px; fill: currentColor; }
+  .lc-lock .lc-shackle { fill: none; stroke: currentColor; stroke-width: 1.3; }
+  .lc-bseq { display: flex; flex-direction: column; gap: 5px; flex: none; height: 158px; padding-top: 5px; }
+  .lc-bknobs { display: flex; flex-direction: column; justify-content: space-evenly; flex: 1; min-height: 0; }
+  .lc-bars { display: grid; grid-template-columns: repeat(16, 1fr); gap: 3px; flex: 1; }
+  .lc-bar {
+    display: block; border-radius: 2px;
+    background: linear-gradient(to top, var(--lc-vi) 0 calc(var(--lc-h) * 100%), var(--lc-well) 0);
+    box-shadow: inset 0 1px 2px rgba(27, 25, 23, 0.22), inset 0 0 0 1px rgba(27, 25, 23, 0.14), 0 1px 0 rgba(255, 255, 255, 0.7);
+  }
+  .lc-bar.lc-dn { box-shadow: inset 0 1px 2px rgba(27, 25, 23, 0.22), inset 0 0 0 1px rgba(27, 25, 23, 0.3), 0 1px 0 rgba(255, 255, 255, 0.7); }
+  .lc-bar.lc-lit { box-shadow: inset 0 1px 2px rgba(27, 25, 23, 0.25), inset 0 0 0 1px color-mix(in srgb, var(--lc-vi) 70%, #000), 0 0 7px color-mix(in srgb, var(--lc-vi) 38%, transparent); }
+  .lc-bnums { grid-column: auto; padding: 0; }
+
+  /* ── hands row · rack · keybed · gate ── */
+  .lc-row {
+    display: flex; align-items: center; gap: 14px; box-sizing: border-box; height: 44px; margin-top: 12px;
+    padding: 0 14px; border: 1px solid var(--lc-ink); border-radius: 6px;
+  }
+  .lc-grp { display: flex; align-items: center; gap: 7px; }
+  .lc-lab { font-weight: 400; font-size: 10px; margin-left: 2px; }
+  .lc-arrow { width: 24px; padding: 0; }
+  .lc-arrow svg { width: 8px; height: 8px; fill: currentColor; }
+  .lc-key { min-width: 58px; }
+  .lc-chord { display: flex; align-items: center; justify-content: center; gap: 12px; width: 220px; height: 32px; margin: 0 auto; }
+  .lc-chord b { font-weight: 500; font-size: 17px; letter-spacing: 0.04em; color: var(--lc-glow); text-shadow: 0 0 10px rgba(114, 232, 228, 0.5); }
+  .lc-chord small { font-size: 9px; letter-spacing: 0.14em; color: rgba(114, 232, 228, 0.55); }
+  .lc-rack { display: grid; grid-template-columns: repeat(8, 1fr); gap: 8px; height: 36px; margin-top: 8px; }
+  .lc-pad {
+    position: relative; display: flex; align-items: center; justify-content: center; border-radius: 6px;
+    background: linear-gradient(180deg, #faf9f7, #f3f2ee); box-shadow: var(--lc-sh-cap), 0 3px 6px -3px rgba(27, 25, 23, 0.25);
+    transition: transform 0.09s cubic-bezier(0.2, 0.7, 0.3, 1), box-shadow 0.09s;
+  }
+  .lc-pad:hover { background: #fdfcfa; }
+  .lc-pad:active { transform: translateY(1px); box-shadow: 0 0 0 1px rgba(27, 25, 23, 0.3), inset 0 1px 1px rgba(27, 25, 23, 0.12); }
+  .lc-pad small { position: absolute; left: 7px; top: 5px; font-size: 8.5px; color: var(--lc-ink2); }
+  .lc-pad.lc-lit { background: var(--lc-c); box-shadow: var(--lc-sh-cap), 0 0 16px color-mix(in srgb, var(--lc-c) 45%, transparent); }
+  .lc-pad.lc-lit small { color: var(--lc-ink); }
+  .lc-pad b { font-weight: 500; font-size: 11.5px; letter-spacing: 0.04em; }
+  .lc-pad em {
+    position: absolute; right: 7px; top: 50%; transform: translateY(-50%); padding: 2px 5px; border-radius: 2px;
+    background: var(--lc-ink); color: var(--lc-paper); font-weight: 500; font-size: 9px;
+  }
+  .lc-bed { height: 100px; margin-top: 10px; }
+  .lc-piano { position: relative; display: flex; box-sizing: border-box; height: 82px; overflow: hidden; border: 1px solid var(--lc-ink); border-radius: 3px 3px 5px 5px; background: var(--lc-ink); }
+  .lc-w {
+    position: relative; flex: 1; box-sizing: border-box; border-right: 1px solid var(--lc-ink); border-radius: 0 0 3px 3px;
+    background: #faf9f6; box-shadow: inset 0 3px 3px -2px rgba(27, 25, 23, 0.25), inset 0 -3px 0 rgba(27, 25, 23, 0.06);
+  }
+  .lc-w:nth-child(29) { border-right: 0; }
+  .lc-w:hover { background: #fff; }
+  .lc-w.lc-held { background: var(--lc-c); box-shadow: inset 0 3px 4px -2px rgba(27, 25, 23, 0.3), inset 0 -3px 0 rgba(27, 25, 23, 0.1); }
+  .lc-w b { position: absolute; left: 0; right: 0; bottom: 9px; text-align: center; font-weight: 500; font-size: 10px; }
+  .lc-b {
+    position: absolute; z-index: 1; top: 0; height: 52px;
+    left: calc(100% / 29 * var(--lc-i) - 100% / 29 * 0.31); width: calc(100% / 29 * 0.62);
+    border-radius: 0 0 3px 3px; background: #1f1d1b;
+    box-shadow: 1px 2px 3px rgba(0, 0, 0, 0.28), inset 0 -4px 0 rgba(255, 255, 255, 0.07), inset 1px 0 0 rgba(255, 255, 255, 0.05);
+  }
+  .lc-b:hover { background: #2c2926; }
+  .lc-b b { position: absolute; left: 0; right: 0; bottom: 9px; text-align: center; font-weight: 500; font-size: 9px; color: var(--lc-paper); }
+  .lc-rule { position: relative; height: 18px; font-size: 8px; color: var(--lc-ink2); }
+  .lc-rule i { position: absolute; top: 9px; left: calc((100% - 2px) / 29 * var(--lc-i) + 5px); }
+  .lc-bracket {
+    position: absolute; top: 2px; height: 4px; border: 1px solid var(--lc-ink); border-top: 0;
+    left: calc((100% - 2px) / 29 * var(--lc-a) + 1px); width: calc((100% - 2px) / 29 * (var(--lc-b) - var(--lc-a)));
+  }
+  .lc-gate { margin-top: 10px; }
+  .lc-gpad { width: 34px; height: 26px; padding: 0; font-weight: 500; font-size: 12px; }
+  .lc-badge {
+    margin: 0 auto; padding-left: 0.9em; font-weight: 500; font-size: 11px; letter-spacing: 0.9em; color: #e0ded8;
+    text-shadow: 0 1px 0 rgba(255, 255, 255, 0.95), 0 -1px 0 rgba(27, 25, 23, 0.3);
+  }
+</style>
