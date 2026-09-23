@@ -21,11 +21,16 @@ interface Props {
   /** The set wraps: past the last slide comes the first, before the
    *  first comes the last; the keys never grey out (Jon, 2026-09-15). */
   loop?: boolean;
+  /** The chassis answers arrow keys and swipes (default). false = only its
+   *  host moves it (car:show): the audio room, where a tape is chosen from
+   *  the wallet and never by an arrow or a swipe (Jon, 2026-09-10; restored
+   *  2026-09-22 — it had not reached main). */
+  keys?: boolean;
 }
-const { count, label, accent = "var(--brand-cyan, #6ee0ff)", dots = false, titles = [], mode = "slide", loop = false } = Astro.props;
+const { count, label, accent = "var(--brand-cyan, #6ee0ff)", dots = false, titles = [], mode = "slide", loop = false, keys = true } = Astro.props;
 ---
 
-<div class="car" data-carousel data-count={String(count)} data-mode={mode} data-car-loop={loop ? "" : undefined} style={`--car-accent:${accent}`}
+<div class="car" data-carousel data-count={String(count)} data-mode={mode} data-car-loop={loop ? "" : undefined} data-car-keys={keys ? undefined : "false"} style={`--car-accent:${accent}`}
   role="group" aria-roledescription="carousel" aria-label={label}>
   <div class="car-view">
     <div class="car-track" data-car-track>
@@ -304,21 +309,22 @@ const { count, label, accent = "var(--brand-cyan, #6ee0ff)", dots = false, title
       show(i + d);
       (d > 0 ? next : prev)?.setAttribute("data-pressed", "");
     };
-    car.addEventListener("keydown", (e) => {
+    const hands = car.getAttribute("data-car-keys") !== "false";
+    if (hands) car.addEventListener("keydown", (e) => {
       // the transport's wave owns ←/→ for seeking when focused
       const el = document.activeElement as HTMLElement | null;
       if (el?.hasAttribute?.("data-tp-wave")) return;
       if (e.key === "ArrowRight") step(1);
       if (e.key === "ArrowLeft") step(-1);
     });
-    registry.push({ car, go: step });
+    if (hands) registry.push({ car, go: step });
     // a host may ask for a slide by index (the audio room's title menu)
     car.addEventListener("car:show", (e) => show(Number((e as CustomEvent).detail?.index ?? i)));
 
     // touch: swipe the track (2026-08-24 mobile pass). Horizontal drags of
     // more than 48px commit a slide; vertical motion stays the page's.
     let tx = 0, ty = 0, tracking = false;
-    car.addEventListener("touchstart", (e) => {
+    if (hands) car.addEventListener("touchstart", (e) => {
       tx = e.touches[0].clientX;
       ty = e.touches[0].clientY;
       tracking = true;
@@ -343,7 +349,9 @@ const { count, label, accent = "var(--brand-cyan, #6ee0ff)", dots = false, title
       // anything that owns its own arrow keys keeps them
       if (el && (el.tagName === "INPUT" || el.tagName === "TEXTAREA" || el.tagName === "SELECT" || el.isContentEditable)) return;
       if (el?.hasAttribute?.("data-tp-wave")) return;
-      if (el?.closest?.("[data-carousel]")) return;
+      // (a chassis that takes no keys never holds them: focus on a tape or
+      // in the wallet must not steal ←/→ from the pictures)
+      if (el?.closest?.('[data-carousel]:not([data-car-keys="false"])')) return;
       // route to the carousel covering most of the screen — only when one
       // genuinely dominates (the full-viewport look band case)
       let best: (typeof registry)[number] | null = null;
