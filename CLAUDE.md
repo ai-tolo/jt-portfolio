@@ -301,15 +301,15 @@ session must follow.
   `robots.txt` carries the Sitemap line.
 - FIRST SETTLE (branch `discover`, 2026-09-23, Jon: "guarantee it's seen
   by a speedrunner"): when an object settles in view (≥60% visible, scroll
-  at rest, a short beat) it takes its own first step ONCE per visit
-  (sessionStorage `uxj-ran-intake` / `uxj-ran-archive` / `uxj-wl-shown`),
-  and any hand takes it back. One helper in StudioOne's script,
+  at rest, a short beat) it takes its own first step ONCE per page load
+  (in-memory keys; sessionStorage was tried and made a reload never show it
+  again), and any hand takes it back. A pointer MOVING over the object makes
+  the beat WAIT (re-checked every 300ms while in view), never cancel. One helper in StudioOne's script,
   `firstSettle(el, {ratio, grace, ok, fire, leave})`. The watch and the
   phone press their own control (a ghost press: `data-ghost`) and run for
   real; a tap during the auto-run fires `hero:finish` (end frame), leaving
   before stage 2 fires `hero:reset`; the status region is aria-live off
-  until the end. A pointer that MOVES over the object cancels the beat (a
-  still pointer under a scroll does not). Phones: the watch also fires from
+  until the end. Phones: the watch also fires from
   its first run row (no beat), and a run started at the watch is FOLLOWED
   down main (transcript at 28%, first card at 35%; any touch/wheel/key lets
   go). The WALLET: the blank tape is a real button that opens the same strip
@@ -321,8 +321,8 @@ session must follow.
   (`.r-stack`, screen-only, each 4px narrower and 5px lower, painted top
   sheet highest; the foot carries the drop shadow); four wordless paper
   tabs (`.r-stack-tab`, same-page links to `#study-<slug>`) stand 12px
-  above the top edge; first visit per session they rise once
-  (`data-riffle`, `r-riffle`). Phones snap a flick past the paper onto the
+  above the top edge; they rise once per load (`data-riffle`). Blank-tape
+  hover lifts the mini 8px with a ground shadow over 220ms. Phones snap a flick past the paper onto the
   studies. Print hides both (verified 1 page).
 - THE SITE IS THREE THINGS (Jon, 2026-09-22): the homepage, the résumé, and
   the case studies under it. The Catalog + Judge doors, the /writing posts

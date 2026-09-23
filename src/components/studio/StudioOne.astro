@@ -1706,7 +1706,17 @@ const ARCHIVE = BUILDS.find((b) => b.id === "archive")!;
      press opens the wallet, with the tape's own seat, and on a desk the
      pointer on it wakes the mini (the mini's own hover lift) */
   .ls-blank:has(> .cs:hover) .wl-pick {
-    transform: translateY(-2px);
+    /* a clear lift, read from across the room (Jon, 2026-09-23: the 2px
+       blip "doesn't move quite enough"): up 8px over a beat you can see,
+       its shadow opening under it on the ground */
+    transform: translateY(-8px);
+    box-shadow: 0 10px 14px -8px color-mix(in srgb, var(--au-ink) 45%, transparent);
+    transition: transform 220ms cubic-bezier(0.2, 0.7, 0.3, 1), box-shadow 220ms ease;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .ls-blank:has(> .cs:hover) .wl-pick {
+      transition: none;
+    }
   }
   /* the wallet's first settle: the mini seats as if pressed, then opens */
   .wl-pick[data-seat] {
@@ -2664,19 +2674,15 @@ const ARCHIVE = BUILDS.find((b) => b.id === "archive")!;
   // ── FIRST SETTLE (2026-09-22, Jon: "guarantee the exhibits' info is seen
   // … what if someone doesn't understand step one"). When an object settles
   // in view — mostly on screen, the scroll at rest, a beat of stillness — it
-  // takes its own first step, ONCE per visit (sessionStorage), and any touch
-  // hands it back. No words, no loops; reduced motion takes each module's own
-  // reduced path. A pointer that MOVES over an object is reaching for it and
-  // cancels the beat (a still pointer the page merely scrolls under is not).
+  // takes its own first step, ONCE per page load, and any touch hands it
+  // back. No words, no loops; reduced motion takes each module's own reduced
+  // path. A pointer MOVING over an object is reaching for it: the beat WAITS
+  // until the pointer is still or gone, then goes (it never gives up while
+  // the object is on screen). (2026-09-23: once per load, not per tab —
+  // sessionStorage kept a reload from ever showing it again.)
   const settleMem = new Set<string>();
-  const wasShown = (k: string) => {
-    try { if (sessionStorage.getItem(k) === "1") return true; } catch {}
-    return settleMem.has(k);
-  };
-  const markShown = (k: string) => {
-    settleMem.add(k);
-    try { sessionStorage.setItem(k, "1"); } catch {}
-  };
+  const wasShown = (k: string) => settleMem.has(k);
+  const markShown = (k: string) => { settleMem.add(k); };
   let lastScroll = 0;
   document.addEventListener("scroll", () => { lastScroll = performance.now(); }, { capture: true, passive: true });
   const reachAt = new WeakMap<Element, number>();
@@ -2685,11 +2691,11 @@ const ARCHIVE = BUILDS.find((b) => b.id === "archive")!;
       const p = e as PointerEvent;
       if (p.pointerType === "mouse" && (p.movementX || p.movementY)) reachAt.set(el, performance.now());
     }, { passive: true });
-  const reaching = (el: Element) => el.matches(":hover") && performance.now() - (reachAt.get(el) ?? -1e9) < 1500;
+  const reaching = (el: Element) => el.matches(":hover") && performance.now() - (reachAt.get(el) ?? -1e9) < 1000;
   const settleReduce = window.matchMedia("(prefers-reduced-motion: reduce)");
   const firstSettle = (target: Element, o: {
     ratio: number; grace: number; settle?: boolean; rootMargin?: string;
-    ok: () => boolean; fire: () => void; leave?: () => void;
+    ok: () => boolean; wait?: () => boolean; fire: () => void; leave?: () => void;
   }) => {
     let timer = 0;
     let inView = false;
@@ -2704,7 +2710,9 @@ const ARCHIVE = BUILDS.find((b) => b.id === "archive")!;
       timer = window.setTimeout(() => {
         if (!inView) return;
         if (o.settle !== false && lastScroll > t0) return arm(); // they moved again: start the beat over
-        if (document.visibilityState !== "visible" || !o.ok()) return;
+        if (!o.ok()) return;
+        // hidden tab or a hand on its way: hold the beat and look again
+        if (document.visibilityState !== "visible" || o.wait?.()) { timer = window.setTimeout(arm, 300); return; }
         o.fire();
       }, o.grace);
     };
@@ -2730,13 +2738,10 @@ const ARCHIVE = BUILDS.find((b) => b.id === "archive")!;
     if (!hero || !object || !control) return null;
     const status = hero.querySelector<HTMLElement>('[role="status"]');
     let auto = false;
-    let byUser = false;
     watchReach(object);
     const quiet = (on: boolean) => status?.setAttribute("aria-live", on ? "off" : "polite");
     const done = () => { auto = false; hero.removeAttribute("data-auto"); quiet(false); };
-    // a desk press is theirs from then on; on a phone a touch may be a scroll,
-    // so only a real tap (the run starting) takes it
-    hero.addEventListener("pointerdown", (e) => { if (!auto && (e as PointerEvent).pointerType === "mouse") byUser = true; }, true);
+    // (a visitor's own run needs no flag: it starts s1, and s2 spends the key)
     // (only a real hand: the object's own programmatic press is not a tap)
     hero.addEventListener("click", (e) => { if (auto && e.isTrusted) hero.dispatchEvent(new CustomEvent("hero:finish")); }, true);
     document.addEventListener("keydown", (e) => { if (auto && e.key === "Escape") hero.dispatchEvent(new CustomEvent("hero:finish")); });
@@ -2756,11 +2761,11 @@ const ARCHIVE = BUILDS.find((b) => b.id === "archive")!;
       hero.setAttribute("data-ghost", "");
       window.setTimeout(() => { hero.removeAttribute("data-ghost"); control.click(); }, 160);
     };
-    const ok = () => !hero.classList.contains("s1") && !byUser && !wasShown(key) && !reaching(object);
+    const ok = () => !hero.classList.contains("s1") && !wasShown(key);
     const leave = () => {
       if (auto && !pinned && !hero.classList.contains("s2")) { hero.dispatchEvent(new CustomEvent("hero:reset")); done(); }
     };
-    firstSettle(object, { ratio: 0.6, grace: phoneMq.matches ? 400 : 700, ok, fire: () => fire(), leave });
+    firstSettle(object, { ratio: 0.6, grace: phoneMq.matches ? 400 : 700, ok, wait: () => reaching(object), fire: () => fire(), leave });
     return { fire, ok, isAuto: () => auto };
   };
   const intakeHero = document.querySelector<HTMLElement>(".intake-hero");
@@ -3038,7 +3043,8 @@ const ARCHIVE = BUILDS.find((b) => b.id === "archive")!;
       watchReach(blankTape);
       firstSettle(blankTape, {
         ratio: 0.6, grace: 600,
-        ok: () => active === 0 && !!wallets[0]?.strip?.hidden && !wasShown(WL_KEY) && !reaching(blankTape),
+        ok: () => active === 0 && !!wallets[0]?.strip?.hidden && !wasShown(WL_KEY),
+        wait: () => reaching(blankTape),
         fire: () => {
           const w = wallets[0];
           if (!w?.pick || !w.open) return;
