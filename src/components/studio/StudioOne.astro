@@ -217,6 +217,12 @@ const columns = (blocks: BuildBlock[]): StoryBlock[][] =>
           stroke-linecap="square" stroke-linejoin="miter" aria-hidden="true" focusable="false" set:html={m.icon} />
       </a>
     ))}
+    {/* the builds' marks (Jon, 2026-09-24): two thin dashes across the comet's
+        track, one per object in the work room. The bead on a dash = that
+        object centred on screen; the first shares the word's own knot, since
+        "work" now frames the watch centred (its scroll-margin is set live). */}
+    <i class="rail-mark" data-mark-for="build-watch" data-center=".watch-col" aria-hidden="true"></i>
+    <i class="rail-mark" data-mark-for="build-archive" data-center=".phone" aria-hidden="true"></i>
     <span class="comet" data-comet aria-hidden="true">
       <i class="comet-track"></i>
       <i class="comet-fill"></i>
@@ -739,6 +745,25 @@ const columns = (blocks: BuildBlock[]): StoryBlock[][] =>
     top: calc(18px + var(--fy, 0) * (100% - 36px));
   }
 
+  /* the builds' marks: a hairline dash across the comet's track at each
+     object's knot; placed by the same map as the words (JS sets --fy) */
+  .rail-mark {
+    position: absolute;
+    right: -5px;
+    width: 8px;
+    height: 1px;
+    top: calc(18px + var(--fy, 0) * (100% - 36px));
+    background: color-mix(in oklab, var(--ink) 40%, transparent);
+    opacity: 0;
+    transition: opacity 400ms ease;
+    pointer-events: none;
+  }
+  .rail[data-mapped] .rail-mark[style] {
+    opacity: 1;
+  }
+  :global(html[data-night]) .rail-mark {
+    background: rgba(245, 242, 234, 0.42);
+  }
   /* ── the comet: reading progress riding the rail's right edge ────────── */
   .comet {
     position: absolute;
@@ -1310,7 +1335,7 @@ const columns = (blocks: BuildBlock[]): StoryBlock[][] =>
      the room. */
   .wk-story {
     position: relative;
-    margin-top: var(--sp-12);
+    margin-top: 64px; /* the caption → the card (Jon, 2026-09-24: more air) */
     border: 1px solid color-mix(in oklab, var(--mx-ink) 16%, transparent);
     border-radius: 28px;
     transition: border-color 560ms ease;
@@ -2565,6 +2590,17 @@ const columns = (blocks: BuildBlock[]): StoryBlock[][] =>
         const el = rail.querySelector<HTMLElement>(`[data-for="${id}"]`);
         el?.style.setProperty("--fy", fyOf(i, ids.length).toFixed(4));
       });
+      // the builds' marks sit between "work" and the next word: the first on
+      // the word itself (its knot), the second part-way down toward the next
+      const iWork = ids.indexOf("work");
+      const marks = Array.from(rail.querySelectorAll<HTMLElement>("[data-mark-for]"));
+      if (iWork >= 0 && ids.length > 1) {
+        const a = fyOf(iWork, ids.length);
+        const b = fyOf(Math.min(iWork + 1, ids.length - 1), ids.length);
+        marks.forEach((m, k) => m.style.setProperty("--fy", (a + (k / marks.length) * (b - a) * 0.9).toFixed(4)));
+      } else {
+        marks.forEach((m) => m.style.removeProperty("--fy"));
+      }
       if (ids.length > 0) rail.setAttribute("data-mapped", "");
     };
     mapItems();
@@ -2586,8 +2622,19 @@ const columns = (blocks: BuildBlock[]): StoryBlock[][] =>
     // Knots and words still share getDocIds() + fyOf() — they cannot
     // diverge. Runs on load/resize only; computed-style reads are fine here.
     let anchors: { s: number; fy: number }[] = [];
+    // the work room's framed position is the WATCH centred on screen (Jon,
+    // 2026-09-24): its scroll-margin-top is set live so the anchor click,
+    // the spy's knot and the first mark all agree
+    const frameWork = () => {
+      const work = document.getElementById("work");
+      const obj = document.querySelector<HTMLElement>("#build-watch .watch-col");
+      if (!work || !obj) return;
+      const centre = obj.getBoundingClientRect().top - work.getBoundingClientRect().top + obj.offsetHeight / 2;
+      work.style.scrollMarginTop = Math.max(0, Math.round(window.innerHeight / 2 - centre)) + "px";
+    };
     const buildAnchors = () => {
       anchors = [];
+      frameWork();
       const span = document.documentElement.scrollHeight - window.innerHeight;
       const docIds = getDocIds();
       if (span <= 4 || docIds.length === 0) return;
@@ -2605,6 +2652,18 @@ const columns = (blocks: BuildBlock[]): StoryBlock[][] =>
         anchors.push({ s, fy: fyOf(k, docIds.length) });
         prev = s;
       }
+      // the builds' marks: the scroll where each object sits centred
+      const rail = comet.closest<HTMLElement>("[data-rail]");
+      rail?.querySelectorAll<HTMLElement>("[data-mark-for]").forEach((m) => {
+        const fy = parseFloat(m.style.getPropertyValue("--fy"));
+        const obj = document.getElementById(m.dataset.markFor || "")?.querySelector<HTMLElement>(m.dataset.center || "");
+        if (!Number.isFinite(fy) || !obj || obj.offsetParent == null) return;
+        const r = obj.getBoundingClientRect();
+        const s = Math.min(span, Math.max(0, Math.round(r.top + window.scrollY + r.height / 2 - window.innerHeight / 2)));
+        anchors.push({ s, fy });
+      });
+      anchors.sort((a, b) => a.s - b.s);
+      for (let k = 1; k < anchors.length; k++) if (anchors[k].s <= anchors[k - 1].s) anchors[k].s = anchors[k - 1].s + 1;
     };
     let ticking = false;
     const measure = () => {
