@@ -217,8 +217,8 @@ export interface Keys {
   noteOff(id: string, when?: number): void;
   /** The arp's one-shot: no id, its own 18 ms fade, booked at `when` for `durSec`. */
   hit(midi: number, when: number, durSec: number, vel?: number): void;
-  /** DIVE: every sounding voice glides `cents` (τ .45 s down, .07 s back); new voices start bent. */
-  bend(cents: number): void;
+  /** DIVE: every sounding voice glides `cents` (τ = tauSec down, default .45; .07 back); new voices start bent. [R2] */
+  bend(cents: number, tauSec?: number): void;
   /** ←/→ on a sounding chord: re-pitch held ids in place (the same zone; a glide of τ). */
   retune(map: Record<string, number>, tauSec?: number): void;
   held(): ReadonlyArray<[string, number]>;   // [id, midi] sounding (hold included) — the chord screen's source
