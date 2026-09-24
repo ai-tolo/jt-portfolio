@@ -1202,6 +1202,12 @@ const columns = (blocks: BuildBlock[]): StoryBlock[][] =>
   .one > .room {
     margin-top: clamp(96px, 18vh, 200px);
   }
+  /* half the air after the landing viewport (Jon, 2026-09-24): the first
+     room's top margin and padding at half the others' */
+  .one > .work {
+    margin-top: clamp(48px, 9vh, 100px);
+    padding-top: clamp(14px, 2.5vh, 28px);
+  }
 
   /* ── WORK: objects on the room ground (2026-09-18; the nav word was "learn" until that evening). The room's left
      edge = the 1080 column's left edge (flush with the other rooms); the
@@ -1272,13 +1278,14 @@ const columns = (blocks: BuildBlock[]): StoryBlock[][] =>
   /* the mono caption: small, lightly tracked, clearly under the body */
   .wk-cap {
     margin: 0; /* seated at the run's foot by the module's own column gap */
+    padding-left: 32px; /* on the run's text axis, with transcript · verdict · ticket · deck (Jon, 2026-09-24) */
     max-width: var(--wk-measure);
     font-family: var(--wk-mono);
     font-size: 0.75rem;
-    font-weight: 400;
+    font-weight: 600;
     letter-spacing: 0.04em;
     line-height: 1.5;
-    color: var(--mx-dim);
+    color: var(--mx-ink);
     /* the caption arrives with the run (Jon, 2026-09-22: not visible "until
        the recording stops", the same for the phone): at rest it holds its
        space unseen, as the nodes' words hold theirs, so the story never
@@ -1303,7 +1310,7 @@ const columns = (blocks: BuildBlock[]): StoryBlock[][] =>
      the room. */
   .wk-story {
     position: relative;
-    margin-top: var(--sp-8);
+    margin-top: var(--sp-12);
     border: 1px solid color-mix(in oklab, var(--mx-ink) 16%, transparent);
     border-radius: 28px;
     transition: border-color 560ms ease;
@@ -3274,6 +3281,14 @@ const columns = (blocks: BuildBlock[]): StoryBlock[][] =>
   // handle, and opened by the run itself when it ends untouched. The comet
   // re-measures its knots on any change to the body's height (its own
   // ResizeObserver), so a card opening moves the bead's map with it.
+  // every card closes to the SAME height (Jon, 2026-09-24: the watch's folded
+  // card matches the phone's): the shortest card's natural peek — its first
+  // paragraph whole plus the 64px the fade takes — governs them all
+  const peeks: (() => number)[] = [];
+  const settles: (() => void)[] = [];
+  const sharedPeek = () => Math.min(...peeks.map((f) => f()));
+  let settling = 0;
+  const settleAll = () => { window.clearTimeout(settling); settling = window.setTimeout(() => settles.forEach((f) => f()), 30); };
   document.querySelectorAll<HTMLElement>("[data-story]").forEach((card) => {
     const clip = card.querySelector<HTMLElement>(".wk-story-clip");
     const btn = card.querySelector<HTMLButtonElement>(".wk-more");
@@ -3282,9 +3297,10 @@ const columns = (blocks: BuildBlock[]): StoryBlock[][] =>
     const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     let touched = false;
     const isOpen = () => card.hasAttribute("data-open");
-    // the peek: the first paragraph whole, then 64px that the fade takes
-    const peek = () => Math.ceil(first.offsetTop + first.offsetHeight + 64);
+    peeks.push(() => Math.ceil(first.offsetTop + first.offsetHeight + 64));
+    const peek = () => sharedPeek();
     const settle = () => { if (!isOpen()) clip.style.height = peek() + "px"; };
+    settles.push(settle);
     const open = () => {
       if (isOpen()) return;
       const from = clip.getBoundingClientRect().height;
@@ -3314,8 +3330,8 @@ const columns = (blocks: BuildBlock[]): StoryBlock[][] =>
     if (hero) {
       new MutationObserver(() => { if (!touched && hero.classList.contains("s6")) open(); }).observe(hero, { attributes: true, attributeFilter: ["class"] });
     }
-    settle();
-    if (document.fonts && document.fonts.ready) document.fonts.ready.then(settle);
-    new ResizeObserver(settle).observe(clip.firstElementChild as Element);
+    new ResizeObserver(settleAll).observe(clip.firstElementChild as Element);
   });
+  settleAll();
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(settleAll);
 </script>
