@@ -262,8 +262,9 @@ async function leg(name) {
       finally { await cdp.send("Emulation.setCPUThrottlingRate", { rate: 1 }).catch(() => {}); }
       const rs = th.xs.map(([, v]) => v), g0 = th.g0, g1 = th.g1, pb1 = await page.evaluate(PLAYBACK);
       const pb = pb0 && pb1 ? ` · Chrome's playbackStats in the same window: underrunEvents +${pb1.ev - pb0.ev}, underrunDuration +${((pb1.dur - pb0.dur) * 1000).toFixed(1)} ms` : " · (no ctx.playbackStats)";
-      row("throttle 4× · glitches().gaps 0", g1.gaps === 0,
-        `gaps ${g1.gaps} (+${g1.gaps - g0.gaps} in the window) · blocks +${g1.blocks - g0.blocks} in ${(th.wall / 1000).toFixed(1)} s · maxGapMs ${g1.maxGapMs.toFixed(1)} · lagMs +${((g1.lagMs ?? 0) - (g0.lagMs ?? 0)).toFixed(1)}${pb}`);
+      // judged across the 20 s window (the counts are cumulative since boot: a gap before the throttle is not this row's)
+      row("throttle 4× · glitches().gaps 0", g1.gaps - g0.gaps === 0 && g1.blocks > g0.blocks,
+        `+${g1.gaps - g0.gaps} gaps in the window (${g1.gaps} since boot) · blocks +${g1.blocks - g0.blocks} in ${(th.wall / 1000).toFixed(1)} s · maxGapMs ${g1.maxGapMs.toFixed(1)} · lagMs +${((g1.lagMs ?? 0) - (g0.lagMs ?? 0)).toFixed(1)}${pb}`);
       row("throttle 4× · rms stays > −60 dBFS", rs.length > 0 && Math.min(...rs) > RMS_MIN,
         `min ${dB(Math.min(...rs))} · median ${dB(median(rs))} over ${rs.length} reads in ${(th.wall / 1000).toFixed(1)} s`);
     }

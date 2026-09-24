@@ -22,8 +22,10 @@
 //
 // SOLO rides the three bus nodes (τ 5 ms), never the gain/mute nodes (E §7); while any solo is on, the kick's duck
 // is skipped (the Studio's core.ts:1202: drums cannot see the solo, so their effects.duckHit is wrapped here).
-// MASTER STOP: harmony, keys, bass, drums, effects.hush, time, out.panic, in that order; registered with stop.ts's
-// silencer registry, whose capture-phase Escape listener sweeps it.
+// MASTER STOP: keys, harmony, bass, drums, effects.hush, time, out.panic, in that order; registered with stop.ts's
+// silencer registry, whose capture-phase Escape listener sweeps it. The keys go FIRST: the harmony's stop releases its
+// held ids through keys.noteOff, the MUSICAL release (90 ms), which takes them out of the sampler's voice map, so a
+// keys.stop() after it found nothing to put down on its 30 ms ramp (measured: held notes −90 dBFS at 96 ms, not 36).
 // WAKE: ctx.resume() on every call until the context RUNS (a non-activating key, Escape, rejects or waits: the next
 // gesture tries again, signal-studio-page/src/page/main.ts:270-273), then effects.mountFirst() once.
 
@@ -293,8 +295,9 @@ export async function createInstrument(d: InstrumentDeps): Promise<SignalInstrum
   // ── the master stop ────────────────────────────────────────────────────────────────────────────────────
   function stop(): void {
     const step = (what: string, fn: () => void): void => { try { fn(); } catch (e) { warn(`stop: ${what}`, e); } };
-    step('harmony', () => rawHarmony.stop());   // pool cleared, hold + arp off, pads released, gate + dive back
-    step('keys', () => rawKeys.stop());         // every voice down on a 30 ms ramp, the dive dropped
+    step('keys', () => rawKeys.stop());         // every voice down on a 30 ms ramp, booked plucks un-booked, the dive dropped
+    step('harmony', () => rawHarmony.stop());   // pool cleared, hold + arp off, pads released, gate + dive back (its
+                                                // noteOffs find the keys already down: nothing re-releases at 90 ms)
     step('bass', () => rawBass.stop());         // the drone τ 10 ms, booked hits cancelled, sounding hits 5 ms
     step('bass gate', shutBass);                // … and its 10-20 Hz high-pass tail shut off behind them
     step('drums', () => rawDrums.stop());       // booked hits cancelled, sounding τ 4 ms, the stop gate shut

@@ -166,6 +166,10 @@ export const mountBassView: MountView = (root, inst) => {
   let st: BassState = b0;
   let follow = 36;         // the note the bass last followed: 65.4 Hz = C1 at boot (core.ts bassTarget)
   let noteKey = '';
+  // what the bass follows = what SOUNDS: the harmony's sounding() (the arp pool while the arp runs, when keys.held() is
+  // empty: the arp books one-shots) when the instance has it, else the held keys
+  const HS = (inst.harmony ?? {}) as unknown as { sounding?: () => ReadonlyArray<[string, number]> };
+  const soundingNow = (): ReadonlyArray<[string, number]> => (typeof HS.sounding === 'function' ? HS.sounding() : inst.keys.held());
   const setK = (k: Knob, v: number): void => { if (Math.abs(k.get() - v) > 1e-6) k.set(v); };
   const paintNote = (): void => {
     const pinned = st.root != null && !st.armed;
@@ -173,7 +177,7 @@ export const mountBassView: MountView = (root, inst) => {
     if (st.root != null) m = st.root;
     else {
       let lo = Infinity;
-      for (const [, midi] of inst.keys.held()) if (midi < lo) lo = midi;
+      for (const [, midi] of soundingNow()) if (midi < lo) lo = midi;
       if (lo !== Infinity) follow = lo;
       m = follow;
     }

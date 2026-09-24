@@ -360,7 +360,11 @@ const url = (v, root) => `${ROOT}/${v}/${String(root).padStart(3, '0')}.m4a`;
   const heldBefore = heldEvents.length;
   keys.allOff();
   const live = [srcF, ctx.made.srcs.find((s) => s.playbackRate.value === 0.5), h];
-  ok('allOff: every held voice AND the booked hit get the 30 ms ramp', live.every((s) => approx(releaseEnd(s), 0.03, 1e-9)));
+  ok('allOff: every held voice gets the 30 ms ramp', live.slice(0, 2).every((s) => approx(releaseEnd(s), 0.03, 1e-9)));
+  const hEv = voiceGainOf(h).gain.events, hCut = hEv.findIndex((e) => e[0] === 'cancel');
+  ok('…and the hit booked ahead (at 0.5) never plays: stopped at now, before its start, its envelope cancelled to 0',
+    h.stops.at(-1) === 0 && h.stops.at(-1) < h.starts[0][0] && hCut >= 0 && same(hEv.slice(hCut), [['cancel', 0], ['set', 0, 0]]),
+    JSON.stringify({ stops: h.stops, starts: h.starts, ev: hEv }));
   ok('…held() empty and onHeldChange fired with []', keys.held().length === 0 && heldEvents.length === heldBefore + 1 && same(heldEvents.at(-1), []));
 
   keys.noteOn('kKeyA', 60);

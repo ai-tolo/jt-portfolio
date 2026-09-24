@@ -383,6 +383,16 @@ export function createMockSamplePlayer(ctx: BaseAudioContext): SamplePlayer {
           // the one rule is the EARLIEST ramp end wins — a later-ending re-stop must not UN-choke.
           if (done) return;
           const t = Math.max(at ?? ctx.currentTime, ctx.currentTime);
+          // [SIGNAL R1 review] a voice BOOKED ahead and stopped before its start (the arp's plucks inside the horizon
+          // when the master stop / ARP off / allOff comes) never plays: a stop before the start is the Web Audio law
+          // for that. The ramp below would anchor at the gain param's DEFAULT (1: its automation starts at `when`),
+          // cancel the fade-in, and let the pluck start unfaded at up to 0.67 for 25 ms after the stop.
+          if (t < when) {
+            if (pendingStopEnd <= t) return;              // already un-booked
+            pendingStopEnd = t;
+            try { g.gain.cancelScheduledValues(t); g.gain.setValueAtTime(0, t); src.stop(t); } catch { /* already stopped */ }
+            return;
+          }
           const release = Math.max(0.0005, releaseSec ?? fout); // default = the old declick fadeOut
           const end = t + release;
           if (end >= pendingStopEnd) return;

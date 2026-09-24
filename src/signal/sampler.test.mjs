@@ -168,6 +168,29 @@ console.log('\n[mock-player] stop(when, releaseSec) — re-stop tightens, never 
   ok('release floor 0.5ms (never a hard cut)', approx(end2, 2.0005, 1e-6), `end ${end2}`);
 }
 
+console.log('\n[mock-player] a stop BEFORE the voice starts un-books it (SIGNAL R1 review: the master stop vs a booked pluck)');
+{
+  const ctx = fakeCtx();
+  const player = createMockSamplePlayer(ctx);
+  const buf = fakeBuf(48000, [new Float32Array(48000)]);
+  ctx.currentTime = 1.0;
+  const v = player.play({ buffer: buf, when: 1.02, duration: 0.2, gain: 0.9, destination: { connect() {} } });   // an arp pluck 20 ms ahead
+  const g = ctx.made.gains[0], src = ctx.made.srcs[0];
+  const nEv = g.gain.events.length;
+  v.stop(undefined, 0.03);                                                                                           // allOff at 1.0
+  const tail = g.gain.events.slice(nEv);
+  ok('the source stops at now, before its start: it never plays', src.stops.at(-1) === 1.0 && src.starts[0][0] === 1.02 && src.stops.at(-1) < src.starts[0][0]);
+  ok('its envelope is cancelled and held at 0 (no ramp anchored at the param\'s default 1)',
+    JSON.stringify(tail) === JSON.stringify([['cancel', 1.0], ['set', 0, 1.0]]), JSON.stringify(tail));
+  const n2 = g.gain.events.length, s2 = src.stops.length;
+  v.stop(undefined, 0.03);
+  ok('a second stop after it is a no-op', g.gain.events.length === n2 && src.stops.length === s2);
+  const v3 = player.play({ buffer: buf, when: 1.0, loop: true, destination: { connect() {} } });                   // started (when = now)
+  const g3 = ctx.made.gains[1];
+  v3.stop(undefined, 0.03);
+  ok('a voice that has started still gets its release ramp', approx(g3.gain.events.filter((e) => e[0] === 'ramp' && e[1] === 0).at(-1)[2], 1.03));
+}
+
 console.log('\n[mock-player] setRate(rate, when, tau) — tau clamp 0.005..1.0 (W15)');
 {
   const ctx = fakeCtx();

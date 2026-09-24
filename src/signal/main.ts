@@ -5,8 +5,10 @@
 //   decodes on the suspended context) ─▶ instrument.load(row) ─▶ the four views ─▶ the keymap ─▶ the store follows
 //   onChange ─▶ (?mute=1 | ?test=1) window.__signal
 //
-// SOUND SAFETY (types.ts): nothing sounds before the first gesture. A context that an autoplay flag or an engaged
-// origin starts RUNNING is suspended at once (a saved "drums on" must not start the beat on load). The first
+// SOUND SAFETY (types.ts): nothing sounds before the first gesture. A new context reports 'suspended' even where
+// autoplay is allowed, then STARTS on its own tens of ms later (measured: the page in Playwright Chromium, 76 ms; a
+// saved "drums on" played the beat on load at −9 dBFS), so it is suspended at once, whatever it reports, and never
+// awaited (WebKit holds that promise while the context has not started). The first
 // pointerdown/keydown anywhere on the window resumes it, in the CAPTURE phase and registered BEFORE the keymap, so
 // the resume is asked for before the same key becomes a note; a note pressed before the voice's first batch lands
 // waits in the keys' pending set and sounds when it lands if still held (lane K). The listeners stay: Escape is not
@@ -61,7 +63,7 @@ export async function boot(root: HTMLElement): Promise<Booted | null> {
 
   // ── the context, suspended ────────────────────────────────────────────────────────────────────────────
   const ctx = makeContext();
-  if (ctx.state === 'running') { try { await ctx.suspend(); } catch { /* */ } }
+  try { void ctx.suspend().catch(() => { /* a closed context */ }); } catch { /* */ }
 
   // ── the first gesture (capture, before the keymap) ───────────────────────────────────────────────────
   let inst: SignalInstrumentX | null = null;

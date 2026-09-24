@@ -3,8 +3,11 @@
 //
 // An AudioWorkletProcessor 'sig-glitch' hung as a SINK (one input, NO output) on a tap: the out's post-clamp node,
 // or nothing. Every process() call is one render quantum. It counts them (`blocks`) and reads the global
-// `currentFrame`: when the frame advanced by MORE than 1.5 quanta since the previous call, quanta were skipped, a
-// dropout (`gaps`; `maxGapMs` = the longest stretch of frames no call covered). The counts are posted to the node on
+// `currentFrame`: when the frame advanced by MORE than 1.5 quanta beyond what the calls so far rendered, quanta were
+// skipped, a dropout (`gaps`; `maxGapMs` = the longest stretch of frames no call covered). A call that finds the frame
+// NOT advanced (Chromium hands process() a stale currentFrame now and then while the main thread holds the graph,
+// then catches up with a double or triple step on the next call: MEASURED, the r1-G probe, frame span = exactly
+// (calls − 1) × 128) owes its quantum to the next step, which is then no gap. The counts are posted to the node on
 // the first block and then every 250 ms of audio time, so read() is at most 250 ms stale; blocks 0 = installed but no
 // quantum rendered yet (a suspended context). What `gaps` cannot see: an underrun. The graph renders every quantum,
 // late but in order, and currentFrame never skips (MEASURED in Chromium, the r1-S smoke: a render thread overloaded for
@@ -18,7 +21,8 @@
 // Its arithmetic is GAP_MATH_SRC, which glitch-worklet's suite evaluates as well: the tested maths IS the shipped maths.
 
 export const GLITCH_PROCESSOR = 'sig-glitch';
-/** A call that finds currentFrame more than this many quanta on from the last one is a dropout. */
+/** A call that finds currentFrame more than this many quanta on from the last one (after any quantum a stale call
+ *  before it still owed) is a dropout. */
 export const GAP_QUANTA = 1.5;
 /** The processor posts its counts this often (audio time). */
 export const GLITCH_POST_MS = 250;
@@ -43,17 +47,26 @@ export interface GlitchMeter {
  *   gapInit()                    → a fresh state
  *   gapStep(st, frame, quantum)  → one process() call at `frame` (the global currentFrame); `quantum` = its length
  *   gapRead(st, sampleRate)      → { blocks, gaps, maxGapMs }
- * The first call is never a gap; a frame that does not advance (it never should) re-seats without counting.
+ * The first call is never a gap. A frame that does not advance a whole quantum (a stale currentFrame: Chromium, under
+ * load) is no gap either: the frames it fell short by are OWED, and the next advancing step pays them back first (the
+ * catch-up step after a stale call is 2 or 3 quanta, and no quantum was skipped). A debt the next step does not use is
+ * dropped with it: only the step straight after the stale calls may cancel against them.
  */
 export const GAP_MATH_SRC = `
-function gapInit() { return { blocks: 0, gaps: 0, maxGapFrames: 0, last: -1 }; }
+function gapInit() { return { blocks: 0, gaps: 0, maxGapFrames: 0, last: -1, owed: 0 }; }
 function gapStep(st, frame, quantum) {
   st.blocks++;
   if (st.last >= 0) {
     var d = frame - st.last;
-    if (d > ${GAP_QUANTA} * quantum) {
-      st.gaps++;
-      if (d - quantum > st.maxGapFrames) st.maxGapFrames = d - quantum;
+    if (d < quantum) {
+      st.owed += quantum - d;
+    } else {
+      var miss = d - quantum - st.owed;
+      st.owed = 0;
+      if (miss > ${GAP_QUANTA - 1} * quantum) {
+        st.gaps++;
+        if (miss > st.maxGapFrames) st.maxGapFrames = miss;
+      }
     }
   }
   st.last = frame;

@@ -121,6 +121,19 @@ console.log('\n[gaps] the dropout arithmetic on synthetic currentFrame sequences
   const at441 = run([0, 128, 256 + 441], 128, 44100);
   ok('at 44.1 kHz: 441 missing frames = 10 ms', at441.gaps === 1 && near(at441.maxGapMs, 10), JSON.stringify(at441));
   eq('no sample rate: maxGapMs 0, never NaN', run([0, 512], 128, 0), { blocks: 2, gaps: 1, maxGapMs: 0 });
+  // Chromium under load (the r1-G probe, CPU ×4): process() gets the SAME currentFrame twice, then the next call
+  // catches up by 2 (or 3) quanta; the frame span = (calls − 1) × 128, so no quantum was skipped
+  eq('a stale frame, then a double step: no gap', run([0, 128, 256, 256, 512, 640]), { blocks: 6, gaps: 0, maxGapMs: 0 });
+  eq('two stale frames, then a triple step: no gap', run([0, 128, 128, 128, 512, 640]), { blocks: 6, gaps: 0, maxGapMs: 0 });
+  const probe = [0];
+  for (let i = 1; i < 400; i++) probe.push(probe[i - 1] + (i % 50 === 7 ? 0 : i % 50 === 8 ? 256 : 128));
+  eq('the probe\'s pattern, eight stale calls in 400 (span = (calls − 1)·128): no gap', run(probe), { blocks: 400, gaps: 0, maxGapMs: 0 });
+  const real = run([0, 128, 256, 256, 512, 896]);
+  ok('a real dropout after a caught-up stale frame still counts: 256 frames', real.gaps === 1 && near(real.maxGapMs, 256 / 48), JSON.stringify(real));
+  const short = run([0, 128, 128, 512]);
+  ok('a stale frame pays back ONE quantum only: a step of 3 after it = one quantum missing', short.gaps === 1 && near(short.maxGapMs, 128 / 48), JSON.stringify(short));
+  const stale = run([0, 128, 128, 256, 384, 640]);
+  ok('a debt the next step did not use is dropped: a later skipped quantum counts', stale.gaps === 1 && near(stale.maxGapMs, 128 / 48), JSON.stringify(stale));
 }
 
 /** Evaluate the whole worklet module in a fake AudioWorkletGlobalScope: currentFrame + sampleRate as globals. */
