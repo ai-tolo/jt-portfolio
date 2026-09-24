@@ -1,0 +1,74 @@
+/* ═══ SIGNAL R1 · lane V1 · THE DRUMS TOWER: its layout + its own components (view/drums-view.ts builds the DOM) ═════════
+   from jt-portfolio-signal/src/components/signal/look/LookB.astro:281, 350-357, 373-399 (6392211): the R0 look-B mock's
+   drums tower (head, cover glass, the LED grid, the body split, the texture housing, the delay column, the footer), made
+   live. The MATERIAL is not re-declared here: the tower, glass, caps, seg, knobs, chip, rail, hairlines come from
+   src/styles/signal/material.css (every recipe there sits in @layer sg-material, so this unlayered sheet wins where it
+   speaks, and only speaks to geometry + the parts the material has no recipe for: the grid, the lane pads, the power
+   cap's ink). Geometry at the 1120 device: a 290-wide tower (the chassis gives the slot; the tower fills it), rows
+   head 30 · cover 58 · grid 95 · pattern 28 · body (flex) · footer 36, gaps 8. Every rule sits under .sig. ═══ */
+
+.sig .sd-tower { width: 100%; height: 100%; min-height: 0; }
+
+/* ── the header rail: power cap + the kit's name glass ── */
+.sig .sd-head { flex: none; display: flex; align-items: center; gap: 8px; height: 30px; }
+.sig .sd-pow { flex: none; width: 70px; height: 26px; letter-spacing: .16em; }
+.sig .sd-pow.on { color: color-mix(in srgb, var(--acc) 42%, #fff); }
+.sig .sd-name { flex: 1; min-width: 0; }
+
+/* ── the cover glass (filter-curve.ts's .si-fcurve fills the host; the host carries the value ghost above it) ── */
+.sig .sd-eqhost { position: relative; flex: none; height: 58px; }
+.sig .sd-eqhost > .si-screen { position: absolute; inset: 0; }
+
+/* ── THE GRID: an LED matrix under glass. Six lanes × sixteen cells; a beat gap every four; the lane word is a pad.
+   Cells sit under the glass's scanlines (z 2 < 5). Tiers: 1 ghost (a low ember) · 2 mid (lit) · 3 accent (hot).
+   The playhead column (.ph) tints the empty cells and turns the lit ones white-hot, lit from inside the glass. ── */
+.sig .sd-grid { flex: none; display: flex; flex-direction: column; gap: 3px; padding: 6px 7px; }
+.sig .sd-lane { display: flex; align-items: stretch; gap: 2px; height: 11px; }
+.sig .sd-pad {
+  position: relative; z-index: 2; flex: none; width: 31px; align-self: center; height: 13px; margin: -1px 0; padding: 0; text-align: left;
+  font: 500 6.5px/13px var(--sg-mono); letter-spacing: .1em; text-transform: uppercase; color: #7d8fa3; white-space: nowrap;
+  cursor: pointer; transition: color .15s linear, text-shadow .15s linear;
+}
+.sig .sd-pad:hover { color: #c4d2e0; }
+.sig .sd-pad:active, .sig .sd-pad.hit {
+  color: color-mix(in srgb, var(--acc) 55%, #fff4ec); text-shadow: 0 0 6px color-mix(in srgb, var(--acc) 85%, transparent); transition: none;
+}
+.sig .sd-cell {
+  position: relative; z-index: 2; flex: 1; min-width: 0; padding: 0; border-radius: 2px; cursor: pointer;
+  background: #0f151d; box-shadow: inset 0 0 0 1px rgba(0,0,0,.55), inset 0 1px 0 rgba(255,255,255,.03);
+}
+.sig .sd-cell.beat { margin-left: 3px; }
+.sig .sd-cell:hover { outline: 1px solid color-mix(in srgb, var(--acc) 50%, transparent); outline-offset: 0; }
+.sig .sd-cell.v1 { background: color-mix(in srgb, var(--acc) 30%, #0f151d); }
+.sig .sd-cell.v2 { background: linear-gradient(180deg, #ffaa78, #ff7a3c 70%, #d8581f); box-shadow: inset 0 1px 0 rgba(255,230,210,.5); }
+.sig .sd-cell.v3 { background: linear-gradient(180deg, #ffd0b0, #ff9555 60%, #ff7a3c); box-shadow: inset 0 1px 0 rgba(255,245,235,.7), inset 0 0 0 1px rgba(255,214,190,.35); }
+.sig .sd-cell.ph { background: color-mix(in srgb, var(--acc) 16%, #121922); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--acc) 30%, transparent); }
+.sig .sd-cell.ph.v1 { background: color-mix(in srgb, var(--acc) 52%, #16100c); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--acc) 45%, transparent); }
+.sig .sd-cell.ph:is(.v2, .v3) {
+  background: radial-gradient(circle at 50% 40%, #fffaf5, #ffc9a2 55%, #ff8a48);
+  box-shadow: 0 0 6px 1px color-mix(in srgb, var(--acc) 80%, transparent), inset 0 0 0 1px rgba(255,255,255,.5);
+}
+.sig .sd-cell:focus-visible { outline-offset: 1px; }
+
+/* ── the pattern seg ── */
+.sig .sd-pat { flex: none; }
+
+/* ── the body: [SWING · DENSITY / TEXTURE housing / SIDECHAIN] | hairline | [DELAY] ── */
+.sig .sd-body { flex: 1; min-height: 0; display: flex; gap: 10px; }
+.sig .sd-left { flex: 1; min-width: 0; display: flex; flex-direction: column; justify-content: space-between; padding: 4px 0 2px; }
+.sig .sd-krow { display: flex; justify-content: space-evenly; align-items: flex-start; }
+.sig .sd-tex { display: flex; align-items: center; gap: 10px; padding: 7px 10px 6px; }
+.sig .sd-texseg { flex: 1; min-width: 0; }
+.sig .sd-body > .sg-vdiv { margin: 6px 0; }
+.sig .sd-delay { flex: none; width: 76px; display: flex; flex-direction: column; align-items: center; justify-content: space-between; padding: 2px 0; }
+.sig .sd-dcap { font: 500 7.5px/1 var(--sg-mono); letter-spacing: .24em; margin-right: -.24em; text-transform: uppercase; color: color-mix(in srgb, var(--acc) 60%, #8593a2); }
+.sig .sd-delay .sg-chip { min-width: 36px; height: 15px; font-size: 9.5px; margin-top: 1px; }
+
+/* ── power: the body lights with the drums. Off, the dials fall to steel and the controls recede (lighting only:
+   every control stays live; the Studio's drums-off dim, signal-studio-v6lib/src/views/instrument/styles/drums.ts:215-220, softened) ── */
+.sig .sd-tower:not(.is-on) .sd-body { --arc: var(--sg-steel); }
+.sig .sd-tower:not(.is-on) :is(.sd-pat, .sd-body) { opacity: .62; transition: opacity .35s ease; }
+.sig .sd-tower.is-on :is(.sd-pat, .sd-body) { opacity: 1; transition: opacity .35s ease; }
+
+/* ── the footer rail ── */
+.sig .sd-foot { height: 36px; }
