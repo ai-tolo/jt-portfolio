@@ -242,16 +242,23 @@ const detected: string[] = Array.isArray(moment.detected) ? (moment.detected as 
 
         <img class="body" src="/archive/phone-blank.png" alt="" width="864" height="1760" decoding="async" loading="lazy" draggable="false" />
 
-        <button class="tap" type="button" data-tap aria-label={`Tap the list: search the library for “${query}”`}>
-          <span class="tap-label" aria-hidden="true">
-            <svg viewBox="0 0 20 20" class="ico"><path d="M4 10a6 6 0 1 0 1.8-4.3" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M4 3v3.5h3.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-            Replay
-          </span>
-        </button>
+        <button class="tap" type="button" data-tap aria-label={`Tap the list: search the library for “${query}”`}></button>
+        {/* after the run: three views of it, before · the search · the moment (Jon, 2026-09-24) */}
+        <div class="views" data-views role="group" aria-label="Views of the run">
+          <button type="button" class="vdot" data-view="rest" aria-label="Before: the recorder" aria-pressed="false"></button>
+          <button type="button" class="vdot" data-view="list" aria-label="The search and its results" aria-pressed="false"></button>
+          <button type="button" class="vdot" data-view="moment" aria-label="The kept moment" aria-pressed="false"></button>
+        </div>
 
         {hasClip && <audio preload="metadata" src={moment.src}></audio>}
       </div>
-      <p class="hint" aria-hidden="true">tap the list</p>
+      <div class="foot">
+        <p class="hint" aria-hidden="true">tap the list</p>
+        <button type="button" class="replay" data-replay aria-label="Replay the run">
+          <svg viewBox="0 0 20 20" class="ico" aria-hidden="true"><path d="M4 10a6 6 0 1 0 1.8-4.3" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M4 3v3.5h3.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          Replay
+        </button>
+      </div>
     </div>
 
     <div class="col">
@@ -291,7 +298,7 @@ const detected: string[] = Array.isArray(moment.detected) ? (moment.detected as 
     --accent: var(--archive-accent, #b9701a);
     /* the screen's rim: intense bright blue to purple, the watch's ring's pair (Jon, 2026-09-22) */
     --ring-a: var(--archive-ring-a, #47B6FF); --ring-b: var(--archive-ring-b, #8A5CF6);
-    --char: 110ms; /* per-character typing delay; mirrored in the script */
+    --char: 220ms; /* per-character typing delay; mirrored in the script */
 
     --oled: #000;
     --sfg: #f5f5f7;
@@ -463,25 +470,54 @@ const detected: string[] = Array.isArray(moment.detected) ? (moment.detected as 
      slow): two seconds, never fully out, never blazing — an EXACT COPY of the
      watch's (IntakeHero.astro) */
   @keyframes touch-breathe { 0%, 100% { opacity: 0.45; } 50% { opacity: 1; } }
-  .tap-label {
-    display: inline-flex; align-items: center; gap: 1.4cqw;
-    padding: 2.4cqw 4.6cqw; border-radius: 999px;
-    background: #ECE9E2; color: #1A1917; /* the page's paper on the screen, as the watch's replay (Jon, 2026-09-24) */
-    font-weight: 500;
-    opacity: 0;
-    transition: background 120ms;
-  }
-  .s6 .tap:hover .tap-label { background: #DDD9CF; }
-  .tap-label .ico { width: 1.1em; height: 1.1em; }
-  .s1 .tap { pointer-events: none; cursor: default; }
-  .s6 .tap {
-    pointer-events: auto; cursor: pointer;
-    top: auto; left: 50%; width: auto; height: auto; bottom: 5.6%;
+  /* once pressed the tap is gone — the replay lives under the phone */
+  .s1 .tap { pointer-events: none; cursor: default; visibility: hidden; }
+  /* THE VIEWS (Jon, 2026-09-24): after the run, three bubbles at the foot of
+     the screen — before · the search · the moment — so the whole thing can
+     be taken in again at the reader's own pace. They arrive last of all,
+     after the caption has settled. */
+  .views {
+    position: absolute; z-index: 3; left: 50%; bottom: 5.2%;
     transform: translateX(-50%);
-    border-radius: 999px;
+    display: flex; gap: 0.4cqw; padding: 0.8cqw 1.4cqw;
+    border-radius: 999px; background: rgba(255, 255, 255, 0.1);
+    opacity: 0; pointer-events: none;
+    transition: opacity 0.4s;
   }
-  .s6 .tap:focus-visible { outline-offset: 0.4cqw; }
-  .s6 .tap-label { opacity: 1; transition: opacity 0.35s 0.25s; }
+  .s6 .views { opacity: 1; pointer-events: auto; transition: opacity 0.6s 2.6s; }
+  .vdot {
+    width: 6cqw; height: 6cqw; padding: 0; border: 0; background: transparent;
+    border-radius: 50%; display: grid; place-items: center; cursor: pointer;
+  }
+  .vdot::before {
+    content: ''; width: 2cqw; height: 2cqw; border-radius: 50%;
+    background: rgba(255, 255, 255, 0.34);
+    transition: background 0.3s, transform 0.3s;
+  }
+  .vdot[aria-pressed='true']::before { background: #ECE9E2; transform: scale(1.3); }
+  .vdot:hover::before { background: rgba(255, 255, 255, 0.6); }
+  .vdot:focus-visible { outline: 0.6cqw solid #ECE9E2; outline-offset: 0.2cqw; }
+  .archive-hero[data-view='rest'] .face-lib { opacity: 0; }
+  .archive-hero[data-view='rest'] .face-rest { opacity: 1; }
+  .archive-hero[data-view='list'] .lib-results { opacity: 1; }
+  .archive-hero[data-view='list'] .lib-count { opacity: 1; }
+  .archive-hero[data-view='list'] .moment { opacity: 0; pointer-events: none; }
+  /* the foot under the phone: the hint at rest, the replay after the run,
+     one slot so nothing below moves */
+  .foot { display: grid; min-height: 30px; align-items: start; justify-items: center; }
+  .foot > * { grid-area: 1 / 1; }
+  .replay {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 8px 14px; border: 0; border-radius: 999px;
+    background: var(--ink); color: var(--ground);
+    font: 500 0.72rem/1 var(--mono); letter-spacing: 0.04em;
+    cursor: pointer; opacity: 0; pointer-events: none;
+    transition: opacity 0.4s, background 120ms, color 560ms ease;
+  }
+  .replay .ico { width: 1.1em; height: 1.1em; }
+  .replay:hover { background: color-mix(in oklab, var(--ink) 82%, var(--ground)); }
+  .replay:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+  .s6 .replay { opacity: 1; pointer-events: auto; transition: opacity 0.6s 2.6s, background 120ms, color 560ms ease; }
 
   .hint {
     margin: 0; text-align: center;
@@ -502,13 +538,6 @@ const detected: string[] = Array.isArray(moment.detected) ? (moment.detected as 
   .s1 .face-lib { opacity: 1; }
   .face-rest { transition: opacity 0.45s; }
   .s1 .face-rest { opacity: 0; }
-  /* after the run, the pointer resting on the screen shows the stock list
-     again (Jon, 2026-09-24): the before under the after; the replay floats
-     above both faces */
-  @media (hover: hover) {
-    .s6 .phone:hover .face-lib { opacity: 0; }
-    .s6 .phone:hover .face-rest { opacity: 1; }
-  }
   .rewind .face-lib { opacity: 0 !important; }
   .rewind .face-rest { opacity: 1 !important; }
 
@@ -769,7 +798,8 @@ const detected: string[] = Array.isArray(moment.detected) ? (moment.detected as 
     .s3 .res, .s4 .moment, .s5 .kept, .s6 .m-more > * { transition: opacity 0.2s; }
     .wave rect { transform: none; }
     .s4 .wave rect { transition: none; }
-    .s4 .trim, .s4 .trim-time, .s4 .ticks, .s4 .scope, .s5 .play, .s6 .tap-label { transition: opacity 0.2s; }
+    .s4 .trim, .s4 .trim-time, .s4 .ticks, .s4 .scope, .s5 .play { transition: opacity 0.2s; }
+    .s6 .views, .s6 .replay { transition: opacity 0.2s 0.6s; }
     .hint, .step, .step::before, .step > * { transition: none; }
     .tap::before, .tap::after { animation: none; opacity: 0.75; }
   }
@@ -778,16 +808,17 @@ const detected: string[] = Array.isArray(moment.detected) ? (moment.detected as 
 <script>
   /* Drives every [data-archive-hero] on the page. Plain JS, no framework. */
   const STAGES = ['s1', 's2', 's3', 's4', 's5', 's6'];
-  const CHAR_MS = 110; // keep equal to --char in the styles
+  const CHAR_MS = 220; // keep equal to --char in the styles
 
   // Offsets (ms) at which each stage class is added.
   function schedule(chars, reduced) {
+    // THE PACE (Jon, 2026-09-24): each step gets room to be taken in
     const t1 = 0;
-    const t2 = t1 + (reduced ? 450 : 800);
-    const t3 = t2 + (reduced ? 0 : chars * CHAR_MS) + (reduced ? 500 : 650);
-    const t4 = t3 + (reduced ? 900 : 1750);
-    const t5 = t4 + (reduced ? 900 : 1800);
-    const t6 = t5 + (reduced ? 900 : 1600);
+    const t2 = t1 + (reduced ? 450 : 900);
+    const t3 = t2 + (reduced ? 0 : chars * CHAR_MS) + (reduced ? 500 : 900);
+    const t4 = t3 + (reduced ? 900 : 2200);
+    const t5 = t4 + (reduced ? 900 : 2200);
+    const t6 = t5 + (reduced ? 900 : 1800);
     return [t1, t2, t3, t4, t5, t6];
   }
 
@@ -800,6 +831,13 @@ const detected: string[] = Array.isArray(moment.detected) ? (moment.detected as 
     const play = root.querySelector('[data-play]');
     const audio = root.querySelector('audio');
     if (!tap) return;
+    const replay = root.querySelector('[data-replay]');
+    const views = Array.from(root.querySelectorAll('[data-views] [data-view]'));
+    const setView = (v) => {
+      if (v) root.dataset.view = v; else delete root.dataset.view;
+      views.forEach((b) => b.setAttribute('aria-pressed', b.dataset.view === v ? 'true' : 'false'));
+    };
+    views.forEach((b) => b.addEventListener('click', () => { if (root.classList.contains('s6')) setView(b.dataset.view); }));
 
     const chars = root.querySelectorAll('[data-query] .ch').length;
     const reduce = window.matchMedia('(prefers-reduced-motion: reduce)');
@@ -838,8 +876,7 @@ const detected: string[] = Array.isArray(moment.detected) ? (moment.detected as 
       say(messages[n]);
       if (n === 6) {
         running = false;
-        tap.removeAttribute('aria-disabled');
-        tap.setAttribute('aria-label', 'Replay the run');
+        setView('moment');
       }
     };
 
@@ -859,6 +896,7 @@ const detected: string[] = Array.isArray(moment.detected) ? (moment.detected as 
       timers.push(window.setTimeout(() => {
         root.classList.remove('rewind', ...STAGES);
         root.dataset.stage = '0';
+        setView(null);
         schedule(chars, reduce.matches).forEach((t, i) => {
           timers.push(window.setTimeout(() => setStage(i + 1), t));
         });
@@ -866,6 +904,7 @@ const detected: string[] = Array.isArray(moment.detected) ? (moment.detected as 
     };
 
     tap.addEventListener('click', run);
+    if (replay) replay.addEventListener('click', run);
 
     // the host (StudioOne's first settle) may FINISH a run it started — the
     // visitor pressed during it, so it lands on its end frame at once — or
@@ -877,8 +916,7 @@ const detected: string[] = Array.isArray(moment.detected) ? (moment.detected as 
       root.classList.add(...STAGES);
       root.dataset.stage = '6';
       running = false;
-      tap.removeAttribute('aria-disabled');
-      tap.setAttribute('aria-label', 'Replay the run');
+      setView('moment');
     });
     root.addEventListener('hero:reset', () => {
       clear();
@@ -886,6 +924,7 @@ const detected: string[] = Array.isArray(moment.detected) ? (moment.detected as 
       root.classList.remove('rewind', ...STAGES);
       root.dataset.stage = '0';
       running = false;
+      setView(null);
       tap.removeAttribute('aria-disabled');
       tap.setAttribute('aria-label', restLabel);
     });
