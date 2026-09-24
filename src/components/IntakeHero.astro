@@ -18,10 +18,15 @@ interface Props {
 }
 const { step = 15, theme = 'auto', class: cls = '' } = Astro.props;
 const runJson = JSON.stringify(run);
+// the host may seat the room's words in the module's own columns (2026-09-24):
+// a `head` slot above the watch (left axis), a `cap` slot at the run's foot
+const hasHead = Astro.slots.has('head');
+const hasCap = Astro.slots.has('cap');
 ---
-<section class={`intake-hero${theme !== 'auto' ? ' ' + theme : ''}${cls ? ' ' + cls : ''}`} data-intake-hero data-step={step} aria-label="Intake: one voice memo becoming tickets">
+<section class={`intake-hero${theme !== 'auto' ? ' ' + theme : ''}${cls ? ' ' + cls : ''}${hasHead ? ' has-head' : ''}`} data-intake-hero data-step={step} aria-label="Intake: one voice memo becoming tickets">
   <script type="application/json" data-intake-run set:html={runJson}></script>
   <div class="grid">
+    {hasHead && <div class="hook"><slot name="head" /></div>}
     <div class="watch-col">
       <figure class="watch" aria-hidden="true">
         <div class="screen">
@@ -133,6 +138,7 @@ const runJson = JSON.stringify(run);
           </div>
         </div>
       </div>
+      {hasCap && <div class="cap"><slot name="cap" /></div>}
     </div>
   </div>
     <div class="fly"></div>
@@ -185,6 +191,23 @@ const runJson = JSON.stringify(run);
   column-gap: calc(6cqw - 5px);
   row-gap: 48px;
   align-items: start;
+}
+/* the room's words seated in the module (Jon's mockup, 2026-09-24): the hook
+   above the watch on the left axis, the run beside BOTH from the top — its
+   first node level with the hook's first line — and the caption at the run's
+   foot. One arrangement with the Archive. */
+.intake-hero.has-head .grid {
+  grid-template-rows: auto 1fr;
+  grid-template-areas: 'hook run' 'watch run';
+  row-gap: 32px;
+}
+.intake-hero .hook { grid-area: hook; min-width: 0; }
+.intake-hero.has-head .watch-col { grid-area: watch; }
+.intake-hero.has-head .run { grid-area: run; }
+.intake-hero .cap { min-width: 0; }
+@container hero (width < 820px) {
+  .intake-hero.has-head .grid { grid-template-rows: auto; grid-template-areas: 'hook' 'watch' 'run'; row-gap: 48px; }
+  .intake-hero .hook { margin-bottom: -16px; }
 }
 /* one column under 820px of module width: the watch fills ~70% of it, centred */
 @container hero (width < 820px) {

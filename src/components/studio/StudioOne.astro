@@ -20,7 +20,7 @@ import illustrations from "./rooms/illustrations-manifest.json";
 import Signal from "../signal/Signal.astro";
 import Transport from "../Transport.astro";
 import Carousel from "../Carousel.astro";
-import { BUILDS } from "./builds-copy";
+import { BUILDS, type BuildBlock } from "./builds-copy";
 import IntakeHero from "../IntakeHero.astro";
 import ArchiveHero from "../ArchiveHero.astro";
 import { WATCH_COPY, ARCHIVE_COPY } from "./objects-copy";
@@ -160,6 +160,15 @@ const SHOW = new Set(MARKS.map((m) => m.id));
 // the watch piece's locked words (headline + paragraphs) frame its object
 const WATCH = BUILDS.find((b) => b.id === "watch")!;
 const ARCHIVE = BUILDS.find((b) => b.id === "archive")!;
+// a story's columns: its blocks split at every `break` (the room's card sets
+// them side by side on desks, stacked on phones); media slots don't print here
+type StoryBlock = Extract<BuildBlock, { type: "p" | "list" }>;
+const columns = (blocks: BuildBlock[]): StoryBlock[][] =>
+  blocks.reduce<StoryBlock[][]>((cols, blk) => {
+    if (blk.type === "break") cols.push([]);
+    else if (blk.type === "p" || blk.type === "list") cols[cols.length - 1].push(blk);
+    return cols;
+  }, [[]]);
 ---
 
 <a class="skip" href="#work">Skip to the work</a>
@@ -264,30 +273,58 @@ const ARCHIVE = BUILDS.find((b) => b.id === "archive")!;
   {SHOW.has("work") && <section class="work room" id="work" aria-labelledby="work-t">
     <h2 id="work-t" class="sr-only">Work</h2>
     <div class="objects">
-      {/* hook (locked) → dek (draft) → the object → caption (draft) → the
-          read (locked): the story around the thing, in Jon's voice */}
+      {/* ONE ARRANGEMENT for both objects (Jon's mockup, 2026-09-24): the hook
+          top-left, the object under it on the left axis, the run beside both
+          from the top with the caption at its foot — the module seats the
+          room's words in its own columns through its `head` and `cap` slots —
+          then the story, in a card that opens (closed, it shows its first
+          paragraph; it opens itself when the run ends untouched). The words
+          stay locked in builds-copy.ts. */}
       <article class="wk" id="build-watch">
-        <header class="wk-head">
-          <h3 class="wk-hook">{WATCH.headline}</h3>
-        </header>
-        <IntakeHero class="obj obj-intake" />
-        <p class="wk-cap">{WATCH_COPY.caption}</p>
-        <div class="wk-read">
-          {WATCH.blocks.map((blk) => blk.type === "p" && <p class="wk-p" set:html={blk.html} />)}
+        <IntakeHero class="obj obj-intake">
+          <h3 slot="head" class="wk-hook">{WATCH.headline}</h3>
+          <p slot="cap" class="wk-cap">{WATCH_COPY.caption}</p>
+        </IntakeHero>
+        <div class="wk-story" data-story>
+          <div class="wk-story-clip" id="story-watch">
+            <div class="wk-story-body">
+              {columns(WATCH.blocks).map((col) => (
+                <div class="wk-col">
+                  {col.map((blk) =>
+                    blk.type === "p" ? <p class:list={["wk-p", { hinge: blk.hinge }]} set:html={blk.html} /> : <ul class="wk-list">{blk.items.map((it) => <li set:html={it} />)}</ul>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+          <button class="wk-more" type="button" aria-expanded="false" aria-controls="story-watch" aria-label="Read the whole story">
+            <svg class="wk-chev" viewBox="0 0 20 20" aria-hidden="true"><path d="M5 8l5 5 5-5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </button>
         </div>
       </article>
       {/* object two: THE ARCHIVE (Jon's Claude Design module, 2026-09-18) —
           the phone at rest is the stock Voice Memos list; a tap searches
-          the real library. The words around it are the locked archive
-          piece; the module's own story is off (story={false}) */}
+          the real library. story={false}: the room frames it */}
       <article class="wk" id="build-archive">
-        <header class="wk-head">
-          <h3 class="wk-hook">{ARCHIVE.headline}</h3>
-        </header>
-        <ArchiveHero story={false} />
-        <p class="wk-cap">{ARCHIVE_COPY.caption}</p>
-        <div class="wk-read">
-          {ARCHIVE.blocks.map((blk) => blk.type === "p" && <p class="wk-p" set:html={blk.html} />)}
+        <ArchiveHero story={false}>
+          <h3 slot="head" class="wk-hook">{ARCHIVE.headline}</h3>
+          <p slot="cap" class="wk-cap">{ARCHIVE_COPY.caption}</p>
+        </ArchiveHero>
+        <div class="wk-story" data-story>
+          <div class="wk-story-clip" id="story-archive">
+            <div class="wk-story-body">
+              {columns(ARCHIVE.blocks).map((col) => (
+                <div class="wk-col">
+                  {col.map((blk) =>
+                    blk.type === "p" ? <p class:list={["wk-p", { hinge: blk.hinge }]} set:html={blk.html} /> : <ul class="wk-list">{blk.items.map((it) => <li set:html={it} />)}</ul>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+          <button class="wk-more" type="button" aria-expanded="false" aria-controls="story-archive" aria-label="Read the whole story">
+            <svg class="wk-chev" viewBox="0 0 20 20" aria-hidden="true"><path d="M5 8l5 5 5-5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </button>
         </div>
       </article>
     </div>
@@ -1220,32 +1257,7 @@ const ARCHIVE = BUILDS.find((b) => b.id === "archive")!;
     width: 100%;
     max-width: 1080px;
   }
-  .wk-head {
-    margin: 0 0 var(--sp-8);
-    max-width: var(--wk-measure);
-  }
-  /* the Archive's title stands over its phone, on the right (Jon, 2026-09-22),
-     once the module runs two columns; stacked, every title sits left */
   .wk { container-type: inline-size; }
-  @container (min-width: 820px) {
-    /* THE ARCHIVE'S WORDS (round 2, 2026-09-22): the title above the phone
-       on its left edge; the caption and the story beneath, left-aligned, as
-       wide as the watch's. The module mirrors the watch's COLUMNS — words +
-       object | run ↔ rail | words + object — not its reading direction.
-       (Before: the title and caption ragged-right against the phone's right
-       edge — an edge that moves with the viewport's height, since the phone
-       is height-capped — and the story ragged-left on its left: three axes
-       in mixed directions, a three-line caption.) */
-    /* the title stands over the phone, on its left edge */
-    #build-archive .wk-head { margin-left: 56cqw; margin-right: 0; max-width: none; text-align: left; }
-    /* the caption and the story are as wide as the watch's: from the dots'
-       left edge (the dot's centre is 50cqw, the dot 10px) to the module's
-       right edge — 545px on a 1080 module against the watch's 576 (Jon,
-       2026-09-22: "as wide as the vertical dots are, that way it matches the
-       watch") */
-    #build-archive .wk-cap,
-    #build-archive .wk-read { margin-left: calc(50cqw - 5px); margin-right: 0; max-width: none; text-align: left; }
-  }
   .wk-hook {
     margin: 0;
     font-family: var(--wk-display);
@@ -1259,7 +1271,7 @@ const ARCHIVE = BUILDS.find((b) => b.id === "archive")!;
   }
   /* the mono caption: small, lightly tracked, clearly under the body */
   .wk-cap {
-    margin: var(--sp-6) 0 0;
+    margin: 0; /* seated at the run's foot by the module's own column gap */
     max-width: var(--wk-measure);
     font-family: var(--wk-mono);
     font-size: 0.75rem;
@@ -1282,10 +1294,43 @@ const ARCHIVE = BUILDS.find((b) => b.id === "archive")!;
       transition: color 560ms ease;
     }
   }
-  .wk-read {
-    margin-top: var(--sp-12);
-    max-width: var(--wk-measure);
+  /* ── THE STORY: a card under the object (Jon's mockup, 2026-09-24).
+     Closed, it shows the first paragraph and lets the rest dissolve under a
+     fade; its whole lower edge is the handle. It opens on its own when the
+     object's run reaches its end and no hand has touched it — the run
+     ensures the story the way the host ensures the run — and never fights a
+     hand that has. Two columns on desks, one on phones; one type system with
+     the room. */
+  .wk-story {
+    position: relative;
+    margin-top: var(--sp-8);
+    border: 1px solid color-mix(in oklab, var(--mx-ink) 16%, transparent);
+    border-radius: 28px;
+    transition: border-color 560ms ease;
   }
+  .wk-story-clip {
+    overflow: hidden;
+    transition: height 0.55s cubic-bezier(0.2, 0.8, 0.2, 1);
+  }
+  /* the cut: the lines past the first paragraph dissolve into the ground */
+  .wk-story:not([data-open]) .wk-story-clip {
+    -webkit-mask-image: linear-gradient(to bottom, #000 calc(100% - 64px), transparent);
+    mask-image: linear-gradient(to bottom, #000 calc(100% - 64px), transparent);
+  }
+  .wk-story-body {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0 var(--sp-12);
+    padding: var(--sp-8) var(--sp-8) var(--sp-4);
+  }
+  @container (min-width: 820px) {
+    .wk-story-body {
+      grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+      padding: var(--sp-12) var(--sp-12) var(--sp-6);
+    }
+  }
+  .wk-col { min-width: 0; }
+  .wk-col > :last-child { margin-bottom: 0; }
   .wk-p {
     margin: 0 0 var(--sp-4);
     font-size: 1rem;
@@ -1294,8 +1339,61 @@ const ARCHIVE = BUILDS.find((b) => b.id === "archive")!;
     color: var(--mx-ink);
     transition: color 560ms ease;
   }
-  .wk-p:last-child {
-    margin-bottom: 0;
+  /* the hinge line, in the Intake's red */
+  .wk-p.hinge {
+    color: #ff6b4a;
+    margin-block: var(--sp-6);
+  }
+  .wk-p.hinge em { font-style: italic; }
+  .wk-list {
+    margin: 0 0 var(--sp-4);
+    padding: 0 0 0 1.1em;
+    font-size: 1rem;
+    line-height: 1.6;
+    color: var(--mx-ink);
+  }
+  .wk-list li { margin: 0 0 6px; padding-left: 0.2em; }
+  .wk-list li::marker { color: var(--mx-dim); }
+  /* the kind, in the room's mono label face (the run's transcript · verdict · ticket · deck) */
+  .wk-list .k {
+    display: inline-block;
+    margin-right: 0.45em;
+    font: 500 0.6875rem/1 var(--wk-mono);
+    letter-spacing: 0.12em;
+    color: var(--mx-dim);
+    transform: translateY(-1px);
+  }
+  /* the handle: the card's whole lower edge; the chevron breathes while the
+     story is folded (the touch signal's vocabulary) and turns when it opens */
+  .wk-more {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    height: 56px;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    border-radius: 0 0 28px 28px;
+    background: transparent;
+    color: var(--mx-dim);
+    cursor: pointer;
+    transition: color 0.3s;
+  }
+  .wk-more:hover { color: var(--mx-ink); }
+  .wk-more:focus-visible { outline: 2px solid var(--mx-ink); outline-offset: -6px; }
+  .wk-chev {
+    width: 20px;
+    height: 20px;
+    transition: transform 0.45s cubic-bezier(0.2, 0.8, 0.2, 1);
+    animation: wk-breathe 2s ease-in-out infinite;
+  }
+  .wk-story[data-open] .wk-chev { transform: rotate(180deg); animation: none; }
+  .wk-more:hover .wk-chev { animation: none; }
+  @keyframes wk-breathe { 0%, 100% { opacity: 0.45; } 50% { opacity: 1; } }
+  @media (prefers-reduced-motion: reduce) {
+    .wk-story-clip { transition: none; }
+    .wk-chev { animation: none; }
   }
   /* host fit only (the module's own language is Jon's): each module is the
      1080 column wide and sizes its object in cqw of itself; the room's
@@ -3169,4 +3267,55 @@ const ARCHIVE = BUILDS.find((b) => b.id === "archive")!;
       lkRoom.addEventListener("touchcancel", lkEnd, { capture: true });
     }
   }
+</script>
+
+<script>
+  // THE STORY CARDS (2026-09-24): closed to the first paragraph, open on the
+  // handle, and opened by the run itself when it ends untouched. The comet
+  // re-measures its knots on any change to the body's height (its own
+  // ResizeObserver), so a card opening moves the bead's map with it.
+  document.querySelectorAll<HTMLElement>("[data-story]").forEach((card) => {
+    const clip = card.querySelector<HTMLElement>(".wk-story-clip");
+    const btn = card.querySelector<HTMLButtonElement>(".wk-more");
+    const first = card.querySelector<HTMLElement>(".wk-p, .wk-list");
+    if (!clip || !btn || !first) return;
+    const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    let touched = false;
+    const isOpen = () => card.hasAttribute("data-open");
+    // the peek: the first paragraph whole, then 64px that the fade takes
+    const peek = () => Math.ceil(first.offsetTop + first.offsetHeight + 64);
+    const settle = () => { if (!isOpen()) clip.style.height = peek() + "px"; };
+    const open = () => {
+      if (isOpen()) return;
+      const from = clip.getBoundingClientRect().height;
+      card.setAttribute("data-open", "");
+      btn.setAttribute("aria-expanded", "true");
+      btn.setAttribute("aria-label", "Fold the story");
+      if (reduce) { clip.style.height = "auto"; return; }
+      clip.style.height = from + "px";
+      const to = clip.scrollHeight;
+      const done = (e: TransitionEvent) => { if (e.target !== clip) return; clip.style.height = "auto"; clip.removeEventListener("transitionend", done); };
+      clip.addEventListener("transitionend", done);
+      requestAnimationFrame(() => { clip.style.height = to + "px"; });
+    };
+    const close = () => {
+      if (!isOpen()) return;
+      clip.style.height = clip.getBoundingClientRect().height + "px";
+      void clip.offsetHeight;
+      card.removeAttribute("data-open");
+      btn.setAttribute("aria-expanded", "false");
+      btn.setAttribute("aria-label", "Read the whole story");
+      requestAnimationFrame(() => { clip.style.height = peek() + "px"; });
+      if (card.getBoundingClientRect().top < 0) card.scrollIntoView({ block: "start", behavior: reduce ? "auto" : "smooth" });
+    };
+    btn.addEventListener("click", () => { touched = true; if (isOpen()) close(); else open(); });
+    // the run ensures the story: the object beside the card reaching its end
+    const hero = card.parentElement?.querySelector<HTMLElement>("[data-intake-hero], [data-archive-hero]");
+    if (hero) {
+      new MutationObserver(() => { if (!touched && hero.classList.contains("s6")) open(); }).observe(hero, { attributes: true, attributeFilter: ["class"] });
+    }
+    settle();
+    if (document.fonts && document.fonts.ready) document.fonts.ready.then(settle);
+    new ResizeObserver(settle).observe(clip.firstElementChild as Element);
+  });
 </script>

@@ -76,10 +76,21 @@ const splitLine = (line: string): [string, string, string] => {
 const momentParts = splitLine(moment.line);
 const chars = Array.from(query);
 const hasClip = Boolean(moment.src);
+// the room's words may sit in the module's own columns (2026-09-24): a `head`
+// slot above the phone, a `cap` slot under the rail
+const hasHead = Astro.slots.has('head');
+const hasCap = Astro.slots.has('cap');
+// the moment's second half (2026-09-24): where the word lands in the whole
+// recording, what the library heard, what a kept moment can become
+const hits: { clock: string; pct: number }[] = (Array.isArray(moment.hits) ? (moment.hits as number[]) : []).map((t) => ({
+  clock: fmtClock(t),
+  pct: momentSeconds ? clamp((t / momentSeconds) * 100) : 0,
+}));
+const detected: string[] = Array.isArray(moment.detected) ? (moment.detected as string[]) : [];
 ---
 
 <section
-  class:list={['archive-hero', { 'no-story': !story }]}
+  class:list={['archive-hero', { 'no-story': !story, 'has-head': hasHead }]}
   data-archive-hero
   data-stage="0"
   data-query={query}
@@ -90,6 +101,7 @@ const hasClip = Boolean(moment.src);
   data-clip={hasClip ? '1' : ''}
 >
   <div class="grid">
+    {hasHead && <div class="hook"><slot name="head" /></div>}
     {story && (
       <div class="story">
         <p class="kicker">
@@ -206,6 +218,23 @@ const hasClip = Boolean(moment.src);
                     <span class="mono">{fmtLen(trimLen)}</span>
                   </button>
                 </div>
+                {(hits.length > 0 || detected.length > 0) && (
+                  <div class="m-more">
+                    {hits.length > 0 && (
+                      <div class="m-hits" style="--i:0">
+                        <div class="m-hits-head mono"><span>“{query}”</span><span>{hits.length} in this recording</span></div>
+                        <div class="m-hits-bar"><b style={`--sa:${scopeA}%; --sb:${scopeB}%`}></b>{hits.map((h) => <i style={`left:${h.pct}%`}></i>)}</div>
+                        <div class="m-hits-times mono">{hits.map((h) => <span>{h.clock}</span>)}</div>
+                      </div>
+                    )}
+                    {detected.length > 0 && <ul class="m-tags mono" style="--i:1">{detected.map((d) => <li>{d}</li>)}</ul>}
+                    <div class="m-tools" style="--i:2" aria-hidden="true">
+                      <span class="tool"><svg viewBox="0 0 20 20" class="ico"><circle cx="6" cy="6" r="2.5" fill="none" stroke="currentColor" stroke-width="1.8"/><circle cx="6" cy="14" r="2.5" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M8.2 7.6L17 15M8.2 12.4L17 5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>Trim</span>
+                      <span class="tool"><svg viewBox="0 0 20 20" class="ico"><path d="M3 10h12M11 5l5 5-5 5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>Send to Studio</span>
+                      <span class="tool"><svg viewBox="0 0 20 20" class="ico"><path d="M10 12V3M6.5 6.5L10 3l3.5 3.5M4 11v5h12v-5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>Share</span>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           </div>
@@ -225,6 +254,7 @@ const hasClip = Boolean(moment.src);
       <p class="hint" aria-hidden="true">tap the list</p>
     </div>
 
+    <div class="col">
     <ol class="rail" aria-label="The run, step by step">
       <li class="step step-search">
         <span class="label">search</span>
@@ -246,6 +276,8 @@ const hasClip = Boolean(moment.src);
         {hasClip && <span class="sub">play it on the phone</span>}
       </li>
     </ol>
+      {hasCap && <div class="cap"><slot name="cap" /></div>}
+    </div>
   </div>
 
   <p class="sr" role="status" aria-live="polite" data-status></p>
@@ -300,29 +332,33 @@ const hasClip = Boolean(moment.src);
     display: grid;
     grid-template-columns: minmax(0, 44cqw) minmax(0, 1fr);
     grid-template-rows: auto 1fr;
-    grid-template-areas: 'phone story' 'phone rail';
+    grid-template-areas: 'phone story' 'phone col';
     column-gap: 6cqw;
     row-gap: 48px;
     align-items: start;
   }
-  /* without the story the phone takes the RIGHT column, on the module's right
-     edge, and the rail MIRRORS the watch's run beside it (Jon, 2026-09-22:
-     "the vertical bars still need to be near the phone"): the dots on the
-     phone's side, one gutter from it, the words running left, right-aligned */
+  /* without the story (the room frames it) the phone takes the LEFT column —
+     the watch's 44cqw — and the rail the right, one gutter less half a dot so
+     the dot's CENTRE lands on 50cqw, the module's centre line, where the
+     watch's nodes land. One arrangement for both objects (Jon's mockup,
+     2026-09-24): the hook top-left, the object under it, the run beside both
+     from the top, the caption at the run's foot. */
   .no-story .grid {
-    /* the phone's column mirrors the watch's (44cqw) and the gutter is one
-       gutter less half a dot, so the dot's CENTRE lands on 50cqw — the module's
-       centre line, where the watch's nodes land too (Jon, 2026-09-22); the
-       phone (38cqw, height-capped by the host) starts one gutter from the dots */
-    grid-template-columns: minmax(0, 1fr) minmax(0, 44cqw);
+    grid-template-columns: minmax(0, 44cqw) minmax(0, 1fr);
     column-gap: calc(6cqw - 5px);
     grid-template-rows: auto;
-    grid-template-areas: 'rail phone';
+    grid-template-areas: 'phone col';
   }
+  .no-story.has-head .grid {
+    grid-template-rows: auto 1fr;
+    grid-template-areas: 'hook col' 'phone col';
+    row-gap: 32px;
+  }
+  .hook { grid-area: hook; min-width: 0; }
+  .col { grid-area: col; align-self: end; display: flex; flex-direction: column; gap: 24px; min-width: 0; }
+  .no-story .col { align-self: start; }
+  .cap { min-width: 0; }
   .no-story .stage { justify-self: start; }
-  .no-story .rail::before { left: auto; right: 4.5px; }
-  .no-story .step { padding: 0 32px 0 0; justify-items: end; text-align: right; }
-  .no-story .step::before { left: auto; right: 0; }
   .story { grid-area: story; }
   .stage {
     grid-area: phone;
@@ -330,8 +366,6 @@ const hasClip = Boolean(moment.src);
     display: flex; flex-direction: column; gap: 16px;
     width: 38cqw; max-width: 100%;
   }
-  .rail { grid-area: rail; align-self: end; }
-  .no-story .rail { align-self: start; }
 
   /* ---------- story ---------- */
   .kicker {
@@ -609,6 +643,42 @@ const hasClip = Boolean(moment.src);
   .play .i-play { margin-left: 8%; }
   .s5 .play { opacity: 1; transition: opacity 0.35s 0.55s; }
   .s5 .play[aria-disabled='true'] { opacity: 0.32; cursor: default; }
+  /* the moment's second half (Jon, 2026-09-24: the end frame should feel like
+     more product): where the word lands across the whole recording, what the
+     library heard in it, and what a kept moment can become. Arrives with the
+     kept step, one beat per block. */
+  .m-more {
+    display: flex; flex-direction: column; gap: 3cqw;
+    margin-top: 3.2cqw; padding-top: 3.2cqw;
+    border-top: 1px solid var(--sline);
+  }
+  .m-more > * { opacity: 0; transform: translateY(2cqw); }
+  .s6 .m-more > * {
+    opacity: 1; transform: none;
+    transition: opacity 0.4s calc(0.2s + var(--i) * 150ms), transform 0.5s calc(0.2s + var(--i) * 150ms) cubic-bezier(0.2, 0.8, 0.2, 1);
+  }
+  .m-hits { display: grid; gap: 1.8cqw; }
+  .m-hits-head { display: flex; justify-content: space-between; font-size: 2.7cqw; letter-spacing: 0.04em; color: var(--sdim); }
+  .m-hits-head span:first-child { color: var(--sacc); font-weight: 600; }
+  .m-hits-bar { position: relative; height: 1.2cqw; margin: 1cqw 0; border-radius: 1cqw; background: rgba(255, 255, 255, 0.12); }
+  .m-hits-bar b { position: absolute; top: 0; bottom: 0; left: var(--sa); width: calc(var(--sb) - var(--sa)); border-radius: 1cqw; background: rgba(255, 255, 255, 0.18); }
+  .m-hits-bar i {
+    position: absolute; top: -1.3cqw; bottom: -1.3cqw; width: 1cqw; margin-left: -0.5cqw;
+    border-radius: 1cqw; background: var(--sacc);
+    box-shadow: 0 0 1.8cqw color-mix(in oklab, var(--sacc) 75%, transparent);
+  }
+  .m-hits-times { display: flex; gap: 2cqw; font-size: 2.6cqw; color: var(--sacc); }
+  .m-hits-times span + span::before { content: '·'; margin-right: 2cqw; color: var(--sdim); }
+  .m-tags { display: flex; flex-wrap: wrap; gap: 1.6cqw; list-style: none; margin: 0; padding: 0; }
+  .m-tags li { padding: 1.3cqw 2.3cqw; border-radius: 999px; border: 1px solid var(--sline); font-size: 2.6cqw; letter-spacing: 0.03em; color: #c7c7cc; white-space: nowrap; }
+  .m-tools { display: flex; flex-wrap: wrap; gap: 1.8cqw; }
+  .tool {
+    display: inline-flex; align-items: center; gap: 1.3cqw;
+    padding: 2cqw 2.7cqw; border-radius: 2.2cqw;
+    background: var(--sfield); color: var(--sfg);
+    font-size: 2.9cqw; font-weight: 500; line-height: 1; white-space: nowrap;
+  }
+  .tool .ico { width: 1.05em; height: 1.05em; color: var(--sdim); }
 
   /* ---------- rail ---------- */
   .rail {
@@ -656,16 +726,15 @@ const hasClip = Boolean(moment.src);
     .grid {
       grid-template-columns: minmax(0, 1fr);
       grid-template-rows: auto;
-      grid-template-areas: 'story' 'phone' 'rail';
+      grid-template-areas: 'story' 'phone' 'col';
       row-gap: 48px;
     }
-    .no-story .grid { grid-template-columns: minmax(0, 1fr); grid-template-areas: 'phone' 'rail'; }
-    .no-story .rail::before { left: 4.5px; right: auto; }
-    .no-story .step { padding: 0 0 0 32px; justify-items: start; text-align: left; }
-    .no-story .step::before { left: 0; right: auto; }
+    .no-story .grid { grid-template-columns: minmax(0, 1fr); grid-template-areas: 'phone' 'col'; }
+    .no-story.has-head .grid { grid-template-rows: auto; grid-template-areas: 'hook' 'phone' 'col'; row-gap: 48px; }
+    .no-story.has-head .hook { margin-bottom: -16px; }
     /* the phone fills ~80% of the module, centred */
     .stage { width: 80cqw; margin-inline: auto; }
-    .rail { align-self: start; }
+    .col { align-self: start; }
   }
 
   /* ---------- reduced motion: no typing, no travel, short fades ---------- */
@@ -673,8 +742,8 @@ const hasClip = Boolean(moment.src);
     .face-lib, .face-rest, .s4 .lib-results { transition-duration: 0.2s; }
     .s2 .ch { transition-delay: 0s; }
     .s2 .caret { animation: none; }
-    .res, .moment, .kept { transform: none; }
-    .s3 .res, .s4 .moment, .s5 .kept { transition: opacity 0.2s; }
+    .res, .moment, .kept, .m-more > * { transform: none; }
+    .s3 .res, .s4 .moment, .s5 .kept, .s6 .m-more > * { transition: opacity 0.2s; }
     .wave rect { transform: none; }
     .s4 .wave rect { transition: none; }
     .s4 .trim, .s4 .trim-time, .s4 .ticks, .s4 .scope, .s5 .play, .s6 .tap-label { transition: opacity 0.2s; }

@@ -4,7 +4,10 @@
 //
 // ⭐ THE WORDS ARE LOCKED (copy chat delivery, installed 2026-08-31).
 // Every headline and paragraph below is Jon-owned, verbatim — do not edit,
-// polish, or "improve" a sentence. Media captions are Jon's cue lines from
+// polish, or "improve" a sentence. 2026-09-24: the watch and archive stories
+// re-installed from Jon's Figma mockup (his rewrite), grammar lightly
+// massaged with his permission; a story now carries a `hinge` line, a
+// `list`, and a `break` where its second column starts. Media captions are Jon's cue lines from
 // the script, split at its "→" beats into sequential slots.
 //
 // Media contract: assets live at public/builds/<piece-id>/… and land by
@@ -13,7 +16,9 @@
 // caption says what will live there and ships as the figcaption once the
 // real thing lands. Never fake a frame.
 export type BuildBlock =
-  | { type: "p"; html: string }
+  | { type: "p"; html: string; hinge?: boolean }
+  | { type: "list"; items: string[] }
+  | { type: "break" }
   | {
       type: "media";
       kind: "film" | "stills" | "audio";
@@ -45,12 +50,13 @@ export const BUILDS: BuildPiece[] = [
     blocks: [
       {
         type: "p",
-        html: "I record everything. That's the line, anyway, usually delivered right after a friend says something they'll regret. The truth is less menacing. A college class called Sound Studies taught me how much of a moment lives in its sound, and I've been hitting record ever since: an idea hummed into my phone, a song starting in a parking lot, a laugh I wasn't ready to lose.",
+        html: "A course I took in college called Sound Studies taught me how much of a moment lives in its sound, and I've been hitting record ever since.",
       },
       {
         type: "p",
         html: "My phone never caught on. Photos get faces, places, and search. Recordings get a date, a duration, and a name like New Recording 47. I had hundreds, spread across phones and laptops and drives: technically saved, practically gone. Every so often I'd open one by accident and be wrecked by how good it felt to be back there. Then a year would pass before I found another.",
       },
+      { type: "break" },
       {
         type: "p",
         html: "So I built the library I kept expecting someone to sell me. Every recording gets listened to and named for what's in it. Every word is searchable, the way photos are. Every waveform is something I can see, trim, and keep.",
@@ -137,15 +143,42 @@ export const BUILDS: BuildPiece[] = [
     blocks: [
       {
         type: "p",
-        html: "My best ideas show up while I'm doing something else. They arrive whole, in my own voice, and they don't care that I'm on a walk. Keeping one used to mean finding a screen, which meant leaving the room the idea lives in. By the time I'd typed it, I had a note about an idea. The idea itself had left.",
+        html: "My best ideas show up while I'm doing something else. They arrive whole, in my own voice, and they don't care that I'm going 29 mph on my bike. Keeping one used to require some sort of context switch: grabbing my laptop, a pen, whatever was near, which meant leaving the place the idea was born.",
+      },
+      {
+        // the hinge line: set in the Intake's red, "about" in italic (Jon's mockup, 2026-09-24)
+        type: "p",
+        hinge: true,
+        html: "By the time I'd typed it, I had a note <em>about</em> an idea.",
       },
       {
         type: "p",
-        html: "Now I raise my wrist and say it. Tap stop. The watch says saved. Behind that, a small system I wrote transcribes what I said, decides what kind of thing it is (something to do, something to show me later, something to keep), and files it: a task, a calendar entry, a note. I keep walking. The work is already moving.",
+        html: "Now I click one button on my wrist and speak my mind freely. Ideas, calendar events, jokes: nothing is required of me. I have a sonic vacuum on my wrist with one analog switch that turns it on or off.",
       },
       {
         type: "p",
-        html: "I tried to buy this. Humane's AI Pin overheated, then its servers went dark. The Limitless Pendant came closest, until Meta bought it and stopped selling it. Bee records everything, which is surveillance with a summary. The Stream Ring has the right gesture and a ship date I'm still waiting on. They all wanted to be a companion. I wanted a button.",
+        html: "All of the hard work is handled by transcription. The program I built transcribes what I say and decides what kind of \"thing\" it is.",
+      },
+      { type: "break" },
+      {
+        type: "list",
+        items: [
+          "<b class=\"k\">TASK</b> something I need to do",
+          "<b class=\"k\">IDEA</b> something I may want to archive or elaborate on later",
+          "<b class=\"k\">EXECUTE</b> things obvious enough for the system to complete on its own, like adding a reminder or an event to my calendar",
+        ],
+      },
+      {
+        type: "p",
+        html: "The craziest thing about this build is that I first scoured the market to buy a simple wearable microphone, with the goal of seamless transcription and access to the recordings.",
+      },
+      {
+        type: "p",
+        html: "Humane's AI Pin overheated, then its servers went dark. The Limitless Pendant came closest, until Meta bought it and stopped selling it. Bee records everything, which felt like surveillance with a summary. The Stream Ring has the right gesture and a ship date I'm still waiting on.",
+      },
+      {
+        type: "p",
+        html: "They all wanted to be a companion. I just wanted a button.",
       },
       {
         type: "p",
