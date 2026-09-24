@@ -3,13 +3,19 @@
 // the contract's; regenerate() is generateDrumPattern(density, 0.3, pattern); booking lands the right lanes on the
 // right frames (FLOOR at .5); the swing law in frames (step 2 vs 3) and the kick never swings; the humanize bounds;
 // stop() un-books a future voice and ramps a sounding one, zeroes the delay and closes the stop gate; the gate
-// reopens on the next voice; the delay, TEXTURE, cover/low-cut and gain laws; the tracked-voice registry; kit.ts.
+// reopens on the next voice; the delay, TEXTURE, cover/low-cut and gain laws; the tracked-voice registry; kit.ts (R2: the
+// six hits fetched from <root>/kit/<lane>.m4a, the shipped files checked byte for byte against the repo's DRUMKIT).
 //   source ~/.nvm/nvm.sh && node src/signal/drums.test.mjs
 import { createDrums, defaultDrumsState, patternSeq } from './drums.ts';
-import { decodeKit, LANE_KIT_KEY } from './kit.ts';
+import { decodeKit, kitUrl, KIT_DIR, LANE_KIT_KEY } from './kit.ts';
 import { generateDrumPattern } from './drum-pattern.ts';
-import { DRUM_LANES } from './types.ts';
+import { DRUM_LANES, RIP_ROOT } from './types.ts';
 import { DRUMKIT } from '../components/signal-drumkit.ts';
+import { readFileSync } from 'node:fs';
+import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+const PUB = join(dirname(fileURLToPath(import.meta.url)), '../../public');
 
 let pass = 0, fail = 0;
 const ok = (n, c, x = '') => { if (c) { pass++; console.log(`  ✓ ${n}`); } else { fail++; console.log(`  ✗ ${n}  ${x}`); } };
@@ -432,28 +438,77 @@ withRandom(0.5, () => {
 });
 
 // ─────────────────────────────────────────────────────────────── kit.ts
-console.log('\n[kit] decodeKit: six lanes from the repo\'s DRUMKIT, keyed by DRUM_LANES; never rejects');
+// R2 (lane A): THE KIT AS FILES. decodeKit fetches <root>/kit/<lane>.m4a (scripts/signal/kit-extract.mjs wrote them byte
+// for byte from the repo's DRUMKIT); a fake fetch serves the six shipped files from public/ through fs.
+console.log('\n[kit] decodeKit: six lanes fetched from <root>/kit/<lane>.m4a, keyed by DRUM_LANES; never rejects');
 {
-  const ctx = fakeCtx();
-  const kit = await decodeKit(ctx);
-  ok('six lanes, in DRUM_LANES order', JSON.stringify(Object.keys(kit)) === JSON.stringify([...DRUM_LANES]) && ctx.decodes.length === 6);
-  ok('each payload is an MP4 (bytes 4..8 = "ftyp")', DRUM_LANES.every((l) => String.fromCharCode(...kit[l].bytes.slice(4, 8)) === 'ftyp'));
-  ok('shaker decodes DRUMKIT.shaker (the Studio\'s perc lane), byte for byte', kit.shaker.bytes.length === atob(DRUMKIT.shaker).length && LANE_KIT_KEY.shaker === 'shaker' && kit.shaker.bytes[100] === atob(DRUMKIT.shaker).charCodeAt(100));
-  ok('every lane gets its own fresh buffer (decodeAudioData detaches)', new Set(ctx.decodes).size === 6);
-  const ctx2 = fakeCtx();
-  ctx2.failLanes.add(3); // openhat fails
-  const partial = await decodeKit(ctx2);
-  ok('a lane that fails to decode is left out; the rest resolve', !partial.openhat && Object.keys(partial).length === 5);
-  withRandom(0.5, () => {
-    const out = { ctx: ctx2, duck: ctx2.createGain(), drumsIn: ctx2.createGain(), level: () => ({ peak: 0, rms: 0 }), muted: () => true, panic() {} };
-    const d = createDrums({ ctx: ctx2, out, effects: { duckHit() {} }, kit: partial });
-    ctx2.currentTime = 1;
-    d.set('on', true);
-    d.setStep('openhat', 0, 3);
-    let threw = false;
-    try { d.book({ frame: 50000, bar: 0, step: 0 }); d.hit('openhat'); } catch { threw = true; }
-    ok('drums on a partial kit: ready() false, the missing lane books nothing, nothing throws', d.ready() === false && !threw && !ctx2.sources.some((s) => s.buffer === undefined || s.buffer === null));
-  });
+  const KIT_FILES = Object.fromEntries(DRUM_LANES.map((l) => [l, readFileSync(join(PUB, RIP_ROOT, KIT_DIR, `${l}.m4a`))]));
+  const fetched = [];
+  const serve = (routes, { throwFor = null } = {}) => (u) => {
+    fetched.push(u);
+    if (throwFor && u.includes(throwFor)) return Promise.reject(new TypeError('Failed to fetch'));
+    const b = routes[u];
+    if (!b) return Promise.resolve({ ok: false, status: 404, arrayBuffer: async () => new ArrayBuffer(0) });
+    return Promise.resolve({ ok: true, status: 200, arrayBuffer: async () => b.buffer.slice(b.byteOffset, b.byteOffset + b.byteLength) });
+  };
+  const routesAt = (root) => Object.fromEntries(DRUM_LANES.map((l) => [`${root}/${KIT_DIR}/${l}.m4a`, KIT_FILES[l]]));
+  const warned = [];
+  const realWarn = console.warn, realFetch = globalThis.fetch;
+  console.warn = (...a) => { warned.push(a.join(' ')); };
+  try {
+    globalThis.fetch = serve(routesAt(RIP_ROOT));
+    const ctx = fakeCtx();
+    const kit = await decodeKit(ctx);
+    ok('six lanes, in DRUM_LANES order', JSON.stringify(Object.keys(kit)) === JSON.stringify([...DRUM_LANES]) && ctx.decodes.length === 6);
+    ok('one fetch per lane: RIP_ROOT + "/kit/<lane>.m4a" (= kitUrl), the unlisted path', JSON.stringify(fetched) === JSON.stringify(DRUM_LANES.map((l) => `${RIP_ROOT}/kit/${l}.m4a`))
+      && DRUM_LANES.every((l) => kitUrl(l) === `${RIP_ROOT}/kit/${l}.m4a`), JSON.stringify(fetched));
+    ok('each payload is an MP4 (bytes 4..8 = "ftyp", brand M4A)', DRUM_LANES.every((l) => String.fromCharCode(...kit[l].bytes.slice(4, 11)) === 'ftypM4A'));
+    ok('every file is DRUMKIT[LANE_KIT_KEY[lane]], byte for byte (the extractor\'s copy of the Studio kit)',
+      DRUM_LANES.every((l) => Buffer.from(DRUMKIT[LANE_KIT_KEY[l]], 'base64').equals(KIT_FILES[l]) && Buffer.from(kit[l].bytes).equals(KIT_FILES[l])));
+    ok('shaker decodes the shaker file (the Studio\'s perc lane)', LANE_KIT_KEY.shaker === 'shaker' && kit.shaker.bytes.length === atob(DRUMKIT.shaker).length && kit.shaker.bytes[100] === atob(DRUMKIT.shaker).charCodeAt(100));
+    ok('every lane gets its own fresh buffer (decodeAudioData detaches)', new Set(ctx.decodes).size === 6);
+    ok('a whole kit warns nothing', warned.length === 0, warned.join(' | '));
+
+    fetched.length = 0;
+    globalThis.fetch = serve(routesAt('/x/y'));
+    const k2 = await decodeKit(fakeCtx(), '/x/y/');
+    ok('a custom root (the instrument\'s ripRoot) is honoured; a trailing slash is ignored', Object.keys(k2).length === 6 && fetched.every((u) => u.startsWith('/x/y/kit/')) && kitUrl('kick', '/x/y//') === '/x/y/kit/kick.m4a');
+
+    // openhat's file is not an m4a (a broken deploy, an HTML 200): its decode rejects; snare 404s; the rest resolve
+    const routes = routesAt(RIP_ROOT);
+    routes[`${RIP_ROOT}/kit/openhat.m4a`] = Buffer.from('<!doctype html><p>not found</p>');
+    delete routes[`${RIP_ROOT}/kit/snare.m4a`];
+    globalThis.fetch = serve(routes);
+    const ctx2 = fakeCtx();
+    const decode = ctx2.decodeAudioData;
+    ctx2.decodeAudioData = (ab) => (String.fromCharCode(...new Uint8Array(ab).slice(4, 8)) === 'ftyp' ? decode(ab) : Promise.reject(new Error('EncodingError')));
+    warned.length = 0;
+    const partial = await decodeKit(ctx2);
+    ok('a lane that fails to decode (openhat) or 404s (snare) is left out; the rest resolve', !partial.openhat && !partial.snare && Object.keys(partial).length === 4);
+    ok('…and one warning names them', warned.length === 1 && /openhat/.test(warned[0]) && /snare/.test(warned[0]), warned.join(' | '));
+
+    globalThis.fetch = serve(routesAt(RIP_ROOT), { throwFor: 'kick' });
+    const k3 = await decodeKit(fakeCtx());
+    ok('a fetch that rejects (offline) loses that lane only', !k3.kick && Object.keys(k3).length === 5);
+    delete globalThis.fetch;
+    let threw = false, k4 = null;
+    try { k4 = await decodeKit(fakeCtx()); } catch { threw = true; }
+    ok('no fetch at all: resolves an empty kit, never rejects', !threw && k4 && Object.keys(k4).length === 0);
+
+    withRandom(0.5, () => {
+      const out = { ctx: ctx2, duck: ctx2.createGain(), drumsIn: ctx2.createGain(), level: () => ({ peak: 0, rms: 0 }), muted: () => true, panic() {} };
+      const d = createDrums({ ctx: ctx2, out, effects: { duckHit() {} }, kit: partial });
+      ctx2.currentTime = 1;
+      d.set('on', true);
+      d.setStep('openhat', 0, 3);
+      let threw2 = false;
+      try { d.book({ frame: 50000, bar: 0, step: 0 }); d.hit('openhat'); } catch { threw2 = true; }
+      ok('drums on a partial kit: ready() false, the missing lane books nothing, nothing throws', d.ready() === false && !threw2 && !ctx2.sources.some((s) => s.buffer === undefined || s.buffer === null));
+    });
+  } finally {
+    console.warn = realWarn;
+    if (realFetch) globalThis.fetch = realFetch; else delete globalThis.fetch;
+  }
 }
 
 console.log(`\n${fail ? '✗' : '✓'} drums: ${pass}/${pass + fail}`);

@@ -191,7 +191,7 @@ console.log('\n[mock-player] a stop BEFORE the voice starts un-books it (SIGNAL 
   ok('a voice that has started still gets its release ramp', approx(g3.gain.events.filter((e) => e[0] === 'ramp' && e[1] === 0).at(-1)[2], 1.03));
 }
 
-console.log('\n[mock-player] setRate(rate, when, tau) — tau clamp 0.005..1.0 (W15)');
+console.log('\n[mock-player] setRate(rate, when, tau) — tau clamp 0.005..2.0 (W15; R2: the ceiling was 1.0)');
 {
   const ctx = fakeCtx();
   const player = createMockSamplePlayer(ctx);
@@ -203,8 +203,10 @@ console.log('\n[mock-player] setRate(rate, when, tau) — tau clamp 0.005..1.0 (
   ok('default tau 0.03', approx(last()[3], 0.03));
   v.setRate(0.5, 1.0, 0.45);
   ok('explicit tau passes through (the dive fall)', approx(last()[3], 0.45));
+  v.setRate(0.5, 1.0, 1.5);
+  ok('[R2] the DIVE SPEED dial\'s slow end (1.5 s) passes whole (the Studio\'s player flattened it to 1.0)', approx(last()[3], 1.5));
   v.setRate(0.5, 1.0, 5);
-  ok('tau clamps high → 1.0', approx(last()[3], 1.0));
+  ok('tau clamps high → 2.0 (R2: the Studio\'s diveTime ceiling, core.ts:1879; was 1.0)', approx(last()[3], 2.0));
   v.setRate(0.5, 1.0, 0.0001);
   ok('tau clamps low → 0.005', approx(last()[3], 0.005));
   ctx.made.srcs[0].onended(); // natural end

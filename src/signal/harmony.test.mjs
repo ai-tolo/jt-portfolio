@@ -20,6 +20,7 @@ function rig(o = {}) {
   const bass = {
     held: (n) => log.push(['bheld', n]), gesture: (...a) => log.push(['bgest', ...a]),
     state: () => ({ ...bs }), set: (k, v) => { log.push(['bset', k, v]); if (k === 'root') bs.root = v; },
+    ...(o.chop ? { chop: (w, sd) => log.push(['bchop', w, sd]) } : {}),   // lane B's exact chop (the real bass has it)
   };
   const effects = { chop: (w, s) => log.push(['chop', w, s]), releaseGate: () => log.push(['release']) };
   const ctx = { currentTime: 0 };
@@ -184,6 +185,8 @@ console.log('\n[harmony] the gate row + the master stop');
   ok('gesture(\'gate\') + book(): a chop on this step', r.of('chop').length === 1);
   r.h.gesture('dive', true);
   ok('gesture(\'dive\'): keys bend −2400 with τ .45', js(r.of('bend')[0]) === js(['bend', -2400, 0.45]));
+  ok('[R2] …and the bass dives the same depth at the same SPEED (τ .45, its 4th argument)',
+    js(r.of('bgest').filter((e) => e[1] === 'dive')) === js([['bgest', 'dive', true, -2400, 0.45]]), js(r.of('bgest')));
   r.h.set('hold', true); r.h.set('chord', true);
   r.h.set('rack', [[60, 64, 67]]);
   r.down('KeyA'); r.up('KeyA'); r.h.trigger(0);
@@ -195,6 +198,34 @@ console.log('\n[harmony] the gate row + the master stop');
   ok('stop: the gate released and DIVE returned', r.of('release').length === 1 && js(r.of('bend')) === js([['bend', 0]]));
   ok('stop: the bass hears silence, the view hears a change', js(r.of('bheld').at(-1)) === js(['bheld', []]) && changes >= 1);
   ok('stop keeps the rack and the knobs', js(s.rack[0]) === js([60, 64, 67]) && s.chord === true);
+}
+
+console.log('\n[harmony] R2 · DIVE SPEED reaches the keys AND the bass (one τ down; the Studio\'s .07 back) · the gate row passes through');
+{
+  const r = rig();
+  r.h.set('dive', { speedSec: 1.5, dist: 12 });
+  r.clear();
+  r.h.gesture('dive', true);
+  ok('[R2] SPEED 1.5 (the dial\'s slow end), DIST 12: keys.bend(−1200, 1.5) and bass.gesture(dive, on, −1200, 1.5)',
+    js(r.of('bend')) === js([['bend', -1200, 1.5]]) && js(r.of('bgest')) === js([['bgest', 'dive', true, -1200, 1.5]]), js(r.log));
+  r.clear();
+  r.h.gesture('dive', false);
+  ok('[R2] release: keys.bend(0) and the bass\'s dive-off carry no τ (both come back on their .07)',
+    js(r.of('bend')) === js([['bend', 0]]) && js(r.of('bgest')) === js([['bgest', 'dive', false]]), js(r.log));
+  r.h.set('dive', { speedSec: 0.05, dist: 36 });
+  r.clear(); r.h.gesture('dive', true);
+  ok('[R2] SPEED .05 (the fast end), DIST 36: both fall at .05', js(r.of('bend')) === js([['bend', -3600, 0.05]])
+    && js(r.of('bgest')) === js([['bgest', 'dive', true, -3600, 0.05]]), js(r.log));
+  r.h.gesture('dive', false);
+  r.clear();
+  r.h.gesture('gate', true); r.h.book(r.booking(0, 0));
+  ok('[R2] the gate row still reaches the bass: a bass without chop gets gesture(gate, on, sd) beside effects.chop',
+    r.of('chop').length === 1 && r.of('bchop').length === 0 && r.of('bgest').some((e) => e[1] === 'gate' && e[2] === true && e[3] === r.of('chop')[0][2]), js(r.log));
+  const c = rig({ chop: true });
+  c.h.gesture('gate', true); c.h.book(c.booking(0, 0));
+  const [ch] = c.of('chop'), [bc] = c.of('bchop');
+  ok('[R2] …and a bass WITH chop gets its exact chop at effects.chop\'s time + length (lane B\'s frame-exact twin)',
+    !!ch && !!bc && bc[1] === ch[1] && bc[2] === ch[2], js(c.log));
 }
 
 console.log('\n[harmony] the keys went silent on their own (blur / hidden / stop: keys.allOff) → the model forgets');

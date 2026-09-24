@@ -3,6 +3,9 @@
 // a diff of a block against those lines shows only the dropped import lines — the Studio spreads these across five
 // files that import each other (./types, ./multisample-map.ts, ./zone-dsp.ts); here they share one scope, so those
 // imports are gone and nothing else changed. The one addition is the last line: the contract's name for the player.
+// R2 (lane A) changes ONE NUMBER inside the player's block, marked [R2]: setRate's τ ceiling 1.0 → 2.0 (the Studio's own
+// diveTime clamp, core.ts:1879), so the DIVE SPEED dial's slow end (1.5 s) reaches the voices whole; the Studio's player
+// flattened 1.0..1.5 s to 1.0 on the keys while its drone fell at the full τ. The block's doc line says so too.
 //
 // Why these and only these (docs/signal-map/C-keys-sampler.md §7): the SamplePlayer seam and the keys source it
 // satisfies (types.ts), the zone map (multisample-map.ts), the loop-seam bake + the two level scans the mount uses
@@ -55,7 +58,7 @@ export interface SampleVoice {
   stop(when?: number, releaseSec?: number): void;
   /** Glide the playbackRate in place (tape repitch) — for re-pitching a SUSTAINED voice (e.g. a held
    *  repitch loop on ←/→ transpose) without re-triggering it from the buffer head. `tau` is the
-   *  setTargetAtTime time-constant (default 0.03, clamped 0.005..1.0) — bend() leans on it for the
+   *  setTargetAtTime time-constant (default 0.03, clamped 0.005..2.0 [R2: was ..1.0]) — bend() leans on it for the
    *  slow-fall / quick-recover DIVE feel. Optional. */
   setRate?(rate: number, when?: number, tau?: number): void;
   /** Resolves (best effort) when the voice has finished + disconnected. */
@@ -248,7 +251,7 @@ export function bakeLoopCrossfade(data: Float32Array, sampleRate: number, loopSt
   }
 }
 
-// ═══ from signal-studio-v6lib/src/engine/sampler/mock-sample-player.ts:1-192 (2a9e4a7) — whole; line 12 (its import of ./types) dropped: the seam is above ═══
+// ═══ from signal-studio-v6lib/src/engine/sampler/mock-sample-player.ts:1-192 (2a9e4a7) — whole; line 12 (its import of ./types) dropped: the seam is above; [R2] setRate's τ ceiling ═══
 // Stream D — a minimal, REAL SamplePlayer.
 //
 // This is what Stream D builds + tests against until A's generalised `playSample`
@@ -442,7 +445,7 @@ export function createMockSamplePlayer(ctx: BaseAudioContext): SamplePlayer {
           // was computed from the original rate, so only re-pitch open-ended (loop) voices here.
           if (done) return;
           const t = Math.max(at ?? ctx.currentTime, ctx.currentTime);
-          const tc = Math.min(1.0, Math.max(0.005, tau ?? 0.03));
+          const tc = Math.min(2.0, Math.max(0.005, tau ?? 0.03));   // [R2] ceiling 1.0 → 2.0 (see the file's header)
           try { src.playbackRate.setTargetAtTime(Math.max(0.0001, r), t, tc); } catch { /* */ }
         },
         ended,

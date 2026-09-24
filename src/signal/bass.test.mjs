@@ -352,6 +352,21 @@ console.log('\n[gestures] DIVE (drone detune, booked hits bent) · GATE (bassGat
   ok('release: back to the base detune with τ .07 s', ds.every((o) => { const e = o.detune.last('target'); return near(e.v, o._bd) && e.tau === 0.07; }));
   const r = rig(); r.bass.gesture('dive', true, -1200); r.bass.set('on', true);
   ok('a drone started mid-dive starts bent', droneOscs(r.ctx).every((o) => near(o.detune.value, o._bd - 1200)));
+  // [R2] DIVE SPEED reaches the bass: the 4th argument is the fall's τ (core.ts:1879's diveTime), the return stays .07
+  const q = rig(); q.ctx.currentTime = 0.5; q.bass.set('on', true);
+  const qs = droneOscs(q.ctx), fall = () => qs.map((o) => o.detune.last('target').tau);
+  q.bass.gesture('dive', true, -2400, 1.5);
+  ok('[R2] dive with a τ (DIVE SPEED 1.5 s, the dial\'s slow end): every drone osc falls with τ 1.5, to −2400¢',
+    fall().every((t) => t === 1.5) && qs.every((o) => near(o.detune.last('target').v, o._bd - 2400)), JSON.stringify(fall()));
+  q.bass.gesture('dive', false);
+  ok('[R2] …and comes back on the literal .07, whatever the speed', fall().every((t) => t === 0.07));
+  q.bass.gesture('dive', true, -2400);
+  ok('[R2] the speed holds until the next one (the Studio\'s parameter): a 3-argument dive falls with 1.5 again', fall().every((t) => t === 1.5));
+  q.bass.gesture('dive', false); q.bass.gesture('dive', true, -2400, 9);
+  const hi = fall()[0]; q.bass.gesture('dive', false); q.bass.gesture('dive', true, -2400, 0.001);
+  ok('[R2] the τ is clamped as the Studio\'s diveTime: .02..2 s', hi === 2 && fall().every((t) => t === 0.02), `${hi} ${fall()[0]}`);
+  q.bass.gesture('dive', false); q.bass.gesture('dive', true, -2400, NaN);
+  ok('[R2] a non-number τ is ignored (the last one stands)', fall().every((t) => t === 0.02));
   const p = rig(); p.bass.held([60]); p.bass.set('mode', 'pluck'); p.bass.set('on', true);
   p.bass.gesture('dive', true); p.bass.book(line(0)); p.bass.gesture('dive', false); p.bass.book(line(2));
   const [a, b] = hitsOf(p.ctx);

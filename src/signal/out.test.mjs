@@ -1,6 +1,7 @@
 // out.test.mjs — lane O · the exit and the effects, in node.
 //   §1 the clamp curve against E-effects-out.md §5's table · §2 the soft stage · §3 the duck envelope at 120 BPM (A §5)
-//   §4 createOut on a mock context (the chain stage for stage, forced stereo, mute, level, panic)
+//   §4 createOut on a mock context (the chain stage for stage, forced stereo, mute, level, panic; R2: the stop gate's
+//      bookings — panic closes it in 5 ms and books the reopen at +130 ms, open() for wake())
 //   §5 createEffects on a mock context, both paths (worklet / fallback): the graph, apply's laws, the delay re-timed on
 //      every bpm, duckHit's bookings, chop / releaseGate, hush + restore, setGain, the REV taps + parking
 //   §6 ir.ts: the onset shift, the manifest, the silent mount law · §7 the shipped ir.json against its files
@@ -10,7 +11,7 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
   CLAMP_KNEE, CLAMP_CEIL, CLAMP_DOMAIN, CLAMP_POINTS, clampSample, clampCurve, shapeThrough, softCurve, levelOf, createOut,
-  PRE_LIMIT,
+  PRE_LIMIT, STOP_GATE_CLOSE, STOP_GATE_HOLD, STOP_GATE_OPEN,
 } from './out.ts';
 import {
   createEffects, duckLaw, fxLevels, delayTimeSec, fallbackDrive, driveCurve, sanitizeFx, hushHoldSec, HUSH_RAMP, TAP_FADE,
@@ -186,7 +187,10 @@ console.warn = (...a) => { warned.push(a.join(' ')); };
   const trim = into(ctx, clampSh)[0];
   ok(edge(out.duck, pre) && edge(out.drumsIn, pre) && pre.gain.value === 0.92, 'out: duck + drumsIn land on preLimit 0.92');
   ok(hp.type === 'highpass' && hp.frequency.value === 20 && hp.Q.value === -3.01 && edge(pre, hp) && edge(hp, soft), 'out: masterHP 20 Hz, Q −3.01 dB');
-  ok(soft.oversample === '2x' && soft.curve.length === 1024 && near(soft.curve[1023], Math.tanh(1.12), 1e-7) && edge(soft, lim), 'out: soft tanh(1.12x) at 2×');
+  const gate = out.stopGate;
+  ok(soft.oversample === '2x' && soft.curve.length === 1024 && near(soft.curve[1023], Math.tanh(1.12), 1e-7) && edge(soft, gate), 'out: soft tanh(1.12x) at 2×');
+  ok(gate && gate.kind === 'gain' && gate.gain.value === 1 && gate.gain.ev.length === 0 && edge(gate, lim) && !edge(soft, lim) && !edge(hp, lim)
+    && out.closed() === false, '[R2] out: the stop gate sits AFTER masterHP + soft, BEFORE the limiter; open at 1, nothing booked');
   ok(lim.threshold.value === -1.5 && lim.knee.value === 0 && lim.ratio.value === 20 && lim.attack.value === 0.002 && lim.release.value === 0.09,
     'out: limiter −1.5 dB · knee 0 · 20:1 · 2 ms / 90 ms');
   ok(edge(lim, trim) && trim.gain.value === 0.25 && edge(trim, clampSh) && clampSh.oversample === 'none' && clampSh.curve.length === 8192,
@@ -228,6 +232,56 @@ console.warn = (...a) => { warned.push(a.join(' ')); };
   const [anL] = kinds(ctx, 'analyser');
   anL.data = new Float32Array(4096).fill(0.1);
   ok(near(out.level().peak, 0.1, 1e-6), 'out muted: level() still reads');
+}
+
+// ═══ §4b THE STOP GATE (R2): panic() pins its value, 0 in 5 ms, the reopen booked at +130 ms (linear to 1 over 20 ms)
+{
+  const evNear = (got, want) => got.length === want.length && want.every((w, i) => got[i].k === w.k
+    && (w.t === undefined || near(got[i].t, w.t, 1e-9)) && (w.v === undefined || near(got[i].v, w.v, 1e-9)));
+  const show = (ev) => ev.map((e) => `${e.k}${e.v !== undefined ? ` ${+e.v.toFixed(4)}` : ''}@${+e.t.toFixed(4)}`).join(' · ');
+  ok(STOP_GATE_CLOSE === 0.005 && STOP_GATE_HOLD === 0.13 && STOP_GATE_OPEN === 0.02, '[R2] stop gate: close 5 ms, hold 130 ms, reopen 20 ms');
+  const ctx = mockCtx();
+  const out = createOut({ ctx, muted: false });
+  const g = out.stopGate.gain;
+  out.open();
+  ok(g.ev.length === 0 && out.closed() === false, '[R2] open() on an open gate books nothing');
+  ctx.currentTime = 2;
+  out.panic();
+  ok(evNear(g.ev, [{ k: 'hold', t: 2 }, { k: 'set', v: 1, t: 2 }, { k: 'lin', v: 0, t: 2.005 }, { k: 'set', v: 0, t: 2.13 }, { k: 'lin', v: 1, t: 2.15 }]),
+    '[R2] panic(): pin (cancelAndHold + its value) → 0 in 5 ms → held → the reopen booked at +130 ms, linear to 1 by +150 ms', show(g.ev));
+  const shut = [2, 2.004, 2.1, 2.1499].map((t) => { ctx.currentTime = t; return out.closed(); });
+  ctx.currentTime = 2.15;
+  ok(shut.every(Boolean) && out.closed() === false, '[R2] closed() from the panic until the reopen reaches 1 (+150 ms), then open');
+  // a second stop inside the hold: re-pinned (at the held 0) and re-booked from ITS time
+  ctx.currentTime = 2.05; g.value = 0; g.clear();
+  out.panic();
+  ok(evNear(g.ev, [{ k: 'hold', t: 2.05 }, { k: 'set', v: 0, t: 2.05 }, { k: 'lin', v: 0, t: 2.055 }, { k: 'set', v: 0, t: 2.18 }, { k: 'lin', v: 1, t: 2.2 }])
+    && out.closed(), '[R2] a repeated panic re-pins and re-books the reopen from its own time', show(g.ev));
+  // open(): wake() on a shut gate — back to 1 over 20 ms from now, the booked reopen cancelled (the hold cancels it)
+  ctx.currentTime = 2.07; g.clear();
+  out.open();
+  ok(evNear(g.ev, [{ k: 'hold', t: 2.07 }, { k: 'set', v: 0, t: 2.07 }, { k: 'lin', v: 1, t: 2.09 }]) && out.closed() === false,
+    '[R2] open() while shut: pin at now (cancelling the booked reopen) → linear to 1 in 20 ms; closed() false', show(g.ev));
+  g.clear(); out.open();
+  ok(g.ev.length === 0, '[R2] open() again: a no-op');
+  // an engine without cancelAndHoldAtTime (Firefox): cancelScheduledValues + the value
+  const ctx2 = mockCtx();
+  const out2 = createOut({ ctx: ctx2, muted: true });
+  const g2 = out2.stopGate.gain;
+  g2.cancelAndHoldAtTime = undefined;
+  ctx2.currentTime = 1;
+  out2.panic();
+  ok(evNear(g2.ev, [{ k: 'cancel', t: 1 }, { k: 'set', v: 1, t: 1 }, { k: 'lin', v: 0, t: 1.005 }, { k: 'set', v: 0, t: 1.13 }, { k: 'lin', v: 1, t: 1.15 }]),
+    '[R2] no cancelAndHoldAtTime (Firefox): cancel + set, the same bookings; a MUTED page shuts it too', show(g2.ev));
+  // a suspended context never ran (t = 0): a stop before the first gesture books from 0, and wake's open() undoes it
+  const ctx3 = mockCtx();
+  const out3 = createOut({ ctx: ctx3, muted: false });
+  out3.panic();
+  const shut0 = out3.closed();
+  out3.open();
+  const g3 = out3.stopGate.gain;
+  ok(shut0 && !out3.closed() && evNear(g3.ev.slice(-3), [{ k: 'hold', t: 0 }, { k: 'set', v: 1, t: 0 }, { k: 'lin', v: 1, t: 0.02 }]),
+    '[R2] a stop on a context frozen at 0 stays shut until wake(): open() takes it back to 1', show(g3.ev));
 }
 
 // ═══ §5 createEffects

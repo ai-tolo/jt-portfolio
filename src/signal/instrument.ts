@@ -27,7 +27,12 @@
 // held ids through keys.noteOff, the MUSICAL release (90 ms), which takes them out of the sampler's voice map, so a
 // keys.stop() after it found nothing to put down on its 30 ms ramp (measured: held notes −90 dBFS at 96 ms, not 36).
 // WAKE: ctx.resume() on every call until the context RUNS (a non-activating key, Escape, rejects or waits: the next
-// gesture tries again, signal-studio-page/src/page/main.ts:270-273), then effects.mountFirst() once.
+// gesture tries again, signal-studio-page/src/page/main.ts:270-273), then effects.mountFirst() once. R2: out.panic()
+// shuts the exit's stop gate and books its reopen +130 ms on; a wake that finds it still shut (a context suspended
+// inside the hold, a power-on right after a power-off) opens it at once, so the first sound is never swallowed.
+// LOAD (R2): A RELOAD IS ARMED AND SILENT. Everything saved comes back EXCEPT the four switches that start sound on
+// their own: drums.on, bass.on, harmony.arp.on and harmony.hold load OFF (state() still reports the live switches and
+// the store saves them). A fresh boot never plays by itself, and the first press on a cap is always "on".
 
 import type {
   DrumLane, Keys, SignalInstrument, SignalState, Timekeeper, VoiceId,
@@ -112,8 +117,9 @@ export async function createInstrument(d: InstrumentDeps): Promise<SignalInstrum
   const ripRoot = d.ripRoot ?? RIP_ROOT;
   const warn = (what: string, e: unknown): void => { try { console.warn(`[signal] ${what}`, e); } catch { /* */ } };
 
-  // the house kit decodes (a suspended context decodes) while the effects worklet registers
-  const kitP = decodeKit(ctx);
+  // the house kit fetches + decodes (a suspended context decodes) while the effects worklet registers (R2: six static
+  // files under the rip root, kit.ts)
+  const kitP = decodeKit(ctx, ripRoot);
 
   // ── the exit, the keys' front half, the clock ──────────────────────────────────────────────────────────
   const out = createOut({ ctx, muted: !!d.muted });
@@ -284,6 +290,7 @@ export async function createInstrument(d: InstrumentDeps): Promise<SignalInstrum
     try { effects.mountFirst(); } catch (e) { warn('the rooms could not mount', e); }
   };
   function wake(): Promise<void> {
+    try { if (out.closed()) out.open(); } catch (e) { warn('the stop gate', e); }   // R2: never resume into a shut gate
     if (ctx.state === 'running') { settle(); return Promise.resolve(); }
     let p: Promise<void>;
     try { p = ctx.resume(); } catch (e) { warn('resume threw', e); return Promise.resolve(); }
@@ -304,7 +311,8 @@ export async function createInstrument(d: InstrumentDeps): Promise<SignalInstrum
     step('effects', () => effects.hush());      // the returns 15 ms, booked ducks + chops cancelled
     gateHeld = false;
     step('time', () => rawTime.stop());         // scheduler off, every want dropped, the origin gone
-    step('out', () => out.panic());
+    step('out', () => out.panic());             // R2: + the exit's stop gate: 0 in 5 ms (the 20 Hz high-pass's ring
+                                                // cut), reopening +130 ms on (wake() opens it sooner)
     changed();
   }
   const unregister = registerSilencer(stop);
@@ -324,7 +332,8 @@ export async function createInstrument(d: InstrumentDeps): Promise<SignalInstrum
 
   /** A saved (or foreign, or partial) document, field by field over the defaults (db.ts mergeState), then every module's
    *  set() for every field. A grid or a strip the document does not carry is REGENERATED (a fresh install: DEFAULT_STATE's
-   *  are all rests); a saved all-rest grid is the visitor's and stays. */
+   *  are all rests); a saved all-rest grid is the visitor's and stays. R2: ARMED AND SILENT — drums.on, bass.on,
+   *  harmony.arp.on and harmony.hold always load OFF (the header's LOAD law). */
   function load(s: Partial<SignalState>): void {
     const raw = obj(s) ?? {};
     const st = mergeState(DEFAULT_STATE, raw);
@@ -351,7 +360,7 @@ export async function createInstrument(d: InstrumentDeps): Promise<SignalInstrum
     rawDrums.set('delay', D.delay);
     rawDrums.set('sidechain', D.sidechain);
     rawDrums.set('gain', D.gain); rawDrums.set('mute', D.mute);
-    rawDrums.set('on', D.on);
+    rawDrums.set('on', false);                    // R2: armed, never playing by itself (D.on is not restored)
 
     // bass: density + groove only store; the strip, the mode, the lock (root before armed: a root disarms); `on` last
     const B = st.bass;
@@ -366,8 +375,7 @@ export async function createInstrument(d: InstrumentDeps): Promise<SignalInstrum
     rawBass.set('cut', B.cut); rawBass.set('cutDb', B.cutDb);
     rawBass.set('lowcut', B.lowcut); rawBass.set('lowcutDb', B.lowcutDb);
     rawBass.set('gain', B.gain); rawBass.set('mute', B.mute);
-    if (B.on) openBass();
-    rawBass.set('on', B.on);
+    rawBass.set('on', false);                     // R2: armed (B.on is not restored; its next power-on opens the gate)
 
     // keys: the hand's filter (MOTION carries it into the filter once the context runs), motion, fx, gain; the voice
     const K = st.keys;
@@ -384,8 +392,8 @@ export async function createInstrument(d: InstrumentDeps): Promise<SignalInstrum
     const H = st.harmony;
     rawHarmony.set('music', H.music);
     rawHarmony.set('chord', H.chord);
-    rawHarmony.set('hold', H.hold);
-    rawHarmony.set('arp', H.arp);
+    rawHarmony.set('hold', false);                // R2: HOLD and ARP load off (their div / length / groove load)
+    rawHarmony.set('arp', { ...H.arp, on: false });
     rawHarmony.set('rack', H.rack);
     rawHarmony.set('gate', H.gate);
     rawHarmony.set('dive', H.dive);

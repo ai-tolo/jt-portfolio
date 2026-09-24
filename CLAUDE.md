@@ -37,9 +37,22 @@ session must follow.
   emulation on.
 
 ## Sacred / hazard files
-- `src/components/SignalMachine.astro` is **SACRED**: observe it (its root is
-  `section#sgm` inside `.sig-desktop`; page-level anchor/spy target is the
-  HOST `#play`), style it only from outside, never edit it.
+- THE INSTRUMENT is `src/components/signal/Signal.astro` + `src/signal/*`
+  (SIGNAL, 2026-09-23). The old `SignalMachine.astro` is RETIRED to
+  `junkyard/` (never import it back). The contract is `src/signal/types.ts`
+  (planner-owned), the code map `docs/signal-map/`, the gate
+  `scripts/signal/gate.mjs`. The unlisted assets `public/s/<8hex>/` (rips,
+  kit, IRs, boot sound) ship `immutable` (the postbuild adds the header):
+  never change a file in place; re-encoding = a new 8-hex folder name.
+  The HOST hooks StudioOne relies on (keep them on both sides):
+  `#sgm[data-state]` standby → boot → live → powerdown (boot/on/live = the
+  site goes night; the host clicks `#pwr` when the room is < 35% visible),
+  `#pwr` (the power disc; the host's `.pwr` overrides scale and light it),
+  `.sgm .device` (the 1120px box the host zooms with `--sig-zoom`; `.sgm`'s
+  parent is the fit's measure). The anchor/spy target stays the HOST `#play`.
+  Sound safety still applies: never engage its audio in a live preview pane;
+  probe headless with `--mute-audio` (`?mute=1`) and kill every headless
+  Chrome you start (a leaked `--headless` blocks Jon's own Chrome).
 - `src/components/studio/builds-copy.ts` holds **JON'S LOCKED WORDS**
   (installed verbatim from his copy chat, 2026-08-31): never edit, polish,
   or reflow a sentence. Structure/media `src` fields may change; prose may

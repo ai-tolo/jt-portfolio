@@ -509,8 +509,10 @@ export const createKeys: CreateKeys = ({ ctx, ripRoot }: KeysDeps): Keys => {
       r.quietAt = Math.max(r.quietAt, now() + (Math.max(0, t - ctx.currentTime) + Math.max(0, durSec)) * 1000 + TAIL_MS);
     },
 
-    // `tauSec` is optional and beyond the contract (harmony's DIVE SPEED may pass it); omitted = the sampler's
-    // own asymmetry, .45 s falling / .07 s recovering (multisample.ts:271-282).
+    // `tauSec` is the contract's (R2): the DIVE SPEED (harmony → arp.ts → here), handed to EVERY resident (a batch
+    // whose notes still ring and the current one alike) and on to each voice's playbackRate glide (the player clamps
+    // .005..2 s since R2: the dial's 1.5 s arrives whole); omitted = the sampler's own asymmetry, .45 s falling /
+    // .07 s recovering (multisample.ts:271-282).
     bend(cents: number, tauSec?: number) {
       bendCents = Number.isFinite(cents) ? cents : 0;
       const tau = finiteOr(tauSec);

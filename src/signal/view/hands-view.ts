@@ -1,6 +1,6 @@
 // SIGNAL R1 · lane V3 · view/hands-view.ts — THE HANDS. New code (the portfolio's), built on the Studio's gestures and
 // laws, each block naming its source below. Five strata:
-//   the TOP STRIP   the etched wordmark · the amber tempo glass (drag) + TAP · the red master STOP
+//   the TOP STRIP   the etched wordmark · the amber tempo glass (drag) + TAP · [the POWER slot] · the red master STOP
 //   the PIANOHEAD   ◀ OCTAVE ▶ · ◀ KEY ▶ + the scale cap · the sapphire chord glass · CHORD · HOLD · ARPEGGIATOR + RATE LENGTH GROOVE
 //   the RACK        eight chord pads (stamp what sounds, play, ⇧ clears)
 //   the KEYBED      C2..C7 (stage-geometry.ts) with the letters where the hand currently sits + the bracket rail
@@ -11,6 +11,8 @@
 // MOUNT: mountHandsView(root, inst) PREPENDS the top strip (.sgh-top) and APPENDS the hands block (.sgh-hands) to root,
 // so root may be the device's strata column with the towers row already inside (top · towers · hands) or an empty box.
 // dispose() removes both, every listener, the rAF and every timer, and lets go of anything a pointer still holds.
+// [R2] The top strip carries an empty .sgh-power slot at the device's top middle: view/power.ts mounts the disc in it.
+// [R2] The held gestures are REFERENCE-COUNTED (see the gate row): a key and its pad are two holders of one gesture.
 // PAINT: every gesture calls the instrument, never the DOM's own state. The harmony fields are painted from inst.state()
 // on inst.onChange; the digits, the beat lamp, the stop lamp, the key lamps and the sounding pads from time.bpm() /
 // time.running() / time.playhead() / keys.held() on a requestAnimationFrame (DOM touched only when something changed).
@@ -147,7 +149,10 @@ export const mountHandsView: MountView = (root, inst) => {
   tempoCl.append(tempo, tap);
   const stop = cap('stop', { cls: 'red sgh-stop', key: 'esc', icon: '<i class="sgh-sq" aria-hidden="true"></i>' });
   stop.dataset.ctl = 'stop';
-  top.append(mark, tempoCl, stop);
+  // [R2] the POWER slot: the device's top middle, between the tempo and STOP (power.css places it, view/power.ts fills
+  // it); absolutely placed, so the strip's three columns never move
+  const powerSlot = el('div', 'sgh-power');
+  top.append(mark, tempoCl, stop, powerSlot);
 
   // the tempo glass: vertical drag 0.5 BPM/px from the value under the finger (time-strip.ts:62-78), pointer capture,
   // no reset. The digits read time.bpm() on the frame, so they follow the drag at once (time.ts: bpm() = the target).
@@ -394,7 +399,22 @@ export const mountHandsView: MountView = (root, inst) => {
   gr.append(gm, etch('dive', 'sgh-gword'), kdSpeed, kdDist);
   gateRow.append(gl, etch('signal', 'badge sgh-badge'), gr);
 
-  // the held gestures (play.ts:820-840): a pointer hold is the gesture; the lit pad is pointer OR its key
+  // the held gestures (play.ts:820-840): a pointer hold is the gesture; the lit pad is pointer OR its key.
+  // [R2] REFERENCE-COUNTED: the key (Z, M) and its pad are two HOLDERS of one gesture; it goes on with the first holder
+  // and off with the last, so letting go of one while the other holds keeps it (a pad released under a held Z used to
+  // drop the gate). The key's holds reach the harmony through inst.harmony.gesture (main.ts routes the keymap's
+  // gate/dive there, the test surface's press() too), so while this view is mounted that one method is the counter's
+  // key door: every call that is not this view's own pad is the key. dispose() puts the method back. Every arrival
+  // re-asserts the gesture (idempotent downstream), so a holder that arrives after a master stop dropped the gesture
+  // under another holder brings it back.
+  const rawGesture = H.gesture;
+  const holders = { gate: new Set<'key' | 'pad'>(), dive: new Set<'key' | 'pad'>() };
+  const hold = (name: 'gate' | 'dive', who: 'key' | 'pad', on: boolean): void => {
+    const set = holders[name];
+    if (on) { set.add(who); rawGesture.call(H, name, true); }
+    else if (set.delete(who) && set.size === 0) rawGesture.call(H, name, false);
+  };
+  H.gesture = (name, on) => hold(name, 'key', !!on);
   const ptrGesture = { gate: false, dive: false };
   const holdPad = (name: 'gate' | 'dive', pad: HTMLButtonElement): void => {
     pad.addEventListener('pointerdown', (e) => {
@@ -403,10 +423,10 @@ export const mountHandsView: MountView = (root, inst) => {
       if (ptrGesture[name]) return;
       ptrGesture[name] = true;
       try { pad.setPointerCapture(e.pointerId); } catch { /* */ }
-      H.gesture(name, true);
+      hold(name, 'pad', true);
       paintKeysDown();
     });
-    const up = (): void => { if (!ptrGesture[name]) return; ptrGesture[name] = false; H.gesture(name, false); paintKeysDown(); };
+    const up = (): void => { if (!ptrGesture[name]) return; ptrGesture[name] = false; hold(name, 'pad', false); paintKeysDown(); };
     pad.addEventListener('pointerup', up); pad.addEventListener('pointercancel', up); pad.addEventListener('lostpointercapture', up);
   };
   holdPad('gate', gz);
@@ -624,7 +644,7 @@ export const mountHandsView: MountView = (root, inst) => {
   const letGo = (): void => {
     for (const m of [...fingers]) { fingers.delete(m); H.keyUp('p' + m); }
     for (const i of [...padHeld]) { padHeld.delete(i); H.release(i); }
-    for (const name of ['gate', 'dive'] as const) if (ptrGesture[name]) { ptrGesture[name] = false; H.gesture(name, false); }
+    for (const name of ['gate', 'dive'] as const) if (ptrGesture[name]) { ptrGesture[name] = false; hold(name, 'pad', false); }
     ptrCaps.clear(); tDrag = false; railDrag = false;
   };
   const onBlur = (): void => { codesDown.clear(); setShift(false); letGo(); paintKeysDown(); };
@@ -649,6 +669,7 @@ export const mountHandsView: MountView = (root, inst) => {
       window.removeEventListener('blur', onBlur);
       document.removeEventListener('visibilitychange', onVis);
       letGo();
+      H.gesture = rawGesture;
       top.remove(); hands.remove();
     },
   };

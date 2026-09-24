@@ -3,7 +3,7 @@
 //
 //   keys glue → glueMakeup ─┐  (effects.ts)
 //   bass + SUB exciter ─────┴→ duck ──┐              the kick sidechain; effects.duckHit books its envelope
-//   drums ──────────────────→ drumsIn ┴→ preLimit .92 → masterHP 20 Hz (Q −3.01 dB) → soft tanh(1.12x) 2×
+//   drums ──────────────────→ drumsIn ┴→ preLimit .92 → masterHP 20 Hz (Q −3.01 dB) → soft tanh(1.12x) 2× → stopGate
 //     → limiter (−1.5 dB, knee 0, 20:1, 2 ms / 90 ms) → trim ¼ → clamp curve ─┬→ destination   (or the sink when muted)
 //                                                                              └→ split → analyser L, analyser R → sink
 //
@@ -19,6 +19,14 @@
 //   that at ~180 ms, past the gate's 150.
 // DROPPED from the page (E §8): setSinkId, enumerateDevices, the getUserMedia label grant (a mic prompt for a visitor),
 //   the alt route, the 4-channel wiring and the mix tap.
+//
+// THE STOP GATE (R2, lane A; not in the Studio). The master high-pass (20 Hz, Butterworth: τ ≈ 11 ms) keeps RINGING after
+// every input is silent, so on deep low end the master stop read 105-145 ms to −90 dBFS (the R1 fixer's gate runs).
+// `stopGate` sits AFTER masterHP + soft and BEFORE the limiter: panic() pins its value and ramps it to 0 in 5 ms
+// (STOP_GATE_CLOSE), and books the reopen at +130 ms (STOP_GATE_HOLD: past the modules' own ≤ 30 ms ramps and most of
+// the ring), linear back to 1 over 20 ms (STOP_GATE_OPEN), so the next note is never swallowed for good. A repeated
+// panic re-pins and re-books. open() takes it back to 1 at once (the same 20 ms ramp, the booked reopen cancelled):
+// wake() calls it when closed() — a context suspended mid-hold would otherwise resume into a shut gate. Muted or not.
 //
 // MUTE (?mute=1): the clamp's output lands on a 0-gain SINK instead of the destination. The sink is always wired into
 // the destination (the analysers hang on it too), so every engine keeps pulling the whole chain and level() keeps
@@ -98,10 +106,30 @@ export const MASTER_HP_HZ = 20;
 export const MASTER_HP_Q = -3.01;            // dB (the W56 unit fix: Butterworth-flat, no 20 Hz bell)
 export const LIMITER = { threshold: -1.5, knee: 0, ratio: 20, attack: 0.002, release: 0.09 } as const;
 
-/** SignalOut plus the one additive member (see the header). */
+/** THE STOP GATE (R2, see the header): panic() closes it in 5 ms and books the reopen at +130 ms, 20 ms linear. */
+export const STOP_GATE_CLOSE = 0.005;
+export const STOP_GATE_HOLD = 0.13;
+export const STOP_GATE_OPEN = 0.02;
+
+/** SignalOut plus the additive members (see the header). */
 export interface SignalOutNode extends SignalOut {
   /** The clamp's output: what leaves, post-clamp and pre-mute. */
   post: AudioNode;
+  /** The stop gate (R2): after masterHP + soft, before the limiter; panic() closes it, the reopen is booked. */
+  stopGate: GainNode;
+  /** The gate is shut (or reopening): panic() booked it and ctx time has not passed the end of its reopen. */
+  closed(): boolean;
+  /** Back to 1 now (20 ms linear) and the booked reopen cancelled; a no-op when open. wake() calls it. */
+  open(): void;
+}
+
+/** Stop a param's future at t and hold its value there (cancelAndHoldAtTime where the engine has it). */
+function pinAt(p: AudioParam, t: number): void {
+  const v = p.value;
+  const c = p as AudioParam & { cancelAndHoldAtTime?: (t: number) => AudioParam };
+  if (typeof c.cancelAndHoldAtTime === 'function') c.cancelAndHoldAtTime(t);
+  else p.cancelScheduledValues(t);
+  p.setValueAtTime(v, t);
 }
 
 /** Linear (0..1 full scale; dBFS = 20·log10(x)) RMS over the whole window of both channels, and the peak over its
@@ -137,6 +165,7 @@ export function createOut(d: OutDeps): SignalOutNode {
   const masterHP = ctx.createBiquadFilter();
   masterHP.type = 'highpass'; masterHP.frequency.value = MASTER_HP_HZ; masterHP.Q.value = MASTER_HP_Q;
   const soft = ctx.createWaveShaper(); soft.curve = softCurve(); soft.oversample = '2x';
+  const stopGate = ctx.createGain(); stopGate.gain.value = 1;
   const limiter = ctx.createDynamicsCompressor();
   limiter.threshold.value = LIMITER.threshold; limiter.knee.value = LIMITER.knee; limiter.ratio.value = LIMITER.ratio;
   limiter.attack.value = LIMITER.attack; limiter.release.value = LIMITER.release;
@@ -161,7 +190,8 @@ export function createOut(d: OutDeps): SignalOutNode {
   drumsIn.connect(preLimit);
   preLimit.connect(masterHP);
   masterHP.connect(soft);
-  soft.connect(limiter);
+  soft.connect(stopGate);
+  stopGate.connect(limiter);
   limiter.connect(trim);
 
   // The sink: 0 gain, always into the destination, so every engine pulls the analysers (and, muted, the chain).
@@ -190,11 +220,26 @@ export function createOut(d: OutDeps): SignalOutNode {
   wireLevel();
   post.connect(isMuted ? sink : ctx.destination);
 
+  // the ctx time the booked reopen reaches 1 (< 0: open, nothing booked)
+  let shutUntil = -1;
+  const closed = (): boolean => shutUntil >= 0 && ctx.currentTime < shutUntil;
+
   return {
     ctx,
     duck,
     drumsIn,
     post,
+    stopGate,
+    closed,
+    open(): void {
+      if (!closed()) { shutUntil = -1; return; }
+      shutUntil = -1;
+      try {
+        const t = ctx.currentTime;
+        pinAt(stopGate.gain, t);
+        stopGate.gain.linearRampToValueAtTime(1, t + STOP_GATE_OPEN);
+      } catch { /* a closed context */ }
+    },
     level(): { peak: number; rms: number } {
       try {
         anL.getFloatTimeDomainData(bufL);
@@ -206,8 +251,9 @@ export function createOut(d: OutDeps): SignalOutNode {
     },
     muted: (): boolean => isMuted,
     panic(): void {
-      // Nothing ramps here (the modules do). Re-assert the two guarantees: the analysers are wired and reading
-      // (connect is idempotent), and a muted page reaches the speakers through nothing but the 0-gain sink.
+      // The modules ramp their own voices; here the two guarantees are re-asserted (the analysers are wired and
+      // reading — connect is idempotent — and a muted page reaches the speakers through nothing but the 0-gain sink),
+      // then the stop gate shuts (R2).
       try {
         sink.gain.cancelScheduledValues(0);
         sink.gain.value = 0;
@@ -217,6 +263,16 @@ export function createOut(d: OutDeps): SignalOutNode {
         try { post.disconnect(ctx.destination); } catch { /* never was: the normal case */ }
         try { post.connect(sink); } catch { /* a closed context */ }
       }
+      // THE STOP GATE: shut in 5 ms behind the modules' ramps (the master high-pass's ring goes with it), the reopen
+      // booked at +130 ms, linear to 1 over 20 ms
+      try {
+        const t = ctx.currentTime, g = stopGate.gain;
+        pinAt(g, t);
+        g.linearRampToValueAtTime(0, t + STOP_GATE_CLOSE);
+        g.setValueAtTime(0, t + STOP_GATE_HOLD);
+        g.linearRampToValueAtTime(1, t + STOP_GATE_HOLD + STOP_GATE_OPEN);
+        shutUntil = t + STOP_GATE_HOLD + STOP_GATE_OPEN;
+      } catch { /* a closed context */ }
     },
   };
 }

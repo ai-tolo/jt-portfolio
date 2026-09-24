@@ -318,6 +318,19 @@ const url = (v, root) => `${ROOT}/${v}/${String(root).padStart(3, '0')}.m4a`;
     keys.noteOn('vel1', 40, 1); const g1 = startGain(lastSrc()); keys.noteOff('vel1');
     return approx(startGain(srcF) / g1, VEL_DEFAULT, 1e-9);
   })());
+  // [R2] DIVE SPEED reaches the keys: bend(cents, τ) → every resident's bend(cents, τ) → each voice's playbackRate glide
+  // at exactly that τ, through the real player (two residents ring here: A + D on the first batch, F on the full set)
+  const diveT = (src) => src.playbackRate.events.filter((e) => e[0] === 'target').at(-1);
+  keys.bend(-1200, 1.5);
+  ok('[R2] bend(−1200, 1.5): the τ reaches EVERY resident\'s voices (old batch A + D, full set F), the dial\'s slow end whole',
+    [srcA, srcD, srcF].every((x) => diveT(x)[3] === 1.5) && approx(diveT(srcA)[1], 0.5) && approx(diveT(srcD)[1], 2 ** (-11 / 12) * 0.5)
+    && approx(diveT(srcF)[1], 2 ** (1 / 12) * 0.5), JSON.stringify([srcA, srcD, srcF].map(diveT)));
+  keys.bend(0);
+  ok('[R2] …back to each base on the Studio\'s .07 (the return is the release, not the dive)',
+    [srcA, srcD, srcF].every((x) => diveT(x)[3] === 0.07) && approx(diveT(srcA)[1], 1) && approx(diveT(srcF)[1], 2 ** (1 / 12)));
+  keys.bend(-2400, 0.05);
+  ok('[R2] the fast end: τ .05 on every voice', [srcA, srcD, srcF].every((x) => diveT(x)[3] === 0.05));
+  keys.bend(0);
   keys.noteOff('kKeyA');
   keys.noteOff('kKeyD');
   ok('released on the batch that owns them, with the 90 ms release', approx(releaseEnd(srcA), 0.09, 1e-9) && approx(releaseEnd(srcD), 0.09, 1e-9)

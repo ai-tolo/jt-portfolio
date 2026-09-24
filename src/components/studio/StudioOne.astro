@@ -17,7 +17,7 @@ import fs from "node:fs";
 import path from "node:path";
 import soundlab from "./rooms/soundlab-manifest.json";
 import illustrations from "./rooms/illustrations-manifest.json";
-import SignalMachine from "../SignalMachine.astro";
+import Signal from "../signal/Signal.astro";
 import Transport from "../Transport.astro";
 import Carousel from "../Carousel.astro";
 import { BUILDS } from "./builds-copy";
@@ -295,12 +295,12 @@ const ARCHIVE = BUILDS.find((b) => b.id === "archive")!;
 
   {/* ── SIGNAL — the instrument itself, live, the site's finale.
       Power-on takes the whole site dark; scrolling away powers it off and
-      the light returns. The component is SACRED — observed, never edited. */}
-  {/* No id here — SignalMachine's own root is <section id="signal">, which
-      serves as the anchor + spy target; this host only frames and observes. */}
+      the light returns. The instrument (src/components/signal/Signal.astro,
+      2026-09-23) is observed from here, never edited: this host frames it,
+      fits it and watches #sgm[data-state]; #play is the anchor + spy target. */}
   <section class="live-signal room" id="play" aria-label="Signal — a playable instrument" data-signal-host>
     <div class="sig-desktop">
-      <SignalMachine />
+      <Signal />
     </div>
     {/* the phone exhibit that stood in here (a note + the lazy /more iframe)
         is gone (Jon, 2026-09-22): the room exists only where the instrument
@@ -806,12 +806,6 @@ const ARCHIVE = BUILDS.find((b) => b.id === "archive")!;
   :global(html[data-night]) .lk-note,
   :global(html[data-night]) .lk-rights {
     color: #7d8798;
-  }
-  /* the machine's intro line is RETIRED from the page (Jon, 2026-09-22:
-     "remove 'The instrument. Built for this page. Press power, type to
-     play.'") — hidden from out here; the component itself stays untouched */
-  .live-signal :global(.sgm-intro) {
-    display: none;
   }
   :global(html[data-night]) .look-band :global(.car-counter) {
     color: #7d8798;
@@ -1357,6 +1351,11 @@ const ARCHIVE = BUILDS.find((b) => b.id === "archive")!;
   }
   .sig-desktop {
     display: none;
+    /* the old machine sat in the site's .inner (78rem, --content-pad a
+       side) and the fit measures .sgm's parent's CONTENT box: the new root
+       has no .inner, so this gutter keeps the geometry (≤ 1120px of device
+       in the 1248px room; the legend and the brief fit under it) */
+    padding-inline: var(--content-pad);
   }
   /* FIT (2026-09-02, Jon: "the drums module hangs off the side"). The
      sacred file pins the device to its 1120px reference and zooms it
@@ -1374,6 +1373,11 @@ const ARCHIVE = BUILDS.find((b) => b.id === "archive")!;
   .live-signal :global(.sgm .device) {
     width: 1120px;
     zoom: var(--sig-zoom, 1);
+  }
+  /* the site's dot cursor is redundant over the instrument: its material
+     restores the system cursor there (the /signal page's own rule) */
+  :global(body:has(.live-signal .sig:hover) .cursor-dot) {
+    visibility: hidden !important;
   }
   /* the POWER button reads from across the room (Jon, 2026-09-21: "much
      more noticeable — bigger, brighter, or both"). From OUTSIDE the sacred
@@ -2582,7 +2586,7 @@ const ARCHIVE = BUILDS.find((b) => b.id === "archive")!;
   syncNightBtn();
   applyNight();
 
-  // The SignalMachine is SACRED — we only OBSERVE its data-state: boot →
+  // The instrument is observed, never edited — we only watch its data-state: boot →
   // the site goes night; powerdown/standby → the machine's claim on the
   // dark ends. Scrolling the instrument out of view powers it off.
   const sgm = document.getElementById("sgm");
@@ -2607,23 +2611,6 @@ const ARCHIVE = BUILDS.find((b) => b.id === "archive")!;
       }
     }, { threshold: [0, 0.35] }).observe(host);
   }
-
-  // ── the instrument's a11y roles, patched from the HOST (the sacred file is
-  // never edited). Two axe failures on the homepage:
-  //   #afnode declares role="slider" but is a pointer-only XY handle — not
-  //     focusable, no aria-valuenow. It is decoration for assistive tech; the
-  //     filter is not operable by keyboard at all, so hide it rather than
-  //     advertise a control that does not exist.
-  //   #readout is a generic div carrying aria-live + aria-label (aria-label is
-  //     prohibited on a div). role="status" makes the label legal and keeps the
-  //     polite live region.
-  const afnode = document.getElementById("afnode");
-  if (afnode) {
-    afnode.removeAttribute("role");
-    afnode.removeAttribute("aria-label");
-    afnode.setAttribute("aria-hidden", "true");
-  }
-  document.getElementById("readout")?.setAttribute("role", "status");
 
   // ── the instrument's FIT zoom (styled from outside the sacred file):
   // zoom = min(cap, available / 1120), where `available` is the CONTENT box

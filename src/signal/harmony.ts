@@ -27,8 +27,13 @@
 //   chordActive()   a letter sounds, is held or is pooled (←/→ = MOVE, else the octave).
 //   pad(i)          the view's data for pad i: notes, label, degree, sel, lean, on (chords.ts PadFace).
 //   onChange(cb)    state() changed inside (a stamp, a clear, a MOVE-less ←/→ octave, the master stop's switches).
+//
+// DIVE SPEED (R2). The machine (arp.ts) glides the keys with keys.bend(cents, dive.speedSec) — the contract's τ — and
+// dives the bass with bass.gesture('dive', true, cents), which carries no τ. So the machine holds a bass whose dive-on
+// adds dive.speedSec as a 4th argument (bass.ts: the fall's τ, a superset of the contract): the keys and the drone fall
+// at the one SPEED; the way back stays the Studio's .07 on both (core.ts:969). The gate row + the exact chop pass through.
 
-import type { Booking, CreateHarmony, GateDiv, Harmony, HarmonyDeps, HarmonyState, ArpDiv } from './types.ts';
+import type { Bass, Booking, CreateHarmony, GateDiv, Harmony, HarmonyDeps, HarmonyState, ArpDiv } from './types.ts';
 import { ARP_DIVS, GATE_DIVS } from './types.ts';
 import { MUSIC_DEFAULT, midiForOffset, normMusic, stepMidi, triadForMidi } from './music.ts';
 import { createArp, LENGTH_MAX, LENGTH_MIN, VEL } from './arp.ts';
@@ -114,8 +119,20 @@ export function createHarmony(d: HarmonyDeps): Harmony & {
     try { bass.held(notes); } catch { /* */ }
   };
 
+  // DIVE SPEED reaches the bass (the header's R2 note): the machine's bass = the real one, with the fall's τ on dive-on
+  type BassX = Bass & { gesture(name: 'gate' | 'dive', on: boolean, arg?: number, tauSec?: number): void; chop?: (when: number, stepSec: number) => void };
+  const bassX = bass as BassX;
+  const arpBass = {
+    gesture(name: 'gate' | 'dive', on: boolean, arg?: number): void {
+      if (name === 'dive' && on) bassX.gesture(name, on, arg, st.dive.speedSec);
+      else if (arg === undefined) bassX.gesture(name, on);   // passed through exactly as the machine sent it
+      else bassX.gesture(name, on, arg);
+    },
+    chop(when: number, stepSec: number): void { if (typeof bassX.chop === 'function') bassX.chop(when, stepSec); },
+  };
+
   const machine = createArp({
-    keys, bass, effects: d.effects, time: d.time, ctx: d.ctx,
+    keys, bass: arpBass, effects: d.effects, time: d.time, ctx: d.ctx,
     params: () => ({
       div: st.arp.div, length: st.arp.length, groove: st.arp.groove, chord: st.chord,
       gateDiv: st.gate.div, gateSwing: st.gate.swing, diveSpeed: st.dive.speedSec, diveDist: st.dive.dist,

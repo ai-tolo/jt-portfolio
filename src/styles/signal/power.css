@@ -1,0 +1,153 @@
+/* ═══ SIGNAL · THE POWER (lane B, R2): the disc · the trace · the dark · the bulb-up ══════════════════════════════════
+   The DOM: src/signal/view/power.ts (the disc, the states on #sgm), src/components/signal/Signal.astro (the root + the
+   trace svg), src/signal/view/hands-view.ts (the top strip's .sgh-power slot). The laws come from the old homepage
+   machine, junkyard/SignalMachine.astro: the trace 249-256, the disc 316-319 + 489-495 + 841-844, the dark 418-452, the
+   keyframes 1131-1134; and from src/components/studio/StudioOne.astro 1384-1403 (the host's brighter standby disc,
+   Jon 2026-09-21: "much more noticeable"), mirrored here so every page that shows the device reads the same.
+   THE DARK is LIGHTING ONLY: opacity, filter, colour. Never display, never a size or a position: the host fits the
+   device by its box, and a dark that moved one pixel would move the page. Unlayered: every rule beats the material's
+   @layer; the states key on #sgm[data-state] (the ONE truth the host also watches). ═══ */
+
+/* ── the slot: the device's top middle (the strip spans the content box, which the chassis centres). Absolutely
+   placed, so the strip's three columns (wordmark · tempo · STOP) never move. The disc is 36 px drawn at 1.5× in place:
+   the host scales `.sgm .pwr` by 1.5 from outside (a transform REPLACES a transform, so the two never compound) and this
+   page-independent rule keeps every other page at the host's size: 54 px on the 40 px strip, clear of the towers. ── */
+.sig .sgh-power { position: absolute; left: 50%; top: 50%; z-index: 4; width: 36px; height: 36px; margin: -18px 0 0 -18px; }
+
+/* ── the disc: a flush dark-glass disc that lights from within; the ember ring ::before, the halo ::after ── */
+.sgm .pwr {
+  position: relative; display: block; width: 36px; height: 36px; margin: 0; padding: 0; border: 0; border-radius: 50%;
+  cursor: pointer; -webkit-tap-highlight-color: transparent;
+  background: radial-gradient(circle at 50% 36%, #0e141c, #05080c 76%);
+  box-shadow: inset 0 1px 1px rgba(255,255,255,.06), inset 0 0 0 1px rgba(0,0,0,.8), inset 0 3px 7px rgba(0,0,0,.72), 0 1px 2px rgba(0,0,0,.6);
+  transform: scale(1.5); transform-origin: 50% 50%; transition: box-shadow .4s;
+}
+.sgm .pwr::before { content: ""; position: absolute; inset: 0; z-index: 1; border-radius: 50%; pointer-events: none; box-shadow: inset 0 0 0 1.5px rgba(255,90,90,.16); transition: box-shadow .4s; }
+.sgm .pwr svg { position: absolute; inset: 0; z-index: 2; display: block; width: 36%; height: 36%; margin: auto; }
+.sgm .pwr path { fill: none; stroke: rgba(255,90,90,.5); stroke-width: 2.2; stroke-linecap: round; transition: stroke .4s, filter .4s; }
+.sgm .pwr::after {   /* the halo: OPACITY only (a breathing box-shadow repaints a large region every frame) */
+  content: ""; position: absolute; inset: -12px; border-radius: 50%; pointer-events: none; opacity: 0; will-change: opacity;
+  background: radial-gradient(circle, rgba(255,90,90,.3), transparent 70%);
+}
+/* standby: the ember LIT, from across the room (the host's 2026-09-21 values) */
+.sgm .device:not(.live) .pwr:not(.lit)::before {
+  box-shadow: inset 0 0 0 2px rgba(255,96,96,.85), inset 0 0 10px -2px rgba(255,90,90,.45), 0 0 0 3px rgba(255,90,90,.16), 0 0 22px 4px rgba(255,90,90,.42);
+}
+.sgm .device:not(.live) .pwr:not(.lit) path { stroke: #ff7b6e; filter: drop-shadow(0 0 5px rgba(255,90,90,.85)); }
+.sgm .device:not(.live) .pwr:not(.lit)::after { inset: -20px; background: radial-gradient(circle, rgba(255,90,90,.55), transparent 70%); }
+/* it breathes only while the device shows (power.ts marks .inview); the first sight flares it once */
+.sgm.inview .device:not(.live) .pwr:not(.lit)::after { animation: sgm-breathe 4.2s ease-in-out infinite; }
+.sgm.inview .device:not(.live) .pwr.flare:not(.lit)::after { animation: sgm-flare .9s ease-out 1; }
+/* boot (.lit) and live: the ring and the glyph go green */
+.sgm .pwr.lit::before, .sgm .device.live .pwr::before { box-shadow: inset 0 0 0 1.5px rgba(110,200,150,.45), inset 0 0 13px -4px rgba(74,160,112,.6); }
+.sgm .pwr.lit path, .sgm .device.live .pwr path { stroke: #7fc6a0; filter: drop-shadow(0 0 4px rgba(74,160,112,.5)); }
+/* while the line runs, the pointer cannot press again (a double click is not an off); power.ts still takes a
+   programmatic click during the boot (the host's scroll-away) */
+.sgm:is([data-state="boot"], [data-state="powerdown"]) .pwr { pointer-events: none; }
+@keyframes sgm-breathe { 0%, 100% { opacity: .22; } 50% { opacity: .85; } }
+@keyframes sgm-flare { 0%, 100% { opacity: .25; } 35% { opacity: 1; } }
+
+/* ── the trace: the device's OUTER edge (power.ts draws both paths in the device's own pixels). The svg is laid over
+   the device's grid cell only (Signal.astro: .sgm is a grid, the device its first row), never the legend beneath. ── */
+.sgm > .sgm-trace {
+  position: absolute; grid-area: 1 / 1 / 2 / 2; inset: 0; z-index: 9; width: 100%; height: 100%;
+  pointer-events: none; opacity: 0; transition: opacity .5s ease .15s;
+}
+.sgm > .sgm-trace.drawing { opacity: 1; }
+.sgm > .sgm-trace.settled { opacity: .4; }
+.sgm > .sgm-trace path {
+  fill: none; stroke: #3ddc84; stroke-width: 2; stroke-linecap: round;
+  filter: drop-shadow(0 0 6px color-mix(in srgb, #3ddc84 70%, transparent));
+  transition: stroke-dashoffset 1.2s cubic-bezier(.62, 0, .2, 1);
+}
+.sgm > .sgm-trace.settled path { stroke-width: 1; filter: drop-shadow(0 0 2px color-mix(in srgb, #3ddc84 55%, transparent)); }
+
+/* ═══ THE DARK: every state that is not live (standby, the boot while the line draws, the power-down) ═══════════════
+   What the old machine's standby kept, the new device keeps: a dark object you can read, nothing lit. */
+
+/* the door: nothing but the disc takes a pointer (power.ts also seals the rest inert: no tab stops, no a11y tree) */
+.sgm:not([data-state="live"]) > .device { pointer-events: none; }
+.sgm > .device .pwr { pointer-events: auto; }
+
+/* the towers: the accent rim and its inner glow go to a plain dark edge (same four insets: the change fades) */
+.sgm:not([data-state="live"]) .sig .sg-tower {
+  border-color: #0e1217;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.04), inset 0 0 0 1px #050608, inset 0 2px 9px rgba(0,0,0,.5), inset 0 0 20px -12px transparent;
+}
+/* glass: unlit, its content gone (the tempo digits, the names, the curves and nodes, the grid, the strip, the chord) */
+.sgm:not([data-state="live"]) .sig :is(.sg-glass, .si-screen) { filter: saturate(0) brightness(.62); }
+.sgm:not([data-state="live"]) .sig :is(.sg-glass, .si-screen) > * { opacity: 0; }
+.sgm:not([data-state="live"]) .sig :is(.sg-glass, .si-screen)::after { opacity: .25; }
+/* LEDs off: the caps', the segs', the power lamp; nothing pulses */
+.sgm:not([data-state="live"]) .sig :is(.sg-led, .sgh-lamp) { filter: saturate(0) brightness(.3); animation: none; }
+.sgm:not([data-state="live"]) .sig .si-seg > button::after { opacity: 0; animation: none; }
+.sgm:not([data-state="live"]) .sig .sb-pin svg { animation: none; }
+/* knobs: the arcs fall dark, the pointer dims; the values go out, the engraved words stay (a little lower) */
+.sgm:not([data-state="live"]) .sig .si-dial { filter: saturate(0) brightness(.46); }
+.sgm:not([data-state="live"]) .sig .si-kn { color: #434b56; text-shadow: none; }
+.sgm:not([data-state="live"]) .sig .si-kn.sg-chip { color: transparent; filter: saturate(0) brightness(.5); }
+.sgm:not([data-state="live"]) .sig :is(.si-kl, .sgh-oname) { color: #5a6571; }
+.sgm:not([data-state="live"]) .sig :is(.sd-dcap, .kv-mrcap) { color: #414a55; }
+/* the LCD towers: the backlight off, the fill and its legend gone; the MOD RATE ribbon's fill gone */
+.sgm:not([data-state="live"]) .sig .sg-lcd { filter: saturate(0) brightness(.5); }
+.sgm:not([data-state="live"]) .sig .sg-lcd > :is(.si-fill, .si-fl) { opacity: 0; }
+.sgm:not([data-state="live"]) .sig .kv-mrtrack .si-sfill { opacity: 0; }
+/* caps, seg caps, the gate pads, the rack: the faces dim; a latch stays DOWN (geometry) but its light goes: the accent
+   it glows with turns to the face's own dark (the glow and the LED fade with it: a box-shadow colour transitions), its
+   legend and glyph back to the resting ink; a pad's printed chord goes; the keys' flavour columns all recede alike */
+.sgm:not([data-state="live"]) .sig :is(.sg-cap, .si-seg > button, .sg-gpad, .sgh-pad) { filter: brightness(.6) saturate(.3); --acc: #1a2029 !important; }
+.sgm:not([data-state="live"]) .sig .sg-cap.on { color: #b3bdc9; }
+.sgm:not([data-state="live"]) .sig .sg-cap.on svg path { stroke: #9aa6b4; }
+.sgm:not([data-state="live"]) .sig .si-seg > button.on { color: #aab5c2; }
+.sgm:not([data-state="live"]) .sig .kv-sub { opacity: .4; }
+.sgm:not([data-state="live"]) .sig .sgh-pad :is(.sgh-plabel, .sgh-pdeg) { opacity: 0; }
+.sgm:not([data-state="live"]) .sig .sb-note { color: rgba(200,215,235,.26); text-shadow: none; }
+/* the keybed: the keys stay (they are the object) a shade lower with the room, the letters dim, the colour-row rims and
+   the bracket go plain, the octave window goes out */
+.sgm:not([data-state="live"]) .sig .sgh-bed { filter: brightness(.74); }
+.sgm:not([data-state="live"]) .sig .sgh-q { color: rgba(243,248,252,.2); text-shadow: none; }
+.sgm:not([data-state="live"]) .sig .sgh-nn { opacity: 0; }
+.sgm:not([data-state="live"]) .sig .sgh-w:is(.color, .inbracket) {
+  border-color: rgba(255,255,255,.2);
+  box-shadow: inset 0 7px 11px -7px rgba(255,255,255,.14), inset 0 -7px 11px -6px rgba(0,0,0,.55), inset 0 0 0 1px transparent, 0 2px 4px rgba(0,0,0,.5);
+}
+.sgm:not([data-state="live"]) .sig .sgh-b:is(.color, .inbracket) {
+  border-color: rgba(255,255,255,.18);
+  box-shadow: inset 0 0 0 1px transparent, inset 0 1px 0 rgba(255,255,255,.1), inset 0 -8px 9px rgba(0,0,0,.7), 0 4px 6px rgba(0,0,0,.7);
+}
+.sgm:not([data-state="live"]) .sig .sgh-win { opacity: 0; }
+
+/* ── the fades. DOWN (power-off): the dark rules carry their own transitions, the light draining from the gate row up
+   to the disc as the line runs back. UP (live): .bulb (power.ts, BULB_MS) lends every lit property a ~500 ms fade with a
+   stagger down the strata, the line having drawn first; then the recipes' own snappy transitions come back. ── */
+/* (the disc is out of it: it keeps its own .4 s light whatever the device does) */
+.sgm:not([data-state="live"]) .sig :not(.pwr, .pwr *),
+.sgm:not([data-state="live"]) .sig :not(.pwr, .pwr *)::before,
+.sgm:not([data-state="live"]) .sig :not(.pwr, .pwr *)::after,
+.sgm.bulb .sig :not(.pwr, .pwr *),
+.sgm.bulb .sig :not(.pwr, .pwr *)::before,
+.sgm.bulb .sig :not(.pwr, .pwr *)::after {
+  transition-property: opacity, filter, color, border-color, box-shadow, text-shadow;
+  transition-duration: .55s;
+  transition-timing-function: ease;
+  transition-delay: var(--sgm-d, 0ms);
+}
+.sgm.bulb .sig :not(.pwr, .pwr *),
+.sgm.bulb .sig :not(.pwr, .pwr *)::before,
+.sgm.bulb .sig :not(.pwr, .pwr *)::after { transition-duration: .5s; }
+.sgm[data-state="powerdown"] .sig .sgh-gate { --sgm-d: 0ms; }
+.sgm[data-state="powerdown"] .sig .sgh-keybed { --sgm-d: 50ms; }
+.sgm[data-state="powerdown"] .sig .sgh-rack { --sgm-d: 100ms; }
+.sgm[data-state="powerdown"] .sig .sgh-head { --sgm-d: 150ms; }
+.sgm[data-state="powerdown"] .sig .sig-towers { --sgm-d: 200ms; }
+.sgm[data-state="powerdown"] .sig .sgh-top { --sgm-d: 260ms; }
+.sgm.bulb .sig .sgh-top { --sgm-d: 0ms; }
+.sgm.bulb .sig .sig-towers { --sgm-d: 70ms; }
+.sgm.bulb .sig .sgh-head { --sgm-d: 140ms; }
+.sgm.bulb .sig .sgh-rack { --sgm-d: 190ms; }
+.sgm.bulb .sig .sgh-keybed { --sgm-d: 240ms; }
+.sgm.bulb .sig .sgh-gate { --sgm-d: 290ms; }
+@media (prefers-reduced-motion: reduce) {
+  .sgm.inview .device:not(.live) .pwr:not(.lit)::after { animation: none; opacity: .5; }
+  .sgm .sig, .sgm .sig * { --sgm-d: 0ms !important; }   /* the fades stay, the stagger goes */
+}

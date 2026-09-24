@@ -1,24 +1,38 @@
 ---
-// SIGNAL · THE INSTRUMENT'S MARKUP (the integrator's, R1). One root `.sig` (the material's tokens + base, data-live="1"
-// so every lit recipe may light), the carbon chassis `.sig-device`, and the empty strata the views fill:
+// SIGNAL · THE INSTRUMENT'S MARKUP (R1 the integrator's; R2 lane B: the host-compatible root, the power, the words).
+// THE HOST CONTRACT (src/components/studio/StudioOne.astro relies on these; CLAUDE.md "Sacred / hazard files"):
+//   #sgm[data-state]   standby → boot → live → powerdown → standby, written by src/signal/view/power.ts only (the host
+//                      watches it: boot/live = the site goes night; it clicks #pwr when the room is < 35 % visible)
+//   svg.sgm-trace      the power's perimeter line, laid over the DEVICE's grid cell only (power.css)
+//   .sgm > .device     the 1120 px box the host zooms with --sig-zoom; .sgm's parent is the fit's measure
+//   #pwr               the power disc: power.ts mounts it in the top strip's middle (hands-view.ts's .sgh-power slot)
+// The device is the material's root `.sig` (the tokens + base; data-live="1" only while live) around the empty strata
+// the views fill:
 //   [data-strata]   the device's column (gap 8): hands-view.ts PREPENDS the top strip and APPENDS the hands block
 //     .sig-towers   290 · 494 · 290 (the side columns take what the 14 px chassis padding leaves), 520 tall
 //       [data-slot=drums|keys|bass]   mountDrumsView / mountKeysView / mountBassView: each tower fills its cell
-// The recipes are src/styles/signal/material.css (@layer sg-material); each stratum's layout is its view lane's sheet.
-// The boot (src/signal/main.ts) runs once the DOM is parsed, and never where the device is not shown (a phone, a
-// coarse pointer, a window under 900 px: the page shows the still instead; widening the window boots it then).
+// Beneath the device, inside .sgm: the LEGEND (the keys) and the BRIEF (a <details>), both from ./signal-copy.ts.
+// The recipes are src/styles/signal/material.css (@layer sg-material); each stratum's layout is its view lane's sheet;
+// the power's states and the dark are power.css. The boot (src/signal/main.ts) runs once the DOM is parsed, and never
+// where the device is not shown (a phone, a coarse pointer, a window under 900 px: the page shows the still instead;
+// widening the window boots it then). The key door goes on BEFORE the boot (its listener must precede the keymap's),
+// the power AFTER it (the disc needs the top strip).
 import "@fontsource/ibm-plex-mono/400.css";
 import "@fontsource/ibm-plex-mono/500.css";
+import "@fontsource/ibm-plex-sans/400.css";
 import "@fontsource/orbitron/500.css";
 import "../../styles/signal/material.css";
 import "../../styles/signal/drums.css";
 import "../../styles/signal/keys.css";
 import "../../styles/signal/bass.css";
 import "../../styles/signal/hands.css";
+import "../../styles/signal/power.css";
+import { BRIEF, BRIEF_SUMMARY, LEGEND } from "./signal-copy.ts";
 ---
 
-<div class="sig" data-live="1" id="sig">
-  <div class="sig-device" id="sig-device">
+<div class="sgm" id="sgm" data-state="standby">
+  <svg class="sgm-trace" aria-hidden="true"><path class="tr-l"></path><path class="tr-r"></path></svg>
+  <div class="device sig sig-device" id="sig-device">
     <div class="sig-strata" data-strata>
       <div class="sig-towers">
         <div class="sig-slot" data-slot="drums"></div>
@@ -27,9 +41,41 @@ import "../../styles/signal/hands.css";
       </div>
     </div>
   </div>
+  <div class="sig-legend">
+    {LEGEND.map((row) => (
+      <ul class="sgl-row">
+        {row.map((item) => (
+          <li class="sgl-item">
+            <span class="sgl-keys">
+              {item.range
+                ? [<kbd>{item.keys[0]}</kbd>, <span class="sgl-to" aria-hidden="true">–</span>, <kbd>{item.keys[item.keys.length - 1]}</kbd>]
+                : item.keys.map((k) => <kbd>{k}</kbd>)}
+            </span>
+            <span class="sgl-word">{item.word}</span>
+          </li>
+        ))}
+      </ul>
+    ))}
+  </div>
+  <details class="sig-brief">
+    <summary>{BRIEF_SUMMARY}</summary>
+    <div class="sgb-body">{BRIEF.map((p) => <p>{p}</p>)}</div>
+  </details>
 </div>
 
 <style is:global>
+  /* ── the root: one grid column as wide as the (zoomed) device; the trace svg shares the device's cell (power.css),
+     the legend and the brief add no width of their own (contain: inline-size), so .sgm is exactly the device's box
+     wide and the host's fit-content centring holds ── */
+  .sgm {
+    position: relative; display: grid; grid-template-columns: minmax(0, auto); width: fit-content; margin-inline: auto;
+    --sgm-ink: #141210; --sgm-dim: #6a6660; --sgm-line: rgba(20, 18, 16, 0.2);
+  }
+  @media screen {
+    html[data-night] .sgm { --sgm-ink: #e8ecf4; --sgm-dim: #7d8798; --sgm-line: rgba(232, 236, 244, 0.2); }
+  }
+  .sgm > .device { width: 1120px; }
+
   /* the strata the views fill (unlayered: the material's @layer never fights it) */
   .sig .sig-strata { position: relative; z-index: 1; display: flex; flex-direction: column; gap: 8px; min-height: 841px; }
   .sig .sig-towers {
@@ -37,19 +83,67 @@ import "../../styles/signal/hands.css";
     grid-template-columns: minmax(0, 1fr) var(--sgh-mid, 494px) minmax(0, 1fr);
   }
   .sig .sig-slot { position: relative; min-width: 0; min-height: 0; display: flex; }
+
+  /* ── THE LEGEND: the keys, one quiet mono line of keycaps + words (two rows where the room is narrow). The page's
+     ink, never the device's: engraved and dim while the device sleeps, lit (full ink) while it plays. ── */
+  .sgm > .sig-legend {
+    contain: inline-size; display: flex; flex-wrap: wrap; justify-content: center; gap: 6px 22px;
+    margin: 14px 0 0; padding: 0 8px;
+    font: 400 11px/1 "IBM Plex Mono", ui-monospace, Menlo, monospace; letter-spacing: 0.02em; color: var(--sgm-dim);
+    opacity: 0.7; transition: color 0.5s ease, opacity 0.5s ease;
+  }
+  .sgm[data-state="live"] > .sig-legend { color: var(--sgm-ink); opacity: 1; }
+  .sgm .sgl-row { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px 18px; margin: 0; padding: 0; list-style: none; }
+  .sgm .sgl-item { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
+  .sgm .sgl-keys { display: inline-flex; align-items: center; gap: 3px; }
+  .sgm .sgl-item kbd {
+    display: inline-flex; align-items: center; justify-content: center; box-sizing: border-box; min-width: 17px; height: 17px;
+    padding: 0 4px; border: 1px solid var(--sgm-line); border-bottom-width: 2px; border-radius: 4px;
+    font: 500 10px/1 "IBM Plex Mono", ui-monospace, Menlo, monospace; color: inherit; background: none;
+    transition: border-color 0.5s ease;
+  }
+  .sgm[data-state="live"] .sgl-item kbd { border-color: color-mix(in srgb, var(--sgm-ink) 42%, transparent); }
+  .sgm .sgl-to { opacity: 0.55; }
+
+  /* ── THE BRIEF: a quiet handle under the legend; open, a few plain sentences (Jon's, DRAFT) ── */
+  .sgm > .sig-brief { contain: inline-size; margin: 4px 0 0; padding: 0 8px; text-align: center; color: var(--sgm-dim); }
+  .sgm > .sig-brief > summary {
+    display: inline-flex; align-items: center; gap: 8px; padding: 3px 8px; border-radius: 4px; list-style: none;
+    font: 400 11px/1 "IBM Plex Mono", ui-monospace, Menlo, monospace; letter-spacing: 0.04em; color: var(--sgm-dim);
+    transition: color 0.2s ease;
+  }
+  .sgm > .sig-brief > summary::-webkit-details-marker { display: none; }
+  .sgm > .sig-brief > summary::before {   /* a small chevron that turns down when open */
+    content: ""; width: 4px; height: 4px; margin-top: -1px; border-right: 1.25px solid currentColor; border-bottom: 1.25px solid currentColor;
+    transform: rotate(-45deg); transition: transform 0.2s ease;
+  }
+  .sgm > .sig-brief[open] > summary::before { transform: rotate(45deg); margin-top: -3px; }
+  .sgm > .sig-brief > summary:hover, .sgm > .sig-brief[open] > summary { color: var(--sgm-ink); }
+  .sgm > .sig-brief > summary:focus-visible { outline: 1px solid var(--sgm-line); outline-offset: 2px; }
+  .sgm .sgb-body { max-width: 58ch; margin: 6px auto 4px; }
+  .sgm .sgb-body p {
+    margin: 0 0 8px; font: 400 14px/1.6 "IBM Plex Sans", ui-sans-serif, system-ui, sans-serif; color: var(--sgm-ink);
+    text-wrap: pretty;
+  }
+  .sgm .sgb-body p:last-child { margin-bottom: 0; }
 </style>
 
 <script>
   import { boot } from "../../signal/main.ts";
+  import { guardKeys, mountPower } from "../../signal/view/power.ts";
 
+  const sgm = document.getElementById("sgm");
   const device = document.getElementById("sig-device");
   const hidden = window.matchMedia("(max-width: 899px), (pointer: coarse)");
   let started = false;
   const go = (): void => {
-    if (started || !device || hidden.matches) return;
+    if (started || !sgm || !device || hidden.matches) return;
     started = true;
     hidden.removeEventListener("change", go);
-    boot(device).catch((e) => console.error("[signal] boot failed", e));
+    guardKeys(sgm);   // the key door first: its capture listener must run before the keymap's (attached inside boot)
+    boot(device)
+      .then((b) => { if (b) mountPower(sgm, b.instrument); })
+      .catch((e) => console.error("[signal] boot failed", e));
   };
   const start = (): void => {
     go();

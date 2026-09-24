@@ -32,6 +32,9 @@
 //   deps.time?     optional, the Timekeeper (only its bpm() is read; the same optional dep the drums take): the
 //                  hit length law and the drone LFO read the tempo. Without it the bass measures the tempo from
 //                  book()'s lattice lines (BPM_DEFAULT until the second line arrives).
+//   gesture('dive', on, cents, tauSec)   [R2] a 4th argument, the fall's τ: DIVE SPEED (harmony.ts passes
+//                  dive.speedSec). It is the Studio's diveTime parameter (core.ts:1879, clamped .02..2 s): it holds
+//                  until the next one; never given, it is the Studio's .45. The return stays the literal .07.
 
 import type { Bass, BassDeps, BassMode, BassState, BassStep, Booking, CreateBass, DrumVel, Timekeeper } from './types.ts';
 import { BPM_DEFAULT } from './types.ts';
@@ -147,6 +150,8 @@ export type SignalBass = Bass & {
   chop(when: number, stepSec: number): void;
   /** bassGate back to 1 (cancel-and-hold, τ .03): call it beside effects.releaseGate. */
   releaseGate(): void;
+  /** [R2] the contract's gesture plus the DIVE's fall τ (s) as a 4th argument (a superset: 3 arguments = the contract). */
+  gesture(name: 'gate' | 'dive', on: boolean, arg?: number, tauSec?: number): void;
 };
 
 /** One booked 303 hit: everything stop() needs to cancel it before it starts or ramp it while it sounds. */
@@ -296,9 +301,9 @@ export function createBass(d: BassDeps & BassExtras): SignalBass {
   const bassPulseSteps = PULSE_MULT[2], bassSeqMult = 1, accentScale = 1;
   const bassSteady = (): number => DRONE_LV;
   // from signal-studio-v6lib/src/engine/core.ts:938, 949 (2a9e4a7) — DIVE: the held flag, the depth (−2400¢ = two
-  // octaves), the fall τ .45 s (the return is the literal .07 in dive())
-  let diving = false, diveCents = -2400;
-  const diveTau = 0.45;
+  // octaves), the fall τ .45 s (the return is the literal .07 in dive()). R2: diveTau is the Studio's PARAMETER again
+  // (core.ts:1879), set by the dive's 4th argument (DIVE SPEED)
+  let diving = false, diveCents = -2400, diveTau = 0.45;
   // the port's pitch input: the MIDI notes held() last received (the candidates), and the previous call's (onsets)
   let cands: number[] = [], prevHeld: number[] = [];
   const hits = new Set<Hit>();
@@ -500,9 +505,11 @@ export function createBass(d: BassDeps & BassExtras): SignalBass {
 
   // from signal-studio-v6lib/src/engine/core.ts:968-973 (2a9e4a7) — DIVE's drone half (bendCents is 0: no continuous
   // bend in the port). A sounding hit does not dive; a hit booked mid-dive starts bent (bassHit reads `diving`).
-  function dive(on: boolean, cents?: number): void {
+  function dive(on: boolean, cents?: number, tauSec?: number): void {
     // core.ts:1878: a dive always goes down (diveCents = −|depth|)
     if (typeof cents === 'number' && Number.isFinite(cents) && cents !== 0) diveCents = -Math.abs(cents);
+    // core.ts:1879 (R2): the fall's τ = DIVE SPEED, clamped as the Studio's diveTime (.02..2 s)
+    if (typeof tauSec === 'number' && Number.isFinite(tauSec)) diveTau = clamp(tauSec, 0.02, 2);
     if (diving === on) return;
     diving = on; const t = ctx.currentTime;
     const tau = on ? diveTau : 0.07;
@@ -558,9 +565,10 @@ export function createBass(d: BassDeps & BassExtras): SignalBass {
   // gesture('gate', true, stepSec): ONE chop of stepSec (call it beside effects.chop). It carries no time, so the
   // chop lands on the chain (the previous chop of this run + its length, while that is still ahead), else on
   // the latest lattice line book() saw (call bass.book(b) before harmony.book(b)), else 10 ms from now.
-  // chop(when, stepSec) is the exact form. gesture('gate', false) = releaseGate(). gesture('dive', on, cents).
-  function gesture(name: 'gate' | 'dive', on: boolean, arg?: number): void {
-    if (name === 'dive') { dive(!!on, arg); return; }
+  // chop(when, stepSec) is the exact form. gesture('gate', false) = releaseGate(). gesture('dive', on, cents, tauSec?)
+  // (R2: the fall's τ, the DIVE SPEED).
+  function gesture(name: 'gate' | 'dive', on: boolean, arg?: number, tauSec?: number): void {
+    if (name === 'dive') { dive(!!on, arg, tauSec); return; }
     if (name !== 'gate') return;
     if (!on) { releaseGate(); return; }
     if (gateExact) return;
