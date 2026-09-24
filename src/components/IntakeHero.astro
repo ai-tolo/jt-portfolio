@@ -67,7 +67,7 @@ const hasCap = Astro.slots.has('cap');
           <div class="face face-saved">
             <div class="brand">INTAKE</div>
             <div class="flat"></div>
-            <div class="check"><svg viewBox="0 0 24 24" fill="none" stroke="#FFB454" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"></path></svg></div>
+            <div class="check"><svg viewBox="0 0 24 24" fill="none" stroke="#34C759" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"></path></svg></div>
             <div class="saved">Saved</div>
             <div class="meta">{run.memo.id} · {run.memo.duration}</div>
           </div>
@@ -288,7 +288,7 @@ const hasCap = Astro.slots.has('cap');
 /* the object presses itself (the host's first settle, 2026-09-22): the square dips as a finger would */
 .intake-hero[data-ghost] .stop span { transform: scale(0.86); }
 .intake-hero .flat { position: absolute; left: 7.91cqw; top: 43.99cqw; width: 84.18cqw; height: 0.63cqw; border-radius: 1px; background: color-mix(in oklab, var(--accent) 40%, transparent); animation: ih-in .5s ease-out both; }
-.intake-hero .check { position: absolute; left: 39.87cqw; top: 34.18cqw; width: 20.25cqw; height: 20.25cqw; box-sizing: border-box; border-radius: 50%; border: 0.79cqw solid color-mix(in oklab, var(--glow) 55%, transparent); background: #000; display: flex; align-items: center; justify-content: center; animation: ih-pop .5s ease-out .15s both; }
+.intake-hero .check { position: absolute; left: 39.87cqw; top: 34.18cqw; width: 20.25cqw; height: 20.25cqw; box-sizing: border-box; border-radius: 50%; border: 0.79cqw solid color-mix(in oklab, #34C759 70%, transparent); background: #000; display: flex; align-items: center; justify-content: center; animation: ih-pop .5s ease-out .15s both; }
 .intake-hero .check svg { width: 8.86cqw; height: 8.86cqw; }
 .intake-hero .saved { position: absolute; left: 0; top: 63.29cqw; width: 100%; text-align: center; font-size: 7.59cqw; font-weight: 400; letter-spacing: 0.01em; line-height: 1; color: #F2F0EA; animation: ih-in .5s ease-out .3s both; }
 .intake-hero .meta { position: absolute; left: 0; top: 75.32cqw; width: 100%; text-align: center; font-family: var(--mono); font-size: 3.48cqw; letter-spacing: 0.08em; color: #8C8A84; animation: ih-in .5s ease-out .4s both; }
@@ -309,9 +309,17 @@ const hasCap = Astro.slots.has('cap');
 .intake-hero.measuring, .intake-hero.measuring * { transition: none !important; animation: none !important; }
 /* a row = a 10px node on the line at the left, its text 32px in (the Archive's rail draws the same) */
 .intake-hero .row { position: relative; padding-left: 32px; }
-.intake-hero .row::before { content: ""; position: absolute; left: 4.5px; top: 16px; bottom: -24px; width: 1px; background: var(--line); }
+.intake-hero .row::before { content: ""; position: absolute; left: 4.5px; top: 16px; bottom: -24px; width: 1px; background: var(--line); transform-origin: top; transition: transform .55s ease-out; }
 .intake-hero .row:last-of-type::before { bottom: 0; background: linear-gradient(to bottom, var(--line), transparent); }
-.intake-hero .node { position: absolute; left: 0; top: 3px; width: 10px; height: 10px; border-radius: 50%; background: var(--line); transition: background .4s; }
+.intake-hero .node { position: absolute; left: 0; top: 3px; width: 10px; height: 10px; border-radius: 50%; background: var(--line); transition: background .4s, opacity .3s, transform .35s cubic-bezier(.2, .9, .3, 1.4); }
+/* THE DOTS' SEQUENCE (Jon, 2026-09-24, one choreography with the Archive's
+   rail): at rest the grey layout stands where the run will end; the press
+   clears it; then each node pops in its turn and draws the line to the next */
+.intake-hero.s1 .node { opacity: 0; transform: scale(.5); }
+.intake-hero.s1 .row::before { transform: scaleY(0); transition: none; }
+.intake-hero.s2 .node-transcript, .intake-hero.s3 .node-verdict, .intake-hero.s4 .node-ticket, .intake-hero.s5 .node-deck { opacity: 1; transform: none; }
+.intake-hero.s2 .run > .row:nth-of-type(1)::before, .intake-hero.s3 .run > .row:nth-of-type(2)::before,
+.intake-hero.s4 .run > .row:nth-of-type(3)::before, .intake-hero.s5 .run > .row:nth-of-type(4)::before { transform: none; transition: transform .55s ease-out .2s; }
 .intake-hero .body { min-width: 0; display: flex; flex-direction: column; gap: 8px; }
 .intake-hero .label { font: 500 0.6875rem/1.5 var(--mono); letter-spacing: 0.12em; color: var(--dim); }
 /* at rest the run shows only its nodes (Jon, 2026-09-22): a row's words arrive with its node */
@@ -321,8 +329,8 @@ const hasCap = Astro.slots.has('cap');
 .intake-hero.s4 .run > .row:nth-of-type(3) .label,
 .intake-hero.s5 .run > .row:nth-of-type(4) .label { opacity: 1; }
 
-.intake-hero .stream { display: none; height: 156px; overflow: hidden; flex-direction: column; justify-content: flex-end; font-family: var(--mono); font-size: 13px; line-height: 1.65; color: var(--ink-2); transition: opacity .6s; -webkit-mask-image: linear-gradient(to bottom, transparent, #000 36px); mask-image: linear-gradient(to bottom, transparent, #000 36px); }
-.intake-hero.s2 .stream { display: flex; animation: ih-in .4s ease-out both; }
+.intake-hero .stream { display: flex; visibility: hidden; height: 156px; overflow: hidden; flex-direction: column; justify-content: flex-end; font-family: var(--mono); font-size: 13px; line-height: 1.65; color: var(--ink-2); transition: opacity .6s; -webkit-mask-image: linear-gradient(to bottom, transparent, #000 36px); mask-image: linear-gradient(to bottom, transparent, #000 36px); }
+.intake-hero.s2 .stream { visibility: visible; animation: ih-in .4s ease-out both; }
 .intake-hero.s2 .node-transcript { background: var(--accent); }
 .intake-hero.s3 .stream { opacity: .45; }
 .intake-hero .caret { display: inline-block; width: 8px; height: 14px; margin-left: 4px; vertical-align: -2px; background: var(--accent); animation: ih-blink 1s steps(1) infinite; }
@@ -333,15 +341,15 @@ const hasCap = Astro.slots.has('cap');
 .intake-hero.s3 .verdict span[data-on] { color: var(--amber); }
 .intake-hero.s3 .node-verdict { background: var(--amber); }
 
-.intake-hero .tickets { display: none; flex-direction: column; font-family: var(--mono); font-size: 12px; line-height: 1.7; }
-.intake-hero.s4 .tickets { display: flex; animation: ih-in .45s ease-out both; }
+.intake-hero .tickets { display: flex; visibility: hidden; flex-direction: column; font-family: var(--mono); font-size: 12px; line-height: 1.7; }
+.intake-hero.s4 .tickets { visibility: visible; animation: ih-in .45s ease-out both; }
 .intake-hero.s4 .node-ticket { background: var(--pink); }
 .intake-hero .stub { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .intake-hero .stub.stored { opacity: .55; }
 .intake-hero .k { color: var(--amber); } .intake-hero .p { color: var(--dim); } .intake-hero .v { color: var(--ink-2); }
 
-.intake-hero .deck { display: none; flex-direction: column; gap: 10px; }
-.intake-hero.s5 .deck { display: flex; }
+.intake-hero .deck { display: flex; visibility: hidden; flex-direction: column; gap: 10px; }
+.intake-hero.s5 .deck { visibility: visible; }
 .intake-hero.s5 .node-deck { background: var(--rail); }
 .intake-hero .card {
   position: relative; background: var(--card); border: 1px solid var(--card-line); border-left: 3px solid var(--rail); border-radius: 16px;
@@ -365,9 +373,9 @@ const hasCap = Astro.slots.has('cap');
 
 /* the replay is the phone's pill, at the foot of the screen (Jon, 2026-09-22); the
    screen is the query container, so its cqw match the phone's */
-.intake-hero .replay { display: none; position: absolute; left: 0; right: 0; bottom: 6.5cqw; z-index: 3; width: max-content; margin-inline: auto; align-items: center; gap: 1.4cqw; padding: 2.4cqw 4.6cqw; border: 0; border-radius: 999px; background: rgba(255, 255, 255, 0.14); color: #F2F0EA; font: 500 3.5cqw/1 var(--sans); cursor: pointer; pointer-events: auto; }
+.intake-hero .replay { display: none; position: absolute; left: 0; right: 0; bottom: 6.5cqw; z-index: 3; width: max-content; margin-inline: auto; align-items: center; gap: 1.4cqw; padding: 2.4cqw 4.6cqw; border: 0; border-radius: 999px; background: #ECE9E2; color: #1A1917; font: 500 3.5cqw/1 var(--sans); cursor: pointer; pointer-events: auto; } /* the page's paper on the screen (Jon, 2026-09-24): plainly not the device's own UI */
 .intake-hero .replay .ico { width: 1.1em; height: 1.1em; }
-.intake-hero .replay:hover { background: rgba(255, 255, 255, 0.22); }
+.intake-hero .replay:hover { background: #DDD9CF; }
 .intake-hero .replay:focus-visible { outline: 2px solid #F2F0EA; outline-offset: 2px; }
 .intake-hero.s6 .replay { display: inline-flex; animation: ih-in .4s ease-out .5s both; }
 .intake-hero .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
