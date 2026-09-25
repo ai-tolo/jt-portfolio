@@ -1,9 +1,18 @@
 # SIGNAL R4 · THE RENDER ROUND
 
-Jon made a render (docs/signal-map/r4-render.webp: a rough draft cut from screenshot slices) of where the device goes next.
-Build round 4 of the portfolio SIGNAL instrument from it: REFINE the render, do not copy its pixels. "The big ideas are
-mostly all there"; the specifics below are what the render cannot show. This is a relayout round on top of R3.3 (main
-1754f4d), not a patch: when a stratum moves, the strata around it are re-balanced until the device reads as one instrument.
+Jon made a render (docs/signal-map/r4-render.webp) of where the device goes next. HIS WORDS: it is "a very rough draft"
+cut from screenshot slices, "the big ideas are mostly all there", and he wants the result "more intentionally crafted but
+with the key takeaways gleaned from my feedback". So the render is the SOURCE OF THE TAKEAWAYS, not a layout to copy:
+the takeaways (§A–§E) are the law; the exact positions, gaps and sizes in the render are not. Mold each module on its own
+(its hierarchy, its real estate, what a first-timer's eye lands on), then compose the whole device as one view and
+re-balance across modules until it reads as one instrument. Build round 4 on top of R3.3 (main 1754f4d): a relayout, not a
+patch: when a stratum moves, the strata around it are re-balanced.
+
+THE TAKEAWAYS, in one list: (1) the top strip goes; the device's top is the three module titles; (2) esc STOP at a top
+corner; the power is a red flick switch; (3) the arpeggiator leaves the surface; (4) the KEY screen and the CHORD glass
+live in the keys module's foot with HOLD · CHORD; (5) the octave group lives on the keybed's right flank; (6) the hands map
+correlates to the physical keyboard (the letter rows, Z and M where they are on a keyboard, the knobs beside their keys);
+(7) the three mixer rails stay on one line above the three feet (Jon: "keep the gain"); (8) everything else is R3.3.
 
 ## Read first
 - Memory: `signal_portfolio_rebuild` (R0–R3.3: what shipped, the laws, the hosts), then `feedback_product_surface_context`,
@@ -55,8 +64,8 @@ mostly all there"; the specifics below are what the render cannot show. This is 
 - The keys' foot row (44): the CHORD glass at the left (the chord's name 22 px + its degree under it, the settle/dim law as
   today; `data-ctl="chord-glass"`), then `HOLD` · `CHORD` (the `.sg-cap` toggles as today), then the KEY screen (`C MAJ` 22 px
   over `key`, `data-ctl="key"`) with its ◀ ▶ caps and the SCALE cap (the render shows the screen alone; the walk needs its
-  caps: keep them small beside it). The keys' M · S · GAIN rail is NOT in the render: KEEP it (the three modules' rails on
-  one line above the feet, R3.1) unless it will not fit, and say so.
+  caps: keep them small beside it). The keys' M · S · GAIN rail stays (Jon, 2026-09-24: "keep the gain, my mistake"): the
+  three modules' rails on one line above the three feet, as R3.1.
 - With the gesture row (R3.3) and the arp row gone, the FX cards and the LFO deck take the height (as the render shows).
 
 ### D. Drums and bass: as today
@@ -95,4 +104,7 @@ mostly all there"; the specifics below are what the render cannot show. This is 
 - The shared probe: `<scratchpad>/r3-shot.mjs` from the R3 chat is gone with that scratchpad; write the same 60-line probe once
   (headless muted Playwright Chromium, power via a trusted click on `#pwr`, `--keys`, `--sel`, `--full`, kill in finally) and
   hand it to every lane. Kill every headless browser you start; never engage audio in the live preview pane.
+- The look pass is the round's craft: the integrator composes with Jon's render open beside the live device, keeps the
+  takeaways, and lets the material and the size floor decide the rest; nothing in the render is precise enough to be
+  measured against. Screenshots first, then the numbers.
 - End with screenshots (whole device, each module, the switch off/on, one pressed state), the preview URL, and a residue list.
