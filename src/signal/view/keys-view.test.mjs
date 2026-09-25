@@ -55,7 +55,7 @@ const flushRaf = (n = 1) => { for (let k = 0; k < n; k++) { const q = rafQ; rafQ
 
 const V = await import('./keys-view.ts');
 const { createStubInstrument } = await import('./stub-instrument.ts');
-const { FILTER_OPEN, LFO_DIVS, VOICES } = await import('../types.ts');
+const { CTL, FILTER_OPEN, LFO_DIVS, VOICES } = await import('../types.ts');
 
 // ── the harness ──
 let pass = 0, total = 0; const fails = [];
@@ -153,17 +153,20 @@ await t('source: imports ONLY ../types.ts, ./controls.ts, ./common.ts (types.ts:
   ok(froms.length >= 3); ok(froms.every((f) => ['../types.ts', './controls.ts', './common.ts'].includes(f)), froms.join(', '));
   ok(!/\bimport\s*\(/.test(src), 'no dynamic import'); ok(!/\btitle\s*=/.test(src.replace(/\/\/.*$/gm, '')), 'no title=');
 });
-await t('mount: one tower in root, the keys accent, head · glass · body · foot', () => {
+await t('mount: one tower in root, the keys accent, head · glass · gestures · body · harmony · foot', () => {
   const { root, T, view } = mount();
   is(root.children.length, 1); ok(T.cls.has('sg-tower') && T.cls.has('kv-tower')); is(T.style.getPropertyValue('--acc'), 'var(--sg-keys)');
-  is(T.children.map((c) => c.className).join(' | '), 'kv-head | sg-glass tint sg-ew kv-filter | kv-body | sg-rail kv-foot');
+  is(T.children.map((c) => c.className).join(' | '), 'kv-head | sg-glass tint sg-ew kv-filter | kv-gest | kv-body | kv-harm | sg-rail kv-foot');
   view.dispose();
 });
-await t('header: KEYS is a static span (no LED, never lit); the voice seg holds the four rips, RHODES on', () => {
-  const { T, q, view } = mount();
-  const pow = q('.kv-pow'); is(pow.tagName, 'SPAN'); is(pow.textContent, 'KEYS'); is(pow.children.length, 0); ok(!pow.cls.has('on'));
+await t('header: the voice seg holds the four rips, RHODES on; the ↑ ↓ keycaps (ArrowUp/Down) step the voice, wrapping', () => {
+  const { inst, T, q, view } = mount();
+  const up = q('.sg-key[data-code="ArrowUp"]'), dn = q('.sg-key[data-code="ArrowDown"]');
+  is(up.tagName, 'BUTTON'); is(up.textContent + dn.textContent, '↑↓'); is(up.dataset.ctl, 'keys-voice-up'); is(dn.dataset.ctl, 'keys-voice-down');
   const b = q('.kv-voices').querySelectorAll('button'); is(b.map((x) => x.textContent).join(' '), 'RHODES PIANO PAD LEAD'); is(b.map((x) => x.dataset.v).join(' '), VOICES.join(' '));
   ok(b[0].cls.has('on')); is(b.filter((x) => x.cls.has('on')).length, 1); ok(!T.innerHTML.includes('title='));
+  up.fire('click'); is(inst.keys.state().voice, 'piano'); ok(b[1].cls.has('on'));
+  dn.fire('click'); dn.fire('click'); is(inst.keys.state().voice, 'lead', '↓ from RHODES wraps to LEAD;'); ok(b[3].cls.has('on')); is(b.filter((x) => x.cls.has('on')).length, 1);
   view.dispose();
 });
 await t('voice: a click picks (keys.pick), lights the cap, carries .loading until ready(), then settles', async () => {
@@ -261,6 +264,15 @@ await t('ghost: hidden while MOTION is OFF; with MOTION on it rides p·(1 − am
   inst.keys.set('motion', { amount: 0.004, shape: 'sine', div: '1/8' }); await tick(); flushRaf(); ok(gn.hidden, 'OFF again hides it');
   view.dispose();
 });
+await t('gestures: Z + M are keycaps (KeyZ → keys-gate, KeyM → keys-dive); a pointer hold lights one (.pressed + .lit), counted with its key', () => {
+  const { inst, q, view } = mount();
+  const z = q('.sg-key[data-code="KeyZ"]'), m = q('.sg-key[data-code="KeyM"]');
+  is(z.dataset.ctl, 'keys-gate'); is(m.dataset.ctl, 'keys-dive'); is(z.textContent + m.textContent, 'ZM'); ok(z.cls.has('lg') && m.cls.has('lg'));
+  z.fire('pointerdown'); ok(z.cls.has('pressed') && z.cls.has('lit'), 'held;'); ok(!m.cls.has('lit'), 'M is its own;');
+  inst.harmony.gesture('gate', true); z.fire('pointerup'); ok(z.cls.has('lit'), 'the key still holds it;');
+  inst.harmony.gesture('gate', false); ok(!z.cls.has('lit') && !z.cls.has('pressed'), 'the last holder lets go;');
+  view.dispose(); inst.harmony.gesture('dive', true); ok(!m.cls.has('lit'), 'dispose hands the door back;');
+});
 await t('MOTION: drag up 40 px = +.25 through keys.set("motion"), shape + div kept; the chip prints the %', async () => {
   const { inst, T, view } = mount();
   inst.keys.set('motion', { amount: 0, shape: 'saw', div: '1/4T' }); await tick();
@@ -277,7 +289,7 @@ await t('MOTION: reads OFF at 0 (an amber LCD chip), dbl-click resets to 0', () 
 });
 await t('RATE: stepped over the 9 divisions (9 ticks), 20 px = one detent, the chip prints it; dbl-click = 1/8', () => {
   const { inst, T, view } = mount();
-  const k = knobOf(T, 'rate'); ok(k.cls.has('si-stepped')); is(k.querySelectorAll('.si-stick').length, 9); is(k.querySelector('.si-kn').textContent, '1/8');
+  const k = T.querySelector('.si-knob[data-ctl="keys-rate"]'); ok(k.cls.has('si-stepped')); is(k.querySelectorAll('.si-stick').length, 9); is(k.querySelector('.si-kn').textContent, '1/8');
   drag(k, 20); is(inst.keys.state().motion.div, '1/8T'); is(k.querySelector('.si-kn').textContent, '1/8T');
   drag(k, -200); is(inst.keys.state().motion.div, '1/1');
   k.fire('dblclick'); is(inst.keys.state().motion.div, '1/8'); is(k.querySelector('.si-kn').textContent, '1/8');
@@ -285,7 +297,7 @@ await t('RATE: stepped over the 9 divisions (9 ticks), 20 px = one detent, the c
 });
 await t('RATE: a drag inside one detent writes nothing (no set per pixel)', () => {
   const { calls, T, view } = mount();
-  const k = knobOf(T, 'rate'); k.fire('pointerdown', { clientY: 500 }); for (let y = 1; y < 8; y++) k.fire('pointermove', { clientY: 500 - y }); k.fire('pointerup');
+  const k = T.querySelector('.si-knob[data-ctl="keys-rate"]'); k.fire('pointerdown', { clientY: 500 }); for (let y = 1; y < 8; y++) k.fire('pointermove', { clientY: 500 - y }); k.fire('pointerup');
   is(calls.filter((c) => c[0] === 'set' && c[1] === 'motion').length, 0);
   view.dispose();
 });
@@ -294,6 +306,14 @@ await t('shapes: four caps with LEDs + drawn glyphs, sine on; a click sets the s
   const caps = qa('.kv-shape'); is(caps.length, 4); is(caps.map((c) => c.dataset.v).join(' '), 'sine sawi saw sqr');
   ok(caps.every((c) => c.querySelector('.sg-led') && c.innerHTML.includes('<svg'))); ok(caps[0].cls.has('on'));
   caps[3].fire('click'); is(inst.keys.state().motion.shape, 'sqr'); ok(caps[3].cls.has('on')); ok(!caps[0].cls.has('on')); is(caps[3].getAttribute('aria-pressed'), 'true');
+  view.dispose();
+});
+await t('dormant (Law 3): RATE + the shapes carry .dormant while MOTION is OFF, and lose it at .5', async () => {
+  const { inst, q, view } = mount();
+  const rate = q('.si-knob[data-ctl="keys-rate"]'), shapes = q('[data-ctl="keys-shape"]');
+  ok(rate.cls.has('dormant') && shapes.cls.has('dormant'), 'OFF at 0;');
+  inst.keys.set('motion', { ...inst.keys.state().motion, amount: 0.5 }); await tick(); ok(!rate.cls.has('dormant') && !shapes.cls.has('dormant'), 'awake at .5;');
+  inst.keys.set('motion', { ...inst.keys.state().motion, amount: 0 }); await tick(); ok(rate.cls.has('dormant') && shapes.cls.has('dormant'), 'OFF again;');
   view.dispose();
 });
 await t('FX: four LCD towers DRIVE MOD DEL REV, each in its green, fills from the state', () => {
@@ -352,6 +372,27 @@ await t('empty meters: the fill carries .mt at v ≤ .004 (the seg dims by CSS :
   inst.keys.set('fx', { ...inst.keys.state().fx, delay: 0.3 }); await tick(); ok(!q('.sg-lcd[data-key="delay"]').querySelector('.si-fill').cls.has('mt'));
   view.dispose();
 });
+await t('harmony: HOLD · CHORD · ARP are on-screen caps (LED, no key); a click writes the harmony, the state flips aria-pressed', async () => {
+  const { inst, q, view } = mount();
+  const togs = ['hold', 'chord', 'arp'].map((c) => q(`.sg-cap[data-ctl="${c}"]`));
+  is(togs.map((b) => b.textContent).join(' '), 'hold chord arp'); ok(togs.every((b) => b.querySelector('.sg-led') && b.dataset.code === undefined));
+  const aria = () => togs.map((b) => b.getAttribute('aria-pressed')).join();
+  is(aria(), 'false,false,false');
+  togs[0].fire('click'); await tick(); is(inst.harmony.state().hold, true); is(aria(), 'true,false,false'); ok(togs[0].cls.has('on'));
+  togs[1].fire('click'); await tick(); is(inst.harmony.state().chord, true); is(aria(), 'true,true,false');
+  togs[2].fire('click'); await tick(); is(inst.harmony.state().arp.on, true); is(aria(), 'true,true,true');
+  togs.forEach((b) => b.fire('click')); await tick(); is(aria(), 'false,false,false'); ok(!inst.harmony.state().hold && !inst.harmony.state().chord && !inst.harmony.state().arp.on);
+  view.dispose();
+});
+await t('dormant (Law 3): the arp\'s RATE · LENGTH · GROOVE carry .dormant while ARP is off', async () => {
+  const { inst, q, view } = mount();
+  const ks = ['arp-rate', 'arp-length', 'arp-groove'].map((c) => q(`.si-knob[data-ctl="${c}"]`));
+  const dz = () => ks.map((k) => k.cls.has('dormant')).join();
+  is(dz(), 'true,true,true', 'ARP off;');
+  inst.harmony.set('arp', { ...inst.harmony.state().arp, on: true }); await tick(); is(dz(), 'false,false,false', 'ARP on;');
+  inst.harmony.set('arp', { ...inst.harmony.state().arp, on: false }); await tick(); is(dz(), 'true,true,true', 'ARP off again;');
+  view.dispose();
+});
 await t('footer: M = keys mute latch (red), S = solo keys, S again = none; another solo dims the tower', async () => {
   const { inst, T, q, view } = mount();
   const [m, s] = q('.kv-foot').querySelectorAll('button'); ok(m.cls.has('sq') && m.cls.has('warn')); ok(s.cls.has('sq')); is(m.textContent + s.textContent, 'ms');
@@ -376,7 +417,7 @@ await t('paint: a load repaints every control from the state', async () => {
   const fx = { drive: 0.4, driveType: 'crunch', mod: 0.6, modMode: 'flanger', modRate: 0.7, delay: 0.25, delayDiv: '1/16', reverb: 0.35, revSize: 'vast' };
   inst.load({ keys: { voice: 'pad', filter: 0.6, motion: { amount: 0.4, shape: 'sawi', div: '1/16' }, fx, gain: 0.5, mute: true } }); await tick();
   ok(q('.kv-voices').querySelectorAll('button').find((b) => b.dataset.v === 'pad').cls.has('on'));
-  is(knobOf(T, 'motion').querySelector('.si-kn').textContent, '40'); is(knobOf(T, 'rate').querySelector('.si-kn').textContent, '1/16');
+  is(knobOf(T, 'motion').querySelector('.si-kn').textContent, '40'); is(q('.si-knob[data-ctl="keys-rate"]').querySelector('.si-kn').textContent, '1/16');
   ok(qa('.kv-shape').find((b) => b.dataset.v === 'sawi').cls.has('on'));
   is(q('.sg-lcd[data-key="drive"]').querySelector('.si-fill').style.height, '40.0%');
   is(qa('.kv-sub').map((s) => s.querySelector('button.on').dataset.v).join(' '), 'crunch flanger 1/16 vast');
@@ -402,15 +443,17 @@ await t('dispose: the tower leaves root, the frame stops, onChange no longer pai
   inst.keys.set('fx', { ...inst.keys.state().fx, drive: 0.9 }); await tick(); is(q('.sg-lcd[data-key="drive"]').querySelector('.si-fill').style.height, before);
   view.dispose(); ok(T);
 });
-await t('hooks: a data-ctl on each control the gate may click (the hands\' convention)', () => {
+await t('hooks: a data-ctl on each control the gate may click (types.ts CTL.keys: every one, once, in tower order)', () => {
   const { T, view } = mount();
-  is([...T.walk()].filter((e) => e.dataset.ctl).map((e) => e.dataset.ctl).join(' '), 'keys-voice keys-filter keys-motion keys-rate keys-shape keys-modrate keys-mute keys-solo keys-gain');
+  const ctls = [...T.walk()].filter((e) => e.dataset.ctl).map((e) => e.dataset.ctl);
+  is(ctls.join(' '), 'keys-voice keys-voice-up keys-voice-down keys-filter keys-gate gate-rate gate-swing keys-dive dive-speed dive-dist keys-motion keys-rate keys-shape keys-fx-drive keys-fx-mod keys-modrate keys-fx-delay keys-fx-reverb hold chord arp arp-rate arp-length arp-groove keys-mute keys-solo keys-gain');
+  is([...ctls].sort().join(' '), [...CTL.keys].sort().join(' '), 'the contract\'s set;');
   view.dispose();
 });
 await t('no words that explain: no title=, no text beyond the legends', () => {
   const { T, view } = mount();
   const words = [...T.walk()].filter((e) => !e.cls.has('si-pc') && !e.innerHTML).map((e) => e.textContent).filter(Boolean);   // .si-pc is display:none (material); innerHTML replaced the legend (a real DOM drops it)
-  is(words.join(' '), 'KEYS RHODES PIANO PAD LEAD 100 1k 10k motion OFF rate 1/8 DRIVE WARM CRUNCH TAPE FUZZ MOD PHS FLNG DBL CHRS rate DEL REV SM MED HALL VAST m s gain');
+  is(words.join(' '), 'RHODES PIANO PAD LEAD ↑ ↓ 100 1k 10k Z gate rate 1/16 swing 0 M dive speed 0.45 dist 24 motion OFF rate 1/8 DRIVE WARM CRUNCH TAPE FUZZ MOD PHS FLNG DBL CHRS rate DEL REV SM MED HALL VAST hold chord arp rate 1/8 length 0.50 groove 0.00 m s gain');
   ok(![...T.walk()].some((e) => 'title' in e.attrs));
   view.dispose();
 });
