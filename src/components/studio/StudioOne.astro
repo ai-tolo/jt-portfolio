@@ -2828,10 +2828,14 @@ const columns = (blocks: BuildBlock[]): StoryBlock[][] =>
       sigHost.style.setProperty("--sig-zoom", z);
       window.dispatchEvent(new Event("resize"));
     };
+    // deferred to the next frame: a fit written inside an observation re-sizes the observed device in the same
+    // frame (WebKit: "ResizeObserver loop completed with undelivered notifications")
+    let sigQueued = 0;
+    const sigLater = () => { if (!sigQueued) sigQueued = requestAnimationFrame(() => { sigQueued = 0; fit(); }); };
     fit();
-    new ResizeObserver(fit).observe(sigWrap);
-    new ResizeObserver(fit).observe(sigDev);
-    window.addEventListener("resize", fit, { passive: true });
+    new ResizeObserver(sigLater).observe(sigWrap);
+    new ResizeObserver(sigLater).observe(sigDev);
+    window.addEventListener("resize", sigLater, { passive: true });
   }
 
   // ── FIRST SETTLE (2026-09-22, Jon: "guarantee the exhibits' info is seen

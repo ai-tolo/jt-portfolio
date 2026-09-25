@@ -91,10 +91,14 @@ export const prerender = true;
       last = z;
       fitEl.style.setProperty("--sig-zoom", z);
     };
+    // the observers defer to the next frame: a fit that writes --sig-zoom inside an observation re-sizes the observed
+    // device in the same frame, which WebKit reports as "ResizeObserver loop completed with undelivered notifications"
+    let queued = 0;
+    const later = (): void => { if (!queued) queued = requestAnimationFrame(() => { queued = 0; fit(); }); };
     fit();
-    new ResizeObserver(fit).observe(fitEl);
-    new ResizeObserver(fit).observe(devEl);
-    window.addEventListener("resize", fit, { passive: true });
+    new ResizeObserver(later).observe(fitEl);
+    new ResizeObserver(later).observe(devEl);
+    window.addEventListener("resize", later, { passive: true });
   }
 
   // THE ROOM LAW (the homepage's, StudioOne.astro): scrolled mostly out of view, the instrument powers off through its
