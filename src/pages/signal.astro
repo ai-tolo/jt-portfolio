@@ -47,13 +47,14 @@ export const prerender = true;
   }
   @media (min-width: 900px) { .sig-page { padding-left: calc(var(--railw, 110px) + 24px); } }
 
-  /* THE HOST FIT (the homepage's, StudioOne.astro: .live-signal .sgm / .sgm .device): the device is 1120 px, always,
-     and `zoom` scales it (never the device's own CSS), so its layout box IS its drawn size: the page flows around it,
-     nothing to reserve. #sig-fit is .sgm's parent, the fit's measure. The script sets --sig-zoom. */
+  /* THE HOST FIT (the homepage's, StudioOne.astro: .live-signal .sgm / .sgm .device): the device is 1280 px, always
+     (types.ts DEVICE_W), and `zoom` scales it (never the device's own CSS), so its layout box IS its drawn size: the
+     page flows around it, nothing to reserve. #sig-fit is .sgm's parent, the fit's measure. The script sets --sig-zoom
+     from BOTH axes (R3): 98 % of the column, or the viewport's height less the page's own padding, whichever binds. */
   .sig-host { width: 100%; max-width: 1560px; display: flex; justify-content: center; align-items: flex-start; }
   .sig-fit { width: 100%; min-width: 0; }
   .sig-fit :global(.sgm) { width: fit-content; margin-inline: auto; }
-  .sig-fit :global(.sgm .device) { width: 1120px; zoom: var(--sig-zoom, 1); }
+  .sig-fit :global(.sgm .device) { width: 1280px; zoom: var(--sig-zoom, 1); }   /* = types.ts DEVICE_W */
   /* the site's dot cursor (Cursor.astro) is redundant over the instrument: the material restores the system cursor
      there (pointer on caps, ns-resize on knobs, ew-resize on the glass, grab on nodes) */
   :global(body:has(.sig:hover) .cursor-dot) { visibility: hidden !important; }
@@ -68,38 +69,31 @@ export const prerender = true;
 </style>
 
 <script>
-  // THE FIT (the homepage's law, StudioOne.astro's "instrument's FIT zoom" block, mirrored): zoom = min(the height cap,
-  // the measure's width ÷ 1120). The caps keep the whole device on a short screen (grow on tall monitors, shrink on
-  // short ones), exactly the homepage's steps.
+  // THE FIT (R3; the homepage's host, StudioOne.astro, keeps the same law): zoom = min(0.98 · the measure's width ÷
+  // DEVICE_W, (the viewport's height − the page's vertical padding) ÷ the device's own height), floor 0.25. The device
+  // stands at 97–99 % of the column wherever the height allows and never touches the nav rail; on a short screen the
+  // height binds and the whole device still shows. The old height-cap table is retired.
   const fitEl = document.getElementById("sig-fit");
-  if (fitEl) {
-    const REF = 1120;
-    const mm = (q: string): boolean => window.matchMedia(q).matches;
-    const cap = (): number => {
-      let z = 1;
-      if (mm("(min-width: 1640px) and (min-height: 1060px)")) z = 1.1;
-      if (mm("(min-width: 1900px) and (min-height: 1130px)")) z = 1.18;
-      if (mm("(min-width: 2200px) and (min-height: 1200px)")) z = 1.26;
-      if (mm("(min-width: 2500px) and (min-height: 1260px)")) z = 1.34;
-      if (mm("(max-height: 960px)")) z = 0.91;
-      if (mm("(max-height: 900px)")) z = 0.84;
-      if (mm("(max-height: 840px)")) z = 0.77;
-      if (mm("(max-height: 780px)")) z = 0.69;
-      if (mm("(max-height: 720px)")) z = 0.62;
-      if (mm("(max-height: 660px)")) z = 0.55;
-      return z;
-    };
+  const devEl = document.getElementById("sig-device");
+  if (fitEl && devEl) {
+    const REF = 1280;            // = types.ts DEVICE_W
+    const WIDTH_SHARE = 0.98;    // a 2 % margin: 1 % each side of the column
+    const PAGE_V = 100;          // .sig-page's padding: 40 top + 60 bottom
     let last = "";
     const fit = (): void => {
       const w = fitEl.clientWidth;
       if (w <= 0) return;   // hidden (the phone layout): nothing to fit
-      const z = Math.max(0.25, Math.min(cap(), w / REF)).toFixed(4);
+      const h = devEl.offsetHeight || 808;   // the device's UNZOOMED height (offsetHeight ignores zoom)
+      const byW = (WIDTH_SHARE * w) / REF;
+      const byH = Math.max(120, window.innerHeight - PAGE_V) / h;
+      const z = Math.max(0.25, Math.min(byW, byH)).toFixed(4);
       if (z === last) return;
       last = z;
       fitEl.style.setProperty("--sig-zoom", z);
     };
     fit();
     new ResizeObserver(fit).observe(fitEl);
+    new ResizeObserver(fit).observe(devEl);
     window.addEventListener("resize", fit, { passive: true });
   }
 

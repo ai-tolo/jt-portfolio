@@ -108,5 +108,28 @@ export function lcd(legend: string, cls = ''): HTMLElement {
   c.append(el('span', 'si-fill'), text('span', 'si-fl', legend), el('span', 'si-pc'));
   return c;
 }
+export interface KeyOpts {
+  lg?: boolean;      // 48 px (Z · M · B)
+  sm?: boolean;      // 36 px
+  wide?: boolean;    // the SPACE bar: the row's full width
+  word?: boolean;    // a lowercase word on an auto-width cap (`stop`)
+  tint?: AccKey;     // the face carries this accent at rest (the SPACE bar 'drums', B 'bass')
+  colour?: boolean;  // a colour-row key (the amber rim)
+  dormant?: boolean; // plays nothing (R, I)
+  name?: string;     // aria-label when the label is a glyph
+}
+/** R3 · A KEYCAP (src/styles/signal/keycap.css: the Visuals room's key material): `button.sg-key[data-code]` printing
+ *  its own key (`A`, `space`, `esc`, `←`). The view toggles `.pressed` (its key is down: keyboard or pointer) and `.lit`
+ *  (its function is ON). Every code the KEYMAP teaches is drawn with this, once, somewhere on the device. */
+export function key(code: string, label: string, o: KeyOpts = {}): HTMLButtonElement {
+  const b = button(join('sg-key', o.lg && 'lg', o.sm && 'sm', o.wide && 'wide', o.word && 'word', o.tint && 'tint', o.colour && 'colour', o.dormant && 'dormant'));
+  b.dataset.code = code;
+  b.textContent = label;
+  b.tabIndex = -1;                       // the page's keys are the instrument's; a pointer reaches the cap
+  if (o.name) b.setAttribute('aria-label', o.name);
+  if (o.tint) accent(b, o.tint);
+  if (o.dormant) b.setAttribute('aria-disabled', 'true');
+  return b;
+}
 /** The elastomer gate pad ('z', 'm'): hold it. cls 'dive' = the amber-tinted M. The view toggles `.on` while held. */
 export const gpad = (letter: string, cls = ''): HTMLButtonElement => { const b = button(join('sg-gpad', cls)); b.textContent = letter; return b; };

@@ -1,4 +1,5 @@
-// SIGNAL · THE WORDS UNDER THE INSTRUMENT (R2, lane B). Jon edits this file; Signal.astro prints it beneath the device.
+// SIGNAL · THE WORDS UNDER THE INSTRUMENT (R2, lane B). Jon edits this file. R3: UNMOUNTED (brief §E: the surface carries
+// the teaching; Jon writes what goes beneath after the round) — kept on disk, Signal.astro no longer prints it.
 //   LEGEND  the device's own chrome: the keys the page answers to, each with one lowercase word. It mirrors the key
 //           table in src/signal/types.ts (KEYMAP): a remap there is a line here.
 //   BRIEF   DRAFT, Jon's voice (first person, plain, no hype): what the instrument is and how to start. He rewrites it;
@@ -20,15 +21,10 @@ export const LEGEND: ReadonlyArray<ReadonlyArray<LegendItem>> = [
     { keys: ['W', 'E', 'T', 'Y', 'U', 'O'], word: 'colour' },
     { keys: ['space'], word: 'drums' },
     { keys: ['B'], word: 'bass' },
-    { keys: ['V'], word: 'arp' },
-    { keys: ['X'], word: 'hold' },
-    { keys: ['C'], word: 'chord' },
   ],
   [
     { keys: ['Z'], word: 'gate (hold)' },
     { keys: ['M'], word: 'dive (hold)' },
-    { keys: ['N'], word: 'lock' },
-    { keys: ['1', '8'], range: true, word: 'pads' },
     { keys: ['←', '→'], word: 'octave' },
     { keys: ['↑', '↓'], word: 'voice' },
     { keys: ['='], word: 'tap' },

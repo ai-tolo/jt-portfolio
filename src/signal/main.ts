@@ -115,7 +115,9 @@ export async function boot(root: HTMLElement): Promise<Booted | null> {
   root.dataset.booted = '1';
 
   // ── the keyboard: KeyAction → the instrument ─────────────────────────────────────────────────────────
-  function onAction(a: KeyAction, on: boolean, shift: boolean, code: string): void {
+  // R3: the taught set only (types.ts KEYMAP). HOLD · CHORD · ARP · the root lock are on-screen toggles (the views write
+  // the harmony / the bass directly); the pads left the surface with Digit1–8.
+  function onAction(a: KeyAction, on: boolean, _shift: boolean, code: string): void {
     const H = I.harmony;
     switch (a.kind) {
       case 'note': {
@@ -128,9 +130,6 @@ export async function boot(root: HTMLElement): Promise<Booted | null> {
       case 'dive':
         H.gesture(a.kind, on);                            // held: on at keydown, off at keyup (and on blur)
         return;
-      case 'pad':
-        if (on) H.trigger(a.i, shift); else H.release(a.i);
-        return;
       case 'oct':
         if (on) H.transpose(a.d);                         // a sounding chord moves; else the octave
         return;
@@ -141,18 +140,8 @@ export async function boot(root: HTMLElement): Promise<Booted | null> {
         void I.keys.pick(VOICES[(i + a.d + VOICES.length) % VOICES.length]);
         return;
       }
-      case 'hold': if (on) H.set('hold', !H.state().hold); return;
-      case 'chord': if (on) H.set('chord', !H.state().chord); return;
-      case 'arp': if (on) { const s = H.state().arp; H.set('arp', { ...s, on: !s.on }); } return;
       case 'beat': if (on) I.drums.set('on', !I.drums.state().on); return;
       case 'bass': if (on) I.bass.set('on', !I.bass.state().on); return;
-      case 'lock': {
-        if (!on) return;
-        const b = I.bass.state();                         // the padlock: arm; armed or pinned → clear both
-        if (b.root != null || b.armed) { I.bass.set('armed', false); I.bass.set('root', null); }
-        else I.bass.set('armed', true);
-        return;
-      }
       case 'tap': if (on) I.time.tap(); return;
       case 'stop': if (on && !swept) silenceAll(); return;
     }

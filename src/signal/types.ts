@@ -270,10 +270,17 @@ export type ArpDiv = (typeof ARP_DIVS)[number];
 export const GATE_DIVS = ['1/8', '1/8T', '1/16', '1/16T', '1/32'] as const;          // 2 3 4 6 8 per beat
 export type GateDiv = (typeof GATE_DIVS)[number];
 
+/** HOLD UNDER CHORD (R3, Jon's law). HOLD alone stacks like a sustain pedal: every released note keeps ringing, and
+ *  tapping a ringing letter again releases it. HOLD with CHORD is ONE CHORD AT A TIME: a new chord (a letter press
+ *  that starts a chord no finger is holding) SWITCHES — everything the hold owns (every latched id no finger holds:
+ *  letters, their '~' extensions, stage keys, pad tones) releases, the new chord takes over the hold, and holding
+ *  persists. Tap-again on a ringing letter still releases it (and only it). Keys a finger still holds are the
+ *  finger's, not the hold's: they stay. Under ARP the same law runs on the pool. HOLD off releases everything held.
+ *  What a PAD does under HOLD (chords.ts: chord-mono, the same pad re-strikes) is unchanged. */
 export interface HarmonyState {
   music: Music;                       // C major, oct 0
   chord: boolean;                     // CHORD: a letter plays its diatonic triad (colour row: a major triad)
-  hold: boolean;                      // HOLD: notes stay after release; tap again releases (the Studio's latch)
+  hold: boolean;                      // HOLD: notes stay after release; tap again releases (the Studio's latch); see above
   arp: { on: boolean; div: ArpDiv; length: number; groove: number };   // '1/8' · LENGTH 0.06..1.3 (0.5) · 0..1 (0)
   rack: Array<number[] | null>;       // 8 pads, each a stamped set of MIDI notes (absolute, FROZEN)
   gate: { div: GateDiv; swing: number };        // '1/16', 0
@@ -304,15 +311,16 @@ export interface Harmony {
 
 // ─────────────────────────────────────────────────────────────── the keyboard (keymap.ts)
 
-/** e.code → the action. Letters are the Studio's (A S D F G H J K L white, W E T Y U O the colour row);
- *  the bottom row holds the switches (Z gate · X HOLD · C CHORD · V ARP · B bass · N lock · M dive). */
+/** e.code → the action: THE TAUGHT SET (R3), every key of it drawn on the surface as a keycap that lights.
+ *  Letters are the Studio's (A S D F G H J K L white, W E T Y U O the colour row); Space drums · B bass · Z gate (held)
+ *  · M dive (held) · ←/→ octave · ↑/↓ voice · = tap · Esc stop. R3 REMOVED X HOLD · C CHORD · V ARP · N LOCK (on-screen
+ *  toggles only now) and Digit1–8 (the pads row left the surface; the rack model + its state stay in the engine). */
 export type KeyAction =
   | { kind: 'note'; offset: number; colour: boolean }
   | { kind: 'gate' } | { kind: 'dive' }                       // held
-  | { kind: 'pad'; i: number }                                // Digit1..8 (shift = clear)
   | { kind: 'oct'; d: -1 | 1 }                                // ArrowLeft/Right (a sounding chord transposes instead)
   | { kind: 'voice'; d: -1 | 1 }                              // ArrowUp/Down
-  | { kind: 'hold' } | { kind: 'chord' } | { kind: 'arp' } | { kind: 'beat' } | { kind: 'bass' } | { kind: 'lock' }
+  | { kind: 'beat' } | { kind: 'bass' }                       // Space · B
   | { kind: 'tap' }                                           // Equal
   | { kind: 'stop' };                                         // Escape = master stop
 
@@ -325,19 +333,54 @@ export const KEYMAP: Readonly<Record<string, KeyAction>> = {
   KeyW: { kind: 'note', offset: 1, colour: true }, KeyE: { kind: 'note', offset: 3, colour: true },
   KeyT: { kind: 'note', offset: 6, colour: true }, KeyY: { kind: 'note', offset: 8, colour: true },
   KeyU: { kind: 'note', offset: 10, colour: true }, KeyO: { kind: 'note', offset: 13, colour: true },
-  KeyZ: { kind: 'gate' }, KeyX: { kind: 'hold' }, KeyC: { kind: 'chord' }, KeyV: { kind: 'arp' },
-  KeyB: { kind: 'bass' }, KeyN: { kind: 'lock' }, KeyM: { kind: 'dive' },
+  KeyZ: { kind: 'gate' }, KeyB: { kind: 'bass' }, KeyM: { kind: 'dive' },
   Space: { kind: 'beat' }, Equal: { kind: 'tap' }, Escape: { kind: 'stop' },
   ArrowLeft: { kind: 'oct', d: -1 }, ArrowRight: { kind: 'oct', d: 1 },
   ArrowUp: { kind: 'voice', d: 1 }, ArrowDown: { kind: 'voice', d: -1 },
-  Digit1: { kind: 'pad', i: 0 }, Digit2: { kind: 'pad', i: 1 }, Digit3: { kind: 'pad', i: 2 }, Digit4: { kind: 'pad', i: 3 },
-  Digit5: { kind: 'pad', i: 4 }, Digit6: { kind: 'pad', i: 5 }, Digit7: { kind: 'pad', i: 6 }, Digit8: { kind: 'pad', i: 7 },
 };
 
-/** The keybed the page draws: C2..C7 (MIDI 36..96, 36 whites); the octave range −1..+1 keeps every
- *  letter on the stage (docs/signal-map/D §6). */
-export const STAGE_LO = 36;
+/** The keys the surface draws as keycaps (R3): every KEYMAP code, plus the two laptop-row keys inside the colour row
+ *  that play nothing (R and I), drawn dormant so the row on screen IS the row under the hand. */
+export const KEYCAP_ROWS = {
+  colour: ['KeyW', 'KeyE', 'KeyR', 'KeyT', 'KeyY', 'KeyU', 'KeyI', 'KeyO'],
+  home: ['KeyA', 'KeyS', 'KeyD', 'KeyF', 'KeyG', 'KeyH', 'KeyJ', 'KeyK', 'KeyL'],
+} as const;
+
+/** The keybed the page draws: C3..C7 (MIDI 48..96, 29 whites, R3: the rack's voicings no longer need C2); the
+ *  octave range −1..+1 keeps every letter on the stage (docs/signal-map/D §6: oct −1 = 48..62 · 0 = 60..74 · +1 = 72..86). */
+export const STAGE_LO = 48;
 export const STAGE_HI = 96;
+
+// ─────────────────────────────────────────────────────────────── the device (R3: THE FIRST-TIMER ROUND)
+
+/** The device's reference width in CSS px. The host (the /signal page, StudioOne) zooms the device from outside:
+ *  zoom = min(0.98 · the content column ÷ DEVICE_W, the room's height ÷ the device's height), so it stands at
+ *  97–99 % of the page's content width where the height allows and never touches the nav rail. */
+export const DEVICE_W = 1280;
+/** The size floor (Law 5): no control word under 12 px, no screen numeral under 22 px; BPM the largest numeral. */
+export const WORD_MIN_PX = 12;
+export const NUMERAL_MIN_PX = 22;
+
+/** THE SURFACE HOOKS (what the gate and the test surface's click() find; every view keeps these exact strings):
+ *  data-ctl on the control's host (its .si-knob / button / glass), data-code on every KEYCAP (`.sg-key`) for the
+ *  KEYMAP code it draws. `.dormant` (material.css) on a control whose effect waits on another control:
+ *    drums-fb · drums-time      while drums.delay.mix < 0.01
+ *    keys-rate · keys-shape     while keys.motion.amount < 0.005 (MOTION_OFF)
+ *    arp-rate · arp-length · arp-groove   while !harmony.arp.on
+ *    bass-strip                 while bass.mode !== 'seq'
+ *    the R and I keycaps        always (they play nothing)
+ *  Keycap states: `.pressed` while its key is down (keyboard or pointer), `.lit` while its function is ON (drums
+ *  running, bass on, a note sounding, a gesture held, anything running for esc). */
+export const CTL = {
+  drums: ['drums-power', 'drums-bpm', 'drums-tap', 'drums-cover', 'drums-grid', 'drums-pattern', 'drums-swing', 'drums-density',
+    'drums-sidechain', 'drums-texture', 'drums-texseg', 'drums-delay', 'drums-mix', 'drums-fb', 'drums-time', 'drums-mute', 'drums-solo', 'drums-gain'],
+  keys: ['keys-voice', 'keys-voice-up', 'keys-voice-down', 'keys-filter', 'keys-gate', 'gate-rate', 'gate-swing', 'keys-dive', 'dive-speed', 'dive-dist',
+    'keys-motion', 'keys-rate', 'keys-shape', 'keys-fx-drive', 'keys-fx-mod', 'keys-fx-delay', 'keys-fx-reverb', 'keys-modrate',
+    'hold', 'chord', 'arp', 'arp-rate', 'arp-length', 'arp-groove', 'keys-mute', 'keys-solo', 'keys-gain'],
+  bass: ['bass-power', 'bass-tone', 'bass-mode', 'bass-lock', 'bass-root', 'bass-strip', 'bass-density', 'bass-groove', 'bass-heat', 'bass-weight',
+    'bass-glide', 'bass-mute', 'bass-solo', 'bass-gain'],
+  hands: ['oct-', 'oct+', 'octave', 'key-', 'key+', 'key', 'scale', 'chord-glass', 'stop', 'keycaps', 'piano', 'rail'],
+} as const;
 
 // ─────────────────────────────────────────────────────────────── persistence (db.ts)
 

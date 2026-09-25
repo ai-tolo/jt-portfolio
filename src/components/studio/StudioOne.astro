@@ -1497,19 +1497,18 @@ const columns = (blocks: BuildBlock[]): StoryBlock[][] =>
 
   /* ── the live instrument (the finale) ────────────────────────────────── */
   .live-signal {
-    /* 1248 = the sacred file's reference: 1120px device + its .inner's 128px
-       gutter. Narrower hosts held the reference device off-center and
-       6% small on tall screens (found 2026-09-02 with the fit pass). */
-    max-width: 1248px;
+    /* R3 (2026-09-24): the device is 1280 wide (src/signal/types.ts
+       DEVICE_W) and stands at 97–99 % of the column it gets, so the room
+       is as wide as the site's content column allows: the device plus a
+       small gutter a side (was 1248 for the 1120 device). */
+    max-width: 1360px;
     margin: 0 auto;
   }
   .sig-desktop {
     display: none;
-    /* the old machine sat in the site's .inner (78rem, --content-pad a
-       side) and the fit measures .sgm's parent's CONTENT box: the new root
-       has no .inner, so this gutter keeps the geometry (≤ 1120px of device
-       in the 1248px room; the legend and the brief fit under it) */
-    padding-inline: var(--content-pad);
+    /* the fit measures .sgm's parent's CONTENT box: this gutter is the
+       1–3 % margin the device keeps from the rail and the viewport edge */
+    padding-inline: clamp(12px, 1.5vw, 24px);
   }
   /* FIT (2026-09-02, Jon: "the drums module hangs off the side"). The
      sacred file pins the device to its 1120px reference and zooms it
@@ -1525,7 +1524,7 @@ const columns = (blocks: BuildBlock[]): StoryBlock[][] =>
     margin-inline: auto;
   }
   .live-signal :global(.sgm .device) {
-    width: 1120px;
+    width: 1280px; /* = src/signal/types.ts DEVICE_W (R3) */
     zoom: var(--sig-zoom, 1);
   }
   /* the site's dot cursor is redundant over the instrument: its material
@@ -2800,42 +2799,31 @@ const columns = (blocks: BuildBlock[]): StoryBlock[][] =>
     }, { threshold: [0, 0.35] }).observe(host);
   }
 
-  // ── the instrument's FIT zoom (styled from outside the sacred file):
-  // zoom = min(cap, available / 1120), where `available` is the CONTENT box
-  // of the component's own wrapper around `.sgm` (its `.inner` carries
-  // ~55px side padding — sizing to the host box overflowed that padding
-  // and broke the auto-centering). The cap mirrors the file's own HEIGHT
-  // rules (grow on tall monitors, shrink on short ones); its width steps
-  // (.82/.6/.44/.33) are replaced by the continuous fit, which reproduces
-  // them where they were right and never lets a module overflow the casing
-  // between them. Re-fires resize when the zoom changes so the comet's
-  // knots and the rail map re-measure the new page height.
+  // ── the instrument's FIT zoom (styled from outside the sacred file; R3,
+  // the /signal page's own law, mirrored): zoom = min(0.98 · available ÷
+  // 1280, (the viewport's height − the room's padding) ÷ the device's own
+  // height), where `available` is the CONTENT box of the component's own
+  // wrapper around `.sgm`. The device stands at 97–99 % of the column
+  // wherever the height allows; on a short screen the height binds and
+  // the whole device still shows in its room. The old height-cap table is
+  // retired. Re-fires resize when the zoom changes so the comet's knots and
+  // the rail map re-measure the new page height.
   const sigHost = document.querySelector<HTMLElement>(".live-signal");
   const sigBox = sigHost?.querySelector<HTMLElement>(".sig-desktop");
   const sigWrap = sigBox?.querySelector<HTMLElement>(".sgm")?.parentElement ?? null;
-  if (sigHost && sigBox && sigWrap) {
-    const REF = 1120;
-    const mm = (q: string) => window.matchMedia(q).matches;
-    const cap = () => {
-      let z = 1;
-      if (mm("(min-width: 1640px) and (min-height: 1060px)")) z = 1.1;
-      if (mm("(min-width: 1900px) and (min-height: 1130px)")) z = 1.18;
-      if (mm("(min-width: 2200px) and (min-height: 1200px)")) z = 1.26;
-      if (mm("(min-width: 2500px) and (min-height: 1260px)")) z = 1.34;
-      if (mm("(max-height: 960px)")) z = 0.91;
-      if (mm("(max-height: 900px)")) z = 0.84;
-      if (mm("(max-height: 840px)")) z = 0.77;
-      if (mm("(max-height: 780px)")) z = 0.69;
-      if (mm("(max-height: 720px)")) z = 0.62;
-      if (mm("(max-height: 660px)")) z = 0.55;
-      return z;
-    };
+  const sigDev = sigBox?.querySelector<HTMLElement>(".sgm > .device") ?? null;
+  if (sigHost && sigBox && sigWrap && sigDev) {
+    const REF = 1280; // = src/signal/types.ts DEVICE_W
+    const WIDTH_SHARE = 0.98;
     let last = "";
     const fit = () => {
       const cs = getComputedStyle(sigWrap);
       const w = sigWrap.clientWidth - (parseFloat(cs.paddingLeft) || 0) - (parseFloat(cs.paddingRight) || 0);
       if (w <= 0) return; // hidden (touch layout) — nothing to fit
-      const z = Math.max(0.25, Math.min(cap(), w / REF)).toFixed(4);
+      const hs = getComputedStyle(sigHost);
+      const reserve = (parseFloat(hs.paddingTop) || 0) + (parseFloat(hs.paddingBottom) || 0) + 16;
+      const h = sigDev.offsetHeight || 808; // unzoomed (offsetHeight ignores zoom)
+      const z = Math.max(0.25, Math.min((WIDTH_SHARE * w) / REF, Math.max(120, window.innerHeight - reserve) / h)).toFixed(4);
       if (z === last) return;
       last = z;
       sigHost.style.setProperty("--sig-zoom", z);
@@ -2843,6 +2831,7 @@ const columns = (blocks: BuildBlock[]): StoryBlock[][] =>
     };
     fit();
     new ResizeObserver(fit).observe(sigWrap);
+    new ResizeObserver(fit).observe(sigDev);
     window.addEventListener("resize", fit, { passive: true });
   }
 
