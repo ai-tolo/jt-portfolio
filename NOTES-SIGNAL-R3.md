@@ -192,6 +192,14 @@ bar; the ROOT screen moved beside the padlock; the keys' rail moved above its HO
 so the three mixer rails sit on one line (430 from each tower's content top) and the bottom row of every module is the thing
 the hands do. Gate r3 re-run; suites 28 green (towers 56, keys-view 63). Merged into main and pushed on Jon's word.
 
+R3.2 (2026-09-24, Jon: "i want the z and the m on the bottom left and right of the main keys"): Z and M left the keys
+module's gesture row for a THIRD keycap row under the home row, in the keyboard's own stagger (Z under the A/S seam, M under
+the J/K seam, the X C V B N slots empty), amber when held, `gate` / `dive` etched beside them; the gesture's hold (pointer +
+key, reference-counted) moved back to the hands view; the keys module's gesture row is `gate · RATE · SWING | dive · SPEED ·
+DIST` (48 tall, the FX body +8). The device is 884 tall now: at 1440×900 the HEIGHT sets the zoom (≈ 0.955, ≈ 95 % of the
+column; the page's padding is 24/32 and the gate's 1440 width floor is 0.93 for that case); on a taller screen the width
+binds at 98 %. The still re-rendered (1280/884).
+
 Residue (for Jon; nothing here blocks the round):
 1. THE PADS ROW AND THE 1–8 KEYS ARE GONE this round (brief §F: the pads stay only with the Studio's key wheel as a popover;
    the wheel is a ~900-line port needing its own design under the size floor, so it did not come). The rack model, its

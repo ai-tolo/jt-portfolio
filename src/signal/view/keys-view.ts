@@ -7,7 +7,7 @@
 // R3 · lane K · THE FIRST-TIMER ROUND (NOTES-SIGNAL-R3.md §1.3 KEYS; brief §D) + R3.1 (Jon's call: the three modules'
 // rails M · S · GAIN on ONE line across the device, the row above each module's foot; each foot is the thing the hands do).
 // The tower, top to bottom (544 × 518 inside its 1 px border + 10 px padding, 8 apart; the body takes what the fixed rows
-// leave, 214):
+// leave, 222):
 //   head     the VOICE seg spanning the row, its caps 16 px (RHODES PIANO PAD LEAD: the first thing seen), the picked one
 //            lit, .loading while it loads · the ↑ ↓ keycaps (ArrowUp/Down: a click steps the voice as main.ts's 'voice'
 //            action does, VOICES order, wrapping; .pressed while the arrow is down). The static KEYS cap is gone.
@@ -17,10 +17,11 @@
 //            relative, the full width = the full sweep (ew-resize); a tap-tap under 320 ms resets to 1 (open).
 //            MOTION on (amount ≥ .005): a faint ghost node + a dashed ghost curve ride the LFO's own law (motion.ts) in
 //            heard time, breathing between p and p·(1 − amount): the honest picture of the LFO's range
-//   gesture  [Z] gate · RATE · SWING  |  [M] dive · SPEED · DIST — Z and M are keycaps (common.ts key(), lg), HOLD
-//            gestures: a pointer hold on the cap is the gesture, the key is the other holder, REFERENCE-COUNTED (moved
-//            here from view/hands-view.ts in R3: this tower wraps inst.harmony.gesture while mounted and restores it in
-//            dispose); .pressed + .lit (amber) while either holder holds
+//   gesture  gate · RATE · SWING  |  dive · SPEED · DIST — the two held gestures' knobs, each group headed by its etched
+//            name. [R3.2] (Jon's call: "i want the z and the m on the bottom left and right of the main keys") the Z and M
+//            keycaps left this row for the keybed's bottom row (view/hands-view.ts), and the reference-counted gesture
+//            wrapper around inst.harmony.gesture went with them: this tower no longer touches it. The row 56 → 48; the
+//            8 px went to the body
 //   body     the LFO deck: MOTION (amount; the chip reads OFF below .005, else the %) · RATE (stepped over LFO_DIVS, the
 //            chip prints the division) · the four shape caps — RATE and the shapes .dormant while MOTION is OFF · the four
 //            LCD towers DRIVE MOD DEL REV (makeFader: absolute, press/drag = 1 − y/h) over their flavour segs (+ the MOD
@@ -448,62 +449,22 @@ export const mountKeysView: MountView = (root, inst) => {
   scr.addEventListener('pointercancel', endGlass);
   // ═══ end shape.ts port ═══
 
-  // ── 3 · THE GESTURE ROW: [Z] gate · RATE · SWING | [M] dive · SPEED · DIST ─────────────────────────────────────────
+  // ── 3 · THE GESTURE ROW: gate · RATE · SWING | dive · SPEED · DIST ─────────────────────────────────────────────────
   // ═══ from jt-portfolio-signal/src/signal/view/hands-view.ts:385-457 (R2, 76a02c7; the Studio's play.ts:146-163, 818-883
-  // @ 2a9e4a7): the gate row. PORT (R3): the elastomer pads are keycaps now (common.ts key(), .lg: the keys the hand holds),
-  // the wordmark badge is gone, the words `gate` / `dive` are the gestures' names etched beside their keys. ═══
+  // @ 2a9e4a7): the gate row. PORT (R3): the wordmark badge is gone, the words `gate` / `dive` are the gestures' names.
+  // [R3.2] the Z and M keycaps (and the gesture wrapper that let their pointer holds count with the keys) moved to the
+  // keybed's bottom row in view/hands-view.ts: here the two knob groups stay, each headed by its etched name. ═══
   const gest = accent(el('div', 'kv-gest'), 'gate');
-  const gz = accent(key('KeyZ', 'Z', { lg: true, name: 'Gate (hold)' }), 'gate');
-  const gm = accent(key('KeyM', 'M', { lg: true, name: 'Dive (hold)' }), 'gate');
-  gz.dataset.ctl = 'keys-gate'; gm.dataset.ctl = 'keys-dive';
   const kgRate = knob('rate', { size: 'kx', side: true, steps: GATE_DIVS.length, value: h0.gate.div });
   const kgSwing = knob('swing', { size: 'kx', side: true, value: String(Math.round(h0.gate.swing * 100)) });
   const kdSpeed = knob('speed', { size: 'kx', side: true, value: h0.dive.speedSec.toFixed(2) });
   const kdDist = knob('dist', { size: 'kx', side: true, value: String(h0.dive.dist) });
   kgRate.dataset.ctl = 'gate-rate'; kgSwing.dataset.ctl = 'gate-swing'; kdSpeed.dataset.ctl = 'dive-speed'; kdDist.dataset.ctl = 'dive-dist';
   const gl = el('div', 'kv-ggrp');
-  gl.append(gz, etch('gate', 'kv-gword'), kgRate, kgSwing);
+  gl.append(etch('gate', 'kv-gword'), kgRate, kgSwing);
   const gr = el('div', 'kv-ggrp');
-  gr.append(gm, etch('dive', 'kv-gword'), kdSpeed, kdDist);
+  gr.append(etch('dive', 'kv-gword'), kdSpeed, kdDist);
   gest.append(gl, el('i', 'sg-vdiv kv-gdiv'), gr);
-
-  // the held gestures (play.ts:820-840): a pointer hold is the gesture; the lit key is pointer OR its key.
-  // [R2] REFERENCE-COUNTED: the key (Z, M) and its cap are two HOLDERS of one gesture; it goes on with the first holder
-  // and off with the last, so letting go of one while the other holds keeps it. The key's holds reach the harmony through
-  // inst.harmony.gesture (main.ts routes the keymap's gate/dive there, the test surface's press() too), so while this view
-  // is mounted that one method is the counter's key door: every call that is not this view's own cap is the key.
-  // dispose() puts the method back. Every arrival re-asserts the gesture (idempotent downstream), so a holder that arrives
-  // after a master stop dropped the gesture under another holder brings it back. [R3] this tower owns the wrapper now.
-  const rawGesture = H.gesture;
-  const holders = { gate: new Set<'key' | 'pad'>(), dive: new Set<'key' | 'pad'>() };
-  const gKeys = { gate: gz, dive: gm };
-  const paintGesture = (name: 'gate' | 'dive'): void => {
-    const on = holders[name].size > 0;
-    gKeys[name].classList.toggle('pressed', on);
-    gKeys[name].classList.toggle('lit', on);
-  };
-  const hold = (name: 'gate' | 'dive', who: 'key' | 'pad', on: boolean): void => {
-    const set = holders[name];
-    if (on) { set.add(who); rawGesture.call(H, name, true); }
-    else if (set.delete(who) && set.size === 0) rawGesture.call(H, name, false);
-    paintGesture(name);
-  };
-  H.gesture = (name, on) => hold(name, 'key', !!on);
-  const ptrGesture = { gate: false, dive: false };
-  const holdCap = (name: 'gate' | 'dive', b: HTMLButtonElement): void => {
-    b.addEventListener('pointerdown', (e) => {
-      if (e.button !== 0) return;
-      e.preventDefault();
-      if (ptrGesture[name]) return;
-      ptrGesture[name] = true;
-      try { b.setPointerCapture(e.pointerId); } catch { /* */ }
-      hold(name, 'pad', true);
-    });
-    const up = (): void => { if (!ptrGesture[name]) return; ptrGesture[name] = false; hold(name, 'pad', false); };
-    b.addEventListener('pointerup', up); b.addEventListener('pointercancel', up); b.addEventListener('lostpointercapture', up);
-  };
-  holdCap('gate', gz);
-  holdCap('dive', gm);
   const gateWrite = (p: Partial<HarmonyState['gate']>): void => {
     const g = H.state().gate, n = { ...g, ...p };
     if (n.div !== g.div || !near(n.swing, g.swing)) H.set('gate', n);
@@ -528,14 +489,6 @@ export const mountKeysView: MountView = (root, inst) => {
     toV: (d) => clamp((d - DIVE_D_MIN) / (DIVE_D_MAX - DIVE_D_MIN), 0, 1), fromV: (v) => Math.round(DIVE_D_MIN + v * (DIVE_D_MAX - DIVE_D_MIN)),
     same: (a, b) => a === b, text: (d) => String(d), write: (dist) => diveWrite({ dist }), dflt: 24,
   });
-  // a lost window lets go of what a pointer holds here (the key's own release is the keymap's blur law)
-  const letGo = (): void => {
-    for (const name of ['gate', 'dive'] as const) if (ptrGesture[name]) { ptrGesture[name] = false; hold(name, 'pad', false); }
-  };
-  const onVis = (): void => { if (document.visibilityState === 'hidden') letGo(); };
-  const W = typeof window !== 'undefined' ? window : null;
-  W?.addEventListener('blur', letGo);
-  document.addEventListener?.('visibilitychange', onVis);
   // ═══ end hands-view.ts gate-row port ═══
 
   // ── 4 · the body: the LFO deck + the four FX towers ────────────────────────────────────────────────────────────
@@ -794,10 +747,6 @@ export const mountKeysView: MountView = (root, inst) => {
       cutRaf.cancel();
       offChange();
       offKeys();
-      W?.removeEventListener('blur', letGo);
-      document.removeEventListener?.('visibilitychange', onVis);
-      letGo();
-      H.gesture = rawGesture;
       timers.forEach((t) => clearTimeout(t));
       timers.clear();
       T.remove();

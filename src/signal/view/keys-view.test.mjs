@@ -172,9 +172,9 @@ await t('geometry (R3.1, keys.css): the rows fill the 518 px content exactly; th
   };
   const CONTENT = 540 - 2 * 1 - 2 * 10, GAP = 8;   // the cell 540, the tower's 1 px border + 10 px padding (material.css .sg-tower)
   const rows = { head: h('kv-head'), glass: h('kv-filter'), gest: h('kv-gest'), rail: h('kv-foot'), foot: h('kv-harm') };
-  is(`${rows.head} ${rows.glass} ${rows.gest} ${rows.rail} ${rows.foot}`, '44 84 56 36 44', 'head · glass · gesture · rail · foot;');
+  is(`${rows.head} ${rows.glass} ${rows.gest} ${rows.rail} ${rows.foot}`, '44 84 48 36 44', 'head · glass · gesture (R3.2: 48, its keycaps gone) · rail · foot;');
   const body = CONTENT - (rows.head + rows.glass + rows.gest + rows.rail + rows.foot) - 5 * GAP;
-  is(body, 214, 'the body (flex 1) takes what the fixed rows leave;');
+  is(body, 222, 'the body (flex 1) takes what the fixed rows leave (R3.2: the gesture row\'s 8 px);');
   ok(/\.sig \.kv-body \{[^}]*\bflex:\s*1\b[^}]*min-height:\s*0/.test(css), 'the body flexes (flex: 1; min-height: 0) so the tower fills 518 exactly;');
   is(CONTENT - rows.foot - GAP - rows.rail, 430, 'the rail\'s top = the drums\' (518 − 44 − 8 − 36);');
 });
@@ -283,14 +283,23 @@ await t('ghost: hidden while MOTION is OFF; with MOTION on it rides p·(1 − am
   inst.keys.set('motion', { amount: 0.004, shape: 'sine', div: '1/8' }); await tick(); flushRaf(); ok(gn.hidden, 'OFF again hides it');
   view.dispose();
 });
-await t('gestures: Z + M are keycaps (KeyZ → keys-gate, KeyM → keys-dive); a pointer hold lights one (.pressed + .lit), counted with its key', () => {
-  const { inst, q, view } = mount();
-  const z = q('.sg-key[data-code="KeyZ"]'), m = q('.sg-key[data-code="KeyM"]');
-  is(z.dataset.ctl, 'keys-gate'); is(m.dataset.ctl, 'keys-dive'); is(z.textContent + m.textContent, 'ZM'); ok(z.cls.has('lg') && m.cls.has('lg'));
-  z.fire('pointerdown'); ok(z.cls.has('pressed') && z.cls.has('lit'), 'held;'); ok(!m.cls.has('lit'), 'M is its own;');
-  inst.harmony.gesture('gate', true); z.fire('pointerup'); ok(z.cls.has('lit'), 'the key still holds it;');
-  inst.harmony.gesture('gate', false); ok(!z.cls.has('lit') && !z.cls.has('pressed'), 'the last holder lets go;');
-  view.dispose(); inst.harmony.gesture('dive', true); ok(!m.cls.has('lit'), 'dispose hands the door back;');
+await t('gesture row (R3.2): gate · RATE · SWING | dive · SPEED · DIST, no keycaps (Z + M moved to the keybed); the knobs write + paint the harmony; the tower never wraps inst.harmony.gesture', async () => {
+  const inst = createStubInstrument(), door = inst.harmony.gesture, root = new FakeEl('div');
+  const view = V.mountKeysView(root, inst), T = root.children[0], row = T.querySelector('.kv-gest');
+  is(inst.harmony.gesture, door, 'mounted: the gesture door is the instrument\'s own (the hands view counts the holders now);');
+  is(T.querySelectorAll('.sg-key').filter((k) => k.dataset.code === 'KeyZ' || k.dataset.code === 'KeyM').length, 0, 'no Z / M keycap in the tower;');
+  is(row.querySelectorAll('.sg-key').length, 0, 'no keycap in the row;');
+  is(row.children.map((c) => (c.cls.has('kv-ggrp') ? c.children.map((x) => (x.cls.has('sg-etch') ? x.textContent : x.dataset.ctl)).join(' ') : c.className)).join(' | '),
+    'gate gate-rate gate-swing | sg-vdiv kv-gdiv | dive dive-speed dive-dist', 'two groups, each headed by its word, the hairline between;');
+  const k = (c) => row.querySelector(`.si-knob[data-ctl="${c}"]`), val = (c) => k(c).querySelector('.si-kn').textContent;
+  drag(k('gate-rate'), 40); is(inst.harmony.state().gate.div, '1/16T', 'RATE: one detent up;'); is(val('gate-rate'), '1/16T');
+  drag(k('gate-swing'), 40); near(inst.harmony.state().gate.swing, 0.25, 1e-9, 'SWING;'); is(val('gate-swing'), '25');
+  drag(k('dive-speed'), 40); ok(inst.harmony.state().dive.speedSec < 0.2, 'SPEED: clockwise = faster;');
+  k('dive-speed').fire('dblclick'); near(inst.harmony.state().dive.speedSec, 0.45, 1e-9, 'SPEED: dbl-click = .45;');
+  drag(k('dive-dist'), 400); is(inst.harmony.state().dive.dist, 36, 'DIST to the top;');
+  inst.harmony.set('gate', { div: '1/32', swing: 0.5 }); inst.harmony.set('dive', { speedSec: 1.5, dist: 2 }); await tick();
+  is(['gate-rate', 'gate-swing', 'dive-speed', 'dive-dist'].map(val).join(' '), '1/32 50 1.50 2', 'painted back from the state;');
+  view.dispose(); is(inst.harmony.gesture, door, 'disposed: still the instrument\'s own;');
 });
 await t('MOTION: drag up 40 px = +.25 through keys.set("motion"), shape + div kept; the chip prints the %', async () => {
   const { inst, T, view } = mount();
@@ -465,14 +474,14 @@ await t('dispose: the tower leaves root, the frame stops, onChange no longer pai
 await t('hooks: a data-ctl on each control the gate may click (types.ts CTL.keys: every one, once, in tower order)', () => {
   const { T, view } = mount();
   const ctls = [...T.walk()].filter((e) => e.dataset.ctl).map((e) => e.dataset.ctl);
-  is(ctls.join(' '), 'keys-voice keys-voice-up keys-voice-down keys-filter keys-gate gate-rate gate-swing keys-dive dive-speed dive-dist keys-motion keys-rate keys-shape keys-fx-drive keys-fx-mod keys-modrate keys-fx-delay keys-fx-reverb keys-mute keys-solo keys-gain hold chord arp arp-rate arp-length arp-groove');
+  is(ctls.join(' '), 'keys-voice keys-voice-up keys-voice-down keys-filter gate-rate gate-swing dive-speed dive-dist keys-motion keys-rate keys-shape keys-fx-drive keys-fx-mod keys-modrate keys-fx-delay keys-fx-reverb keys-mute keys-solo keys-gain hold chord arp arp-rate arp-length arp-groove');
   is([...ctls].sort().join(' '), [...CTL.keys].sort().join(' '), 'the contract\'s set;');
   view.dispose();
 });
 await t('no words that explain: no title=, no text beyond the legends', () => {
   const { T, view } = mount();
   const words = [...T.walk()].filter((e) => !e.cls.has('si-pc') && !e.innerHTML).map((e) => e.textContent).filter(Boolean);   // .si-pc is display:none (material); innerHTML replaced the legend (a real DOM drops it)
-  is(words.join(' '), 'RHODES PIANO PAD LEAD ↑ ↓ 100 1k 10k Z gate rate 1/16 swing 0 M dive speed 0.45 dist 24 motion OFF rate 1/8 DRIVE WARM CRUNCH TAPE FUZZ MOD PHS FLNG DBL CHRS rate DEL REV SM MED HALL VAST m s gain hold chord arp rate 1/8 length 0.50 groove 0.00');
+  is(words.join(' '), 'RHODES PIANO PAD LEAD ↑ ↓ 100 1k 10k gate rate 1/16 swing 0 dive speed 0.45 dist 24 motion OFF rate 1/8 DRIVE WARM CRUNCH TAPE FUZZ MOD PHS FLNG DBL CHRS rate DEL REV SM MED HALL VAST m s gain hold chord arp rate 1/8 length 0.50 groove 0.00');
   ok(![...T.walk()].some((e) => 'title' in e.attrs));
   view.dispose();
 });

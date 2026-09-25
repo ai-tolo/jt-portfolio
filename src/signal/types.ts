@@ -374,12 +374,12 @@ export const NUMERAL_MIN_PX = 22;
 export const CTL = {
   drums: ['drums-power', 'drums-bpm', 'drums-tap', 'drums-cover', 'drums-grid', 'drums-pattern', 'drums-swing', 'drums-density',
     'drums-sidechain', 'drums-texture', 'drums-texseg', 'drums-delay', 'drums-mix', 'drums-fb', 'drums-time', 'drums-mute', 'drums-solo', 'drums-gain'],
-  keys: ['keys-voice', 'keys-voice-up', 'keys-voice-down', 'keys-filter', 'keys-gate', 'gate-rate', 'gate-swing', 'keys-dive', 'dive-speed', 'dive-dist',
+  keys: ['keys-voice', 'keys-voice-up', 'keys-voice-down', 'keys-filter', 'gate-rate', 'gate-swing', 'dive-speed', 'dive-dist',
     'keys-motion', 'keys-rate', 'keys-shape', 'keys-fx-drive', 'keys-fx-mod', 'keys-fx-delay', 'keys-fx-reverb', 'keys-modrate',
     'hold', 'chord', 'arp', 'arp-rate', 'arp-length', 'arp-groove', 'keys-mute', 'keys-solo', 'keys-gain'],
   bass: ['bass-power', 'bass-tone', 'bass-mode', 'bass-lock', 'bass-root', 'bass-strip', 'bass-density', 'bass-groove', 'bass-heat', 'bass-weight',
     'bass-glide', 'bass-mute', 'bass-solo', 'bass-gain'],
-  hands: ['oct-', 'oct+', 'octave', 'key-', 'key+', 'key', 'scale', 'chord-glass', 'stop', 'keycaps', 'piano', 'rail'],
+  hands: ['oct-', 'oct+', 'octave', 'key-', 'key+', 'key', 'scale', 'chord-glass', 'stop', 'keycaps', 'piano', 'rail', 'keys-gate', 'keys-dive'],   // R3.2: Z and M live on the keybed's bottom row
 } as const;
 
 // ─────────────────────────────────────────────────────────────── persistence (db.ts)
@@ -481,4 +481,4 @@ export type MountTestSurface = (d: SurfaceDeps) => Promise<SignalTestSurface>;  
  *  and their own files only. */
 export type MountView = (root: HTMLElement, inst: SignalInstrument) => { dispose(): void };
 // mountDrumsView (view/drums-view.ts, V1) · mountBassView (view/bass-view.ts, V1) · mountKeysView (view/keys-view.ts, V2)
-// mountHandsView (view/hands-view.ts, V3: the top strip, the pianohead, the rack, the keybed, the gate row)
+// mountHandsView (view/hands-view.ts: the top strip; the keybed = the piano, the rail, the keycap rows incl. Z and M on the bottom row)

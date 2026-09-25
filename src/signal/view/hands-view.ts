@@ -3,10 +3,14 @@
 // it into two strata:
 //   the TOP STRIP   [←] OCTAVE [→] · ◀ KEY ▶ SCALE · [the POWER slot] · the sapphire CHORD glass · [esc] stop
 //   the KEYBED      the small piano C3..C7 (lights only: no letters, no names) · the bracket rail · the KEYCAP ROWS
-//                   (the colour row W E R T Y U I O over the home row A S D F G H J K L, in the laptop's stagger)
+//                   (the colour row W E R T Y U I O over the home row A S D F G H J K L, in the laptop's stagger, and
+//                   [R3.2] under it the bottom row: Z (gate) · five empty slots · M (dive))
 // R3 LEFT THIS VIEW (other lanes draw them now): the wordmark + its lamp (gone), the tempo glass + TAP (the drums tower),
-// CHORD · HOLD · ARPEGGIATOR + RATE LENGTH GROOVE and the whole gate row with its reference-counted gesture wrapper (the
-// keys tower), the rack (dropped this round, §1.1), the pianohead as a stratum (its octave / key parts live in the strip).
+// CHORD · HOLD · ARPEGGIATOR + RATE LENGTH GROOVE and the gate row's knobs (the keys tower), the rack (dropped this round,
+// §1.1), the pianohead as a stratum (its octave / key parts live in the strip).
+// R3.2 (Jon's call, 2026-09-24: "i want the z and the m on the bottom left and right of the main keys"): the Z and M
+// keycaps came back to this view as the keybed's bottom row, and with them the reference-counted gesture wrapper around
+// inst.harmony.gesture (R2's law, which lived in the keys tower in R3); their knobs stay in the keys tower.
 // The look is R0's LOOK B; every recipe is src/styles/signal/material.css's, the keycap is keycap.css's (`key()` from
 // common.ts); the strata's own layout is src/styles/signal/hands.css.
 //
@@ -52,7 +56,19 @@ const OCT_DN = ENTRIES.find(([, a]) => a.kind === 'oct' && a.d < 0)?.[0] ?? 'Arr
 const OCT_UP = ENTRIES.find(([, a]) => a.kind === 'oct' && a.d > 0)?.[0] ?? 'ArrowRight';
 const STOP_CODE = codesOf('stop')[0] ?? 'Escape';
 const CAP_CODES: string[] = [...KEYCAP_ROWS.colour, ...KEYCAP_ROWS.home];
-const REFLECTED = new Set<string>([...CAP_CODES, OCT_DN, OCT_UP, STOP_CODE]);
+/** [R3.2] THE BOTTOM ROW: the laptop's Z X C V B N M, under the home row. Only its HELD gestures are drawn (read off the
+ *  KEYMAP: Z gate · M dive); X C V N play nothing and B is the bass's bar, so their slots stay empty. */
+const BOTTOM_ROW = ['KeyZ', 'KeyX', 'KeyC', 'KeyV', 'KeyB', 'KeyN', 'KeyM'] as const;
+type GestureName = 'gate' | 'dive';
+const GESTURE_OF = new Map<string, GestureName>(
+  ENTRIES.flatMap(([c, a]): Array<[string, GestureName]> => (a.kind === 'gate' || a.kind === 'dive' ? [[c, a.kind]] : [])));
+/** Each held gesture's cap: its aria name, its surface hook (types.ts CTL.hands), the side its etched name stands on. */
+const GESTURE_CAP: Readonly<Record<GestureName, { name: string; ctl: string; side: 'l' | 'r' }>> = {
+  gate: { name: 'Gate (hold)', ctl: 'keys-gate', side: 'l' },
+  dive: { name: 'Dive (hold)', ctl: 'keys-dive', side: 'r' },
+};
+const GESTURE_CODES: string[] = BOTTOM_ROW.filter((c) => GESTURE_OF.has(c));
+const REFLECTED = new Set<string>([...CAP_CODES, ...GESTURE_CODES, OCT_DN, OCT_UP, STOP_CODE]);
 const letterOf = (code: string): string => code.replace(/^Key/, '');
 
 function setText(e: Element, s: string): void { if (e.textContent !== s) e.textContent = s; }
@@ -223,8 +239,47 @@ export const mountHandsView: MountView = (root, inst) => {
     }
     return row;
   };
-  caps.append(capRow(KEYCAP_ROWS.colour, 'sgh-colour'), capRow(KEYCAP_ROWS.home, 'sgh-home'));
+  // [R3.2] THE BOTTOM ROW (Jon's call: "i want the z and the m on the bottom left and right of the main keys"): the
+  // laptop's Z X C V B N M under the home row, half a cap to its right as on a keyboard (Z under the A/S seam, M under
+  // the J/K seam). Only the two HELD gestures are drawn, Z gate and M dive; the five slots between stay EMPTY (X C V N
+  // play nothing, B is the bass's bar: no dormant caps here). Each gesture's name is etched beside its cap, outside the
+  // row (`gate` left of Z, `dive` right of M), the way the keys tower heads their knob groups; each lights AMBER (the
+  // gestures' colour) where a letter lights sapphire, so a hold key reads apart from a note key by its light.
+  const gestEls = new Map<GestureName, HTMLButtonElement>();
+  const bottom = el('div', 'sgh-crow sgh-bottom');
+  for (const code of BOTTOM_ROW) {
+    const g = GESTURE_OF.get(code);
+    if (!g) { bottom.append(el('span', 'sgh-slot')); continue; }
+    const spec = GESTURE_CAP[g];
+    const b = accent(key(code, letterOf(code), { name: spec.name }), 'gate');
+    b.dataset.ctl = spec.ctl;
+    const cell = el('span', `sgh-hold ${spec.side}`);   // the cap's slot; its name stands beside it (absolutely placed)
+    cell.append(b, etch(g, 'sgh-hword'));
+    gestEls.set(g, b);
+    bottom.append(cell);
+  }
+  caps.append(capRow(KEYCAP_ROWS.colour, 'sgh-colour'), capRow(KEYCAP_ROWS.home, 'sgh-home'), bottom);
   keybed.append(bed, rail, caps);
+
+  // ═══ THE HELD GESTURES: Z gate · M dive (the Studio's play.ts:820-840 @ 2a9e4a7; R2's law, back here in R3.2) ═══════
+  // A pointer hold on the cap is the gesture (captured: pointerdown → on; pointerup, cancel, lost capture and a lost
+  // window → off). REFERENCE-COUNTED: the key (Z, M) and its cap are two HOLDERS of one gesture; it goes on with the first
+  // holder and off with the last, so letting go of one while the other holds keeps it. The key's holds reach the harmony
+  // through inst.harmony.gesture (main.ts routes the keymap's gate/dive there, the test surface's press() too), so while
+  // this view is mounted that one method is the counter's key door: every call that is not this view's own cap is the
+  // key. dispose() puts the method back. Every arrival re-asserts the gesture (idempotent downstream), so a holder that
+  // arrives after a master stop dropped the gesture under another holder brings it back.
+  // .pressed = its key is down or the pointer holds it (paintKeysDown); .lit = either holder holds the gesture.
+  const rawGesture = H.gesture;
+  const holders: Record<GestureName, Set<'key' | 'pad'>> = { gate: new Set(), dive: new Set() };
+  const hold = (name: GestureName, who: 'key' | 'pad', on: boolean): void => {
+    const set = holders[name];
+    if (on) { set.add(who); rawGesture.call(H, name, true); }
+    else if (set.delete(who) && set.size === 0) rawGesture.call(H, name, false);
+    gestEls.get(name)?.classList.toggle('lit', set.size > 0);
+  };
+  H.gesture = (name, on) => hold(name, 'key', !!on);
+  for (const [g, b] of gestEls) ptrKey(b, b.dataset.code ?? '', () => hold(g, 'pad', true), () => hold(g, 'pad', false));
 
   // the letters' notes: each of the 15 note keys asks the harmony which MIDI it plays now (music.ts's law, never
   // re-derived here); the diatonic row claims first; the colour row (the key's five outside notes, play.ts:416-433)
@@ -384,7 +439,8 @@ export const mountHandsView: MountView = (root, inst) => {
     const a = document.activeElement as HTMLElement | null;
     return !!a && (a.tagName === 'INPUT' || a.tagName === 'TEXTAREA' || a.tagName === 'SELECT' || a.isContentEditable);
   };
-  const reflectEls: Array<[HTMLElement, string]> = [[octDn, OCT_DN], [octUp, OCT_UP], [stop, STOP_CODE], ...[...capEls].map(([c, b]) => [b, c] as [HTMLElement, string])];
+  const reflectEls: Array<[HTMLElement, string]> = [[octDn, OCT_DN], [octUp, OCT_UP], [stop, STOP_CODE],
+    ...[...capEls].map(([c, b]) => [b, c] as [HTMLElement, string]), ...[...gestEls.values()].map((b) => [b, b.dataset.code ?? ''] as [HTMLElement, string])];
   const paintKeysDown = (): void => {
     for (const [b, code] of reflectEls) b.classList.toggle('pressed', codesDown.has(code) || ptrCodes.has(code));
     lampSig = '';
@@ -425,7 +481,8 @@ export const mountHandsView: MountView = (root, inst) => {
       window.removeEventListener('keyup', onKeyUp, true);
       window.removeEventListener('blur', onBlur);
       document.removeEventListener('visibilitychange', onVis);
-      letGo();
+      letGo();                   // a pointer still on Z / M lets go through the counter first (the key may still hold it)
+      H.gesture = rawGesture;    // then the key's door goes back to the instrument
       top.remove(); keybed.remove();
     },
   };

@@ -959,7 +959,7 @@ async function fitRows({ page, row }, w) {
   const share = f.dev && f.content > 0 ? f.dev.w / f.content : NaN;
   const railR = f.rail ? f.rail.r : f.pl, gap = f.dev ? f.dev.l - railR : NaN, need = 0.01 * f.content;
   const col = `content ${f.content.toFixed(0)} = innerWidth ${f.iw} − .sig-page padding ${f.pl}|${f.pr}${f.page ? "" : " (NO .sig-page)"}`;
-  if (w === 1440) row(`fit ${w} · 97–99 % of the column`, Number.isFinite(share) && share >= 0.96 && share <= 0.995,
+  if (w === 1440) row(`fit ${w} · 93–99.5 % of the column (the height may bind at 900 tall)`, Number.isFinite(share) && share >= 0.93 && share <= 0.995,
     `#sig-device drawn ${f.dev ? `${f.dev.w.toFixed(1)}×${f.dev.h.toFixed(1)} at x ${f.dev.l.toFixed(1)}..${f.dev.r.toFixed(1)}` : "MISSING"} · ${col} · ${Number.isFinite(share) ? `${(100 * share).toFixed(2)} %` : "?"} · zoom ${f.zoom}`);
   row(`fit ${w} · clear of the rail`, Number.isFinite(gap) && gap >= need,
     `${f.rail ? `.awayrail (${f.rail.pos}) ${f.rail.l.toFixed(0)}..${f.rail.r.toFixed(0)}` : `no .awayrail rendered: the page's padding-left ${f.pl}`} · device left ${f.dev ? f.dev.l.toFixed(1) : "?"} · gap ${Number.isFinite(gap) ? gap.toFixed(1) : "?"} px, want ≥ ${need.toFixed(1)} (1 % of ${f.content.toFixed(0)})`);
