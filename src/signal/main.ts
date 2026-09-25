@@ -101,6 +101,8 @@ export async function boot(root: HTMLElement): Promise<Booted | null> {
   {                                                       // R4: the arp left the surface; a saved "on" never plays (it loads OFF)
     const arp = I.harmony.state().arp;
     if (arp.on) I.harmony.set('arp', { ...arp, on: false });
+    const m = I.harmony.state().music;                    // R5: FREE (chromatic) left the surface; a saved FREE loads as major
+    if (m.scale === 'chrom') I.harmony.set('music', { ...m, scale: 'major' });
   }
   if (ctx.state === 'running') void I.wake();             // a gesture that came during the build
 

@@ -1,8 +1,9 @@
 // keys-view.test.mjs — lane V2: mountKeysView on V0's stub instrument, in node, on a DOM stub. The glass's maths (the 24 dB/oct
 // Butterworth drawn from its two biquads, the bypass, the MOTION ghost's range), every gesture → the instrument, every state
 // change → the paint. No audio, no browser (the look is verified by headless screenshots, NOTES-SIGNAL-R1 §2 V2).
-// R4 (NOTES-SIGNAL-R4.md §1.3): the arpeggiator left the surface (no arp hook, no harmony.set('arp') from the tower); the
-// foot is the CHORD glass (the settle law, on the stub's Cmaj7 · I) · HOLD · CHORD | ◀ the KEY screen ▶ SCALE.
+// R4 (NOTES-SIGNAL-R4.md §1.3): the arpeggiator left the surface (no arp hook, no harmony.set('arp') from the tower).
+// R5 (NOTES-SIGNAL-R5.md §1.2): the foot is the chord's — CHORD · the CHORD glass (wide, centred; the settle law, on the
+// stub's Cmaj7 · I) · HOLD; the KEY walk left the tower (no key / key- / key+ / scale hook, never a harmony.set('music')).
 // run: source ~/.nvm/nvm.sh && node src/signal/view/keys-view.test.mjs   (exit 0 = green; prints `keys-view: N/N`)
 import { readFileSync } from 'node:fs';
 
@@ -156,16 +157,17 @@ await t('source: imports ONLY ../types.ts, ./controls.ts, ./common.ts (types.ts:
   ok(froms.length >= 3); ok(froms.every((f) => ['../types.ts', './controls.ts', './common.ts'].includes(f)), froms.join(', '));
   ok(!/\bimport\s*\(/.test(src), 'no dynamic import'); ok(!/\btitle\s*=/.test(src.replace(/\/\/.*$/gm, '')), 'no title=');
 });
-await t('mount: one tower in root, the keys accent, head · glass · body · rail · foot (R3.1: the rail rises above the foot; R4: the foot = the chord glass · HOLD · CHORD | the KEY walk)', () => {
+await t('mount: one tower in root, the keys accent, head · glass · body · rail · foot (R3.1: the rail rises above the foot; R5: the foot = CHORD · the chord glass · HOLD)', () => {
   const { root, T, view } = mount();
   is(root.children.length, 1); ok(T.cls.has('sg-tower') && T.cls.has('kv-tower')); is(T.style.getPropertyValue('--acc'), 'var(--sg-keys)');
   is(T.children.map((c) => c.className).join(' | '), 'kv-head | sg-glass tint sg-ew kv-filter | kv-body | sg-rail kv-foot | kv-harm');
   is(T.children.at(-2).querySelectorAll('[data-ctl]').map((e) => e.dataset.ctl).join(' '), 'keys-mute keys-solo keys-gain', 'the rail, one above the foot;');
   const f = T.children.at(-1);
-  is(f.querySelectorAll('[data-ctl]').map((e) => e.dataset.ctl).join(' '), 'chord-glass hold chord key- key key+ scale', 'the foot = the hands\' row, in order;');
-  is(f.children.map((c) => c.className).join(' | '), 'sg-glass glow kv-chord dim | kv-togs | sg-vdiv kv-hdiv | kv-keygrp', 'the glass · the toggles · the hairline · the KEY walk;');
+  is(f.children.map((c) => c.dataset.ctl).join(' '), 'chord chord-glass hold', 'the row\'s own children carry the hooks, in order (.kv-harm > [data-ctl]);');
+  is(f.querySelectorAll('[data-ctl]').map((e) => e.dataset.ctl).join(' '), 'chord chord-glass hold', 'and nothing else in the row has one;');
+  is(f.children.map((c) => c.className).join(' | '), 'sg-cap kv-tog | sg-glass glow kv-chord dim | sg-cap kv-tog', 'CHORD · the glass · HOLD: no wrapper, no hairline, no KEY walk;');
   is(f.style.getPropertyValue('--acc'), 'var(--sg-sapphire)', 'the harmony\'s sapphire;');
-  is(f.querySelectorAll('.sg-key').length, 0, 'no keycap in the foot (the keyboard teaches no key for the walk);');
+  is(f.querySelectorAll('.sg-key').length, 0, 'no keycap in the foot (the keyboard teaches no key for either toggle);');
   view.dispose();
 });
 await t('geometry (R3.1, keys.css): the rows fill the 518 px content exactly; the rail\'s top lands at 430, the drums\' line (their rail over the 44 px SPACE bar)', () => {
@@ -186,29 +188,30 @@ await t('geometry (R3.1, keys.css): the rows fill the 518 px content exactly; th
   ok(/\.sig \.kv-body \{[^}]*\bflex:\s*1\b[^}]*min-height:\s*0/.test(css), 'the body flexes (flex: 1; min-height: 0) so the tower fills 518 exactly;');
   is(CONTENT - rows.foot - GAP - rows.rail, 430, 'the rail\'s top = the drums\' (518 − 44 − 8 − 36);');
 });
-await t('geometry (R4, keys.css): the foot fits ONE line in 544 — §1.3\'s numbers leave the chord glass 140..170 (mono .6 em advance; caps 12 px + .08 em)', () => {
+await t('geometry (R5, keys.css): the foot is ONE line in 544, gaps 12 — CHORD and HOLD one width (72), the chord glass takes the whole middle (376) and stands centred; the KEY walk\'s rules are gone', () => {
   const css = readFileSync(new URL('../../styles/signal/keys.css', import.meta.url), 'utf8').replace(/\/\*[\s\S]*?\*\//g, '');
   const rule = (cls) => { const m = new RegExp(`\\.sig \\.${cls} \\{([^}]*)\\}`).exec(css); if (!m) throw new Error(`no .sig .${cls} rule`); return m[1]; };
-  const px = (cls, prop) => {
-    const v = new RegExp(`(?:^|;)\\s*${prop}:\\s*([^;]+)`).exec(rule(cls));
-    if (!v) throw new Error(`.${cls}: no ${prop}`);
-    return v[1].trim().split(/\s+/).map((x) => parseFloat(x));
-  };
+  const prop = (cls, p) => { const v = new RegExp(`(?:^|;)\\s*${p}:\\s*([^;]+)`).exec(rule(cls)); return v ? v[1].trim() : null; };
+  const px = (cls, p) => { const v = prop(cls, p); if (v === null) throw new Error(`.${cls}: no ${p}`); return v.split(/\s+/).map((x) => parseFloat(x)); };
   ok(/flex-wrap:\s*nowrap/.test(rule('kv-harm')), 'the row never wraps;');
-  const gap = px('kv-harm', 'gap')[0], togGap = px('kv-togs', 'gap')[0], grpGap = px('kv-keygrp', 'gap')[0];
-  const tp = px('kv-tog', 'padding'), togPad = tp[1] + tp[3];                 // 0 18px 0 13px (the LED's side is wider)
-  const scPad = px('kv-scale', 'padding')[1], scML = px('kv-scale', 'margin')[3];
-  const arrow = px('kv-arrow', 'width')[0], keyMin = px('kv-keyscr', 'min-width')[0], keyPad = px('kv-keyscr', 'padding')[1];
-  const gMin = px('kv-chord', 'min-width')[0], gMax = px('kv-chord', 'max-width')[0];
-  is(`${gap} ${togGap} ${grpGap} ${arrow} ${keyMin} ${gMin} ${gMax}`, '6 8 4 30 100 140 170', '§1.3\'s numbers;');
-  const capW = (w) => w.length * 12 * (0.6 + 0.08);                 // .sg-cap: 12 px mono, .08 em tracking
-  const numW = (w) => w.length * 22 * (0.6 + 0.03);                 // .sg-screen > b: 22 px mono, .03 em
-  const widest = Math.max(...['C MAJ', 'C# MIN', 'A# MAJ', 'FREE'].map(numW)) + 2 * keyPad + 2;   // + the glass's 1 px border
-  ok(widest <= keyMin, `the KEY screen's widest word fits its ${keyMin} (${widest.toFixed(1)}): a step never moves a cap;`);
-  const togs = capW('hold') + togPad + togGap + capW('chord') + togPad;
-  const walk = arrow + grpGap + keyMin + grpGap + arrow + grpGap + scML + capW('scale') + 2 * scPad;
-  const glassW = 544 - (gap + togs + gap + 1 + gap + walk);
-  ok(glassW >= gMin && glassW <= gMax, `the chord glass gets ${glassW.toFixed(1)} of the 544 (wants ${gMin}..${gMax});`);
+  is(prop('kv-harm', 'gap'), '12px', 'gaps 12;');
+  is(prop('kv-chord', 'flex'), '1 1 auto', 'the glass takes the whole middle (flex: 1 1 auto);');
+  is(prop('kv-chord', 'min-width'), '0', 'and may give way (min-width: 0);');
+  is(prop('kv-chord', 'max-width'), null, 'no cap on its width (R4\'s 170 is gone);');
+  is(prop('kv-tog', 'flex'), 'none', 'the caps never give way;');
+  const capMin = px('kv-tog', 'min-width')[0], tp = px('kv-tog', 'padding'), togPad = tp[1] + tp[3];   // 0 18px 0 13px (the LED's side is wider)
+  const capW = (w) => w.length * 12 * (0.6 + 0.08) + togPad;      // .sg-cap: 12 px mono (.6 em advance), .08 em tracking
+  ok(capW('chord') <= capMin && capW('hold') <= capMin, `both words fit the one width ${capMin} (chord ${capW('chord').toFixed(1)}, hold ${capW('hold').toFixed(1)});`);
+  const chordW = Math.max(capMin, capW('chord')), holdW = Math.max(capMin, capW('hold')), gap = px('kv-harm', 'gap')[0];
+  is(chordW, holdW, 'CHORD and HOLD stand one width;');
+  const glassW = 544 - chordW - holdW - 2 * gap;
+  is(glassW, 376, 'the glass = 544 − 2 · 72 − 2 · 12;');
+  ok(glassW > chordW && glassW > holdW, 'the glass is wider than each cap;');
+  is(chordW + gap + glassW / 2, 544 / 2, 'the glass\'s centre is the tower\'s: it stands centred;');
+  const nameW = (w) => w.length * 22 * (0.6 + 0.03);              // .kv-clabel: 22 px mono, .03 em
+  const pad = px('kv-chord', 'padding')[1];
+  ok(nameW('F#m7♭5/C#') + 2 * pad + 2 <= glassW, `a long name (F#m7♭5/C#, ${nameW('F#m7♭5/C#').toFixed(0)} px) stands whole in the glass;`);
+  for (const cls of ['kv-keygrp', 'kv-arrow', 'kv-keyscr', 'kv-scale', 'kv-hdiv', 'kv-togs']) ok(!new RegExp(`\\.${cls}\\b`).test(css), `no .${cls} rule left;`);
 });
 await t('header: the voice seg holds the four rips, RHODES on; the ↑ ↓ keycaps (ArrowUp/Down) step the voice, wrapping', () => {
   const { inst, T, q, view } = mount();
@@ -423,17 +426,19 @@ await t('empty meters: the fill carries .mt at v ≤ .004 (the seg dims by CSS :
   inst.keys.set('fx', { ...inst.keys.state().fx, delay: 0.3 }); await tick(); ok(!q('.sg-lcd[data-key="delay"]').querySelector('.si-fill').cls.has('mt'));
   view.dispose();
 });
-await t('foot: HOLD · CHORD are on-screen caps (LED, no key, the harmony\'s sapphire); a click writes the harmony, the state flips aria-pressed', async () => {
+await t('foot: CHORD (the left end) · HOLD (the right end) are on-screen caps (LED, no key, the harmony\'s sapphire); a click writes the harmony, the state flips aria-pressed', async () => {
   const { inst, q, view } = mount();
-  const togs = ['hold', 'chord'].map((c) => q(`.sg-cap[data-ctl="${c}"]`));
-  is(togs.map((b) => b.textContent).join(' '), 'hold chord'); ok(togs.every((b) => b.querySelector('.sg-led') && b.dataset.code === undefined && b.cls.has('kv-tog')));
+  const togs = ['chord', 'hold'].map((c) => q(`.sg-cap[data-ctl="${c}"]`));
+  const row = q('.kv-harm').children;
+  ok(row[0] === togs[0] && row.at(-1) === togs[1], 'CHORD opens the row, HOLD closes it;');
+  is(togs.map((b) => b.textContent).join(' '), 'chord hold'); ok(togs.every((b) => b.querySelector('.sg-led') && b.dataset.code === undefined && b.cls.has('kv-tog')));
   ok(togs.every((b) => b.style.getPropertyValue('--acc') === 'var(--sg-sapphire)'));
   const aria = () => togs.map((b) => b.getAttribute('aria-pressed')).join();
   is(aria(), 'false,false');
-  togs[0].fire('click'); await tick(); is(inst.harmony.state().hold, true); is(aria(), 'true,false'); ok(togs[0].cls.has('on'));
-  togs[1].fire('click'); await tick(); is(inst.harmony.state().chord, true); is(aria(), 'true,true');
+  togs[0].fire('click'); await tick(); is(inst.harmony.state().chord, true); is(aria(), 'true,false'); ok(togs[0].cls.has('on'));
+  togs[1].fire('click'); await tick(); is(inst.harmony.state().hold, true); is(aria(), 'true,true');
   togs.forEach((b) => b.fire('click')); await tick(); is(aria(), 'false,false'); ok(!inst.harmony.state().hold && !inst.harmony.state().chord);
-  inst.load({ harmony: { ...inst.harmony.state(), hold: true } }); await tick(); is(aria(), 'true,false', 'a load lights it;');
+  inst.load({ harmony: { ...inst.harmony.state(), hold: true } }); await tick(); is(aria(), 'false,true', 'a load lights it;');
   view.dispose();
 });
 await t('no arpeggiator (R4): no arp hook, no ARP · LENGTH · GROOVE legend; a click on every control never writes harmony.arp; an arp ON in the state paints nothing', async () => {
@@ -449,7 +454,7 @@ await t('no arpeggiator (R4): no arp hook, no ARP · LENGTH · GROOVE legend; a 
   await tick();
   const w = calls.slice(n0).filter((c) => c[0] === 'hset');
   is(w.filter((c) => c[1] === 'arp').length, 0, 'the tower never calls harmony.set("arp");');
-  ok(w.some((c) => c[1] === 'music') && w.some((c) => c[1] === 'hold') && w.some((c) => c[1] === 'chord'), 'the clicks reached the foot;');
+  ok(w.some((c) => c[1] === 'hold') && w.some((c) => c[1] === 'chord'), 'the clicks reached the foot;');
   is(inst.harmony.state().arp.on, true, 'the engine\'s arp untouched;');
   inst.harmony.set('arp', { ...inst.harmony.state().arp, on: false });
   view.dispose();
@@ -460,39 +465,40 @@ await t('source (R4): the arp\'s laws and writes left keys-view.ts (no ARP_DIVS,
   ok(!/\.set\(\s*['"]arp['"]/.test(src), 'no harmony.set(\'arp\');');
   ok(!/\.arp\b/.test(src), 'the tower never reads harmony.arp;');
 });
-await t('keySummary: C MAJ · C# MIN · B MAJ · FREE (chrom names no key); any integer key wraps', () => {
-  is(V.keySummary(0, 'major'), 'C MAJ'); is(V.keySummary(1, 'minor'), 'C# MIN'); is(V.keySummary(11, 'major'), 'B MAJ');
-  is(V.keySummary(5, 'chrom'), 'FREE'); is(V.keySummary(-1, 'major'), 'B MAJ'); is(V.keySummary(13, 'minor'), 'C# MIN');
-});
-await t('KEY walk: ◀ from C → B (key 11), ▶ back to C, ▶ C#; the screen prints it at once; each step ONE harmony.set("music"), the octave kept', async () => {
-  const { inst, calls, q, view } = mount();
-  const dn = q('[data-ctl="key-"]'), up = q('[data-ctl="key+"]'), scr = q('[data-ctl="key"]'), val = scr.querySelector('b');
-  ok(dn.cls.has('sg-cap') && dn.cls.has('kv-arrow') && !dn.cls.has('sg-key') && dn.dataset.code === undefined, '◀ is an on-screen cap, not a keycap;');
-  is(dn.getAttribute('aria-label'), 'Key down'); is(up.getAttribute('aria-label'), 'Key up'); ok(dn.innerHTML.includes('<svg') && up.innerHTML.includes('<svg'), 'drawn glyphs;');
-  ok(scr.cls.has('sg-glass') && scr.cls.has('sg-screen') && scr.cls.has('kv-keyscr')); is(val.textContent, 'C MAJ'); is(scr.querySelector('small').textContent, 'key');
-  inst.harmony.set('music', { ...inst.harmony.state().music, oct: 1 }); await tick();
-  const n0 = calls.length;
-  dn.fire('click'); is(inst.harmony.state().music.key, 11); is(val.textContent, 'B MAJ', 'repainted at once;');
-  up.fire('click'); is(inst.harmony.state().music.key, 0); is(val.textContent, 'C MAJ');
-  up.fire('click'); await tick(); is(val.textContent, 'C# MAJ');
-  is(calls.slice(n0).filter((c) => c[0] === 'hset').map((c) => `${c[1]}:${c[2].key}/${c[2].scale}/${c[2].oct}`).join(' '),
-    'music:11/major/1 music:0/major/1 music:1/major/1', 'one music write per step, the octave kept;');
+await t('no KEY walk (R5: it left for the keybed\'s KEY block): no key / key- / key+ / scale hook anywhere in the tower, no KEY screen, no arrow cap, no SCALE legend', () => {
+  const { T, view } = mount();
+  const all = [...T.walk()];
+  for (const c of ['key', 'key-', 'key+', 'scale']) is(all.filter((e) => e.dataset.ctl === c).length, 0, `no [data-ctl="${c}"];`);
+  is(all.filter((e) => /^(key|scale)([-+]|$)/.test(e.dataset.ctl ?? '')).length, 0, 'no key / scale hook of any spelling;');
+  is(T.querySelectorAll('.sg-screen').length, 0, 'no screen in the tower (the KEY screen was its one);');
+  is(all.filter((e) => e.tagName === 'BUTTON' && /viewBox="0 0 10 10"/.test(e.innerHTML)).length, 0, 'no ◀ ▶ glyph cap;');
+  ok(!all.some((e) => /^(scale|key|free|c maj)$/i.test(e.textContent)), 'no SCALE / KEY legend, no key name printed;');
   view.dispose();
 });
-await t('SCALE: major → minor → chrom → major; the screen prints C MAJ → C MIN → FREE → C MAJ; a key written elsewhere (a load) repaints it', async () => {
-  const { inst, q, view } = mount();
-  const sc = q('[data-ctl="scale"]'), val = q('[data-ctl="key"]').querySelector('b');
-  ok(sc.cls.has('sg-cap') && sc.cls.has('kv-scale') && !sc.cls.has('sg-key')); is(sc.textContent, 'scale', 'a fixed legend: the screen shows the state;');
-  const seen = [val.textContent];
-  for (let i = 0; i < 3; i++) { sc.fire('click'); await tick(); seen.push(`${inst.harmony.state().music.scale}:${val.textContent}`); }
-  is(seen.join(' → '), 'C MAJ → minor:C MIN → chrom:FREE → major:C MAJ');
-  inst.load({ harmony: { ...inst.harmony.state(), music: { key: 10, scale: 'minor', oct: 0 } } }); await tick();
-  is(val.textContent, 'A# MIN');
+await t('never a harmony.set("music") (R5): every button clicked and every hook pressed, the tower writes the harmony\'s hold and chord only; the key stays', async () => {
+  const { inst, T, calls, view } = mount();
+  const n0 = calls.length, all = [...T.walk()];
+  for (const e of all) if (e.tagName === 'BUTTON') e.fire('click');
+  for (const e of all) if (e.dataset.ctl) { e.fire('pointerdown', { clientX: 10, clientY: 10, timeStamp: 9000 }); e.fire('pointerup', { timeStamp: 9050 }); }
+  await tick(); flushRaf(); await tick();
+  const w = calls.slice(n0).filter((c) => c[0] === 'hset');
+  is(w.filter((c) => c[1] === 'music').length, 0, 'no harmony.set("music");');
+  is([...new Set(w.map((c) => c[1]))].sort().join(' '), 'chord hold', 'the foot\'s two toggles, nothing else of the harmony;');
+  is(JSON.stringify(inst.harmony.state().music), JSON.stringify({ key: 0, scale: 'major', oct: 0 }), 'C major, octave 0, untouched;');
   view.dispose();
 });
-await t('chord glass: the foot\'s first thing, a sapphire glow glass (b name over small degree), .dim and empty at rest', () => {
+await t('source (R5): the KEY walk left keys-view.ts (no NOTE_NAMES · SCALES · keySummary · the ◀ ▶ glyphs · the KEY screen; no set(\'music\'); keySummary no longer exported)', () => {
+  const src = readFileSync(new URL('./keys-view.ts', import.meta.url), 'utf8').replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/.*$/gm, '');
+  for (const w of ['NOTE_NAMES', 'SCALES', 'SCALE_WORD', 'keySummary', 'keyDn', 'keyScr', 'keyVal', 'keyGrp', 'scaleCap', 'setMusic', 'kv-keygrp', 'kv-arrow', 'kv-keyscr', 'kv-scale', 'kv-hdiv', 'kv-togs']) ok(!src.includes(w), `no ${w};`);
+  ok(!/\bLEFT\b|\bRIGHT\b/.test(src), 'no ◀ ▶ glyphs;');
+  ok(!/\bscreen\s*\(/.test(src), 'no screen() built;');
+  ok(!/\.set\(\s*['"]music['"]/.test(src), 'no harmony.set(\'music\');');
+  is(V.keySummary, undefined, 'keySummary is not exported;');
+});
+await t('chord glass: the foot\'s middle (between CHORD and HOLD), a sapphire glow glass (b name over small degree), .dim and empty at rest', () => {
   const { q, view } = mount();
   const gl = q('[data-ctl="chord-glass"]');
+  is(q('.kv-harm').children.indexOf(gl), 1, 'the second of the row\'s three;');
   ok(gl.cls.has('sg-glass') && gl.cls.has('glow') && gl.cls.has('kv-chord')); ok(gl.cls.has('dim'), '.dim at rest;');
   is(gl.style.getPropertyValue('--acc'), 'var(--sg-sapphire)');
   is(gl.children.map((c) => `${c.tagName.toLowerCase()}.${c.className}`).join(' '), 'b.kv-clabel small.kv-cdeg');
@@ -521,27 +527,31 @@ await t('chord glass: a strum names ONCE (every change inside the 90 ms re-arms 
   await sleep(100); is(names, 1, 'named once;'); is(q('.kv-clabel').textContent, 'Cmaj7');
   view.dispose();
 });
-await t('chord glass: a key or scale change respells AT ONCE (no settle); held over in silence it respells DIM', async () => {
+await t('chord glass: a key or scale change written ELSEWHERE (R5: the keybed\'s KEY block) respells on the paint, AT ONCE (no settle); held over in silence it respells DIM', async () => {
   const { inst, q, view } = mount();
   const gl = q('[data-ctl="chord-glass"]'), lab = q('.kv-clabel'), deg = q('.kv-cdeg');
-  inst.harmony.name = (n) => { const m = inst.harmony.state().music; return { label: `K${m.key}x${n.length}`, degree: m.scale === 'chrom' ? null : 'I' }; };
+  // the stub's naming: the key and the scale in the label; key 6 is off its map (no degree)
+  inst.harmony.name = (n) => { const m = inst.harmony.state().music; return { label: `K${m.key}${m.scale === 'minor' ? 'm' : ''}x${n.length}`, degree: m.key === 6 ? null : m.scale === 'minor' ? 'i' : 'I' }; };
+  const music = async (p) => { inst.harmony.set('music', { ...inst.harmony.state().music, ...p }); await tick(); };
   inst.setHeld([60, 64, 67]); await sleep(130); is(lab.textContent, 'K0x3'); ok(!gl.cls.has('dim'));
-  q('[data-ctl="key+"]').fire('click'); is(lab.textContent, 'K1x3', 'the key respells at once;'); ok(!gl.cls.has('dim'));
-  q('[data-ctl="scale"]').fire('click'); q('[data-ctl="scale"]').fire('click');
-  is(deg.textContent, '', 'chrom: off the map, no degree;'); ok(!deg.cls.has('on'), 'dark off the map;');
+  await music({ key: 1 }); is(lab.textContent, 'K1x3', 'a key change respells on the next paint (no 90 ms settle);'); ok(!gl.cls.has('dim'));
+  await music({ scale: 'minor' }); is(lab.textContent, 'K1mx3', 'a scale change too;'); is(deg.textContent, 'i'); ok(deg.cls.has('on'));
+  await music({ key: 6 }); is(deg.textContent, '', 'off the map: no degree;'); ok(!deg.cls.has('on'), 'dark off the map;');
   inst.setHeld([]); await sleep(130); ok(gl.cls.has('dim'));
-  q('[data-ctl="key-"]').fire('click'); is(lab.textContent, 'K0x3', 'the held-over name respells…'); ok(gl.cls.has('dim'), '…and stays dim;');
+  await music({ key: 0, scale: 'major' }); is(lab.textContent, 'K0x3', 'the held-over name respells…'); ok(gl.cls.has('dim'), '…and stays dim;');
+  await music({ oct: 1 }); is(lab.textContent, 'K0x3', 'an octave change is no respell;'); ok(gl.cls.has('dim'));
   view.dispose();
 });
 await t('chord glass: the blink is burst-guarded (a second new name inside 150 ms does not blink; past the guard it does)', async () => {
   const { inst, q, view } = mount();
   const lab = q('.kv-clabel');
   inst.harmony.name = () => ({ label: `K${inst.harmony.state().music.key}`, degree: null });
+  const keyStep = async () => { const m = inst.harmony.state().music; inst.harmony.set('music', { ...m, key: (m.key + 1) % 12 }); await tick(); };   // the keybed's KEY block
   inst.setHeld([60, 64, 67]); await sleep(120); is(lab.textContent, 'K0'); ok(lab.cls.has('sg-t-blink'));
   lab.cls.delete('sg-t-blink');
-  q('[data-ctl="key+"]').fire('click'); is(lab.textContent, 'K1'); ok(!lab.cls.has('sg-t-blink'), 'inside the guard: no strobe;');
+  await keyStep(); is(lab.textContent, 'K1'); ok(!lab.cls.has('sg-t-blink'), 'inside the guard: no strobe;');
   await sleep(160);
-  q('[data-ctl="key+"]').fire('click'); is(lab.textContent, 'K2'); ok(lab.cls.has('sg-t-blink'), 'past the guard: it blinks;');
+  await keyStep(); is(lab.textContent, 'K2'); ok(lab.cls.has('sg-t-blink'), 'past the guard: it blinks;');
   view.dispose();
 });
 await t('chord glass: a pool keys.onHeldChange never reports (harmony.sounding(), the arp\'s) is caught by the frame\'s signature, then settles', async () => {
@@ -617,19 +627,21 @@ await t('dispose: the tower leaves root, the frame stops, onChange no longer pai
   inst.keys.set('fx', { ...inst.keys.state().fx, drive: 0.9 }); await tick(); is(q('.sg-lcd[data-key="drive"]').querySelector('.si-fill').style.height, before);
   view.dispose(); ok(T);
 });
-await t('hooks: a data-ctl on each control the gate may click (types.ts CTL.keys: every one, once, in tower order)', () => {
+await t('hooks: a data-ctl on each control the gate may click (types.ts CTL.keys: every one, once, in tower order; R5: the foot = chord · chord-glass · hold)', () => {
   const { T, view } = mount();
   const ctls = [...T.walk()].filter((e) => e.dataset.ctl).map((e) => e.dataset.ctl);
-  is(ctls.join(' '), 'keys-voice keys-voice-up keys-voice-down keys-filter keys-motion keys-rate keys-shape keys-fx-drive keys-fx-mod keys-modrate keys-fx-delay keys-fx-reverb keys-mute keys-solo keys-gain chord-glass hold chord key- key key+ scale');
+  is(ctls.join(' '), 'keys-voice keys-voice-up keys-voice-down keys-filter keys-motion keys-rate keys-shape keys-fx-drive keys-fx-mod keys-modrate keys-fx-delay keys-fx-reverb keys-mute keys-solo keys-gain chord chord-glass hold');
   is(new Set(ctls).size, ctls.length, 'each once;');
   is([...ctls].sort().join(' '), [...CTL.keys].sort().join(' '), 'the contract\'s set;');
-  is(ctls.slice(-7).join(' '), CTL.keys.slice(-7).join(' '), 'the foot in the contract\'s order;');
+  is(ctls.slice(-3).join(' '), CTL.keys.slice(-3).join(' '), 'the foot in the contract\'s order;');
+  is(CTL.keys.slice(-3).join(' '), 'chord chord-glass hold', 'the contract\'s foot (R5);');
+  ok(!CTL.keys.some((c) => /^(key[-+]?|scale)$/.test(c)), 'the contract gives the tower no key / scale hook;');
   view.dispose();
 });
 await t('no words that explain: no title=, no text beyond the legends', () => {
   const { T, view } = mount();
   const words = [...T.walk()].filter((e) => !e.cls.has('si-pc') && !e.innerHTML).map((e) => e.textContent).filter(Boolean);   // .si-pc is display:none (material); innerHTML replaced the legend (a real DOM drops it)
-  is(words.join(' '), 'RHODES PIANO PAD LEAD ↑ ↓ 100 1k 10k motion OFF rate 1/8 DRIVE WARM CRUNCH TAPE FUZZ MOD PHS FLNG DBL CHRS rate DEL REV SM MED HALL VAST m s gain hold chord C MAJ key scale');
+  is(words.join(' '), 'RHODES PIANO PAD LEAD ↑ ↓ 100 1k 10k motion OFF rate 1/8 DRIVE WARM CRUNCH TAPE FUZZ MOD PHS FLNG DBL CHRS rate DEL REV SM MED HALL VAST m s gain chord hold');
   ok(![...T.walk()].some((e) => 'title' in e.attrs));
   view.dispose();
 });

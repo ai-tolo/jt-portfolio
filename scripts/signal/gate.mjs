@@ -1,6 +1,6 @@
 #!/usr/bin/env node
-// gate · the SIGNAL round gate (branch `signal`; R0 + R1 + R2 2026-09-23, R3 + R4 2026-09-24). One command, one verdict:
-//   source ~/.nvm/nvm.sh && node scripts/signal/gate.mjs [--round r0|r1|r2|r3|r4] [--skip-build] [--looks a,b,c] [--only chromium,webkit,firefox]
+// gate · the SIGNAL round gate (branch `signal`; R0 + R1 + R2 2026-09-23, R3 + R4 2026-09-24, R5 2026-09-25). One command, one verdict:
+//   source ~/.nvm/nvm.sh && node scripts/signal/gate.mjs [--round r0|r1|r2|r3|r4|r5] [--skip-build] [--looks a,b,c] [--only chromium,webkit,firefox]
 // build (exit code only) → serve-dist :4637 → the round's browsers → one table → the KILL line, always the last line.
 // R0 · headless Chrome/CDP :9345 (own profile <scratch>/<round>-gate-chrome, muted, DPR 1) → each look at 1440×900 +
 //   1024×768: console clean, the asked .look shown at 700–1100 px unscaled, no sideways scroll, a viewport PNG + a
@@ -50,6 +50,18 @@
 //   (a section after the size floor, read while live: DRUMS · KEYS · BASS visible, each centred within 3 px over its
 //   tower and above its top, ≥ 16 px, three different inks) · the module PNGs <browser>-mod-{drums,keys,bass,head,
 //   keybed,switch}.png. The keymap, hold, keycap, fit, reload, stop, phone and home rows are R3's.
+// R5 · NOTES-SIGNAL-R5.md §1.4 (THE COMPARTMENT ROUND, `--round r5`): R4's leg (legR2 with r3 + r4 + r5), the new rows
+//   gated on r5 so r0–r4 run as they did: four sections after the keycaps, read while live (the standby makes all but #pwr
+//   inert) · THE KEY (`key · click steps, drag walks`: a trusted page.mouse.click at [data-ctl="key"]'s centre → music.key
+//   + 1 mod 12 within 150 ms of the release, the screen's b printing its sharp name; a trusted drag from that centre, 30 px
+//   DOWN in 3 moves → 1–5 steps back (2 at 14 px a step), the screen matching the state; k0 back by harmony.set('music'))
+//   · THE SCALE (`scale · MAJ / MIN toggle`: MAJ .on + aria-pressed at the default; a trusted click on MIN → 'minor', its
+//   button lit, the piano's .sgh-w.color set re-assigned; a trusted click on MAJ → all of it back; no [data-ctl="key-"] /
+//   [data-ctl="key+"] on the device and no .sg-cap in [data-ctl="keycaps"] printing an arrow) · THE RAIL (`rail · the
+//   window line, no names`: no .sgh-oname and no text in .sgh-rail; its .sgh-win shown, wider than 0, inside the rail's
+//   box) · THE FOOT (`keys foot · CHORD · glass · HOLD`: [data-slot="keys"] .kv-harm's own [data-ctl] children are chord ·
+//   chord-glass · hold, the glass wider than either cap). The rest (the switch, the titles, the loop's chord with the arp
+//   off, dormant, keycaps, the size floor, hold, fit, reload, stop, phone, home, the module + pressed shots) is R4's.
 // KILL DISCIPLINE · R0: Chrome's whole process group. R1 + R2: each child and everything under it, the WebKit shim (by this
 //   run's marker) and every ms-playwright process that was not running at start and has been orphaned. SIGKILLed, the
 //   server closed, in `finally` AND on SIGINT/SIGTERM/SIGHUP/uncaughtException; the last line proves none survives.
@@ -67,7 +79,8 @@ const REPO = fileURLToPath(new URL("../../", import.meta.url));
 const SELF = fileURLToPath(import.meta.url);
 const ROUND = arg("round", "r0"), TAG = `${ROUND}-gate`, R1 = ROUND === "r1", R2 = ROUND === "r2", R3 = ROUND === "r3";
 const R4 = ROUND === "r4";                                                       // R3's leg with the r4 hooks (NOTES-SIGNAL-R4.md §1.5)
-const LEGS = R1 || R2 || R3 || R4;                                               // the Playwright rounds: one child per browser
+const R5 = ROUND === "r5";                                                       // R4's leg with the r5 rows (NOTES-SIGNAL-R5.md §1.4)
+const LEGS = R1 || R2 || R3 || R4 || R5;                                         // the Playwright rounds: one child per browser
 const PORT = Number(arg("port", 4637)), CDP_PORT = Number(arg("cdp-port", 9345)), BASE = `http://127.0.0.1:${PORT}`;
 const SCRATCH = arg("scratch", "/private/tmp/claude-501/-Users-tolo/a1c7365a-3a62-4cf9-a768-e8fc57dd9bca/scratchpad");
 const PROFILE = join(SCRATCH, `${TAG}-chrome`);
@@ -83,7 +96,7 @@ const PW = "/Users/tolo/studio-mocks/pw/node_modules/playwright/index.mjs";
 const RIP_VERIFY = fileURLToPath(new URL("./rip-verify.mjs", import.meta.url)); // doubles as the WebKit pipe shim
 const LEG = arg("r1-leg", null);                                                   // child mode: one browser's leg
 const BROWSERS = arg("only", "chromium,webkit,firefox").split(",").filter(Boolean);
-const LEG_MS = Number(arg("leg-ms", R3 || R4 ? 180_000 : 120_000));             // each browser's clock (a knob for proving the HUNG path)
+const LEG_MS = Number(arg("leg-ms", R3 || R4 || R5 ? 180_000 : 120_000));       // each browser's clock (a knob for proving the HUNG path)
 const SIGNAL_URL = `${BASE}/signal/?mute=1`;
 const RMS_MIN = 0.001;                  // −60 dBFS: the loop sounds
 const PEAK_QUIET = 3e-5;                // −90.5 dBFS: the master stop is silent
@@ -625,7 +638,10 @@ async function legR2(k) {
 
   // R3 (NOTES-SIGNAL-R3 §3 rows 1–5): the taught keymap, HOLD under CHORD, the dormant pairs, the keycaps, the size floor
   // (+ R4 §1.5 (8): the titles, read here while the device is live: the standby greys all three to one engraving)
-  if (k.r3) for (const sec of [keymapRows, holdRows, dormantRows, keycapRows, floorRows, ...(k.r4 ? [titleRows] : [])]) {
+  // (+ R5 §1.4 (1)–(4), after the keycaps, live: the KEY screen's click + drag, the MAJ · MIN toggle, the rail's window
+  // line, the keys' foot)
+  const r5Secs = k.r5 ? [keyRows, scaleRows, railRows, footRows] : [];
+  if (k.r3) for (const sec of [keymapRows, holdRows, dormantRows, keycapRows, ...r5Secs, floorRows, ...(k.r4 ? [titleRows] : [])]) {
     try { await sec(k); }                                     // one section's throw is its own red row; the leg runs on
     catch (e) { row(`${sec.name} · ran to its end`, false, String(e?.message ?? e).split("\n")[0].slice(0, 300)); }
   }
@@ -906,6 +922,163 @@ const TITLES = () => ["drums", "keys", "bass"].map((n) => {
     dx: sr ? r.left + r.width / 2 - (sr.left + sr.width / 2) : NaN, above: sr ? sr.top - r.bottom : NaN };
 });
 
+// ── R5 · THE COMPARTMENT ROUND (NOTES-SIGNAL-R5.md §1.4): the key's names, then in page (self-contained, one argument) ──
+/** The KEY screen's spelling (music.ts NOTE_NAMES: the sharps, the Studio's): the screen prints R5_NOTE_NAMES[music.key]. */
+const R5_NOTE_NAMES = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
+/** Where a hand would press `.sig <sel>`: its getBoundingClientRect centre, what elementFromPoint finds there, whether the
+ *  point is inside the viewport, and the power state (the standby makes all but #pwr inert: a press needs 'live'). */
+const AIM_AT = (sel) => {
+  const e = document.querySelector(`.sig ${sel}`), sgm = document.getElementById("sgm");
+  const state = sgm ? sgm.getAttribute("data-state") : null;
+  if (!e) return { found: false, state, sy: Math.round(scrollY) };
+  const desc = (x) => {
+    if (!x) return "nothing";
+    const c = (x.getAttribute("class") || "").trim().split(/\s+/)[0], h = x.closest("[data-ctl]");
+    return `${x.tagName.toLowerCase()}${x.id ? `#${x.id}` : ""}${c ? `.${c}` : ""}${h ? ` in [data-ctl=${h.dataset.ctl}]` : ""}`;
+  };
+  const r = e.getBoundingClientRect(), x = r.left + r.width / 2, y = r.top + r.height / 2;
+  const inView = r.width > 0 && r.height > 0 && x >= 0 && y >= 0 && x < innerWidth && y < innerHeight;
+  const at = inView ? document.elementFromPoint(x, y) : null;
+  return { found: true, x, y, w: r.width, h: r.height, inView, hit: !!(at && (at === e || e.contains(at))), hitDesc: desc(at),
+    state, sy: Math.round(scrollY) };
+};
+/** §1.4 (1): music.key and what the KEY screen's b prints (a ♯ read as #). */
+const KEY_READ = () => {
+  const b = document.querySelector('.sig [data-ctl="key"] b');
+  return { key: window.__signal.instrument.harmony.state().music.key, text: b ? b.textContent.replace(/\u266f/g, "#").trim() : null };
+};
+/** Arms a recorder on the KEY screen: the first pointerdown that reaches it (window capture: its isTrusted, its own time),
+ *  the next pointerup, every key the state walks through (a 2 ms poll, off by itself after 3 s) and, with o.want, the
+ *  first poll that finds the key there, then the first that finds the screen printing o.name. */
+const KEY_ARM = (o) => {
+  const H = window.__signal.instrument.harmony, t0 = performance.now();
+  const text = () => { const b = document.querySelector('.sig [data-ctl="key"] b'); return b ? b.textContent.replace(/\u266f/g, "#").trim() : null; };
+  const g = { down: null, up: null, trusted: null, keyAt: null, textAt: null, walk: [H.state().music.key] };
+  const stamp = (ev) => { const now = performance.now(), ts = ev.timeStamp; return ts <= now && now - ts <= 1000 ? ts : now; };
+  const onDown = (ev) => {
+    const e = document.querySelector('.sig [data-ctl="key"]');
+    if (g.down === null && e && (ev.target === e || e.contains(ev.target))) { g.down = stamp(ev); g.trusted = ev.isTrusted; }
+  };
+  const onUp = (ev) => { if (g.down !== null && g.up === null) g.up = stamp(ev); };
+  addEventListener("pointerdown", onDown, true);
+  addEventListener("pointerup", onUp, true);
+  let id = 0;
+  const off = () => { clearInterval(id); removeEventListener("pointerdown", onDown, true); removeEventListener("pointerup", onUp, true); };
+  id = setInterval(() => {
+    const now = performance.now(), k = H.state().music.key;
+    if (now - t0 > 3000) { off(); return; }
+    if (k !== g.walk[g.walk.length - 1]) g.walk.push(k);
+    if (o.want === null) return;
+    if (g.keyAt === null && k === o.want) g.keyAt = now;
+    if (g.keyAt !== null && g.textAt === null && text() === o.name) g.textAt = now;
+  }, 2);
+  window.__gateKey5 = { g, off };
+  return true;
+};
+/** After the click: until the key and then the screen arrived, or limitMs after the release (1.5 s when no release came). */
+const KEY_WAIT = (limitMs) => new Promise((ok) => {
+  const k = window.__gateKey5, t0 = performance.now();
+  const tick = () => {
+    const g = k.g, now = performance.now();
+    if ((g.keyAt !== null && g.textAt !== null) || (g.up !== null && now - g.up > limitMs) || now - t0 > 1500) {
+      k.off();
+      const b = document.querySelector('.sig [data-ctl="key"] b');
+      ok({ ...g, key: window.__signal.instrument.harmony.state().music.key, text: b ? b.textContent.replace(/\u266f/g, "#").trim() : null });
+    } else setTimeout(tick, 5);
+  };
+  tick();
+});
+/** After the drag: until the key has held still 40 ms with the screen printing its name (o.names), or o.limitMs; then the
+ *  recorder off (its walk and its pointerdown reported). */
+const KEY_SETTLE = (o) => new Promise((ok) => {
+  const H = window.__signal.instrument.harmony, k = window.__gateKey5, t0 = performance.now();
+  let last = null, since = t0;
+  const tick = () => {
+    const b = document.querySelector('.sig [data-ctl="key"] b'), now = performance.now(), key = H.state().music.key;
+    const text = b ? b.textContent.replace(/\u266f/g, "#").trim() : null, match = text === o.names[((key % 12) + 12) % 12];
+    if (key !== last) { last = key; since = now; }
+    if ((match && now - since >= 40) || now - t0 > o.limitMs) {
+      if (k) k.off();
+      ok({ key, text, match, ms: Math.round(now - t0), walk: k ? k.g.walk : [], down: k ? k.g.down : null, trusted: k ? k.g.trusted : null });
+    } else setTimeout(tick, 5);
+  };
+  tick();
+});
+/** The key back where the row found it (by state, never judged). */
+const KEY_RESTORE = (k0) => {
+  const H = window.__signal.instrument.harmony, m = H.state().music;
+  if (m.key !== k0) H.set("music", { ...m, key: k0 });
+  return H.state().music.key;
+};
+/** §1.4 (2): the MAJ · MIN toggle as the page holds it (each button's .on + aria-pressed), the scale in the state, the
+ *  piano's whites wearing the colour rim (their MIDI, ascending), and what must be gone: the key- / key+ hooks, and any
+ *  on-screen cap in the keycap block printing an arrow (a glyph, an arrow class, an up / down / left / right name). */
+const SCALE_FACTS = () => {
+  const seg = document.querySelector('.sig [data-ctl="scale"]'), kc = document.querySelector('.sig [data-ctl="keycaps"]');
+  const one = (v) => {
+    const b = seg && seg.querySelector(`button[data-v="${v}"]`);
+    return b ? { on: b.classList.contains("on"), ap: b.getAttribute("aria-pressed"), text: b.textContent.trim() } : null;
+  };
+  const ARROW = /[\u2190-\u21ff\u25b2-\u25c5\u27f0-\u27ff\u2900-\u297f\u2b00-\u2bff\u2039\u203a\u00ab\u00bb<>]/;
+  const caps = kc ? [...kc.querySelectorAll(".sg-cap")] : [];
+  const arrows = caps.filter((e) => ARROW.test(e.textContent) || /arrow/i.test(e.getAttribute("class") || "")
+    || /arrow|\b(up|down|left|right)\b/i.test(e.getAttribute("aria-label") || ""))
+    .map((e) => `${(e.getAttribute("class") || "").trim().split(/\s+/).slice(0, 2).join(".")} "${e.textContent.trim() || e.getAttribute("aria-label") || ""}"`);
+  return { seg: !!seg, segDesc: seg ? `${seg.tagName.toLowerCase()}.${(seg.getAttribute("class") || "").trim().split(/\s+/).join(".")}` : "",
+    segText: seg ? seg.textContent.trim().slice(0, 24) : "", buttons: seg ? seg.querySelectorAll("button[data-v]").length : 0,
+    major: one("major"), minor: one("minor"), scale: window.__signal.instrument.harmony.state().music.scale,
+    colour: [...document.querySelectorAll(".sig .sgh-w.color")].map((e) => Number(e.dataset.m)).sort((a, b) => a - b),
+    gone: [...document.querySelectorAll('.sig [data-ctl="key-"], .sig [data-ctl="key+"]')].map((e) => e.dataset.ctl),
+    keycaps: !!kc, caps: caps.length, arrows };
+};
+/** Until the state holds o.want and its button is .on + aria-pressed "true" (the paint landed), or o.limitMs. */
+const SCALE_WAIT = (o) => new Promise((ok) => {
+  const t0 = performance.now();
+  const tick = () => {
+    const b = document.querySelector(`.sig [data-ctl="scale"] button[data-v="${o.want}"]`), now = performance.now();
+    const done = window.__signal.instrument.harmony.state().music.scale === o.want && !!b && b.classList.contains("on")
+      && b.getAttribute("aria-pressed") === "true";
+    if (done || now - t0 > o.limitMs) ok({ done, ms: Math.round(now - t0) });
+    else setTimeout(tick, 5);
+  };
+  tick();
+});
+/** The scale back where the row found it (by state; true when the clicks had left it elsewhere). */
+const SCALE_RESTORE = (s0) => {
+  const H = window.__signal.instrument.harmony, m = H.state().music;
+  if (m.scale === s0) return false;
+  H.set("music", { ...m, scale: s0 });
+  return true;
+};
+/** §1.4 (3): the rail: its C names (.sgh-oname) and its text, and the window line: shown (display, visibility, [hidden],
+ *  the opacity it is drawn at), its drawn box, and whether that box lies inside the rail's. */
+const RAIL_FACTS = () => {
+  const rail = document.querySelector(".sig .sgh-rail");
+  if (!rail) return { rail: false, wins: document.querySelectorAll(".sig .sgh-win").length };
+  const rr = rail.getBoundingClientRect(), win = rail.querySelector(".sgh-win");
+  let w = null;
+  if (win) {
+    const r = win.getBoundingClientRect(), cs = getComputedStyle(win);
+    let op = 1;
+    for (let x = win; x; x = x.parentElement) op *= Number(getComputedStyle(x).opacity);
+    w = { w: r.width, h: r.height, x: r.left - rr.left, y: r.top - rr.top, hidden: win.hidden, display: cs.display, vis: cs.visibility, op,
+      inside: r.left >= rr.left - 0.5 && r.right <= rr.right + 0.5 && r.top >= rr.top - 0.5 && r.bottom <= rr.bottom + 0.5 };
+  }
+  return { rail: true, ctl: rail.dataset.ctl || null, names: rail.querySelectorAll(".sgh-oname").length, text: rail.textContent.trim(),
+    rw: rr.width, rh: rr.height, win: w, wins: document.querySelectorAll(".sig .sgh-win").length };
+};
+/** §1.4 (4): the keys' foot: its own [data-ctl] children in DOM order (each one's drawn box), and every [data-ctl] under it. */
+const FOOT_FACTS = () => {
+  const harm = document.querySelector('.sig [data-slot="keys"] .kv-harm');
+  if (!harm) return { harm: false, slot: !!document.querySelector('.sig [data-slot="keys"]') };
+  const box = (e) => {
+    const r = e.getBoundingClientRect(), cs = getComputedStyle(e);
+    return { ctl: e.dataset.ctl, l: r.left, w: r.width, vis: e.getClientRects().length > 0 && r.width > 0 && r.height > 0 && cs.visibility !== "hidden" };
+  };
+  return { harm: true, kids: [...harm.children].filter((e) => e.hasAttribute("data-ctl")).map(box),
+    all: [...harm.querySelectorAll("[data-ctl]")].map((e) => e.dataset.ctl) };
+};
+
 // ── R3 · THE LEG'S SECTIONS ──
 async function keymapRows({ page, row, step }) {
   // (1) THE KEYMAP: X C V N and Digit1 are gone: through the surface (taps) AND as trusted keys, nothing changes
@@ -1081,8 +1254,127 @@ async function moduleShotRows({ name, page, row, step, r4 }, aim) {
   row("shots · modules written", ok,
     `${files.map((f, j) => `${f.split("/").pop()} ${sizes[j] ? `${(sizes[j] / 1024).toFixed(0)} KB` : "MISSING"}`).join(" · ")} · pressed while held: caps .pressed ${held.caps.join("+") || "none"} · drums ${held.drums ? "on" : "OFF"} · ${held.state}${note}${notes.length ? ` · ${notes.join(" | ")}` : ""} · in ${OUT}`);
 }
+// ── R5 · THE LEG'S SECTIONS (NOTES-SIGNAL-R5.md §1.4): after the keycaps, while the device is live ──
+/** Where a trusted press on `.sig <sel>` lands: its page centre when a hand there reaches it, else Playwright's box centre
+ *  (where a real hand aims too); a centre outside the viewport is scrolled in first, and `how` says so. */
+async function aimR5(page, sel) {
+  let f = await page.evaluate(AIM_AT, sel), note = "";
+  if (f.found && !f.inView) {
+    await page.evaluate((s) => { document.documentElement.style.scrollBehavior = "auto"; document.querySelector(`.sig ${s}`)?.scrollIntoView({ block: "nearest" }); }, sel);
+    await page.waitForTimeout(150);
+    f = await page.evaluate(AIM_AT, sel);
+    note = ` (scrolled into view: scrollY ${f.sy})`;
+  }
+  const scrolled = note !== "";
+  if (!f.found) return { ...f, scrolled, how: `MISSING${note}` };
+  if (f.hit) return { ...f, scrolled, how: `its centre ${f.x.toFixed(0)},${f.y.toFixed(0)}${note}` };
+  const b = await page.locator(`.sig ${sel}`).first().boundingBox().catch(() => null);
+  return b ? { ...f, scrolled, x: b.x + b.width / 2, y: b.y + b.height / 2, how: `Playwright's box centre (its own centre hit ${f.hitDesc})${note}` }
+    : { ...f, scrolled, how: `its centre, which hit ${f.hitDesc} (no Playwright box)${note}` };
+}
+async function keyRows({ page, row, step }) {
+  // (1) R5 §1.4 (1): THE KEY SCREEN (the keybed's top-left block): a trusted click steps to the next key, a trusted vertical
+  // drag walks it from the key at the press (14 px a step, down = lower); the screen prints the key's sharp name each time;
+  // k0 comes back by state
+  step("key");
+  const r0 = await page.evaluate(KEY_READ), k0 = r0.key;
+  const a = await aimR5(page, '[data-ctl="key"]');
+  if (!a.found) {
+    row("key · click steps, drag walks", false, `no [data-ctl="key"] on the device · music.key ${k0} · the device ${a.state}`);
+    return;
+  }
+  const want = (k0 + 1) % 12, name = R5_NOTE_NAMES[want], q = (s) => (s === null ? "no b" : `"${s}"`);
+  const t = (x) => (x === null ? "never" : `${Math.round(x)} ms`);
+  try {
+    // the click: down + up at the centre (within 3 px of the press: the next key)
+    await page.evaluate(KEY_ARM, { want, name });
+    await page.mouse.click(a.x, a.y);
+    const c = await page.evaluate(KEY_WAIT, 150);
+    const from = c.up ?? c.down, since = (x) => (x !== null && from !== null ? x - from : null);
+    const dKey = since(c.keyAt), dText = since(c.textAt);
+    const clickOk = c.trusted === true && c.key === want && dKey !== null && dKey <= 150 && c.text === name && dText !== null && dText <= 150;
+    // the drag: from the same centre, down, 30 px DOWN in 3 moves, up (two steps back at 14 px a step)
+    const k1 = c.key;
+    await page.evaluate(KEY_ARM, { want: null, name: null });
+    await page.mouse.move(a.x, a.y);
+    await page.mouse.down();
+    try { await page.mouse.move(a.x, a.y + 30, { steps: 3 }); } finally { await page.mouse.up(); }
+    const d = await page.evaluate(KEY_SETTLE, { limitMs: 400, names: R5_NOTE_NAMES });
+    const back = (k1 - d.key + 12) % 12;
+    const dragOk = d.trusted === true && back >= 1 && back <= 5 && d.match;
+    const k2 = await page.evaluate(KEY_RESTORE, k0);
+    const walk1 = c.walk.join(" → ") === `${k0} → ${want}` ? "" : `; the walk ${c.walk.join(" → ")}`;
+    row("key · click steps, drag walks", clickOk && dragOk,
+      `k0 ${k0} ${q(r0.text)} · the device ${a.state} · a trusted click at ${a.how}${c.down === null ? ": NO pointerdown reached [data-ctl=key]" : ` (isTrusted ${c.trusted})`} → key ${c.key} ${q(c.text)} (want ${want} "${name}": the state ${t(dKey)}, the screen ${t(dText)} after the release, ≤ 150${walk1}) · a trusted drag 30 px down in 3 moves${d.down === null ? " (NO pointerdown reached it)" : ""} → key ${d.key} ${q(d.text)}: ${back} step${back === 1 ? "" : "s"} back (want 2 at 14 px a step; judged 1–5), the screen ${d.match ? "matches" : "does NOT match"} the state, the walk ${d.walk.join(" → ")} · restored to ${k2} by harmony.set('music')`);
+  } finally {
+    await page.evaluate(() => { window.__gateKey5?.off(); }).catch(() => {});   // never leave a 2 ms poll running into the throttle
+    if (a.scrolled) await page.evaluate(SETTLE).catch(() => {});
+  }
+}
+async function scaleRows({ page, row, step }) {
+  // (2) R5 §1.4 (2): THE SCALE TOGGLE beside the KEY screen (a .si-seg.col, MAJ over MIN): MAJ lit at the default; a trusted
+  // click on MIN → 'minor', aria-pressed flips, the piano's colour rims re-assign (the .sgh-w.color set changes); a trusted
+  // click on MAJ brings it all back; and the arrow caps are gone (no key- / key+ hook on the device; no on-screen cap in the
+  // keycap block prints an arrow: only the real ← → keys may)
+  step("scale");
+  const f0 = await page.evaluate(SCALE_FACTS), s0 = f0.scale;
+  let scrolled = false;
+  const press = async (v) => {
+    const a = await aimR5(page, `[data-ctl="scale"] button[data-v="${v}"]`);
+    scrolled ||= !!a.scrolled;
+    if (!a.found) return { f: await page.evaluate(SCALE_FACTS), say: `${v.toUpperCase()} MISSING` };
+    await page.mouse.click(a.x, a.y);
+    const w = await page.evaluate(SCALE_WAIT, { want: v, limitMs: 300 });
+    await page.waitForTimeout(60);                              // the piano's rims repaint from the same change
+    return { f: await page.evaluate(SCALE_FACTS), say: `a trusted click on ${v} at ${a.how} → ${w.done ? `'${v}' + its button lit in ${w.ms} ms` : `NOT '${v}' + lit in ${w.ms} ms`}` };
+  };
+  const both = !!(f0.major && f0.minor);
+  let p1 = null, p2 = null, forced = false;
+  try {
+    if (both) { p1 = await press("minor"); p2 = await press("major"); }
+  } finally {
+    forced = await page.evaluate(SCALE_RESTORE, s0).catch(() => false);   // the rest of the leg runs in the scale it had
+    if (scrolled) await page.evaluate(SETTLE).catch(() => {});
+  }
+  const f1 = p1 ? p1.f : null, f2 = p2 ? p2.f : null;
+  const lit = (f, v) => !!(f && f[v] && f[v].on && f[v].ap === "true");
+  const dark = (f, v) => !!(f && f[v] && !f[v].on && f[v].ap === "false");
+  const same = (x, y) => x.length === y.length && x.every((m, j) => m === y[j]);
+  const atDefault = s0 === "major" && lit(f0, "major") && dark(f0, "minor");
+  const toMinor = !!f1 && f1.scale === "minor" && lit(f1, "minor") && dark(f1, "major") && !same(f0.colour, f1.colour);
+  const toMajor = !!f2 && f2.scale === "major" && lit(f2, "major") && dark(f2, "minor") && same(f0.colour, f2.colour);
+  const noArrows = f0.keycaps && f0.gone.length === 0 && f0.arrows.length === 0;
+  const btn = (f, v) => (f && f[v] ? `${f[v].text || v} ${f[v].on ? ".on" : "off"} aria-pressed ${f[v].ap}` : `${v} MISSING`);
+  const rims = (f) => (f ? `[${f.colour.join(" ")}]` : "?");
+  row("scale · MAJ / MIN toggle", atDefault && toMinor && toMajor && noArrows,
+    `${f0.seg ? `[data-ctl=scale] = ${f0.segDesc} (${f0.buttons} button[data-v])` : "no [data-ctl=scale] on the device"} · at the default '${s0}': ${btn(f0, "major")} · ${btn(f0, "minor")}${both ? ` · ${p1.say}: ${btn(f1, "minor")} · ${btn(f1, "major")} · '${f1.scale}' · ${p2.say}: ${btn(f2, "major")} · ${btn(f2, "minor")} · '${f2.scale}'` : ` (no MAJ / MIN buttons${f0.seg ? `: it prints "${f0.segText}"` : ""})`} · the whites with the colour rim ${rims(f0)} → ${rims(f1)} → ${rims(f2)} (want a change, then back) · key- / key+ ${f0.gone.length ? `ON THE DEVICE (${f0.gone.join(" ")})` : "gone"} · arrow caps in [data-ctl=keycaps]: ${f0.keycaps ? (f0.arrows.length ? `${f0.arrows.length} (${f0.arrows.join(" | ")})` : `none (${f0.caps} .sg-cap in it)`) : "NO [data-ctl=keycaps]"}${forced ? ` · the clicks left the scale off '${s0}': restored by state` : ""}`);
+}
+async function railRows({ page, row, step }) {
+  // (3) R5 §1.4 (3): THE RAIL is the window line alone: no C names (no .sgh-oname, no text in it), the .sgh-win shown, wider
+  // than 0, inside the rail (the rail's 12 px stay the drag target; the line is what shows)
+  step("rail");
+  const f = await page.evaluate(RAIL_FACTS), w = f.win;
+  const shown = !!w && !w.hidden && w.display !== "none" && w.vis !== "hidden" && w.op > 0 && w.w > 0 && w.h > 0;
+  row("rail · the window line, no names", f.rail && f.names === 0 && f.text === "" && shown && w.inside,
+    f.rail ? `.sgh-rail${f.ctl ? `[data-ctl=${f.ctl}]` : " (no data-ctl)"} ${f.rw.toFixed(0)}×${f.rh.toFixed(1)} px · .sgh-oname ${f.names}${f.text ? ` · its text "${f.text.slice(0, 40)}"` : " · no text"} · .sgh-win ${w ? `${w.w.toFixed(1)}×${w.h.toFixed(1)} px at ${w.x.toFixed(1)},${w.y.toFixed(1)} in the rail, ${shown ? "shown" : `NOT shown (hidden ${w.hidden}, display ${w.display}, visibility ${w.vis}, opacity ${w.op})`}, ${w.inside ? "inside the rail" : "OUTSIDE the rail's box"}` : `NOT in the rail (${f.wins} on the device)`}`
+      : `no .sgh-rail on the device (${f.wins} .sgh-win)`);
+}
+async function footRows({ page, row, step }) {
+  // (4) R5 §1.4 (4): THE KEYS' FOOT is the chord's: CHORD · the glass · HOLD, the .kv-harm's own hooks in that order, the
+  // glass (flex 1 1 auto: the whole middle) wider than either cap
+  step("keys foot");
+  const f = await page.evaluate(FOOT_FACTS);
+  if (!f.harm) { row("keys foot · CHORD · glass · HOLD", false, `no [data-slot="keys"] .kv-harm${f.slot ? "" : " (no [data-slot=keys] either)"}`); return; }
+  const order = f.kids.map((x) => x.ctl).join(" "), by = (c) => f.kids.find((x) => x.ctl === c);
+  const ch = by("chord"), gl = by("chord-glass"), ho = by("hold");
+  const wide = !!(ch && gl && ho) && gl.w > ch.w && gl.w > ho.w, vis = f.kids.length > 0 && f.kids.every((x) => x.vis);
+  const drawn = [...f.kids].sort((x, y) => x.l - y.l).map((x) => x.ctl).join(" "), all = f.all.join(" ");
+  row("keys foot · CHORD · glass · HOLD", order === "chord chord-glass hold" && wide && vis,
+    `.kv-harm > [data-ctl]: ${order || "none"} (want chord chord-glass hold)${drawn !== order ? ` · drawn left to right: ${drawn}` : ""} · widths ${f.kids.map((x) => `${x.ctl} ${x.w.toFixed(0)}${x.vis ? "" : " (NOT visible)"}`).join(" · ") || "none"} px${ch && gl && ho ? ` · the glass ${wide ? "wider than" : "NOT wider than"} each cap` : ""}${all !== order ? ` · every [data-ctl] under it: ${all || "none"}` : ""}`);
+}
 async function legR3(k) { return legR2({ ...k, r3: true }); }   // R2's leg; its r3 hooks insert the sections above
 async function legR4(k) { return legR2({ ...k, r3: true, r4: true }); }   // R3's leg; its r4 hooks change the rows (R4 §1.5)
+async function legR5(k) { return legR2({ ...k, r3: true, r4: true, r5: true }); }   // R4's leg; its r5 hooks add the rows (R5 §1.4)
 
 async function leg(name) {
   const T0 = Date.now();
@@ -1116,7 +1408,8 @@ async function leg(name) {
     listen(page, errs);
 
     const k = { name, browser, page, errs, row, step, listen, errLine };
-    if (R4) await legR4(k);
+    if (R5) await legR5(k);
+    else if (R4) await legR4(k);
     else if (R3) await legR3(k);
     else if (R2) await legR2(k);
     else await legR1(k);
@@ -1207,7 +1500,7 @@ function report() {
   const fails = rows.filter((r) => r.status === "FAIL"), hung = rows.filter((r) => r.status === "HUNG");
   const allPass = rows.length > 0 && fails.length === 0 && (!LEGS || complete.length > 0);
   if (LEGS) {
-    const NW = R4 ? 54 : 44, nm = (s) => (R4 && s.length >= NW ? `${s} ` : s.padEnd(NW));   // R4: its long row names keep a gap
+    const NW = R4 || R5 ? 54 : 44, nm = (s) => ((R4 || R5) && s.length >= NW ? `${s} ` : s.padEnd(NW));   // R4 + R5: long names keep a gap
     console.log(`\n${"browser".padEnd(10)}${"assertion".padEnd(NW)}${"pass".padEnd(6)}detail`);
     for (const r of rows) console.log(`${r.who.padEnd(10)}${nm(r.name)}${r.status.padEnd(6)}${r.detail}`);
   } else {

@@ -64,10 +64,16 @@ session must follow.
   controls), and `#pwr` = a RED ROCKER SWITCH in the right corner (the disc
   is gone; every host hook kept: the host's `.pwr` block in StudioOne is
   written for the switch). THE ARPEGGIATOR IS OFF THE SURFACE (no ARP cap,
-  no arp knobs; the engine keeps it, it loads off in main.ts): the keys'
-  foot is the chord glass · HOLD · CHORD · the KEY walk; the octave group
-  is in the keybed's right flank; Z and M stand on their keyboard row under
-  the letters with their knob pairs wired to them by a hairline.
+  no arp knobs; the engine keeps it, it loads off in main.ts).
+  R5 (2026-09-25, Jon's second mock, docs/signal-map/r5-mock.webp): the keys'
+  foot is the chord's (CHORD · the glass wide and centred · HOLD); the KEY
+  walk lives in the keybed's top-left block (the KEY screen: a click steps
+  the key, a vertical drag walks it; a MAJ · MIN toggle beside it; no arrow
+  caps anywhere but the real ← → keys; FREE is off the surface, a saved FREE
+  loads as major in main.ts); the octave group top-right on the same line;
+  the letter rows sit in a recessed tray; Z and M stand just outside it a
+  bottom-row step lower with their knob pairs outboard, no hairlines; the
+  rail is the window line alone (no C names).
   Sound safety still applies: never engage its audio in a live preview pane;
   probe headless with `--mute-audio` (`?mute=1`) and kill every headless
   Chrome you start (a leaked `--headless` blocks Jon's own Chrome).

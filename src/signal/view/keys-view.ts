@@ -31,18 +31,23 @@
 //            drums' and the bass' rail to the letter (view/drums-view.ts, view/bass-view.ts), so the three read as one.
 //            [R3.1] it rose from the bottom to sit directly above the foot: its top at 518 − 44 − 8 − 36 = 430,
 //            the drums' line (their rail over the 44 px SPACE bar) and the bass' (over the B bar)
-//   foot     [R4] THE FOOT, 44 (the keys' hands row, as the SPACE bar is the drums' and the B bar the bass'; the rail
-//            directly above it, its top still on the 430 line), left to right in 544 (NOTES-SIGNAL-R4.md §1.3):
-//            THE CHORD GLASS (data-ctl chord-glass: the name of what SOUNDS, 22 px sapphire, its degree under it 12 px, dark
-//            off the map; a held-set change names once the set has held still 90 ms, a new name blinks 70 ms burst-guarded
-//            150 ms, silence leaves the last name DIM, a key/scale change respells at once) · HOLD · CHORD (on-screen
-//            toggles: .sg-cap + LED, written to the harmony, lit from the state) | THE KEY WALK: ◀ · the KEY screen
-//            (`C MAJ` / `C# MIN` / `FREE`, 22 px amber over `key`) · ▶ · SCALE (major → minor → chrom), every step one
-//            harmony.set('music'). The chord glass and the walk came down from the hands' top strip, which R4 dissolved.
+//   foot     [R5] THE FOOT, 44 (the keys' hands row, as the SPACE bar is the drums' and the B bar the bass'; the rail
+//            directly above it, its top still on the 430 line), left to right in 544, gaps 12 (NOTES-SIGNAL-R5.md §1.2):
+//            CHORD at the left end · THE CHORD GLASS (data-ctl chord-glass) wide, taking the whole middle, centred (the
+//            two caps one width): the name of what SOUNDS, 22 px sapphire, its degree under it 12 px, dark off the map; a
+//            held-set change names once the set has held still 90 ms, a new name blinks 70 ms burst-guarded 150 ms,
+//            silence leaves the last name DIM, a key/scale change respells at once · HOLD at the right end. CHORD and HOLD
+//            are on-screen toggles (.sg-cap + LED, written to the harmony, lit from the state). The chord glass came down
+//            from the hands' top strip, which R4 dissolved.
 //
 // R4 · lane K · THE RENDER ROUND (NOTES-SIGNAL-R4.md §1.3; brief §C): THE ARPEGGIATOR LEFT THE SURFACE. No ARP cap, no
 // RATE · LENGTH · GROOVE, none of their laws; the engine keeps harmony.arp (it loads OFF, main.ts) and this tower never
 // writes it. Nothing else in the tower changed (head · glass · body 278 · rail as R3.3).
+//
+// R5 · lane K · THE COMPARTMENT ROUND (NOTES-SIGNAL-R5.md §1.2; Jon's mock docs/signal-map/r5-mock.webp): THE KEY WALK LEFT
+// THIS TOWER for the keybed's top-left KEY block (view/hands-view.ts: the KEY screen + MAJ · MIN). No ◀ ▶, no KEY screen,
+// no SCALE here: this tower never writes harmony.music (it READS it, so a key or scale change respells the chord glass).
+// The foot is the chord's: CHORD · the chord glass · HOLD. Nothing else in the tower changed (head · glass · body · rail).
 //
 // PAINT LAW: a gesture calls the instrument (inst.keys.* / inst.harmony.* / inst.setSolo), then repaints its own control at
 // once from the state it wrote back; everything else is repainted from inst.state() on inst.onChange (coalesced to one
@@ -52,10 +57,10 @@
 // No title=, no tooltips: the words on the tower are its legends; values surface only in the controls' own transient
 // ghosts (the Studio's value-ghost vocabulary).
 import { FILTER_MAX_HZ, FILTER_MIN_HZ, FILTER_OPEN, LFO_DIVS, VOICES, VOICE_NAMES } from '../types.ts';
-import type { HarmonyState, KeysState, LfoDiv, LfoShape, MountView, ScaleName, SignalInstrument, SignalState, VoiceId } from '../types.ts';
+import type { KeysState, LfoDiv, LfoShape, MountView, SignalInstrument, SignalState, VoiceId } from '../types.ts';
 import { clamp, el, makeFader, makeGhost, makeHSlider, makeKnob, makeSeg } from './controls.ts';
 import type { Fader, HSlider, Knob, Seg } from './controls.ts';
-import { accent, cap, etch, glass, key, knob, lcd, rail, screen, seg, tower } from './common.ts';
+import { accent, cap, etch, glass, key, knob, lcd, rail, seg, tower } from './common.ts';
 import type { AccKey } from './common.ts';
 
 // ─────────────────────────────────────────────────────────────── the one low-pass, as maths (pure; node-testable)
@@ -258,19 +263,11 @@ function rafDrag(apply: (e: PointerEvent) => void, live: () => boolean): { move:
 const setK = (k: Knob, v: number): void => { if (Math.abs(k.get() - v) > 1e-6) k.set(v); };
 const readSolo = (s: SignalState['solo'] | undefined): SignalState['solo'] => (s === 'drums' || s === 'keys' || s === 'bass' ? s : null);
 
-// ═══ from jt-portfolio-signal/src/signal/view/hands-view.ts:40-44, 50-51, 77-86 (R3.3, 1754f4d; the words are
-// signal-studio-v6lib src/engine/dsp.ts:9 + src/views/instrument/play.ts:531-541, 611-612 @ 2a9e4a7): the KEY screen's
-// words, the walk's two glyphs and the chord label's writers, moved into this tower's foot with the KEY walk and the chord
-// glass in R4 (lane V drops them from the hands). COPIED, not imported (no import from another lane). PORT: keySummary is
-// exported (pure: the suite pins it); the cluster dot is .kv-dot. [R4] the arp's laws that stood here (LEN_MIN/LEN_SPAN,
-// stepV/stepI, bindKnob) left with the arpeggiator. ═══
-/** from signal-studio-v6lib/src/engine/dsp.ts:9 (2a9e4a7): the KEY screen's sharps (play.ts:611-612 keySummary). */
-const NOTE_NAMES = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
-const SCALES: readonly ScaleName[] = ['major', 'minor', 'chrom'];
-const SCALE_WORD: Record<ScaleName, string> = { major: 'MAJ', minor: 'MIN', chrom: 'FREE' };
-export const keySummary = (k: number, s: ScaleName): string => (s === 'chrom' ? 'FREE' : `${NOTE_NAMES[((k % 12) + 12) % 12]} ${SCALE_WORD[s]}`);
-const LEFT = '<svg viewBox="0 0 10 10" aria-hidden="true"><path d="M7 2L3 5L7 8Z"/></svg>';
-const RIGHT = '<svg viewBox="0 0 10 10" aria-hidden="true"><path d="M3 2L7 5L3 8Z"/></svg>';
+// ═══ from jt-portfolio-signal/src/signal/view/hands-view.ts:77-86 (R3.3, 1754f4d; the Studio's play.ts:531-541 @ 2a9e4a7):
+// the chord label's writers, moved into this tower's foot with the chord glass in R4. COPIED, not imported (no import from
+// another lane). PORT: the cluster dot is .kv-dot. [R4] the arp's laws that stood here (LEN_MIN/LEN_SPAN, stepV/stepI,
+// bindKnob) left with the arpeggiator; [R5] the KEY screen's words and the walk's two glyphs left with the KEY walk (the
+// keybed's KEY block draws its own). ═══
 function setText(e: Element, s: string): void { if (e.textContent !== s) e.textContent = s; }
 /** A chord label with the naming law's honest cluster dot drawn faint (play.ts:531-541). */
 function setLabel(e: HTMLElement, label: string): void {
@@ -598,53 +595,34 @@ export const mountKeysView: MountView = (root, inst) => {
   foot.append(mBtn, sBtn, el('i', 'sg-fdiv'), gainHost);
   // ═══ end module-header.ts port ═══
 
-  // ── 5 · THE FOOT (R4): the CHORD glass · HOLD · CHORD | ◀ the KEY screen ▶ SCALE ─────────────────────────────────
+  // ── 5 · THE FOOT (R5): CHORD · the CHORD glass · HOLD ───────────────────────────────────────────────────────────
   // The keys' hands row (44). THE ARPEGGIATOR LEFT THE SURFACE (R4): no ARP cap, no RATE · LENGTH · GROOVE; harmony.arp
-  // stays the engine's and nothing here writes it.
+  // stays the engine's and nothing here writes it. [R5] THE KEY WALK LEFT THIS TOWER (the keybed's KEY block): no ◀ ▶, no
+  // KEY screen, no SCALE; nothing here writes harmony.music. The row is the chord's: CHORD at the left end, the glass taking
+  // the whole middle, HOLD at the right end (NOTES-SIGNAL-R5.md §1.2); DOM order = the contract's (CTL.keys).
   const harm = accent(el('div', 'kv-harm'), 'harmony');
+  // CHORD · HOLD (R3's on-screen latches, as R3.3 drew them here): a click writes the harmony; lit + aria-pressed from the
+  // state (paint)
+  const chordTog = cap('chord', { led: true, acc: 'harmony', cls: 'kv-tog' }); chordTog.dataset.ctl = 'chord';
+  const holdTog = cap('hold', { led: true, acc: 'harmony', cls: 'kv-tog' }); holdTog.dataset.ctl = 'hold';
+  onClick(chordTog, () => H.set('chord', !H.state().chord));
+  onClick(holdTog, () => H.set('hold', !H.state().hold));
   // ═══ from jt-portfolio-signal/src/signal/view/hands-view.ts:175-180 (R3.3, 1754f4d; the Studio's play.ts:120 @ 2a9e4a7):
   // the chord glass — the name of what sounds over its degree (dark when off the map), lit from within in the harmony's
-  // sapphire, DIM at rest. PORT: kv- names; it opens the keys' foot instead of the top strip's right half. ═══
+  // sapphire, DIM at rest. PORT: kv- names; it stands in the keys' foot instead of the top strip's right half, and [R5]
+  // between the two caps, taking the row's whole middle. ═══
   const chordGl = accent(glass('glow kv-chord dim'), 'harmony'); chordGl.dataset.ctl = 'chord-glass';
   const clabel = el('b', 'kv-clabel');
   const cdeg = el('small', 'kv-cdeg');
   chordGl.append(clabel, cdeg);
   // ═══ end hands-view.ts copy ═══
-  // HOLD · CHORD (R3's on-screen latches, as R3.3 drew them here): a click writes the harmony; lit + aria-pressed from the
-  // state (paint)
-  const holdTog = cap('hold', { led: true, acc: 'harmony', cls: 'kv-tog' }); holdTog.dataset.ctl = 'hold';
-  const chordTog = cap('chord', { led: true, acc: 'harmony', cls: 'kv-tog' }); chordTog.dataset.ctl = 'chord';
-  onClick(holdTog, () => H.set('hold', !H.state().hold));
-  onClick(chordTog, () => H.set('chord', !H.state().chord));
-  const togs = el('div', 'kv-togs');
-  togs.append(holdTog, chordTog);
-  // ═══ from jt-portfolio-signal/src/signal/view/hands-view.ts:164-169, 120-124, 192-194 (R3.3, 1754f4d; the Studio's
-  // pianohead play.ts:104-133 @ 2a9e4a7): THE KEY WALK — ◀ ▶ walk the 12 keys, SCALE cycles MAJ → MIN → FREE, each step
-  // ONE harmony.set('music') and only when it changes (the octave kept); the screen prints the state (paint). On-screen
-  // caps, never keycaps: the keyboard teaches no key for the walk. PORT: kv- names; a step repaints at once (the tower's
-  // paint law), the echo's paint then finds nothing to write. ═══
-  const keyDn = cap('', { icon: LEFT, cls: 'kv-arrow', name: 'Key down' }); keyDn.dataset.ctl = 'key-';
-  const keyScr = screen('C MAJ', 'key', 'kv-keyscr'); keyScr.dataset.ctl = 'key';
-  const keyVal = keyScr.querySelector('b')!;
-  const keyUp = cap('', { icon: RIGHT, cls: 'kv-arrow', name: 'Key up' }); keyUp.dataset.ctl = 'key+';
-  const scaleCap = cap('scale', { cls: 'kv-scale' }); scaleCap.dataset.ctl = 'scale';   // a fixed legend: the screen shows the state
-  const keyGrp = el('div', 'kv-keygrp');
-  keyGrp.append(keyDn, keyScr, keyUp, scaleCap);
-  const music = (): HarmonyState['music'] => H.state().music;
-  const setMusic = (p: Partial<HarmonyState['music']>): void => {
-    const cur = music(), next = { ...cur, ...p };
-    if (next.key !== cur.key || next.scale !== cur.scale || next.oct !== cur.oct) H.set('music', next);
-  };
-  onClick(keyDn, () => { setMusic({ key: (music().key + 11) % 12 }); paint(); });
-  onClick(keyUp, () => { setMusic({ key: (music().key + 1) % 12 }); paint(); });
-  onClick(scaleCap, () => { const s = music().scale; setMusic({ scale: SCALES[(SCALES.indexOf(s) + 1) % SCALES.length] }); paint(); });
-  // ═══ end hands-view.ts copy ═══
-  harm.append(chordGl, togs, el('i', 'sg-vdiv kv-hdiv'), keyGrp);
+  harm.append(chordTog, chordGl, holdTog);
 
   // ═══ from jt-portfolio-signal/src/signal/view/hands-view.ts:399-439 (R3.3, 1754f4d; the settle law is signal-studio-v6lib
   // src/views/instrument/play.ts:513-569 @ 2a9e4a7): THE CHORD GLASS's settle. A held-set change arms a 90 ms settle; the
   // name is taken once the set has held still that long (a strum names once). A new name SNAPS and blinks 70 ms
-  // (burst-guarded 150 ms); on silence the last name holds DIM; a key or scale change respells at once (paint, below).
+  // (burst-guarded 150 ms); on silence the last name holds DIM; a key or scale change respells at once (paint, below;
+  // [R5] the keybed's KEY block writes the key and the scale, this tower only reads them).
   // PORT: the settle rides this tower's keyed `after` (one 'settle' slot = hands-view's drop + later); the blink stamp is
   // chordBlinkAt (lcdWrite's WeakMap owns the name lastBlink); the frame's pool signature (hands-view.ts:488-491) rides
   // this tower's frame (below). ═══
@@ -732,10 +710,10 @@ export const mountKeysView: MountView = (root, inst) => {
           b.classList.toggle('on', on); b.setAttribute('aria-pressed', String(on));
         }
       }
-      // [R4] the KEY screen prints the state; a key or scale change respells the chord glass at once (hands-view.ts:446, 449-456)
+      // a key or scale change respells the chord glass at once (hands-view.ts:446, 449-456); [R5] the keybed's KEY block
+      // writes them (no KEY screen here any more): read, never written
       const mu = h.music;
       if (mu) {
-        setText(keyVal, keySummary(mu.key, mu.scale));
         const ms = `${mu.key}|${mu.scale}`;
         if (ms !== musicSig) { const spell = musicSig !== ''; musicSig = ms; if (spell) respell(); }
       }

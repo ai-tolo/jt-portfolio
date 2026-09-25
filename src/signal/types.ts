@@ -378,8 +378,19 @@ export const NUMERAL_MIN_PX = 22;
  *  → the device is 882 tall (the hosts zoom by both axes; at 1440 × 900 the height binds at ≈ 96 % of the column).
  *  THE KEYS' FOOT (44, the keys' hands row): the CHORD glass · HOLD · CHORD · the KEY screen with its ◀ ▶ caps + SCALE.
  *  THE ARPEGGIATOR LEFT THE SURFACE: no ARP cap, no RATE · LENGTH · GROOVE. The engine keeps its arp (harmony.arp stays
- *  in the state and the saved row); it LOADS OFF (main.ts) and nothing on the surface switches it on. */
-export const DEVICE_H = 882;
+ *  in the state and the saved row); it LOADS OFF (main.ts) and nothing on the surface switches it on.
+ *
+ *  R5 · THE COMPARTMENT ROUND (2026-09-25, Jon's second mock; NOTES-SIGNAL-R5.md). The head is R4's. The keys' foot is
+ *  the CHORD's: `CHORD` at the left end · the CHORD glass wide and centred · `HOLD` at the right end. THE KEY WALK LEFT
+ *  THE KEYS TOWER for the keybed's top-left: the KEY screen (the root big over `key`; a click steps to the next key, a
+ *  vertical drag walks it either way: the BPM glass's gesture) + the MAJ · MIN toggle beside it (two stacked caps, the
+ *  chosen one lit). FREE (chromatic) LEFT THE SURFACE: the engine keeps 'chrom', a saved FREE loads as major (main.ts).
+ *  THE KEYBED (≈ 218): the piano 60 · the rail = the window line alone (no C names; the drag stays) · THE BLOCK: the
+ *  letter rows in a recessed TRAY (a key well in the keycaps' own grey) centred; the KEY block top-left and the OCTAVE
+ *  group top-right, both on the colour row's line; Z and M just outside the tray, a bottom-row step lower than the home
+ *  row, `gate` / `dive` etched over them, their knob pairs outboard (RATE nearest Z then SWING; SPEED nearest M then
+ *  DIST); no hairlines: adjacency joins them. The device ≈ 850 tall (DEVICE_H below is the measured height). */
+export const DEVICE_H = 850;
 
 /** THE SURFACE HOOKS (what the gate and the test surface's click() find; every view keeps these exact strings):
  *  data-ctl on the control's host (its .si-knob / button / glass), data-code on every KEYCAP (`.sg-key`) for the
@@ -391,9 +402,12 @@ export const DEVICE_H = 882;
  *  (R4: the arp knobs are gone with the arp cap; nothing waits on ARP any more.)
  *  Keycap states: `.pressed` while its key is down (keyboard or pointer), `.lit` while its function is ON (drums
  *  running, bass on, a note sounding, a gesture held, anything running for esc).
- *  R4 moved hooks (the names stay): `chord-glass` · `key-` · `key` · `key+` · `scale` are the KEYS tower's (its foot);
- *  `oct-` · `octave` · `oct+` are the keybed's right flank; `stop` is the head's left corner; the switch is `power`
- *  (= #pwr, aria-pressed); the titles are `title-drums` · `title-keys` · `title-bass` (static, in Signal.astro). */
+ *  R4 moved hooks (the names stay): `chord-glass` is the KEYS tower's (its foot); `oct-` · `octave` · `oct+` are the
+ *  keybed's; `stop` is the head's left corner; the switch is `power` (= #pwr, aria-pressed); the titles are
+ *  `title-drums` · `title-keys` · `title-bass` (static, in Signal.astro).
+ *  R5: `key` (the KEY screen: click = the next key, a vertical drag walks it) and `scale` (the MAJ · MIN toggle: a
+ *  .si-seg.col with button[data-v="major"|"minor"]) are the KEYBED's (its top-left block); `key-` and `key+` are GONE
+ *  (no arrow caps: an arrow-shaped cap read as the real ← → keys). The keys' foot holds `chord` · `chord-glass` · `hold`. */
 export const CTL = {
   device: ['title-drums', 'title-keys', 'title-bass', 'power', 'stop'],   // R4: the head (Signal.astro's titles; power.ts's switch; the hands' esc)
   drums: ['drums-power', 'drums-bpm', 'drums-tap', 'drums-cover', 'drums-grid', 'drums-pattern', 'drums-swing', 'drums-density',
@@ -401,11 +415,11 @@ export const CTL = {
   keys: ['keys-voice', 'keys-voice-up', 'keys-voice-down', 'keys-filter',
     'keys-motion', 'keys-rate', 'keys-shape', 'keys-fx-drive', 'keys-fx-mod', 'keys-fx-delay', 'keys-fx-reverb', 'keys-modrate',
     'keys-mute', 'keys-solo', 'keys-gain',
-    'chord-glass', 'hold', 'chord', 'key-', 'key', 'key+', 'scale'],   // R4: the foot = the chord glass · HOLD · CHORD · the KEY walk (no arp)
+    'chord', 'chord-glass', 'hold'],   // R5: the foot is the chord's: CHORD · the glass (wide, centred) · HOLD
   bass: ['bass-power', 'bass-tone', 'bass-mode', 'bass-lock', 'bass-root', 'bass-strip', 'bass-density', 'bass-groove', 'bass-heat', 'bass-weight',
     'bass-glide', 'bass-mute', 'bass-solo', 'bass-gain'],
-  hands: ['piano', 'rail', 'keycaps', 'oct-', 'octave', 'oct+',
-    'keys-gate', 'gate-rate', 'gate-swing', 'keys-dive', 'dive-speed', 'dive-dist'],   // R4: the octave group in the right flank; Z/M on the line under the letters
+  hands: ['piano', 'rail', 'keycaps', 'key', 'scale', 'oct-', 'octave', 'oct+',
+    'keys-gate', 'gate-rate', 'gate-swing', 'keys-dive', 'dive-speed', 'dive-dist'],   // R5: the KEY block top-left, the octave top-right, Z/M beside the tray
 } as const;
 
 // ─────────────────────────────────────────────────────────────── persistence (db.ts)
@@ -507,5 +521,6 @@ export type MountTestSurface = (d: SurfaceDeps) => Promise<SignalTestSurface>;  
  *  and their own files only. */
 export type MountView = (root: HTMLElement, inst: SignalInstrument) => { dispose(): void };
 // mountDrumsView (view/drums-view.ts, V1) · mountBassView (view/bass-view.ts, V1) · mountKeysView (view/keys-view.ts, V2)
-// mountHandsView (view/hands-view.ts, R4: `esc STOP` into the head's left corner (Signal.astro's [data-corner="stop"]); the keybed = the
-//   piano, the rail, the keycap block (the letter rows + the OCTAVE group in the right flank), the Z/M line with the gate and dive pairs)
+// mountHandsView (view/hands-view.ts, R5: `esc STOP` into the head's left corner (Signal.astro's [data-corner="stop"]); the keybed = the
+//   piano, the window-line rail, the block: the KEY block top-left (screen + MAJ · MIN), the letter rows in their tray, the OCTAVE
+//   group top-right, Z and M beside the tray with their knob pairs outboard)
