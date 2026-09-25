@@ -1,9 +1,14 @@
 // SIGNAL R2 · lane B · view/power.ts — THE POWER. New code (the portfolio's): the old homepage machine's ceremony,
 // rebuilt on the new device. The reference for every law below is junkyard/SignalMachine.astro (the instrument this one
-// replaced, 2026-09-23); each block names its lines there.
-//   the DISC   button.pwr#pwr in the top strip's middle (hands-view.ts's .sgh-power slot): a red ember at rest that
-//              breathes while the device shows (.inview), green while it boots and plays. The host's .pwr overrides
-//              (StudioOne: scale, the brighter ember) land on it unchanged.
+// replaced, 2026-09-23); each block names its lines there. R4 (lane P, NOTES-SIGNAL-R4.md §1.2; Jon: "more like a
+// multiswitch power outlet where it's a red switch you flick"): the disc became THE SWITCH. Only the DOM inside the
+// button and its CSS changed; every law below is the disc's, byte for byte in behaviour.
+//   the SWITCH button.pwr#pwr in the head's RIGHT corner (Signal.astro's .sgh-power slot, [data-corner="power"]). The
+//              button is the HOUSING, a 68 × 30 recessed dark well; in it span.pwr-rocker, a red plastic rocker on its
+//              vertical centre line (OFF: its left half proud; .lit: flicked, its right half proud) holding i.pwr-lamp
+//              (the plastic lit red from within while .lit) and the ⏻ printed on its ON half. At rest a faint red
+//              ember in the plastic and a halo that breathes while the device shows (.inview). The host's .pwr
+//              overrides (StudioOne: the brighter standby) land on it unchanged. power.css draws every state.
 //   the STATE  #sgm[data-state] standby → boot → live → powerdown → standby. The host WATCHES it (boot/live = the site
 //              goes night) and clicks #pwr when the room scrolls away; nothing else talks to it. data-live="1" and
 //              .device.live exist only while live. The look of each state is power.css's (the dark is lighting only).
@@ -11,7 +16,7 @@
 //              while live, run back on power-off.
 //   the SOUND  Jon's boot sound (public/s/59e8a3b3/boot.m4a: the old machine's inline AAC, byte for byte) AT THE PRESS,
 //              gain .675 straight to the destination, never through the instrument's master; ?mute=1 → a 0-gain.
-//   the DOOR   in standby the device answers nothing but the disc: its keys are the page's (guardKeys, installed before
+//   the DOOR   in standby the device answers nothing but the switch: its keys are the page's (guardKeys, installed before
 //              the keymap), its controls take no pointer (power.css) and leave the tab order (inert, here).
 import type { SignalInstrument } from '../types.ts';
 import { KEYMAP } from '../types.ts';
@@ -29,8 +34,11 @@ export const BOOT_URL = '/s/59e8a3b3/boot.m4a';
 export const BOOT_GAIN = 0.675;
 /** SignalMachine.astro:2750: the ember breathes only while this much of the device shows. */
 const INVIEW_RATIO = 0.25;
-/** SignalMachine.astro:19 — the disc's glyph, verbatim. */
+/** SignalMachine.astro:19 — the old disc's glyph, verbatim: R4 prints it small on the rocker's ON half. */
 const GLYPH = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3.5 V11"/><path d="M6.6 6.8 a7.5 7.5 0 1 0 10.8 0"/></svg>';
+/** R4 · the switch's inside: the red rocker, its lamp (the plastic lit from within), the ⏻ on its ON half. Pure
+ *  lighting for power.css; none of it takes a pointer (the button, the housing, is the whole hit). */
+const ROCKER = `<span class="pwr-rocker" aria-hidden="true"><i class="pwr-lamp"></i>${GLYPH}</span>`;
 
 const num = (v: number): string => String(Math.round(v * 100) / 100);
 
@@ -67,12 +75,12 @@ export function guardKeys(sgm: HTMLElement, target: Window = window): () => void
 
 export interface PowerHandle {
   state(): PowerState;
-  /** The disc's own press (what a click does): standby → on; live or booting → off; a power-down finishes first. */
+  /** The switch's own press (what a click does): standby → on; live or booting → off; a power-down finishes first. */
   press(): void;
   dispose(): void;
 }
 
-/** Mount the power on the booted instrument: the disc into the top strip's .sgh-power slot, the states on `sgm`. */
+/** Mount the power on the booted instrument: the switch into the head's .sgh-power corner, the states on `sgm`. */
 export function mountPower(sgm: HTMLElement, inst: SignalInstrument): PowerHandle {
   const device = sgm.querySelector<HTMLElement>('.device') ?? sgm;
   const svg = sgm.querySelector<SVGSVGElement>('.sgm-trace');
@@ -88,16 +96,18 @@ export function mountPower(sgm: HTMLElement, inst: SignalInstrument): PowerHandl
   };
   const drop = (t: ReturnType<typeof setTimeout> | null): null => { if (t) { clearTimeout(t); timers.delete(t); } return null; };
 
-  // ── the disc ─────────────────────────────────────────────────────────────────────────────────────────────────
+  // ── the switch ───────────────────────────────────────────────────────────────────────────────────────────────
   const pwr = document.createElement('button');
   pwr.type = 'button';
   pwr.className = 'pwr';
   pwr.id = 'pwr';
+  pwr.dataset.ctl = 'power';                                      // the contract's hook (types.ts CTL.device)
   pwr.setAttribute('aria-label', 'Power');
   pwr.setAttribute('aria-pressed', 'false');
-  pwr.innerHTML = GLYPH;
-  const slot = sgm.querySelector<HTMLElement>('.sgh-power');
-  if (!slot) console.warn('[signal/power] no .sgh-power slot: the disc sits on the device');
+  pwr.innerHTML = ROCKER;
+  // the head's right corner first (a view that still draws an older .sgh-power never takes the switch from it)
+  const slot = sgm.querySelector<HTMLElement>('.sig-head .sgh-power') ?? sgm.querySelector<HTMLElement>('.sgh-power');
+  if (!slot) console.warn('[signal/power] no .sgh-power slot: the switch sits on the device');
   (slot ?? device).appendChild(pwr);
 
   // ── the state ────────────────────────────────────────────────────────────────────────────────────────────────
@@ -110,7 +120,7 @@ export function mountPower(sgm: HTMLElement, inst: SignalInstrument): PowerHandl
     for (const e of [sgm, device]) { if (on) e.dataset.live = '1'; else delete e.dataset.live; }
   };
   // the rest of the device leaves the tab order and the accessibility tree until it is live: every sibling of every
-  // box between the disc and the device (the top strip's wordmark, tempo and STOP; the towers; the hands) goes inert
+  // box between the switch and the device (the head's titles and esc STOP; the towers; the keybed) goes inert
   const seal = (dark: boolean): void => {
     for (let n: HTMLElement | null = pwr; n && n !== device; n = n.parentElement) {
       const p: HTMLElement | null = n.parentElement;
@@ -255,11 +265,11 @@ export function mountPower(sgm: HTMLElement, inst: SignalInstrument): PowerHandl
   const press = (): void => {
     if (st === 'standby') powerOn();
     else if (st === 'live' || st === 'boot') powerOff();          // booting: the host's scroll-away turns it back
-    // powerdown: the line is running back; the disc answers again at standby
+    // powerdown: the line is running back; the switch answers again at standby
   };
   pwr.addEventListener('click', press);
 
-  // ── the ember breathes only while the device shows; the first sight flares it once (SignalMachine.astro:2748-2753) ──
+  // ── the halo breathes only while the device shows; the first sight flares it once (SignalMachine.astro:2748-2753) ──
   let flared = false;
   const io = typeof IntersectionObserver === 'function'
     ? new IntersectionObserver((entries) => {

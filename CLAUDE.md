@@ -47,17 +47,27 @@ session must follow.
   The HOST hooks StudioOne relies on (keep them on both sides):
   `#sgm[data-state]` standby → boot → live → powerdown (boot/on/live = the
   site goes night; the host clicks `#pwr` when the room is < 35% visible),
-  `#pwr` (the power disc; the host's `.pwr` overrides scale and light it),
+  `#pwr` (the power switch since R4; the host's `.pwr` overrides light it),
   `.sgm .device` (the 1280px box — `DEVICE_W` in types.ts since R3,
   2026-09-24 — the host zooms with `--sig-zoom` from BOTH axes: 98% of the
   column, or the room's height ÷ the device's height; `.sgm`'s parent is the
   fit's measure). The anchor/spy target stays the HOST `#play`. R3 laws: the
   taught keymap only (letters · Space · B · Z · M · arrows · = · Esc; HOLD,
-  CHORD, ARP and the root lock are on-screen toggles), every taught key drawn
+  CHORD and the root lock are on-screen toggles), every taught key drawn
   as a `.sg-key` keycap (keycap.css) that goes `.pressed`/`.lit`, the size
   floor (no control word under 12px, no screen numeral under 22px, BPM the
   largest), `.dormant` on a control whose effect waits on another, nothing
   printed beneath the device (signal-copy.ts is unmounted, Jon writes it).
+  R4 (2026-09-24, Jon's render): the device is 1280 × 882 (`DEVICE_H`); its
+  top is THE HEAD (Signal.astro, static): `esc STOP` in the left corner, the
+  three module TITLES over their towers in their accents (words, never
+  controls), and `#pwr` = a RED ROCKER SWITCH in the right corner (the disc
+  is gone; every host hook kept: the host's `.pwr` block in StudioOne is
+  written for the switch). THE ARPEGGIATOR IS OFF THE SURFACE (no ARP cap,
+  no arp knobs; the engine keeps it, it loads off in main.ts): the keys'
+  foot is the chord glass · HOLD · CHORD · the KEY walk; the octave group
+  is in the keybed's right flank; Z and M stand on their keyboard row under
+  the letters with their knob pairs wired to them by a hairline.
   Sound safety still applies: never engage its audio in a live preview pane;
   probe headless with `--mute-audio` (`?mute=1`) and kill every headless
   Chrome you start (a leaked `--headless` blocks Jon's own Chrome).

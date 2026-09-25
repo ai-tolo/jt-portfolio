@@ -361,26 +361,51 @@ export const DEVICE_W = 1280;
 export const WORD_MIN_PX = 12;
 export const NUMERAL_MIN_PX = 22;
 
+/** R4 · THE RENDER ROUND (NOTES-SIGNAL-R4-BRIEF.md; Jon's render docs/signal-map/r4-render.webp is the SOURCE OF THE
+ *  TAKEAWAYS, not a layout to copy). The device's strata, top to bottom (Signal.astro, gap 8, inside the 14 px chassis):
+ *    THE HEAD 44      `esc STOP` at the top-LEFT corner (the Escape keycap + the etched word, red ink, .lit while anything
+ *                     runs) · the three MODULE TITLES `DRUMS` · `KEYS` · `BASS` printed over their towers, centred, in each
+ *                     tower's own accent (orange · sapphire · violet), 16 px: the hierarchy's first words, titles not
+ *                     controls (no light, no press: static markup) · THE POWER SWITCH at the top-RIGHT corner (#pwr, a red
+ *                     rocker you flick, view/power.ts + power.css; every host hook of the old disc kept). The top strip is
+ *                     GONE: its octave group went to the keybed, its KEY screen and CHORD glass to the keys' foot.
+ *    THE TOWERS 540   DRUMS 330 · KEYS 566 · BASS 330 (as R3.3; the keys' foot is new, see below)
+ *    THE KEYBED 250   the piano 60 · the rail 16 · the keycap block 100 (the two letter rows centred; the OCTAVE group
+ *                     `[←] 0 OCTAVE [→]` in the dark flank to their RIGHT; the left flank stays dark) · THE Z/M LINE 50:
+ *                     Z under the A/S seam and M under the J/K seam (where they stand on the keyboard), the gate pair
+ *                     (RATE · SWING, `gate` etched) at the line's left end and the dive pair (SPEED · DIST, `dive`) at its
+ *                     right end, each joined to its key by a thin amber hairline
+ *  → the device is 882 tall (the hosts zoom by both axes; at 1440 × 900 the height binds at ≈ 96 % of the column).
+ *  THE KEYS' FOOT (44, the keys' hands row): the CHORD glass · HOLD · CHORD · the KEY screen with its ◀ ▶ caps + SCALE.
+ *  THE ARPEGGIATOR LEFT THE SURFACE: no ARP cap, no RATE · LENGTH · GROOVE. The engine keeps its arp (harmony.arp stays
+ *  in the state and the saved row); it LOADS OFF (main.ts) and nothing on the surface switches it on. */
+export const DEVICE_H = 882;
+
 /** THE SURFACE HOOKS (what the gate and the test surface's click() find; every view keeps these exact strings):
  *  data-ctl on the control's host (its .si-knob / button / glass), data-code on every KEYCAP (`.sg-key`) for the
  *  KEYMAP code it draws. `.dormant` (material.css) on a control whose effect waits on another control:
  *    drums-fb · drums-time      while drums.delay.mix < 0.01
  *    keys-rate · keys-shape     while keys.motion.amount < 0.005 (MOTION_OFF)
- *    arp-rate · arp-length · arp-groove   while !harmony.arp.on
  *    bass-strip                 while bass.mode !== 'seq'
  *    the R and I keycaps        always (they play nothing)
+ *  (R4: the arp knobs are gone with the arp cap; nothing waits on ARP any more.)
  *  Keycap states: `.pressed` while its key is down (keyboard or pointer), `.lit` while its function is ON (drums
- *  running, bass on, a note sounding, a gesture held, anything running for esc). */
+ *  running, bass on, a note sounding, a gesture held, anything running for esc).
+ *  R4 moved hooks (the names stay): `chord-glass` · `key-` · `key` · `key+` · `scale` are the KEYS tower's (its foot);
+ *  `oct-` · `octave` · `oct+` are the keybed's right flank; `stop` is the head's left corner; the switch is `power`
+ *  (= #pwr, aria-pressed); the titles are `title-drums` · `title-keys` · `title-bass` (static, in Signal.astro). */
 export const CTL = {
+  device: ['title-drums', 'title-keys', 'title-bass', 'power', 'stop'],   // R4: the head (Signal.astro's titles; power.ts's switch; the hands' esc)
   drums: ['drums-power', 'drums-bpm', 'drums-tap', 'drums-cover', 'drums-grid', 'drums-pattern', 'drums-swing', 'drums-density',
     'drums-sidechain', 'drums-texture', 'drums-texseg', 'drums-delay', 'drums-mix', 'drums-fb', 'drums-time', 'drums-mute', 'drums-solo', 'drums-gain'],
   keys: ['keys-voice', 'keys-voice-up', 'keys-voice-down', 'keys-filter',
     'keys-motion', 'keys-rate', 'keys-shape', 'keys-fx-drive', 'keys-fx-mod', 'keys-fx-delay', 'keys-fx-reverb', 'keys-modrate',
-    'hold', 'chord', 'arp', 'arp-rate', 'arp-length', 'arp-groove', 'keys-mute', 'keys-solo', 'keys-gain'],
+    'keys-mute', 'keys-solo', 'keys-gain',
+    'chord-glass', 'hold', 'chord', 'key-', 'key', 'key+', 'scale'],   // R4: the foot = the chord glass · HOLD · CHORD · the KEY walk (no arp)
   bass: ['bass-power', 'bass-tone', 'bass-mode', 'bass-lock', 'bass-root', 'bass-strip', 'bass-density', 'bass-groove', 'bass-heat', 'bass-weight',
     'bass-glide', 'bass-mute', 'bass-solo', 'bass-gain'],
-  hands: ['oct-', 'oct+', 'octave', 'key-', 'key+', 'key', 'scale', 'chord-glass', 'stop', 'keycaps', 'piano', 'rail',
-    'keys-gate', 'gate-rate', 'gate-swing', 'keys-dive', 'dive-speed', 'dive-dist'],   // R3.3: the gate + dive groups flank the keycap rows
+  hands: ['piano', 'rail', 'keycaps', 'oct-', 'octave', 'oct+',
+    'keys-gate', 'gate-rate', 'gate-swing', 'keys-dive', 'dive-speed', 'dive-dist'],   // R4: the octave group in the right flank; Z/M on the line under the letters
 } as const;
 
 // ─────────────────────────────────────────────────────────────── persistence (db.ts)
@@ -482,4 +507,5 @@ export type MountTestSurface = (d: SurfaceDeps) => Promise<SignalTestSurface>;  
  *  and their own files only. */
 export type MountView = (root: HTMLElement, inst: SignalInstrument) => { dispose(): void };
 // mountDrumsView (view/drums-view.ts, V1) · mountBassView (view/bass-view.ts, V1) · mountKeysView (view/keys-view.ts, V2)
-// mountHandsView (view/hands-view.ts: the top strip; the keybed = the piano, the rail, the keycap rows flanked by the gate group (Z · RATE · SWING) and the dive group (M · SPEED · DIST))
+// mountHandsView (view/hands-view.ts, R4: `esc STOP` into the head's left corner (Signal.astro's [data-corner="stop"]); the keybed = the
+//   piano, the rail, the keycap block (the letter rows + the OCTAVE group in the right flank), the Z/M line with the gate and dive pairs)

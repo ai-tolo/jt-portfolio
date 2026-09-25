@@ -98,6 +98,10 @@ export async function boot(root: HTMLElement): Promise<Booted | null> {
   const I = inst;
   void I.keys.pick(initial.keys.voice);                   // the saved voice (the default when none): the fetch begun above
   I.load(saved ?? {});                                    // field by field; a missing grid or strip is regenerated
+  {                                                       // R4: the arp left the surface; a saved "on" never plays (it loads OFF)
+    const arp = I.harmony.state().arp;
+    if (arp.on) I.harmony.set('arp', { ...arp, on: false });
+  }
   if (ctx.state === 'running') void I.wake();             // a gesture that came during the build
 
   // ── the four views ───────────────────────────────────────────────────────────────────────────────────

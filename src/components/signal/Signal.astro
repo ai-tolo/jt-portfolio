@@ -1,23 +1,29 @@
 ---
-// SIGNAL · THE INSTRUMENT'S MARKUP (R1 the integrator's; R2 lane B: the host-compatible root, the power, the words).
+// SIGNAL · THE INSTRUMENT'S MARKUP (R1 the integrator's; R2 lane B: the host-compatible root, the power, the words; R4 the
+// planner: the HEAD stratum replaces the top strip).
 // THE HOST CONTRACT (src/components/studio/StudioOne.astro relies on these; CLAUDE.md "Sacred / hazard files"):
 //   #sgm[data-state]   standby → boot → live → powerdown → standby, written by src/signal/view/power.ts only (the host
 //                      watches it: boot/live = the site goes night; it clicks #pwr when the room is < 35 % visible)
 //   svg.sgm-trace      the power's perimeter line, laid over the DEVICE's grid cell only (power.css)
-//   .sgm > .device     the 1120 px box the host zooms with --sig-zoom; .sgm's parent is the fit's measure
-//   #pwr               the power disc: power.ts mounts it in the top strip's middle (hands-view.ts's .sgh-power slot)
-// The device is the material's root `.sig` (the tokens + base; data-live="1" only while live) around the empty strata
-// the views fill:
-//   [data-strata]   the device's column (gap 8): hands-view.ts PREPENDS the top strip and APPENDS the keybed block
-//     .sig-towers   330 · 566 · 330 with 13 px gaps = the 1252 the 14 px chassis padding leaves of DEVICE_W 1280, 540 tall
+//   .sgm > .device     the 1280 px box the host zooms with --sig-zoom (types.ts DEVICE_W); .sgm's parent is the fit's measure
+//   #pwr               THE POWER SWITCH (R4: a red rocker; the disc until R3.3): power.ts mounts it in the head's right corner
+//                      (the .sgh-power slot below); the host's `.pwr` overrides land on it
+// The device is the material's root `.sig` (the tokens + base; data-live="1" only while live) around the strata the views
+// fill (gap 8 inside the 14 px chassis padding; content 1252 wide):
+//   [data-strata]   the device's column: hands-view.ts APPENDS the keybed block and fills the head's stop corner
+//     .sig-head     R4 · 44: `esc STOP` in the LEFT corner ([data-corner="stop"], hands-view.ts) · the three MODULE TITLES
+//                   printed over their towers, centred, in each tower's accent (static words: no light, no press; the
+//                   recipe is material.css's .sg-title) · THE SWITCH in the RIGHT corner (.sgh-power, power.ts)
+//     .sig-towers   330 · 566 · 330 with 13 px gaps, 540 tall
 //       [data-slot=drums|keys|bass]   mountDrumsView / mountKeysView / mountBassView: each tower fills its cell
-// R3: the device is 1280 wide (types.ts DEVICE_W); the host zooms it by BOTH axes (this page's script, StudioOne). Nothing
-// prints beneath the device this round (the legend + the brief are unmounted; ./signal-copy.ts stays on disk for Jon).
+//     .sgh-keybed   250 (hands-view.ts): the piano · the rail · the keycap block · the Z/M line
+// → 882 tall (types.ts DEVICE_H); the hosts zoom it by BOTH axes (this page's script, StudioOne). Nothing prints beneath
+// the device (the legend + the brief are unmounted; ./signal-copy.ts stays on disk for Jon).
 // The recipes are src/styles/signal/material.css (@layer sg-material); each stratum's layout is its view lane's sheet;
 // the power's states and the dark are power.css. The boot (src/signal/main.ts) runs once the DOM is parsed, and never
 // where the device is not shown (a phone, a coarse pointer, a window under 900 px: the page shows the still instead;
 // widening the window boots it then). The key door goes on BEFORE the boot (its listener must precede the keymap's),
-// the power AFTER it (the disc needs the top strip).
+// the power AFTER it (the switch needs its corner, which is static markup, and the booted instrument).
 import "@fontsource/ibm-plex-mono/400.css";
 import "@fontsource/ibm-plex-mono/500.css";
 import "@fontsource/ibm-plex-sans/400.css";
@@ -36,6 +42,13 @@ import { DEVICE_W } from "../../signal/types.ts";
   <svg class="sgm-trace" aria-hidden="true"><path class="tr-l"></path><path class="tr-r"></path></svg>
   <div class="device sig sig-device" id="sig-device">
     <div class="sig-strata" data-strata>
+      <div class="sig-head" data-head>
+        <div class="sig-corner sig-cl" data-corner="stop"></div>
+        <span class="sg-title" data-ctl="title-drums" data-title="drums">DRUMS</span>
+        <span class="sg-title" data-ctl="title-keys" data-title="keys">KEYS</span>
+        <span class="sg-title" data-ctl="title-bass" data-title="bass">BASS</span>
+        <div class="sig-corner sig-cr sgh-power" data-corner="power"></div>
+      </div>
       <div class="sig-towers">
         <div class="sig-slot" data-slot="drums"></div>
         <div class="sig-slot" data-slot="keys"></div>
@@ -57,8 +70,21 @@ import { DEVICE_W } from "../../signal/types.ts";
   }
   .sgm > .device { width: 1280px; }   /* = types.ts DEVICE_W; the hosts pin the same number */
 
-  /* the strata the views fill (unlayered: the material's @layer never fights it): top strip 48 · towers 540 · keybed */
+  /* the strata the views fill (unlayered: the material's @layer never fights it): head 44 · towers 540 · keybed 250 */
   .sig .sig-strata { position: relative; z-index: 1; display: flex; flex-direction: column; gap: 8px; }
+
+  /* R4 · THE HEAD: the towers' three columns, each title centred over its tower and resting on the head's floor (its
+     baseline ≈ 12 px above the tower's edge); the two system controls at the corners, absolutely placed so the titles
+     never move: `esc STOP` left (the hands view fills it), THE SWITCH right (power.ts fills .sgh-power) */
+  .sig .sig-head {
+    position: relative; flex: none; height: 44px; display: grid; align-items: end;
+    grid-template-columns: 330px 566px 330px; column-gap: 13px;
+  }
+  .sig .sig-head > .sg-title { justify-self: center; padding-bottom: 4px; }
+  .sig .sig-corner { position: absolute; top: 0; height: 44px; display: flex; align-items: center; }
+  .sig .sig-cl { left: 0; }
+  .sig .sig-cr { right: 0; }
+
   .sig .sig-towers {
     flex: none; display: grid; column-gap: 13px; height: 540px;
     grid-template-columns: 330px 566px 330px;

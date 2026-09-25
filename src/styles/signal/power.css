@@ -1,46 +1,99 @@
-/* ═══ SIGNAL · THE POWER (lane B, R2): the disc · the trace · the dark · the bulb-up ══════════════════════════════════
-   The DOM: src/signal/view/power.ts (the disc, the states on #sgm), src/components/signal/Signal.astro (the root + the
-   trace svg), src/signal/view/hands-view.ts (the top strip's .sgh-power slot). The laws come from the old homepage
-   machine, junkyard/SignalMachine.astro: the trace 249-256, the disc 316-319 + 489-495 + 841-844, the dark 418-452, the
-   keyframes 1131-1134; and from src/components/studio/StudioOne.astro 1384-1403 (the host's brighter standby disc,
-   Jon 2026-09-21: "much more noticeable"), mirrored here so every page that shows the device reads the same.
+/* ═══ SIGNAL · THE POWER (lane B, R2; R4 lane P): the switch · the trace · the dark · the bulb-up ═════════════════════
+   The DOM: src/signal/view/power.ts (the switch, the states on #sgm), src/components/signal/Signal.astro (the root, the
+   trace svg, the head's right corner .sgh-power that power.ts fills). The laws come from the old homepage machine,
+   junkyard/SignalMachine.astro: the trace 249-256, the dark 418-452, the keyframes 1131-1134; and from
+   src/components/studio/StudioOne.astro (the host's brighter standby, Jon 2026-09-21: "much more noticeable"), mirrored
+   here so every page that shows the device reads the same. R4 (NOTES-SIGNAL-R4.md §1.2; Jon: "more like a multiswitch
+   power outlet where it's a red switch you flick"): the disc is gone; THE SWITCH is a red plastic rocker in a dark well.
    THE DARK is LIGHTING ONLY: opacity, filter, colour. Never display, never a size or a position: the host fits the
    device by its box, and a dark that moved one pixel would move the page. Unlayered: every rule beats the material's
    @layer; the states key on #sgm[data-state] (the ONE truth the host also watches). ═══ */
 
-/* ── the slot: the device's top middle (the strip spans the content box, which the chassis centres). Absolutely
-   placed, so the strip's three columns (wordmark · tempo · STOP) never move. The disc is 36 px drawn at 1.5× in place:
-   the host scales `.sgm .pwr` by 1.5 from outside (a transform REPLACES a transform, so the two never compound) and this
-   page-independent rule keeps every other page at the host's size: 54 px on the 52 px strip (R3), clear of the towers. ── */
-.sig .sgh-power { position: absolute; left: 50%; top: 50%; z-index: 4; width: 36px; height: 36px; margin: -18px 0 0 -18px; }
+/* ── the slot: the head's right corner (Signal.astro places it, absolutely, so the titles never move): a 44-tall row
+   that centres the switch on the head's line, the line esc STOP stands on in the left corner ── */
+.sig .sgh-power { display: flex; align-items: center; height: 44px; }
 
-/* ── the disc: a flush dark-glass disc that lights from within; the ember ring ::before, the halo ::after ── */
+/* ── THE SWITCH. The button is the HOUSING: a 68 × 30 well sunk in the carbon, the dark glass ground behind a 1 px
+   seam. The RED ROCKER (span.pwr-rocker, 56 × 20) rides in it on its vertical centre line; its tilt is faked by a
+   perspective turn of the rocker alone plus light (nothing else moves, nothing lays out). OFF: the right half pushed
+   in, the left half proud (the ON end: the ⏻ is printed on it, its rim catches the light). .lit (boot + live): flicked
+   in 110 ms, the left half in, the right half proud, the plastic LIT from within (i.pwr-lamp), steady. The halo
+   ::after lies UNDER the housing (z −1: the button is no stacking context, so it sinks to the strata's) and only ever
+   shows in standby, breathing by opacity alone. ── */
 .sgm .pwr {
-  position: relative; display: block; width: 36px; height: 36px; margin: 0; padding: 0; border: 0; border-radius: 50%;
+  position: relative; display: block; flex: none; width: 68px; height: 30px; margin: 0; padding: 0; border-radius: 6px;
   cursor: pointer; -webkit-tap-highlight-color: transparent;
-  background: radial-gradient(circle at 50% 36%, #0e141c, #05080c 76%);
-  box-shadow: inset 0 1px 1px rgba(255,255,255,.06), inset 0 0 0 1px rgba(0,0,0,.8), inset 0 3px 7px rgba(0,0,0,.72), 0 1px 2px rgba(0,0,0,.6);
-  transform: scale(1.5); transform-origin: 50% 50%; transition: box-shadow .4s;
+  background: radial-gradient(130% 130% at 50% 0%, #080e16, #04060b 80%);
+  border: 1px solid rgba(155,167,187,.16);
+  box-shadow: inset 0 0 0 1px rgba(0,0,0,.85), inset 0 3px 7px rgba(0,0,0,.8), inset 0 -1px 0 rgba(255,255,255,.04), 0 1px 0 rgba(255,255,255,.05);
+  transition: box-shadow .14s ease-out;
 }
-.sgm .pwr::before { content: ""; position: absolute; inset: 0; z-index: 1; border-radius: 50%; pointer-events: none; box-shadow: inset 0 0 0 1.5px rgba(255,90,90,.16); transition: box-shadow .4s; }
-.sgm .pwr svg { position: absolute; inset: 0; z-index: 2; display: block; width: 36%; height: 36%; margin: auto; }
-.sgm .pwr path { fill: none; stroke: rgba(255,90,90,.5); stroke-width: 2.2; stroke-linecap: round; transition: stroke .4s, filter .4s; }
-.sgm .pwr::after {   /* the halo: OPACITY only (a breathing box-shadow repaints a large region every frame) */
-  content: ""; position: absolute; inset: -12px; border-radius: 50%; pointer-events: none; opacity: 0; will-change: opacity;
-  background: radial-gradient(circle, rgba(255,90,90,.3), transparent 70%);
+/* the rocker: dull translucent red plastic, lit from above; OFF tilts it +12° (its right half away, into the well) */
+.sgm .pwr-rocker {
+  position: absolute; left: 50%; top: 50%; width: 56px; height: 20px; margin: -10px 0 0 -28px; border-radius: 4px;
+  overflow: hidden; pointer-events: none;
+  background: linear-gradient(180deg, #7c2622, #6e1f1c 42%, #4a1412);
+  box-shadow: inset 0 0 0 1px rgba(20,2,2,.5), 4px 0 5px -2px rgba(0,0,0,.85), 0 1px 2px rgba(0,0,0,.75);
+  transform: perspective(140px) rotateY(12deg); transform-origin: 50% 50%;
+  transition: transform .11s ease-out, box-shadow .11s ease-out, filter .12s ease-out;
 }
-/* standby: the ember LIT, from across the room (the host's 2026-09-21 values) */
-.sgm .device:not(.live) .pwr:not(.lit)::before {
-  box-shadow: inset 0 0 0 2px rgba(255,96,96,.85), inset 0 0 10px -2px rgba(255,90,90,.45), 0 0 0 3px rgba(255,90,90,.16), 0 0 22px 4px rgba(255,90,90,.42);
+.sgm .pwr.lit .pwr-rocker {
+  transform: perspective(140px) rotateY(-12deg);
+  box-shadow: inset 0 0 0 1px rgba(70,6,3,.45), -4px 0 5px -2px rgba(0,0,0,.85), 0 1px 2px rgba(0,0,0,.75);
 }
-.sgm .device:not(.live) .pwr:not(.lit) path { stroke: #ff7b6e; filter: drop-shadow(0 0 5px rgba(255,90,90,.85)); }
-.sgm .device:not(.live) .pwr:not(.lit)::after { inset: -20px; background: radial-gradient(circle, rgba(255,90,90,.55), transparent 70%); }
+.sgm .pwr:hover .pwr-rocker { filter: brightness(1.14); }
+/* the lamp: the plastic glowing from within (a hot centre, a red inset glow); dark until .lit */
+.sgm .pwr-lamp {
+  position: absolute; inset: 0; z-index: 1; border-radius: inherit; pointer-events: none; opacity: 0;
+  background: radial-gradient(58% 110% at 50% 50%, #ffd0c6 0%, #ff9c8a 14%, #ff5a4a 42%, #de3b2f 76%, #b3291f 100%);
+  box-shadow: inset 0 0 5px 1px rgba(255,90,74,.85);
+  transition: opacity .12s ease-out;
+}
+.sgm .pwr.lit .pwr-lamp { opacity: 1; }
+/* the tilt, in light: ::before is OFF's (the proud left end's rim and top edge lit, the face falling into shadow toward
+   the sunk right end, the crease at the pivot), ::after ON's (the mirror); the flick cross-fades them with the turn */
+.sgm .pwr-rocker::before, .sgm .pwr-rocker::after {
+  content: ""; position: absolute; inset: 0; z-index: 2; border-radius: inherit; pointer-events: none;
+  transition: opacity .11s ease-out;
+}
+.sgm .pwr-rocker::before {
+  background:
+    linear-gradient(90deg, transparent calc(50% - 1px), rgba(0,0,0,.42) calc(50% - 1px) 50%, rgba(255,186,176,.16) 50% calc(50% + 1px), transparent calc(50% + 1px)),
+    linear-gradient(180deg, rgba(255,214,204,.34), transparent 3px) left top / 50% 100% no-repeat,
+    linear-gradient(90deg, rgba(255,204,194,.5) 0, rgba(255,204,194,.12) 2px, transparent 6px, transparent 50%, rgba(0,0,0,.24) 62%, rgba(0,0,0,.58) 100%);
+}
+.sgm .pwr-rocker::after {
+  opacity: 0;
+  background:
+    linear-gradient(90deg, transparent calc(50% - 1px), rgba(255,200,190,.2) calc(50% - 1px) 50%, rgba(120,12,6,.55) 50% calc(50% + 1px), transparent calc(50% + 1px)),
+    linear-gradient(180deg, rgba(255,232,226,.4), transparent 3px) right top / 50% 100% no-repeat,
+    linear-gradient(270deg, rgba(255,226,218,.55) 0, rgba(255,226,218,.14) 2px, transparent 6px, transparent 50%, rgba(60,0,0,.22) 62%, rgba(60,0,0,.5) 100%);
+}
+.sgm .pwr.lit .pwr-rocker::before { opacity: 0; }
+.sgm .pwr.lit .pwr-rocker::after { opacity: 1; }
+/* the ⏻, 10 px, printed on the ON half: pale ink the room lights (OFF); lit from behind, the print reads dark (ON) */
+.sgm .pwr-rocker > svg {
+  position: absolute; left: 9px; top: 5px; z-index: 3; display: block; width: 10px; height: 10px;
+  filter: drop-shadow(0 -.5px 0 rgba(30,4,3,.6));
+}
+.sgm .pwr-rocker path { fill: none; stroke: rgba(255,222,214,.66); stroke-width: 2.8; stroke-linecap: round; transition: stroke .12s ease-out; }
+.sgm .pwr.lit .pwr-rocker > svg { filter: none; }
+.sgm .pwr.lit .pwr-rocker path { stroke: rgba(96,12,8,.8); }
+/* lit, the rocker's light falls on the well's walls (inside the housing: the casing itself never blooms) */
+.sgm .pwr.lit { box-shadow: inset 0 0 0 1px rgba(0,0,0,.85), inset 0 3px 7px rgba(0,0,0,.8), inset 0 0 10px rgba(255,70,58,.24), inset 0 -1px 0 rgba(255,255,255,.04), 0 1px 0 rgba(255,255,255,.05); }
+/* the halo: a still glow under the housing, OPACITY only (a breathing box-shadow repaints a large region every frame);
+   ≈ 14 px round the well, inside the chassis's rim */
+.sgm .pwr::after {
+  content: ""; position: absolute; inset: -1px; z-index: -1; border-radius: inherit; pointer-events: none; opacity: 0; will-change: opacity;
+  box-shadow: 0 0 12px 2px rgba(255,70,58,.62);
+}
+/* STANDBY: the switch reads from across the room (the host's 2026-09-21 law): the plastic keeps a faint ember (its lamp
+   at a glimmer), the ⏻ brightens, the halo breathes round the well */
+.sgm .device:not(.live) .pwr:not(.lit) .pwr-lamp { opacity: .3; }
+.sgm .device:not(.live) .pwr:not(.lit) .pwr-rocker path { stroke: rgba(255,228,220,.8); }
 /* it breathes only while the device shows (power.ts marks .inview); the first sight flares it once */
 .sgm.inview .device:not(.live) .pwr:not(.lit)::after { animation: sgm-breathe 4.2s ease-in-out infinite; }
 .sgm.inview .device:not(.live) .pwr.flare:not(.lit)::after { animation: sgm-flare .9s ease-out 1; }
-/* boot (.lit) and live: the ring and the glyph go green */
-.sgm .pwr.lit::before, .sgm .device.live .pwr::before { box-shadow: inset 0 0 0 1.5px rgba(110,200,150,.45), inset 0 0 13px -4px rgba(74,160,112,.6); }
-.sgm .pwr.lit path, .sgm .device.live .pwr path { stroke: #7fc6a0; filter: drop-shadow(0 0 4px rgba(74,160,112,.5)); }
 /* while the line runs, the pointer cannot press again (a double click is not an off); power.ts still takes a
    programmatic click during the boot (the host's scroll-away) */
 .sgm:is([data-state="boot"], [data-state="powerdown"]) .pwr { pointer-events: none; }
@@ -65,7 +118,7 @@
 /* ═══ THE DARK: every state that is not live (standby, the boot while the line draws, the power-down) ═══════════════
    What the old machine's standby kept, the new device keeps: a dark object you can read, nothing lit. */
 
-/* the door: nothing but the disc takes a pointer (power.ts also seals the rest inert: no tab stops, no a11y tree) */
+/* the door: nothing but the switch takes a pointer (power.ts also seals the rest inert: no tab stops, no a11y tree) */
 .sgm:not([data-state="live"]) > .device { pointer-events: none; }
 .sgm > .device .pwr { pointer-events: auto; }
 
@@ -109,7 +162,12 @@
 /* the keybed: the keys stay (they are the object) a shade lower with the room, the letters dim, the colour-row rims and
    the bracket go plain, the octave window goes out */
 .sgm:not([data-state="live"]) .sig .sgh-bed { filter: brightness(.74); }
-.sgm:not([data-state="live"]) .sig .sgh-caps { filter: brightness(.9); }
+.sgm:not([data-state="live"]) .sig :is(.sgh-caps, .sgh-line) { filter: brightness(.9); }   /* R4: the Z/M line dims with the block */
+/* R4: in the dark the ONE red thing is the switch: the esc key reads as a plain key, its word and the gate/dive words go to
+   the engraved grey, the hairlines to half */
+.sgm:not([data-state="live"]) .sig .sgh-stop { --kc-glyph: var(--kc-ink); --kc-seam: color-mix(in srgb, var(--kc-ink) 22%, transparent); }
+.sgm:not([data-state="live"]) .sig :is(.sgh-stopword, .sgh-gword) { color: #5a6571; }
+.sgm:not([data-state="live"]) .sig .sgh-wire { opacity: .5; }
 .sgm:not([data-state="live"]) .sig .sgh-w:is(.color, .inbracket) {
   border-color: rgba(255,255,255,.2);
   box-shadow: inset 0 7px 11px -7px rgba(255,255,255,.14), inset 0 -7px 11px -6px rgba(0,0,0,.55), inset 0 0 0 1px transparent, 0 2px 4px rgba(0,0,0,.5);
@@ -119,11 +177,13 @@
   box-shadow: inset 0 0 0 1px transparent, inset 0 1px 0 rgba(255,255,255,.1), inset 0 -8px 9px rgba(0,0,0,.7), 0 4px 6px rgba(0,0,0,.7);
 }
 .sgm:not([data-state="live"]) .sig .sgh-win { opacity: 0; }
+/* R4 · the head: the three titles grey to an engraving on the carbon (their accents come back with the light) */
+.sgm:not([data-state="live"]) .sig .sg-title { color: #3b434e; text-shadow: none; }
 
-/* ── the fades. DOWN (power-off): the dark rules carry their own transitions, the light draining from the gate row up
-   to the disc as the line runs back. UP (live): .bulb (power.ts, BULB_MS) lends every lit property a ~500 ms fade with a
-   stagger down the strata, the line having drawn first; then the recipes' own snappy transitions come back. ── */
-/* (the disc is out of it: it keeps its own .4 s light whatever the device does) */
+/* ── the fades. DOWN (power-off): the dark rules carry their own transitions, the light draining from the keybed up
+   to the switch as the line runs back. UP (live): .bulb (power.ts, BULB_MS) lends every lit property a ~500 ms fade with
+   a stagger down the strata, the line having drawn first; then the recipes' own snappy transitions come back. ── */
+/* (the switch is out of it: it keeps its own flick and light whatever the device does) */
 .sgm:not([data-state="live"]) .sig :not(.pwr, .pwr *),
 .sgm:not([data-state="live"]) .sig :not(.pwr, .pwr *)::before,
 .sgm:not([data-state="live"]) .sig :not(.pwr, .pwr *)::after,
@@ -138,12 +198,12 @@
 .sgm.bulb .sig :not(.pwr, .pwr *),
 .sgm.bulb .sig :not(.pwr, .pwr *)::before,
 .sgm.bulb .sig :not(.pwr, .pwr *)::after { transition-duration: .5s; }
-/* R3: three strata (top strip · towers · keybed); the light drains from the keybed up to the disc on power-off and
-   bulbs from the strip down on power-on */
+/* R4: three strata (the head · the towers · the keybed); the light drains from the keybed up to the head on power-off
+   and bulbs from the head down on power-on */
 .sgm[data-state="powerdown"] .sig .sgh-keybed { --sgm-d: 0ms; }
 .sgm[data-state="powerdown"] .sig .sig-towers { --sgm-d: 120ms; }
-.sgm[data-state="powerdown"] .sig .sgh-top { --sgm-d: 240ms; }
-.sgm.bulb .sig .sgh-top { --sgm-d: 0ms; }
+.sgm[data-state="powerdown"] .sig .sig-head { --sgm-d: 240ms; }
+.sgm.bulb .sig .sig-head { --sgm-d: 0ms; }
 .sgm.bulb .sig .sig-towers { --sgm-d: 110ms; }
 .sgm.bulb .sig .sgh-keybed { --sgm-d: 220ms; }
 @media (prefers-reduced-motion: reduce) {

@@ -29,23 +29,33 @@
 //            RATE ribbon, centre detent .5; the DEL divisions as note glyphs) → keys.set('fx', …)
 //   rail     M (keys mute) · S (inst.setSolo('keys'); again = null) · GAIN (0..1.25; unity at .8 of the dial) — the
 //            drums' and the bass' rail to the letter (view/drums-view.ts, view/bass-view.ts), so the three read as one.
-//            [R3.1] it rose from the bottom to sit directly above the harmony row: its top at 518 − 44 − 8 − 36 = 430,
+//            [R3.1] it rose from the bottom to sit directly above the foot: its top at 518 − 44 − 8 − 36 = 430,
 //            the drums' line (their rail over the 44 px SPACE bar) and the bass' (over the B bar)
-//   harmony  [R3.1] THE FOOT, 44 (the keys' hands row, as the SPACE bar is the drums' and the B bar the bass'): HOLD ·
-//            CHORD · ARP (on-screen toggles only since R3: .sg-cap + LED, written to the harmony, lit from the state) ·
-//            RATE · LENGTH · GROOVE (the arp's knobs, .dormant while the arp is off) — moved from the hands' head in R3
+//   foot     [R4] THE FOOT, 44 (the keys' hands row, as the SPACE bar is the drums' and the B bar the bass'; the rail
+//            directly above it, its top still on the 430 line), left to right in 544 (NOTES-SIGNAL-R4.md §1.3):
+//            THE CHORD GLASS (data-ctl chord-glass: the name of what SOUNDS, 22 px sapphire, its degree under it 12 px, dark
+//            off the map; a held-set change names once the set has held still 90 ms, a new name blinks 70 ms burst-guarded
+//            150 ms, silence leaves the last name DIM, a key/scale change respells at once) · HOLD · CHORD (on-screen
+//            toggles: .sg-cap + LED, written to the harmony, lit from the state) | THE KEY WALK: ◀ · the KEY screen
+//            (`C MAJ` / `C# MIN` / `FREE`, 22 px amber over `key`) · ▶ · SCALE (major → minor → chrom), every step one
+//            harmony.set('music'). The chord glass and the walk came down from the hands' top strip, which R4 dissolved.
+//
+// R4 · lane K · THE RENDER ROUND (NOTES-SIGNAL-R4.md §1.3; brief §C): THE ARPEGGIATOR LEFT THE SURFACE. No ARP cap, no
+// RATE · LENGTH · GROOVE, none of their laws; the engine keeps harmony.arp (it loads OFF, main.ts) and this tower never
+// writes it. Nothing else in the tower changed (head · glass · body 278 · rail as R3.3).
 //
 // PAINT LAW: a gesture calls the instrument (inst.keys.* / inst.harmony.* / inst.setSolo), then repaints its own control at
 // once from the state it wrote back; everything else is repainted from inst.state() on inst.onChange (coalesced to one
 // paint per microtask, diffed: a drag's own echo writes nothing) — the keyboard's voice cycle, a load, another tower's solo.
-// keys.ready() (the loading tense) and the MOTION ghost are read on requestAnimationFrame (cancelled in dispose).
+// keys.ready() (the loading tense), the MOTION ghost and [R4] the sounding pool's signature (the chord glass's second ear)
+// are read on requestAnimationFrame (cancelled in dispose).
 // No title=, no tooltips: the words on the tower are its legends; values surface only in the controls' own transient
 // ghosts (the Studio's value-ghost vocabulary).
-import { ARP_DIVS, FILTER_MAX_HZ, FILTER_MIN_HZ, FILTER_OPEN, LFO_DIVS, VOICES, VOICE_NAMES } from '../types.ts';
-import type { ArpDiv, HarmonyState, KeysState, LfoDiv, LfoShape, MountView, SignalInstrument, SignalState, VoiceId } from '../types.ts';
+import { FILTER_MAX_HZ, FILTER_MIN_HZ, FILTER_OPEN, LFO_DIVS, VOICES, VOICE_NAMES } from '../types.ts';
+import type { HarmonyState, KeysState, LfoDiv, LfoShape, MountView, ScaleName, SignalInstrument, SignalState, VoiceId } from '../types.ts';
 import { clamp, el, makeFader, makeGhost, makeHSlider, makeKnob, makeSeg } from './controls.ts';
 import type { Fader, HSlider, Knob, Seg } from './controls.ts';
-import { accent, cap, etch, glass, key, knob, lcd, rail, seg, tower } from './common.ts';
+import { accent, cap, etch, glass, key, knob, lcd, rail, screen, seg, tower } from './common.ts';
 import type { AccKey } from './common.ts';
 
 // ─────────────────────────────────────────────────────────────── the one low-pass, as maths (pure; node-testable)
@@ -248,28 +258,28 @@ function rafDrag(apply: (e: PointerEvent) => void, live: () => boolean): { move:
 const setK = (k: Knob, v: number): void => { if (Math.abs(k.get() - v) > 1e-6) k.set(v); };
 const readSolo = (s: SignalState['solo'] | undefined): SignalState['solo'] => (s === 'drums' || s === 'keys' || s === 'bass' ? s : null);
 
-// ═══ from jt-portfolio-signal/src/signal/view/hands-view.ts:60-78 (R2, 76a02c7; its laws are signal-studio-v6lib
-// src/views/instrument/play.ts:797-816 @ 2a9e4a7): the arp's knob laws + bindKnob, moved here with the controls in R3
-// (lane V drops them from the hands). [R3.3] the gesture row's laws (SPEED, DIST) went back to the hands with their knobs.
-// COPIED, not imported (no import from another lane). ═══
-const LEN_MIN = 0.06, LEN_SPAN = 1.24;             // play.ts:809-813 LENGTH = the Studio's arp gate 0.06..1.3, default .5
-const stepV = (i: number, n: number): number => (n > 1 ? i / (n - 1) : 0);
-const stepI = (v: number, n: number): number => clamp(Math.round(v * (n - 1)), 0, n - 1);
-const near = (a: number, b: number): boolean => Math.abs(a - b) < 1e-6;
+// ═══ from jt-portfolio-signal/src/signal/view/hands-view.ts:40-44, 50-51, 77-86 (R3.3, 1754f4d; the words are
+// signal-studio-v6lib src/engine/dsp.ts:9 + src/views/instrument/play.ts:531-541, 611-612 @ 2a9e4a7): the KEY screen's
+// words, the walk's two glyphs and the chord label's writers, moved into this tower's foot with the KEY walk and the chord
+// glass in R4 (lane V drops them from the hands). COPIED, not imported (no import from another lane). PORT: keySummary is
+// exported (pure: the suite pins it); the cluster dot is .kv-dot. [R4] the arp's laws that stood here (LEN_MIN/LEN_SPAN,
+// stepV/stepI, bindKnob) left with the arpeggiator. ═══
+/** from signal-studio-v6lib/src/engine/dsp.ts:9 (2a9e4a7): the KEY screen's sharps (play.ts:611-612 keySummary). */
+const NOTE_NAMES = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
+const SCALES: readonly ScaleName[] = ['major', 'minor', 'chrom'];
+const SCALE_WORD: Record<ScaleName, string> = { major: 'MAJ', minor: 'MIN', chrom: 'FREE' };
+export const keySummary = (k: number, s: ScaleName): string => (s === 'chrom' ? 'FREE' : `${NOTE_NAMES[((k % 12) + 12) % 12]} ${SCALE_WORD[s]}`);
+const LEFT = '<svg viewBox="0 0 10 10" aria-hidden="true"><path d="M7 2L3 5L7 8Z"/></svg>';
+const RIGHT = '<svg viewBox="0 0 10 10" aria-hidden="true"><path d="M3 2L7 5L3 8Z"/></svg>';
 function setText(e: Element, s: string): void { if (e.textContent !== s) e.textContent = s; }
-interface Law<T> {
-  toV(x: T): number; fromV(v: number): T; same(a: T, b: T): boolean; text(x: T): string;
-  write(x: T): void; dflt?: T; steps?: number;
-}
-interface Bound<T> { host: HTMLElement; sync(x: T): void }
-/** makeKnob (controls.ts, the one drag law) bound to one field: the value legend follows the knob; state writes back
- *  only when the knob's own reading of the field differs (a quantized field never snaps a knob out of the hand). */
-function bindKnob<T>(host: HTMLElement, init: T, law: Law<T>): Bound<T> {
-  const kn = host.querySelector<HTMLElement>('.si-kn');
-  const paint = (v: number): void => { if (kn) setText(kn, law.text(law.fromV(v))); };
-  const k: Knob = makeKnob(host, law.toV(init), (v) => law.write(law.fromV(v)), paint,
-    { dflt: law.dflt === undefined ? undefined : law.toV(law.dflt), steps: law.steps });
-  return { host, sync(x) { if (!law.same(law.fromV(k.get()), x)) k.set(law.toV(x)); } };
+/** A chord label with the naming law's honest cluster dot drawn faint (play.ts:531-541). */
+function setLabel(e: HTMLElement, label: string): void {
+  if (label.endsWith('·')) {
+    const head = label.slice(0, -1);
+    if (e.firstChild?.textContent === head && e.lastElementChild?.classList.contains('kv-dot')) return;
+    e.textContent = head;
+    const dot = el('span', 'kv-dot'); dot.textContent = '·'; e.appendChild(dot);
+  } else setText(e, label);
 }
 // ═══ end hands-view.ts copy ═══
 
@@ -320,7 +330,7 @@ export const mountKeysView: MountView = (root, inst) => {
     timers.set(key, setTimeout(() => { timers.delete(key); fn(); }, ms));
   };
   const s0 = inst.state();
-  const k0 = s0.keys, h0 = s0.harmony;
+  const k0 = s0.keys;
   let pHand = k0.filter;                           // the hand's p (keys.state().filter), as the glass last drew it
   let motion = k0.motion;                          // what the frame's ghost rides (kept by paint)
   const T = tower('keys', 'kv-tower');
@@ -588,43 +598,92 @@ export const mountKeysView: MountView = (root, inst) => {
   foot.append(mBtn, sBtn, el('i', 'sg-fdiv'), gainHost);
   // ═══ end module-header.ts port ═══
 
-  // ── 5 · THE HARMONY ROW, the foot (R3.1): HOLD · CHORD · ARP + RATE · LENGTH · GROOVE ──────────────────────────────
-  // ═══ from jt-portfolio-signal/src/signal/view/hands-view.ts:196-243 (R2, 76a02c7; the Studio's play.ts:762-816 @ 2a9e4a7):
-  // the latches write the harmony, their lit state is painted back from the state; RATE (stepped over ARP_DIVS) · LENGTH
-  // (0.06..1.3) · GROOVE (0..1). PORT (R3): on-screen toggles only (X C V left the keyboard); the arp knobs carry the
-  // material's .dormant while the arp is off (they went steel before). ═══
+  // ── 5 · THE FOOT (R4): the CHORD glass · HOLD · CHORD | ◀ the KEY screen ▶ SCALE ─────────────────────────────────
+  // The keys' hands row (44). THE ARPEGGIATOR LEFT THE SURFACE (R4): no ARP cap, no RATE · LENGTH · GROOVE; harmony.arp
+  // stays the engine's and nothing here writes it.
   const harm = accent(el('div', 'kv-harm'), 'harmony');
+  // ═══ from jt-portfolio-signal/src/signal/view/hands-view.ts:175-180 (R3.3, 1754f4d; the Studio's play.ts:120 @ 2a9e4a7):
+  // the chord glass — the name of what sounds over its degree (dark when off the map), lit from within in the harmony's
+  // sapphire, DIM at rest. PORT: kv- names; it opens the keys' foot instead of the top strip's right half. ═══
+  const chordGl = accent(glass('glow kv-chord dim'), 'harmony'); chordGl.dataset.ctl = 'chord-glass';
+  const clabel = el('b', 'kv-clabel');
+  const cdeg = el('small', 'kv-cdeg');
+  chordGl.append(clabel, cdeg);
+  // ═══ end hands-view.ts copy ═══
+  // HOLD · CHORD (R3's on-screen latches, as R3.3 drew them here): a click writes the harmony; lit + aria-pressed from the
+  // state (paint)
   const holdTog = cap('hold', { led: true, acc: 'harmony', cls: 'kv-tog' }); holdTog.dataset.ctl = 'hold';
   const chordTog = cap('chord', { led: true, acc: 'harmony', cls: 'kv-tog' }); chordTog.dataset.ctl = 'chord';
-  const arpTog = cap('arp', { led: true, acc: 'harmony', cls: 'kv-tog' }); arpTog.dataset.ctl = 'arp';
   onClick(holdTog, () => H.set('hold', !H.state().hold));
   onClick(chordTog, () => H.set('chord', !H.state().chord));
-  onClick(arpTog, () => { const a = H.state().arp; H.set('arp', { ...a, on: !a.on }); });
-  const kRate = knob('rate', { size: 'kx', side: true, steps: ARP_DIVS.length, value: h0.arp.div });
-  const kLen = knob('length', { size: 'kx', side: true, value: h0.arp.length.toFixed(2) });
-  const kGroove = knob('groove', { size: 'kx', side: true, value: h0.arp.groove.toFixed(2) });
-  kRate.dataset.ctl = 'arp-rate'; kLen.dataset.ctl = 'arp-length'; kGroove.dataset.ctl = 'arp-groove';
   const togs = el('div', 'kv-togs');
-  togs.append(holdTog, chordTog, arpTog);
-  const arpK = el('div', 'kv-arpk');
-  arpK.append(kRate, kLen, kGroove);
-  harm.append(togs, el('i', 'sg-vdiv kv-hdiv'), arpK);
-  const arpWrite = (p: Partial<HarmonyState['arp']>): void => {
-    const a = H.state().arp, n = { ...a, ...p };
-    if (n.div !== a.div || !near(n.length, a.length) || !near(n.groove, a.groove)) H.set('arp', n);
+  togs.append(holdTog, chordTog);
+  // ═══ from jt-portfolio-signal/src/signal/view/hands-view.ts:164-169, 120-124, 192-194 (R3.3, 1754f4d; the Studio's
+  // pianohead play.ts:104-133 @ 2a9e4a7): THE KEY WALK — ◀ ▶ walk the 12 keys, SCALE cycles MAJ → MIN → FREE, each step
+  // ONE harmony.set('music') and only when it changes (the octave kept); the screen prints the state (paint). On-screen
+  // caps, never keycaps: the keyboard teaches no key for the walk. PORT: kv- names; a step repaints at once (the tower's
+  // paint law), the echo's paint then finds nothing to write. ═══
+  const keyDn = cap('', { icon: LEFT, cls: 'kv-arrow', name: 'Key down' }); keyDn.dataset.ctl = 'key-';
+  const keyScr = screen('C MAJ', 'key', 'kv-keyscr'); keyScr.dataset.ctl = 'key';
+  const keyVal = keyScr.querySelector('b')!;
+  const keyUp = cap('', { icon: RIGHT, cls: 'kv-arrow', name: 'Key up' }); keyUp.dataset.ctl = 'key+';
+  const scaleCap = cap('scale', { cls: 'kv-scale' }); scaleCap.dataset.ctl = 'scale';   // a fixed legend: the screen shows the state
+  const keyGrp = el('div', 'kv-keygrp');
+  keyGrp.append(keyDn, keyScr, keyUp, scaleCap);
+  const music = (): HarmonyState['music'] => H.state().music;
+  const setMusic = (p: Partial<HarmonyState['music']>): void => {
+    const cur = music(), next = { ...cur, ...p };
+    if (next.key !== cur.key || next.scale !== cur.scale || next.oct !== cur.oct) H.set('music', next);
   };
-  const bRate = bindKnob<ArpDiv>(kRate, h0.arp.div, {
-    toV: (d) => stepV(Math.max(0, ARP_DIVS.indexOf(d)), ARP_DIVS.length), fromV: (v) => ARP_DIVS[stepI(v, ARP_DIVS.length)],
-    same: (a, b) => a === b, text: (d) => d, write: (div) => arpWrite({ div }), steps: ARP_DIVS.length,
-  });
-  const bLen = bindKnob<number>(kLen, h0.arp.length, {
-    toV: (l) => clamp((l - LEN_MIN) / LEN_SPAN, 0, 1), fromV: (v) => LEN_MIN + v * LEN_SPAN,
-    same: near, text: (l) => l.toFixed(2), write: (length) => arpWrite({ length }), dflt: 0.5,
-  });
-  const bGroove = bindKnob<number>(kGroove, h0.arp.groove, {
-    toV: (g) => clamp(g, 0, 1), fromV: (v) => v, same: near, text: (g) => g.toFixed(2), write: (groove) => arpWrite({ groove }), dflt: 0,
-  });
-  // ═══ end hands-view.ts harmony port ═══
+  onClick(keyDn, () => { setMusic({ key: (music().key + 11) % 12 }); paint(); });
+  onClick(keyUp, () => { setMusic({ key: (music().key + 1) % 12 }); paint(); });
+  onClick(scaleCap, () => { const s = music().scale; setMusic({ scale: SCALES[(SCALES.indexOf(s) + 1) % SCALES.length] }); paint(); });
+  // ═══ end hands-view.ts copy ═══
+  harm.append(chordGl, togs, el('i', 'sg-vdiv kv-hdiv'), keyGrp);
+
+  // ═══ from jt-portfolio-signal/src/signal/view/hands-view.ts:399-439 (R3.3, 1754f4d; the settle law is signal-studio-v6lib
+  // src/views/instrument/play.ts:513-569 @ 2a9e4a7): THE CHORD GLASS's settle. A held-set change arms a 90 ms settle; the
+  // name is taken once the set has held still that long (a strum names once). A new name SNAPS and blinks 70 ms
+  // (burst-guarded 150 ms); on silence the last name holds DIM; a key or scale change respells at once (paint, below).
+  // PORT: the settle rides this tower's keyed `after` (one 'settle' slot = hands-view's drop + later); the blink stamp is
+  // chordBlinkAt (lcdWrite's WeakMap owns the name lastBlink); the frame's pool signature (hands-view.ts:488-491) rides
+  // this tower's frame (below). ═══
+  const SETTLE_MS = 90, BLINK_GUARD_MS = 150;
+  let chordBlinkAt = -Infinity, shownLabel = '', shownDeg = '', lastMidi: number[] = [];
+  // what SOUNDS: the harmony's sounding() (the arp pool while the arp runs, where keys.held() is empty because the arp
+  // books one-shots), else the keys' held set (the contract's)
+  const HS = H as unknown as { sounding?: () => ReadonlyArray<[string, number]> };
+  const soundingNow = (): ReadonlyArray<[string, number]> => (typeof HS.sounding === 'function' ? HS.sounding() : K.held());
+  const heldMidi = (): number[] => soundingNow().map(([, m]) => m);
+  const blinkChord = (): void => {
+    const now = performance.now();
+    if (now - chordBlinkAt < BLINK_GUARD_MS) return;
+    chordBlinkAt = now;
+    for (const e of [clabel, cdeg]) { e.classList.remove('sg-t-blink'); void e.offsetWidth; e.classList.add('sg-t-blink'); }
+  };
+  const showChord = (midi: number[], dim: boolean): void => {
+    if (!midi.length) return;
+    const r = H.name(midi);
+    chordGl.classList.toggle('dim', dim);
+    if (r.label !== shownLabel || (r.degree ?? '') !== shownDeg) {
+      setLabel(clabel, r.label);
+      setText(cdeg, r.degree ?? '');
+      cdeg.classList.toggle('on', !!r.degree);
+      shownLabel = r.label; shownDeg = r.degree ?? '';
+      if (!dim) blinkChord();
+    }
+  };
+  const settleChord = (): void => {
+    const m = heldMidi();
+    if (m.length) { lastMidi = m; showChord(m, false); } else chordGl.classList.add('dim');
+  };
+  const onHeld = (): void => { after('settle', SETTLE_MS, settleChord); };
+  const respell = (): void => {
+    const m = heldMidi();
+    if (m.length) { lastMidi = m; showChord(m, false); } else if (lastMidi.length) showChord(lastMidi, true);
+  };
+  const unsubHeld = K.onHeldChange(onHeld);
+  // ═══ end hands-view.ts copy ═══
 
   T.append(head, scr, body, foot, harm);
   root.appendChild(T);
@@ -632,7 +691,7 @@ export const mountKeysView: MountView = (root, inst) => {
   // ── PAINT: everything from the instrument's state (inst.state()), diffed: only what changed is written ─────────────
   let dead = false, queued = false;
   let lastMute: boolean | undefined, lastSolo: SignalState['solo'] | undefined, lastMOff: boolean | undefined;
-  let harmSig = '';
+  let harmSig = '', musicSig = '';
   function paint(): void {
     queued = false;
     if (dead) return;
@@ -666,27 +725,38 @@ export const mountKeysView: MountView = (root, inst) => {
     setK(gainKnob, gainToV(k.gain));
     const h = S.harmony;
     if (h) {
-      const sig = `${h.hold}|${h.chord}|${h.arp.on}`;
+      const sig = `${h.hold}|${h.chord}`;
       if (sig !== harmSig) {
         harmSig = sig;
-        for (const [b, on] of [[holdTog, h.hold], [chordTog, h.chord], [arpTog, h.arp.on]] as Array<[HTMLElement, boolean]>) {
+        for (const [b, on] of [[holdTog, h.hold], [chordTog, h.chord]] as Array<[HTMLElement, boolean]>) {
           b.classList.toggle('on', on); b.setAttribute('aria-pressed', String(on));
         }
-        for (const kn of [kRate, kLen, kGroove]) kn.classList.toggle('dormant', !h.arp.on);   // Law 3: they wait on ARP
       }
-      bRate.sync(h.arp.div); bLen.sync(h.arp.length); bGroove.sync(h.arp.groove);
+      // [R4] the KEY screen prints the state; a key or scale change respells the chord glass at once (hands-view.ts:446, 449-456)
+      const mu = h.music;
+      if (mu) {
+        setText(keyVal, keySummary(mu.key, mu.scale));
+        const ms = `${mu.key}|${mu.scale}`;
+        if (ms !== musicSig) { const spell = musicSig !== ''; musicSig = ms; if (spell) respell(); }
+      }
     }
   }
   const schedule = (): void => { if (!queued && !dead) { queued = true; queueMicrotask(paint); } };
   const offChange = inst.onChange(schedule);
   paint();
+  if (soundingNow().length) onHeld();              // mounted over a sounding chord: name it once it settles
 
-  // ── the frame: keys.ready() (the loading tense) + the MOTION ghost, in heard time ──────────────────────────────
-  let raf = 0;
+  // ── the frame: keys.ready() (the loading tense) + [R4] the sounding pool + the MOTION ghost, in heard time ──────
+  let raf = 0, poolSig = '';
   const frame = (now: number): void => {
     if (dead) return;
     raf = requestAnimationFrame(frame);
     paintLoading();
+    // [R4] the sounding pool's signature (hands-view.ts:488-491): a pool keys.onHeldChange never reports (the arp's, in
+    // harmony.sounding()) still settles the chord glass
+    let ps = '';
+    try { for (const [, mi] of soundingNow()) ps += `${mi},`; } catch { ps = poolSig; }   // a broken sounding() reads as unchanged
+    if (ps !== poolSig) { poolSig = ps; onHeld(); }
     const m = motion;
     if (m && m.amount >= MOTION_OFF) {
       let beats = 0;
@@ -703,6 +773,7 @@ export const mountKeysView: MountView = (root, inst) => {
       cancelAnimationFrame(raf);
       cutRaf.cancel();
       offChange();
+      unsubHeld();
       offKeys();
       timers.forEach((t) => clearTimeout(t));
       timers.clear();

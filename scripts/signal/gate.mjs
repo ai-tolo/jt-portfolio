@@ -1,6 +1,6 @@
 #!/usr/bin/env node
-// gate · the SIGNAL round gate (branch `signal`; R0 + R1 + R2 2026-09-23, R3 2026-09-24). One command, one verdict:
-//   source ~/.nvm/nvm.sh && node scripts/signal/gate.mjs [--round r0|r1|r2|r3] [--skip-build] [--looks a,b,c] [--only chromium,webkit,firefox]
+// gate · the SIGNAL round gate (branch `signal`; R0 + R1 + R2 2026-09-23, R3 + R4 2026-09-24). One command, one verdict:
+//   source ~/.nvm/nvm.sh && node scripts/signal/gate.mjs [--round r0|r1|r2|r3|r4] [--skip-build] [--looks a,b,c] [--only chromium,webkit,firefox]
 // build (exit code only) → serve-dist :4637 → the round's browsers → one table → the KILL line, always the last line.
 // R0 · headless Chrome/CDP :9345 (own profile <scratch>/<round>-gate-chrome, muted, DPR 1) → each look at 1440×900 +
 //   1024×768: console clean, the asked .look shown at 700–1100 px unscaled, no sideways scroll, a viewport PNG + a
@@ -18,16 +18,17 @@
 //   still and its line, no device. WebKit is the frozen macOS-14 build: it launches through rip-verify.mjs's
 //   inspector-pipe shim (the PushAPIEnabled rename), reused as it is; its close is capped at 5 s.
 // R2 · NOTES-SIGNAL-R2.md (the power, the dark, the swap) in the SAME children, clocks and kill discipline
-//   (`--round r2`): boot as R1 → POWER FIRST: #sgm[data-state] 'standby' with no data-live, the
-//   disc #pwr at the device's top middle and hit-testable, the device box shot DARK (<browser>-standby.png) → a TRUSTED
-//   click at the disc's centre (page.mouse.click): 'boot' within the press's own dispatch, 'live' + data-live="1" within
-//   2 s, the boot sound without an error (?mute=1 plays it through a 0-gain: no error is the whole assertion), the lit
-//   box (<browser>-live.png): the standby's mean relative luminance (linear, Rec. 709) at most 55 % of the live's →
+//   (`--round r2`): boot as R1 → POWER FIRST: #sgm[data-state] 'standby' with no data-live, the power #pwr
+//   hit-testable (R2–R3: the disc, at the device's top middle; R4: the switch, anywhere inside the device), the device
+//   box shot DARK (<browser>-standby.png) → a TRUSTED click at the power's centre (page.mouse.click): 'boot' within the
+//   press's own dispatch, 'live' + data-live="1" within 2 s, the boot sound without an error (?mute=1 plays it through a
+//   0-gain: no error is the whole assertion), the lit box (<browser>-live.png): the standby's mean relative luminance
+//   (linear, Rec. 709) at most 55 % of the live's →
 //   first sound: a trusted KeyA on the live device, < 200 ms from the key's own timeStamp to rms > −60 dBFS (the gate
 //   measures it: the surface's firstSoundMs marks the power click, its first trusted pointerdown, and is reported,
 //   never judged) → the loop, the throttle, the master stop (R1's own sections) → save/reload: ARMED AND SILENT (bpm +
 //   voice restore, drums.on comes back false, the device back in standby) → powered again, R1's shots (lit) → POWER
-//   OFF: the beat on, a trusted click on the disc → 'standby' within 2 s, level().peak < 3e-5, no data-live → R1's
+//   OFF: the beat on, a trusted click on the power → 'standby' within 2 s, level().peak < 3e-5, no data-live → R1's
 //   phone (Chromium) → THE HOMEPAGE (Chromium): /?mute=1 at 1440×900, #play scrolled into view: 'standby' and no
 //   html[data-night]; a trusted click → data-night and 'live' within 2 s; scrolled to the top → 'standby' and
 //   data-night gone within 1.5 s (+ <browser>-home-standby.png, <browser>-home-live.png).
@@ -40,6 +41,15 @@
 //   gone) + stop + reload → powered again → R2's shots + THE FIT (1440: 96–99.5 % of the page's content width, clear
 //   of the nav rail by ≥ 1 %; 1024: the clearance only) → the module PNGs (<browser>-mod-{drums,keys,bass,top,keybed}.png)
 //   and one pressed state (<browser>-pressed.png: KeyA + KeyZ held, the drums on) → R2's power off, phone, home.
+// R4 · NOTES-SIGNAL-R4.md §1.5 (THE RENDER ROUND, `--round r4`): R3's leg (legR2 with r3 + r4), every change gated on
+//   r4 so r0–r3 run as they did: THE SWITCH (`power · the switch: hit-testable, toggles the state`: #pwr hit-testable,
+//   its centre anywhere inside the device box, where it stands printed; the trusted click → boot → live, the boot sound,
+//   the dark and the power-off rows are R2's) · THE LOOP holds a CHORD, no arp (the arp left the surface: drums + bass
+//   seq + C E G held, rms > −60 dBFS after 4 bars; the throttle rides the same loop) · DORMANT without the three arp
+//   knobs and their "arp on" wake · the size floor's BPM rivals take the keys' foot glass too (.kv-clabel) · THE TITLES
+//   (a section after the size floor, read while live: DRUMS · KEYS · BASS visible, each centred within 3 px over its
+//   tower and above its top, ≥ 16 px, three different inks) · the module PNGs <browser>-mod-{drums,keys,bass,head,
+//   keybed,switch}.png. The keymap, hold, keycap, fit, reload, stop, phone and home rows are R3's.
 // KILL DISCIPLINE · R0: Chrome's whole process group. R1 + R2: each child and everything under it, the WebKit shim (by this
 //   run's marker) and every ms-playwright process that was not running at start and has been orphaned. SIGKILLed, the
 //   server closed, in `finally` AND on SIGINT/SIGTERM/SIGHUP/uncaughtException; the last line proves none survives.
@@ -56,7 +66,8 @@ const arg = (n, d) => { const i = argv.indexOf(`--${n}`); return i >= 0 && argv[
 const REPO = fileURLToPath(new URL("../../", import.meta.url));
 const SELF = fileURLToPath(import.meta.url);
 const ROUND = arg("round", "r0"), TAG = `${ROUND}-gate`, R1 = ROUND === "r1", R2 = ROUND === "r2", R3 = ROUND === "r3";
-const LEGS = R1 || R2 || R3;                                                     // the Playwright rounds: one child per browser
+const R4 = ROUND === "r4";                                                       // R3's leg with the r4 hooks (NOTES-SIGNAL-R4.md §1.5)
+const LEGS = R1 || R2 || R3 || R4;                                               // the Playwright rounds: one child per browser
 const PORT = Number(arg("port", 4637)), CDP_PORT = Number(arg("cdp-port", 9345)), BASE = `http://127.0.0.1:${PORT}`;
 const SCRATCH = arg("scratch", "/private/tmp/claude-501/-Users-tolo/a1c7365a-3a62-4cf9-a768-e8fc57dd9bca/scratchpad");
 const PROFILE = join(SCRATCH, `${TAG}-chrome`);
@@ -72,7 +83,7 @@ const PW = "/Users/tolo/studio-mocks/pw/node_modules/playwright/index.mjs";
 const RIP_VERIFY = fileURLToPath(new URL("./rip-verify.mjs", import.meta.url)); // doubles as the WebKit pipe shim
 const LEG = arg("r1-leg", null);                                                   // child mode: one browser's leg
 const BROWSERS = arg("only", "chromium,webkit,firefox").split(",").filter(Boolean);
-const LEG_MS = Number(arg("leg-ms", R3 ? 180_000 : 120_000));                   // each browser's clock (a knob for proving the HUNG path)
+const LEG_MS = Number(arg("leg-ms", R3 || R4 ? 180_000 : 120_000));             // each browser's clock (a knob for proving the HUNG path)
 const SIGNAL_URL = `${BASE}/signal/?mute=1`;
 const RMS_MIN = 0.001;                  // −60 dBFS: the loop sounds
 const PEAK_QUIET = 3e-5;                // −90.5 dBFS: the master stop is silent
@@ -130,7 +141,8 @@ const LOOP = (arpBy) => {   // NOTES-SIGNAL-R1 §4 (3), through the real keymap'
   i.bass.set("mode", "seq");                                 // … in SEQ, via state
   for (const k of ["KeyA", "KeyD", "KeyG"]) s.press(k, true); // C E G held
   let how;
-  if (arpBy === "click") {                                   // R3: V left the keyboard; the arp is its on-screen cap
+  if (arpBy === "chord") how = "chord";                      // R4: the arp left the surface; the held chord is the keys' part
+  else if (arpBy === "click") {                              // R3: V left the keyboard; the arp is its on-screen cap
     how = s.click('[data-ctl="arp"]') ? 'click [data-ctl="arp"]' : "NO [data-ctl=arp]: harmony.set('arp') instead";
     if (!s.state().harmony.arp.on) i.harmony.set("arp", { ...i.harmony.state().arp, on: true });
   } else s.press("KeyV");                                    // the arp
@@ -239,14 +251,17 @@ async function bootRows({ name, browser, page, errs, row, step, errLine }) {
 }
 async function loopRows(k) {
   const { name, page, row, step } = k;
-  // (3) THE LOOP: drums · bass seq · a held chord · the arp; 4 bars; Chromium also 20 s at CPU throttle 4×
+  // (3) THE LOOP: drums · bass seq · a held chord · the arp (R4: the chord alone: the arp left the surface); 4 bars;
+  // Chromium also 20 s at CPU throttle 4×, riding the same loop
   step("loop");
-  const lp = await page.evaluate(LOOP, "click");   // R3: KeyV is gone from the contract; every round turns the arp on through the cap
+  const lp = await page.evaluate(LOOP, k.r4 ? "chord" : "click");   // R3: KeyV is gone from the contract; r1–r3 turn the arp on through the cap
   const barMs = 240_000 / lp.bpm;
   const four = await page.evaluate(SAMPLE, Math.round(4 * barMs + 150));
   const bar4 = four.xs.filter(([t]) => t >= 3 * barMs).map(([, v]) => v);
-  row("loop · 4 bars > −60 dBFS", four.end.rms > RMS_MIN && lp.drums && lp.bass && lp.mode === "seq" && lp.arp,
-    `rms ${dB(four.end.rms)} after 4 bars (${(4 * barMs / 1000).toFixed(1)} s @ ${lp.bpm} bpm) · bar 4 min ${dB(Math.min(...bar4))} / median ${dB(median(bar4))} · drums ${lp.drums ? "on" : "OFF"} · bass ${lp.bass ? lp.mode : "OFF"} · arp ${lp.arp ? "on" : "OFF"}${lp.how ? ` (${lp.how})` : ""} · ${lp.held} held · gaps ${four.g1.gaps}`);
+  const keysPart = k.r4 ? `chord (${lp.held} held) · arp ${lp.arp ? "ON" : "OFF"}`
+    : `arp ${lp.arp ? "on" : "OFF"}${lp.how ? ` (${lp.how})` : ""} · ${lp.held} held`;
+  row("loop · 4 bars > −60 dBFS", four.end.rms > RMS_MIN && lp.drums && lp.bass && lp.mode === "seq" && (k.r4 ? lp.held === 3 : lp.arp),
+    `rms ${dB(four.end.rms)} after 4 bars (${(4 * barMs / 1000).toFixed(1)} s @ ${lp.bpm} bpm) · bar 4 min ${dB(Math.min(...bar4))} / median ${dB(median(bar4))} · drums ${lp.drums ? "on" : "OFF"} · bass ${lp.bass ? lp.mode : "OFF"} · ${keysPart} · gaps ${four.g1.gaps}`);
   if (name === "chromium") {
     step("throttle");
     const cdp = await page.context().newCDPSession(page);
@@ -352,7 +367,7 @@ async function legR1(k) {
 }
 
 // ════ R2 · THE POWER (NOTES-SIGNAL-R2.md): in page (self-contained, one argument) ═══════════════════════════════════
-const POWER_FACTS = () => {   // the host contract as the page holds it now, and where a hand would press the disc
+const POWER_FACTS = () => {   // the host contract as the page holds it now, and where a hand would press the power (#pwr)
   const sgm = document.getElementById("sgm"), dev = sgm && sgm.querySelector(":scope > .device");
   const p = document.getElementById("pwr"), html = document.documentElement;
   const pr = p && p.getBoundingClientRect(), dr = dev && dev.getBoundingClientRect();
@@ -369,11 +384,11 @@ const POWER_FACTS = () => {   // the host contract as the page holds it now, and
     live: sgm ? sgm.getAttribute("data-live") : null, devLive: dev ? dev.getAttribute("data-live") : null,
     devCls: dev ? dev.classList.contains("live") : null, pwr: !!p, slot: p ? desc(p.parentElement) : "none",
     lit: p ? p.classList.contains("lit") : null, pressed: p ? p.getAttribute("aria-pressed") : null,
-    x, y, pw: pr ? pr.width : 0, hit: !!(p && hitEl && (hitEl === p || p.contains(hitEl))), hitDesc: desc(hitEl),
+    x, y, pw: pr ? pr.width : 0, ph: pr ? pr.height : 0, hit: !!(p && hitEl && (hitEl === p || p.contains(hitEl))), hitDesc: desc(hitEl),
     dev: dr ? { l: dr.left, t: dr.top, w: dr.width, h: dr.height } : null, night: html.hasAttribute("data-night"),
     ctx: window.__signal ? window.__signal.ctxState() : null, muted, ih: innerHeight, sy: Math.round(scrollY) };
 };
-const WAIT_POWER = (limitMs) => new Promise((ok) => {   // the disc mounts once the boot resolves (Signal.astro's script)
+const WAIT_POWER = (limitMs) => new Promise((ok) => {   // #pwr mounts once the boot resolves (Signal.astro's script)
   const t0 = performance.now();
   const tick = () => {
     let r = false;
@@ -385,7 +400,7 @@ const WAIT_POWER = (limitMs) => new Promise((ok) => {   // the disc mounts once 
   tick();
 });
 /** Arms a recorder: a timestamp for each #sgm data-state/data-live and html data-night change (an `init` row first), the
- *  first click that reaches #pwr (read in the window's BUBBLE phase, after the disc's own handler: `after` is what the
+ *  first click that reaches #pwr (read in the window's BUBBLE phase, after the power's own handler: `after` is what the
  *  press did within its own dispatch) and, with o.quiet, the first level() peak under it after that click + the loudest
  *  read from then on. */
 const ARM_REC = (o) => {
@@ -533,7 +548,8 @@ async function legR2(k) {
   const rel = (x) => (typeof x === "number" ? `${x < -0.5 ? "−" : "+"}${Math.abs(Math.round(x))} ms` : "never");   // after the origin
   const pct = (x) => (Number.isFinite(x) ? `${(100 * x).toFixed(1)} %` : "∞");
   const when = (rec, pred, base) => { const e = rec ? rec.log.find((x) => !x.init && pred(x)) : null; return e ? e.t - base : null; };
-  // the disc's centre from the page's own box; if that point does not hit the disc, Playwright's box (what a real hand
+  const PWR = k.r4 ? "switch" : "disc";   // the details' word for #pwr (R2–R3 the disc, R4 THE SWITCH)
+  // the power's centre from the page's own box; if that point does not hit #pwr, Playwright's box (what a real hand
   // aims at) is tried, and the detail says so
   const aim = async (p, f) => {
     if (f.hit) return { x: f.x, y: f.y, how: "its getBoundingClientRect centre" };
@@ -553,7 +569,7 @@ async function legR2(k) {
   // (1) BOOT: R1's rows (muted, ready ≤ 10 s, rendered, no console errors)
   await bootRows(k);
 
-  // (2) POWER FIRST: the device boots into STANDBY, dark, and answers only the disc
+  // (2) POWER FIRST: the device boots into STANDBY, dark, and answers only the power (#pwr)
   step("standby");
   const pw0 = await page.evaluate(WAIT_POWER, 5000);
   await page.evaluate(SETTLE);
@@ -563,11 +579,18 @@ async function legR2(k) {
   row("power · standby at boot", sb.state === "standby" && sb.live === null && sb.devLive === null && sb.devCls === false && sb.root && sb.pwr && sb.lit === false,
     `#sgm[data-state] ${sb.state} · data-live ${sb.live ?? "absent"} (.device: ${sb.devLive ?? "absent"}, .live ${sb.devCls}) · #sgm > .device.sig.sig-device ${sb.root} · #pwr ${sb.pwr ? `in ${sb.slot}, lit ${sb.lit}, aria-pressed ${sb.pressed}` : `MISSING${pw0.pwr ? "" : " (never mounted in 5 s)"}`} · ctx ${sb.ctx}`);
   const dx = sb.dev ? sb.x - (sb.dev.l + sb.dev.w / 2) : NaN, dy = sb.dev ? sb.y - sb.dev.t : NaN;
-  const topMid = !!sb.dev && Math.abs(dx) <= 4 && dy > 0 && dy <= 0.1 * sb.dev.h;
-  row("power · the disc: top middle, hit", sb.pwr && sb.hit && topMid,
-    `#pwr centre ${sb.x.toFixed(0)},${sb.y.toFixed(0)} (${sb.pw.toFixed(0)} px drawn) · ${dx >= 0 ? "+" : ""}${dx.toFixed(1)} px off the device's centre line · ${dy.toFixed(0)} px under its top edge (${sb.dev ? pct(dy / sb.dev.h) : "?"} of ${sb.dev ? sb.dev.h.toFixed(0) : "?"} px) · elementFromPoint → ${sb.hitDesc}`);
+  if (k.r4) {   // R4 §1.5 (1): THE SWITCH stands where its lane put it (the brief: any place): inside the device, hit-testable
+    const fromR = sb.dev ? sb.dev.l + sb.dev.w - sb.x : NaN;
+    const inside = !!sb.dev && sb.x >= sb.dev.l && sb.x <= sb.dev.l + sb.dev.w && sb.y >= sb.dev.t && sb.y <= sb.dev.t + sb.dev.h;
+    row("power · the switch: hit-testable, toggles the state", sb.pwr && sb.hit && inside,
+      `${sb.pwr ? `#pwr centre ${sb.x.toFixed(0)},${sb.y.toFixed(0)} (${sb.pw.toFixed(0)}×${sb.ph.toFixed(0)} px drawn, in ${sb.slot}) · ${fromR.toFixed(0)} px from the device's right edge, ${dy.toFixed(0)} px under its top: ${inside ? "inside" : "OUTSIDE"} the ${sb.dev ? `${sb.dev.w.toFixed(0)}×${sb.dev.h.toFixed(0)}` : "?"} px device` : `#pwr MISSING${pw0.pwr ? "" : " (never mounted in 5 s)"}`} · elementFromPoint → ${sb.hitDesc} · the toggle: the trusted clicks below (standby → boot → live, then live → standby)`);
+  } else {
+    const topMid = !!sb.dev && Math.abs(dx) <= 4 && dy > 0 && dy <= 0.1 * sb.dev.h;
+    row("power · the disc: top middle, hit", sb.pwr && sb.hit && topMid,
+      `#pwr centre ${sb.x.toFixed(0)},${sb.y.toFixed(0)} (${sb.pw.toFixed(0)} px drawn) · ${dx >= 0 ? "+" : ""}${dx.toFixed(1)} px off the device's centre line · ${dy.toFixed(0)} px under its top edge (${sb.dev ? pct(dy / sb.dev.h) : "?"} of ${sb.dev ? sb.dev.h.toFixed(0) : "?"} px) · elementFromPoint → ${sb.hitDesc}`);
+  }
 
-  // (3) THE PRESS: a trusted click at the disc's centre → boot at once → live within 2 s; the boot sound; the dark vs the lit
+  // (3) THE PRESS: a trusted click at the power's centre → boot at once → live within 2 s; the boot sound; the dark vs the lit
   step("power on");
   const a1 = await aim(page, sb);
   await page.evaluate(ARM_REC, {});
@@ -579,7 +602,7 @@ async function legR2(k) {
     c1 ? `click isTrusted ${c1.trusted} at ${a1.how} · data-state within the press's own dispatch: ${c1.after} (observed ${rel(boot1)}) · ctx ${sb.ctx} → ${on1.ctx}`
       : `NO click reached #pwr at ${a1.x.toFixed(0)},${a1.y.toFixed(0)} (${a1.how}) · data-state ${on1.state}`);
   row("power · live ≤ 2 s · data-live=1", on1.state === "live" && live1 !== null && live1 <= 2000 && on1.live === "1" && on1.devLive === "1" && on1.devCls === true,
-    `live at ${rel(live1)} after the click (TRACE_MS 1380) · #sgm data-live ${on1.live ?? "absent"} · .device data-live ${on1.devLive ?? "absent"} · .device.live ${on1.devCls} · disc lit ${on1.lit} · aria-pressed ${on1.pressed}`);
+    `live at ${rel(live1)} after the click (TRACE_MS 1380) · #sgm data-live ${on1.live ?? "absent"} · .device data-live ${on1.devLive ?? "absent"} · .device.live ${on1.devCls} · ${PWR} lit ${on1.lit} · aria-pressed ${on1.pressed}`);
   await page.waitForTimeout(1300);                              // the bulb-up (BULB_MS 950, its stagger ≤ 290 ms) is over
   const pwrWarns = warns.filter((w) => w.includes("[signal/power]"));
   row("power · boot sound: no error", errs.length === 0 && pwrWarns.length === 0 && bootNet.some((r) => r.status === 200),
@@ -601,7 +624,8 @@ async function legR2(k) {
     : `no sound in 3 s after KeyA · the key ${fs.keyed ? `was seen as code ${fs.code || "''"} in state ${fs.state}` : "was NOT seen by the page"} · ctx ${fs.ctx} · rms ${dB(fs.rms)} · the surface's firstSoundMs ${surf}`);
 
   // R3 (NOTES-SIGNAL-R3 §3 rows 1–5): the taught keymap, HOLD under CHORD, the dormant pairs, the keycaps, the size floor
-  if (k.r3) for (const sec of [keymapRows, holdRows, dormantRows, keycapRows, floorRows]) {
+  // (+ R4 §1.5 (8): the titles, read here while the device is live: the standby greys all three to one engraving)
+  if (k.r3) for (const sec of [keymapRows, holdRows, dormantRows, keycapRows, floorRows, ...(k.r4 ? [titleRows] : [])]) {
     try { await sec(k); }                                     // one section's throw is its own red row; the leg runs on
     catch (e) { row(`${sec.name} · ran to its end`, false, String(e?.message ?? e).split("\n")[0].slice(0, 300)); }
   }
@@ -641,7 +665,7 @@ async function legR2(k) {
   await shotRows(k);
   if (k.r3) await moduleShotRows(k, aim);   // R3 §3 (7): back at 1440×900, powered: each module + one pressed state
 
-  // (9) POWER OFF: the beat on, a trusted click on the disc while live → standby within 2 s, silent, no data-live
+  // (9) POWER OFF: the beat on, a trusted click on the power while live → standby within 2 s, silent, no data-live
   step("power off");
   await page.evaluate(SETTLE);
   let pre = await page.evaluate(POWER_FACTS), again = "";
@@ -666,7 +690,7 @@ async function legR2(k) {
   const qAt = off.rec && off.rec.quietAt !== null ? off.rec.quietAt - b3 : null;
   row("power off · standby ≤ 2 s, silent", pre.state === "live" && loud > RMS_MIN && !!co && co.trusted === true && off.state === "standby"
       && sbAt !== null && sbAt <= 2000 && !!off.level && off.level.peak < PEAK_QUIET && off.live === null && off.devLive === null && off.devCls === false,
-    `powered again after the reload: live at ${rel(live2)}${again} · the beat before the press: max rms ${dB(loud)} · trusted click (${co ? `isTrusted ${co.trusted}, '${co.after}' within its dispatch` : "NONE reached #pwr"}) → powerdown ${rel(pd)} → standby ${rel(sbAt)} · peak at standby ${off.level ? dB(off.level.peak) : "?"} (under 3e-5 from ${rel(qAt)}; the loudest read after that ${dB(off.rec ? off.rec.maxAfter : 0)}) · data-live ${off.live ?? "absent"} (.device ${off.devLive ?? "absent"}, .live ${off.devCls}) · disc lit ${off.lit} · ctx ${off.ctx}`);
+    `powered again after the reload: live at ${rel(live2)}${again} · the beat before the press: max rms ${dB(loud)} · trusted click (${co ? `isTrusted ${co.trusted}, '${co.after}' within its dispatch` : "NONE reached #pwr"}) → powerdown ${rel(pd)} → standby ${rel(sbAt)} · peak at standby ${off.level ? dB(off.level.peak) : "?"} (under 3e-5 from ${rel(qAt)}; the loudest read after that ${dB(off.rec ? off.rec.maxAfter : 0)}) · data-live ${off.live ?? "absent"} (.device ${off.devLive ?? "absent"}, .live ${off.devCls}) · ${PWR} lit ${off.lit} · ctx ${off.ctx}`);
 
   // (10) THE PHONE (Chromium): R1's section
   await phoneRows(k);
@@ -686,7 +710,7 @@ async function legR2(k) {
       const hs = join(OUT, `${name}-home-standby.png`);
       await hp.screenshot({ path: hs });
       row("home · #play in view: standby, day", pv.found && hw.pwr && h0.state === "standby" && !h0.night && h0.muted === true,
-        `#play ${pv.found ? `top ${pv.top} (${pv.h} px tall) at scrollY ${pv.y}` : "MISSING"} · #pwr ${hw.pwr ? `mounted (ready ${hw.ready})` : "never mounted in 12 s"} · data-state ${h0.state} · html[data-night] ${h0.night ? "PRESENT" : "absent"} · out.muted() ${h0.muted} · elementFromPoint at the disc → ${h0.hitDesc} · ${hs}`);
+        `#play ${pv.found ? `top ${pv.top} (${pv.h} px tall) at scrollY ${pv.y}` : "MISSING"} · #pwr ${hw.pwr ? `mounted (ready ${hw.ready})` : "never mounted in 12 s"} · data-state ${h0.state} · html[data-night] ${h0.night ? "PRESENT" : "absent"} · out.muted() ${h0.muted} · elementFromPoint at the ${PWR} → ${h0.hitDesc} · ${hs}`);
       if (h0.muted !== true) throw new Error("home: the instrument is not muted: no input (sound safety)");
       const ha = await aim(hp, h0);
       await hp.evaluate(ARM_REC, {});
@@ -705,7 +729,7 @@ async function legR2(k) {
       const o = h2.rec.origin, hc2 = h2.rec.click;
       const hpd = when(h2.rec, (e) => e.state === "powerdown", o), hsb = when(h2.rec, (e) => e.state === "standby", o), hday = when(h2.rec, (e) => !e.night, o);
       row("home · scroll to top: standby + day ≤ 1.5 s", h2.state === "standby" && !h2.night && hsb !== null && hsb <= 1500 && hday !== null && hday <= 1500,
-        `scrollY ${top.from} → ${top.y} · the host pressed the disc ${hc2 ? `at ${rel(hc2.t - o)} (isTrusted ${hc2.trusted})` : "NEVER"} · powerdown ${rel(hpd)} · data-night gone ${rel(hday)} · standby ${rel(hsb)} (1380 ms of it is the line running back) · data-live ${h2.live ?? "absent"}`);
+        `scrollY ${top.from} → ${top.y} · the host pressed the ${PWR} ${hc2 ? `at ${rel(hc2.t - o)} (isTrusted ${hc2.trusted})` : "NEVER"} · powerdown ${rel(hpd)} · data-night gone ${rel(hday)} · standby ${rel(hsb)} (1380 ms of it is the line running back) · data-live ${h2.live ?? "absent"}`);
       row("home · no console errors", herrs.length === 0, errLine(herrs));
     } finally { await hc.close().catch(() => {}); }
   }
@@ -721,6 +745,11 @@ const R3_GONE = ["KeyX", "KeyC", "KeyV", "KeyN", "Digit1"];
 const R3_DORMANT = ['[data-ctl="drums-fb"]', '[data-ctl="drums-time"]', '[data-ctl="keys-rate"]', '[data-ctl="keys-shape"]',
   '[data-ctl="arp-rate"]', '[data-ctl="arp-length"]', '[data-ctl="arp-groove"]', '[data-ctl="bass-strip"]',
   '.sg-key[data-code="KeyR"]', '.sg-key[data-code="KeyI"]'];
+/** R4 (NOTES-SIGNAL-R4 §1.5 (3)): R3's list minus the three arp knobs (the arp left the surface with its cap). */
+const R4_DORMANT = R3_DORMANT.filter((sel) => !/"arp-(rate|length|groove)"/.test(sel));
+/** R4 (§1.5 (5)): BPM's rivals, the chord glass's name under both of its names (r3 code draws it in the hands' top strip,
+ *  .sgh-clabel; r4 code in the keys' foot, .kv-clabel). */
+const R4_RIVALS = ".sig .sg-screen > b, .sig .sgh-clabel, .sig .kv-clabel";
 const KM_SNAP = () => {   // what an unmapped key could have changed, and which codes the surface draws
   const s = window.__signal, i = s.instrument, st = s.state();
   let snd = null;
@@ -791,12 +820,13 @@ const DORM_WAKE = async (sels) => {   // §3 (3): each parent on → its childre
       await w(10);
     }
   };
+  const pick = (...ctl) => sels.filter((sel) => ctl.some((c) => sel.includes(`"${c}"`)));   // by name: R3's list → sels[0..7]
   const groups = [
-    { name: "drums delay mix .5", kids: [sels[0], sels[1]], on: () => i.drums.set("delay", { ...i.drums.state().delay, mix: 0.5 }), off: () => i.drums.set("delay", { ...i.drums.state().delay, mix: 0 }) },
-    { name: "keys motion .5", kids: [sels[2], sels[3]], on: () => i.keys.set("motion", { ...i.keys.state().motion, amount: 0.5 }), off: () => i.keys.set("motion", { ...i.keys.state().motion, amount: 0 }) },
-    { name: "arp on", kids: [sels[4], sels[5], sels[6]], on: () => i.harmony.set("arp", { ...i.harmony.state().arp, on: true }), off: () => i.harmony.set("arp", { ...i.harmony.state().arp, on: false }) },
-    { name: "bass seq", kids: [sels[7]], on: () => i.bass.set("mode", "seq"), off: () => i.bass.set("mode", "drone") },
-  ];
+    { name: "drums delay mix .5", kids: pick("drums-fb", "drums-time"), on: () => i.drums.set("delay", { ...i.drums.state().delay, mix: 0.5 }), off: () => i.drums.set("delay", { ...i.drums.state().delay, mix: 0 }) },
+    { name: "keys motion .5", kids: pick("keys-rate", "keys-shape"), on: () => i.keys.set("motion", { ...i.keys.state().motion, amount: 0.5 }), off: () => i.keys.set("motion", { ...i.keys.state().motion, amount: 0 }) },
+    { name: "arp on", kids: pick("arp-rate", "arp-length", "arp-groove"), on: () => i.harmony.set("arp", { ...i.harmony.state().arp, on: true }), off: () => i.harmony.set("arp", { ...i.harmony.state().arp, on: false }) },
+    { name: "bass seq", kids: pick("bass-strip"), on: () => i.bass.set("mode", "seq"), off: () => i.bass.set("mode", "drone") },
+  ].filter((g) => g.kids.length);   // R4's list has no arp knob: no "arp on" group (the gate never switches the arp on)
   const out = [];
   for (const g of groups) {
     g.on();
@@ -832,7 +862,7 @@ const WAIT_CAPS = ({ tap, checks, limitMs }) => new Promise((ok) => {
   };
   tick();
 });
-const SIZE_FLOOR = () => {   // §3 (5): computed font-size in the device's own (unzoomed) px
+const SIZE_FLOOR = (rivalSel) => {   // §3 (5): computed font-size in the device's own (unzoomed) px (R4: rivalSel = R4_RIVALS)
   const vis = (e) => e.getClientRects().length > 0 && getComputedStyle(e).visibility !== "hidden";
   const fs = (e) => parseFloat(getComputedStyle(e).fontSize);
   const path = (e) => {
@@ -844,7 +874,7 @@ const SIZE_FLOOR = () => {   // §3 (5): computed font-size in the device's own 
     .filter((e) => vis(e) && e.textContent.trim()).map((e) => ({ px: fs(e), p: path(e) })).sort((a, b) => a.px - b.px);
   const nums = [...document.querySelectorAll(".sig .sg-screen > b")].filter(vis).map((e) => ({ px: fs(e), p: path(e) })).sort((a, b) => a.px - b.px);
   const bpm = document.querySelector('.sig [data-ctl="drums-bpm"] .sgh-bpm') || document.querySelector('.sig [data-ctl="drums-bpm"] b');
-  const rivals = [...document.querySelectorAll(".sig .sg-screen > b, .sig .sgh-clabel")].filter((e) => e !== bpm && vis(e))
+  const rivals = [...document.querySelectorAll(rivalSel || ".sig .sg-screen > b, .sig .sgh-clabel")].filter((e) => e !== bpm && vis(e))
     .map((e) => ({ px: fs(e), p: path(e) })).sort((a, b) => b.px - a.px);
   const fit = document.getElementById("sig-fit");
   return { words, nums, bpm: bpm ? { px: fs(bpm), p: path(bpm), vis: vis(bpm) } : null, rivals,
@@ -862,6 +892,19 @@ const FIT_FACTS = () => {   // §3 (6): the page's content column, the drawn dev
     rail: rr && rr.width > 0 ? { l: rr.left, r: rr.right, w: rr.width, pos: rcs.position } : null,
     zoom: fit ? getComputedStyle(fit).getPropertyValue("--sig-zoom").trim() : "" };
 };
+// ── R4 · THE RENDER ROUND (NOTES-SIGNAL-R4.md §1.5): in page (self-contained, one argument) ──
+/** §1.5 (8): the head's three words, each against its tower's box, in drawn px (the host's zoom is inside both boxes);
+ *  `op` = the opacity it is drawn at (its own × every ancestor's: the dark's fades act on the strata). */
+const TITLES = () => ["drums", "keys", "bass"].map((n) => {
+  const e = document.querySelector(`.sig [data-ctl="title-${n}"]`), s = document.querySelector(`.sig [data-slot="${n}"]`);
+  if (!e) return { n, found: false };
+  const cs = getComputedStyle(e), r = e.getBoundingClientRect(), sr = s ? s.getBoundingClientRect() : null;
+  let op = 1;
+  for (let x = e; x; x = x.parentElement) op *= Number(getComputedStyle(x).opacity);
+  return { n, found: true, slot: !!sr, text: e.textContent.trim(), px: parseFloat(cs.fontSize), color: cs.color, op,
+    vis: e.getClientRects().length > 0 && r.width > 0 && r.height > 0 && cs.visibility !== "hidden" && op > 0,
+    dx: sr ? r.left + r.width / 2 - (sr.left + sr.width / 2) : NaN, above: sr ? sr.top - r.bottom : NaN };
+});
 
 // ── R3 · THE LEG'S SECTIONS ──
 async function keymapRows({ page, row, step }) {
@@ -898,14 +941,15 @@ async function holdRows({ page, row, step }) {
       && S.end.apHold === "false" && S.end.apChord === "false" && h.forced.length === 0,
     `chord off + hold on: aria-pressed hold ${S.pedal.apHold} / chord ${S.pedal.apChord} · tap A → ${fmt(S.pA)} (want [${h.mA}]) · tap D → ${fmt(S.pD)} (want [${h.mA} ${h.mD}]: harmony.midiFor(0) + midiFor(4)) · tap A again → ${fmt(S.pA2)} (want [${h.mD}]) · hold off → ${fmt(S.pOff)} · at the end aria-pressed hold ${S.end.apHold} / chord ${S.end.apChord}${h.forced.length ? ` · the clicks left ${h.forced.join(" + ")} ON: forced off by state for the rest of the leg` : ""}`);
 }
-async function dormantRows({ page, row, step }) {
-  // (3) DORMANT: present at the defaults, and each pair wakes with its parent
+async function dormantRows({ page, row, step, r4 }) {
+  // (3) DORMANT: present at the defaults, and each pair wakes with its parent (R4: the arp knobs are gone)
   step("dormant");
-  const d0 = await page.evaluate(DORM_READ, R3_DORMANT);
+  const DORM = r4 ? R4_DORMANT : R3_DORMANT;
+  const d0 = await page.evaluate(DORM_READ, DORM);
   const bad = d0.filter((x) => x.st !== "dormant");
   row("dormant · present at the defaults", bad.length === 0,
     `${d0.length - bad.length}/${d0.length} .dormant${bad.length ? ` · ${bad.map((x) => `${x.sel} ${x.st.toUpperCase()}`).join(" · ")}` : ""}`);
-  const wk = await page.evaluate(DORM_WAKE, R3_DORMANT);
+  const wk = await page.evaluate(DORM_WAKE, DORM);
   const short = (sel) => sel.replace(/^\[data-ctl="(.*)"\]$/, "$1");
   row("dormant · wakes", wk.every((g) => g.wake.ok && g.back.ok),
     wk.map((g) => `${g.name} → ${g.kids.map(short).join("+")} ${g.wake.ok ? `awake in ${g.wake.ms} ms` : `NOT awake in ${g.wake.ms} ms (${g.wake.r.join(" ")})`}, restored → ${g.back.ok ? "dormant again" : `NOT dormant (${g.back.r.join(" ")})`}`).join(" · "));
@@ -937,10 +981,10 @@ async function keycapRows({ page, row, step }) {
   row("keycaps · press lights", aDown.ok && aUp.ok && spOn.ok && spOn.drums && spOff.ok && !spOff.drums && zDown.ok && zUp.ok,
     `${res.join(" · ")} · (ms from the poll's start, the key already dispatched)`);
 }
-async function floorRows({ page, row, step }) {
-  // (5) THE SIZE FLOOR (Law 5): words ≥ 12, screen numerals ≥ 22, BPM the largest
+async function floorRows({ page, row, step, r4 }) {
+  // (5) THE SIZE FLOOR (Law 5): words ≥ 12, screen numerals ≥ 22, BPM the largest (R4: its rivals read .kv-clabel too)
   step("size floor");
-  const f = await page.evaluate(SIZE_FLOOR);
+  const f = await page.evaluate(SIZE_FLOOR, r4 ? R4_RIVALS : null);
   const unz = `computed px = the device's own unzoomed px (the host zooms it ${f.zoom || "?"}: the floor is written in these)`;
   const lo = f.words.filter((x) => x.px < 12 - 0.01);
   row("size floor · words ≥ 12 px", f.words.length > 0 && lo.length === 0,
@@ -950,8 +994,30 @@ async function floorRows({ page, row, step }) {
     `${f.nums.length} visible .sg-screen > b · ${nlo.length} under 22 px · smallest: ${f.nums.slice(0, 3).map((x) => `${x.px} px ${x.p}`).join(" | ") || "none found"}`);
   const top = f.rivals[0];
   row("size floor · BPM the largest", !!f.bpm && f.bpm.vis && (!top || f.bpm.px >= top.px),
-    f.bpm ? `BPM ${f.bpm.px} px (${f.bpm.p}${f.bpm.vis ? "" : ", NOT visible"}) · the next largest numeral: ${top ? `${top.px} px ${top.p}` : "none"} (of ${f.rivals.length} .sg-screen > b + .sgh-clabel)`
+    f.bpm ? `BPM ${f.bpm.px} px (${f.bpm.p}${f.bpm.vis ? "" : ", NOT visible"}) · the next largest numeral: ${top ? `${top.px} px ${top.p}` : "none"} (of ${f.rivals.length} .sg-screen > b + .sgh-clabel${r4 ? " + .kv-clabel" : ""})`
       : `no [data-ctl="drums-bpm"] .sgh-bpm / b on the device · the largest numeral: ${top ? `${top.px} px ${top.p}` : "none"}`);
+}
+async function titleRows({ page, row, step }) {
+  // (8) R4 §1.5 (8): THE TITLES: DRUMS · KEYS · BASS, each centred over its tower (≤ 3 px) and above it, ≥ 16 px, in three
+  // different inks (the towers' accents; read live: the standby greys all three alike)
+  step("titles");
+  const t = await page.evaluate(TITLES);
+  const WANT = { drums: "DRUMS", keys: "KEYS", bass: "BASS" };
+  const each = t.map((x) => ({ ...x, ok: !!(x.found && x.slot && x.vis && x.text === WANT[x.n] && Math.abs(x.dx) <= 3 && x.above >= -0.5 && x.px >= 16 - 0.01) }));
+  const inks = new Set(t.filter((x) => x.found).map((x) => x.color)), three = t.every((x) => x.found) && inks.size === 3;
+  const sg = (v) => { const r = Math.round(v * 10) / 10 || 0; return `${r >= 0 ? "+" : ""}${r.toFixed(1)}`; };   // −0.0 → +0.0
+  const say = (x) => {
+    if (!x.found) return `[data-ctl=title-${x.n}] MISSING`;
+    const bits = [x.text === WANT[x.n] ? x.text : `"${x.text}" (want ${WANT[x.n]})`];
+    if (x.slot) bits.push(`${sg(x.dx)} px off the ${x.n} tower's centre${Math.abs(x.dx) <= 3 ? "" : " (> 3)"}`,
+      `${x.above.toFixed(1)} px above its top${x.above >= -0.5 ? "" : " (OVERLAPS it)"}`);
+    else bits.push(`NO [data-slot=${x.n}]`);
+    bits.push(`${x.px} px${x.px >= 16 - 0.01 ? "" : " (< 16)"}`, x.color);
+    if (!x.vis) bits.push(`NOT visible (drawn at opacity ${x.op})`);
+    return bits.join(", ");
+  };
+  row("titles · three, over their towers, in their inks", each.every((x) => x.ok) && three,
+    `${each.map(say).join(" · ")} · the inks: ${three ? "three different" : `${inks.size} different`} (drawn px, the host's zoom inside)`);
 }
 async function fitRows({ page, row }, w) {
   // (6) THE FIT: 1440 → 96–99.5 % of the content column + clear of the rail; 1024 → the clearance only
@@ -964,7 +1030,7 @@ async function fitRows({ page, row }, w) {
   row(`fit ${w} · clear of the rail`, Number.isFinite(gap) && gap >= need,
     `${f.rail ? `.awayrail (${f.rail.pos}) ${f.rail.l.toFixed(0)}..${f.rail.r.toFixed(0)}` : `no .awayrail rendered: the page's padding-left ${f.pl}`} · device left ${f.dev ? f.dev.l.toFixed(1) : "?"} · gap ${Number.isFinite(gap) ? gap.toFixed(1) : "?"} px, want ≥ ${need.toFixed(1)} (1 % of ${f.content.toFixed(0)})`);
 }
-async function moduleShotRows({ name, page, row, step }, aim) {
+async function moduleShotRows({ name, page, row, step, r4 }, aim) {
   // (7) SHOTS (Chromium): each module clipped to its box, and one pressed state, at 1440×900 powered
   if (name !== "chromium") return;
   step("module shots");
@@ -980,7 +1046,9 @@ async function moduleShotRows({ name, page, row, step }, aim) {
     await page.waitForTimeout(1300);
     pf = await page.evaluate(POWER_FACTS);
   }
-  const mods = [["drums", '[data-slot="drums"]'], ["keys", '[data-slot="keys"]'], ["bass", '[data-slot="bass"]'], ["top", ".sgh-top"], ["keybed", ".sgh-keybed"]];
+  const mods = r4   // R4 §1.5 (7): the head in the top strip's place, and the switch on its own
+    ? [["drums", '[data-slot="drums"]'], ["keys", '[data-slot="keys"]'], ["bass", '[data-slot="bass"]'], ["head", ".sig-head"], ["keybed", ".sgh-keybed"], ["switch", "#pwr"]]
+    : [["drums", '[data-slot="drums"]'], ["keys", '[data-slot="keys"]'], ["bass", '[data-slot="bass"]'], ["top", ".sgh-top"], ["keybed", ".sgh-keybed"]];
   const files = [], notes = [];
   for (const [m, sel] of mods) {
     const file = join(OUT, `${name}-mod-${m}.png`);
@@ -1008,11 +1076,13 @@ async function moduleShotRows({ name, page, row, step }, aim) {
   await page.keyboard.up("KeyA");
   if (!drumsWere) await page.evaluate(() => { if (window.__signal.state().drums.on) window.__signal.press("Space"); });
   const sizes = files.map((f) => { try { return statSync(f).size; } catch { return 0; } });
-  const ok = sizes.every((b) => b > 10_240);
+  const least = (f) => (f.endsWith("-mod-switch.png") ? 1_024 : 10_240);   // a module shot is tens of KB; the 68 × 30 switch a few
+  const ok = sizes.every((b, j) => b > least(files[j]));
   row("shots · modules written", ok,
     `${files.map((f, j) => `${f.split("/").pop()} ${sizes[j] ? `${(sizes[j] / 1024).toFixed(0)} KB` : "MISSING"}`).join(" · ")} · pressed while held: caps .pressed ${held.caps.join("+") || "none"} · drums ${held.drums ? "on" : "OFF"} · ${held.state}${note}${notes.length ? ` · ${notes.join(" | ")}` : ""} · in ${OUT}`);
 }
 async function legR3(k) { return legR2({ ...k, r3: true }); }   // R2's leg; its r3 hooks insert the sections above
+async function legR4(k) { return legR2({ ...k, r3: true, r4: true }); }   // R3's leg; its r4 hooks change the rows (R4 §1.5)
 
 async function leg(name) {
   const T0 = Date.now();
@@ -1046,7 +1116,8 @@ async function leg(name) {
     listen(page, errs);
 
     const k = { name, browser, page, errs, row, step, listen, errLine };
-    if (R3) await legR3(k);
+    if (R4) await legR4(k);
+    else if (R3) await legR3(k);
     else if (R2) await legR2(k);
     else await legR1(k);
     row("no console errors (the whole leg)", errs.length === 0, errLine(errs));
@@ -1136,8 +1207,9 @@ function report() {
   const fails = rows.filter((r) => r.status === "FAIL"), hung = rows.filter((r) => r.status === "HUNG");
   const allPass = rows.length > 0 && fails.length === 0 && (!LEGS || complete.length > 0);
   if (LEGS) {
-    console.log(`\n${"browser".padEnd(10)}${"assertion".padEnd(44)}${"pass".padEnd(6)}detail`);
-    for (const r of rows) console.log(`${r.who.padEnd(10)}${r.name.padEnd(44)}${r.status.padEnd(6)}${r.detail}`);
+    const NW = R4 ? 54 : 44, nm = (s) => (R4 && s.length >= NW ? `${s} ` : s.padEnd(NW));   // R4: its long row names keep a gap
+    console.log(`\n${"browser".padEnd(10)}${"assertion".padEnd(NW)}${"pass".padEnd(6)}detail`);
+    for (const r of rows) console.log(`${r.who.padEnd(10)}${nm(r.name)}${r.status.padEnd(6)}${r.detail}`);
   } else {
     console.log(`\n${"look".padEnd(6)}${"width".padEnd(7)}${"assertion".padEnd(27)}${"pass".padEnd(6)}detail`);
     for (const r of rows) console.log(`${r.who.padEnd(6)}${String(r.width).padEnd(7)}${r.name.padEnd(27)}${r.status.padEnd(6)}${r.detail}`);
