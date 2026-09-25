@@ -3,7 +3,7 @@
 // repaints even when the instrument's echo never comes; the keyboard is only REFLECTED (a keycap .pressed while its key is
 // down: Space · Equal · KeyB), never acted on; dispose leaves no frame, no repaint and no window listener behind.
 // R3 (THE FIRST-TIMER ROUND): the drums tower = head (BPM glass · `=` · kit) · cover · grid · pattern · knob row · delay unit
-// · texture · footer · the SPACE bar; the bass head = the B keycap · the ROOT screen · `303`. The hooks are types.ts CTL.
+// · texture · footer · the SPACE bar; the bass = `303` etched · tone · mode row (seg · padlock · ROOT screen) · strip · knobs · the rail · the B bar. The hooks are types.ts CTL.
 // run: source ~/.nvm/nvm.sh && node src/signal/view/towers.test.mjs   (exit 0 = green; prints `towers: N/N`)
 
 // ── a DOM stub: elements with classes, style, dataset, listeners that bubble, a tiny HTML parser (filter-curve.ts and the
@@ -373,10 +373,29 @@ function mountAll() {
   const bars = () => B.querySelectorAll('.sb-bar');
   const S = () => inst.state();
 
-  await t('bass: one tower in the bass accent, six rows in order; the head = the B keycap · the ROOT screen · 303 etched', () => {
+  await t('bass: one tower in the bass accent, seven rows in order (the B bar last); the head = the 303 engraving alone', () => {
     is(bRoot.elements.length, 1); is(B.style.getPropertyValue('--acc'), 'var(--sg-bass-lit)');
-    is(B.elements.map((e) => [...e.cls].find((c) => c.startsWith('sb-'))).join(' '), 'sb-head sb-eqhost sb-mode sb-bars sb-knobs sb-foot');
-    is(B.querySelector('.sb-pow').textContent, 'B'); is(B.querySelector('.sb-pow').dataset.code, 'KeyB'); is(B.querySelector('.sb-voice').textContent, '303'); is(B.querySelector('.sb-note small').textContent, 'root');
+    is(B.elements.map((e) => [...e.cls].find((c) => c.startsWith('sb-'))).join(' '), 'sb-head sb-eqhost sb-mode sb-bars sb-knobs sb-foot sb-pow');
+    const head = B.querySelector('.sb-head'); is(head.elements.length, 1, 'one thing in the head');
+    const v = head.elements[0]; yes(v.classList.contains('sg-etch') && v.classList.contains('sb-voice'), 'the engraving'); is(v.textContent, '303');
+    is(B.querySelector('.sb-head .sg-key'), null, 'no key up here'); is(B.querySelector('.sb-head .sg-screen'), null, 'no screen up here');
+  });
+  await t('bass: the B bar = one wide keycap at the foot, right under the rail (KeyB, `B`, the bass tint, bass-power)', () => {
+    const pow = B.elements[B.elements.length - 1];
+    yes(pow.classList.contains('sb-pow') && pow.classList.contains('sg-key') && pow.classList.contains('wide') && pow.classList.contains('tint'), '.sb-pow.sg-key.wide.tint');
+    yes(!pow.classList.contains('lg'), 'a bar, not the R3 head key');
+    is(pow.tagName, 'BUTTON'); is(pow.type, 'button'); is(pow.textContent, 'B'); is(pow.dataset.code, 'KeyB'); is(pow.dataset.ctl, 'bass-power');
+    is(pow.getAttribute('aria-label'), 'Bass on/off'); is(pow.style.getPropertyValue('--acc'), 'var(--sg-bass-lit)');
+    yes(B.elements[B.elements.length - 2] === B.querySelector('.sb-foot'), 'the rail (M · S · GAIN) sits directly above the bar');
+    is(B.querySelectorAll('.sg-key').length, 1, 'one keycap on the tower');
+    yes(!pow.classList.contains('lit') && !pow.classList.contains('pressed'), 'at rest: off, up');
+  });
+  await t('bass: the ROOT screen lives in the mode row, right beside the padlock (seg · padlock · screen), numeral over `root`', () => {
+    const row = B.querySelector('.sb-mode');
+    is(row.elements.map((e) => [...e.cls].find((c) => c.startsWith('sb-'))).join(' '), 'sb-modes sb-pin sb-note');
+    const note = row.querySelector('.sb-note'); yes(note.classList.contains('sg-screen') && note.classList.contains('sg-glass'), 'a glass screen');
+    is(note.dataset.ctl, 'bass-root'); is(note.querySelector('b').textContent, 'C1'); is(note.querySelector('small').textContent, 'root');
+    is(note.style.getPropertyValue('--acc'), 'var(--sg-amber)'); yes(!note.classList.contains('lit') && !note.classList.contains('glow'), 'dim while it follows');
   });
   await t('bass: every CTL.bass hook is on the tower, once (types.ts: the surface hooks)', () => {
     is([...B.walk()].filter((e) => e.dataset.ctl).map((e) => e.dataset.ctl).sort().join(' '), [...CTL.bass].sort().join(' '));
@@ -427,13 +446,13 @@ function mountAll() {
     is(foldMidi(60), 36); is(foldMidi(72), 36); is(foldMidi(48), 36); is(foldMidi(64), 40); is(foldMidi(57), 45); is(foldMidi(45), 33);
     is(bassNoteName(60), 'C1'); is(bassNoteName(64), 'E1'); is(bassNoteName(69), 'A1'); is(bassNoteName(45), 'A0'); is(bassNoteName(61), 'C♯1');
   });
-  await t('bass: the padlock arms (pulses), an onset pins (lit + the ROOT screen lit), a press unpins + disarms', async () => {
+  await t('bass: the padlock arms (pulses), an onset pins (lit + the ROOT screen beside it lit + glowing), a press unpins + disarms', async () => {
     const pin = B.querySelector('.sb-pin'), note = B.querySelector('.sb-note');
     yes(!!pin.querySelector('svg rect') && !!pin.querySelector('svg path') && !!pin.querySelector('.sg-led')); is(pin.getAttribute('aria-label'), 'root lock');
     pin.fire('click'); await tick(); is(S().bass.armed, true); yes(pin.classList.contains('on') && pin.classList.contains('arm')); yes(!note.classList.contains('lit'));
     inst.setHeld([64, 67]); await tick(); is(S().bass.root, 64); is(S().bass.armed, false);
-    yes(pin.classList.contains('on') && !pin.classList.contains('arm')); is(note.querySelector('b').textContent, 'E1'); yes(note.classList.contains('lit'));
-    pin.fire('click'); await tick(); is(S().bass.root, null); is(S().bass.armed, false); yes(!pin.classList.contains('on')); yes(!note.classList.contains('lit'));
+    yes(pin.classList.contains('on') && !pin.classList.contains('arm')); is(note.querySelector('b').textContent, 'E1'); yes(note.classList.contains('lit') && note.classList.contains('glow'));
+    pin.fire('click'); await tick(); is(S().bass.root, null); is(S().bass.armed, false); yes(!pin.classList.contains('on')); yes(!note.classList.contains('lit') && !note.classList.contains('glow'));
     pin.fire('click'); await tick(); is(S().bass.armed, true); pin.fire('click'); await tick(); is(S().bass.armed, false); is(S().bass.root, null);
   });
   await t('bass: unpinned, the ROOT screen follows the lowest held key, and stays on it after the release', async () => {
@@ -454,7 +473,7 @@ function mountAll() {
     inst.bass.set('mode', 'seq'); await tick(); pump(); is(at(), '12');
     inst.bass.set('on', false); await tick(); pump(); is(at(), '');
   });
-  await t('bass: B presses the B keycap (data-code; display only, released on keyup); the padlock has no key (N left the keymap)', async () => {
+  await t('bass: B presses the B bar (data-code; display only, released on keyup); the padlock has no key (N left the keymap)', async () => {
     const pow = B.querySelector('.sb-pow'), pin = B.querySelector('.sb-pin');
     is(pow.dataset.code, 'KeyB'); is(pin.dataset.code, undefined);
     const b0 = JSON.stringify(S().bass);
@@ -464,7 +483,7 @@ function mountAll() {
     key('keyup', 'KeyN');
     await tick(); is(JSON.stringify(S().bass), b0, 'the reflection never acts');
   });
-  await t('bass: the B keycap toggles bass.on, lights (.lit + aria-pressed) and lights the tower', async () => {
+  await t('bass: the B bar toggles bass.on, lights (.lit + aria-pressed) and lights the tower', async () => {
     const pow = B.querySelector('.sb-pow'); pow.fire('click'); await tick(); is(S().bass.on, true); yes(pow.classList.contains('lit') && B.classList.contains('is-on')); is(pow.getAttribute('aria-pressed'), 'true');
     pow.fire('click'); await tick(); is(S().bass.on, false); yes(!pow.classList.contains('lit') && !B.classList.contains('is-on'));
   });

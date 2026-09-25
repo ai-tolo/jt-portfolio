@@ -153,11 +153,30 @@ await t('source: imports ONLY ../types.ts, ./controls.ts, ./common.ts (types.ts:
   ok(froms.length >= 3); ok(froms.every((f) => ['../types.ts', './controls.ts', './common.ts'].includes(f)), froms.join(', '));
   ok(!/\bimport\s*\(/.test(src), 'no dynamic import'); ok(!/\btitle\s*=/.test(src.replace(/\/\/.*$/gm, '')), 'no title=');
 });
-await t('mount: one tower in root, the keys accent, head · glass · gestures · body · harmony · foot', () => {
+await t('mount: one tower in root, the keys accent, head · glass · gestures · body · rail · harmony (R3.1: the rail rises, the harmony row is the foot)', () => {
   const { root, T, view } = mount();
   is(root.children.length, 1); ok(T.cls.has('sg-tower') && T.cls.has('kv-tower')); is(T.style.getPropertyValue('--acc'), 'var(--sg-keys)');
-  is(T.children.map((c) => c.className).join(' | '), 'kv-head | sg-glass tint sg-ew kv-filter | kv-gest | kv-body | kv-harm | sg-rail kv-foot');
+  is(T.children.map((c) => c.className).join(' | '), 'kv-head | sg-glass tint sg-ew kv-filter | kv-gest | kv-body | sg-rail kv-foot | kv-harm');
+  is(T.children.at(-2).querySelectorAll('[data-ctl]').map((e) => e.dataset.ctl).join(' '), 'keys-mute keys-solo keys-gain', 'the rail, one above the foot;');
+  is(T.children.at(-1).querySelectorAll('[data-ctl]').map((e) => e.dataset.ctl).join(' '), 'hold chord arp arp-rate arp-length arp-groove', 'the foot = the hands\' row;');
   view.dispose();
+});
+await t('geometry (R3.1, keys.css): the rows fill the 518 px content exactly; the rail\'s top lands at 430, the drums\' line (their rail over the 44 px SPACE bar)', () => {
+  const css = readFileSync(new URL('../../styles/signal/keys.css', import.meta.url), 'utf8').replace(/\/\*[\s\S]*?\*\//g, '');
+  const h = (cls) => {
+    const m = new RegExp(`\\.sig \\.${cls} \\{([^}]*)\\}`).exec(css);
+    if (!m) throw new Error(`no .sig .${cls} rule`);
+    const v = /(?:^|;)\s*height:\s*(\d+)px/.exec(m[1]);
+    if (!v) throw new Error(`.${cls}: no px height`);
+    return Number(v[1]);
+  };
+  const CONTENT = 540 - 2 * 1 - 2 * 10, GAP = 8;   // the cell 540, the tower's 1 px border + 10 px padding (material.css .sg-tower)
+  const rows = { head: h('kv-head'), glass: h('kv-filter'), gest: h('kv-gest'), rail: h('kv-foot'), foot: h('kv-harm') };
+  is(`${rows.head} ${rows.glass} ${rows.gest} ${rows.rail} ${rows.foot}`, '44 84 56 36 44', 'head · glass · gesture · rail · foot;');
+  const body = CONTENT - (rows.head + rows.glass + rows.gest + rows.rail + rows.foot) - 5 * GAP;
+  is(body, 214, 'the body (flex 1) takes what the fixed rows leave;');
+  ok(/\.sig \.kv-body \{[^}]*\bflex:\s*1\b[^}]*min-height:\s*0/.test(css), 'the body flexes (flex: 1; min-height: 0) so the tower fills 518 exactly;');
+  is(CONTENT - rows.foot - GAP - rows.rail, 430, 'the rail\'s top = the drums\' (518 − 44 − 8 − 36);');
 });
 await t('header: the voice seg holds the four rips, RHODES on; the ↑ ↓ keycaps (ArrowUp/Down) step the voice, wrapping', () => {
   const { inst, T, q, view } = mount();
@@ -446,14 +465,14 @@ await t('dispose: the tower leaves root, the frame stops, onChange no longer pai
 await t('hooks: a data-ctl on each control the gate may click (types.ts CTL.keys: every one, once, in tower order)', () => {
   const { T, view } = mount();
   const ctls = [...T.walk()].filter((e) => e.dataset.ctl).map((e) => e.dataset.ctl);
-  is(ctls.join(' '), 'keys-voice keys-voice-up keys-voice-down keys-filter keys-gate gate-rate gate-swing keys-dive dive-speed dive-dist keys-motion keys-rate keys-shape keys-fx-drive keys-fx-mod keys-modrate keys-fx-delay keys-fx-reverb hold chord arp arp-rate arp-length arp-groove keys-mute keys-solo keys-gain');
+  is(ctls.join(' '), 'keys-voice keys-voice-up keys-voice-down keys-filter keys-gate gate-rate gate-swing keys-dive dive-speed dive-dist keys-motion keys-rate keys-shape keys-fx-drive keys-fx-mod keys-modrate keys-fx-delay keys-fx-reverb keys-mute keys-solo keys-gain hold chord arp arp-rate arp-length arp-groove');
   is([...ctls].sort().join(' '), [...CTL.keys].sort().join(' '), 'the contract\'s set;');
   view.dispose();
 });
 await t('no words that explain: no title=, no text beyond the legends', () => {
   const { T, view } = mount();
   const words = [...T.walk()].filter((e) => !e.cls.has('si-pc') && !e.innerHTML).map((e) => e.textContent).filter(Boolean);   // .si-pc is display:none (material); innerHTML replaced the legend (a real DOM drops it)
-  is(words.join(' '), 'RHODES PIANO PAD LEAD ↑ ↓ 100 1k 10k Z gate rate 1/16 swing 0 M dive speed 0.45 dist 24 motion OFF rate 1/8 DRIVE WARM CRUNCH TAPE FUZZ MOD PHS FLNG DBL CHRS rate DEL REV SM MED HALL VAST hold chord arp rate 1/8 length 0.50 groove 0.00 m s gain');
+  is(words.join(' '), 'RHODES PIANO PAD LEAD ↑ ↓ 100 1k 10k Z gate rate 1/16 swing 0 M dive speed 0.45 dist 24 motion OFF rate 1/8 DRIVE WARM CRUNCH TAPE FUZZ MOD PHS FLNG DBL CHRS rate DEL REV SM MED HALL VAST m s gain hold chord arp rate 1/8 length 0.50 groove 0.00');
   ok(![...T.walk()].some((e) => 'title' in e.attrs));
   view.dispose();
 });

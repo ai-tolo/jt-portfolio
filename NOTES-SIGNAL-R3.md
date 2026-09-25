@@ -73,7 +73,7 @@ DRUMS (330 × 540 outer → 310 × 520 inside the tower's 10 px padding), top to
 - a ROW (32): the TEXTURE knob + its TAPE/DRIVE seg (left) | the footer's M · S · GAIN (right) — the footer rail rises here.
 - THE SPACE BAR (44): `key('Space', 'space', { wide: true, tint: 'drums' })`, `data-ctl="drums-power"`, the full tower
   width at the bottom: the drums' on/off (click toggles), `.lit` while drums run, `.pressed` while Space is down.
-KEYS (566 × 540 → 546 × 520):
+KEYS (566 × 540 → 544 × 518 inside the 1 px border + 10 px padding; R3.1 order: head · glass · gesture row · body · RAIL · harmony foot):
 - HEAD 44: the VOICE seg spanning the row, its caps 16 px (`rhodes piano pad lead`: the first thing seen), the picked one
   lit, `.loading` while it loads; at the right end the `↑` and `↓` keycaps (`keys-voice-up`/`-down`, ArrowUp/Down).
 - the FILTER glass (84): the one low-pass + MOTION's ghost, as today.
@@ -84,19 +84,30 @@ KEYS (566 × 540 → 546 × 520):
 - THE BODY (≈190): the LFO deck (MOTION knob 60 + its chip · RATE stepped + chip · the four shape caps) at the left,
   160 wide; the four FX towers DRIVE MOD DEL REV (LCD faders + flavour segs + the MOD RATE ribbon) filling the rest.
   MOTION gates RATE + the shapes: `.dormant` on `keys-rate` + `keys-shape` below MOTION_OFF.
-- THE HARMONY ROW (46): `HOLD · CHORD · ARP` as `.sg-cap` toggles with LEDs (`data-ctl` hold/chord/arp; the material's
-  on-screen-toggle form, distinct from the keycaps) then `RATE · LENGTH · GROOVE` (.side knobs, `arp-*`), all three
-  `.dormant` while ARP is off.
-- FOOT 36: M · S · GAIN on the rail.
-BASS (330 × 540 → 310 × 520):
-- HEAD 56: `key('KeyB','B',{lg:true, tint:'bass'})` (`data-ctl="bass-power"`: click toggles, `.lit` while on, `.pressed`
-  while B is down) at the left; the ROOT display beside it (`data-ctl="bass-root"`, a 22 px amber numeral: the note the
-  bass is on — lit when a lock pins it, dim while it follows); at the right the voice as an ETCHED word (`303`).
-- the TONE glass (44), as today.
-- the MODE ROW (32): DRONE PLUCK SEQ + the padlock (`bass-lock`; armed pulses, pinned lit; no shortcut).
-- THE STRIP (≈150): 16 wells under glass, the playhead, `.dormant` (and today's `.idle`) unless SEQ.
-- KNOB ROW (60): DENSITY · GROOVE · KNOB ROW (60): INTENSITY · SUB · GLIDE.
-- FOOT 36: M · S · GAIN.
+- THE RAIL 36 (R3.1, Jon's call: the three mixer rails on ONE line, the row above each module's foot): M · S · GAIN on the
+  brushed rail (data-ctl keys-mute / keys-solo / keys-gain), its top 430 px below the tower's content top, like the drums'
+  and the bass's.
+- THE HARMONY ROW 44 at the foot (R3.1): `HOLD · CHORD · ARP` as `.sg-cap` toggles with LEDs (cap('hold', { led: true,
+  acc: 'harmony' }) etc.; data-ctl hold / chord / arp; a click writes the harmony: H.set('hold', !…), H.set('chord', !…),
+  H.set('arp', {…on: !on}); lit from the state, aria-pressed), then `RATE · LENGTH · GROOVE` as .side knobs (arp-rate /
+  arp-length / arp-groove), all three `.dormant` while !harmony.arp.on. The bottom row of every module is the thing the
+  hands do (space · these toggles · B).
+BASS (330 × 540 → 308 × 518 inside the 1 px border + 10 px padding; R3.1, Jon's call: "move the B button to the bottom
+similar to space"):
+- HEAD 24: the voice as an ETCHED word (`303`, etch()) alone, left-aligned.
+- the TONE glass 44 (`data-ctl="bass-tone"`, filter-curve.ts as today).
+- the MODE ROW 48: the DRONE PLUCK SEQ seg (`data-ctl="bass-mode"`) + the padlock cap (`data-ctl="bass-lock"`, `.sb-pin`:
+  armed pulses, pinned lit, a press while either unpins + disarms; no key) + THE ROOT screen right beside it
+  (`data-ctl="bass-root"`, the `.sb-note` screen: a 22 px numeral over `root` 12 px, 84 × 44; LIT + .glow while a lock
+  pins it, dim while it follows): the padlock and its readout are one control.
+- THE STRIP ≈ 146 (`data-ctl="bass-strip"`): the 16 wells under glass, the tiers, the sub bead, the slide chevron, the
+  playhead; `.dormant` (+ `.idle`) unless mode === 'seq'.
+- KNOB ROW 60: DENSITY · GROOVE · KNOB ROW 60: INTENSITY · SUB · GLIDE (bass-density / bass-groove / bass-heat /
+  bass-weight / bass-glide), knobs 40, captions 12 px.
+- THE RAIL 36: M · S · GAIN (bass-mute / bass-solo / bass-gain), its top at 430: the same line as the drums' and the keys'.
+- THE B BAR 44 at the very bottom, the tower's full inner width: `key('KeyB', 'B', { wide: true, tint: 'bass', name:
+  'Bass on/off' })` with `data-ctl="bass-power"` and the `.sb-pow` class: a click toggles bass.set('on'); `.lit` while
+  bass.state().on; `.pressed` while B is down. It prints `B` uppercase at 18 px and stands like the drums' space bar.
 HANDS (view/hands-view.ts: the top strip + the keybed block; NO pianohead, NO rack, NO gate row):
 - TOP STRIP 48 (`.sgh-top`, prepended to the strata as today): `[←][→]` keycaps (`oct-`/`oct+`, ArrowLeft/Right; a click
   does the literal octave, as today's ◀ ▶) + the OCTAVE screen (22 px numeral) · `◀ C MAJ ▶ SCALE` (as today, 12 px caps,
@@ -175,6 +186,11 @@ column / 36.8 px clear of the rail, the module + pressed shots). The size-floor 
 (WebKit reports a 12 px word under the host's zoom as 11.999999). Shots: ~/Documents/studio-build/signal-r3/gate/ and
 ~/Desktop/signal-r3/. Suites: 28 green (harmony 78 with the R3 HOLD-under-CHORD block; keymap 43; surface 116; towers +
 keys-view re-targeted to the R3 views).
+
+R3.1 (2026-09-24, Jon's call after the shots): the B key became a full-width violet bar at the bass's foot, like the space
+bar; the ROOT screen moved beside the padlock; the keys' rail moved above its HOLD · CHORD · ARP row (now the keys' foot, 44);
+so the three mixer rails sit on one line (430 from each tower's content top) and the bottom row of every module is the thing
+the hands do. Gate r3 re-run; suites 28 green (towers 56, keys-view 63). Merged into main and pushed on Jon's word.
 
 Residue (for Jon; nothing here blocks the round):
 1. THE PADS ROW AND THE 1–8 KEYS ARE GONE this round (brief §F: the pads stay only with the Studio's key wheel as a popover;

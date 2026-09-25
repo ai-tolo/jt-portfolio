@@ -22,6 +22,13 @@
 // lock pins it, dim while it follows) · the voice ETCHED (`303`; the dead `synth` glass is gone). The padlock keeps its
 // cap and loses its key (N is gone from the keymap, R3). THE STRIP carries .dormant (+ today's .idle) unless SEQ. Every
 // part carries its contract hook (types.ts CTL.bass, data-ctl).
+// R3.1 · lane B (Jon: "move b button to the bottom similar to space"; the mixer rails on one line across the three
+// modules, the row above each module's foot). Top to bottom: HEAD 24 = the `303` engraving alone · the TONE glass 44 ·
+// the MODE ROW 48 = DRONE PLUCK SEQ · the padlock · the ROOT screen right beside it (the lock and its readout are one
+// control: arm the lock, the next note pins, the screen shows it) · THE STRIP (what is left) · KNOBS 60 + 60 · the rail
+// (M · S · GAIN, now on the drums' rail line: 36 + 8 + 44 above the content's foot) · THE B BAR 44 (the B keycap as a
+// wide bar, the tower's full width at the bottom, the drums' SPACE bar form: a click toggles bass.on, .lit while on,
+// .pressed while B is down).
 import type { BassMode, BassState, BassStep, DrumVel, MountView, SignalState } from '../types.ts';
 import { el, makeGhost, makeKnob, makeSeg } from './controls.ts';
 import type { Knob } from './controls.ts';
@@ -70,17 +77,9 @@ export const mountBassView: MountView = (root, inst) => {
 
   const T = tower('bass', 'sb-tower');
 
-  // ── the head: the B keycap (the bass's on/off) · the ROOT screen (the note it is on) · the voice, etched ──
+  // ── the head: the voice, etched, alone (R3.1: the B key went to the tower's foot, the ROOT screen to the padlock) ──
   const head = el('div', 'sb-head');
-  const pow = key('KeyB', 'B', { lg: true, tint: 'bass', name: 'Bass on/off' });
-  pow.classList.add('sb-pow');
-  pow.dataset.ctl = 'bass-power';
-  pow.addEventListener('click', () => set('on', !bass.state().on));
-  // the ROOT glass (was the mode row's `.sb-note` chip, same class): amber, the numeral lit while a lock pins it
-  const note = accent(screen('C1', 'root', 'sb-note'), 'tempo');
-  note.dataset.ctl = 'bass-root';
-  const noteB = note.querySelector('b') as HTMLElement;
-  head.append(pow, note, etch('303', 'sb-voice'));
+  head.append(etch('303', 'sb-voice'));
 
   // ── the tone glass: ① low-cut (lowcut / lowcutDb) + ② tone (cut / cutDb), filter-curve.ts verbatim ──
   const eqHost = el('div', 'sb-eqhost');
@@ -99,7 +98,8 @@ export const mountBassView: MountView = (root, inst) => {
   eqHost.addEventListener('pointerup', () => eqGhost.hide());
   eqHost.addEventListener('pointercancel', () => eqGhost.hide());
 
-  // ── the mode row: DRONE PLUCK SEQ · the padlock (an on-screen toggle: no key since R3) ──
+  // ── the mode row: DRONE PLUCK SEQ · the padlock (an on-screen toggle: no key since R3) · the ROOT screen beside it:
+  //    the padlock and its readout are one control (arm the lock, the next note pins, the screen shows it) ──
   const modeRow = el('div', 'sb-mode');
   const modeEl = seg(MODES, b0.mode, 'sb-modes');
   modeEl.dataset.ctl = 'bass-mode';
@@ -112,7 +112,12 @@ export const mountBassView: MountView = (root, inst) => {
     else bass.set('armed', true);                                                         // arm: the next onset pins
     schedule();
   });
-  modeRow.append(modeEl, pin);
+  // the ROOT glass (.sb-note, the same screen R3 carried in the head): amber, the note the bass is on; lit + .glow while
+  // a lock pins it, dim while it follows
+  const note = accent(screen('C1', 'root', 'sb-note'), 'tempo');
+  note.dataset.ctl = 'bass-root';
+  const noteB = note.querySelector('b') as HTMLElement;
+  modeRow.append(modeEl, pin, note);
 
   // ── the strip: sixteen bars under glass (one per 8th: a two-bar line), lit only in SEQ ──
   const strip = el('div', 'sg-glass tint sb-bars');
@@ -175,7 +180,14 @@ export const mountBassView: MountView = (root, inst) => {
   gainEl.addEventListener('pointercancel', unglint);
   foot.append(mBtn, sBtn, el('i', 'sg-fdiv'), gainEl);
 
-  T.append(head, eqHost, modeRow, strip, knobs, foot);
+  // ── THE B BAR: the bass's on/off, the B keycap as a wide bar the tower's full width at the bottom (the drums' SPACE
+  //    bar's form, violet): a click toggles bass.on, .lit while on, .pressed while B is down (the reflection below) ──
+  const pow = key('KeyB', 'B', { wide: true, tint: 'bass', name: 'Bass on/off' });
+  pow.classList.add('sb-pow');
+  pow.dataset.ctl = 'bass-power';
+  pow.addEventListener('click', () => set('on', !bass.state().on));
+
+  T.append(head, eqHost, modeRow, strip, knobs, foot, pow);
   root.appendChild(T);
 
   // ── PAINT ──

@@ -4,8 +4,10 @@
 // built with ./common.ts + ./controls.ts). Every ported block carries a banner naming its source. Imports: ../types.ts,
 // ./controls.ts, ./common.ts only (types.ts: "Views … import ./types.ts, ./view/controls.ts, ./view/common.ts").
 //
-// R3 · lane K · THE FIRST-TIMER ROUND (NOTES-SIGNAL-R3.md §1.3 KEYS; brief §D). The tower, top to bottom (546 × 520 inside
-// its 10 px padding, 8 apart; the body takes what the fixed rows leave):
+// R3 · lane K · THE FIRST-TIMER ROUND (NOTES-SIGNAL-R3.md §1.3 KEYS; brief §D) + R3.1 (Jon's call: the three modules'
+// rails M · S · GAIN on ONE line across the device, the row above each module's foot; each foot is the thing the hands do).
+// The tower, top to bottom (544 × 518 inside its 1 px border + 10 px padding, 8 apart; the body takes what the fixed rows
+// leave, 214):
 //   head     the VOICE seg spanning the row, its caps 16 px (RHODES PIANO PAD LEAD: the first thing seen), the picked one
 //            lit, .loading while it loads · the ↑ ↓ keycaps (ArrowUp/Down: a click steps the voice as main.ts's 'voice'
 //            action does, VOICES order, wrapping; .pressed while the arrow is down). The static KEYS cap is gone.
@@ -23,10 +25,13 @@
 //            chip prints the division) · the four shape caps — RATE and the shapes .dormant while MOTION is OFF · the four
 //            LCD towers DRIVE MOD DEL REV (makeFader: absolute, press/drag = 1 − y/h) over their flavour segs (+ the MOD
 //            RATE ribbon, centre detent .5; the DEL divisions as note glyphs) → keys.set('fx', …)
-//   harmony  HOLD · CHORD · ARP (on-screen toggles only since R3: .sg-cap + LED, written to the harmony, lit from the
-//            state) · RATE · LENGTH · GROOVE (the arp's knobs, .dormant while the arp is off) — moved from the hands' head
-//   footer   M (keys mute) · S (inst.setSolo('keys'); again = null) · GAIN (0..1.25; unity at .8 of the dial) — the
-//            drums' and the bass' footer to the letter (view/drums-view.ts, view/bass-view.ts), so the three read as one
+//   rail     M (keys mute) · S (inst.setSolo('keys'); again = null) · GAIN (0..1.25; unity at .8 of the dial) — the
+//            drums' and the bass' rail to the letter (view/drums-view.ts, view/bass-view.ts), so the three read as one.
+//            [R3.1] it rose from the bottom to sit directly above the harmony row: its top at 518 − 44 − 8 − 36 = 430,
+//            the drums' line (their rail over the 44 px SPACE bar) and the bass' (over the B bar)
+//   harmony  [R3.1] THE FOOT, 44 (the keys' hands row, as the SPACE bar is the drums' and the B bar the bass'): HOLD ·
+//            CHORD · ARP (on-screen toggles only since R3: .sg-cap + LED, written to the harmony, lit from the state) ·
+//            RATE · LENGTH · GROOVE (the arp's knobs, .dormant while the arp is off) — moved from the hands' head in R3
 //
 // PAINT LAW: a gesture calls the instrument (inst.keys.* / inst.harmony.* / inst.setSolo), then repaints its own control at
 // once from the state it wrote back; everything else is repainted from inst.state() on inst.onChange (coalesced to one
@@ -647,7 +652,32 @@ export const mountKeysView: MountView = (root, inst) => {
   // ═══ end effects.ts port ═══
   body.append(lfo, fxEl);
 
-  // ── 5 · THE HARMONY ROW: HOLD · CHORD · ARP + RATE · LENGTH · GROOVE ────────────────────────────────────────────────
+  // ── 5 · THE RAIL: M · S · GAIN, directly above the foot (R3.1: its top on the drums' line, 430) ────────────────────
+  // ═══ from signal-studio-v6lib/src/views/instrument/module-header.ts:225-277 (2a9e4a7) + index.ts:651-658: the footer —
+  // M (the module's mute latch), S (solo, radio-exclusive, again = clear), the gain trim (dial 0..1 → 0..1.25, unity .8:
+  // detent + dbl-click, the dB ghost). PORT: look B's rail + square caps (LookB.astro:153-156) and the drums' + bass' footer
+  // to the letter (view/drums-view.ts): a plain arc, the unity tick engraved, glinting only while the hand holds the
+  // trim in its detent; the keys' DRY tag dropped (a word that explains); the tower dims while another module is soloed. ═══
+  const foot = rail('kv-foot');
+  const mBtn = cap('m', { cls: 'sq warn' });
+  const sBtn = cap('s', { cls: 'sq' });
+  mBtn.dataset.ctl = 'keys-mute'; sBtn.dataset.ctl = 'keys-solo';
+  mBtn.addEventListener('click', () => { K.set('mute', !K.state().mute); paint(); });
+  sBtn.addEventListener('click', () => { inst.setSolo(readSolo(inst.state().solo) === 'keys' ? null : 'keys'); paint(); });
+  const gainHost = knob('gain', { size: 'kx', side: true, tick: GAIN_UNITY });
+  const gainTick = gainHost.querySelector<HTMLElement>('.si-tick');
+  gainHost.dataset.ctl = 'keys-gain';
+  const gainKnob = makeKnob(gainHost, gainToV(k0.gain), (v) => K.set('gain', v * GAIN_MAX), undefined, {
+    dflt: GAIN_UNITY, detents: [GAIN_UNITY], ghost: makeGhost(gainHost), label: gainFmt,
+    onRender: (v) => { gainTick?.classList.toggle('hot', gainHost.classList.contains('grip') && Math.abs(v - GAIN_UNITY) < 0.004); },
+  });
+  const unglint = (): void => { gainTick?.classList.remove('hot'); };
+  gainHost.addEventListener('pointerup', unglint);
+  gainHost.addEventListener('pointercancel', unglint);
+  foot.append(mBtn, sBtn, el('i', 'sg-fdiv'), gainHost);
+  // ═══ end module-header.ts port ═══
+
+  // ── 6 · THE HARMONY ROW, the foot (R3.1): HOLD · CHORD · ARP + RATE · LENGTH · GROOVE ──────────────────────────────
   // ═══ from jt-portfolio-signal/src/signal/view/hands-view.ts:196-243 (R2, 76a02c7; the Studio's play.ts:762-816 @ 2a9e4a7):
   // the latches write the harmony, their lit state is painted back from the state; RATE (stepped over ARP_DIVS) · LENGTH
   // (0.06..1.3) · GROOVE (0..1). PORT (R3): on-screen toggles only (X C V left the keyboard); the arp knobs carry the
@@ -685,31 +715,7 @@ export const mountKeysView: MountView = (root, inst) => {
   });
   // ═══ end hands-view.ts harmony port ═══
 
-  // ═══ from signal-studio-v6lib/src/views/instrument/module-header.ts:225-277 (2a9e4a7) + index.ts:651-658: the footer —
-  // M (the module's mute latch), S (solo, radio-exclusive, again = clear), the gain trim (dial 0..1 → 0..1.25, unity .8:
-  // detent + dbl-click, the dB ghost). PORT: look B's rail + square caps (LookB.astro:153-156) and the drums' + bass' footer
-  // to the letter (view/drums-view.ts): a plain arc, the unity tick engraved, glinting only while the hand holds the
-  // trim in its detent; the keys' DRY tag dropped (a word that explains); the tower dims while another module is soloed. ═══
-  const foot = rail('kv-foot');
-  const mBtn = cap('m', { cls: 'sq warn' });
-  const sBtn = cap('s', { cls: 'sq' });
-  mBtn.dataset.ctl = 'keys-mute'; sBtn.dataset.ctl = 'keys-solo';
-  mBtn.addEventListener('click', () => { K.set('mute', !K.state().mute); paint(); });
-  sBtn.addEventListener('click', () => { inst.setSolo(readSolo(inst.state().solo) === 'keys' ? null : 'keys'); paint(); });
-  const gainHost = knob('gain', { size: 'kx', side: true, tick: GAIN_UNITY });
-  const gainTick = gainHost.querySelector<HTMLElement>('.si-tick');
-  gainHost.dataset.ctl = 'keys-gain';
-  const gainKnob = makeKnob(gainHost, gainToV(k0.gain), (v) => K.set('gain', v * GAIN_MAX), undefined, {
-    dflt: GAIN_UNITY, detents: [GAIN_UNITY], ghost: makeGhost(gainHost), label: gainFmt,
-    onRender: (v) => { gainTick?.classList.toggle('hot', gainHost.classList.contains('grip') && Math.abs(v - GAIN_UNITY) < 0.004); },
-  });
-  const unglint = (): void => { gainTick?.classList.remove('hot'); };
-  gainHost.addEventListener('pointerup', unglint);
-  gainHost.addEventListener('pointercancel', unglint);
-  foot.append(mBtn, sBtn, el('i', 'sg-fdiv'), gainHost);
-  // ═══ end module-header.ts port ═══
-
-  T.append(head, scr, gest, body, harm, foot);
+  T.append(head, scr, gest, body, foot, harm);
   root.appendChild(T);
 
   // ── PAINT: everything from the instrument's state (inst.state()), diffed: only what changed is written ─────────────
