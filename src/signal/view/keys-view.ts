@@ -7,7 +7,7 @@
 // R3 · lane K · THE FIRST-TIMER ROUND (NOTES-SIGNAL-R3.md §1.3 KEYS; brief §D) + R3.1 (Jon's call: the three modules'
 // rails M · S · GAIN on ONE line across the device, the row above each module's foot; each foot is the thing the hands do).
 // The tower, top to bottom (544 × 518 inside its 1 px border + 10 px padding, 8 apart; the body takes what the fixed rows
-// leave, 222):
+// leave, 278):
 //   head     the VOICE seg spanning the row, its caps 16 px (RHODES PIANO PAD LEAD: the first thing seen), the picked one
 //            lit, .loading while it loads · the ↑ ↓ keycaps (ArrowUp/Down: a click steps the voice as main.ts's 'voice'
 //            action does, VOICES order, wrapping; .pressed while the arrow is down). The static KEYS cap is gone.
@@ -17,11 +17,12 @@
 //            relative, the full width = the full sweep (ew-resize); a tap-tap under 320 ms resets to 1 (open).
 //            MOTION on (amount ≥ .005): a faint ghost node + a dashed ghost curve ride the LFO's own law (motion.ts) in
 //            heard time, breathing between p and p·(1 − amount): the honest picture of the LFO's range
-//   gesture  gate · RATE · SWING  |  dive · SPEED · DIST — the two held gestures' knobs, each group headed by its etched
-//            name. [R3.2] (Jon's call: "i want the z and the m on the bottom left and right of the main keys") the Z and M
-//            keycaps left this row for the keybed's bottom row (view/hands-view.ts), and the reference-counted gesture
-//            wrapper around inst.harmony.gesture went with them: this tower no longer touches it. The row 56 → 48; the
-//            8 px went to the body
+//   [R3.3]   NO GESTURE ROW (Jon's call, 2026-09-24, looking at the keybed: "i want them [Z and M] to be to the left and
+//            the right of the main keyboard, in the dark areas. with their controls."): gate · RATE · SWING and dive ·
+//            SPEED · DIST left this tower for the keybed, beside their keys (view/hands-view.ts: the Z group in the dark
+//            left of the letter rows, the M group right of them; R3.2 had already moved the Z and M keycaps and the
+//            reference-counted gesture wrapper there). This tower never touches inst.harmony.gesture, harmony.gate or
+//            harmony.dive; the row's 48 px and the 8 px gap under it went to the body (222 → 278)
 //   body     the LFO deck: MOTION (amount; the chip reads OFF below .005, else the %) · RATE (stepped over LFO_DIVS, the
 //            chip prints the division) · the four shape caps — RATE and the shapes .dormant while MOTION is OFF · the four
 //            LCD towers DRIVE MOD DEL REV (makeFader: absolute, press/drag = 1 − y/h) over their flavour segs (+ the MOD
@@ -40,8 +41,8 @@
 // keys.ready() (the loading tense) and the MOTION ghost are read on requestAnimationFrame (cancelled in dispose).
 // No title=, no tooltips: the words on the tower are its legends; values surface only in the controls' own transient
 // ghosts (the Studio's value-ghost vocabulary).
-import { ARP_DIVS, FILTER_MAX_HZ, FILTER_MIN_HZ, FILTER_OPEN, GATE_DIVS, LFO_DIVS, VOICES, VOICE_NAMES } from '../types.ts';
-import type { ArpDiv, GateDiv, HarmonyState, KeysState, LfoDiv, LfoShape, MountView, SignalInstrument, SignalState, VoiceId } from '../types.ts';
+import { ARP_DIVS, FILTER_MAX_HZ, FILTER_MIN_HZ, FILTER_OPEN, LFO_DIVS, VOICES, VOICE_NAMES } from '../types.ts';
+import type { ArpDiv, HarmonyState, KeysState, LfoDiv, LfoShape, MountView, SignalInstrument, SignalState, VoiceId } from '../types.ts';
 import { clamp, el, makeFader, makeGhost, makeHSlider, makeKnob, makeSeg } from './controls.ts';
 import type { Fader, HSlider, Knob, Seg } from './controls.ts';
 import { accent, cap, etch, glass, key, knob, lcd, rail, seg, tower } from './common.ts';
@@ -248,11 +249,10 @@ const setK = (k: Knob, v: number): void => { if (Math.abs(k.get() - v) > 1e-6) k
 const readSolo = (s: SignalState['solo'] | undefined): SignalState['solo'] => (s === 'drums' || s === 'keys' || s === 'bass' ? s : null);
 
 // ═══ from jt-portfolio-signal/src/signal/view/hands-view.ts:60-78 (R2, 76a02c7; its laws are signal-studio-v6lib
-// src/views/instrument/play.ts:797-816, 866-882 @ 2a9e4a7): the gesture row's and the arp's knob laws + bindKnob, moved
-// here with the controls in R3 (lane V drops them from the hands). COPIED, not imported (no import from another lane). ═══
+// src/views/instrument/play.ts:797-816 @ 2a9e4a7): the arp's knob laws + bindKnob, moved here with the controls in R3
+// (lane V drops them from the hands). [R3.3] the gesture row's laws (SPEED, DIST) went back to the hands with their knobs.
+// COPIED, not imported (no import from another lane). ═══
 const LEN_MIN = 0.06, LEN_SPAN = 1.24;             // play.ts:809-813 LENGTH = the Studio's arp gate 0.06..1.3, default .5
-const DIVE_T_MIN = 0.05, DIVE_T_MAX = 1.5;         // play.ts:866-875 SPEED: clockwise = faster (a shorter tau)
-const DIVE_D_MIN = 2, DIVE_D_MAX = 36;             // play.ts:876-882 DIST in semitones
 const stepV = (i: number, n: number): number => (n > 1 ? i / (n - 1) : 0);
 const stepI = (v: number, n: number): number => clamp(Math.round(v * (n - 1)), 0, n - 1);
 const near = (a: number, b: number): boolean => Math.abs(a - b) < 1e-6;
@@ -449,49 +449,7 @@ export const mountKeysView: MountView = (root, inst) => {
   scr.addEventListener('pointercancel', endGlass);
   // ═══ end shape.ts port ═══
 
-  // ── 3 · THE GESTURE ROW: gate · RATE · SWING | dive · SPEED · DIST ─────────────────────────────────────────────────
-  // ═══ from jt-portfolio-signal/src/signal/view/hands-view.ts:385-457 (R2, 76a02c7; the Studio's play.ts:146-163, 818-883
-  // @ 2a9e4a7): the gate row. PORT (R3): the wordmark badge is gone, the words `gate` / `dive` are the gestures' names.
-  // [R3.2] the Z and M keycaps (and the gesture wrapper that let their pointer holds count with the keys) moved to the
-  // keybed's bottom row in view/hands-view.ts: here the two knob groups stay, each headed by its etched name. ═══
-  const gest = accent(el('div', 'kv-gest'), 'gate');
-  const kgRate = knob('rate', { size: 'kx', side: true, steps: GATE_DIVS.length, value: h0.gate.div });
-  const kgSwing = knob('swing', { size: 'kx', side: true, value: String(Math.round(h0.gate.swing * 100)) });
-  const kdSpeed = knob('speed', { size: 'kx', side: true, value: h0.dive.speedSec.toFixed(2) });
-  const kdDist = knob('dist', { size: 'kx', side: true, value: String(h0.dive.dist) });
-  kgRate.dataset.ctl = 'gate-rate'; kgSwing.dataset.ctl = 'gate-swing'; kdSpeed.dataset.ctl = 'dive-speed'; kdDist.dataset.ctl = 'dive-dist';
-  const gl = el('div', 'kv-ggrp');
-  gl.append(etch('gate', 'kv-gword'), kgRate, kgSwing);
-  const gr = el('div', 'kv-ggrp');
-  gr.append(etch('dive', 'kv-gword'), kdSpeed, kdDist);
-  gest.append(gl, el('i', 'sg-vdiv kv-gdiv'), gr);
-  const gateWrite = (p: Partial<HarmonyState['gate']>): void => {
-    const g = H.state().gate, n = { ...g, ...p };
-    if (n.div !== g.div || !near(n.swing, g.swing)) H.set('gate', n);
-  };
-  const diveWrite = (p: Partial<HarmonyState['dive']>): void => {
-    const d = H.state().dive, n = { ...d, ...p };
-    if (!near(n.speedSec, d.speedSec) || n.dist !== d.dist) H.set('dive', n);
-  };
-  const bgRate = bindKnob<GateDiv>(kgRate, h0.gate.div, {
-    toV: (d) => stepV(Math.max(0, GATE_DIVS.indexOf(d)), GATE_DIVS.length), fromV: (v) => GATE_DIVS[stepI(v, GATE_DIVS.length)],
-    same: (a, b) => a === b, text: (d) => d, write: (div) => gateWrite({ div }), steps: GATE_DIVS.length,
-  });
-  const bgSwing = bindKnob<number>(kgSwing, h0.gate.swing, {
-    toV: (s) => clamp(s, 0, 1), fromV: (v) => v, same: near, text: (s) => String(Math.round(s * 100)),
-    write: (swing) => gateWrite({ swing }), dflt: 0,
-  });
-  const bdSpeed = bindKnob<number>(kdSpeed, h0.dive.speedSec, {
-    toV: (t) => clamp((DIVE_T_MAX - t) / (DIVE_T_MAX - DIVE_T_MIN), 0, 1), fromV: (v) => DIVE_T_MAX - v * (DIVE_T_MAX - DIVE_T_MIN),
-    same: near, text: (t) => t.toFixed(2), write: (speedSec) => diveWrite({ speedSec }), dflt: 0.45,
-  });
-  const bdDist = bindKnob<number>(kdDist, h0.dive.dist, {
-    toV: (d) => clamp((d - DIVE_D_MIN) / (DIVE_D_MAX - DIVE_D_MIN), 0, 1), fromV: (v) => Math.round(DIVE_D_MIN + v * (DIVE_D_MAX - DIVE_D_MIN)),
-    same: (a, b) => a === b, text: (d) => String(d), write: (dist) => diveWrite({ dist }), dflt: 24,
-  });
-  // ═══ end hands-view.ts gate-row port ═══
-
-  // ── 4 · the body: the LFO deck + the four FX towers ────────────────────────────────────────────────────────────
+  // ── 3 · the body: the LFO deck + the four FX towers ────────────────────────────────────────────────────────────
   const body = el('div', 'kv-body');
   const lfo = el('div', 'sg-deck kv-lfo');
   const setMotion = (patch: Partial<KeysState['motion']>): void => {
@@ -605,7 +563,7 @@ export const mountKeysView: MountView = (root, inst) => {
   // ═══ end effects.ts port ═══
   body.append(lfo, fxEl);
 
-  // ── 5 · THE RAIL: M · S · GAIN, directly above the foot (R3.1: its top on the drums' line, 430) ────────────────────
+  // ── 4 · THE RAIL: M · S · GAIN, directly above the foot (R3.1: its top on the drums' line, 430) ────────────────────
   // ═══ from signal-studio-v6lib/src/views/instrument/module-header.ts:225-277 (2a9e4a7) + index.ts:651-658: the footer —
   // M (the module's mute latch), S (solo, radio-exclusive, again = clear), the gain trim (dial 0..1 → 0..1.25, unity .8:
   // detent + dbl-click, the dB ghost). PORT: look B's rail + square caps (LookB.astro:153-156) and the drums' + bass' footer
@@ -630,7 +588,7 @@ export const mountKeysView: MountView = (root, inst) => {
   foot.append(mBtn, sBtn, el('i', 'sg-fdiv'), gainHost);
   // ═══ end module-header.ts port ═══
 
-  // ── 6 · THE HARMONY ROW, the foot (R3.1): HOLD · CHORD · ARP + RATE · LENGTH · GROOVE ──────────────────────────────
+  // ── 5 · THE HARMONY ROW, the foot (R3.1): HOLD · CHORD · ARP + RATE · LENGTH · GROOVE ──────────────────────────────
   // ═══ from jt-portfolio-signal/src/signal/view/hands-view.ts:196-243 (R2, 76a02c7; the Studio's play.ts:762-816 @ 2a9e4a7):
   // the latches write the harmony, their lit state is painted back from the state; RATE (stepped over ARP_DIVS) · LENGTH
   // (0.06..1.3) · GROOVE (0..1). PORT (R3): on-screen toggles only (X C V left the keyboard); the arp knobs carry the
@@ -668,7 +626,7 @@ export const mountKeysView: MountView = (root, inst) => {
   });
   // ═══ end hands-view.ts harmony port ═══
 
-  T.append(head, scr, gest, body, foot, harm);
+  T.append(head, scr, body, foot, harm);
   root.appendChild(T);
 
   // ── PAINT: everything from the instrument's state (inst.state()), diffed: only what changed is written ─────────────
@@ -717,7 +675,6 @@ export const mountKeysView: MountView = (root, inst) => {
         for (const kn of [kRate, kLen, kGroove]) kn.classList.toggle('dormant', !h.arp.on);   // Law 3: they wait on ARP
       }
       bRate.sync(h.arp.div); bLen.sync(h.arp.length); bGroove.sync(h.arp.groove);
-      bgRate.sync(h.gate.div); bgSwing.sync(h.gate.swing); bdSpeed.sync(h.dive.speedSec); bdDist.sync(h.dive.dist);
     }
   }
   const schedule = (): void => { if (!queued && !dead) { queued = true; queueMicrotask(paint); } };

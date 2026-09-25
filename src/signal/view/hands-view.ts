@@ -2,15 +2,20 @@
 // laws, each block naming its source below. R3 (THE FIRST-TIMER ROUND, lane V, NOTES-SIGNAL-R3.md §1.3 HANDS) recomposed
 // it into two strata:
 //   the TOP STRIP   [←] OCTAVE [→] · ◀ KEY ▶ SCALE · [the POWER slot] · the sapphire CHORD glass · [esc] stop
-//   the KEYBED      the small piano C3..C7 (lights only: no letters, no names) · the bracket rail · the KEYCAP ROWS
-//                   (the colour row W E R T Y U I O over the home row A S D F G H J K L, in the laptop's stagger, and
-//                   [R3.2] under it the bottom row: Z (gate) · five empty slots · M (dive))
+//   the KEYBED      the small piano C3..C7 (lights only: no letters, no names) · the bracket rail · the KEYCAP BLOCK,
+//                   three columns: [R3.3] the GATE group (Z · RATE · SWING) in the dark left of the letter rows · the
+//                   LETTER ROWS (the colour row W E R T Y U I O over the home row A S D F G H J K L, in the laptop's
+//                   stagger) · the DIVE group (M · SPEED · DIST) in the dark right of them
 // R3 LEFT THIS VIEW (other lanes draw them now): the wordmark + its lamp (gone), the tempo glass + TAP (the drums tower),
-// CHORD · HOLD · ARPEGGIATOR + RATE LENGTH GROOVE and the gate row's knobs (the keys tower), the rack (dropped this round,
-// §1.1), the pianohead as a stratum (its octave / key parts live in the strip).
+// CHORD · HOLD · ARPEGGIATOR + RATE LENGTH GROOVE (the keys tower), the rack (dropped this round, §1.1), the pianohead as
+// a stratum (its octave / key parts live in the strip).
 // R3.2 (Jon's call, 2026-09-24: "i want the z and the m on the bottom left and right of the main keys"): the Z and M
-// keycaps came back to this view as the keybed's bottom row, and with them the reference-counted gesture wrapper around
-// inst.harmony.gesture (R2's law, which lived in the keys tower in R3); their knobs stay in the keys tower.
+// keycaps came back to this view (a third keycap row), and with them the reference-counted gesture wrapper around
+// inst.harmony.gesture (R2's law, which lived in the keys tower in R3).
+// R3.3 (Jon's call, 2026-09-24, looking at the keybed: "i want them [Z and M] to be to the left and the right of the main
+// keyboard, in the dark areas. with their controls."): the third row is gone. Z and M stand in the dark flanks of the
+// letter rows, each with the two knobs the keys tower's gesture row held until now (gate RATE · SWING, dive SPEED ·
+// DIST: the same laws, the same writes), so the keybed is 192 tall again and the keys tower has no gesture row.
 // The look is R0's LOOK B; every recipe is src/styles/signal/material.css's, the keycap is keycap.css's (`key()` from
 // common.ts); the strata's own layout is src/styles/signal/hands.css.
 //
@@ -24,10 +29,11 @@
 // KEYBOARD: the integrator's keymap drives the instrument; this view only REFLECTS keys (a keycap goes .pressed while its
 // key is down) through ONE capture-phase window listener that never preventDefaults, never stops propagation and ignores
 // ⌘/ctrl/alt and typing: display only.
-import { KEYCAP_ROWS, KEYMAP } from '../types.ts';
-import type { HarmonyState, KeyAction, MountView, ScaleName } from '../types.ts';
-import { clamp, el } from './controls.ts';
-import { accent, cap, etch, glass, key, screen } from './common.ts';
+import { GATE_DIVS, KEYCAP_ROWS, KEYMAP } from '../types.ts';
+import type { GateDiv, HarmonyState, KeyAction, MountView, ScaleName } from '../types.ts';
+import { clamp, el, makeKnob } from './controls.ts';
+import type { Knob } from './controls.ts';
+import { accent, cap, etch, glass, key, knob, screen } from './common.ts';
 import { BLACKS, WHITES, keyBox, midiAtPct, spanOf } from './stage-geometry.ts';
 
 // ── words the device prints (legends, never explanations) ─────────────────────────────────────────────────────────
@@ -56,18 +62,15 @@ const OCT_DN = ENTRIES.find(([, a]) => a.kind === 'oct' && a.d < 0)?.[0] ?? 'Arr
 const OCT_UP = ENTRIES.find(([, a]) => a.kind === 'oct' && a.d > 0)?.[0] ?? 'ArrowRight';
 const STOP_CODE = codesOf('stop')[0] ?? 'Escape';
 const CAP_CODES: string[] = [...KEYCAP_ROWS.colour, ...KEYCAP_ROWS.home];
-/** [R3.2] THE BOTTOM ROW: the laptop's Z X C V B N M, under the home row. Only its HELD gestures are drawn (read off the
- *  KEYMAP: Z gate · M dive); X C V N play nothing and B is the bass's bar, so their slots stay empty. */
-const BOTTOM_ROW = ['KeyZ', 'KeyX', 'KeyC', 'KeyV', 'KeyB', 'KeyN', 'KeyM'] as const;
 type GestureName = 'gate' | 'dive';
-const GESTURE_OF = new Map<string, GestureName>(
-  ENTRIES.flatMap(([c, a]): Array<[string, GestureName]> => (a.kind === 'gate' || a.kind === 'dive' ? [[c, a.kind]] : [])));
-/** Each held gesture's cap: its aria name, its surface hook (types.ts CTL.hands), the side its etched name stands on. */
-const GESTURE_CAP: Readonly<Record<GestureName, { name: string; ctl: string; side: 'l' | 'r' }>> = {
-  gate: { name: 'Gate (hold)', ctl: 'keys-gate', side: 'l' },
-  dive: { name: 'Dive (hold)', ctl: 'keys-dive', side: 'r' },
+/** [R3.3] the two HELD gestures' keys, read off the KEYMAP (Z gate · M dive): each stands in a flank of the letter rows. */
+const GESTURE_CODE: Readonly<Record<GestureName, string>> = { gate: codesOf('gate')[0] ?? 'KeyZ', dive: codesOf('dive')[0] ?? 'KeyM' };
+/** Each held gesture's flank: its cap's aria name and surface hook (types.ts CTL.hands), and its group's class. */
+const GESTURE_CAP: Readonly<Record<GestureName, { name: string; ctl: string; cls: string }>> = {
+  gate: { name: 'Gate (hold)', ctl: 'keys-gate', cls: 'sgh-gate' },
+  dive: { name: 'Dive (hold)', ctl: 'keys-dive', cls: 'sgh-dive' },
 };
-const GESTURE_CODES: string[] = BOTTOM_ROW.filter((c) => GESTURE_OF.has(c));
+const GESTURE_CODES: string[] = [GESTURE_CODE.gate, GESTURE_CODE.dive];
 const REFLECTED = new Set<string>([...CAP_CODES, ...GESTURE_CODES, OCT_DN, OCT_UP, STOP_CODE]);
 const letterOf = (code: string): string => code.replace(/^Key/, '');
 
@@ -81,6 +84,31 @@ function setLabel(e: HTMLElement, label: string): void {
     const dot = el('span', 'sgh-dot'); dot.textContent = '·'; e.appendChild(dot);
   } else setText(e, label);
 }
+
+// ═══ from jt-portfolio-signal/src/signal/view/keys-view.ts:250-274 + 452-492 (R3.2, lane K's gesture row; itself R2's
+// hands-view.ts:60-78 @ 76a02c7, the laws signal-studio-v6lib src/views/instrument/play.ts:818-883 @ 2a9e4a7): the gate's
+// and the dive's knob laws + bindKnob, back in this view with their knobs in R3.3. COPIED, not imported (no import from
+// another lane). ═══
+const DIVE_T_MIN = 0.05, DIVE_T_MAX = 1.5;         // play.ts:866-875 SPEED: clockwise = faster (a shorter tau)
+const DIVE_D_MIN = 2, DIVE_D_MAX = 36;             // play.ts:876-882 DIST in semitones
+const stepV = (i: number, n: number): number => (n > 1 ? i / (n - 1) : 0);
+const stepI = (v: number, n: number): number => clamp(Math.round(v * (n - 1)), 0, n - 1);
+const near = (a: number, b: number): boolean => Math.abs(a - b) < 1e-6;
+interface Law<T> {
+  toV(x: T): number; fromV(v: number): T; same(a: T, b: T): boolean; text(x: T): string;
+  write(x: T): void; dflt?: T; steps?: number;
+}
+interface Bound<T> { host: HTMLElement; sync(x: T): void }
+/** makeKnob (controls.ts, the one drag law) bound to one field: the value legend follows the knob; state writes back
+ *  only when the knob's own reading of the field differs (a quantized field never snaps a knob out of the hand). */
+function bindKnob<T>(host: HTMLElement, init: T, law: Law<T>): Bound<T> {
+  const kn = host.querySelector<HTMLElement>('.si-kn');
+  const paint = (v: number): void => { if (kn) setText(kn, law.text(law.fromV(v))); };
+  const k: Knob = makeKnob(host, law.toV(init), (v) => law.write(law.fromV(v)), paint,
+    { dflt: law.dflt === undefined ? undefined : law.toV(law.dflt), steps: law.steps });
+  return { host, sync(x) { if (!law.same(law.fromV(k.get()), x)) k.set(law.toV(x)); } };
+}
+// ═══ end keys-view.ts copy ═══
 
 export const mountHandsView: MountView = (root, inst) => {
   const H = inst.harmony, T = inst.time, KEYS = inst.keys;
@@ -218,10 +246,12 @@ export const mountHandsView: MountView = (root, inst) => {
   railIn.prepend(win);
   rail.append(railIn);
 
-  // THE KEYCAP ROWS (R3, brief §D): the laptop's two rows as real keycaps, the colour row half a cap to the right of the
-  // home row (W over the A/S seam). A cap PLAYS its note (the same 'k'+code id the keyboard uses, so the harmony sees one
-  // hand); R and I play nothing and stay dormant.
+  // THE KEYCAP BLOCK (R3, brief §D; [R3.3] three columns: the gate group · the letter rows · the dive group). The letter
+  // rows are the laptop's two rows as real keycaps, the colour row half a cap to the right of the home row (W over the
+  // A/S seam). A cap PLAYS its note (the same 'k'+code id the keyboard uses, so the harmony sees one hand); R and I play
+  // nothing and stay dormant.
   const caps = el('div', 'sgh-caps'); caps.dataset.ctl = 'keycaps';
+  const letters = el('div', 'sgh-letters');
   const capEls = new Map<string, HTMLButtonElement>();
   const capRow = (codes: readonly string[], cls: string): HTMLElement => {
     const row = el('div', `sgh-crow ${cls}`);
@@ -239,29 +269,64 @@ export const mountHandsView: MountView = (root, inst) => {
     }
     return row;
   };
-  // [R3.2] THE BOTTOM ROW (Jon's call: "i want the z and the m on the bottom left and right of the main keys"): the
-  // laptop's Z X C V B N M under the home row, half a cap to its right as on a keyboard (Z under the A/S seam, M under
-  // the J/K seam). Only the two HELD gestures are drawn, Z gate and M dive; the five slots between stay EMPTY (X C V N
-  // play nothing, B is the bass's bar: no dormant caps here). Each gesture's name is etched beside its cap, outside the
-  // row (`gate` left of Z, `dive` right of M), the way the keys tower heads their knob groups; each lights AMBER (the
-  // gestures' colour) where a letter lights sapphire, so a hold key reads apart from a note key by its light.
+  letters.append(capRow(KEYCAP_ROWS.colour, 'sgh-colour'), capRow(KEYCAP_ROWS.home, 'sgh-home'));
+
+  // [R3.3] THE FLANKS (Jon's call: "i want them [Z and M] to be to the left and the right of the main keyboard, in the dark
+  // areas. with their controls."): the GATE group stands in the dark left of the letter rows, the DIVE group in the dark
+  // right of them, both on the rows' centre line. Each reads from the letters outward: its HELD key first (Z, M: the 48 px
+  // cap, lit AMBER while held where a letter lights sapphire, so a hold key reads apart from a note key by its light),
+  // then its two knobs, the first one next to the key; its name is etched over the knobs. The knobs are the keys tower's
+  // gesture row until R3.3, with the same laws and the same writes: RATE stepped over GATE_DIVS · SWING 0..1 printed as a
+  // % · SPEED 0.05..1.5 s inverted (clockwise = faster) · DIST 2..36 semitones. A drag writes H.set('gate' | 'dive'); the
+  // state paints them back on inst.onChange (paintState), and a drag's own echo writes nothing.
+  const h0 = inst.state().harmony;
+  const gateWrite = (p: Partial<HarmonyState['gate']>): void => {
+    const g = H.state().gate, n = { ...g, ...p };
+    if (n.div !== g.div || !near(n.swing, g.swing)) H.set('gate', n);
+  };
+  const diveWrite = (p: Partial<HarmonyState['dive']>): void => {
+    const d = H.state().dive, n = { ...d, ...p };
+    if (!near(n.speedSec, d.speedSec) || n.dist !== d.dist) H.set('dive', n);
+  };
+  const kgRate = knob('rate', { size: 'kx', side: true, steps: GATE_DIVS.length, value: h0.gate.div });
+  const kgSwing = knob('swing', { size: 'kx', side: true, value: String(Math.round(h0.gate.swing * 100)) });
+  const kdSpeed = knob('speed', { size: 'kx', side: true, value: h0.dive.speedSec.toFixed(2) });
+  const kdDist = knob('dist', { size: 'kx', side: true, value: String(h0.dive.dist) });
+  kgRate.dataset.ctl = 'gate-rate'; kgSwing.dataset.ctl = 'gate-swing'; kdSpeed.dataset.ctl = 'dive-speed'; kdDist.dataset.ctl = 'dive-dist';
+  const bgRate = bindKnob<GateDiv>(kgRate, h0.gate.div, {
+    toV: (d) => stepV(Math.max(0, GATE_DIVS.indexOf(d)), GATE_DIVS.length), fromV: (v) => GATE_DIVS[stepI(v, GATE_DIVS.length)],
+    same: (a, b) => a === b, text: (d) => d, write: (div) => gateWrite({ div }), steps: GATE_DIVS.length,
+  });
+  const bgSwing = bindKnob<number>(kgSwing, h0.gate.swing, {
+    toV: (w) => clamp(w, 0, 1), fromV: (v) => v, same: near, text: (w) => String(Math.round(w * 100)),
+    write: (swing) => gateWrite({ swing }), dflt: 0,
+  });
+  const bdSpeed = bindKnob<number>(kdSpeed, h0.dive.speedSec, {
+    toV: (t) => clamp((DIVE_T_MAX - t) / (DIVE_T_MAX - DIVE_T_MIN), 0, 1), fromV: (v) => DIVE_T_MAX - v * (DIVE_T_MAX - DIVE_T_MIN),
+    same: near, text: (t) => t.toFixed(2), write: (speedSec) => diveWrite({ speedSec }), dflt: 0.45,
+  });
+  const bdDist = bindKnob<number>(kdDist, h0.dive.dist, {
+    toV: (d) => clamp((d - DIVE_D_MIN) / (DIVE_D_MAX - DIVE_D_MIN), 0, 1), fromV: (v) => Math.round(DIVE_D_MIN + v * (DIVE_D_MAX - DIVE_D_MIN)),
+    same: (a, b) => a === b, text: (d) => String(d), write: (dist) => diveWrite({ dist }), dflt: 24,
+  });
+  // one flank: the held key + its knobs (in reading order, the key first) + the name over them. The DOM runs left to
+  // right as drawn: the gate's flank is SWING · RATE · Z (outward from the letters it reads Z · RATE · SWING).
   const gestEls = new Map<GestureName, HTMLButtonElement>();
-  const bottom = el('div', 'sgh-crow sgh-bottom');
-  for (const code of BOTTOM_ROW) {
-    const g = GESTURE_OF.get(code);
-    if (!g) { bottom.append(el('span', 'sgh-slot')); continue; }
-    const spec = GESTURE_CAP[g];
-    const b = accent(key(code, letterOf(code), { name: spec.name }), 'gate');
+  const flank = (g: GestureName, knobs: readonly HTMLElement[]): HTMLElement => {
+    const spec = GESTURE_CAP[g], code = GESTURE_CODE[g];
+    const b = accent(key(code, letterOf(code), { lg: true, name: spec.name }), 'gate');
     b.dataset.ctl = spec.ctl;
-    const cell = el('span', `sgh-hold ${spec.side}`);   // the cap's slot; its name stands beside it (absolutely placed)
-    cell.append(b, etch(g, 'sgh-hword'));
     gestEls.set(g, b);
-    bottom.append(cell);
-  }
-  caps.append(capRow(KEYCAP_ROWS.colour, 'sgh-colour'), capRow(KEYCAP_ROWS.home, 'sgh-home'), bottom);
+    const kn = el('div', 'sgh-gknobs');
+    kn.append(etch(g, 'sgh-gword'), ...(g === 'gate' ? [...knobs].reverse() : knobs));
+    const cell = accent(el('div', `sgh-flank ${spec.cls}`), 'gate');
+    if (g === 'gate') cell.append(kn, b); else cell.append(b, kn);
+    return cell;
+  };
+  caps.append(flank('gate', [kgRate, kgSwing]), letters, flank('dive', [kdSpeed, kdDist]));
   keybed.append(bed, rail, caps);
 
-  // ═══ THE HELD GESTURES: Z gate · M dive (the Studio's play.ts:820-840 @ 2a9e4a7; R2's law, back here in R3.2) ═══════
+  // ═══ THE HELD GESTURES: Z gate · M dive (the Studio's play.ts:820-840 @ 2a9e4a7; R2's law, back here since R3.2) ════
   // A pointer hold on the cap is the gesture (captured: pointerdown → on; pointerup, cancel, lost capture and a lost
   // window → off). REFERENCE-COUNTED: the key (Z, M) and its cap are two HOLDERS of one gesture; it goes on with the first
   // holder and off with the last, so letting go of one while the other holds keeps it. The key's holds reach the harmony
@@ -379,6 +444,8 @@ export const mountHandsView: MountView = (root, inst) => {
     const h = inst.state().harmony;
     setText(octVal, octText(h.music.oct));
     setText(keyVal, keySummary(h.music.key, h.music.scale));
+    // [R3.3] the flanks' knobs (a drag's own echo reads what the knob holds, so it writes nothing back)
+    bgRate.sync(h.gate.div); bgSwing.sync(h.gate.swing); bdSpeed.sync(h.dive.speedSec); bdDist.sync(h.dive.dist);
     const ms = `${h.music.key}|${h.music.scale}|${h.music.oct}`;
     if (ms !== musicSig) {
       const spell = musicSig !== '' && musicSig.split('|').slice(0, 2).join('|') !== `${h.music.key}|${h.music.scale}`;

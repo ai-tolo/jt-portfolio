@@ -5,7 +5,8 @@
    R0's LOOK B (jt-portfolio-signal/src/components/signal/look/LookB.astro:329-367, 438-494, 6392211) and the Studio's
    signal-studio-v6lib/src/views/instrument/styles/{hands,time}.ts (2a9e4a7).
    Unlayered on purpose: every rule here beats the material's @layer. R3 geometry at the 1280 device (14 px chassis
-   padding, content 1252): top strip 52 · keybed 60 piano + 8 + 16 rail + 8 + 152 keycap rows (R3.2: three rows) = 244.
+   padding, content 1252): top strip 52 · keybed 60 piano + 8 + 16 rail + 8 + 100 keycap block = 192 (R3.3: the two
+   letter rows, with the Z and M groups beside them in the dark; R3.2's third row is gone).
    The size floor (Law 5): no word under 12 px, no screen numeral under 22 px. ═══ */
 
 /* ═══ 1 · THE TOP STRIP: [← OCTAVE →] [◀ KEY ▶ SCALE] · the power (absolute, centre) · the CHORD glass · [esc] stop ═══ */
@@ -46,7 +47,7 @@
 .sig .sgh-stop.lit { --kc-glyph: #fff; }
 .sig .sgh-stopword { color: color-mix(in srgb, var(--sg-red) 55%, rgba(200,215,235,.42)); }
 
-/* ═══ 2 · THE KEYBED: the piano (lights only) · the bracket rail · the three keycap rows in the laptop's stagger ═══ */
+/* ═══ 2 · THE KEYBED: the piano (lights only) · the bracket rail · the keycap block (gate · the letter rows · dive) ═══ */
 .sig .sgh-keybed { flex: none; display: flex; flex-direction: column; gap: 8px; }
 
 /* the piano: C3..C7 absolutely placed from stage-geometry.ts (29 whites tile 100 %, blacks .62× on the seam); lit
@@ -114,24 +115,27 @@
 .sig .sgh-win::before { left: 2px; }
 .sig .sgh-win::after { right: 2px; }
 
-/* THE KEYCAP ROWS: the colour row (8) over the home row (9) over the bottom row (7 slots), 44 px caps, 4 px gaps, the
-   colour row and the bottom row each half a cap (24 px) to the right of the home row, so W sits over the A/S seam and Z
-   under it, M under the J/K seam, as on the laptop; the block is centred under the piano. Each row's box ends at its
-   caps' faces; the keycap body (keycap.css, 5 × 6 px) shows in the 8 px between the rows */
-.sig .sgh-caps { flex: none; align-self: center; display: flex; flex-direction: column; gap: 8px; width: 428px; height: 152px; }
+/* THE KEYCAP BLOCK (R3.3): three columns across the 1252 content width, the GATE group · the LETTER ROWS · the DIVE
+   group; the middle column is the rows' own width, so the rows stay centred under the piano. The letter rows are R3.1's:
+   the colour row (8) over the home row (9), 44 px caps, 4 px gaps, the colour row half a cap (24 px) to the right of
+   the home row, so W sits over the A/S seam as on the laptop. Each row's box ends at its caps' faces: the keycap body
+   (keycap.css, 5 × 6 px) shows in the 8 px between the rows and in the 4 px under them (44 + 8 + 44 + 4 = 100) */
+.sig .sgh-caps { flex: none; display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); height: 100px; }
+.sig .sgh-letters { display: flex; flex-direction: column; gap: 8px; width: 428px; }
 .sig .sgh-crow { display: flex; gap: 4px; height: 44px; }
 .sig .sgh-crow .sg-key { margin: 0; }
 .sig .sgh-colour { padding-left: 24px; }
-/* [R3.2] THE BOTTOM ROW: Z X C V B N M, only Z and M drawn (the held gestures); the five slots between are EMPTY (no
-   dormant caps). Each gesture's name is etched beside its cap, outside the row and absolutely placed so the slots never
-   move: `gate` to the left of Z, `dive` to the right of M, clear of the key's 5 px oblique body; the gestures' amber ink,
-   as the keys tower's knob groups print the same two words */
-.sig .sgh-bottom { padding-left: 24px; }
-.sig .sgh-slot { flex: none; width: 44px; height: 44px; }
-.sig .sgh-hold { position: relative; flex: none; width: 44px; height: 44px; }
-.sig .sgh-hword {
-  position: absolute; top: 50%; transform: translateY(-50%); white-space: nowrap; pointer-events: none;
+/* [R3.3] THE FLANKS: each held gesture in the dark beside the letter rows, on their centre line (48: the 4 px under the
+   block is the key bodies'), its 48 px key nearest them with 40 px of clear air to the rows' faces (the Z key's 5 px
+   oblique body falls into it), then its two knobs outward, 16 apart, and its name etched 12 px over the knobs, in the
+   gestures' amber ink. The knobs' value column holds its width (1/16T, 0.45, 100), so a turn never moves a dial. */
+.sig .sgh-flank { min-width: 0; display: flex; align-items: center; gap: 20px; padding-bottom: 4px; }
+.sig .sgh-gate { justify-content: flex-end; padding-right: 40px; }
+.sig .sgh-dive { justify-content: flex-start; padding-left: 40px; }
+.sig .sgh-flank .sg-key { margin: 0; }
+.sig .sgh-gknobs { position: relative; display: flex; align-items: center; gap: 16px; }
+.sig .sgh-gword {
+  position: absolute; bottom: calc(100% + 12px); left: 50%; transform: translateX(-50%); white-space: nowrap; pointer-events: none;
   letter-spacing: .08em; color: color-mix(in srgb, var(--sg-amber) 34%, rgba(200,215,235,.46));
 }
-.sig .sgh-hold.l > .sgh-hword { right: calc(100% + 12px); }
-.sig .sgh-hold.r > .sgh-hword { left: calc(100% + 16px); }
+.sig .sgh-gknobs .si-knob.side.si-stepped .si-kn { min-width: 5.3ch; }

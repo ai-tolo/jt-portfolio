@@ -200,6 +200,14 @@ DIST` (48 tall, the FX body +8). The device is 884 tall now: at 1440×900 the HE
 column; the page's padding is 24/32 and the gate's 1440 width floor is 0.93 for that case); on a taller screen the width
 binds at 98 %. The still re-rendered (1280/884).
 
+R3.3 (2026-09-24, Jon on the keybed shot: "i want them to be to the left and the right of the main keyboard, in the dark
+areas. with their controls."): the third row is gone; the keycap block is three columns — the GATE group (Z nearest the
+letters, then RATE · SWING, `gate` etched above) in the dark flank LEFT of the two letter rows, the letter rows centred, the
+DIVE group (M, then SPEED · DIST, `dive` above) in the flank RIGHT — vertically centred on the rows, ≈ 40 px of air to the
+letters; the keys module has NO gesture row any more (head · glass · body · rail · harmony foot; the FX cards ≈ twice as
+tall). The device is 832 tall again (zoom 0.9815 at 1440×900 = 98 % of the column; the page padding back to 32/40; the
+still re-rendered at 1280/832). CTL.hands carries keys-gate · gate-rate · gate-swing · keys-dive · dive-speed · dive-dist.
+
 Residue (for Jon; nothing here blocks the round):
 1. THE PADS ROW AND THE 1–8 KEYS ARE GONE this round (brief §F: the pads stay only with the Studio's key wheel as a popover;
    the wheel is a ~900-line port needing its own design under the size floor, so it did not come). The rack model, its
