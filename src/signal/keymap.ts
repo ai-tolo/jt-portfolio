@@ -7,14 +7,16 @@
 //     index.ts:375-386, 408-413). The Studio's visible/focused/overlay/bench guards belong to its shell: cut. Escape
 //     is ALWAYS owned (the master stop must work from anywhere on the page).
 //   - One action per physical press: `!e.repeat` on everything (index.ts:434-476).
-//   - Space, the arrows and the pad digits preventDefault while owned, repeats included (index.ts:414-415, 480), so the
-//     page never scrolls under the player's hands.
+//   - Space and the arrows preventDefault while owned, repeats included (index.ts:414-415, 480), so the page never
+//     scrolls under the player's hands. Unmapped keys never reach it (they stay the page's).
 //   - keyup releases by the CODE RECORDED AT KEYDOWN (`ourDown`, index.ts:417-419, 482-489), whoever owns the keys by
 //     then. THE DEFECT NOT PORTED (D §4): the Studio matched notes by `e.key.toLowerCase()`, so an ⌥ pressed under a
 //     held note turned the keyup's key into `å` and the note stuck until blur. Everything here is `e.code`, so the
 //     printed letters stay physical on AZERTY / Dvorak too.
 //   - window blur (index.ts:490) and a hidden tab: on = false for every code still down.
-// The table itself is the contract's KEYMAP (types.ts): X HOLD · C CHORD · V ARP are new (D §4 proposal (b)).
+// The table itself is the contract's KEYMAP (types.ts), R3's TAUGHT SET: the letters · Space · B · Z (held) · M (held)
+// · ←/→ · ↑/↓ · = · Esc. X C V N (HOLD, CHORD, ARP, the root lock) left the keyboard for on-screen toggles, and the
+// pads row left the surface with Digit1–8: those codes are unmapped here and belong to the page.
 
 import type { CreateKeymap, KeyAction, KeymapDeps } from './types.ts';
 import { KEYMAP } from './types.ts';
@@ -22,7 +24,6 @@ import { KEYMAP } from './types.ts';
 /** Codes whose browser default (scrolling, find-as-you-type) the instrument suppresses while it owns the keys. */
 export const PREVENT_CODES: ReadonlySet<string> = new Set([
   'Space', 'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown',
-  'Digit1', 'Digit2', 'Digit3', 'Digit4', 'Digit5', 'Digit6', 'Digit7', 'Digit8',
 ]);
 
 interface ElLike { tagName?: string; isContentEditable?: boolean }

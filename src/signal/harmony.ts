@@ -14,6 +14,9 @@
 // diatonic triad, a colour cap → a major triad on itself, FREE → major) unless the caller passes one, and it rides
 // with the note into the arp pool (the D §2.2 fix). Stage keys ('p' ids) sound their own pitch: never chorded, never
 // moved (play.ts:352-358). keyUp releases the note and every extension its press started (play.ts:338-339).
+// HOLD UNDER CHORD (R3, the contract's law above HarmonyState): with HOLD + CHORD a letter that starts a new chord first
+// flushes the latch (machine.flushLatch: every held id no finger holds, the pool under ARP), so one chord rings at a
+// time; tap-again, fingers, the pedal without CHORD and the pads under HOLD (chords.ts) are unchanged.
 //
 // MOVE (play.ts:195-209, 378-396, 589). ←/→ with a letter sounding (or held, or in the pool) walks it and its triad
 // through the key: root = stepMidi(base, shift), extensions = the diatonic triad on the moved root, shift clamped ±14,
@@ -196,6 +199,16 @@ export function createHarmony(d: HarmonyDeps): Harmony & {
   function keyDown(id: string, midi: number, chord?: number[]): void {
     if (typeof id !== 'string' || !id || !Number.isFinite(midi)) return;
     const letter = isLetter(id);
+    // HOLD UNDER CHORD (R3, types.ts above HarmonyState): a letter that starts a NEW chord (not ringing, not under a
+    // finger) SWITCHES — everything the hold owns (latched ids no finger holds: letters + their '~' ids, stage keys, pad
+    // tones; the pool under ARP) releases first, then this chord takes over the hold. Tap-again (a ringing id) keeps the
+    // toggle path below; HOLD without CHORD stacks as before.
+    if (letter && st.chord && machine.latch() && !machine.has(id) && !machine.isDown(id)) {
+      machine.flushLatch();
+      for (const k of Array.from(exts.keys())) if (!machine.has(k) && !machine.isDown(k)) exts.delete(k);
+      for (const k of Array.from(letters.keys())) if (!machine.has(k) && !machine.isDown(k)) letters.delete(k);
+      chords.sync();                           // a pad the flush silenced is not latched any more: its bass pin drops
+    }
     if (letter && !chordActive()) shift = 0;   // a FRESH chord starts unmoved (play.ts:303-307)
     const chord0 = chordFrom(midi, chord) ?? triadForMidi(st.music, midi);
     let notes = chord0;

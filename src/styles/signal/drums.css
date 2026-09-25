@@ -3,30 +3,58 @@
    drums tower (head, cover glass, the LED grid, the body split, the texture housing, the delay column, the footer), made
    live. The MATERIAL is not re-declared here: the tower, glass, caps, seg, knobs, chip, rail, hairlines come from
    src/styles/signal/material.css (every recipe there sits in @layer sg-material, so this unlayered sheet wins where it
-   speaks, and only speaks to geometry + the parts the material has no recipe for: the grid, the lane pads, the power
-   cap's ink). Geometry at the 1120 device: a 290-wide tower (the chassis gives the slot; the tower fills it), rows
-   head 30 · cover 58 · grid 95 · pattern 28 · body (flex) · footer 36, gaps 8. Every rule sits under .sig. ═══ */
+   speaks, and only speaks to geometry + the parts the material has no recipe for: the grid, the lane pads, the BPM glass).
+   R3 · lane D (THE FIRST-TIMER ROUND, NOTES-SIGNAL-R3.md §1.3): the tower is 330 × 540, 310 × 520 inside its 10 px
+   padding, gaps 8, top to bottom: HEAD 56 (BPM glass · `=` · the kit etched) · COVER 40 · THE GRID (the rest, ≈ 100) ·
+   PATTERN 32 · KNOBS 58 · THE DELAY UNIT 56 · TEXTURE 32 · FOOT 36 · THE SPACE BAR 44. The keycaps (`.sg-key`) are
+   keycap.css's; this sheet only places them. Every rule sits under .sig. ═══ */
 
 .sig .sd-tower { width: 100%; height: 100%; min-height: 0; }
+.sig .sd-tower > * { flex: none; }
 
-/* ── the header rail: power cap + the kit's name glass ── */
-.sig .sd-head { flex: none; display: flex; align-items: center; gap: 8px; height: 30px; }
-.sig .sd-pow { flex: none; width: 70px; height: 26px; letter-spacing: .16em; }
-.sig .sd-pow.on { color: color-mix(in srgb, var(--acc) 42%, #fff); }
-.sig .sd-name { flex: 1; min-width: 0; }
+/* ═══ 1 · THE HEAD: the BPM glass · the `=` keycap · the kit, etched ═══════════════════════════════════════════════════
+   from styles/signal/hands.css:24-38 (R2, 76a02c7; LookB .lb-tempo; the Studio's T:8-14): the amber glass, the outlined
+   Orbitron digits each in a fixed box, the beat lamp, the `bpm` word — scaled to the R3 floor (digits 32, the word 12).
+   Selectors carry .sd-head so they win over hands.css (loaded after this sheet) while it still speaks to .sgh-tempo. */
+.sig .sd-head { display: flex; align-items: center; gap: 10px; height: 56px; }
+.sig .sd-head .sgh-tempo {
+  flex: none; display: flex; align-items: center; width: 150px; height: 52px; padding: 0 0 0 12px; border-radius: 10px;
+  border-color: rgba(155,167,187,.14);
+  box-shadow: inset 0 0 0 1px rgba(255,176,74,.16), inset 0 3px 12px rgba(0,0,0,.72), inset 0 0 28px -9px color-mix(in srgb, var(--sg-amber) 60%, transparent), inset 0 0 15px 5px rgba(0,0,0,.4);
+}
+.sig .sd-head .sgh-tempo::before { border-radius: 10px; background: radial-gradient(120% 78% at 50% -12%, rgba(255,255,255,.16), rgba(255,255,255,.04) 26%, transparent 52%); }
+.sig .sd-head .sgh-tempo::after { background: repeating-linear-gradient(0deg, rgba(255,176,74,.06) 0 1px, transparent 1px 3px); }
+.sig .sd-head .sgh-bpm { display: flex; font: 500 32px/1 var(--sg-orb); color: rgba(202,160,99,.1); -webkit-text-stroke: 1.4px #d9ab66; text-shadow: 0 0 10px rgba(202,160,99,.2); }
+.sig .sd-head .sgh-bpm > i { display: block; flex: none; width: .82em; text-align: center; }
+.sig .sd-head .sgh-tempo > small { position: absolute; right: 9px; bottom: 9px; font: 500 12px/1 var(--sg-orb); letter-spacing: .06em; text-transform: lowercase; color: color-mix(in srgb, var(--sg-amber) 62%, #6a5d40); }
+.sig .sd-head .sgh-pls { position: absolute; right: 10px; top: 10px; width: 9px; height: 5px; border-radius: 1px; background: #2a1d0c; box-shadow: inset 0 0 0 1px rgba(0,0,0,.55); }
+.sig .sd-head .sgh-pls.on { background: #ffc06a; box-shadow: 0 0 5px rgba(255,178,74,.55), inset 0 0 0 1px rgba(255,210,150,.4); }
+/* TYPE: the field lies over the digits, the same face filled (a value being written), the caret amber */
+.sig .sd-head .sgh-tempo.typing > .sgh-bpm { visibility: hidden; }
+.sig .sd-bpmin {
+  position: absolute; z-index: 7; left: 6px; top: 7px; width: 96px; height: 38px; margin: 0; padding: 0 4px; border-radius: 5px;
+  font: 500 32px/38px var(--sg-orb); text-align: center; color: #ffcf8f; caret-color: #ffcf8f; letter-spacing: .02em;
+  text-shadow: 0 0 8px color-mix(in srgb, var(--sg-amber) 60%, transparent);
+  background: rgba(40,24,6,.72); border: 1px solid color-mix(in srgb, var(--sg-amber) 45%, transparent); outline: none;
+  -webkit-user-select: text; user-select: text; cursor: text;
+}
+.sig .sd-bpmin::selection { background: color-mix(in srgb, var(--sg-amber) 45%, transparent); color: #fff; }
+.sig .sd-head .sd-tap { --acc: var(--sg-amber); }
+.sig .sd-kit { margin-left: auto; text-align: right; line-height: 1.35; width: min-content; }
 
-/* ── the cover glass (filter-curve.ts's .si-fcurve fills the host; the host carries the value ghost above it) ── */
-.sig .sd-eqhost { position: relative; flex: none; height: 58px; }
+/* ═══ 2 · the cover glass (filter-curve.ts's .si-fcurve fills the host; the host carries the value ghost above it) ═══ */
+.sig .sd-eqhost { position: relative; height: 40px; }
 .sig .sd-eqhost > .si-screen { position: absolute; inset: 0; }
 
-/* ── THE GRID: an LED matrix under glass. Six lanes × sixteen cells; a beat gap every four; the lane word is a pad.
-   Cells sit under the glass's scanlines (z 2 < 5). Tiers: 1 ghost (a low ember) · 2 mid (lit) · 3 accent (hot).
-   The playhead column (.ph) tints the empty cells and turns the lit ones white-hot, lit from inside the glass. ── */
-.sig .sd-grid { flex: none; display: flex; flex-direction: column; gap: 3px; padding: 6px 7px; }
-.sig .sd-lane { display: flex; align-items: stretch; gap: 2px; height: 11px; }
+/* ═══ 3 · THE GRID: an LED matrix under glass. Six lanes × sixteen cells; a beat gap every four; the lane word is a pad.
+   It takes the height the fixed rows leave (≈ 100: six rows of ≈ 13). Cells sit under the glass's scanlines (z 2 < 5).
+   Tiers: 1 ghost (a low ember) · 2 mid (lit) · 3 accent (hot). The playhead column (.ph) tints the empty cells and turns
+   the lit ones white-hot, lit from inside the glass. ── */
+.sig .sd-tower > .sd-grid { flex: 1 1 0; min-height: 0; display: flex; flex-direction: column; gap: 2px; padding: 5px 7px 5px 6px; }
+.sig .sd-lane { flex: 1 1 0; min-height: 12px; display: flex; align-items: stretch; gap: 2px; }
 .sig .sd-pad {
-  position: relative; z-index: 2; flex: none; width: 31px; align-self: center; height: 13px; margin: -1px 0; padding: 0; text-align: left;
-  font: 500 6.5px/13px var(--sg-mono); letter-spacing: .1em; text-transform: uppercase; color: #7d8fa3; white-space: nowrap;
+  position: relative; z-index: 2; flex: none; width: 44px; align-self: center; height: 100%; margin: 0; padding: 0 0 0 1px; text-align: left;
+  font: 500 12px/1 var(--sg-mono); letter-spacing: 0; text-transform: lowercase; color: #8b9cb0; white-space: nowrap;
   cursor: pointer; transition: color .15s linear, text-shadow .15s linear;
 }
 .sig .sd-pad:hover { color: #c4d2e0; }
@@ -50,25 +78,38 @@
 }
 .sig .sd-cell:focus-visible { outline-offset: 1px; }
 
-/* ── the pattern seg ── */
-.sig .sd-pat { flex: none; }
+/* ═══ 4 · the pattern seg ═══ */
+.sig .sd-pat { height: 32px; }
 
-/* ── the body: [SWING · DENSITY / TEXTURE housing / SIDECHAIN] | hairline | [DELAY] ── */
-.sig .sd-body { flex: 1; min-height: 0; display: flex; gap: 10px; }
-.sig .sd-left { flex: 1; min-width: 0; display: flex; flex-direction: column; justify-content: space-between; padding: 4px 0 2px; }
-.sig .sd-krow { display: flex; justify-content: space-evenly; align-items: flex-start; }
-.sig .sd-tex { display: flex; align-items: center; gap: 10px; padding: 7px 10px 6px; }
+/* ═══ 5 · THE KNOB ROW: SWING · DENSITY · SIDECHAIN ═══ */
+.sig .sd-krow { height: 58px; display: flex; justify-content: space-around; align-items: flex-start; padding-top: 1px; }
+
+/* ═══ 6 · THE DELAY UNIT: one raised housing. `delay` + its lamp at the left, then MIX · FB · TIME (TIME a .side switch:
+   the dial, its caption over the amber chip). The lamp is the unit's pulse: dark at MIX 0 (FB + TIME .dormant), blinking
+   on every line of the TIME division while the drums run. ── */
+.sig .sd-delay { height: 56px; display: flex; align-items: center; justify-content: space-between; gap: 6px; padding: 0 12px 0 12px; }
+.sig .sd-dname { flex: none; display: flex; flex-direction: column; align-items: flex-start; gap: 8px; }
+.sig .sd-dcap { color: color-mix(in srgb, var(--sg-delay) 55%, rgba(200,215,235,.5)); }
+.sig .sd-dlamp {
+  position: relative; top: auto; right: auto; width: 9px; height: 9px; margin-left: 1px;
+  --acc: var(--sg-delay); background: #0f1a18; box-shadow: inset 0 0 0 1px rgba(0,0,0,.7), 0 1px 0 rgba(255,255,255,.05);
+}
+.sig .sd-dlamp.on { background: #b6ffe6; box-shadow: 0 0 6px 1px var(--sg-delay), 0 0 2px #fff, inset 0 0 0 1px rgba(255,255,255,.4); }
+.sig .sd-delay .si-knob { --acc: var(--sg-delay); }
+.sig .sd-delay .si-knob.side.si-stepped { column-gap: 12px; }
+.sig .sd-delay .si-knob.side .si-kn.sg-chip { min-width: 48px; height: 22px; font-size: 15px; }
+
+/* ═══ 7 · TEXTURE (a .side knob) + its TAPE/DRIVE seg ═══ */
+.sig .sd-tex { height: 32px; display: flex; align-items: center; gap: 14px; padding-left: 4px; }
 .sig .sd-texseg { flex: 1; min-width: 0; }
-.sig .sd-body > .sg-vdiv { margin: 6px 0; }
-.sig .sd-delay { flex: none; width: 76px; display: flex; flex-direction: column; align-items: center; justify-content: space-between; padding: 2px 0; }
-.sig .sd-dcap { font: 500 7.5px/1 var(--sg-mono); letter-spacing: .24em; margin-right: -.24em; text-transform: uppercase; color: color-mix(in srgb, var(--acc) 60%, #8593a2); }
-.sig .sd-delay .sg-chip { min-width: 36px; height: 15px; font-size: 9.5px; margin-top: 1px; }
 
-/* ── power: the body lights with the drums. Off, the dials fall to steel and the controls recede (lighting only:
-   every control stays live; the Studio's drums-off dim, signal-studio-v6lib/src/views/instrument/styles/drums.ts:215-220, softened) ── */
-.sig .sd-tower:not(.is-on) .sd-body { --arc: var(--sg-steel); }
-.sig .sd-tower:not(.is-on) :is(.sd-pat, .sd-body) { opacity: .62; transition: opacity .35s ease; }
-.sig .sd-tower.is-on :is(.sd-pat, .sd-body) { opacity: 1; transition: opacity .35s ease; }
-
-/* ── the footer rail ── */
+/* ═══ 8 · the footer rail (M · S · GAIN, the three towers' one form) ═══ */
 .sig .sd-foot { height: 36px; }
+
+/* ═══ 9 · THE SPACE BAR: keycap.css's `.sg-key.wide.tint` (orange at rest, lit while the drums run). Its body sits in the
+   tower's bottom padding (a shadow, never a scroll). ═══ */
+.sig .sd-tower > .sd-pow { height: 44px; margin: 0; font-size: 15px; letter-spacing: .3em; }
+
+/* ── power: the knobs light with the drums. Off, the dials fall to steel (lighting only: every control stays live; the
+   Studio's drums-off dim, signal-studio-v6lib/src/views/instrument/styles/drums.ts:215-220, softened) ── */
+.sig .sd-tower:not(.is-on) :is(.sd-krow, .sd-tex) { --arc: var(--sg-steel); }

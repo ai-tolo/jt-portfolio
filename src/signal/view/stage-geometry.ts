@@ -1,6 +1,6 @@
 // from signal-studio-v6lib/src/views/instrument/stage-geometry.ts:1-92 (2a9e4a7) — VERBATIM (SIGNAL R1, lane V3), with ONE
 // port: the two range constants (source lines 15-16, `STAGE_LO = 24` C1 · `STAGE_HI = 96` C7) are no longer declared here;
-// they come from the frozen contract (src/signal/types.ts: STAGE_LO 36 · STAGE_HI 96, C2..C7, 36 whites, docs/signal-map/D §6)
+// they come from the frozen contract (src/signal/types.ts: STAGE_LO 48 · STAGE_HI 96 since R3, C3..C7, 29 whites, docs/signal-map/D §6)
 // and are re-exported under the same names, so every consumer of this module reads the same range the harmony lane plays.
 // The RANGE paragraph below is the Studio's own text about ITS C1–C7 stage (43 whites); the arithmetic is range-agnostic.
 // Zero DOM, zero RNG; node-tested (stage-geometry.test.mjs beside this file).

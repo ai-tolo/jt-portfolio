@@ -1,160 +1,83 @@
-/* ═══ SIGNAL · THE HANDS (lane V3, R1): the top strip · the pianohead · the rack · the keybed + rail · the gate row ═════
-   The DOM is src/signal/view/hands-view.ts's; the recipes (glass, keycap, LED, knob, seg, elastomer pad, etch, housing)
-   are src/styles/signal/material.css's and are NOT re-declared here: this sheet holds only this stratum's layout and the
-   specifics docs/signal-map/F-view.md gives for its components, lifted from R0's LOOK B
-   (jt-portfolio-signal/src/components/signal/look/LookB.astro:329-367, 438-494, 6392211) and from the Studio's
-   signal-studio-v6lib/src/views/instrument/styles/{hands,time}.ts (2a9e4a7) where the mock is silent (lit key states,
-   the chord glass's dim + degree, the rack's filled / sel / flash / ✕, the gate pads' hold).
-   Unlayered on purpose: every rule here beats the material's @layer. Geometry at the 1120 device (10 px chassis padding,
-   content 1098): top strip 40 · pianohead 44 · rack 34 · keybed 86 + bracket 15 · gate row 58. ═══ */
+/* ═══ SIGNAL · THE HANDS (lane V3, R1 · R3 lane V): the top strip · the keybed (piano · rail · keycap rows) ═══════════
+   The DOM is src/signal/view/hands-view.ts's; the recipes (glass, cap, screen, etch) are src/styles/signal/material.css's
+   and the keycap is src/styles/signal/keycap.css's: NOT re-declared here. This sheet holds only the two strata's layout
+   and the specifics docs/signal-map/F-view.md gives for the chord glass, the piano's lit states and the rail, lifted from
+   R0's LOOK B (jt-portfolio-signal/src/components/signal/look/LookB.astro:329-367, 438-494, 6392211) and the Studio's
+   signal-studio-v6lib/src/views/instrument/styles/{hands,time}.ts (2a9e4a7).
+   Unlayered on purpose: every rule here beats the material's @layer. R3 geometry at the 1280 device (14 px chassis
+   padding, content 1252): top strip 52 · keybed 60 piano + 8 + 16 rail + 8 + 100 keycap rows = 192. The size floor
+   (Law 5): no word under 12 px, no screen numeral under 22 px. ═══ */
 
-/* ── the two blocks the view adds to its root ── */
+/* ═══ 1 · THE TOP STRIP: [← OCTAVE →] [◀ KEY ▶ SCALE] · the power (absolute, centre) · the CHORD glass · [esc] stop ═══ */
 .sig .sgh-top {
-  position: relative; flex: none; height: 40px; display: grid; align-items: center;
-  grid-template-columns: minmax(0, 1fr) var(--sgh-mid, 494px) minmax(0, 1fr); column-gap: var(--sgh-colgap, 12px);
+  position: relative; flex: none; height: 52px; padding: 4px 4px 4px 2px; display: grid; align-items: center;
+  grid-template-columns: minmax(0, 1fr) 84px minmax(0, 1fr); column-gap: 0;
 }
-.sig .sgh-hands { flex: none; display: flex; flex-direction: column; gap: 8px; }
+.sig .sgh-top .sg-key { margin: 0; }
+.sig .sgh-tl { grid-column: 1; justify-self: start; display: flex; align-items: center; gap: 22px; height: 44px; }
+.sig .sgh-tr { grid-column: 3; justify-self: stretch; display: flex; align-items: center; justify-content: space-between; gap: 16px; height: 44px; padding-left: 14px; }
+.sig .sgh-octgrp, .sig .sgh-keygrp { display: flex; align-items: center; gap: 8px; }
 
-/* ═══ 1 · THE TOP STRIP: the wordmark over the drums tower, the tempo over the keys tower, STOP ending with the bass ═══ */
-.sig .sgh-mark { justify-self: start; display: inline-flex; align-items: center; gap: 11px; padding-left: 10px; }
-.sig .sgh-lamp { width: 5px; height: 5px; border-radius: 50%; background: #0d1a22; box-shadow: inset 0 0 0 1px rgba(0,0,0,.6); transition: background .4s, box-shadow .4s; }
-.sig .sgh-lamp.on { background: var(--sg-sapphire); box-shadow: 0 0 4px var(--sg-sapphire), 0 0 1px #dff6ff; }
-.sig .sgh-word { font-size: 13px; letter-spacing: .44em; color: rgba(200,215,235,.5); }
-
-.sig .sgh-tempocl { justify-self: start; display: flex; align-items: center; gap: 10px; padding-left: 7px; }
-/* the amber tempo glass (LookB .lb-tempo; the Studio's T:8-14): outlined Orbitron digits, each in a fixed box */
-.sig .sgh-tempo {
-  display: flex; align-items: center; height: 34px; width: 112px; padding: 0 30px 0 21px; border-radius: 10px;
-  border-color: rgba(155,167,187,.14);
-  box-shadow: inset 0 0 0 1px rgba(255,176,74,.13), inset 0 3px 12px rgba(0,0,0,.72), inset 0 0 24px -9px color-mix(in srgb, var(--sg-amber) 55%, transparent), inset 0 0 15px 5px rgba(0,0,0,.4);
-}
-.sig .sgh-tempo::before { border-radius: 10px; background: radial-gradient(120% 78% at 50% -12%, rgba(255,255,255,.16), rgba(255,255,255,.04) 26%, transparent 52%); }
-.sig .sgh-tempo::after { background: repeating-linear-gradient(0deg, rgba(255,176,74,.06) 0 1px, transparent 1px 3px); }
-.sig .sgh-bpm { display: flex; font: 500 21px/1 var(--sg-orb); color: rgba(202,160,99,.1); -webkit-text-stroke: 1.2px #caa063; text-shadow: 0 0 8px rgba(202,160,99,.14); }
-.sig .sgh-bpm > i { display: block; flex: none; width: .9em; text-align: center; }
-.sig .sgh-tempo > small { position: absolute; right: 8px; bottom: 7px; font: 500 6px/1 var(--sg-orb); letter-spacing: .22em; text-transform: uppercase; color: color-mix(in srgb, var(--sg-amber) 62%, #6a5d40); }
-.sig .sgh-pls { position: absolute; left: 8px; top: 8px; width: 7px; height: 4px; border-radius: 1px; background: #2a1d0c; box-shadow: inset 0 0 0 1px rgba(0,0,0,.55); }
-.sig .sgh-pls.on { background: #ffc06a; box-shadow: 0 0 5px rgba(255,178,74,.55), inset 0 0 0 1px rgba(255,210,150,.4); }
-.sig .sgh-tap { height: 26px; padding: 0 10px 0 12px; }
-
-/* the master STOP: the red keycap (material .sg-cap.red); its square lamp lights while anything runs */
-.sig .sgh-stop { justify-self: end; height: 28px; padding: 0 10px 0 12px; gap: 8px; color: color-mix(in srgb, var(--sg-red) 62%, #6b4a48); }
-.sig .sgh-stop.live { color: var(--sg-red); }
-.sig .sgh-sq { display: block; width: 8px; height: 8px; border-radius: 1.5px; background: linear-gradient(180deg, #5a2622, #3a1512); box-shadow: inset 0 0 0 1px rgba(80,0,0,.35); transition: background .15s, box-shadow .15s; }
-.sig .sgh-stop.live .sgh-sq { background: linear-gradient(180deg, #ff7a6e, #d8281c); box-shadow: inset 0 0 0 1px rgba(80,0,0,.35), 0 0 5px rgba(255,70,58,.55); }
-
-/* ═══ 2 · THE PIANOHEAD: one recessed bar (material .sg-housing), amber screens, sapphire harmony ═══ */
-.sig .sgh-head { display: flex; align-items: center; gap: 10px; height: 44px; padding: 0 12px 0 10px; }
-.sig .sgh-head > .sg-cap, .sig .sgh-head > .sgh-arp { flex: none; }
-.sig .sgh-arrow { width: 24px; height: 26px; padding: 0; margin-bottom: 3px; border-radius: 7px; }
-.sig .sgh-arrow svg { width: 10px; height: 10px; }
+/* the screens: the material's 44 px glass, the numeral 22 px amber, the caption 12 px */
+.sig .sgh-octscr { flex: none; min-width: 74px; height: 44px; }
+.sig .sgh-keyscr { flex: none; width: 116px; height: 44px; }
+.sig .sgh-keyscr > b { white-space: nowrap; }
+/* the KEY walk: two small proud caps (on-screen only: the keyboard has no key for it) */
+.sig .sgh-arrow { width: 30px; height: 30px; padding: 0; border-radius: 7px; }
+.sig .sgh-arrow svg { width: 11px; height: 11px; }
 .sig .sgh-arrow svg path { fill: #bcc7d3; stroke: none; }
-.sig .sgh-arrow + .sg-screen, .sig .sg-screen + .sgh-arrow { margin-left: -4px; }
-.sig .sgh-octscr { flex: none; min-width: 46px; }
-.sig .sgh-keyscr { flex: none; min-width: 70px; }
-.sig .sgh-keyscr > b { font-size: 13px; letter-spacing: .08em; white-space: nowrap; }
-.sig .sgh-scale { height: 22px; padding: 0 8px; margin-bottom: 3px; border-radius: 6px; font-size: 7px; letter-spacing: .12em; }
-.sig .sgh-vdiv { margin: 9px 2px; }
+.sig .sgh-scale { height: 30px; padding: 0 12px; margin-left: 4px; }
 
-/* the chord glass (LookB .lb-chord; the Studio's H:27-50): the label, the degree under it (dark when off the map);
-   .dim = the last name held after release; the 70 ms blink is the material's .sg-t-blink on the two inks */
-.sig .sgh-chord { flex: 0 1 216px; min-width: 150px; margin: 0 auto; height: 34px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; padding: 0 10px; }
-.sig .sgh-clabel { max-width: 100%; overflow: hidden; white-space: nowrap; font: 500 16px/1 var(--sg-mono); letter-spacing: .03em; color: #d6f3ff; text-shadow: 0 0 8px color-mix(in srgb, var(--sg-sapphire) 70%, transparent); transition: color .5s, text-shadow .5s; }
+/* the chord glass (LookB .lb-chord; the Studio's H:27-50): the name 22 px, the degree 12 px under it (dark when off the
+   map); .dim = the last name held after release; the 70 ms blink is the material's .sg-t-blink on the two inks */
+.sig .sgh-chord { flex: 1 1 260px; min-width: 220px; max-width: 440px; height: 44px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; padding: 0 12px; }
+.sig .sgh-clabel { max-width: 100%; overflow: hidden; white-space: nowrap; font: 500 22px/1 var(--sg-mono); letter-spacing: .03em; color: #d6f3ff; text-shadow: 0 0 8px color-mix(in srgb, var(--sg-sapphire) 70%, transparent); transition: color .5s, text-shadow .5s; }
 .sig .sgh-clabel:empty::before { content: "\00a0"; }
-.sig .sgh-cdeg { min-height: 8px; font: 500 8px/1 var(--sg-mono); letter-spacing: .14em; color: #26313d; transition: color .4s, text-shadow .4s; }
+.sig .sgh-cdeg { min-height: 12px; font: 500 12px/1 var(--sg-mono); letter-spacing: .14em; color: #26313d; transition: color .4s, text-shadow .4s; }
 .sig .sgh-cdeg.on { color: color-mix(in srgb, var(--sg-sapphire) 70%, #cfefff); text-shadow: 0 0 5px color-mix(in srgb, var(--sg-sapphire) 38%, transparent); }
 .sig .sgh-chord.dim { box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--acc) 14%, transparent), inset 0 3px 12px rgba(0,0,0,.72), inset 0 0 40px 8px rgba(0,0,0,.45), 0 1px 0 rgba(255,255,255,.04); }
 .sig .sgh-chord.dim .sgh-clabel { color: color-mix(in srgb, var(--sg-sapphire) 30%, #3a4654); text-shadow: none; }
 .sig .sgh-chord.dim .sgh-cdeg.on { color: color-mix(in srgb, var(--sg-sapphire) 22%, #39485a); text-shadow: none; }
 .sig .sgh-dot { opacity: .42; padding-left: .5px; }
 
-.sig .sgh-tog { height: 26px; padding: 0 14px; margin-bottom: 3px; }
-.sig .sgh-arp { display: flex; align-items: center; gap: 12px; }
-.sig .sgh-arp .si-knob.side .si-kn { min-width: 26px; }
+/* the master STOP: the Escape keycap in red ink (keycap.css .lit lights it in --acc = red while anything runs) + its word */
+.sig .sgh-stopgrp { flex: none; display: flex; align-items: center; gap: 10px; }
+.sig .sgh-stop { --kc-glyph: color-mix(in srgb, var(--sg-red) 70%, var(--kc-ink)); --kc-seam: color-mix(in srgb, var(--sg-red) 34%, transparent); font-size: 14px; text-transform: lowercase; }
+.sig .sgh-stop.lit { --kc-glyph: #fff; }
+.sig .sgh-stopword { color: color-mix(in srgb, var(--sg-red) 55%, rgba(200,215,235,.42)); }
 
-/* ═══ 3 · THE RACK: an empty pad is a recessed well; a stamped pad a proud matte cap; a sounding pad pressed + lit ═══ */
-.sig .sgh-rack { display: flex; gap: 6px; height: 34px; padding: 0 2px; }
-.sig .sgh-pad {
-  position: relative; flex: 1; min-width: 0; height: 31px; display: flex; align-items: center; justify-content: center; gap: 8px;
-  border-radius: 8px; cursor: pointer; touch-action: none; overflow: hidden;
-  background: linear-gradient(180deg, #0c1016, #121821);
-  box-shadow: inset 0 2px 4px rgba(0,0,0,.8), inset 0 0 0 1px rgba(0,0,0,.6), inset 0 -1px 0 rgba(255,255,255,.035), 0 1px 0 rgba(255,255,255,.05);
-  transition: transform var(--sg-release), box-shadow .12s, background .2s;
-}
-.sig .sgh-pad:not(.full):hover { background: linear-gradient(180deg, #0f141b, #161d27); }
-.sig .sgh-pnum { position: absolute; top: 5px; left: 8px; pointer-events: none; font: 500 9px/1 var(--sg-mono); color: rgba(200,215,235,.3); text-shadow: 0 -1px 0 rgba(0,0,0,.8), 0 1px 0 rgba(255,255,255,.06); }
-.sig .sgh-plabel { max-width: calc(100% - 64px); overflow: hidden; white-space: nowrap; font: 500 12px/1 var(--sg-mono); letter-spacing: .02em; color: #cfefff; text-shadow: 0 0 6px color-mix(in srgb, var(--sg-sapphire) 55%, transparent); }
-.sig .sgh-plabel:empty, .sig .sgh-pad:not(.full) :is(.sgh-pdeg, .sg-led) { display: none; }
-/* the degree chip: a small glass socket, lit with the numeral when the chord sits on the key, DARK (and empty) when it
-   does not: dark is the only off-map signal (the Studio's chord-name law) */
-.sig .sgh-pdeg { position: relative; overflow: hidden; min-width: 18px; min-height: 14px; padding: 3px 6px; border-radius: 3px; text-align: center; font: 500 8px/1 var(--sg-mono); letter-spacing: .08em; color: #3a4654; background: var(--sg-glassbg); box-shadow: inset 0 0 0 1px rgba(0,0,0,.8), inset 0 1px 3px rgba(0,0,0,.8); }
-.sig .sgh-pdeg.on { color: #bfeeff; box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--sg-sapphire) 35%, rgba(0,0,0,.8)), inset 0 1px 3px rgba(0,0,0,.8); }
-/* stamped: the proud matte cap on a 3 px wall (the Studio's H:325-328) */
-.sig .sgh-pad.full {
-  background: linear-gradient(180deg, #333c49 0%, #252c37 47%, #1b212b 100%); border-top: 1px solid rgba(255,255,255,.1);
-  box-shadow: inset 0 1.4px .5px rgba(255,255,255,.18), inset 0 -4px 6px rgba(0,0,0,.46), 0 3px 0 #0a0d12, 0 5px 7px rgba(0,0,0,.5);
-}
-.sig .sgh-pad.full:is(:active, .pressed) { transform: translateY(2px); transition: none; box-shadow: inset 0 1.4px .5px rgba(255,255,255,.15), inset 0 -3px 5px rgba(0,0,0,.46), 0 1px 0 #0a0d12, 0 2px 3px rgba(0,0,0,.5); }
-/* sounding (LookB .lb-pad.lb-lit): pressed in, lit from inside, its LED on */
-.sig .sgh-pad.full.on {
-  transform: translateY(2px); background: var(--sg-face-dn); border-top-color: rgba(255,255,255,.06);
-  box-shadow: inset 0 2px 5px rgba(0,0,0,.6), inset 0 0 16px -4px var(--sg-sapphire), 0 1px 0 #0a0d12, 0 2px 3px rgba(0,0,0,.55);
-}
-.sig .sgh-pad.full .sgh-pnum { color: rgba(200,215,235,.46); }
-.sig .sgh-pad.on .sgh-pnum { color: color-mix(in srgb, var(--sg-sapphire) 55%, #cfefff); text-shadow: none; }
-/* the last one played: a thin sapphire ring (the Studio's H:340) */
-.sig .sgh-pad.full.sel { box-shadow: inset 0 1.4px .5px rgba(255,255,255,.18), inset 0 -4px 6px rgba(0,0,0,.46), inset 0 0 0 1px color-mix(in srgb, var(--sg-sapphire) 50%, transparent), 0 3px 0 #0a0d12, 0 5px 7px rgba(0,0,0,.5); }
-.sig .sgh-pad.full.sel.on { box-shadow: inset 0 2px 5px rgba(0,0,0,.6), inset 0 0 16px -4px var(--sg-sapphire), inset 0 0 0 1px color-mix(in srgb, var(--sg-sapphire) 50%, transparent), 0 1px 0 #0a0d12, 0 2px 3px rgba(0,0,0,.55); }
-/* a stamp: 150 ms heard-you (the Studio's H:336-338) */
-@keyframes sgh-stamp { 0% { box-shadow: inset 0 0 0 1px var(--sg-sapphire), inset 0 0 16px -2px var(--sg-sapphire), 0 3px 0 #0a0d12; } 100% { box-shadow: inset 0 1.4px .5px rgba(255,255,255,.18), inset 0 -4px 6px rgba(0,0,0,.46), 0 3px 0 #0a0d12, 0 5px 7px rgba(0,0,0,.5); } }
-.sig .sgh-pad.full.flash { animation: sgh-stamp 150ms ease-out 1; }
-/* ⇧ held: a stamped pad shows the drawn ✕ in place of its name (a state, not a hover) */
-.sig .sgh-px { position: absolute; left: 50%; top: 50%; width: 15px; height: 15px; margin: -7.5px 0 0 -7.5px; display: none; pointer-events: none; }
-.sig .sgh-px path { fill: none; stroke: #ffd0d0; stroke-width: 2.1; stroke-linecap: round; }
-.sig .sgh-rack.shift .sgh-pad.full :is(.sgh-plabel, .sgh-pdeg) { visibility: hidden; }
-.sig .sgh-rack.shift .sgh-pad.full .sgh-px { display: block; }
+/* ═══ 2 · THE KEYBED: the piano (lights only) · the bracket rail · the two keycap rows in the laptop's stagger ═══ */
+.sig .sgh-keybed { flex: none; display: flex; flex-direction: column; gap: 8px; }
 
-/* ═══ 4 · THE KEYBED: C2..C7 absolutely placed from stage-geometry.ts (whites tile 100/36 %, blacks .62× on the seam),
-   letters at the TOP of the keys the hand drives, names on lit keys, C-dots; lit states press > latched > sounding ═══ */
-.sig .sgh-keybed { display: flex; flex-direction: column; gap: 4px; }
+/* the piano: C3..C7 absolutely placed from stage-geometry.ts (29 whites tile 100 %, blacks .62× on the seam); lit
+   states press > latched > sounding; no letters, no names: only the C-dots */
 .sig .sgh-bed {
-  flex: none; height: 86px; padding: 6px 6px 0; border-radius: 12px 12px 3px 3px;
-  background: linear-gradient(180deg, #0a0d12, #05070a); border: 1px solid rgba(0,0,0,.65);
-  box-shadow: inset 0 3px 12px rgba(0,0,0,.7), inset 0 0 0 1px rgba(90,120,160,.05);
+  flex: none; height: 60px; padding: 4px 0 0; border-radius: 10px 10px 3px 3px; overflow: hidden;
+  background: linear-gradient(180deg, #0a0d12, #05070a);
+  box-shadow: inset 0 0 0 1px rgba(0,0,0,.65), inset 0 3px 12px rgba(0,0,0,.7), inset 0 0 0 2px rgba(90,120,160,.05);
 }
 .sig .sgh-keys { position: relative; height: 100%; }
 .sig .sgh-w, .sig .sgh-b { position: absolute; top: 0; cursor: pointer; touch-action: none; }
 .sig .sgh-w {
-  bottom: 0; border-radius: 0 0 6px 6px;
+  bottom: 0; border-radius: 0 0 5px 5px;
   background: linear-gradient(180deg, #222c39 0%, #141b25 55%, #0c121b 100%); border: 1px solid rgba(255,255,255,.2); border-top: none;
   box-shadow: inset 0 7px 11px -7px rgba(255,255,255,.14), inset 0 -7px 11px -6px rgba(0,0,0,.55), 0 2px 4px rgba(0,0,0,.5);
   transition: background .08s, box-shadow .12s, border-color .12s;
 }
 .sig .sgh-w:hover { background: linear-gradient(180deg, #283345 0%, #18202b 55%, #0e1520 100%); }
 .sig .sgh-b {
-  z-index: 3; height: 50px; border-radius: 0 0 4px 4px;
+  z-index: 3; height: 34px; border-radius: 0 0 4px 4px;
   background: linear-gradient(180deg, #0b0f16, #020305 82%); border: 1px solid rgba(255,255,255,.18); border-top: none;
   box-shadow: inset 0 1px 0 rgba(255,255,255,.1), inset 0 -8px 9px rgba(0,0,0,.7), 0 4px 6px rgba(0,0,0,.7);
   transition: background .05s, box-shadow .08s, border-color .08s;
 }
 .sig .sgh-b:hover { background: linear-gradient(180deg, #111723, #05070a 82%); }
 .sig :is(.sgh-w, .sgh-b).inbracket { border-color: rgba(255,255,255,.34); }
-/* the letter at the key's top: where the hand is, printed on the key it plays. The two rows stagger the way the
-   laptop's do: the colour row (W E T Y U O) at the very top of the black keys, the A-row a step lower on the whites,
-   still inside the black keys' span, so the fifteen read as two rows and never as one crowded line */
-.sig .sgh-q { position: absolute; left: 0; right: 0; top: 23px; text-align: center; pointer-events: none; font: 500 10.5px/1 var(--sg-mono); text-transform: uppercase; color: rgba(243,248,252,.86); }
-.sig .sgh-b .sgh-q { top: 6px; font-size: 8.5px; color: rgba(243,248,252,.74); }
-/* the name, only on a lit key (the Studio's R14c: fifty standing labels were noise) */
-.sig .sgh-nn { position: absolute; left: 0; right: 0; bottom: 9px; text-align: center; pointer-events: none; font: 500 8px/1 var(--sg-mono); letter-spacing: .04em; color: rgba(202,242,255,.86); opacity: 0; }
-.sig .sgh-b .sgh-nn { bottom: 6px; font-size: 7px; }
-.sig :is(.sgh-w, .sgh-b):is(.press, .latched, .sounding) .sgh-nn { opacity: 1; }
-.sig .sgh-cdot { position: absolute; left: 5px; bottom: 5px; width: 3px; height: 3px; border-radius: 50%; pointer-events: none; background: rgba(200,215,235,.3); }
+.sig .sgh-cdot { position: absolute; left: 50%; bottom: 5px; width: 4px; height: 4px; margin-left: -2px; border-radius: 50%; pointer-events: none; background: rgba(200,215,235,.3); }
 /* the colour row in a key: the five notes the key lacks wear a warm RIM (the Studio's H:514-520 borrowed ink, drawn as
-   an edge, not a fill): the key stays black or graphite, its outline and its letter go warm */
+   an edge, not a fill) — the same amber the colour-row keycaps wear below: the bond between the two */
 .sig .sgh-b.color { border-color: color-mix(in srgb, var(--sg-amber) 46%, rgba(255,255,255,.1)); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--sg-amber) 16%, transparent), inset 0 1px 0 rgba(255,255,255,.1), inset 0 -8px 9px rgba(0,0,0,.7), 0 4px 6px rgba(0,0,0,.7); }
-.sig .sgh-b.color .sgh-q { color: rgba(255,214,160,.86); }
 .sig .sgh-w.color { border-color: color-mix(in srgb, var(--sg-amber) 42%, rgba(255,255,255,.2)); box-shadow: inset 0 7px 11px -7px rgba(255,255,255,.14), inset 0 -7px 11px -6px rgba(0,0,0,.55), inset 0 0 0 1px color-mix(in srgb, var(--sg-amber) 14%, transparent), 0 2px 4px rgba(0,0,0,.5); }
-.sig .sgh-w.color .sgh-q { color: rgba(255,214,160,.92); }
 /* a finger on it: the brightest (LookB .lb-held + the Studio's H:423 / 434), lit from inside, no outer bloom, and it
    travels: 1 px down the same frame with the key's top in shadow (the device's one press language) */
 .sig .sgh-w.press {
@@ -168,34 +91,33 @@
   box-shadow: inset 0 0 0 1px var(--sg-sapphire), inset 0 -16px 22px -8px color-mix(in srgb, var(--sg-sapphire) 85%, transparent), inset 0 7px 11px -7px rgba(255,255,255,.2);
 }
 .sig .sgh-b.latched { background: linear-gradient(180deg, #0f86b4, #053a52 80%); border-color: var(--sg-sapphire); box-shadow: inset 0 0 0 1px var(--sg-sapphire), inset 0 1px 0 rgba(255,255,255,.22); }
-/* sounding with no hand (a pad, a chord's extensions): a wash, no depth (the Studio's H:444-448) */
+/* sounding with no hand (a chord's extensions, the arp): a wash, no depth (the Studio's H:444-448) */
 .sig .sgh-w.sounding { background: linear-gradient(180deg, #24485c, #101d29); border-color: color-mix(in srgb, var(--sg-sapphire) 55%, rgba(255,255,255,.34)); box-shadow: inset 0 -14px 20px -10px color-mix(in srgb, var(--sg-sapphire) 70%, transparent), inset 0 7px 11px -7px rgba(255,255,255,.14); }
 .sig .sgh-b.sounding { background: linear-gradient(180deg, #0f6f96, #052f42 82%); border-color: color-mix(in srgb, var(--sg-sapphire) 50%, rgba(255,255,255,.22)); box-shadow: inset 0 1px 0 rgba(255,255,255,.18), inset 0 -8px 10px -6px color-mix(in srgb, var(--sg-sapphire) 60%, transparent); }
-.sig :is(.sgh-w, .sgh-b):is(.press, .latched) .sgh-q { color: #f1ffff; text-shadow: 0 0 7px color-mix(in srgb, var(--sg-sapphire) 80%, transparent); }
-.sig :is(.sgh-w, .sgh-b).sounding .sgh-q { color: rgba(226,248,255,.8); }
-.sig :is(.sgh-w, .sgh-b).sounding .sgh-nn { color: rgba(202,242,255,.66); }
+.sig :is(.sgh-w, .sgh-b):is(.press, .latched, .sounding) .sgh-cdot { background: rgba(230,248,255,.6); }
 
-/* the bracket rail (LookB .lb-rail; the Studio's keybed-locator): the octave names under every C, the window where the
-   letters sit, two brushed jaws; click or drag anywhere on it = an octave jump */
+/* the bracket rail (LookB .lb-rail; the Studio's keybed-locator): the octave names under every C (12 px), the window
+   where the letters sit, two brushed jaws; click or drag anywhere on it = an octave jump */
 .sig .sgh-rail {
-  flex: none; height: 15px; padding: 0 7px; border-radius: 3px 3px 10px 10px; cursor: ew-resize; touch-action: none;
+  flex: none; height: 16px; padding: 0; border-radius: 3px 3px 8px 8px; cursor: ew-resize; touch-action: none;
   background: linear-gradient(180deg, #0b0f15, #070a0e);
   box-shadow: inset 0 1px 3px rgba(0,0,0,.8), inset 0 0 0 1px rgba(0,0,0,.5), 0 1px 0 rgba(255,255,255,.03);
 }
 .sig .sgh-railin { position: relative; height: 100%; }
-.sig .sgh-oname { position: absolute; top: 4px; transform: translateX(-50%); pointer-events: none; font: 500 6.5px/1 var(--sg-mono); letter-spacing: .08em; color: #566b80; white-space: nowrap; }
+.sig .sgh-oname { position: absolute; top: 2px; z-index: 1; transform: translateX(-50%); pointer-events: none; font: 500 12px/1 var(--sg-mono); letter-spacing: .06em; color: #6b8196; white-space: nowrap; }
 .sig .sgh-win {
-  position: absolute; top: 2px; bottom: 2px; border-radius: 3px; pointer-events: none;
+  position: absolute; top: 1px; bottom: 1px; border-radius: 3px; pointer-events: none;
   background: color-mix(in srgb, var(--sg-sapphire) 15%, transparent);
   box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--sg-sapphire) 52%, transparent), inset 0 0 8px -2px var(--sg-sapphire);
 }
-.sig .sgh-win::before, .sig .sgh-win::after { content: ""; position: absolute; top: 1px; bottom: 1px; width: 3px; border-radius: 1px; background: linear-gradient(180deg, #cfd9e3, #8b95a2); }
-.sig .sgh-win::before { left: 1px; }
-.sig .sgh-win::after { right: 1px; }
+.sig .sgh-win::before, .sig .sgh-win::after { content: ""; position: absolute; top: 2px; bottom: 2px; width: 3px; border-radius: 1px; background: linear-gradient(180deg, #cfd9e3, #8b95a2); }
+.sig .sgh-win::before { left: 2px; }
+.sig .sgh-win::after { right: 2px; }
 
-/* ═══ 5 · THE GATE ROW: the elastomer pads, amber arcs, the engraved badge that never lights ═══ */
-.sig .sgh-gate { position: relative; display: flex; align-items: center; justify-content: space-between; height: 58px; padding: 0 18px; }
-.sig .sgh-ggrp { position: relative; z-index: 1; display: flex; align-items: center; gap: 14px; }
-.sig .sgh-gate .sg-gpad { min-width: 50px; height: 36px; margin-bottom: 3px; font-size: 13px; }
-.sig .sgh-gate .si-knob.side .si-kn { min-width: 28px; }
-.sig .sgh-badge { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); pointer-events: none; }
+/* THE KEYCAP ROWS: the colour row (8) over the home row (9), 44 px caps, 4 px gaps, the colour row half a cap (24 px)
+   to the right of the home row, so W sits over the A/S seam as on the laptop; the block is centred under the piano.
+   Each row's box ends at its caps' faces; the keycap body (keycap.css, 5 × 6 px) shows in the 8 px between the rows */
+.sig .sgh-caps { flex: none; align-self: center; display: flex; flex-direction: column; gap: 8px; width: 428px; height: 100px; }
+.sig .sgh-crow { display: flex; gap: 4px; height: 44px; }
+.sig .sgh-crow .sg-key { margin: 0; }
+.sig .sgh-colour { padding-left: 24px; }

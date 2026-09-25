@@ -289,8 +289,11 @@ console.log('\n[surface] window.__signal: the reads, the real keymap, wake befor
   log.length = 0;
   s.press('KeyA', false);
   ok('a key-up: the action alone, no wake', log.join() === 'act:KeyA:false:false', log.join());
-  s.press('Digit1', true, true);
-  ok('shift rides along (a pad clear)', acts.at(-1).a === KEYMAP.Digit1 && acts.at(-1).shift === true);
+  s.press('KeyB', true, true);
+  ok('shift rides along', acts.at(-1).a === KEYMAP.KeyB && acts.at(-1).shift === true);
+  log.length = 0;
+  for (const c of ['KeyX', 'KeyC', 'KeyV', 'KeyN', 'Digit1', 'Digit2', 'Digit3', 'Digit4', 'Digit5', 'Digit6', 'Digit7', 'Digit8']) { s.press(c, true); s.press(c, false); s.press(c); }
+  ok('[R3] the keys that left the keyboard (X C V N, Digit1–8) fire nothing and wake nothing', log.length === 0, log.join());
   log.length = 0;
   s.press('Escape', true);
   ok('Escape: the stop action, no wake (it is never a user activation)', log.join() === 'act:Escape:true:false', log.join());
@@ -307,8 +310,8 @@ console.log('\n[surface] window.__signal: the reads, the real keymap, wake befor
   s.press('Escape');
   ok('…Escape omitted: the stop down + up, still no wake', log.join() === 'act:Escape:true:false,act:Escape:false:false', log.join());
   log.length = 0;
-  s.press('KeyV', undefined, true);
-  ok('…shift rides along on both edges', log.join() === 'wake,act:KeyV:true:true,act:KeyV:false:true', log.join());
+  s.press('KeyZ', undefined, true);
+  ok('…shift rides along on both edges', log.join() === 'wake,act:KeyZ:true:true,act:KeyZ:false:true', log.join());
   log.length = 0;
   ok('click() with no document: false', s.click('#pad') === false);
   s.stop();
@@ -322,7 +325,7 @@ console.log('\n[surface · first sound] on real timers: the first gesture to the
   const { inst, setRms } = fakeInstrument();
   const s = await mountTestSurface({ instrument: inst, onAction: () => {} });
   s.press('Escape', true);
-  s.press('KeyX', false);
+  s.press('KeyS', false);
   setRms(0.5);
   await sleep(40);
   ok('Escape or a key-up first: no mark, so no number, even with sound', s.firstSoundMs() === null);

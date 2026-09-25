@@ -168,3 +168,31 @@ throttle, stop, reload, power off, phone, home)
 KILL discipline as today (children, browsers, the shim; the last line proves nothing survives).
 
 ## 4. Residue (filled by the planner at the end)
+Gate r3 GREEN 2026-09-24 (build, Chromium 153 · WebKit 26.6 · Firefox 155; 232 rows: R2's power/first-sound/loop/throttle/
+stop/reload/power-off/phone/home + the R3 rows: keymap, HOLD-under-CHORD switch + pedal, dormant present + wakes, the 25
+keycaps drawn + press lights, the size floor (words ≥ 12, numerals ≥ 22, BPM 32 the largest), fit 1440 = 98.0 % of the
+column / 36.8 px clear of the rail, the module + pressed shots). The size-floor rows compare with a 0.01 px tolerance
+(WebKit reports a 12 px word under the host's zoom as 11.999999). Shots: ~/Documents/studio-build/signal-r3/gate/ and
+~/Desktop/signal-r3/. Suites: 28 green (harmony 78 with the R3 HOLD-under-CHORD block; keymap 43; surface 116; towers +
+keys-view re-targeted to the R3 views).
+
+Residue (for Jon; nothing here blocks the round):
+1. THE PADS ROW AND THE 1–8 KEYS ARE GONE this round (brief §F: the pads stay only with the Studio's key wheel as a popover;
+   the wheel is a ~900-line port needing its own design under the size floor, so it did not come). The rack model, its
+   saved state and its tests stay in the engine untouched. Next candidate: the key wheel as a popover on an empty pad.
+2. The drums' body did not fit §1.3's plan at the 12 px floor: TEXTURE + its seg took a row of their own and the footer
+   rail another; the grid gave 10 px (rows of ≈ 14), the cover glass sits at 40 (its floor), the delay unit at 56 with TIME
+   as a side knob. The cover and tone glasses stayed on the surface (small).
+3. The keys tower's FX LCD cards are ≈ 75 px tall (the height the gesture row + the harmony row cost); the MOD RATE word
+   sits on its ribbon's line; the gesture row is a flat row split by a hairline (a housing did not fit the width).
+4. HOLD-under-CHORD: the switch also resets the MOVE (←/→) shift: after a switch the new letter's chord plays unmoved
+   (the first press after silence), while a finger still holding a moved chord keeps the move (lane H's call).
+5. The chord glass in the top strip is a wide dark pane at rest (it fills the room between the disc and STOP) and lights
+   with the chord's name; the octave/key names print the Studio's convention (middle C = C3, so the rail reads C2..C6).
+6. The top strip is 52 tall; the power disc (54 drawn at 1.5×) stands a little proud of it (not clipped, by design).
+7. The homepage host (StudioOne) fits by both axes with a 60 px reserve: at 1440×900 the room gives the device ≈ 96 % of
+   its column (the height binds by a hair); the gate's home rows (night on power, day on scroll-away) pass.
+8. Nothing prints beneath the device: signal-copy.ts (the legend + the DRAFT brief) stays on disk, unmounted, for Jon's
+   words after this round.
+9. The phone still was re-rendered from the R3 device (public/s/signal-still.webp, 960 × 624; the page's aspect 1280/832).
+10. `--round r2` on R3 code turns the arp on through the ARP cap (KeyV is gone): r2 stays runnable; r0/r1 untouched.

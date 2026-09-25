@@ -15,12 +15,17 @@
 // INTENSITY = heat (B §11 #3), SUB = weight, GLIDE = glide (0..1; the ghost prints τ). The chip shows the note the bass is
 // on: the pinned root (lit), else the lowest held key (dim), else the last one it followed (B §11 #8), folded as it sounds.
 // PAINT: inst.onChange (and the view's own gestures) → one coalesced repaint per burst (a microtask); the playhead + the
-// followed note on requestAnimationFrame. KEYBOARD: B (power) and N (the padlock) are the integrator's keymap's; the caps
-// are .pressed while their key is down (display only) and light from the state. No title=, no tooltips.
+// followed note on requestAnimationFrame. No title=, no tooltips.
+// R3 · lane B (THE FIRST-TIMER ROUND, NOTES-SIGNAL-R3.md §1.3 BASS): recomposed at 310 × 520 inside the 330 × 540 cell.
+// HEAD 56 = the B KEYCAP (common.ts key(), keycap.css: the old BASS cap is gone; a click toggles bass.on, .lit while on,
+// .pressed while B is down) · the ROOT screen (.sb-note: an amber glass, the note the bass is on, lit + glowing while a
+// lock pins it, dim while it follows) · the voice ETCHED (`303`; the dead `synth` glass is gone). The padlock keeps its
+// cap and loses its key (N is gone from the keymap, R3). THE STRIP carries .dormant (+ today's .idle) unless SEQ. Every
+// part carries its contract hook (types.ts CTL.bass, data-ctl).
 import type { BassMode, BassState, BassStep, DrumVel, MountView, SignalState } from '../types.ts';
 import { el, makeGhost, makeKnob, makeSeg } from './controls.ts';
 import type { Knob } from './controls.ts';
-import { cap, knob, rail, screen, seg, tower } from './common.ts';
+import { accent, cap, etch, key, knob, rail, screen, seg, tower } from './common.ts';
 import { makeFilterCurve, xToF } from './filter-curve.ts';
 import { GAIN_UNITY, coverFmtHz, dbFmt, gainFmt, gainToV, lowcutFmt, pad, primary, reflectKeys, vToGain } from './drums-view.ts';
 
@@ -65,15 +70,21 @@ export const mountBassView: MountView = (root, inst) => {
 
   const T = tower('bass', 'sb-tower');
 
-  // ── the header rail: the power cap (B) + the voice's name glass (static, lit) ──
+  // ── the head: the B keycap (the bass's on/off) · the ROOT screen (the note it is on) · the voice, etched ──
   const head = el('div', 'sb-head');
-  const pow = cap('bass', { led: true, cls: 'sb-pow' });
-  pow.dataset.code = 'KeyB';
+  const pow = key('KeyB', 'B', { lg: true, tint: 'bass', name: 'Bass on/off' });
+  pow.classList.add('sb-pow');
+  pow.dataset.ctl = 'bass-power';
   pow.addEventListener('click', () => set('on', !bass.state().on));
-  head.append(pow, screen('synth', 'voice', 'row tint sb-name'));
+  // the ROOT glass (was the mode row's `.sb-note` chip, same class): amber, the numeral lit while a lock pins it
+  const note = accent(screen('C1', 'root', 'sb-note'), 'tempo');
+  note.dataset.ctl = 'bass-root';
+  const noteB = note.querySelector('b') as HTMLElement;
+  head.append(pow, note, etch('303', 'sb-voice'));
 
   // ── the tone glass: ① low-cut (lowcut / lowcutDb) + ② tone (cut / cutDb), filter-curve.ts verbatim ──
   const eqHost = el('div', 'sb-eqhost');
+  eqHost.dataset.ctl = 'bass-tone';
   const eqGhost = makeGhost(eqHost);
   const eq = { lowcut: b0.lowcut, lowcutDb: b0.lowcutDb, cut: b0.cut, cutDb: b0.cutDb };
   const curve = makeFilterCurve({
@@ -88,23 +99,24 @@ export const mountBassView: MountView = (root, inst) => {
   eqHost.addEventListener('pointerup', () => eqGhost.hide());
   eqHost.addEventListener('pointercancel', () => eqGhost.hide());
 
-  // ── the mode row: DRONE PLUCK SEQ · the padlock (N) · the note it is on ──
+  // ── the mode row: DRONE PLUCK SEQ · the padlock (an on-screen toggle: no key since R3) ──
   const modeRow = el('div', 'sb-mode');
   const modeEl = seg(MODES, b0.mode, 'sb-modes');
+  modeEl.dataset.ctl = 'bass-mode';
   const modeSeg = makeSeg(modeEl, (v) => set('mode', v as BassMode));
   const pin = cap('', { led: true, cls: 'sb-pin', icon: LOCK, name: 'root lock' });
-  pin.dataset.code = 'KeyN';
+  pin.dataset.ctl = 'bass-lock';
   pin.addEventListener('click', () => {
     const b = bass.state();
     if (b.root != null || b.armed) { bass.set('armed', false); bass.set('root', null); }   // unpin + disarm
     else bass.set('armed', true);                                                         // arm: the next onset pins
     schedule();
   });
-  const note = el('span', 'sb-note');
-  modeRow.append(modeEl, pin, note);
+  modeRow.append(modeEl, pin);
 
   // ── the strip: sixteen bars under glass (one per 8th: a two-bar line), lit only in SEQ ──
   const strip = el('div', 'sg-glass tint sb-bars');
+  strip.dataset.ctl = 'bass-strip';
   const bars: HTMLButtonElement[] = [];
   const fills: HTMLElement[] = [];
   const painted: string[] = new Array<string>(16).fill('');
@@ -122,8 +134,10 @@ export const mountBassView: MountView = (root, inst) => {
 
   // ── the knobs: DENSITY · GROOVE (regenerate the strip), INTENSITY · SUB · GLIDE ──
   const knobs = el('div', 'sb-knobs');
-  const densEl = knob('density', { size: 'km' }), grooveEl = knob('groove', { size: 'km' });
-  const intEl = knob('intensity', { size: 'km' }), subEl = knob('sub', { size: 'km' }), glideEl = knob('glide', { size: 'km' });
+  const densEl = knob('density'), grooveEl = knob('groove');
+  const intEl = knob('intensity'), subEl = knob('sub'), glideEl = knob('glide');
+  densEl.dataset.ctl = 'bass-density'; grooveEl.dataset.ctl = 'bass-groove';
+  intEl.dataset.ctl = 'bass-heat'; subEl.dataset.ctl = 'bass-weight'; glideEl.dataset.ctl = 'bass-glide';
   const r1 = el('div', 'sb-krow'), r2 = el('div', 'sb-krow');
   r1.append(densEl, grooveEl);
   r2.append(intEl, subEl, glideEl);
@@ -145,9 +159,11 @@ export const mountBassView: MountView = (root, inst) => {
   const foot = rail('sb-foot');
   const mBtn = cap('m', { cls: 'sq warn' });
   const sBtn = cap('s', { cls: 'sq' });
+  mBtn.dataset.ctl = 'bass-mute'; sBtn.dataset.ctl = 'bass-solo';
   mBtn.addEventListener('click', () => set('mute', !bass.state().mute));
   sBtn.addEventListener('click', () => { inst.setSolo(inst.state().solo === 'bass' ? null : 'bass'); schedule(); });
   const gainEl = knob('gain', { size: 'kx', side: true, tick: GAIN_UNITY });
+  gainEl.dataset.ctl = 'bass-gain';
   const gainTick = gainEl.querySelector<HTMLElement>('.si-tick');
   const gain = makeKnob(gainEl, gainToV(b0.gain), (v) => set('gain', vToGain(v)), undefined, {
     dflt: GAIN_UNITY, detents: [GAIN_UNITY], ghost: makeGhost(gainEl), label: gainFmt,
@@ -181,20 +197,21 @@ export const mountBassView: MountView = (root, inst) => {
       if (lo !== Infinity) follow = lo;
       m = follow;
     }
-    const key = `${pinned ? 'p' : 'f'}|${m}`;
-    if (key === noteKey) return;
-    noteKey = key;
-    note.textContent = bassNoteName(m);
+    const nk = `${pinned ? 'p' : 'f'}|${m}`;
+    if (nk === noteKey) return;
+    noteKey = nk;
+    noteB.textContent = bassNoteName(m);
     note.classList.toggle('lit', pinned);
+    note.classList.toggle('glow', pinned);
   };
   const paintBars = (seq: BassStep[]): void => {
     for (let i = 0; i < 16; i++) {
       const c = seq[i];
       const v = c ? c.v : 0;
       const sub = !!c && c.oct === 'sub' && v > 0, slide = !!c && c.slide && v > 0;
-      const key = `${v}${sub ? 's' : ''}${slide ? '>' : ''}`;
-      if (painted[i] === key) continue;
-      painted[i] = key;
+      const pk = `${v}${sub ? 's' : ''}${slide ? '>' : ''}`;
+      if (painted[i] === pk) continue;
+      painted[i] = pk;
       const b = bars[i];
       b.classList.toggle('on', v > 0);
       b.classList.toggle('v1', v === 1);
@@ -211,7 +228,7 @@ export const mountBassView: MountView = (root, inst) => {
     const S = inst.state();
     const b = S.bass;
     st = b;
-    pow.classList.toggle('on', b.on);
+    pow.classList.toggle('lit', b.on);
     pow.setAttribute('aria-pressed', String(b.on));
     T.classList.toggle('is-on', b.on);
     if (b.lowcut !== eq.lowcut || b.lowcutDb !== eq.lowcutDb || b.cut !== eq.cut || b.cutDb !== eq.cutDb) {
@@ -220,6 +237,7 @@ export const mountBassView: MountView = (root, inst) => {
     }
     if (modeSeg.get() !== b.mode) modeSeg.set(b.mode);
     strip.classList.toggle('idle', b.mode !== 'seq');
+    strip.classList.toggle('dormant', b.mode !== 'seq');
     pin.classList.toggle('on', b.armed || b.root != null);
     pin.classList.toggle('arm', b.armed);
     pin.setAttribute('aria-pressed', String(b.armed || b.root != null));
@@ -242,7 +260,7 @@ export const mountBassView: MountView = (root, inst) => {
   };
   const offChange = inst.onChange(schedule);
   paint();
-  const offKeys = reflectKeys([pow, pin]);
+  const offKeys = reflectKeys([pow]);
 
   // ── rAF: the playhead (one cell per 8th while the bass plays SEQ on a running clock) + the followed note ──
   let ph = -1, raf = 0, tNote = 0;

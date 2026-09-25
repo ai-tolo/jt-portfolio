@@ -79,9 +79,10 @@ console.log('\n[keymap] down / up by CODE');
   ok('a repeating Space is still prevented, but acts once', rep.prevented && r.acts.filter((x) => x[0] === 'Space').length === 1);
   const al = r.down('ArrowLeft');
   ok('ArrowLeft: oct −1 + preventDefault', al.prevented && r.acts.at(-1)[1] === 'oct' && KEYMAP.ArrowLeft.d === -1);
-  const d3 = r.down('Digit3', { shiftKey: true });
-  ok('⇧Digit3: pad 2 with shift = true (clear) + preventDefault', d3.prevented && js(r.acts.at(-1)) === js(['Digit3', 'pad', true, true]) && KEYMAP.Digit3.i === 2);
-  ok('the prevented set is exactly Space, the arrows and Digit1..8', PREVENT_CODES.size === 13 && [...PREVENT_CODES].every((c) => KEYMAP[c]));
+  const bs = r.down('KeyB', { shiftKey: true });
+  ok('⇧B: the bass with shift = true, not prevented (a letter)', !bs.prevented && js(r.acts.at(-1)) === js(['KeyB', 'bass', true, true]));
+  ok('the prevented set is exactly Space and the four arrows, every one mapped', PREVENT_CODES.size === 5
+    && ['Space', 'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].every((c) => PREVENT_CODES.has(c) && KEYMAP[c]));
 }
 
 console.log('\n[keymap] keyup releases by the code recorded at keydown (the ⌥ defect NOT ported, D §4)');
@@ -94,10 +95,10 @@ console.log('\n[keymap] keyup releases by the code recorded at keydown (the ⌥ 
   r.win.document.activeElement = { tagName: 'INPUT' };
   r.up('KeyZ');
   ok('focus moved to a text field mid-hold: the keyup still releases what we pressed', js(r.acts.at(-1)) === js(['KeyZ', 'gate', false, false]));
-  r.down('KeyX');
+  r.down('KeyG');
   ok('…while the field has focus the page does not own new keys', r.acts.at(-1)[0] === 'KeyZ');
   r.win.document.activeElement = null;
-  r.up('KeyX');
+  r.up('KeyG');
   ok('a key pressed while we did not own it is not ours to release', r.acts.at(-1)[0] === 'KeyZ');
 }
 
@@ -140,9 +141,9 @@ console.log('\n[keymap] owns(): text fields, ⌘/ctrl/alt; Escape always (index.
 console.log('\n[keymap] blur and a hidden tab release every code down (index.ts:490)');
 {
   const r = rig();
-  r.down('KeyA'); r.down('KeyZ'); r.down('Digit1');
+  r.down('KeyA'); r.down('KeyZ'); r.down('Space');
   r.win.fire('blur');
-  ok('blur: on = false for every code down, shift false', js(r.acts.slice(3)) === js([['KeyA', 'note', false, false], ['KeyZ', 'gate', false, false], ['Digit1', 'pad', false, false]]) && r.km.down().length === 0);
+  ok('blur: on = false for every code down, shift false', js(r.acts.slice(3)) === js([['KeyA', 'note', false, false], ['KeyZ', 'gate', false, false], ['Space', 'beat', false, false]]) && r.km.down().length === 0);
   r.up('KeyA');
   ok('…and the late keyups find nothing to release twice', r.acts.length === 6);
   r.down('KeyM');
@@ -183,8 +184,24 @@ console.log('\n[keymap] detach; a throwing listener; the whole table');
     if (r.acts.at(-1)[2] !== false) good = false;
   }
   ok(`every contract code (${Object.keys(KEYMAP).length}) fires its own action down and up`, good && r.km.down().length === 0);
-  ok('the bottom row: Z gate · X hold · C chord · V arp · B bass · N lock · M dive; = tap',
-    ['KeyZ', 'KeyX', 'KeyC', 'KeyV', 'KeyB', 'KeyN', 'KeyM', 'Equal'].map((c) => KEYMAP[c].kind).join() === 'gate,hold,chord,arp,bass,lock,dive,tap');
+  ok('the bottom row: Z gate · B bass · M dive; = tap', ['KeyZ', 'KeyB', 'KeyM', 'Equal'].map((c) => KEYMAP[c].kind).join() === 'gate,bass,dive,tap');
+}
+
+console.log('\n[keymap] R3 · THE TAUGHT SET: exactly these codes; X C V N and Digit1–8 left the keyboard');
+{
+  const TAUGHT = ['KeyA', 'KeyS', 'KeyD', 'KeyF', 'KeyG', 'KeyH', 'KeyJ', 'KeyK', 'KeyL', 'KeyW', 'KeyE', 'KeyT', 'KeyY', 'KeyU', 'KeyO',
+    'Space', 'KeyB', 'KeyZ', 'KeyM', 'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Equal', 'Escape'];
+  ok(`KEYMAP is exactly the taught set (${TAUGHT.length} codes)`, js(Object.keys(KEYMAP).sort()) === js(TAUGHT.slice().sort()), js(Object.keys(KEYMAP)));
+  ok('no action kind hold / chord / arp / lock / pad remains', !Object.values(KEYMAP).some((a) => ['hold', 'chord', 'arp', 'lock', 'pad'].includes(a.kind)));
+  const GONE = ['KeyX', 'KeyC', 'KeyV', 'KeyN', 'Digit1', 'Digit2', 'Digit3', 'Digit4', 'Digit5', 'Digit6', 'Digit7', 'Digit8'];
+  ok('X C V N and Digit1–8 are not mapped', GONE.every((c) => !Object.prototype.hasOwnProperty.call(KEYMAP, c)));
+  const r = rig();
+  let prevented = false;
+  for (const c of GONE) { const e = r.down(c); prevented ||= e.prevented; r.down(c, { shiftKey: true }); r.up(c); }
+  ok('…pressed (with or without ⇧) they fire nothing, record nothing, and are never preventDefault-ed', r.acts.length === 0 && r.km.down().length === 0 && !prevented, js(r.acts));
+  r.win.document.activeElement = { tagName: 'INPUT' };
+  r.down('Escape');
+  ok('Escape is still ALWAYS owned (a text field focused)', js(r.acts) === js([['Escape', 'stop', true, false]]));
 }
 
 console.log(`\n[keymap] ${pass} passed, ${fail} failed`);

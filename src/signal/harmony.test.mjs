@@ -74,6 +74,113 @@ console.log('\n[harmony] the hand: letters, CHORD, stage keys (play.ts:292-358)'
   r.up('KeyA');
 }
 
+console.log('\n[harmony] HOLD under CHORD: one chord at a time (R3)');
+{
+  // the note log only (on/off, in order): what keys heard
+  const notes = (r) => r.log.filter((e) => e[0] === 'on' || e[0] === 'off').map((e) => (e[0] === 'on' ? ['on', e[1], e[2]] : ['off', e[1]]));
+  const snd = (r) => js(r.h.sounding().map((e) => e[0]).sort());
+  const ids = (id) => [id, `${id}~0`, `${id}~1`];
+  const C = [['on', 'kKeyA', 60], ['on', 'kKeyA~0', 64], ['on', 'kKeyA~1', 67]];
+  const F = [['on', 'kKeyF', 65], ['on', 'kKeyF~0', 69], ['on', 'kKeyF~1', 72]];
+  const offs = (id) => ids(id).map((x) => ['off', x]);
+
+  // (a) a new chord SWITCHES
+  const r = rig();
+  r.h.set('hold', true); r.h.set('chord', true); r.clear();
+  r.down('KeyA'); r.up('KeyA');
+  ok('(a) hold + chord: tap A → the C triad rings, nothing off', js(notes(r)) === js(C) && snd(r) === js(ids('kKeyA').sort()), js(notes(r)));
+  r.clear(); r.down('KeyF');
+  ok('(a) down F → EXACTLY C\'s three go off, then F\'s three come on', js(notes(r)) === js([...offs('kKeyA'), ...F]), js(notes(r)));
+  ok('(a) sounding() = F\'s triad only', js(r.h.sounding().map((e) => e[1])) === js([65, 69, 72]) && snd(r) === js(ids('kKeyF').sort()), js(r.h.sounding()));
+  r.clear(); r.up('KeyF');
+  ok('(a) up F → nothing off (the hold owns F now)', notes(r).length === 0, js(notes(r)));
+  ok('(a) …300 ms later F still rings (nothing happens on time)', js(r.h.sounding().map((e) => e[1])) === js([65, 69, 72]) && r.h.state().hold);
+
+  // (b) tap-again releases it
+  r.clear(); r.down('KeyF'); r.up('KeyF');
+  ok('(b) tap F again → F\'s three go off, nothing comes on, silence', js(notes(r)) === js(offs('kKeyF')) && r.h.sounding().length === 0, js(notes(r)));
+}
+{
+  // (c) keys a finger holds are the finger's
+  const notes = (r) => r.log.filter((e) => e[0] === 'on' || e[0] === 'off').map((e) => (e[0] === 'on' ? ['on', e[1], e[2]] : ['off', e[1]]));
+  const r = rig();
+  r.h.set('hold', true); r.h.set('chord', true); r.clear();
+  r.down('KeyA');
+  r.clear(); r.down('KeyD');
+  ok('(c) A held by a finger, down D → nothing goes off, D\'s triad (E G B) comes on',
+    js(notes(r)) === js([['on', 'kKeyD', 64], ['on', 'kKeyD~0', 67], ['on', 'kKeyD~1', 71]]), js(notes(r)));
+  r.clear(); r.up('KeyA'); r.up('KeyD');
+  ok('(c) up A, up D → nothing off (the pedal now owns both)', notes(r).length === 0 && r.h.sounding().length === 6, js(notes(r)));
+  r.clear(); r.down('KeyG');
+  const off = notes(r).filter((e) => e[0] === 'off').map((e) => e[1]).sort();
+  ok('(c) down G → A\'s AND D\'s ids go off, then G\'s come on (G B D)',
+    js(off) === js(['kKeyA', 'kKeyA~0', 'kKeyA~1', 'kKeyD', 'kKeyD~0', 'kKeyD~1'])
+    && js(notes(r).filter((e) => e[0] === 'on')) === js([['on', 'kKeyG', 67], ['on', 'kKeyG~0', 71], ['on', 'kKeyG~1', 74]])
+    && notes(r).findIndex((e) => e[0] === 'on') === 6, js(notes(r)));
+  ok('(c) sounding() = G\'s triad only', js(r.h.sounding().map((e) => e[1])) === js([67, 71, 74]), js(r.h.sounding()));
+  r.up('KeyG');
+}
+{
+  // (d) HOLD without CHORD: the sustain pedal (stacks; tap-again releases only that note)
+  const notes = (r) => r.log.filter((e) => e[0] === 'on' || e[0] === 'off').map((e) => (e[0] === 'on' ? ['on', e[1], e[2]] : ['off', e[1]]));
+  const r = rig();
+  r.h.set('hold', true); r.clear();
+  r.down('KeyA'); r.up('KeyA'); r.down('KeyD'); r.up('KeyD');
+  ok('(d) hold, chord off: tap A, tap D → both ring, nothing off', js(notes(r)) === js([['on', 'kKeyA', 60], ['on', 'kKeyD', 64]])
+    && js(r.h.sounding().map((e) => e[1])) === js([60, 64]), js(notes(r)));
+  r.clear(); r.down('KeyA'); r.up('KeyA');
+  ok('(d) tap A again → only A goes off; D rings', js(notes(r)) === js([['off', 'kKeyA']]) && js(r.h.sounding().map((e) => e[1])) === js([64]), js(notes(r)));
+}
+{
+  // (e) ARP + HOLD + CHORD: the same law on the pool
+  const r = rig();
+  r.h.set('hold', true); r.h.set('chord', true); r.h.set('arp', { ...r.h.state().arp, on: true }); r.clear();
+  r.down('KeyA'); r.up('KeyA');
+  const pool = () => js(r.h.sounding().map((e) => e[0]).sort());
+  ok('(e) arp + hold + chord: tap A → the pool holds A\'s ids', pool() === js(['kKeyA', 'kKeyA~0', 'kKeyA~1']), pool());
+  r.down('KeyF'); r.up('KeyF');
+  ok('(e) tap F → the pool holds F\'s ids only', pool() === js(['kKeyF', 'kKeyF~0', 'kKeyF~1']), pool());
+  ok('(e) no keys.noteOn for pool ids (the arp books plucks)', r.of('on').length === 0, js(r.of('on')));
+  r.h.book(r.booking(0, 0));
+  ok('(e) the next step strums F\'s block (65 69 72), not C\'s', js([...new Set(r.of('hit').map((e) => e[1]))].sort((a, b) => a - b)) === js([65, 69, 72]), js(r.of('hit')));
+}
+{
+  // (f) stage keys under hold + chord: a pedal (never chorded, never switched by another stage key); a letter chord
+  // pressed after them releases them (they are the hold's)
+  const notes = (r) => r.log.filter((e) => e[0] === 'on' || e[0] === 'off').map((e) => (e[0] === 'on' ? ['on', e[1], e[2]] : ['off', e[1]]));
+  const r = rig();
+  r.h.set('hold', true); r.h.set('chord', true); r.clear();
+  r.h.keyDown('p60', 60); r.h.keyUp('p60'); r.h.keyDown('p62', 62); r.h.keyUp('p62');
+  ok('(f) stage keys p60, p62 under hold + chord: both ring, unchorded, nothing off', js(notes(r)) === js([['on', 'p60', 60], ['on', 'p62', 62]])
+    && js(r.h.sounding().map((e) => e[0])) === js(['p60', 'p62']), js(notes(r)));
+  r.clear(); r.down('KeyF'); r.up('KeyF');
+  ok('(f) a letter chord after them releases both stage keys, then F\'s triad rings',
+    js(notes(r)) === js([['off', 'p60'], ['off', 'p62'], ['on', 'kKeyF', 65], ['on', 'kKeyF~0', 69], ['on', 'kKeyF~1', 72]])
+    && js(r.h.sounding().map((e) => e[1])) === js([65, 69, 72]), js(notes(r)));
+  // (g) HOLD off releases everything
+  r.h.keyDown('p50', 50); r.h.keyUp('p50');
+  r.clear(); r.h.set('hold', false);
+  ok('(g) hold off → every ringing id goes off (F\'s three + p50), silence',
+    js(r.of('off').map((e) => e[1]).sort()) === js(['kKeyF', 'kKeyF~0', 'kKeyF~1', 'p50']) && r.h.sounding().length === 0, js(r.log));
+}
+{
+  // a switch un-pins a pad the flush silenced (the rack's stale mono ref reconciled), and a pad under HOLD still
+  // re-strikes as before
+  const r = rig();
+  r.h.set('hold', true); r.h.set('chord', true);
+  r.h.set('rack', [[62, 65, 69]]);
+  r.h.trigger(0); r.h.release(0);
+  ok('pad under HOLD: its tones ring and it pins the bass to D (62)', js(r.h.sounding().map((e) => e[0])) === js(['c0.0', 'c0.1', 'c0.2']) && r.bs.root === 62);
+  r.clear(); r.down('KeyF'); r.up('KeyF');
+  ok('a letter chord after it: the pad\'s tones (the hold\'s) release, F rings, the pad\'s pin is dropped',
+    js(r.of('off').map((e) => e[1])) === js(['c0.0', 'c0.1', 'c0.2']) && js(r.h.sounding().map((e) => e[1])) === js([65, 69, 72])
+    && r.bs.root === null && !r.h.pad(0).on, js(r.log));
+  r.clear(); r.h.trigger(0);
+  ok('the pad pressed again re-strikes (the rack\'s mono latch, unchanged: F stays, the pad rings, re-pinned)',
+    js(r.of('on').map((e) => e[1])) === js(['c0.0', 'c0.1', 'c0.2']) && r.bs.root === 62, js(r.log));
+  r.h.release(0);
+}
+
 console.log('\n[harmony] the bass hears what sounds, ascending (core.ts:1671-1672)');
 {
   const r = rig();
@@ -243,15 +350,16 @@ console.log('\n[harmony] the keys went silent on their own (blur / hidden / stop
   const bass = { held() {}, gesture() {}, state: () => ({ root: null, armed: false }), set() {} };
   const time = { grid: () => ({ sr: 48000, barFrames: 96000, originFrame: 0 }), nextLine: (p, f = 960) => ({ frame: f, bar: 0, i: 0, perBar: p }) };
   const h = createHarmony({ keys, bass, time, effects: { chop() {}, releaseGate() {} }, ctx: { currentTime: 0 } });
-  h.set('hold', true); h.set('chord', true);
+  h.set('hold', true);                        // the pedal (R3: HOLD + CHORD switches, so the stack is chord-off)
   h.keyDown('kKeyA', 60); h.keyUp('kKeyA');
   h.keyDown('kKeyS', 62); h.keyUp('kKeyS');
   h.keyDown('kKeyS', 62); h.keyUp('kKeyS');   // tap-again: S released by us (the keys pass through non-empty)
   await Promise.resolve();
-  ok('our own releases never make the model forget what still rings (A\'s chord stays)', js(h.sounding().map((e) => e[1])) === js([60, 64, 67]));
+  ok('our own releases never make the model forget what still rings (A stays)', js(h.sounding().map((e) => e[1])) === js([60]));
   keys.allOff();                              // the window blurred: lane K put every voice down itself
   await Promise.resolve();
-  ok('the keys went silent on their own: the latched chord is forgotten', h.sounding().length === 0);
+  ok('the keys went silent on their own: the latched note is forgotten', h.sounding().length === 0);
+  h.set('chord', true);
   log.length = 0;
   h.keyDown('kKeyA', 60);
   ok('…so the next tap on A SOUNDS (not a tap-again release of a silent note)', log.filter((e) => e[0] === 'on').length === 3 && h.sounding().length === 3, js(log));

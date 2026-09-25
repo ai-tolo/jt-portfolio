@@ -9,17 +9,24 @@
 //     divisions :54-56, the cover glass wiring :319-337 (+ its readout :321-322), the sidechain readout :342, the knob
 //     ghosts :288-313, 340-368; module-header.ts:225-277 — the footer (M · S · the gain trim 1.25·v, detent + reset .8, its
 //     dB readout :259-262).
-// Contract (src/signal/types.ts): DrumsState, Drums, SignalInstrument, MountView. THE GRID IS THE TRUTH: every cell paints
-// drums.state().seq; a click writes drums.setStep; the pattern seg + DENSITY regenerate (drums.regenerate()).
+// R3 · lane D (THE FIRST-TIMER ROUND, NOTES-SIGNAL-R3.md §1.3 DRUMS): the tower recomposed top to bottom — HEAD (the BPM
+// glass, moved here from the top strip, drag AND type · the `=` keycap · the kit as an etched word) · the COVER glass ·
+// THE GRID · the PATTERN seg · SWING DENSITY SIDECHAIN · THE DELAY UNIT (one raised housing, an activity lamp on the
+// TIME division, FB + TIME dormant at MIX 0) · TEXTURE + TAPE/DRIVE · the footer rail (M · S · GAIN) · THE SPACE BAR (the
+// drums' on/off, a real keycap). The tempo glass is ported from view/hands-view.ts:129-179 (R2, 76a02c7; the Studio's
+// time-strip.ts:45-102) with its look from styles/signal/hands.css:24-38.
+// Contract (src/signal/types.ts): DrumsState, Drums, SignalInstrument, MountView, CTL.drums. THE GRID IS THE TRUTH: every
+// cell paints drums.state().seq; a click writes drums.setStep; the pattern seg + DENSITY regenerate (drums.regenerate()).
 // PAINT: inst.onChange (and the view's own gestures) → one coalesced repaint per burst (a microtask) from inst.state(); the
-// playhead column from time.playhead() on requestAnimationFrame while drums.on and time.running().
-// KEYBOARD: the integrator's keymap drives the instrument (Space = drums on/off); this view only REFLECTS it: the DRUMS cap
-// is .pressed while Space is down (display only), and lights from the state. No title=, no tooltips, no words that explain.
-import { DRUM_LANES } from '../types.ts';
+// playhead column, the BPM digits, the beat lamp and the delay lamp on requestAnimationFrame (one frame loop).
+// KEYBOARD: the integrator's keymap drives the instrument (Space = drums on/off, = = tap); this view only REFLECTS it: a
+// keycap is .pressed while its key is down (display only), the SPACE bar lights from the state, `=` flashes per tap.
+// No title=, no tooltips, no words that explain.
+import { BPM_MAX, BPM_MIN, DRUM_LANES } from '../types.ts';
 import type { DrumDelayDiv, DrumLane, DrumPatternName, DrumsState, DrumTexture, DrumVel, MountView, SignalState } from '../types.ts';
-import { el, makeGhost, makeKnob, makeSeg } from './controls.ts';
+import { clamp, el, makeGhost, makeKnob, makeSeg } from './controls.ts';
 import type { Knob } from './controls.ts';
-import { cap, knob, rail, screen, seg, tower } from './common.ts';
+import { cap, etch, glass, key, knob, led, rail, seg, tower } from './common.ts';
 import { makeFilterCurve, xToF } from './filter-curve.ts';
 
 /** The grid's six lane legends (the R0 mock's words, LookB.astro:13-18: OPEN, SHKR). */
@@ -78,7 +85,7 @@ export const primary = (e: PointerEvent): boolean => e.button === 0 || e.button 
 /** THE KEYBOARD, REFLECTED (display only; new code, the guards of keymap.ts defaultOwns, lane H): a cap carrying
  *  data-code is .pressed while that key is down. It never preventDefaults and never stops propagation (the keymap acts);
  *  it ignores ⌘/ctrl/alt and a focused text field; a keyup always lets go; a lost window or a hidden tab lets go of all. */
-export function reflectKeys(caps: ReadonlyArray<HTMLElement>): () => void {
+export function reflectKeys(caps: ReadonlyArray<HTMLElement>, onDown?: (code: string, e: KeyboardEvent) => void): () => void {
   const W = typeof window !== 'undefined' ? window : null;
   if (!W) return () => {};
   const byCode = new Map<string, HTMLElement>();
@@ -89,21 +96,22 @@ export function reflectKeys(caps: ReadonlyArray<HTMLElement>): () => void {
     return !!a && (a.tagName === 'INPUT' || a.tagName === 'TEXTAREA' || a.tagName === 'SELECT' || a.isContentEditable === true);
   };
   const show = (code: string): void => { byCode.get(code)?.classList.toggle('pressed', down.has(code)); };
-  const onDown = (e: KeyboardEvent): void => {
+  const onKey = (e: KeyboardEvent): void => {
     if (!byCode.has(e.code) || down.has(e.code)) return;   // a repeat is the same finger
     if (e.metaKey || e.ctrlKey || e.altKey || typing()) return;
     down.add(e.code);
     show(e.code);
+    onDown?.(e.code, e);                                   // [R3] a view's display-only echo (the `=` cap's tap flash)
   };
   const onUp = (e: KeyboardEvent): void => { if (down.delete(e.code)) show(e.code); };
   const letGo = (): void => { for (const c of [...down]) { down.delete(c); show(c); } };
   const onVis = (): void => { if (document.visibilityState === 'hidden') letGo(); };
-  W.addEventListener('keydown', onDown, true);
+  W.addEventListener('keydown', onKey, true);
   W.addEventListener('keyup', onUp, true);
   W.addEventListener('blur', letGo);
   document.addEventListener?.('visibilitychange', onVis);
   return () => {
-    W.removeEventListener('keydown', onDown, true);
+    W.removeEventListener('keydown', onKey, true);
     W.removeEventListener('keyup', onUp, true);
     W.removeEventListener('blur', letGo);
     document.removeEventListener?.('visibilitychange', onVis);
@@ -111,27 +119,131 @@ export function reflectKeys(caps: ReadonlyArray<HTMLElement>): () => void {
   };
 }
 
+/** [R3] The delay's TIME division in BEATS (the activity lamp's clock): 1/16 = .25 · 1/8 = .5 · 1/8d = .75 · 1/4 = 1 · 1/2 = 2. */
+export const DLY_BEATS: Record<DrumDelayDiv, number> = { '1/16': 0.25, '1/8': 0.5, '1/8d': 0.75, '1/4': 1, '1/2': 2 };
+/** [R3] The playhead in beats, HEARD time (time.playhead(): bar · 16th step · phase through that 16th). */
+export const phBeats = (p: { bar: number; step: number; phase: number }): number => p.bar * 4 + (p.step + p.phase) / 4;
+/** [R3] The delay is heard at all (MIX ≥ .01): below it FB and TIME are dormant and the lamp stays dark. */
+export const DLY_AUDIBLE = 0.01;
+/** [R3] A typed tempo: digits only, rounded, clamped; null = nothing to commit (the field is left as it was). */
+export function typedBpm(s: string): number | null {
+  const d = String(s).replace(/[^0-9.]/g, '');
+  if (!d) return null;
+  const n = Number(d);
+  return Number.isFinite(n) ? clamp(Math.round(n), BPM_MIN, BPM_MAX) : null;
+}
+/** [R3] A plain click on the tempo glass (it TYPES) vs a drag (it slides): a release within 250 ms and under 3 px. */
+export const CLICK_MS = 250, CLICK_PX = 3;
+
 export const mountDrumsView: MountView = (root, inst) => {
   const d0 = inst.state().drums;
-  const drums = inst.drums;
+  const drums = inst.drums, T = inst.time;
   // the repaint: one per burst, from the instrument's state. A gesture asks for it too (the instrument's onChange is the
   // law; this only makes sure the hand that just pressed sees its press even before the echo lands).
   let dead = false, queued = false;
   let paint: () => void = () => {};
   const schedule = (): void => { if (!queued && !dead) { queued = true; queueMicrotask(() => paint()); } };
+  const timers = new Set<ReturnType<typeof setTimeout>>();
+  const later = (fn: () => void, ms: number): ReturnType<typeof setTimeout> => {
+    const t = setTimeout(() => { timers.delete(t); fn(); }, ms); timers.add(t); return t;
+  };
+  const ctl = <E extends HTMLElement>(e: E, name: string): E => { e.dataset.ctl = name; return e; };
 
   // ── the shell: the tower in the drums accent ──
-  const T = tower('drums', 'sd-tower');
+  const T_ = tower('drums', 'sd-tower');
 
-  // ── the header rail: the power cap (Space) + the kit's name glass (static, lit, no picker) ──
+  // ═══ 1 · THE HEAD: the BPM glass (drag AND type) · the `=` keycap (tap) · the kit, etched ═══════════════════════════
+  // from view/hands-view.ts:136-145 (R2, 76a02c7): the amber tempo glass, its beat lamp, the digits in fixed boxes
+  // (Orbitron's digits are proportional: '1' = .39 em), the `bpm` word. Moved here from the top strip (brief §B).
   const head = el('div', 'sd-head');
-  const pow = cap('drums', { led: true, cls: 'sd-pow' });
-  pow.dataset.code = 'Space';
-  pow.addEventListener('click', () => { drums.set('on', !drums.state().on); schedule(); });
-  head.append(pow, screen('house', 'kit', 'row tint sd-name'));
+  const tempo = ctl(glass('sgh-tempo sd-bpm sg-ns'), 'drums-bpm');
+  const pls = el('i', 'sgh-pls');                   // the beat lamp: the first 16th of every beat while the clock runs
+  const digits = el('b', 'sgh-bpm');
+  const dbox = [el('i'), el('i'), el('i')];
+  digits.append(...dbox);
+  const bpmWord = el('small'); bpmWord.textContent = 'bpm';
+  // [R3] TYPE: a plain click lays a text field over the digits (numeric keypad on a touch device; digits only). Its focus
+  // makes the keymap cede the keys (keymap.ts defaultOwns: a focused INPUT owns them).
+  const field = document.createElement('input');
+  field.className = 'sd-bpmin';
+  field.type = 'text';
+  field.setAttribute('inputmode', 'numeric');
+  field.setAttribute('pattern', '[0-9]*');
+  field.setAttribute('maxlength', '3');
+  field.setAttribute('autocomplete', 'off');
+  field.setAttribute('spellcheck', 'false');
+  field.setAttribute('aria-label', 'Tempo in bpm');
+  field.hidden = true;
+  tempo.append(pls, digits, bpmWord, field);
 
-  // ── the cover glass: ① low-cut (lowcut / lowcutDb) + ② cover (cover / coverDb), filter-curve.ts verbatim ──
-  const eqHost = el('div', 'sd-eqhost');
+  const tap = ctl(key('Equal', '=', { name: 'Tap tempo' }), 'drums-tap');
+  tap.classList.add('sd-tap');
+  const kit = etch('house kit', 'sd-kit');
+  head.append(tempo, tap, kit);
+
+  // the tempo glass DRAG: vertical 0.5 BPM/px from the value under the finger (hands-view.ts:157-171, time-strip.ts:62-78),
+  // pointer capture, no reset. [R3] It slides only once the finger has travelled CLICK_PX (a click is for typing).
+  let tDown = false, tDrag = false, tX = 0, tY = 0, tT = 0, tBpm = 0, editing = false, cancelEdit = false, shownBpm = -1;
+  const openEdit = (): void => {
+    if (editing || dead) return;
+    editing = true; cancelEdit = false;
+    field.value = String(Math.round(T.bpm()));
+    field.hidden = false;
+    tempo.classList.add('typing');
+    try { field.focus({ preventScroll: true }); field.select(); } catch { /* */ }
+  };
+  const closeEdit = (): void => {
+    if (!editing) return;
+    editing = false;
+    if (!cancelEdit) { const n = typedBpm(field.value); if (n !== null && n !== Math.round(T.bpm())) T.setBpm(n); }
+    field.hidden = true;
+    tempo.classList.remove('typing');
+    shownBpm = -1;                                   // the digits repaint on the next frame
+  };
+  field.addEventListener('focus', () => { try { field.select(); } catch { /* */ } });
+  field.addEventListener('input', () => { const v = field.value.replace(/[^0-9]/g, '').slice(0, 3); if (v !== field.value) field.value = v; });
+  field.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') { e.preventDefault(); field.blur(); }
+    else if (e.key === 'Escape') { e.preventDefault(); cancelEdit = true; field.blur(); }
+  });
+  field.addEventListener('blur', closeEdit);
+  tempo.addEventListener('pointerdown', (e) => {
+    if (e.target === field || e.button !== 0) return;
+    e.preventDefault();
+    if (editing) { field.blur(); return; }             // a press beside the open field commits it
+    tDown = true; tDrag = false; tX = e.clientX; tY = e.clientY; tT = e.timeStamp; tBpm = T.bpm();
+    try { tempo.setPointerCapture(e.pointerId); } catch { /* */ }
+  });
+  tempo.addEventListener('pointermove', (e) => {
+    if (!tDown) return;
+    if (!tDrag && Math.hypot(e.clientX - tX, e.clientY - tY) < CLICK_PX) return;
+    tDrag = true;
+    const n = Math.round(clamp(tBpm + (tY - e.clientY) * 0.5, BPM_MIN, BPM_MAX));
+    if (n !== Math.round(T.bpm())) T.setBpm(n);
+  });
+  tempo.addEventListener('pointerup', (e) => {
+    if (!tDown) return;
+    tDown = false;
+    const click = !tDrag && e.timeStamp - tT < CLICK_MS && Math.hypot(e.clientX - tX, e.clientY - tY) < CLICK_PX;
+    tDrag = false;
+    if (click) openEdit();
+  });
+  const tEnd = (): void => { tDown = false; tDrag = false; };
+  tempo.addEventListener('pointercancel', tEnd);
+
+  // TAP: time.tap() at the press (the event's own clock), the cap lit 90 ms per tap (hands-view.ts:173-176,
+  // time-strip.ts:86-98). A keyboard `=` taps through the keymap; the reflection flashes the cap the same.
+  let tapT: ReturnType<typeof setTimeout> | null = null;
+  const tapFlash = (): void => {
+    tap.classList.add('lit');
+    if (tapT) { clearTimeout(tapT); timers.delete(tapT); }
+    tapT = later(() => { tap.classList.remove('lit'); tapT = null; }, 90);
+  };
+  tap.addEventListener('pointerdown', (e) => { if (!primary(e)) return; T.tap(e.timeStamp); tapFlash(); });
+  tap.addEventListener('click', (e) => { if (e.detail === 0) { T.tap(e.timeStamp); tapFlash(); } });   // a click with no pointer
+
+  // ═══ 2 · the cover glass: ① low-cut (lowcut / lowcutDb) + ② cover (cover / coverDb), filter-curve.ts verbatim ═══════
+  const eqHost = ctl(el('div', 'sd-eqhost'), 'drums-cover');
   const eqGhost = makeGhost(eqHost);
   // what the curve last drew: a node drag draws inside filter-curve.ts, so the repaint that follows the set() is skipped
   const eq = { lowcut: d0.lowcut, lowcutDb: d0.lowcutDb, cover: d0.cover, coverDb: d0.coverDb };
@@ -147,8 +259,8 @@ export const mountDrumsView: MountView = (root, inst) => {
   eqHost.addEventListener('pointerup', () => eqGhost.hide());
   eqHost.addEventListener('pointercancel', () => eqGhost.hide());
 
-  // ── THE GRID: six lanes × sixteen cells under glass; the lane word is a pad that auditions its lane ──
-  const grid = el('div', 'sg-glass tint sd-grid');
+  // ═══ 3 · THE GRID: six lanes × sixteen cells under glass; the lane word is a pad that auditions its lane ═════════════
+  const grid = ctl(el('div', 'sg-glass tint sd-grid'), 'drums-grid');
   const cells: HTMLButtonElement[][] = [];
   const tiers: number[][] = [];
   const flashT = new Map<HTMLElement, ReturnType<typeof setTimeout>>();
@@ -183,36 +295,36 @@ export const mountDrumsView: MountView = (root, inst) => {
     grid.appendChild(row);
   });
 
-  // ── the pattern seg: a pick regenerates the grid (the same pick again re-seeds it, clearing hand edits) ──
-  const patEl = seg(PATTERNS, d0.pattern, 'sd-pat');
+  // ═══ 4 · the pattern seg: a pick regenerates the grid (the same pick again re-seeds it, clearing hand edits) ═════════
+  const patEl = ctl(seg(PATTERNS, d0.pattern, 'sm sd-pat'), 'drums-pattern');
   const patSeg = makeSeg(patEl, (v) => { drums.set('pattern', v as DrumPatternName); drums.regenerate(); schedule(); });
-
-  // ── the body: [SWING · DENSITY / TEXTURE housing / SIDECHAIN] | hairline | [DELAY: MIX · FB · TIME] ──
-  const body = el('div', 'sd-body');
-  const left = el('div', 'sd-left');
-  const swingEl = knob('swing'), densEl = knob('density');
-  const row1 = el('div', 'sd-krow');
-  row1.append(swingEl, densEl);
-  const texEl = knob('texture', { size: 'ks' });
-  const texSegEl = seg(['tape', 'drive'], d0.texture, 'sm sd-texseg');
-  const tex = el('div', 'sg-raised sd-tex');
-  tex.append(texEl, texSegEl);
-  const scEl = knob('sidechain', { size: 'kl' });
-  const row3 = el('div', 'sd-krow');
-  row3.append(scEl);
-  left.append(row1, tex, row3);
-
-  const dly = el('div', 'sd-delay');
-  const dcap = el('span', 'sd-dcap');
-  dcap.textContent = 'delay';
-  const mixEl = knob('mix', { size: 'ks' }), fbEl = knob('fb', { size: 'ks' });
-  const timeEl = knob('time', { size: 'ks', steps: DLY_DIVS.length, value: DLY_WORD[d0.delay.time], chip: true, cls: 'steel' });
-  const chip = timeEl.querySelector<HTMLElement>('.si-kn')!;
-  dly.append(dcap, mixEl, fbEl, timeEl);
-  body.append(left, el('i', 'sg-vdiv'), dly);
 
   const set = <K extends keyof DrumsState>(k: K, v: DrumsState[K]): void => { drums.set(k, v); schedule(); };
   const setDelay = (patch: Partial<DrumsState['delay']>): void => set('delay', { ...drums.state().delay, ...patch });
+
+  // ═══ 5 · THE KNOB ROW: SWING · DENSITY · SIDECHAIN ═══════════════════════════════════════════════════════════════════
+  const swingEl = ctl(knob('swing'), 'drums-swing'), densEl = ctl(knob('density'), 'drums-density'), scEl = ctl(knob('sidechain'), 'drums-sidechain');
+  const krow = el('div', 'sd-krow');
+  krow.append(swingEl, densEl, scEl);
+
+  // ═══ 6 · THE DELAY UNIT: one raised housing — `delay` etched + its activity lamp · MIX · FB · TIME ════════════════════
+  const dly = ctl(el('div', 'sg-raised sd-delay'), 'drums-delay');
+  const dname = el('div', 'sd-dname');
+  const dcap = etch('delay', 'sd-dcap');
+  const dlamp = led();
+  dlamp.classList.add('sd-dlamp');
+  dname.append(dcap, dlamp);
+  const mixEl = ctl(knob('mix', { size: 'ks' }), 'drums-mix'), fbEl = ctl(knob('fb', { size: 'ks' }), 'drums-fb');
+  const timeEl = ctl(knob('time', { size: 'ks', side: true, steps: DLY_DIVS.length, value: DLY_WORD[d0.delay.time], chip: true, cls: 'steel' }), 'drums-time');
+  const chip = timeEl.querySelector<HTMLElement>('.si-kn')!;
+  dly.append(dname, mixEl, fbEl, timeEl);
+
+  // ═══ 7 · TEXTURE + its TAPE/DRIVE seg ════════════════════════════════════════════════════════════════════════════════
+  const texRow = el('div', 'sd-tex');
+  const texEl = ctl(knob('texture', { size: 'kx', side: true }), 'drums-texture');
+  const texSegEl = ctl(seg(['tape', 'drive'], d0.texture, 'sm sd-texseg'), 'drums-texseg');
+  texRow.append(texEl, texSegEl);
+
   const K: Record<string, Knob> = {
     swing: makeKnob(swingEl, d0.swing, (v) => set('swing', v), undefined,
       { dflt: 0, ghost: makeGhost(swingEl), label: (v) => `SWING ${pct(v)}` }),
@@ -232,13 +344,13 @@ export const mountDrumsView: MountView = (root, inst) => {
   };
   const texSeg = makeSeg(texSegEl, (v) => set('texture', v as DrumTexture));
 
-  // ── the footer rail: M · S · the gain trim ──
+  // ═══ 8 · the footer rail: M · S · the gain trim (the three towers' one form) ═════════════════════════════════════════
   const foot = rail('sd-foot');
-  const mBtn = cap('m', { cls: 'sq warn' });
-  const sBtn = cap('s', { cls: 'sq' });
+  const mBtn = ctl(cap('m', { cls: 'sq warn' }), 'drums-mute');
+  const sBtn = ctl(cap('s', { cls: 'sq' }), 'drums-solo');
   mBtn.addEventListener('click', () => set('mute', !drums.state().mute));
   sBtn.addEventListener('click', () => { inst.setSolo(inst.state().solo === 'drums' ? null : 'drums'); schedule(); });
-  const gainEl = knob('gain', { size: 'kx', side: true, tick: GAIN_UNITY });
+  const gainEl = ctl(knob('gain', { size: 'kx', side: true, tick: GAIN_UNITY }), 'drums-gain');
   const gainTick = gainEl.querySelector<HTMLElement>('.si-tick');
   const gain = makeKnob(gainEl, gainToV(d0.gain), (v) => set('gain', vToGain(v)), undefined, {
     dflt: GAIN_UNITY, detents: [GAIN_UNITY], ghost: makeGhost(gainEl), label: gainFmt,
@@ -250,11 +362,17 @@ export const mountDrumsView: MountView = (root, inst) => {
   gainEl.addEventListener('pointercancel', unglint);
   foot.append(mBtn, sBtn, el('i', 'sg-fdiv'), gainEl);
 
-  T.append(head, eqHost, grid, patEl, body, foot);
-  root.appendChild(T);
+  // ═══ 9 · THE SPACE BAR: the drums' on/off, a real keycap the tower's full width, the biggest orange thing here ═══════
+  const pow = ctl(key('Space', 'space', { wide: true, tint: 'drums', name: 'Drums on/off' }), 'drums-power');
+  pow.classList.add('sd-pow');
+  pow.addEventListener('click', () => { drums.set('on', !drums.state().on); schedule(); });
+
+  T_.append(head, eqHost, grid, patEl, krow, dly, texRow, foot, pow);
+  root.appendChild(T_);
 
   // ── PAINT: from the instrument's state, diffed (a drag's own echo is a no-op) ──
-  let on = d0.on;
+  let on = d0.on, mix = d0.delay.mix, div = DLY_BEATS[d0.delay.time] ?? 0.5;
+  let dormant: boolean | undefined;
   const setK = (k: Knob, v: number): void => { if (Math.abs(k.get() - v) > 1e-6) k.set(v); };
   const paintCells = (seq: DrumsState['seq']): void => {
     DRUM_LANES.forEach((lane, li) => {
@@ -277,9 +395,10 @@ export const mountDrumsView: MountView = (root, inst) => {
     const S = inst.state();
     const d = S.drums;
     on = d.on;
+    pow.classList.toggle('lit', d.on);
     pow.classList.toggle('on', d.on);
     pow.setAttribute('aria-pressed', String(d.on));
-    T.classList.toggle('is-on', d.on);
+    T_.classList.toggle('is-on', d.on);
     if (d.lowcut !== eq.lowcut || d.lowcutDb !== eq.lowcutDb || d.cover !== eq.cover || d.coverDb !== eq.coverDb) {
       eq.lowcut = d.lowcut; eq.lowcutDb = d.lowcutDb; eq.cover = d.cover; eq.coverDb = d.coverDb;
       drawEq();
@@ -295,31 +414,60 @@ export const mountDrumsView: MountView = (root, inst) => {
     setK(K.fb, d.delay.feedback);
     setK(K.time, dlyToV(d.delay.time));
     setK(gain, gainToV(d.gain));
+    mix = d.delay.mix;
+    div = DLY_BEATS[d.delay.time] ?? 0.5;
+    const dz = mix < DLY_AUDIBLE;                    // Law 3: FB + TIME wait on MIX
+    if (dz !== dormant) {
+      dormant = dz;
+      fbEl.classList.toggle('dormant', dz);
+      timeEl.classList.toggle('dormant', dz);
+      dly.classList.toggle('quiet', dz);
+    }
     mBtn.classList.toggle('on', d.mute);
     mBtn.setAttribute('aria-pressed', String(d.mute));
     if (S.solo !== lastSolo) {
       lastSolo = S.solo;
       sBtn.classList.toggle('on', S.solo === 'drums');
       sBtn.setAttribute('aria-pressed', String(S.solo === 'drums'));
-      T.classList.toggle('solo-dim', S.solo != null && S.solo !== 'drums');
+      T_.classList.toggle('solo-dim', S.solo != null && S.solo !== 'drums');
     }
   };
   const offChange = inst.onChange(schedule);
   paint();
-  const offKeys = reflectKeys([pow]);
+  const offKeys = reflectKeys([pow, tap], (code) => { if (code === 'Equal') tapFlash(); });
 
-  // ── THE PLAYHEAD: the column under the step being heard, while the drums play ──
-  let ph = -1, raf = 0;
-  const frame = (): void => {
+  // ═══ THE FRAME: the playhead column, the BPM digits + the beat lamp, the delay's activity lamp ═══════════════════════
+  let ph = -1, raf = 0, lampLine = NaN, lampOff = 0, lampLit = false, plsOn = false;
+  const paintDigits = (n: number): void => {   // hands-view.ts:558-561: right-aligned in the three fixed boxes
+    const s = String(n).padStart(dbox.length, ' ');
+    dbox.forEach((d, i) => { const c = s[i] === ' ' ? '' : s[i]; if (d.textContent !== c) d.textContent = c; });
+  };
+  const frame = (now: number): void => {
     raf = requestAnimationFrame(frame);
-    const step = on && inst.time.running() ? inst.time.playhead().step : -1;
+    const running = T.running();
+    const bpm = Math.round(T.bpm());
+    if (bpm !== shownBpm) { shownBpm = bpm; paintDigits(bpm); }
+    const p = running ? T.playhead() : null;
+    const beat = !!p && p.step % 4 === 0;
+    if (beat !== plsOn) { plsOn = beat; pls.classList.toggle('on', beat); }
+    // the playhead column, under the step being heard, while the drums play
+    const step = on && p ? p.step : -1;
     const s = step >= 0 && step < 16 ? step : -1;
-    if (s === ph) return;
-    for (const lc of cells) {
-      if (ph >= 0) lc[ph].classList.remove('ph');
-      if (s >= 0) lc[s].classList.add('ph');
+    if (s !== ph) {
+      for (const lc of cells) {
+        if (ph >= 0) lc[ph].classList.remove('ph');
+        if (s >= 0) lc[s].classList.add('ph');
+      }
+      ph = s;
     }
-    ph = s;
+    // the delay lamp: ≈60 ms on every line of the TIME division, heard time, while the drums run and the delay is heard
+    let lit = false;
+    if (on && p && mix >= DLY_AUDIBLE) {
+      const line = Math.floor(phBeats(p) / div);
+      if (line !== lampLine) { if (!Number.isNaN(lampLine)) lampOff = now + 60; lampLine = line; }   // the first line seen only arms it
+      lit = now < lampOff;
+    } else { lampLine = NaN; lampOff = 0; }
+    if (lit !== lampLit) { lampLit = lit; dlamp.classList.toggle('on', lit); }
   };
   raf = requestAnimationFrame(frame);
 
@@ -331,7 +479,10 @@ export const mountDrumsView: MountView = (root, inst) => {
       offKeys();
       flashT.forEach((t) => clearTimeout(t));
       flashT.clear();
-      T.remove();
+      timers.forEach((t) => clearTimeout(t));
+      timers.clear();
+      if (editing) { cancelEdit = true; closeEdit(); }
+      T_.remove();
     },
   };
 };

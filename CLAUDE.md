@@ -48,8 +48,16 @@ session must follow.
   `#sgm[data-state]` standby → boot → live → powerdown (boot/on/live = the
   site goes night; the host clicks `#pwr` when the room is < 35% visible),
   `#pwr` (the power disc; the host's `.pwr` overrides scale and light it),
-  `.sgm .device` (the 1120px box the host zooms with `--sig-zoom`; `.sgm`'s
-  parent is the fit's measure). The anchor/spy target stays the HOST `#play`.
+  `.sgm .device` (the 1280px box — `DEVICE_W` in types.ts since R3,
+  2026-09-24 — the host zooms with `--sig-zoom` from BOTH axes: 98% of the
+  column, or the room's height ÷ the device's height; `.sgm`'s parent is the
+  fit's measure). The anchor/spy target stays the HOST `#play`. R3 laws: the
+  taught keymap only (letters · Space · B · Z · M · arrows · = · Esc; HOLD,
+  CHORD, ARP and the root lock are on-screen toggles), every taught key drawn
+  as a `.sg-key` keycap (keycap.css) that goes `.pressed`/`.lit`, the size
+  floor (no control word under 12px, no screen numeral under 22px, BPM the
+  largest), `.dormant` on a control whose effect waits on another, nothing
+  printed beneath the device (signal-copy.ts is unmounted, Jon writes it).
   Sound safety still applies: never engage its audio in a live preview pane;
   probe headless with `--mute-audio` (`?mute=1`) and kill every headless
   Chrome you start (a leaked `--headless` blocks Jon's own Chrome).
@@ -278,14 +286,14 @@ session must follow.
   scroll events do not bubble to window); the lazy exhibit iframe observer
   roots on `main` when it scrolls. Desks (≥900px) keep the document
   scroller: the rail, the comet and keyboard scrolling are untouched.
-- The instrument is FIT from the host (2026-09-02): `.live-signal` is
-  1248px wide (= the sacred file's 1120px reference + its `.inner` 128px
-  gutter), the host pins `.sgm`/`.device` to the reference at EVERY width
-  and sets `--sig-zoom` from a ResizeObserver (min(the file's own height
-  caps, wrapper content width ÷ 1120)). No horizontal scroller exists any
-  more, so nothing clips the device shadow at any width. Verified 700 →
-  1920 with zero module overflow and page scrollWidth == viewport. Never
-  edit SignalMachine.astro for scaling; adjust the host fit instead.
+- The instrument is FIT from the host (2026-09-02; R3 2026-09-24):
+  `.live-signal` is 1360px wide max, the host pins `.sgm`/`.device` to the
+  1280px reference at EVERY width and sets `--sig-zoom` from ResizeObservers
+  on the wrapper AND the device: min(0.98 · wrapper content width ÷ 1280,
+  (innerHeight − the room's padding) ÷ the device's own height). The old
+  height-cap table is gone. No horizontal scroller exists, so nothing clips
+  the device shadow at any width. Never scale inside the device; adjust
+  the host fit instead.
 - THE FLOOR is ONE object sitewide (2026-09-21, Jon's reference shot):
   `src/components/studio/SiteFloor.astro` = the email + the LinkedIn mark,
   centred, nothing else (the city and the résumé link are gone from every

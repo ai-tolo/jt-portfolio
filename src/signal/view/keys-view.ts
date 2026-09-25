@@ -4,32 +4,41 @@
 // built with ./common.ts + ./controls.ts). Every ported block carries a banner naming its source. Imports: ../types.ts,
 // ./controls.ts, ./common.ts only (types.ts: "Views … import ./types.ts, ./view/controls.ts, ./view/common.ts").
 //
-//   header  KEYS (a static cap: the keys have no on/off, it never lights) · the VOICE seg RHODES PIANO PAD LEAD →
-//           keys.pick(id); the picked cap is .on, and carries the material's .loading tense while !keys.ready()
-//   glass   THE ONE LOW-PASS: the 24 dB/oct Butterworth at filterHz(p), drawn from its maths (two RBJ biquads with the
-//           linear pole Qs 0.5412 + 1.3066 at 48 k: what the audio does, no eq-response.ts); ONE node at the corner;
-//           p ≥ FILTER_OPEN = a true bypass (the line flat at 0 dB, the node at the right edge); drag ANYWHERE = p,
-//           relative, the full width = the full sweep (ew-resize); a tap-tap under 320 ms resets to 1 (open).
-//           MOTION on (amount ≥ .005): a faint ghost node + a dashed ghost curve ride the LFO's own law (motion.ts) in
-//           heard time, breathing between p and p·(1 − amount): the honest picture of the LFO's range
-//   LFO     MOTION (amount; the chip reads OFF below .005, else the %) · RATE (stepped over LFO_DIVS, 9 detents, the chip
-//           prints the division) · the four shape caps (sine sawi saw sqr, drawn glyphs, one .on)
-//   FX      four LCD towers DRIVE MOD DEL REV (makeFader: absolute, press/drag = 1 − y/h) over their flavour segs
-//           (+ the MOD RATE ribbon, 9 px, centre detent .5; the DEL divisions as note glyphs) → keys.set('fx', …)
-//   footer  M (keys mute) · S (inst.setSolo('keys'); again = null) · GAIN (0..1.25; unity at .8 of the dial) — the
-//           drums' and the bass' footer to the letter (view/drums-view.ts, view/bass-view.ts), so the three read as one
+// R3 · lane K · THE FIRST-TIMER ROUND (NOTES-SIGNAL-R3.md §1.3 KEYS; brief §D). The tower, top to bottom (546 × 520 inside
+// its 10 px padding, 8 apart; the body takes what the fixed rows leave):
+//   head     the VOICE seg spanning the row, its caps 16 px (RHODES PIANO PAD LEAD: the first thing seen), the picked one
+//            lit, .loading while it loads · the ↑ ↓ keycaps (ArrowUp/Down: a click steps the voice as main.ts's 'voice'
+//            action does, VOICES order, wrapping; .pressed while the arrow is down). The static KEYS cap is gone.
+//   glass    THE ONE LOW-PASS: the 24 dB/oct Butterworth at filterHz(p), drawn from its maths (two RBJ biquads with the
+//            linear pole Qs 0.5412 + 1.3066 at 48 k: what the audio does, no eq-response.ts); ONE node at the corner;
+//            p ≥ FILTER_OPEN = a true bypass (the line flat at 0 dB, the node at the right edge); drag ANYWHERE = p,
+//            relative, the full width = the full sweep (ew-resize); a tap-tap under 320 ms resets to 1 (open).
+//            MOTION on (amount ≥ .005): a faint ghost node + a dashed ghost curve ride the LFO's own law (motion.ts) in
+//            heard time, breathing between p and p·(1 − amount): the honest picture of the LFO's range
+//   gesture  [Z] gate · RATE · SWING  |  [M] dive · SPEED · DIST — Z and M are keycaps (common.ts key(), lg), HOLD
+//            gestures: a pointer hold on the cap is the gesture, the key is the other holder, REFERENCE-COUNTED (moved
+//            here from view/hands-view.ts in R3: this tower wraps inst.harmony.gesture while mounted and restores it in
+//            dispose); .pressed + .lit (amber) while either holder holds
+//   body     the LFO deck: MOTION (amount; the chip reads OFF below .005, else the %) · RATE (stepped over LFO_DIVS, the
+//            chip prints the division) · the four shape caps — RATE and the shapes .dormant while MOTION is OFF · the four
+//            LCD towers DRIVE MOD DEL REV (makeFader: absolute, press/drag = 1 − y/h) over their flavour segs (+ the MOD
+//            RATE ribbon, centre detent .5; the DEL divisions as note glyphs) → keys.set('fx', …)
+//   harmony  HOLD · CHORD · ARP (on-screen toggles only since R3: .sg-cap + LED, written to the harmony, lit from the
+//            state) · RATE · LENGTH · GROOVE (the arp's knobs, .dormant while the arp is off) — moved from the hands' head
+//   footer   M (keys mute) · S (inst.setSolo('keys'); again = null) · GAIN (0..1.25; unity at .8 of the dial) — the
+//            drums' and the bass' footer to the letter (view/drums-view.ts, view/bass-view.ts), so the three read as one
 //
-// PAINT LAW: a gesture calls the instrument (inst.keys.* / inst.setSolo), then repaints its own control at once from the
-// state it wrote back; everything else is repainted from inst.state() on inst.onChange (coalesced to one paint per
-// microtask, diffed: a drag's own echo writes nothing) — the keyboard's voice cycle, a load, another tower's solo.
+// PAINT LAW: a gesture calls the instrument (inst.keys.* / inst.harmony.* / inst.setSolo), then repaints its own control at
+// once from the state it wrote back; everything else is repainted from inst.state() on inst.onChange (coalesced to one
+// paint per microtask, diffed: a drag's own echo writes nothing) — the keyboard's voice cycle, a load, another tower's solo.
 // keys.ready() (the loading tense) and the MOTION ghost are read on requestAnimationFrame (cancelled in dispose).
 // No title=, no tooltips: the words on the tower are its legends; values surface only in the controls' own transient
 // ghosts (the Studio's value-ghost vocabulary).
-import { FILTER_MAX_HZ, FILTER_MIN_HZ, FILTER_OPEN, LFO_DIVS, VOICES, VOICE_NAMES } from '../types.ts';
-import type { KeysState, LfoDiv, LfoShape, MountView, SignalInstrument, SignalState, VoiceId } from '../types.ts';
+import { ARP_DIVS, FILTER_MAX_HZ, FILTER_MIN_HZ, FILTER_OPEN, GATE_DIVS, LFO_DIVS, VOICES, VOICE_NAMES } from '../types.ts';
+import type { ArpDiv, GateDiv, HarmonyState, KeysState, LfoDiv, LfoShape, MountView, SignalInstrument, SignalState, VoiceId } from '../types.ts';
 import { clamp, el, makeFader, makeGhost, makeHSlider, makeKnob, makeSeg } from './controls.ts';
 import type { Fader, HSlider, Knob, Seg } from './controls.ts';
-import { accent, cap, etch, glass, knob, lcd, rail, seg, tower } from './common.ts';
+import { accent, cap, etch, glass, key, knob, lcd, rail, seg, tower } from './common.ts';
 import type { AccKey } from './common.ts';
 
 // ─────────────────────────────────────────────────────────────── the one low-pass, as maths (pure; node-testable)
@@ -232,26 +241,90 @@ function rafDrag(apply: (e: PointerEvent) => void, live: () => boolean): { move:
 const setK = (k: Knob, v: number): void => { if (Math.abs(k.get() - v) > 1e-6) k.set(v); };
 const readSolo = (s: SignalState['solo'] | undefined): SignalState['solo'] => (s === 'drums' || s === 'keys' || s === 'bass' ? s : null);
 
+// ═══ from jt-portfolio-signal/src/signal/view/hands-view.ts:60-78 (R2, 76a02c7; its laws are signal-studio-v6lib
+// src/views/instrument/play.ts:797-816, 866-882 @ 2a9e4a7): the gesture row's and the arp's knob laws + bindKnob, moved
+// here with the controls in R3 (lane V drops them from the hands). COPIED, not imported (no import from another lane). ═══
+const LEN_MIN = 0.06, LEN_SPAN = 1.24;             // play.ts:809-813 LENGTH = the Studio's arp gate 0.06..1.3, default .5
+const DIVE_T_MIN = 0.05, DIVE_T_MAX = 1.5;         // play.ts:866-875 SPEED: clockwise = faster (a shorter tau)
+const DIVE_D_MIN = 2, DIVE_D_MAX = 36;             // play.ts:876-882 DIST in semitones
+const stepV = (i: number, n: number): number => (n > 1 ? i / (n - 1) : 0);
+const stepI = (v: number, n: number): number => clamp(Math.round(v * (n - 1)), 0, n - 1);
+const near = (a: number, b: number): boolean => Math.abs(a - b) < 1e-6;
+function setText(e: Element, s: string): void { if (e.textContent !== s) e.textContent = s; }
+interface Law<T> {
+  toV(x: T): number; fromV(v: number): T; same(a: T, b: T): boolean; text(x: T): string;
+  write(x: T): void; dflt?: T; steps?: number;
+}
+interface Bound<T> { host: HTMLElement; sync(x: T): void }
+/** makeKnob (controls.ts, the one drag law) bound to one field: the value legend follows the knob; state writes back
+ *  only when the knob's own reading of the field differs (a quantized field never snaps a knob out of the hand). */
+function bindKnob<T>(host: HTMLElement, init: T, law: Law<T>): Bound<T> {
+  const kn = host.querySelector<HTMLElement>('.si-kn');
+  const paint = (v: number): void => { if (kn) setText(kn, law.text(law.fromV(v))); };
+  const k: Knob = makeKnob(host, law.toV(init), (v) => law.write(law.fromV(v)), paint,
+    { dflt: law.dflt === undefined ? undefined : law.toV(law.dflt), steps: law.steps });
+  return { host, sync(x) { if (!law.same(law.fromV(k.get()), x)) k.set(law.toV(x)); } };
+}
+// ═══ end hands-view.ts copy ═══
+
+// ═══ from jt-portfolio-signal/src/signal/view/drums-view.ts:81-112 (R3 lane D's reflectKeys, COPIED: no import from another
+// lane): a keycap goes .pressed while its key is down. ONE capture-phase window pair; never preventDefaults, never stops
+// propagation; ignores ⌘/ctrl/alt and typing (the keymap's owns()); a lost window lets go. Display only. ═══
+function reflectKeys(caps: ReadonlyArray<HTMLElement>): () => void {
+  const W = typeof window !== 'undefined' ? window : null;
+  if (!W) return () => {};
+  const byCode = new Map<string, HTMLElement>();
+  for (const c of caps) if (c.dataset.code) byCode.set(c.dataset.code, c);
+  const down = new Set<string>();
+  const typing = (): boolean => {
+    const a = document.activeElement as HTMLElement | null;
+    return !!a && (a.tagName === 'INPUT' || a.tagName === 'TEXTAREA' || a.tagName === 'SELECT' || a.isContentEditable === true);
+  };
+  const show = (code: string): void => { byCode.get(code)?.classList.toggle('pressed', down.has(code)); };
+  const onDown = (e: KeyboardEvent): void => {
+    if (!byCode.has(e.code) || down.has(e.code)) return;   // a repeat is the same finger
+    if (e.metaKey || e.ctrlKey || e.altKey || typing()) return;
+    down.add(e.code);
+    show(e.code);
+  };
+  const onUp = (e: KeyboardEvent): void => { if (down.delete(e.code)) show(e.code); };
+  const letGo = (): void => { for (const c of [...down]) { down.delete(c); show(c); } };
+  const onVis = (): void => { if (document.visibilityState === 'hidden') letGo(); };
+  W.addEventListener('keydown', onDown, true);
+  W.addEventListener('keyup', onUp, true);
+  W.addEventListener('blur', letGo);
+  document.addEventListener?.('visibilitychange', onVis);
+  return () => {
+    W.removeEventListener('keydown', onDown, true);
+    W.removeEventListener('keyup', onUp, true);
+    W.removeEventListener('blur', letGo);
+    document.removeEventListener?.('visibilitychange', onVis);
+    letGo();
+  };
+}
+// ═══ end drums-view.ts copy ═══
+
 // ─────────────────────────────────────────────────────────────── the tower
 
 export const mountKeysView: MountView = (root, inst) => {
-  const K = inst.keys;
+  const K = inst.keys, H = inst.harmony;
   const timers = new Map<string, ReturnType<typeof setTimeout>>();
   const after = (key: string, ms: number, fn: () => void): void => {
     const prev = timers.get(key); if (prev) clearTimeout(prev);
     timers.set(key, setTimeout(() => { timers.delete(key); fn(); }, ms));
   };
-  const k0 = K.state();
+  const s0 = inst.state();
+  const k0 = s0.keys, h0 = s0.harmony;
   let pHand = k0.filter;                           // the hand's p (keys.state().filter), as the glass last drew it
   let motion = k0.motion;                          // what the frame's ghost rides (kept by paint)
   const T = tower('keys', 'kv-tower');
+  // a cap acts on its click; a mouse click hands focus back so Space and Enter stay the page's (hands-view.ts onClick)
+  const onClick = (b: HTMLElement, fn: () => void): void => {
+    b.addEventListener('click', (e) => { fn(); if ((e as MouseEvent).detail) (b as HTMLElement).blur?.(); });
+  };
 
-  // ── the header: the KEYS cap (static) + the VOICE seg ──────────────────────────────────────────────────────────
-  // from signal-studio-v6lib/src/views/instrument/module-header.ts:142-143 (2a9e4a7): the keys' power slot is the house
-  // cap at rest, non-interactive (the keys have no on/off). PORT: a span, never lit, no LED.
+  // ── 1 · the head: the VOICE seg + the ↑ ↓ keycaps ──────────────────────────────────────────────────────────────
   const head = el('div', 'kv-head');
-  const pow = el('span', 'sg-cap kv-pow');
-  pow.textContent = 'KEYS';
   const voices = seg(VOICES.map((v) => [v, VOICE_NAMES[v]] as const), k0.voice, 'kv-voices');
   voices.dataset.ctl = 'keys-voice';   // stable hooks for the test surface's click(selector), as the hands' data-ctl
   const voiceBtns = Array.from(voices.querySelectorAll<HTMLElement>('button[data-v]'));
@@ -264,14 +337,28 @@ export const mountKeysView: MountView = (root, inst) => {
     loadingShown = want;
     voiceBtns.forEach((b) => b.classList.toggle('loading', want !== null && b.dataset.v === want));
   };
-  const voiceSeg: Seg = makeSeg(voices, (v) => {
+  const pickVoice = (v: VoiceId): void => {
     picked = v;
-    try { void Promise.resolve(K.pick(v as VoiceId)).catch(() => { /* pick never rejects (keys.ts); belt and braces */ }); } catch { /* */ }
+    try { void Promise.resolve(K.pick(v)).catch(() => { /* pick never rejects (keys.ts); belt and braces */ }); } catch { /* */ }
     paint();
-  });
-  head.append(pow, voices);
+  };
+  const voiceSeg: Seg = makeSeg(voices, (v) => pickVoice(v as VoiceId));
+  // ↑ ↓: the keymap's 'voice' action (src/signal/main.ts: VOICES order from the current voice, wrapping), by pointer
+  const vUp = key('ArrowUp', '↑', { sm: true, name: 'Voice up' });
+  const vDn = key('ArrowDown', '↓', { sm: true, name: 'Voice down' });
+  vUp.dataset.ctl = 'keys-voice-up'; vDn.dataset.ctl = 'keys-voice-down';
+  const stepVoice = (d: 1 | -1): void => {
+    const i = Math.max(0, VOICES.indexOf(K.state().voice));
+    pickVoice(VOICES[(i + d + VOICES.length) % VOICES.length]);
+  };
+  onClick(vUp, () => stepVoice(1));
+  onClick(vDn, () => stepVoice(-1));
+  const vKeys = el('div', 'kv-vkeys');
+  vKeys.append(vUp, vDn);
+  head.append(voices, vKeys);
+  const offKeys = reflectKeys([vUp, vDn]);
 
-  // ── the one low-pass glass ─────────────────────────────────────────────────────────────────────────────────────
+  // ── 2 · the one low-pass glass ─────────────────────────────────────────────────────────────────────────────────
   const scr = glass('tint sg-ew kv-filter');
   scr.dataset.ctl = 'keys-filter';
   const svg = svgEl('svg', { viewBox: '0 0 600 200', preserveAspectRatio: 'none', 'aria-hidden': 'true' });
@@ -356,7 +443,97 @@ export const mountKeysView: MountView = (root, inst) => {
   scr.addEventListener('pointercancel', endGlass);
   // ═══ end shape.ts port ═══
 
-  // ── the body: the LFO deck + the four FX towers ────────────────────────────────────────────────────────────────
+  // ── 3 · THE GESTURE ROW: [Z] gate · RATE · SWING | [M] dive · SPEED · DIST ─────────────────────────────────────────
+  // ═══ from jt-portfolio-signal/src/signal/view/hands-view.ts:385-457 (R2, 76a02c7; the Studio's play.ts:146-163, 818-883
+  // @ 2a9e4a7): the gate row. PORT (R3): the elastomer pads are keycaps now (common.ts key(), .lg: the keys the hand holds),
+  // the wordmark badge is gone, the words `gate` / `dive` are the gestures' names etched beside their keys. ═══
+  const gest = accent(el('div', 'kv-gest'), 'gate');
+  const gz = accent(key('KeyZ', 'Z', { lg: true, name: 'Gate (hold)' }), 'gate');
+  const gm = accent(key('KeyM', 'M', { lg: true, name: 'Dive (hold)' }), 'gate');
+  gz.dataset.ctl = 'keys-gate'; gm.dataset.ctl = 'keys-dive';
+  const kgRate = knob('rate', { size: 'kx', side: true, steps: GATE_DIVS.length, value: h0.gate.div });
+  const kgSwing = knob('swing', { size: 'kx', side: true, value: String(Math.round(h0.gate.swing * 100)) });
+  const kdSpeed = knob('speed', { size: 'kx', side: true, value: h0.dive.speedSec.toFixed(2) });
+  const kdDist = knob('dist', { size: 'kx', side: true, value: String(h0.dive.dist) });
+  kgRate.dataset.ctl = 'gate-rate'; kgSwing.dataset.ctl = 'gate-swing'; kdSpeed.dataset.ctl = 'dive-speed'; kdDist.dataset.ctl = 'dive-dist';
+  const gl = el('div', 'kv-ggrp');
+  gl.append(gz, etch('gate', 'kv-gword'), kgRate, kgSwing);
+  const gr = el('div', 'kv-ggrp');
+  gr.append(gm, etch('dive', 'kv-gword'), kdSpeed, kdDist);
+  gest.append(gl, el('i', 'sg-vdiv kv-gdiv'), gr);
+
+  // the held gestures (play.ts:820-840): a pointer hold is the gesture; the lit key is pointer OR its key.
+  // [R2] REFERENCE-COUNTED: the key (Z, M) and its cap are two HOLDERS of one gesture; it goes on with the first holder
+  // and off with the last, so letting go of one while the other holds keeps it. The key's holds reach the harmony through
+  // inst.harmony.gesture (main.ts routes the keymap's gate/dive there, the test surface's press() too), so while this view
+  // is mounted that one method is the counter's key door: every call that is not this view's own cap is the key.
+  // dispose() puts the method back. Every arrival re-asserts the gesture (idempotent downstream), so a holder that arrives
+  // after a master stop dropped the gesture under another holder brings it back. [R3] this tower owns the wrapper now.
+  const rawGesture = H.gesture;
+  const holders = { gate: new Set<'key' | 'pad'>(), dive: new Set<'key' | 'pad'>() };
+  const gKeys = { gate: gz, dive: gm };
+  const paintGesture = (name: 'gate' | 'dive'): void => {
+    const on = holders[name].size > 0;
+    gKeys[name].classList.toggle('pressed', on);
+    gKeys[name].classList.toggle('lit', on);
+  };
+  const hold = (name: 'gate' | 'dive', who: 'key' | 'pad', on: boolean): void => {
+    const set = holders[name];
+    if (on) { set.add(who); rawGesture.call(H, name, true); }
+    else if (set.delete(who) && set.size === 0) rawGesture.call(H, name, false);
+    paintGesture(name);
+  };
+  H.gesture = (name, on) => hold(name, 'key', !!on);
+  const ptrGesture = { gate: false, dive: false };
+  const holdCap = (name: 'gate' | 'dive', b: HTMLButtonElement): void => {
+    b.addEventListener('pointerdown', (e) => {
+      if (e.button !== 0) return;
+      e.preventDefault();
+      if (ptrGesture[name]) return;
+      ptrGesture[name] = true;
+      try { b.setPointerCapture(e.pointerId); } catch { /* */ }
+      hold(name, 'pad', true);
+    });
+    const up = (): void => { if (!ptrGesture[name]) return; ptrGesture[name] = false; hold(name, 'pad', false); };
+    b.addEventListener('pointerup', up); b.addEventListener('pointercancel', up); b.addEventListener('lostpointercapture', up);
+  };
+  holdCap('gate', gz);
+  holdCap('dive', gm);
+  const gateWrite = (p: Partial<HarmonyState['gate']>): void => {
+    const g = H.state().gate, n = { ...g, ...p };
+    if (n.div !== g.div || !near(n.swing, g.swing)) H.set('gate', n);
+  };
+  const diveWrite = (p: Partial<HarmonyState['dive']>): void => {
+    const d = H.state().dive, n = { ...d, ...p };
+    if (!near(n.speedSec, d.speedSec) || n.dist !== d.dist) H.set('dive', n);
+  };
+  const bgRate = bindKnob<GateDiv>(kgRate, h0.gate.div, {
+    toV: (d) => stepV(Math.max(0, GATE_DIVS.indexOf(d)), GATE_DIVS.length), fromV: (v) => GATE_DIVS[stepI(v, GATE_DIVS.length)],
+    same: (a, b) => a === b, text: (d) => d, write: (div) => gateWrite({ div }), steps: GATE_DIVS.length,
+  });
+  const bgSwing = bindKnob<number>(kgSwing, h0.gate.swing, {
+    toV: (s) => clamp(s, 0, 1), fromV: (v) => v, same: near, text: (s) => String(Math.round(s * 100)),
+    write: (swing) => gateWrite({ swing }), dflt: 0,
+  });
+  const bdSpeed = bindKnob<number>(kdSpeed, h0.dive.speedSec, {
+    toV: (t) => clamp((DIVE_T_MAX - t) / (DIVE_T_MAX - DIVE_T_MIN), 0, 1), fromV: (v) => DIVE_T_MAX - v * (DIVE_T_MAX - DIVE_T_MIN),
+    same: near, text: (t) => t.toFixed(2), write: (speedSec) => diveWrite({ speedSec }), dflt: 0.45,
+  });
+  const bdDist = bindKnob<number>(kdDist, h0.dive.dist, {
+    toV: (d) => clamp((d - DIVE_D_MIN) / (DIVE_D_MAX - DIVE_D_MIN), 0, 1), fromV: (v) => Math.round(DIVE_D_MIN + v * (DIVE_D_MAX - DIVE_D_MIN)),
+    same: (a, b) => a === b, text: (d) => String(d), write: (dist) => diveWrite({ dist }), dflt: 24,
+  });
+  // a lost window lets go of what a pointer holds here (the key's own release is the keymap's blur law)
+  const letGo = (): void => {
+    for (const name of ['gate', 'dive'] as const) if (ptrGesture[name]) { ptrGesture[name] = false; hold(name, 'pad', false); }
+  };
+  const onVis = (): void => { if (document.visibilityState === 'hidden') letGo(); };
+  const W = typeof window !== 'undefined' ? window : null;
+  W?.addEventListener('blur', letGo);
+  document.addEventListener?.('visibilitychange', onVis);
+  // ═══ end hands-view.ts gate-row port ═══
+
+  // ── 4 · the body: the LFO deck + the four FX towers ────────────────────────────────────────────────────────────
   const body = el('div', 'kv-body');
   const lfo = el('div', 'sg-deck kv-lfo');
   const setMotion = (patch: Partial<KeysState['motion']>): void => {
@@ -367,8 +544,8 @@ export const mountKeysView: MountView = (root, inst) => {
   // ═══ from signal-studio-v6lib/src/views/instrument/shape.ts:209-227, 243-277, 302-310 (2a9e4a7): MOTION (amount, dbl-click
   // = 0, OFF below .005, the value ghost), RATE in SYNC mode (a stepped switch over the divisions, the chip blinks on a
   // change), the four wave keycaps. PORT: RATE has no Hz face (the contract's motion.div is a division only, so the chip is
-  // not a toggle); 9 detents = LFO_DIVS, dbl-click = 1/8 (the default, as the drums' TIME); look B's arcs (MOTION amber,
-  // RATE steel) and the deck from LookB.astro:137-143. ═══
+  // not a toggle); 9 detents = LFO_DIVS, dbl-click = 1/8 (the default, as the drums' TIME); look B's arcs (the LFO deck
+  // amber) and the deck from LookB.astro:137-143. [R3] RATE + the shapes are .dormant while MOTION is OFF (Law 3). ═══
   const amtHost = knob('motion', { size: 'kxl', value: amtFmt(k0.motion.amount), chip: true, cls: 'kv-motion' });
   const amtNum = amtHost.querySelector<HTMLElement>('.si-kn')!;
   amtHost.dataset.ctl = 'keys-motion';
@@ -377,7 +554,7 @@ export const mountKeysView: MountView = (root, inst) => {
     (v) => { amtNum.textContent = amtFmt(v); },
     { dflt: 0, ghost: makeGhost(amtHost), label: (v) => `MOTION ${amtFmt(v)}` });
 
-  const rateHost = knob('rate', { size: 'km', steps: LFO_DIVS.length, value: k0.motion.div, chip: true, cls: 'steel kv-rate' });
+  const rateHost = knob('rate', { size: 'km', steps: LFO_DIVS.length, value: k0.motion.div, chip: true, cls: 'kv-rate' });
   const rateNum = rateHost.querySelector<HTMLElement>('.si-kn')!;
   rateHost.dataset.ctl = 'keys-rate';
   const rateKnob = makeKnob(rateHost, divToV(k0.motion.div),
@@ -401,7 +578,9 @@ export const mountKeysView: MountView = (root, inst) => {
     shapeBtns.forEach((b) => { const on = b.dataset.v === v; b.classList.toggle('on', on); b.setAttribute('aria-pressed', String(on)); });
   };
   lightShape(k0.motion.shape);
-  lfo.append(amtHost, rateHost, shapes);
+  const lfoKnobs = el('div', 'kv-lfoknobs');
+  lfoKnobs.append(amtHost, rateHost);
+  lfo.append(lfoKnobs, shapes);
   // ═══ end shape.ts port ═══
 
   // ═══ from signal-studio-v6lib/src/views/instrument/effects.ts:88-138 (2a9e4a7): the four LCD faders (absolute), the
@@ -410,7 +589,7 @@ export const mountKeysView: MountView = (root, inst) => {
   // here (makeHSlider has none); the ghost stays on the MOD card as the Studio hung it, seated INSIDE the card's legend band
   // by keys.css (the Studio's sat above the card, where the card's overflow clipped it); the DEL long-name ghost is dropped
   // (it named a glyph: a word that explains) and the long name rides aria-label; the REV IR slot strip is not a visitor
-  // surface (F-view.md §i). ═══
+  // surface (F-view.md §i). [R3] each column is a real box (a subgrid column) carrying its data-ctl. ═══
   const fxEl = el('div', 'kv-fx');
   const setFx = (patch: Partial<KeysState['fx']>): void => { K.set('fx', { ...K.state().fx, ...patch }); };
   const faders = {} as Record<FxAmt, Fader>;
@@ -420,6 +599,7 @@ export const mountKeysView: MountView = (root, inst) => {
   for (const f of FX) {
     const col = accent(el('div', 'kv-fxcol'), f.acc);
     col.dataset.key = f.key;
+    col.dataset.ctl = `keys-fx-${f.key}`;
     const card = lcd(f.legend);
     card.dataset.key = f.key;
     card.addEventListener('pointerdown', () => card.classList.remove('si-fall'));   // before makeFader's own: no fall on the grab
@@ -467,10 +647,48 @@ export const mountKeysView: MountView = (root, inst) => {
   // ═══ end effects.ts port ═══
   body.append(lfo, fxEl);
 
+  // ── 5 · THE HARMONY ROW: HOLD · CHORD · ARP + RATE · LENGTH · GROOVE ────────────────────────────────────────────────
+  // ═══ from jt-portfolio-signal/src/signal/view/hands-view.ts:196-243 (R2, 76a02c7; the Studio's play.ts:762-816 @ 2a9e4a7):
+  // the latches write the harmony, their lit state is painted back from the state; RATE (stepped over ARP_DIVS) · LENGTH
+  // (0.06..1.3) · GROOVE (0..1). PORT (R3): on-screen toggles only (X C V left the keyboard); the arp knobs carry the
+  // material's .dormant while the arp is off (they went steel before). ═══
+  const harm = accent(el('div', 'kv-harm'), 'harmony');
+  const holdTog = cap('hold', { led: true, acc: 'harmony', cls: 'kv-tog' }); holdTog.dataset.ctl = 'hold';
+  const chordTog = cap('chord', { led: true, acc: 'harmony', cls: 'kv-tog' }); chordTog.dataset.ctl = 'chord';
+  const arpTog = cap('arp', { led: true, acc: 'harmony', cls: 'kv-tog' }); arpTog.dataset.ctl = 'arp';
+  onClick(holdTog, () => H.set('hold', !H.state().hold));
+  onClick(chordTog, () => H.set('chord', !H.state().chord));
+  onClick(arpTog, () => { const a = H.state().arp; H.set('arp', { ...a, on: !a.on }); });
+  const kRate = knob('rate', { size: 'kx', side: true, steps: ARP_DIVS.length, value: h0.arp.div });
+  const kLen = knob('length', { size: 'kx', side: true, value: h0.arp.length.toFixed(2) });
+  const kGroove = knob('groove', { size: 'kx', side: true, value: h0.arp.groove.toFixed(2) });
+  kRate.dataset.ctl = 'arp-rate'; kLen.dataset.ctl = 'arp-length'; kGroove.dataset.ctl = 'arp-groove';
+  const togs = el('div', 'kv-togs');
+  togs.append(holdTog, chordTog, arpTog);
+  const arpK = el('div', 'kv-arpk');
+  arpK.append(kRate, kLen, kGroove);
+  harm.append(togs, el('i', 'sg-vdiv kv-hdiv'), arpK);
+  const arpWrite = (p: Partial<HarmonyState['arp']>): void => {
+    const a = H.state().arp, n = { ...a, ...p };
+    if (n.div !== a.div || !near(n.length, a.length) || !near(n.groove, a.groove)) H.set('arp', n);
+  };
+  const bRate = bindKnob<ArpDiv>(kRate, h0.arp.div, {
+    toV: (d) => stepV(Math.max(0, ARP_DIVS.indexOf(d)), ARP_DIVS.length), fromV: (v) => ARP_DIVS[stepI(v, ARP_DIVS.length)],
+    same: (a, b) => a === b, text: (d) => d, write: (div) => arpWrite({ div }), steps: ARP_DIVS.length,
+  });
+  const bLen = bindKnob<number>(kLen, h0.arp.length, {
+    toV: (l) => clamp((l - LEN_MIN) / LEN_SPAN, 0, 1), fromV: (v) => LEN_MIN + v * LEN_SPAN,
+    same: near, text: (l) => l.toFixed(2), write: (length) => arpWrite({ length }), dflt: 0.5,
+  });
+  const bGroove = bindKnob<number>(kGroove, h0.arp.groove, {
+    toV: (g) => clamp(g, 0, 1), fromV: (v) => v, same: near, text: (g) => g.toFixed(2), write: (groove) => arpWrite({ groove }), dflt: 0,
+  });
+  // ═══ end hands-view.ts harmony port ═══
+
   // ═══ from signal-studio-v6lib/src/views/instrument/module-header.ts:225-277 (2a9e4a7) + index.ts:651-658: the footer —
   // M (the module's mute latch), S (solo, radio-exclusive, again = clear), the gain trim (dial 0..1 → 0..1.25, unity .8:
   // detent + dbl-click, the dB ghost). PORT: look B's rail + square caps (LookB.astro:153-156) and the drums' + bass' footer
-  // to the letter (view/drums-view.ts:188-204): a plain arc, the unity tick engraved, glinting only while the hand holds the
+  // to the letter (view/drums-view.ts): a plain arc, the unity tick engraved, glinting only while the hand holds the
   // trim in its detent; the keys' DRY tag dropped (a word that explains); the tower dims while another module is soloed. ═══
   const foot = rail('kv-foot');
   const mBtn = cap('m', { cls: 'sq warn' });
@@ -491,12 +709,13 @@ export const mountKeysView: MountView = (root, inst) => {
   foot.append(mBtn, sBtn, el('i', 'sg-fdiv'), gainHost);
   // ═══ end module-header.ts port ═══
 
-  T.append(head, scr, body, foot);
+  T.append(head, scr, gest, body, harm, foot);
   root.appendChild(T);
 
   // ── PAINT: everything from the instrument's state (inst.state()), diffed: only what changed is written ─────────────
   let dead = false, queued = false;
-  let lastMute: boolean | undefined, lastSolo: SignalState['solo'] | undefined;
+  let lastMute: boolean | undefined, lastSolo: SignalState['solo'] | undefined, lastMOff: boolean | undefined;
+  let harmSig = '';
   function paint(): void {
     queued = false;
     if (dead) return;
@@ -512,6 +731,8 @@ export const mountKeysView: MountView = (root, inst) => {
     setK(amtKnob, k.motion.amount);
     setK(rateKnob, divToV(k.motion.div));
     lightShape(k.motion.shape);
+    const mOff = !(k.motion.amount >= MOTION_OFF);
+    if (mOff !== lastMOff) { lastMOff = mOff; rateHost.classList.toggle('dormant', mOff); shapes.classList.toggle('dormant', mOff); }
     for (const f of FX) {
       setFall(f.key, k.fx[f.key]);
       const sv = String(k.fx[f.sub]);
@@ -526,6 +747,19 @@ export const mountKeysView: MountView = (root, inst) => {
       T.classList.toggle('solo-dim', so !== null && so !== 'keys');
     }
     setK(gainKnob, gainToV(k.gain));
+    const h = S.harmony;
+    if (h) {
+      const sig = `${h.hold}|${h.chord}|${h.arp.on}`;
+      if (sig !== harmSig) {
+        harmSig = sig;
+        for (const [b, on] of [[holdTog, h.hold], [chordTog, h.chord], [arpTog, h.arp.on]] as Array<[HTMLElement, boolean]>) {
+          b.classList.toggle('on', on); b.setAttribute('aria-pressed', String(on));
+        }
+        for (const kn of [kRate, kLen, kGroove]) kn.classList.toggle('dormant', !h.arp.on);   // Law 3: they wait on ARP
+      }
+      bRate.sync(h.arp.div); bLen.sync(h.arp.length); bGroove.sync(h.arp.groove);
+      bgRate.sync(h.gate.div); bgSwing.sync(h.gate.swing); bdSpeed.sync(h.dive.speedSec); bdDist.sync(h.dive.dist);
+    }
   }
   const schedule = (): void => { if (!queued && !dead) { queued = true; queueMicrotask(paint); } };
   const offChange = inst.onChange(schedule);
@@ -553,6 +787,11 @@ export const mountKeysView: MountView = (root, inst) => {
       cancelAnimationFrame(raf);
       cutRaf.cancel();
       offChange();
+      offKeys();
+      W?.removeEventListener('blur', letGo);
+      document.removeEventListener?.('visibilitychange', onVis);
+      letGo();
+      H.gesture = rawGesture;
       timers.forEach((t) => clearTimeout(t));
       timers.clear();
       T.remove();

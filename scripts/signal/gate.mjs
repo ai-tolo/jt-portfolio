@@ -1,6 +1,6 @@
 #!/usr/bin/env node
-// gate · the SIGNAL round gate (branch `signal`; R0 + R1 + R2, 2026-09-23). One command, one verdict:
-//   source ~/.nvm/nvm.sh && node scripts/signal/gate.mjs [--round r0|r1|r2] [--skip-build] [--looks a,b,c] [--only chromium,webkit,firefox]
+// gate · the SIGNAL round gate (branch `signal`; R0 + R1 + R2 2026-09-23, R3 2026-09-24). One command, one verdict:
+//   source ~/.nvm/nvm.sh && node scripts/signal/gate.mjs [--round r0|r1|r2|r3] [--skip-build] [--looks a,b,c] [--only chromium,webkit,firefox]
 // build (exit code only) → serve-dist :4637 → the round's browsers → one table → the KILL line, always the last line.
 // R0 · headless Chrome/CDP :9345 (own profile <scratch>/<round>-gate-chrome, muted, DPR 1) → each look at 1440×900 +
 //   1024×768: console clean, the asked .look shown at 700–1100 px unscaled, no sideways scroll, a viewport PNG + a
@@ -31,11 +31,20 @@
 //   phone (Chromium) → THE HOMEPAGE (Chromium): /?mute=1 at 1440×900, #play scrolled into view: 'standby' and no
 //   html[data-night]; a trusted click → data-night and 'live' within 2 s; scrolled to the top → 'standby' and
 //   data-night gone within 1.5 s (+ <browser>-home-standby.png, <browser>-home-live.png).
+// R3 · NOTES-SIGNAL-R3.md §3 (THE FIRST-TIMER ROUND, `--round r3`): R2's leg with these sections after the first sound:
+//   KEYMAP (X C V N and Digit1, tapped through the surface AND as trusted keys, change nothing; no keycap draws them) ·
+//   HOLD UNDER CHORD (the on-screen HOLD + CHORD caps: a new chord SWITCHES the held one; HOLD alone is a pedal) ·
+//   DORMANT (the contract's pairs carry .dormant at the defaults and wake when their parent turns on) · KEYCAPS (one
+//   visible .sg-key per taught KEYMAP code; a trusted key presses + lights its cap and a piano key) · THE SIZE FLOOR
+//   (control words ≥ 12 px, screen numerals ≥ 22 px, BPM the largest) → R2's loop (the arp by its on-screen cap: V is
+//   gone) + stop + reload → powered again → R2's shots + THE FIT (1440: 96–99.5 % of the page's content width, clear
+//   of the nav rail by ≥ 1 %; 1024: the clearance only) → the module PNGs (<browser>-mod-{drums,keys,bass,top,keybed}.png)
+//   and one pressed state (<browser>-pressed.png: KeyA + KeyZ held, the drums on) → R2's power off, phone, home.
 // KILL DISCIPLINE · R0: Chrome's whole process group. R1 + R2: each child and everything under it, the WebKit shim (by this
 //   run's marker) and every ms-playwright process that was not running at start and has been orphaned. SIGKILLed, the
 //   server closed, in `finally` AND on SIGINT/SIGTERM/SIGHUP/uncaughtException; the last line proves none survives.
 import { spawn, execFileSync } from "node:child_process";
-import { mkdirSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, rmSync, statSync, writeFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";
 import { inflateSync } from "node:zlib";
@@ -46,8 +55,8 @@ const argv = process.argv.slice(2);
 const arg = (n, d) => { const i = argv.indexOf(`--${n}`); return i >= 0 && argv[i + 1] ? argv[i + 1] : d; };
 const REPO = fileURLToPath(new URL("../../", import.meta.url));
 const SELF = fileURLToPath(import.meta.url);
-const ROUND = arg("round", "r0"), TAG = `${ROUND}-gate`, R1 = ROUND === "r1", R2 = ROUND === "r2";
-const LEGS = R1 || R2;                                                           // the Playwright rounds: one child per browser
+const ROUND = arg("round", "r0"), TAG = `${ROUND}-gate`, R1 = ROUND === "r1", R2 = ROUND === "r2", R3 = ROUND === "r3";
+const LEGS = R1 || R2 || R3;                                                     // the Playwright rounds: one child per browser
 const PORT = Number(arg("port", 4637)), CDP_PORT = Number(arg("cdp-port", 9345)), BASE = `http://127.0.0.1:${PORT}`;
 const SCRATCH = arg("scratch", "/private/tmp/claude-501/-Users-tolo/a1c7365a-3a62-4cf9-a768-e8fc57dd9bca/scratchpad");
 const PROFILE = join(SCRATCH, `${TAG}-chrome`);
@@ -63,7 +72,7 @@ const PW = "/Users/tolo/studio-mocks/pw/node_modules/playwright/index.mjs";
 const RIP_VERIFY = fileURLToPath(new URL("./rip-verify.mjs", import.meta.url)); // doubles as the WebKit pipe shim
 const LEG = arg("r1-leg", null);                                                   // child mode: one browser's leg
 const BROWSERS = arg("only", "chromium,webkit,firefox").split(",").filter(Boolean);
-const LEG_MS = Number(arg("leg-ms", 120_000));                                   // each browser's clock (a knob for proving the HUNG path)
+const LEG_MS = Number(arg("leg-ms", R3 ? 180_000 : 120_000));                   // each browser's clock (a knob for proving the HUNG path)
 const SIGNAL_URL = `${BASE}/signal/?mute=1`;
 const RMS_MIN = 0.001;                  // −60 dBFS: the loop sounds
 const PEAK_QUIET = 3e-5;                // −90.5 dBFS: the master stop is silent
@@ -114,16 +123,20 @@ const WAIT_FIRST_SOUND = (limitMs) => new Promise((ok) => {
   };
   tick();
 });
-const LOOP = () => {   // NOTES-SIGNAL-R1 §4 (3), through the real keymap's actions (the context already runs)
+const LOOP = (arpBy) => {   // NOTES-SIGNAL-R1 §4 (3), through the real keymap's actions (the context already runs)
   const s = window.__signal, i = s.instrument;
   s.press("Space");                                          // drums on (a tap)
   s.press("KeyB");                                           // bass on …
   i.bass.set("mode", "seq");                                 // … in SEQ, via state
   for (const k of ["KeyA", "KeyD", "KeyG"]) s.press(k, true); // C E G held
-  s.press("KeyV");                                           // the arp
+  let how;
+  if (arpBy === "click") {                                   // R3: V left the keyboard; the arp is its on-screen cap
+    how = s.click('[data-ctl="arp"]') ? 'click [data-ctl="arp"]' : "NO [data-ctl=arp]: harmony.set('arp') instead";
+    if (!s.state().harmony.arp.on) i.harmony.set("arp", { ...i.harmony.state().arp, on: true });
+  } else s.press("KeyV");                                    // the arp
   const st = s.state();
   return { drums: st.drums.on, bass: st.bass.on, mode: st.bass.mode, arp: st.harmony.arp.on, bpm: st.bpm,
-    clock: i.time.running(), held: i.keys.held().length };
+    clock: i.time.running(), held: i.keys.held().length, how };
 };
 const SAMPLE = (ms) => new Promise((ok) => {   // rms every 100 ms for `ms`, in page (no round trips under a throttle)
   const s = window.__signal, xs = [], t0 = performance.now(), g0 = s.glitches();
@@ -224,15 +237,16 @@ async function bootRows({ name, browser, page, errs, row, step, errLine }) {
 
   return { rd, bf };
 }
-async function loopRows({ name, page, row, step }) {
+async function loopRows(k) {
+  const { name, page, row, step } = k;
   // (3) THE LOOP: drums · bass seq · a held chord · the arp; 4 bars; Chromium also 20 s at CPU throttle 4×
   step("loop");
-  const lp = await page.evaluate(LOOP);
+  const lp = await page.evaluate(LOOP, "click");   // R3: KeyV is gone from the contract; every round turns the arp on through the cap
   const barMs = 240_000 / lp.bpm;
   const four = await page.evaluate(SAMPLE, Math.round(4 * barMs + 150));
   const bar4 = four.xs.filter(([t]) => t >= 3 * barMs).map(([, v]) => v);
   row("loop · 4 bars > −60 dBFS", four.end.rms > RMS_MIN && lp.drums && lp.bass && lp.mode === "seq" && lp.arp,
-    `rms ${dB(four.end.rms)} after 4 bars (${(4 * barMs / 1000).toFixed(1)} s @ ${lp.bpm} bpm) · bar 4 min ${dB(Math.min(...bar4))} / median ${dB(median(bar4))} · drums ${lp.drums ? "on" : "OFF"} · bass ${lp.bass ? lp.mode : "OFF"} · arp ${lp.arp ? "on" : "OFF"} · ${lp.held} held · gaps ${four.g1.gaps}`);
+    `rms ${dB(four.end.rms)} after 4 bars (${(4 * barMs / 1000).toFixed(1)} s @ ${lp.bpm} bpm) · bar 4 min ${dB(Math.min(...bar4))} / median ${dB(median(bar4))} · drums ${lp.drums ? "on" : "OFF"} · bass ${lp.bass ? lp.mode : "OFF"} · arp ${lp.arp ? "on" : "OFF"}${lp.how ? ` (${lp.how})` : ""} · ${lp.held} held · gaps ${four.g1.gaps}`);
   if (name === "chromium") {
     step("throttle");
     const cdp = await page.context().newCDPSession(page);
@@ -259,8 +273,9 @@ async function stopRows({ page, row, step }) {
   row("stop · still silent 1 s later", st.at !== null && st.maxAfter < PEAK_QUIET && st.end.rms < PEAK_QUIET && st.b1 > st.b0,
     `max peak ${dB(st.maxAfter)} over the next 1 s · rms ${dB(st.end.rms)} · render blocks ${st.b0} → ${st.b1} · ctx ${st.ctx} · after: drums ${st.drums ? "ON" : "off"} · bass ${st.bass ? "ON" : "off"} · arp ${st.arp ? "ON" : "off"} · hold ${st.hold ? "ON" : "off"} · ${st.held} held`);
 }
-async function shotRows({ name, page, row, step }) {
-  // (6) SHOTS: 1440×900 + 1024×768 + the keybed row pinned
+async function shotRows(k) {
+  const { name, page, row, step } = k;
+  // (6) SHOTS: 1440×900 + 1024×768 + the keybed row pinned (R3: + THE FIT, read before the keybed pin scrolls)
   for (const [w, h] of SIZES) {
     step(`shot ${w}`);                                       // a page error during the resize is tagged with its width
     await page.setViewportSize({ width: w, height: h });
@@ -271,6 +286,7 @@ async function shotRows({ name, page, row, step }) {
     await page.screenshot({ path: file });
     row(`shot ${w} · no sideways scroll`, m.sw <= m.iw && !!m.dev && m.dev.l >= 0 && m.dev.r <= m.iw,
       `scrollWidth ${m.sw} / innerWidth ${m.iw} · device x ${m.dev ? `${m.dev.l}..${m.dev.r} (${m.dev.w}×${m.dev.h}, zoom ${m.zoom})` : "missing"} · ${file}`);
+    if (k.r3) await fitRows(k, w);
     const p = await page.evaluate(PIN, R1_KEYBED);
     await page.waitForTimeout(120);
     const kfile = join(OUT, `${name}-${w}-keybed.png`);
@@ -466,6 +482,7 @@ const SCROLL_TOP = () => {   // the recorder's origin is the scroll itself
   return { from, y: Math.round(scrollY) };
 };
 
+// (the size-floor rows compare with a 0.01 px tolerance: WebKit reports a 12 px word under the host's zoom as 11.999999 px)
 // ── a PNG's mean light, node side (zlib only): Playwright's screenshots are 8-bit, non-interlaced grey/RGB(A) ──────
 /** Y = the mean RELATIVE LUMINANCE (sRGB decoded to linear light, Rec. 709 weights): what the dark is judged on.
  *  luma = the mean gamma-encoded Rec. 601 luma, reported beside it. */
@@ -583,6 +600,12 @@ async function legR2(k) {
     ? `${fs.ms.toFixed(1)} ms from the trusted KeyA's own timeStamp (seen as code ${fs.code || "'' (the key door took it)"} in state ${fs.state}) → rms > −60 dBFS, polled every 4 ms, rendered · ctx ${k0.ctx} at the key (the power press resumed it) · the surface's firstSoundMs ${surf}: marked at the power click (its first trusted pointerdown), so the trace + the bulb-up are inside it: reported, not judged`
     : `no sound in 3 s after KeyA · the key ${fs.keyed ? `was seen as code ${fs.code || "''"} in state ${fs.state}` : "was NOT seen by the page"} · ctx ${fs.ctx} · rms ${dB(fs.rms)} · the surface's firstSoundMs ${surf}`);
 
+  // R3 (NOTES-SIGNAL-R3 §3 rows 1–5): the taught keymap, HOLD under CHORD, the dormant pairs, the keycaps, the size floor
+  if (k.r3) for (const sec of [keymapRows, holdRows, dormantRows, keycapRows, floorRows]) {
+    try { await sec(k); }                                     // one section's throw is its own red row; the leg runs on
+    catch (e) { row(`${sec.name} · ran to its end`, false, String(e?.message ?? e).split("\n")[0].slice(0, 300)); }
+  }
+
   // (5) THE LOOP (+ Chromium's 20 s at CPU 4×) and (6) THE MASTER STOP: R1's own sections
   await loopRows(k);
   await stopRows(k);
@@ -616,6 +639,7 @@ async function legR2(k) {
   const b2 = on2.rec && on2.rec.click ? on2.rec.click.t : on2.rec.armed, live2 = when(on2.rec, (e) => e.state === "live", b2);
   await page.waitForTimeout(1300);
   await shotRows(k);
+  if (k.r3) await moduleShotRows(k, aim);   // R3 §3 (7): back at 1440×900, powered: each module + one pressed state
 
   // (9) POWER OFF: the beat on, a trusted click on the disc while live → standby within 2 s, silent, no data-live
   step("power off");
@@ -687,6 +711,309 @@ async function legR2(k) {
   }
 }
 
+// ════ R3 · THE FIRST-TIMER ROUND (NOTES-SIGNAL-R3.md §3): in page (self-contained, one argument) ═══════════════════
+/** The taught set (types.ts KEYMAP, R3), hardcoded: the page does not expose the map. */
+const R3_TAUGHT = ["Space", "KeyA", "KeyS", "KeyD", "KeyF", "KeyG", "KeyH", "KeyJ", "KeyK", "KeyL", "KeyW", "KeyE", "KeyT",
+  "KeyY", "KeyU", "KeyO", "KeyB", "KeyZ", "KeyM", "ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown", "Equal", "Escape"];
+/** What R3 took off the keyboard: X HOLD · C CHORD · V ARP · N LOCK, and the pads' digits. */
+const R3_GONE = ["KeyX", "KeyC", "KeyV", "KeyN", "Digit1"];
+/** The contract's dormant pairs (types.ts CTL comment), as the gate finds them on the device. */
+const R3_DORMANT = ['[data-ctl="drums-fb"]', '[data-ctl="drums-time"]', '[data-ctl="keys-rate"]', '[data-ctl="keys-shape"]',
+  '[data-ctl="arp-rate"]', '[data-ctl="arp-length"]', '[data-ctl="arp-groove"]', '[data-ctl="bass-strip"]',
+  '.sg-key[data-code="KeyR"]', '.sg-key[data-code="KeyI"]'];
+const KM_SNAP = () => {   // what an unmapped key could have changed, and which codes the surface draws
+  const s = window.__signal, i = s.instrument, st = s.state();
+  let snd = null;
+  try { snd = i.harmony.sounding().map((x) => x[1]).join(" "); } catch { snd = "n/a"; }
+  return { hold: st.harmony.hold, chord: st.harmony.chord, arp: st.harmony.arp.on, armed: st.bass.armed,
+    rack: JSON.stringify(st.harmony.rack), held: i.keys.held().length, sounding: snd, drums: st.drums.on, bass: st.bass.on,
+    drawn: [...document.querySelectorAll(".sig .sg-key[data-code]")].map((e) => e.dataset.code) };
+};
+const KM_TAP = (codes) => { for (const c of codes) window.__signal.press(c); return true; };   // taps (on omitted)
+const HOLD_RUN = async () => {   // §3 (2): both hold rows in one pass, every step recorded
+  const s = window.__signal, i = s.instrument, w = (ms) => new Promise((r) => setTimeout(r, ms));
+  const snd = () => { try { return i.harmony.sounding().map((x) => x[1]).sort((a, b) => a - b); } catch { return null; } };
+  const ap = (sel) => {
+    const e = document.querySelector(sel);
+    if (!e) return "missing";
+    const a = e.getAttribute("aria-pressed") ?? e.querySelector("[aria-pressed]")?.getAttribute("aria-pressed");
+    return a ?? "no aria-pressed";
+  };
+  const steps = {};
+  const rec = (tag) => {
+    const h = s.state().harmony;
+    steps[tag] = { snd: snd(), held: i.keys.held().length, down: document.querySelectorAll(".sig .sg-key.pressed").length,
+      hold: h.hold, chord: h.chord, apHold: ap('[data-ctl="hold"]'), apChord: ap('[data-ctl="chord"]') };
+  };
+  const out = { steps, has: typeof i.harmony.sounding === "function" };
+  rec("before");
+  // a new chord switches
+  out.cHold = s.click('[data-ctl="hold"]');
+  out.cChord = s.click('[data-ctl="chord"]');
+  await w(40); rec("on");
+  s.press("KeyA"); await w(60); rec("A");
+  s.press("KeyF"); await w(60); rec("F");
+  await w(300); rec("F+300");
+  out.cHoldOff = s.click('[data-ctl="hold"]');
+  await w(60); rec("off");
+  // the pedal without chord
+  out.cChordOff = s.click('[data-ctl="chord"]');
+  out.cHoldOn = s.click('[data-ctl="hold"]');
+  await w(40); rec("pedal");
+  out.mA = i.harmony.midiFor(0, false); out.mD = i.harmony.midiFor(4, false);
+  s.press("KeyA"); await w(60); rec("pA");
+  s.press("KeyD"); await w(60); rec("pD");
+  s.press("KeyA"); await w(60); rec("pA2");
+  out.cHoldOff2 = s.click('[data-ctl="hold"]');
+  await w(60); rec("pOff");
+  // whatever happened above, the rest of the leg starts with HOLD and CHORD off (not judged: the rows read the steps)
+  const h = s.state().harmony;
+  out.forced = [];
+  if (h.hold) { i.harmony.set("hold", false); out.forced.push("hold"); }
+  if (h.chord) { i.harmony.set("chord", false); out.forced.push("chord"); }
+  if (out.forced.length) await w(40);
+  rec("end");
+  return out;
+};
+const DORM_READ = (sels) => sels.map((sel) => {
+  const e = document.querySelector(`.sig ${sel}`);
+  return { sel, st: e ? (e.classList.contains("dormant") ? "dormant" : "awake") : "missing" };
+});
+const DORM_WAKE = async (sels) => {   // §3 (3): each parent on → its children awake; each parent back → dormant again
+  const i = window.__signal.instrument, w = (ms) => new Promise((r) => setTimeout(r, ms));
+  const read = (xs) => xs.map((sel) => { const e = document.querySelector(`.sig ${sel}`); return e ? (e.classList.contains("dormant") ? "dormant" : "awake") : "missing"; });
+  const poll = async (xs, want) => {   // a microtask + 50 ms, then every 10 ms up to 300 ms: the time it took is reported
+    const t0 = performance.now();
+    await Promise.resolve(); await w(50);
+    for (;;) {
+      const r = read(xs), t = performance.now() - t0;
+      if (r.every((x) => x === want) || t > 300) return { ok: r.every((x) => x === want), ms: Math.round(t), r };
+      await w(10);
+    }
+  };
+  const groups = [
+    { name: "drums delay mix .5", kids: [sels[0], sels[1]], on: () => i.drums.set("delay", { ...i.drums.state().delay, mix: 0.5 }), off: () => i.drums.set("delay", { ...i.drums.state().delay, mix: 0 }) },
+    { name: "keys motion .5", kids: [sels[2], sels[3]], on: () => i.keys.set("motion", { ...i.keys.state().motion, amount: 0.5 }), off: () => i.keys.set("motion", { ...i.keys.state().motion, amount: 0 }) },
+    { name: "arp on", kids: [sels[4], sels[5], sels[6]], on: () => i.harmony.set("arp", { ...i.harmony.state().arp, on: true }), off: () => i.harmony.set("arp", { ...i.harmony.state().arp, on: false }) },
+    { name: "bass seq", kids: [sels[7]], on: () => i.bass.set("mode", "seq"), off: () => i.bass.set("mode", "drone") },
+  ];
+  const out = [];
+  for (const g of groups) {
+    g.on();
+    const wake = await poll(g.kids, "awake");
+    g.off();
+    const back = await poll(g.kids, "dormant");
+    out.push({ name: g.name, kids: g.kids, wake, back });
+  }
+  return out;
+};
+const CAPS_DRAWN = (codes) => {
+  const all = [...document.querySelectorAll(".sig .sg-key[data-code]")];
+  return { per: codes.map((c) => { const els = all.filter((e) => e.dataset.code === c); return { c, n: els.length, vis: els.filter((e) => e.getClientRects().length > 0).length }; }),
+    extra: [...new Set(all.map((e) => e.dataset.code).filter((c) => !codes.includes(c)))], total: all.length };
+};
+/** Optionally taps `tap` through the surface, then polls every 5 ms until every check holds or limitMs passes. A check
+ *  is { sel, has?: [classes], lacks?: [classes] } on the first match, or { sel, any: true }: some element matches. */
+const WAIT_CAPS = ({ tap, checks, limitMs }) => new Promise((ok) => {
+  if (tap) window.__signal.press(tap);
+  const t0 = performance.now();
+  const read = () => checks.map((c) => {
+    if (c.any) { const n = document.querySelectorAll(c.sel).length; return { sel: c.sel, ok: n > 0, got: `${n} match` }; }
+    const e = document.querySelector(c.sel);
+    if (!e) return { sel: c.sel, ok: false, got: "missing" };
+    const cls = [...e.classList].filter((x) => ["pressed", "lit", "latched", "dormant"].includes(x));
+    const good = (c.has || []).every((x) => e.classList.contains(x)) && (c.lacks || []).every((x) => !e.classList.contains(x));
+    return { sel: c.sel, ok: good, got: cls.length ? `.${cls.join(".")}` : "no state class" };
+  });
+  const tick = () => {
+    const r = read(), t = performance.now() - t0;
+    if (r.every((x) => x.ok) || t > limitMs) ok({ ok: r.every((x) => x.ok), ms: Math.round(t), r, drums: window.__signal.state().drums.on });
+    else setTimeout(tick, 5);
+  };
+  tick();
+});
+const SIZE_FLOOR = () => {   // §3 (5): computed font-size in the device's own (unzoomed) px
+  const vis = (e) => e.getClientRects().length > 0 && getComputedStyle(e).visibility !== "hidden";
+  const fs = (e) => parseFloat(getComputedStyle(e).fontSize);
+  const path = (e) => {
+    const c = e.closest("[data-ctl]"), cls = [...e.classList].slice(0, 2).join(".");
+    const own = `${e.tagName.toLowerCase()}${cls ? `.${cls}` : ""}${e.dataset.code ? `[data-code=${e.dataset.code}]` : ""}`;
+    return `${c && c !== e ? `[data-ctl=${c.dataset.ctl}] ` : e.dataset.ctl ? `[data-ctl=${e.dataset.ctl}]` : ""}${own} "${e.textContent.trim().slice(0, 12)}"`;
+  };
+  const words = [...document.querySelectorAll(".sig :is(.sg-cap, .si-seg > button, .si-kl, .si-kn, .sg-etch, .sg-key, .sg-screen > small, .sg-lcd .si-fl)")]
+    .filter((e) => vis(e) && e.textContent.trim()).map((e) => ({ px: fs(e), p: path(e) })).sort((a, b) => a.px - b.px);
+  const nums = [...document.querySelectorAll(".sig .sg-screen > b")].filter(vis).map((e) => ({ px: fs(e), p: path(e) })).sort((a, b) => a.px - b.px);
+  const bpm = document.querySelector('.sig [data-ctl="drums-bpm"] .sgh-bpm') || document.querySelector('.sig [data-ctl="drums-bpm"] b');
+  const rivals = [...document.querySelectorAll(".sig .sg-screen > b, .sig .sgh-clabel")].filter((e) => e !== bpm && vis(e))
+    .map((e) => ({ px: fs(e), p: path(e) })).sort((a, b) => b.px - a.px);
+  const fit = document.getElementById("sig-fit");
+  return { words, nums, bpm: bpm ? { px: fs(bpm), p: path(bpm), vis: vis(bpm) } : null, rivals,
+    zoom: fit ? getComputedStyle(fit).getPropertyValue("--sig-zoom").trim() : "" };
+};
+const FIT_FACTS = () => {   // §3 (6): the page's content column, the drawn device, the nav rail
+  const pg = document.querySelector(".sig-page"), cs = pg && getComputedStyle(pg);
+  const pl = cs ? parseFloat(cs.paddingLeft) : 0, pr = cs ? parseFloat(cs.paddingRight) : 0;
+  const d = document.getElementById("sig-device"), r = d && d.getBoundingClientRect();
+  const rail = document.querySelector(".awayrail"), rcs = rail && getComputedStyle(rail);
+  const rr = rail && rail.getClientRects().length && rcs.display !== "none" && rcs.visibility !== "hidden" ? rail.getBoundingClientRect() : null;
+  const fit = document.getElementById("sig-fit");
+  return { iw: innerWidth, ih: innerHeight, pl, pr, content: innerWidth - pl - pr, page: !!pg,
+    dev: r ? { l: r.left, r: r.right, w: r.width, h: r.height } : null,
+    rail: rr && rr.width > 0 ? { l: rr.left, r: rr.right, w: rr.width, pos: rcs.position } : null,
+    zoom: fit ? getComputedStyle(fit).getPropertyValue("--sig-zoom").trim() : "" };
+};
+
+// ── R3 · THE LEG'S SECTIONS ──
+async function keymapRows({ page, row, step }) {
+  // (1) THE KEYMAP: X C V N and Digit1 are gone: through the surface (taps) AND as trusted keys, nothing changes
+  step("keymap");
+  const s0 = await page.evaluate(KM_SNAP);
+  await page.evaluate(KM_TAP, R3_GONE);
+  await page.waitForTimeout(60);
+  const s1 = await page.evaluate(KM_SNAP);
+  for (const c of R3_GONE) await page.keyboard.press(c);
+  await page.waitForTimeout(60);
+  const s2 = await page.evaluate(KM_SNAP);
+  const keys = ["hold", "chord", "arp", "armed", "rack", "held", "sounding", "drums", "bass"];
+  const diff = (a, b) => keys.filter((x) => a[x] !== b[x]).map((x) => `${x} ${a[x]} → ${b[x]}`);
+  const d1 = diff(s0, s1), d2 = diff(s1, s2), drawnGone = R3_GONE.filter((c) => s0.drawn.includes(c));
+  row("keymap · no X C V N, no digits", d1.length === 0 && d2.length === 0 && drawnGone.length === 0,
+    `surface taps ${R3_GONE.join(" ")}: ${d1.length ? `CHANGED ${d1.join(" | ")}` : "nothing changed"} · the same as trusted keys: ${d2.length ? `CHANGED ${d2.join(" | ")}` : "nothing changed"} (hold ${s2.hold} · chord ${s2.chord} · arp ${s2.arp} · bass.armed ${s2.armed} · ${s2.held} held) · keycaps of those codes: ${drawnGone.length ? `DRAWN ${drawnGone.join(" ")}` : "none"} · the surface draws ${s0.drawn.length ? `${s0.drawn.length}: ${s0.drawn.join(" ")}` : "NO .sg-key[data-code]"}`);
+}
+async function holdRows({ page, row, step }) {
+  // (2) HOLD UNDER CHORD (types.ts, above HarmonyState): a new chord switches; HOLD alone is a sustain pedal
+  step("hold under chord");
+  const h = await page.evaluate(HOLD_RUN);
+  const S = h.steps, eq = (a, b) => Array.isArray(a) && a.length === b.length && a.every((x, j) => x === b[j]);
+  const fmt = (st) => (st ? `[${st.snd ? st.snd.join(" ") : "n/a"}] held ${st.held}` : "?");
+  const C = [60, 64, 67], F = [65, 69, 72];
+  const miss = !h.cHold ? "no [data-ctl=hold] on the surface" : !h.cChord ? "no [data-ctl=chord] on the surface" : "";
+  row("hold under chord · a new chord switches", !miss && h.has && S.on.apHold === "true" && S.on.apChord === "true"
+      && eq(S.A.snd, C) && S.A.held === 3 && S.A.down === 0 && eq(S.F.snd, F) && eq(S["F+300"].snd, F)
+      && eq(S.off.snd, []) && S.off.held === 0,
+    `${miss ? `${miss} · ` : ""}${h.has ? "" : "NO harmony.sounding() · "}hold + chord clicked: aria-pressed ${S.on.apHold} / ${S.on.apChord} (state hold ${S.on.hold} · chord ${S.on.chord}) · tap A → ${fmt(S.A)}, ${S.A.down} caps down (want [60 64 67] held 3) · tap F → ${fmt(S.F)} (want [65 69 72]) · +300 ms → ${fmt(S["F+300"])} · hold off → ${fmt(S.off)} (want [] held 0)`);
+  const P = [h.mA, h.mD];
+  row("hold under chord · pedal without chord", !miss && h.has && S.pedal.apHold === "true" && S.pedal.apChord === "false"
+      && eq(S.pA.snd, [h.mA]) && eq(S.pD.snd, P) && eq(S.pA2.snd, [h.mD]) && eq(S.pOff.snd, []) && S.pOff.held === 0
+      && S.end.apHold === "false" && S.end.apChord === "false" && h.forced.length === 0,
+    `chord off + hold on: aria-pressed hold ${S.pedal.apHold} / chord ${S.pedal.apChord} · tap A → ${fmt(S.pA)} (want [${h.mA}]) · tap D → ${fmt(S.pD)} (want [${h.mA} ${h.mD}]: harmony.midiFor(0) + midiFor(4)) · tap A again → ${fmt(S.pA2)} (want [${h.mD}]) · hold off → ${fmt(S.pOff)} · at the end aria-pressed hold ${S.end.apHold} / chord ${S.end.apChord}${h.forced.length ? ` · the clicks left ${h.forced.join(" + ")} ON: forced off by state for the rest of the leg` : ""}`);
+}
+async function dormantRows({ page, row, step }) {
+  // (3) DORMANT: present at the defaults, and each pair wakes with its parent
+  step("dormant");
+  const d0 = await page.evaluate(DORM_READ, R3_DORMANT);
+  const bad = d0.filter((x) => x.st !== "dormant");
+  row("dormant · present at the defaults", bad.length === 0,
+    `${d0.length - bad.length}/${d0.length} .dormant${bad.length ? ` · ${bad.map((x) => `${x.sel} ${x.st.toUpperCase()}`).join(" · ")}` : ""}`);
+  const wk = await page.evaluate(DORM_WAKE, R3_DORMANT);
+  const short = (sel) => sel.replace(/^\[data-ctl="(.*)"\]$/, "$1");
+  row("dormant · wakes", wk.every((g) => g.wake.ok && g.back.ok),
+    wk.map((g) => `${g.name} → ${g.kids.map(short).join("+")} ${g.wake.ok ? `awake in ${g.wake.ms} ms` : `NOT awake in ${g.wake.ms} ms (${g.wake.r.join(" ")})`}, restored → ${g.back.ok ? "dormant again" : `NOT dormant (${g.back.r.join(" ")})`}`).join(" · "));
+}
+async function keycapRows({ page, row, step }) {
+  // (4) KEYCAPS: one visible cap per taught code; a trusted key presses + lights its cap (and a piano key for a letter)
+  step("keycaps");
+  const cd = await page.evaluate(CAPS_DRAWN, R3_TAUGHT);
+  const missing = cd.per.filter((x) => x.n === 0).map((x) => x.c), dup = cd.per.filter((x) => x.n > 1).map((x) => `${x.c}×${x.n}`);
+  const hidden = cd.per.filter((x) => x.n === 1 && x.vis === 0).map((x) => x.c);
+  row("keycaps · the taught set drawn", missing.length === 0 && dup.length === 0 && hidden.length === 0,
+    `${cd.per.length - missing.length - dup.length - hidden.length}/${cd.per.length} drawn once and visible · missing ${missing.join(" ") || "none"} · duplicated ${dup.join(" ") || "none"} · hidden ${hidden.join(" ") || "none"} · ${cd.total} .sg-key[data-code] on the device (beyond the taught set: ${cd.extra.join(" ") || "none"})`);
+  const cap = (c) => `.sig .sg-key[data-code="${c}"]`;
+  const say = (w) => `${w.ok ? `${w.ms} ms` : `NOT in ${w.ms} ms`} (${w.r.map((x) => `${x.sel.replace(".sig ", "")} ${x.got}`).join(", ")})`;
+  const res = [];
+  await page.keyboard.down("KeyA");
+  const aDown = await page.evaluate(WAIT_CAPS, { checks: [{ sel: cap("KeyA"), has: ["pressed", "lit"] }, { sel: ".sig .sgh-w.press", any: true }], limitMs: 150 });
+  await page.keyboard.up("KeyA");
+  const aUp = await page.evaluate(WAIT_CAPS, { checks: [{ sel: cap("KeyA"), lacks: ["pressed", "lit"] }], limitMs: 150 });
+  res.push(`trusted KeyA down → .pressed.lit + a .sgh-w.press ${say(aDown)} · up → both gone ${say(aUp)}`);
+  const spOn = await page.evaluate(WAIT_CAPS, { tap: "Space", checks: [{ sel: cap("Space"), has: ["lit"] }], limitMs: 100 });
+  const spOff = await page.evaluate(WAIT_CAPS, { tap: "Space", checks: [{ sel: cap("Space"), lacks: ["lit"] }], limitMs: 100 });
+  res.push(`press('Space') → drums ${spOn.drums ? "on" : "OFF"}, .lit ${say(spOn)} · again → drums ${spOff.drums ? "ON" : "off"}, unlit ${say(spOff)}`);
+  await page.keyboard.down("KeyZ");
+  const zDown = await page.evaluate(WAIT_CAPS, { checks: [{ sel: cap("KeyZ"), has: ["pressed", "lit"] }], limitMs: 150 });
+  await page.keyboard.up("KeyZ");
+  const zUp = await page.evaluate(WAIT_CAPS, { checks: [{ sel: cap("KeyZ"), lacks: ["pressed", "lit"] }], limitMs: 150 });
+  res.push(`trusted KeyZ down → .pressed.lit ${say(zDown)} · up → gone ${say(zUp)}`);
+  row("keycaps · press lights", aDown.ok && aUp.ok && spOn.ok && spOn.drums && spOff.ok && !spOff.drums && zDown.ok && zUp.ok,
+    `${res.join(" · ")} · (ms from the poll's start, the key already dispatched)`);
+}
+async function floorRows({ page, row, step }) {
+  // (5) THE SIZE FLOOR (Law 5): words ≥ 12, screen numerals ≥ 22, BPM the largest
+  step("size floor");
+  const f = await page.evaluate(SIZE_FLOOR);
+  const unz = `computed px = the device's own unzoomed px (the host zooms it ${f.zoom || "?"}: the floor is written in these)`;
+  const lo = f.words.filter((x) => x.px < 12 - 0.01);
+  row("size floor · words ≥ 12 px", f.words.length > 0 && lo.length === 0,
+    `${f.words.length} visible words · ${lo.length} under 12 px · smallest: ${f.words.slice(0, 3).map((x) => `${x.px} px ${x.p}`).join(" | ") || "none found"} · ${unz}`);
+  const nlo = f.nums.filter((x) => x.px < 22 - 0.01);
+  row("size floor · numerals ≥ 22 px", f.nums.length > 0 && nlo.length === 0,
+    `${f.nums.length} visible .sg-screen > b · ${nlo.length} under 22 px · smallest: ${f.nums.slice(0, 3).map((x) => `${x.px} px ${x.p}`).join(" | ") || "none found"}`);
+  const top = f.rivals[0];
+  row("size floor · BPM the largest", !!f.bpm && f.bpm.vis && (!top || f.bpm.px >= top.px),
+    f.bpm ? `BPM ${f.bpm.px} px (${f.bpm.p}${f.bpm.vis ? "" : ", NOT visible"}) · the next largest numeral: ${top ? `${top.px} px ${top.p}` : "none"} (of ${f.rivals.length} .sg-screen > b + .sgh-clabel)`
+      : `no [data-ctl="drums-bpm"] .sgh-bpm / b on the device · the largest numeral: ${top ? `${top.px} px ${top.p}` : "none"}`);
+}
+async function fitRows({ page, row }, w) {
+  // (6) THE FIT: 1440 → 96–99.5 % of the content column + clear of the rail; 1024 → the clearance only
+  const f = await page.evaluate(FIT_FACTS);
+  const share = f.dev && f.content > 0 ? f.dev.w / f.content : NaN;
+  const railR = f.rail ? f.rail.r : f.pl, gap = f.dev ? f.dev.l - railR : NaN, need = 0.01 * f.content;
+  const col = `content ${f.content.toFixed(0)} = innerWidth ${f.iw} − .sig-page padding ${f.pl}|${f.pr}${f.page ? "" : " (NO .sig-page)"}`;
+  if (w === 1440) row(`fit ${w} · 97–99 % of the column`, Number.isFinite(share) && share >= 0.96 && share <= 0.995,
+    `#sig-device drawn ${f.dev ? `${f.dev.w.toFixed(1)}×${f.dev.h.toFixed(1)} at x ${f.dev.l.toFixed(1)}..${f.dev.r.toFixed(1)}` : "MISSING"} · ${col} · ${Number.isFinite(share) ? `${(100 * share).toFixed(2)} %` : "?"} · zoom ${f.zoom}`);
+  row(`fit ${w} · clear of the rail`, Number.isFinite(gap) && gap >= need,
+    `${f.rail ? `.awayrail (${f.rail.pos}) ${f.rail.l.toFixed(0)}..${f.rail.r.toFixed(0)}` : `no .awayrail rendered: the page's padding-left ${f.pl}`} · device left ${f.dev ? f.dev.l.toFixed(1) : "?"} · gap ${Number.isFinite(gap) ? gap.toFixed(1) : "?"} px, want ≥ ${need.toFixed(1)} (1 % of ${f.content.toFixed(0)})`);
+}
+async function moduleShotRows({ name, page, row, step }, aim) {
+  // (7) SHOTS (Chromium): each module clipped to its box, and one pressed state, at 1440×900 powered
+  if (name !== "chromium") return;
+  step("module shots");
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.evaluate(SETTLE);
+  await page.waitForTimeout(350);
+  let pf = await page.evaluate(POWER_FACTS), note = "";
+  if (pf.state !== "live") {   // the 1024 pin's scroll may have let the room law power it off: on again
+    note = ` · it was ${pf.state}: powered on again first`;
+    const a = await aim(page, pf);
+    await page.mouse.click(a.x, a.y);
+    await page.evaluate(WAIT_STATE, { want: "live", limitMs: 2500 });
+    await page.waitForTimeout(1300);
+    pf = await page.evaluate(POWER_FACTS);
+  }
+  const mods = [["drums", '[data-slot="drums"]'], ["keys", '[data-slot="keys"]'], ["bass", '[data-slot="bass"]'], ["top", ".sgh-top"], ["keybed", ".sgh-keybed"]];
+  const files = [], notes = [];
+  for (const [m, sel] of mods) {
+    const file = join(OUT, `${name}-mod-${m}.png`);
+    rmSync(file, { force: true });
+    const loc = page.locator(`.sig ${sel}`).first();
+    const box = await loc.boundingBox().catch(() => null);
+    if (!box) { notes.push(`${m}: no ${sel}`); files.push(file); continue; }
+    await loc.screenshot({ path: file, timeout: 10_000 }).catch((e) => notes.push(`${m}: ${String(e.message).split("\n")[0].slice(0, 80)}`));
+    files.push(file);
+  }
+  // the pressed state: the drums on, KeyA + KeyZ held, the whole viewport taken while held
+  await page.evaluate(SETTLE);
+  const drumsWere = await page.evaluate(() => window.__signal.state().drums.on);
+  if (!drumsWere) await page.evaluate(() => window.__signal.press("Space"));
+  await page.keyboard.down("KeyA");
+  await page.keyboard.down("KeyZ");
+  await page.waitForTimeout(250);
+  const held = await page.evaluate(() => ({ caps: [...document.querySelectorAll(".sig .sg-key.pressed")].map((e) => e.dataset.code),
+    drums: window.__signal.state().drums.on, state: document.getElementById("sgm")?.getAttribute("data-state") }));
+  const pfile = join(OUT, `${name}-pressed.png`);
+  rmSync(pfile, { force: true });
+  await page.screenshot({ path: pfile });
+  files.push(pfile);
+  await page.keyboard.up("KeyZ");
+  await page.keyboard.up("KeyA");
+  if (!drumsWere) await page.evaluate(() => { if (window.__signal.state().drums.on) window.__signal.press("Space"); });
+  const sizes = files.map((f) => { try { return statSync(f).size; } catch { return 0; } });
+  const ok = sizes.every((b) => b > 10_240);
+  row("shots · modules written", ok,
+    `${files.map((f, j) => `${f.split("/").pop()} ${sizes[j] ? `${(sizes[j] / 1024).toFixed(0)} KB` : "MISSING"}`).join(" · ")} · pressed while held: caps .pressed ${held.caps.join("+") || "none"} · drums ${held.drums ? "on" : "OFF"} · ${held.state}${note}${notes.length ? ` · ${notes.join(" | ")}` : ""} · in ${OUT}`);
+}
+async function legR3(k) { return legR2({ ...k, r3: true }); }   // R2's leg; its r3 hooks insert the sections above
+
 async function leg(name) {
   const T0 = Date.now();
   let at = "start", browser = null;
@@ -719,7 +1046,8 @@ async function leg(name) {
     listen(page, errs);
 
     const k = { name, browser, page, errs, row, step, listen, errLine };
-    if (R2) await legR2(k);
+    if (R3) await legR3(k);
+    else if (R2) await legR2(k);
     else await legR1(k);
     row("no console errors (the whole leg)", errs.length === 0, errLine(errs));
   } catch (e) {

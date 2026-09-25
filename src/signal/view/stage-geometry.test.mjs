@@ -1,8 +1,9 @@
 // from signal-studio-v6lib/src/views/instrument/stage-geometry.test.mjs:1-43 (2a9e4a7) — the Studio's 24 checks, RETARGETED
-// (SIGNAL R1, lane V3) to the contract's stage: C2..C7 = MIDI 36..96 (types.ts STAGE_LO/STAGE_HI), 36 whites, 25 blacks.
-// Changed against the source: the range constants (24→36), the counts (43→36 whites, 30→25 blacks), the out-of-range
-// probes (23→35), the report line (`stage-geometry: N/N`, the R1 suite law). Added: [stage] the portfolio stage (the
-// white/black widths the keybed draws, and the letter window at octave −1..+1 on the stage, docs/signal-map/D §6).
+// (SIGNAL R1, lane V3; R3 lane V) to the contract's stage: C3..C7 = MIDI 48..96 (types.ts STAGE_LO/STAGE_HI), 29 whites,
+// 20 blacks. Changed against the source: the range constants (24→48), the counts (43→29 whites, 30→20 blacks), the
+// out-of-range probes (23→47), the report line (`stage-geometry: N/N`, the R1 suite law). Added: [stage] the portfolio
+// stage (the white/black widths the keybed draws at the 1252 content width, and the letter window at octave −1..+1 on
+// the stage, docs/signal-map/D §6).
 // Run: source ~/.nvm/nvm.sh && node src/signal/view/stage-geometry.test.mjs   (exit 0 = green)
 import { STAGE_LO, STAGE_HI, WHITES, BLACKS, WHITE_COUNT, WHITE_W, BLACK_W, isWhite, inStage,
   keyBox, keyCentre, spanOf, midiAtPct } from './stage-geometry.ts';
@@ -10,13 +11,13 @@ import { STAGE_LO as CONTRACT_LO, STAGE_HI as CONTRACT_HI } from '../types.ts';
 let pass=0,fail=0; const ok=(n,c,x='')=>{if(c){pass++;console.log(`  ✓ ${n}`);}else{fail++;console.log(`  ✗ ${n}  ${x}`);}};
 
 console.log('\n[stage] the range');
-ok('C2 … C7 (the contract\'s stage)', STAGE_LO===36 && STAGE_HI===96 && STAGE_LO===CONTRACT_LO && STAGE_HI===CONTRACT_HI);
-ok('36 white keys (5 octaves + the top C)', WHITE_COUNT===36, String(WHITE_COUNT));
-ok('25 black keys', BLACKS.length===25, String(BLACKS.length));
+ok('C3 … C7 (the contract\'s stage)', STAGE_LO===48 && STAGE_HI===96 && STAGE_LO===CONTRACT_LO && STAGE_HI===CONTRACT_HI);
+ok('29 white keys (4 octaves + the top C)', WHITE_COUNT===29, String(WHITE_COUNT));
+ok('20 black keys', BLACKS.length===20, String(BLACKS.length));
 ok('whites + blacks = every semitone in range', WHITES.length+BLACKS.length===STAGE_HI-STAGE_LO+1);
-ok('the first and last keys are C', WHITES[0]===36 && WHITES[WHITE_COUNT-1]===96);
+ok('the first and last keys are C', WHITES[0]===48 && WHITES[WHITE_COUNT-1]===96);
 ok('isWhite matches the piano pattern', [0,2,4,5,7,9,11].every(pc=>isWhite(60+pc)) && [1,3,6,8,10].every(pc=>!isWhite(60+pc)));
-ok('inStage rejects out-of-range notes', !inStage(35) && !inStage(97) && inStage(36) && inStage(96));
+ok('inStage rejects out-of-range notes', !inStage(47) && !inStage(97) && inStage(48) && inStage(96));
 
 console.log('\n[stage] the layout');
 ok('whites TILE the width exactly', Math.abs(WHITE_COUNT*WHITE_W-100)<1e-9);
@@ -29,7 +30,7 @@ ok('a black key straddles the seam above its lower white', (()=>{
 ok('every black key sits between its two white neighbours', BLACKS.every(m=>{
   const b=keyBox(m), lo=keyBox(m-1), hi=keyBox(m+1);
   return b.left>lo.left && b.left+b.width < hi.left+hi.width;}));
-ok('out-of-range notes have no box', keyBox(35)===null && keyBox(120)===null);
+ok('out-of-range notes have no box', keyBox(47)===null && keyBox(120)===null);
 ok('keyCentre agrees with keyBox', Math.abs(keyCentre(60)-(keyBox(60).left+keyBox(60).width/2))<1e-9);
 ok('no two distinct notes share a box', (()=>{
   const seen=new Set(); for(let m=STAGE_LO;m<=STAGE_HI;m++){const b=keyBox(m);const k=b.left.toFixed(6)+':'+b.black; if(seen.has(k))return false; seen.add(k);} return true;})());
@@ -46,12 +47,13 @@ ok('midiAtPct round-trips a white key', WHITES.every(m=>midiAtPct(keyCentre(m))=
 ok('midiAtPct clamps at both ends', midiAtPct(-50)===WHITES[0] && midiAtPct(150)===WHITES[WHITE_COUNT-1]);
 
 console.log('\n[stage] the portfolio stage (added)');
-ok('a white is 100/36 % and a black .62 of it', Math.abs(WHITE_W-100/36)<1e-12 && Math.abs(BLACK_W-0.62*100/36)<1e-12);
-// the 15 letters' widest reach per octave (D §6, MEASURED over 12 keys × maj/min, colour row included): −1 43..68 · 0 55..80 · +1 67..92
-ok('octave −1..+1 keeps every letter on the stage', [[43,68],[55,80],[67,92]].every(([lo,hi])=>inStage(lo)&&inStage(hi)));
-ok('octave 0 in C: a..l (C4..D5) spans nine whites from 38.9 %', (()=>{
-  const s=spanOf([60,62,64,65,67,69,71,72,74]); return Math.abs(s.left-14*WHITE_W)<1e-9 && Math.abs(s.width-9*WHITE_W)<1e-9;})(), JSON.stringify(spanOf([60,74])));
-ok('every C of the stage is a white key (the C-dots, the rail names C1..C6)', [36,48,60,72,84,96].every(m=>isWhite(m)&&keyBox(m)&&!keyBox(m).black));
+ok('a white is 100/29 % and a black .62 of it', Math.abs(WHITE_W-100/29)<1e-12 && Math.abs(BLACK_W-0.62*100/29)<1e-12);
+ok('at the 1252 content width a white is 43.2 px and a black 26.8 px', Math.abs(1252*WHITE_W/100-43.17)<0.01 && Math.abs(1252*BLACK_W/100-26.77)<0.01, (1252*WHITE_W/100).toFixed(2));
+// the 15 letters' reach per octave in C (types.ts STAGE_LO comment, D §6): −1 48..62 · 0 60..74 · +1 72..86
+ok('octave −1..+1 keeps every letter (in C) on the stage', [[48,62],[60,74],[72,86]].every(([lo,hi])=>inStage(lo)&&inStage(hi)));
+ok('octave 0 in C: a..l (MIDI 60..74) spans nine whites from 24.1 %', (()=>{
+  const s=spanOf([60,62,64,65,67,69,71,72,74]); return Math.abs(s.left-7*WHITE_W)<1e-9 && Math.abs(s.width-9*WHITE_W)<1e-9;})(), JSON.stringify(spanOf([60,74])));
+ok('every C of the stage is a white key (the C-dots, the rail names C2..C6)', [48,60,72,84,96].every(m=>isWhite(m)&&keyBox(m)&&!keyBox(m).black));
 
 console.log(`\nstage-geometry: ${pass}/${pass+fail}`);
 if(fail)process.exit(1);
