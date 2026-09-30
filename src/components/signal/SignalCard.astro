@@ -1,0 +1,224 @@
+---
+/**
+ * SignalCard — the expandable card under the instrument (2026-09-30, the export round): the work room's card, for
+ * SIGNAL. Closed, it shows the name and the opening lines under a fade; the whole lower edge opens it. Inside: the
+ * write-up (signal-card-copy.ts, Jon's to rewrite) · HOW TO PLAY (signal-copy.ts LEGEND drawn as keycaps) · UNDER THE
+ * HOOD (the engine, a spine of steps) · WHERE IT CAME FROM. Mounted by StudioOne's play room (inside .sig-desktop, so
+ * it exists only where the instrument plays) and by /signal. Its own fold script and styles: nothing here depends on
+ * the work room's.
+ */
+import { CARD, type CardRow } from "./signal-card-copy.ts";
+import { LEGEND } from "./signal-copy.ts";
+
+const halves = (rows: ReadonlyArray<CardRow>): CardRow[][] => {
+  const cut = Math.ceil(rows.length / 2);
+  return [rows.slice(0, cut), rows.slice(cut)];
+};
+const cols = (ps: ReadonlyArray<string>): string[][] => {
+  const cut = Math.ceil(ps.length / 2);
+  return [ps.slice(0, cut), ps.slice(cut)];
+};
+const id = "sc-clip-" + Math.random().toString(36).slice(2, 7);
+---
+
+<div class="sc" data-signal-card>
+  <div class="sc-clip" id={id}>
+    <div class="sc-body">
+      <h4 class="sc-title">{CARD.title}</h4>
+      <div class="sc-cols">
+        {cols(CARD.story).map((col) => (
+          <div class="sc-col">{col.map((p) => <p class="sc-p" set:html={p} />)}</div>
+        ))}
+      </div>
+    </div>
+    <div class="sc-hood">
+      <p class="sc-t">{CARD.howTitle}</p>
+      <div class="sc-legend">
+        {LEGEND.map((row) => (
+          <div class="sc-lrow">
+            {row.map((it) => (
+              <span class="sc-item">
+                <span class="sc-keys">
+                  {it.range
+                    ? <><kbd>{it.keys[0]}</kbd><i>–</i><kbd>{it.keys[it.keys.length - 1]}</kbd></>
+                    : it.keys.map((k) => <kbd class:list={{ wide: k.length > 1 && !/^[←→↑↓]$/.test(k) }}>{k}</kbd>)}
+                </span>
+                <span class="sc-word">{it.word}</span>
+              </span>
+            ))}
+          </div>
+        ))}
+      </div>
+
+      <p class="sc-t">{CARD.hoodTitle}</p>
+      <div class="sc-cols">
+        {halves(CARD.rows).map((col) => (
+          <ol class="sc-steps">
+            {col.map((r) => (
+              <li class="sc-step">
+                <div class="sc-step-head"><span class="sc-step-k">{r.k}</span><span class="sc-step-tool">{r.tool}</span></div>
+                <p class="sc-step-p" set:html={r.html} />
+              </li>
+            ))}
+          </ol>
+        ))}
+      </div>
+
+      <p class="sc-t">{CARD.fromTitle}</p>
+      <div class="sc-cols">
+        {cols(CARD.from).map((col) => (
+          <div class="sc-col">{col.map((p) => <p class="sc-p" set:html={p} />)}</div>
+        ))}
+      </div>
+    </div>
+  </div>
+  <button class="sc-more" type="button" aria-expanded="false" aria-controls={id} aria-label="Read the whole story">
+    <svg class="sc-chev" viewBox="0 0 20 20" aria-hidden="true"><path d="M5 8l5 5 5-5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+  </button>
+</div>
+
+<style>
+  .sc {
+    --sc-ink: var(--ink, #141210);
+    --sc-dim: var(--muted, #6a6660);
+    --sc-card: #ffffff;
+    --sc-acc: #4fd1ff; /* the instrument's own light: the keys' sapphire */
+    --sc-sans: "Instrument Sans", "Helvetica Neue", Arial, sans-serif;
+    --sc-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+    --sc-display: "Outfit", var(--sc-sans);
+    position: relative;
+    box-sizing: border-box;
+    width: 100%;
+    max-width: 1080px;
+    margin: 56px auto 0;
+    border: 1px solid color-mix(in oklab, var(--sc-ink) 16%, transparent);
+    border-radius: 28px;
+    background: var(--sc-card);
+    color: var(--sc-ink);
+    font-family: var(--sc-sans);
+    container-type: inline-size;
+    transition: border-color 560ms ease, background-color 560ms ease, color 560ms ease;
+  }
+  :global(html[data-night]) .sc { --sc-card: #1c1c1f; }
+  .sc-clip { overflow: hidden; transition: height 0.55s cubic-bezier(0.2, 0.8, 0.2, 1); }
+  .sc:not([data-open]) .sc-clip {
+    -webkit-mask-image: linear-gradient(to bottom, #000 calc(100% - 64px), transparent);
+    mask-image: linear-gradient(to bottom, #000 calc(100% - 64px), transparent);
+  }
+  .sc-body { padding: 32px 32px 32px; }
+  .sc-title {
+    margin: 0 0 40px;
+    text-align: center;
+    font-family: var(--sc-display);
+    font-size: 2.125rem;
+    font-weight: 500;
+    line-height: 1.15;
+    letter-spacing: 0.06em;
+  }
+  .sc-cols { display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px 48px; } /* the row gap only matters where the columns stack */
+  .sc-cols:has(.sc-steps) { row-gap: 24px; }
+  .sc-col { min-width: 0; }
+  .sc-col > :last-child { margin-bottom: 0; }
+  .sc-p { margin: 0 0 16px; font-size: 1rem; line-height: 1.6; text-wrap: pretty; }
+  .sc-hood {
+    margin: 0 32px;
+    padding: 24px 0 16px;
+    border-top: 1px solid color-mix(in oklab, var(--sc-ink) 12%, transparent);
+  }
+  .sc-t {
+    margin: 32px 0 24px;
+    font: 500 0.6875rem/1 var(--sc-mono);
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--sc-dim);
+  }
+  .sc-hood > .sc-t:first-child { margin-top: 0; }
+  /* HOW TO PLAY: the legend's keys as small carbon caps, the word beside them */
+  .sc-legend { display: flex; flex-direction: column; gap: 14px; }
+  .sc-lrow { display: flex; flex-wrap: wrap; gap: 12px 28px; }
+  .sc-item { display: inline-flex; align-items: center; gap: 10px; }
+  .sc-keys { display: inline-flex; align-items: center; gap: 4px; }
+  .sc-keys i { font-style: normal; color: var(--sc-dim); font-family: var(--sc-mono); font-size: 0.75rem; }
+  .sc-keys kbd {
+    display: inline-grid; place-items: center; min-width: 30px; height: 30px; padding: 0 8px; box-sizing: border-box;
+    border-radius: 7px; font: 500 0.75rem/1 var(--sc-mono); letter-spacing: 0.02em; text-transform: lowercase;
+    color: #dce5ee; background: linear-gradient(180deg, #232a36, #151a23);
+    border-top: 1px solid rgba(255, 255, 255, 0.14);
+    box-shadow: inset 0 -3px 5px rgba(0, 0, 0, 0.45), 0 2px 0 #05070a, 0 3px 5px rgba(0, 0, 0, 0.35);
+  }
+  .sc-keys kbd.wide { padding: 0 14px; }
+  .sc-word { font: 500 0.75rem/1 var(--sc-mono); letter-spacing: 0.06em; color: var(--sc-dim); }
+  /* UNDER THE HOOD: the spine */
+  .sc-steps { list-style: none; margin: 0; padding: 0; }
+  .sc-step { position: relative; padding: 0 0 24px 28px; }
+  .sc-step::before { content: ''; position: absolute; left: 0; top: 5px; width: 10px; height: 10px; border-radius: 50%; background: var(--sc-acc); }
+  .sc-step::after { content: ''; position: absolute; left: 4.5px; top: 20px; bottom: 6px; width: 1px; background: color-mix(in oklab, var(--sc-ink) 16%, transparent); }
+  .sc-step:last-child::after { display: none; }
+  .sc-step:last-child { padding-bottom: 0; }
+  .sc-step-head { display: flex; align-items: center; gap: 10px; margin-bottom: 6px; }
+  .sc-step-k { font: 500 0.6875rem/1.6 var(--sc-mono); letter-spacing: 0.12em; text-transform: uppercase; color: color-mix(in oklab, var(--sc-acc) 70%, var(--sc-ink)); }
+  .sc-step-tool { font: 500 0.6875rem/1 var(--sc-mono); letter-spacing: 0.04em; color: var(--sc-dim); padding: 4px 8px; border: 1px solid color-mix(in oklab, var(--sc-ink) 16%, transparent); border-radius: 999px; }
+  .sc-step-p { margin: 0; font-size: 0.9375rem; line-height: 1.55; text-wrap: pretty; }
+  /* the handle: the whole lower edge */
+  .sc-more {
+    display: flex; align-items: center; justify-content: center;
+    width: 100%; height: 56px; margin: 0; padding: 0; border: 0; border-radius: 0 0 28px 28px;
+    background: transparent; color: var(--sc-dim); cursor: pointer; transition: color 0.3s;
+  }
+  .sc-more:hover { color: var(--sc-ink); }
+  .sc-more:focus-visible { outline: 2px solid var(--sc-ink); outline-offset: -6px; }
+  .sc-chev { width: 20px; height: 20px; transition: transform 0.45s cubic-bezier(0.2, 0.8, 0.2, 1); animation: sc-breathe 2s ease-in-out infinite; }
+  .sc[data-open] .sc-chev { transform: rotate(180deg); animation: none; }
+  @keyframes sc-breathe { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(3px); } }
+  @container (min-width: 820px) {
+    .sc-body { padding: 48px 48px 40px; }
+    .sc-hood { margin: 0 48px; padding-top: 32px; }
+    .sc-cols { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .sc-clip { transition: none; }
+    .sc-chev { animation: none; transition: none; }
+  }
+</style>
+
+<script>
+  document.querySelectorAll<HTMLElement>("[data-signal-card]").forEach((card) => {
+    const clip = card.querySelector<HTMLElement>(".sc-clip");
+    const btn = card.querySelector<HTMLButtonElement>(".sc-more");
+    const first = card.querySelector<HTMLElement>(".sc-p");
+    if (!clip || !btn || !first) return;
+    const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const isOpen = () => card.hasAttribute("data-open");
+    const peek = () => Math.ceil(first.offsetTop + first.offsetHeight + 64);
+    const settle = () => { if (!isOpen()) clip.style.height = peek() + "px"; };
+    const open = () => {
+      if (isOpen()) return;
+      const from = clip.getBoundingClientRect().height;
+      card.setAttribute("data-open", "");
+      btn.setAttribute("aria-expanded", "true");
+      btn.setAttribute("aria-label", "Fold the story");
+      if (reduce) { clip.style.height = "auto"; return; }
+      clip.style.height = from + "px";
+      const to = clip.scrollHeight;
+      const done = (e: TransitionEvent) => { if (e.target !== clip) return; clip.style.height = "auto"; clip.removeEventListener("transitionend", done); };
+      clip.addEventListener("transitionend", done);
+      requestAnimationFrame(() => { clip.style.height = to + "px"; });
+    };
+    const close = () => {
+      if (!isOpen()) return;
+      clip.style.height = clip.getBoundingClientRect().height + "px";
+      void clip.offsetHeight;
+      card.removeAttribute("data-open");
+      btn.setAttribute("aria-expanded", "false");
+      btn.setAttribute("aria-label", "Read the whole story");
+      requestAnimationFrame(() => { clip.style.height = peek() + "px"; });
+      if (card.getBoundingClientRect().top < 0) card.scrollIntoView({ block: "start", behavior: reduce ? "auto" : "smooth" });
+    };
+    btn.addEventListener("click", () => { if (isOpen()) close(); else open(); });
+    let t = 0;
+    const later = () => { window.clearTimeout(t); t = window.setTimeout(settle, 30); };
+    new ResizeObserver(later).observe(clip.firstElementChild as Element);
+    settle();
+    if (document.fonts && document.fonts.ready) document.fonts.ready.then(later);
+  });
+</script>
