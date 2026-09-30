@@ -212,7 +212,7 @@ session must follow.
   run is ART, an example anyone gets, never a row from his library — the
   "chorus" run (the idea from three summers ago, a porch guitar take);
   the phone leaves the recorder for a HOME SCREEN (`face-home`, stage
-  class `home`, the Audio Dex tile pressed) and the library opens as an
+  class `home`, the AudioDex tile pressed) and the library opens as an
   app scaling out of the tile; the moment view lists what each tool
   assigned (`moment.assigned`); `src` null so play stays dimmed.
   UNDER THE HOOD: a `.wk-spec` ledger card under each story card, rows

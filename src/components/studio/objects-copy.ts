@@ -5,6 +5,8 @@
 // 2026-09-22 (Jon): the dek is NOT rendered any more — the room goes
 // title → object; the strings stay here for the record.
 export const WATCH_COPY = {
+  // the build's name, centred at the top of its card (Jon, 2026-09-30: the names were too small)
+  title: "Intake",
   // one line under the locked headline: what the object is, in his voice
   dek: "I talk to my watch. It comes back as a calendar event, an organized idea, or a prompt for Claude.",
   // the mono line under the module, true to the run it replays (capture 31
@@ -13,6 +15,8 @@ export const WATCH_COPY = {
 };
 
 export const ARCHIVE_COPY = {
+  // one word, A and D capitalised: a riff on Pokédex
+  title: "AudioDex",
   // one line under the locked headline
   dek: "Every recording I've made, read and named by what's inside it, and searchable the way photos are.",
   // the mono line under the module. 2026-09-30 (Jon): the run is ART, an
