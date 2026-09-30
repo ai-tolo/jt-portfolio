@@ -23,7 +23,13 @@ import Carousel from "../Carousel.astro";
 import { BUILDS, type BuildBlock } from "./builds-copy";
 import IntakeHero from "../IntakeHero.astro";
 import ArchiveHero from "../ArchiveHero.astro";
-import { SPEC } from "./depth-copy";
+import { SPEC, type SpecRow } from "./depth-copy";
+// the hood's steps in two columns with their own spines (a CSS column break
+// would leave the first column's line running past its last step)
+const halves = (rows: SpecRow[]): SpecRow[][] => {
+  const cut = Math.ceil(rows.length / 2);
+  return [rows.slice(0, cut), rows.slice(cut)];
+};
 import { WATCH_COPY, ARCHIVE_COPY } from "./objects-copy";
 import SiteFloor from "./SiteFloor.astro";
 
@@ -303,17 +309,26 @@ const columns = (blocks: BuildBlock[]): StoryBlock[][] =>
                 </div>
               ))}
             </div>
+            <div class="wk-hood">
+              <p class="wk-hood-t">{SPEC.watch.title}</p>
+              <div class="wk-hood-cols">
+                {halves(SPEC.watch.rows).map((col) => (
+                  <ol class="wk-steps">
+                    {col.map((r) => (
+                      <li class="wk-step">
+                        <div class="wk-step-head"><span class="wk-step-k">{r.k}</span><span class="wk-step-tool">{r.tool}</span></div>
+                        <p class="wk-step-p" set:html={r.html} />
+                      </li>
+                    ))}
+                  </ol>
+                ))}
+              </div>
+            </div>
           </div>
           <button class="wk-more" type="button" aria-expanded="false" aria-controls="story-watch" aria-label="Read the whole story">
             <svg class="wk-chev" viewBox="0 0 20 20" aria-hidden="true"><path d="M5 8l5 5 5-5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
           </button>
         </div>
-        <section class="wk-spec" aria-labelledby="spec-watch-t">
-          <h4 class="wk-spec-t" id="spec-watch-t">{SPEC.watch.title}</h4>
-          <dl class="wk-spec-rows">
-            {SPEC.watch.rows.map((r) => <div class="wk-row"><dt>{r.k}</dt><dd set:html={r.html} /></div>)}
-          </dl>
-        </section>
       </article>
       {/* object two: THE ARCHIVE (Jon's Claude Design module, 2026-09-18) —
           the phone at rest is the stock Voice Memos list; a tap searches
@@ -334,17 +349,26 @@ const columns = (blocks: BuildBlock[]): StoryBlock[][] =>
                 </div>
               ))}
             </div>
+            <div class="wk-hood">
+              <p class="wk-hood-t">{SPEC.archive.title}</p>
+              <div class="wk-hood-cols">
+                {halves(SPEC.archive.rows).map((col) => (
+                  <ol class="wk-steps">
+                    {col.map((r) => (
+                      <li class="wk-step">
+                        <div class="wk-step-head"><span class="wk-step-k">{r.k}</span><span class="wk-step-tool">{r.tool}</span></div>
+                        <p class="wk-step-p" set:html={r.html} />
+                      </li>
+                    ))}
+                  </ol>
+                ))}
+              </div>
+            </div>
           </div>
           <button class="wk-more" type="button" aria-expanded="false" aria-controls="story-archive" aria-label="Read the whole story">
             <svg class="wk-chev" viewBox="0 0 20 20" aria-hidden="true"><path d="M5 8l5 5 5-5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
           </button>
         </div>
-        <section class="wk-spec" aria-labelledby="spec-archive-t">
-          <h4 class="wk-spec-t" id="spec-archive-t">{SPEC.archive.title}</h4>
-          <dl class="wk-spec-rows">
-            {SPEC.archive.rows.map((r) => <div class="wk-row"><dt>{r.k}</dt><dd set:html={r.html} /></div>)}
-          </dl>
-        </section>
       </article>
     </div>
   </section>}
@@ -1373,42 +1397,65 @@ const columns = (blocks: BuildBlock[]): StoryBlock[][] =>
      ensures the story the way the host ensures the run — and never fights a
      hand that has. Two columns on desks, one on phones; one type system with
      the room. */
-  /* UNDER THE HOOD (2026-09-30): the system's stages under each story, a
-     second card in the story's frame. Mono keys in the object's ink. */
-  .wk-spec {
-    margin-top: var(--sp-6);
-    border: 1px solid color-mix(in oklab, var(--mx-ink) 16%, transparent);
-    border-radius: 28px;
-    padding: var(--sp-8);
+  /* UNDER THE HOOD (2026-09-30, Jon: one expandable box): the system's
+     stages INSIDE the story's card, under the story — a spine of steps in
+     the object's ink (the phone's rail, in the page), the tool beside each
+     stage, one sentence each. Two columns with the story's break. */
+  #build-watch .wk-story { --spec-ink: #ff6b4a; }
+  #build-archive .wk-story { --spec-ink: #b9701a; }
+  .wk-hood {
+    margin: 0 var(--sp-8);
+    padding: var(--sp-6) 0 var(--sp-4);
+    border-top: 1px solid color-mix(in oklab, var(--mx-ink) 12%, transparent);
     transition: border-color 560ms ease;
   }
-  #build-watch .wk-spec { --spec-ink: #ff6b4a; }
-  #build-archive .wk-spec { --spec-ink: #b9701a; }
-  .wk-spec-t {
+  .wk-hood-t {
     margin: 0 0 var(--sp-6);
     font: 500 0.6875rem/1 var(--wk-mono);
     letter-spacing: 0.14em;
     text-transform: uppercase;
     color: var(--mx-dim);
   }
-  .wk-spec-rows { margin: 0; display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--sp-5, 20px) var(--sp-12); }
-  .wk-row { display: grid; grid-template-columns: 6.5rem minmax(0, 1fr); gap: 0 var(--sp-4); align-items: baseline; }
-  .wk-row dt {
+  .wk-hood-cols { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--sp-6) var(--sp-12); }
+  .wk-steps { list-style: none; margin: 0; padding: 0; }
+  .wk-step { position: relative; padding: 0 0 var(--sp-6) 28px; }
+  .wk-step::before {
+    content: ''; position: absolute; left: 0; top: 5px;
+    width: 10px; height: 10px; border-radius: 50%;
+    background: var(--spec-ink);
+  }
+  .wk-step::after {
+    content: ''; position: absolute; left: 4.5px; top: 20px; bottom: 6px; width: 1px;
+    background: color-mix(in oklab, var(--mx-ink) 16%, transparent);
+  }
+  .wk-step:last-child::after { display: none; }
+  .wk-step:last-child { padding-bottom: 0; }
+  .wk-step-head { display: flex; align-items: center; gap: 10px; margin-bottom: 6px; }
+  .wk-step-k {
     font: 500 0.6875rem/1.6 var(--wk-mono);
     letter-spacing: 0.12em;
     text-transform: uppercase;
-    color: var(--spec-ink, var(--mx-dim));
+    color: var(--spec-ink);
   }
-  .wk-row dd { margin: 0; font-size: 0.9375rem; line-height: 1.55; color: var(--mx-ink); text-wrap: pretty; transition: color 560ms ease; }
-  .wk-row dd .k {
+  .wk-step-tool {
+    font: 500 0.6875rem/1 var(--wk-mono);
+    letter-spacing: 0.04em;
+    color: var(--mx-dim);
+    padding: 4px 8px;
+    border: 1px solid color-mix(in oklab, var(--mx-ink) 16%, transparent);
+    border-radius: 999px;
+    transition: border-color 560ms ease, color 560ms ease;
+  }
+  .wk-step-p { margin: 0; font-size: 0.9375rem; line-height: 1.55; color: var(--mx-ink); text-wrap: pretty; transition: color 560ms ease; }
+  .wk-step-p .k {
     font: 500 0.6875rem/1 var(--wk-mono);
     letter-spacing: 0.12em;
-    color: var(--spec-ink, var(--mx-dim));
+    color: var(--spec-ink);
     margin-right: 0.3em;
   }
   @container (min-width: 820px) {
-    .wk-spec { padding: var(--sp-12); }
-    .wk-spec-rows { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+    .wk-hood { margin: 0 var(--sp-12); padding-top: var(--sp-8); }
+    .wk-hood-cols { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
   }
   .wk-story {
     position: relative;
