@@ -208,10 +208,16 @@ session must follow.
   "Cinder 32" is Intake's real alias for capture 31, length 3:52, seven
   tickets of which the module shows two). Object two = the Archive
   (`ArchiveHero.astro` with `story={false}` — the room frames it with the
-  locked words — + `src/data/archive-run.json`, mined TRUE from the M1:
-  Voice Memos' own titles at rest, the "laugh" search's eight real hits,
-  the kept trim = the loudest 8 s of the opened recording by RMS, a
-  17 s window each side, 80 peaks; `src` null so play stays dimmed).
+  locked words — + `src/data/archive-run.json`). 2026-09-30 (Jon): the
+  run is ART, an example anyone gets, never a row from his library — the
+  "chorus" run (the idea from three summers ago, a porch guitar take);
+  the phone leaves the recorder for a HOME SCREEN (`face-home`, stage
+  class `home`, the Audio Dex tile pressed) and the library opens as an
+  app scaling out of the tile; the moment view lists what each tool
+  assigned (`moment.assigned`); `src` null so play stays dimmed.
+  UNDER THE HOOD: a `.wk-spec` ledger card under each story card, rows
+  from `src/components/studio/depth-copy.ts` (Jon-editable; the tools
+  and stages of the real M1 systems, never his content).
   Objects stack in `.objects` with the room gap between them
   (`.wk + .wk`). Inks come from the section-local
   `--mx-ink`/`--mx-dim` pair on `.work` (day = `.one`'s --ink/--dim, night

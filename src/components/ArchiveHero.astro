@@ -73,7 +73,16 @@ const splitLine = (line: string): [string, string, string] => {
   if (i < 0 || !query) return [line, '', ''];
   return [line.slice(0, i), line.slice(i, i + query.length), line.slice(i + query.length)];
 };
-const momentParts = splitLine(moment.line);
+const momentParts = splitLine((m.said as string) || moment.line);
+const assigned: { by: string; what: string }[] = Array.isArray(m.assigned) ? (m.assigned as { by: string; what: string }[]) : [];
+// THE HOME SCREEN (2026-09-30): the recorder is left, the library is an app
+// among apps. Tiles are colour only; `dex` is the one that opens.
+const HOME_APPS: { k: string; n: string }[] = [
+  { k: 'msg', n: 'Messages' }, { k: 'cal', n: 'Calendar' }, { k: 'pho', n: 'Photos' }, { k: 'cam', n: 'Camera' },
+  { k: 'map', n: 'Maps' }, { k: 'clk', n: 'Clock' }, { k: 'wx', n: 'Weather' }, { k: 'nte', n: 'Notes' },
+  { k: 'vm', n: 'Voice Memos' }, { k: 'dex', n: 'Audio Dex' }, { k: 'mus', n: 'Music' }, { k: 'fil', n: 'Files' },
+  { k: 'mail', n: 'Mail' }, { k: 'rem', n: 'Reminders' }, { k: 'set', n: 'Settings' }, { k: 'store', n: 'App Store' },
+];
 const chars = Array.from(query);
 const hasClip = Boolean(moment.src);
 // the room's words may sit in the module's own columns (2026-09-24): a `head`
@@ -142,6 +151,22 @@ const detected: string[] = Array.isArray(moment.detected) ? (moment.detected as 
             </ul>
             <p class="vm-count">{recordingsCount ? `${recordingsCount.toLocaleString('en-US')} Recordings` : ''}</p>
             <div class="vm-bar"><span class="vm-rec"></span></div>
+          </div>
+
+          <!-- THE HOME SCREEN: leave the recorder; the library is an app among apps -->
+          <div class="face face-home">
+            <div class="hs-grid">
+              {HOME_APPS.map((a) => (
+                <div class:list={['hs-app', `hs-${a.k}`]}>
+                  <i class="hs-ico">
+                    {a.k === 'vm' && <svg viewBox="0 0 40 40" class="hs-g"><g fill="#fff"><rect x="7" y="17" width="3" height="6" rx="1.5"/><rect x="12" y="12" width="3" height="16" rx="1.5"/><rect x="17" y="8" width="3" height="24" rx="1.5"/><rect x="22" y="14" width="3" height="12" rx="1.5"/><rect x="27" y="10" width="3" height="20" rx="1.5"/><rect x="32" y="16" width="3" height="8" rx="1.5"/></g></svg>}
+                    {a.k === 'dex' && <svg viewBox="0 0 40 40" class="hs-g"><g fill="url(#dexg)"><rect x="6" y="19" width="2.6" height="4" rx="1.3"/><rect x="10.4" y="14" width="2.6" height="14" rx="1.3"/><rect x="14.8" y="9" width="2.6" height="24" rx="1.3"/><rect x="19.2" y="16" width="2.6" height="10" rx="1.3"/><rect x="23.6" y="6" width="2.6" height="30" rx="1.3"/><rect x="28" y="12" width="2.6" height="18" rx="1.3"/><rect x="32.4" y="17" width="2.6" height="8" rx="1.3"/></g><defs><linearGradient id="dexg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ffd27a"/><stop offset="1" stop-color="#f0a13a"/></linearGradient></defs></svg>}
+                  </i>
+                  <span>{a.n}</span>
+                </div>
+              ))}
+            </div>
+            <div class="hs-dock"><i class="hs-ico hs-d1"></i><i class="hs-ico hs-d2"></i><i class="hs-ico hs-d3"></i><i class="hs-ico hs-d4"></i></div>
           </div>
 
           <!-- THE RUN: the library -->
@@ -228,7 +253,12 @@ const detected: string[] = Array.isArray(moment.detected) ? (moment.detected as 
                       </div>
                     )}
                     {detected.length > 0 && <ul class="m-tags mono" style="--i:1">{detected.map((d) => <li>{d}</li>)}</ul>}
-                    <div class="m-tools" style="--i:2" aria-hidden="true">
+                    {assigned.length > 0 && (
+                      <dl class="m-assigned" style="--i:2">
+                        {assigned.map((a) => <div class="m-as"><dt class="mono">{a.by}</dt><dd>{a.what}</dd></div>)}
+                      </dl>
+                    )}
+                    <div class="m-tools" style="--i:3" aria-hidden="true">
                       <span class="tool"><svg viewBox="0 0 20 20" class="ico"><circle cx="6" cy="6" r="2.5" fill="none" stroke="currentColor" stroke-width="1.8"/><circle cx="6" cy="14" r="2.5" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M8.2 7.6L17 15M8.2 12.4L17 5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>Trim</span>
                       <span class="tool"><svg viewBox="0 0 20 20" class="ico"><path d="M3 10h12M11 5l5 5-5 5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>Send to Studio</span>
                       <span class="tool"><svg viewBox="0 0 20 20" class="ico"><path d="M10 12V3M6.5 6.5L10 3l3.5 3.5M4 11v5h12v-5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>Share</span>
@@ -246,6 +276,7 @@ const detected: string[] = Array.isArray(moment.detected) ? (moment.detected as 
         {/* after the run: three views of it, before · the search · the moment (Jon, 2026-09-24) */}
         <div class="views" data-views role="group" aria-label="Views of the run">
           <button type="button" class="vdot" data-view="rest" aria-label="Before: the recorder" aria-pressed="false"></button>
+          <button type="button" class="vdot" data-view="home" aria-label="The home screen" aria-pressed="false"></button>
           <button type="button" class="vdot" data-view="list" aria-label="The search and its results" aria-pressed="false"></button>
           <button type="button" class="vdot" data-view="moment" aria-label="The kept moment" aria-pressed="false"></button>
         </div>
@@ -541,6 +572,47 @@ const detected: string[] = Array.isArray(moment.detected) ? (moment.detected as 
   .rewind .face-lib { opacity: 0 !important; }
   .rewind .face-rest { opacity: 1 !important; }
 
+  /* THE HOME SCREEN (2026-09-30): the recorder is left first, then the
+     library opens as an app — the same file, in the view that was built.
+     The library face grows out of the Audio Dex tile (--ax/--ay = its centre). */
+  .face-home {
+    opacity: 0; transition: opacity 0.45s;
+    background: linear-gradient(165deg, #1c1f2e 0%, #0d0e14 55%, #090909 100%);
+  }
+  .home .face-home { opacity: 1; }
+  .home .face-rest { opacity: 0; }
+  .s1 .face-home { opacity: 0; transition: opacity 0.35s 0.2s; }
+  .rewind .face-home { opacity: 0 !important; }
+  .archive-hero[data-view='home'] .face-home { opacity: 1; }
+  .archive-hero[data-view='home'] .face-lib, .archive-hero[data-view='home'] .face-rest { opacity: 0; }
+  .archive-hero[data-view='rest'] .face-home { opacity: 0; }
+  .home .tap::before, .home .tap::after { animation: none; opacity: 0; }
+  .home .tap { pointer-events: none; cursor: default; visibility: hidden; }
+  .home .hint { opacity: 0; }
+  .face-lib { transform: scale(0.18); transform-origin: var(--ax, 37.5%) var(--ay, 35%); }
+  .s1 .face-lib { transform: none; transition: opacity 0.3s, transform 0.55s cubic-bezier(0.2, 0.8, 0.2, 1); }
+  .hs-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4.6cqw 2cqw; padding: 0 1cqw; }
+  .hs-app { display: flex; flex-direction: column; align-items: center; gap: 1.5cqw; font-size: 2.7cqw; line-height: 1.1; color: #fff; text-align: center; white-space: nowrap; }
+  .hs-ico {
+    display: block; width: 14.6cqw; height: 14.6cqw; border-radius: 3.6cqw; position: relative; overflow: hidden;
+    background: var(--tile, #3a3a3c); box-shadow: inset 0 0 0 0.25cqw rgba(255, 255, 255, 0.06);
+  }
+  .hs-ico::before { content: ''; position: absolute; inset: 0; background: radial-gradient(120% 90% at 30% 12%, rgba(255, 255, 255, 0.26), transparent 62%); }
+  .hs-g { position: absolute; inset: 0; width: 100%; height: 100%; }
+  .hs-msg .hs-ico { --tile: #34c759; } .hs-cal .hs-ico { --tile: #f2f2f7; } .hs-pho .hs-ico { --tile: linear-gradient(135deg, #ffcf3c, #ff6b4a 45%, #7c5cff); }
+  .hs-cam .hs-ico { --tile: #2c2c2e; } .hs-map .hs-ico { --tile: #4cd964; } .hs-clk .hs-ico { --tile: #1c1c1e; }
+  .hs-wx .hs-ico { --tile: linear-gradient(180deg, #4aa8ff, #1f6fe0); } .hs-nte .hs-ico { --tile: #ffd60a; }
+  .hs-vm .hs-ico { --tile: #1c1c1e; } .hs-mus .hs-ico { --tile: #ff2d55; } .hs-fil .hs-ico { --tile: #0a84ff; }
+  .hs-mail .hs-ico { --tile: #2f8bff; } .hs-rem .hs-ico { --tile: #f2f2f7; } .hs-set .hs-ico { --tile: #8e8e93; } .hs-store .hs-ico { --tile: #1e90ff; }
+  .hs-dex .hs-ico { --tile: #000; box-shadow: inset 0 0 0 0.45cqw color-mix(in oklab, var(--sacc) 70%, transparent), 0 0 4cqw color-mix(in oklab, var(--sacc) 35%, transparent); }
+  .hs-dex .hs-ico::before { background: radial-gradient(90% 70% at 70% 90%, color-mix(in oklab, var(--sacc) 32%, transparent), transparent 70%); }
+  .hs-dex span { color: var(--sacc); font-weight: 600; }
+  /* the press: the tile dips, then the app opens */
+  .home .hs-dex .hs-ico { animation: hs-press 0.5s ease 0.85s both; }
+  @keyframes hs-press { 0% { transform: none; filter: none; } 45% { transform: scale(0.88); filter: brightness(1.35); } 100% { transform: none; filter: none; } }
+  .hs-dock { margin: auto 0 11cqw; display: flex; justify-content: space-around; padding: 2.8cqw 2cqw; border-radius: 6cqw; background: rgba(255, 255, 255, 0.12); }
+  .hs-d1 { --tile: #34c759; } .hs-d2 { --tile: #0a84ff; } .hs-d3 { --tile: #ff9f0a; } .hs-d4 { --tile: #5e5ce6; }
+
   /* Voice Memos, deadpan */
   .vm-top { display: flex; justify-content: flex-end; color: var(--rec); font-size: 3.9cqw; margin-bottom: 1.2cqw; }
   .vm-title { margin: 0 0 3cqw; font-size: 7.6cqw; font-weight: 700; letter-spacing: -0.02em; line-height: 1.1; }
@@ -714,6 +786,11 @@ const detected: string[] = Array.isArray(moment.detected) ? (moment.detected as 
   .m-hits-times span + span::before { content: '·'; margin-right: 2cqw; color: var(--sdim); }
   .m-tags { display: flex; flex-wrap: wrap; gap: 1.6cqw; list-style: none; margin: 0; padding: 0; }
   .m-tags li { padding: 1.3cqw 2.3cqw; border-radius: 999px; border: 1px solid var(--sline); font-size: 2.6cqw; letter-spacing: 0.03em; color: #c7c7cc; white-space: nowrap; }
+  /* what the system wrote onto the file, and which tool wrote it (2026-09-30) */
+  .m-assigned { margin: 0; display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 1.3cqw 3cqw; font-size: 3cqw; line-height: 1.3; }
+  .m-as { display: contents; }
+  .m-as dt { color: var(--sacc); font-size: 2.5cqw; letter-spacing: 0.08em; text-transform: uppercase; padding-top: 0.35cqw; }
+  .m-as dd { margin: 0; color: #c7c7cc; }
   .m-tools { display: flex; flex-wrap: wrap; gap: 1.8cqw; }
   .tool {
     display: inline-flex; align-items: center; gap: 1.3cqw;
@@ -795,6 +872,9 @@ const detected: string[] = Array.isArray(moment.detected) ? (moment.detected as 
     .s2 .ch { transition-delay: 0s; }
     .s2 .caret { animation: none; }
     .res, .moment, .kept, .m-more > * { transform: none; }
+    .face-lib, .s1 .face-lib { transform: none; transition: opacity 0.2s; }
+    .face-home { transition-duration: 0.2s; }
+    .home .hs-dex .hs-ico { animation: none; }
     .s3 .res, .s4 .moment, .s5 .kept, .s6 .m-more > * { transition: opacity 0.2s; }
     .wave rect { transform: none; }
     .s4 .wave rect { transition: none; }
@@ -809,11 +889,12 @@ const detected: string[] = Array.isArray(moment.detected) ? (moment.detected as 
   /* Drives every [data-archive-hero] on the page. Plain JS, no framework. */
   const STAGES = ['s1', 's2', 's3', 's4', 's5', 's6'];
   const CHAR_MS = 220; // keep equal to --char in the styles
+  const HOME_MS = 1500; // the home screen's dwell: the Audio Dex tile is pressed at 0.85s (hs-press)
 
   // Offsets (ms) at which each stage class is added.
   function schedule(chars, reduced) {
     // THE PACE (Jon, 2026-09-24): each step gets room to be taken in
-    const t1 = 0;
+    const t1 = reduced ? 700 : HOME_MS; // the home screen first, then the app opens
     const t2 = t1 + (reduced ? 450 : 900);
     const t3 = t2 + (reduced ? 0 : chars * CHAR_MS) + (reduced ? 500 : 900);
     const t4 = t3 + (reduced ? 900 : 2200);
@@ -843,7 +924,8 @@ const detected: string[] = Array.isArray(moment.detected) ? (moment.detected as 
     const reduce = window.matchMedia('(prefers-reduced-motion: reduce)');
     const d = root.dataset;
     const messages = {
-      1: 'Library open.',
+      home: 'Home screen. Opening Audio Dex.',
+      1: 'Audio Dex open.',
       3: `${d.count} ${d.count === '1' ? 'recording' : 'recordings'} found for “${d.query}”, named by what’s inside.`,
       4: `Opened “${d.title}”. Trim marked, ${d.trim}.`,
       5: `Moment kept, ${d.kept}.${d.clip ? ' Play is available.' : ''}`,
@@ -894,9 +976,10 @@ const detected: string[] = Array.isArray(moment.detected) ? (moment.detected as 
       if (replaying) root.classList.add('rewind');
 
       timers.push(window.setTimeout(() => {
-        root.classList.remove('rewind', ...STAGES);
+        root.classList.remove('rewind', 'home', ...STAGES);
         root.dataset.stage = '0';
         setView(null);
+        timers.push(window.setTimeout(() => { root.classList.add('home'); say(messages.home); }, 0));
         schedule(chars, reduce.matches).forEach((t, i) => {
           timers.push(window.setTimeout(() => setStage(i + 1), t));
         });
@@ -913,7 +996,7 @@ const detected: string[] = Array.isArray(moment.detected) ? (moment.detected as 
       if (!running) return;
       clear();
       root.classList.remove('rewind');
-      root.classList.add(...STAGES);
+      root.classList.add('home', ...STAGES);
       root.dataset.stage = '6';
       running = false;
       setView('moment');
@@ -921,7 +1004,7 @@ const detected: string[] = Array.isArray(moment.detected) ? (moment.detected as 
     root.addEventListener('hero:reset', () => {
       clear();
       stopClip();
-      root.classList.remove('rewind', ...STAGES);
+      root.classList.remove('rewind', 'home', ...STAGES);
       root.dataset.stage = '0';
       running = false;
       setView(null);

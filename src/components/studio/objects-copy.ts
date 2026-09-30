@@ -15,8 +15,8 @@ export const WATCH_COPY = {
 export const ARCHIVE_COPY = {
   // one line under the locked headline
   dek: "Every recording I've made, read and named by what's inside it, and searchable the way photos are.",
-  // the mono line under the module, true to the run it replays (a real
-  // search of the library on 2026-09-18: eight hits for "laugh"; the kept
-  // moment is the loudest eight seconds of the one it opens)
-  caption: "A real search of my library: eight recordings with a laugh in them, and one moment kept.",
+  // the mono line under the module. 2026-09-30 (Jon): the run is ART, an
+  // example anyone gets, not a row from his library — the idea from three
+  // summers ago, found by one word. DRAFT, his to edit.
+  caption: "One word typed. Six recordings the system had already named, and the twelve seconds that were the point.",
 };
