@@ -83,6 +83,10 @@ const HOME_APPS: { k: string; n: string }[] = [
   { k: 'vm', n: 'Voice Memos' }, { k: 'dex', n: 'Audio Dex' },
 ];
 const chars = Array.from(query);
+// THE HAND (2026-09-30, Jon: touch points): the word is typed key by key on a
+// keyboard that rises for it — a slip and two backspaces if the JSON says so
+const keystrokes: string[] = Array.isArray(m.keystrokes) ? (m.keystrokes as string[]) : (Array.isArray((run as any).keystrokes) ? ((run as any).keystrokes as string[]) : chars);
+const KB_ROWS = ['qwertyuiop', 'asdfghjkl', 'zxcvbnm'];
 const hasClip = Boolean(moment.src);
 // the room's words may sit in the module's own columns (2026-09-24): a `head`
 // slot above the phone, a `cap` slot under the rail
@@ -107,6 +111,7 @@ const detected: string[] = Array.isArray(moment.detected) ? (moment.detected as 
   data-trim={`${fmtClock(trimStart)} to ${fmtClock(trimEnd)}`}
   data-kept={fmtLen(trimLen)}
   data-clip={hasClip ? '1' : ''}
+  data-keystrokes={JSON.stringify(keystrokes)}
 >
   <div class="grid">
     {hasHead && <div class="hook"><slot name="head" /></div>}
@@ -182,13 +187,27 @@ const detected: string[] = Array.isArray(moment.detected) ? (moment.detected as 
               <span class="q-ph">Search transcripts</span>
             </div>
 
+            <div class="kb" aria-hidden="true">
+              {KB_ROWS.map((row, r) => (
+                <div class:list={['kb-row', `kb-r${r}`]}>
+                  {r === 2 && <span class="kb-key kb-fn">⇧</span>}
+                  {Array.from(row).map((k) => <span class="kb-key" data-k={k}>{k}</span>)}
+                  {r === 2 && <span class="kb-key kb-fn kb-bs" data-k="⌫">⌫</span>}
+                </div>
+              ))}
+              <div class="kb-row kb-r3">
+                <span class="kb-key kb-fn kb-num">123</span>
+                <span class="kb-key kb-space" data-k=" ">space</span>
+                <span class="kb-key kb-go" data-k="search">search</span>
+              </div>
+            </div>
             <div class="lib-body">
               <p class="lib-count">{results.length} {results.length === 1 ? 'match' : 'matches'} in transcripts</p>
               <ul class="lib-results">
                 {results.map((r, i) => {
                   const [pre, hit, post] = splitLine(r.line);
                   return (
-                    <li class="res" style={`--i:${i}`}>
+                    <li class:list={['res', { 'res-first': i === 0 }]} style={`--i:${i}`}>
                       <span class="res-title">{r.title}</span>
                       <span class="res-meta"><span>{r.date}</span><span class="mono">{r.duration}</span></span>
                       <span class="res-line">{pre}{hit && <mark>{hit}</mark>}{post}</span>
@@ -652,10 +671,37 @@ const detected: string[] = Array.isArray(moment.detected) ? (moment.detected as 
   .lib-search .ico { color: var(--sdim); }
   .q { display: inline-flex; white-space: pre; }
   .ch { display: inline-block; max-width: 0; opacity: 0; }
-  .s2 .ch {
-    max-width: 1.6em; opacity: 1;
-    transition: max-width 0s calc(var(--i) * var(--char)), opacity 0s calc(var(--i) * var(--char));
+  .ch.on { max-width: 1.6em; opacity: 1; } /* the script types (2026-09-30) */
+  /* THE KEYBOARD: rises for the search, each key lit as it is pressed, down when the results land */
+  .kb {
+    position: absolute; left: 0; right: 0; bottom: 0; z-index: 2;
+    padding: 2.2cqw 1cqw 9cqw; background: #1c1c1e;
+    transform: translateY(100%); transition: transform 0.4s cubic-bezier(0.2, 0.8, 0.2, 1);
+    font-size: 4.6cqw; line-height: 1; color: var(--sfg);
   }
+  .s2:not(.s3) .kb { transform: none; }
+  .kb-row { display: flex; justify-content: center; gap: 1.4cqw; margin-bottom: 2.4cqw; }
+  .kb-r3 { margin-bottom: 0; }
+  .kb-key {
+    display: grid; place-items: center; flex: 0 0 auto;
+    width: 7.9cqw; height: 10cqw; border-radius: 1.4cqw;
+    background: #4a4a4c; box-shadow: 0 0.3cqw 0 rgba(0, 0, 0, 0.45);
+    transition: background 90ms, transform 90ms;
+  }
+  .kb-fn { width: 11.2cqw; background: #2c2c2e; font-size: 3.6cqw; }
+  .kb-space { width: 44cqw; font-size: 3.6cqw; }
+  .kb-go { width: 22cqw; background: #0a84ff; font-size: 3.6cqw; }
+  .kb-key.hit { background: #8e8e93; transform: translateY(-0.5cqw); }
+  .kb-go.hit { background: #4ea6ff; }
+  /* THE FINGER on the result before it opens */
+  .res-first { position: relative; }
+  .res-first::after {
+    content: ''; position: absolute; left: 50%; top: 50%; width: 9cqw; height: 9cqw; margin: -4.5cqw 0 0 -4.5cqw;
+    border-radius: 50%; background: rgba(255, 255, 255, 0.6); opacity: 0; transform: scale(0.5); pointer-events: none;
+  }
+  .pick .res-first::after { animation: hs-touch 0.8s ease both; }
+  .pick .res-first { background: rgba(255, 255, 255, 0.07); border-radius: 2cqw; transition: background 0.2s 0.3s; }
+  .s4 .res-first::after { animation: none; opacity: 0; }
   .caret { display: none; width: 0.11em; height: 1.05em; margin-left: 0.08em; background: var(--sacc); }
   .s2 .caret { display: block; animation: blink 1s steps(1, end) infinite; }
   .s3 .caret { display: none; }
@@ -867,7 +913,8 @@ const detected: string[] = Array.isArray(moment.detected) ? (moment.detected as 
   /* ---------- reduced motion: no typing, no travel, short fades ---------- */
   @media (prefers-reduced-motion: reduce) {
     .face-lib, .face-rest, .s4 .lib-results { transition-duration: 0.2s; }
-    .s2 .ch { transition-delay: 0s; }
+    .kb { transition: none; }
+    .pick .res-first::after { animation: none; }
     .s2 .caret { animation: none; }
     .res, .moment, .kept, .m-more > * { transform: none; }
     .face-lib, .s1 .face-lib { transform: none; transition: opacity 0.2s; }
@@ -890,13 +937,13 @@ const detected: string[] = Array.isArray(moment.detected) ? (moment.detected as 
   const HOME_MS = 2700; // the home screen's dwell: a fingertip at 1.1s (hs-touch), the press at 1.55s (hs-press), then the app opens
 
   // Offsets (ms) at which each stage class is added.
-  function schedule(chars, reduced) {
+  function schedule(typing, reduced) {
     // THE PACE (Jon, 2026-09-24): each step gets room to be taken in
     // THE PACE (Jon, 2026-09-30: too quick to follow): one thing at a time,
     // each left on screen long enough to be read
     const t1 = reduced ? 700 : HOME_MS; // the home screen first, then the app opens
     const t2 = t1 + (reduced ? 450 : 1500); // the empty library, its search field
-    const t3 = t2 + (reduced ? 0 : chars * CHAR_MS) + (reduced ? 500 : 1300); // typed, then the results
+    const t3 = t2 + (reduced ? 0 : typing) + (reduced ? 500 : 1300); // typed (key by key), then the results
     const t4 = t3 + (reduced ? 900 : 3600); // the results read, then one opens
     const t5 = t4 + (reduced ? 900 : 3000); // the moment, then kept
     const t6 = t5 + (reduced ? 900 : 2400); // then what the system assigned
@@ -920,8 +967,41 @@ const detected: string[] = Array.isArray(moment.detected) ? (moment.detected as 
     };
     views.forEach((b) => b.addEventListener('click', () => { if (root.classList.contains('s6')) setView(b.dataset.view); }));
 
-    const chars = root.querySelectorAll('[data-query] .ch').length;
     const reduce = window.matchMedia('(prefers-reduced-motion: reduce)');
+    // THE HAND (2026-09-30): the word is typed stroke by stroke on the keyboard,
+    // letters CHAR_MS apart, a beat of noticing before the first backspace
+    const q = root.querySelector('[data-query]');
+    const finalText = Array.from(q ? q.querySelectorAll('.ch') : []).map((el) => el.textContent).join('');
+    let strokes = [];
+    try { strokes = JSON.parse(root.dataset.keystrokes || '[]'); } catch (e) { strokes = []; }
+    if (!Array.isArray(strokes) || !strokes.length) strokes = Array.from(finalText);
+    const keys = new Map();
+    root.querySelectorAll('.kb-key[data-k]').forEach((k) => keys.set(k.dataset.k, k));
+    const strokeTimes = (() => {
+      const out = []; let t = 0;
+      for (let i = 0; i < strokes.length; i++) {
+        const bs = strokes[i] === '⌫';
+        if (bs && strokes[i - 1] !== '⌫') t += 520;
+        out.push(t);
+        t += bs ? 200 : CHAR_MS;
+      }
+      return out;
+    })();
+    const typingMs = strokeTimes.length ? strokeTimes[strokeTimes.length - 1] + CHAR_MS : 0;
+    // spans the script makes must carry the component's scope attribute, or
+    // the scoped styles (.ch, .ch.on) never reach them
+    const cid = q ? Array.from(q.attributes).map((a) => a.name).find((n) => n.startsWith('data-astro-cid-')) : null;
+    const setQuery = (text) => {
+      if (!q) return;
+      q.innerHTML = '';
+      Array.from(text).forEach((c) => {
+        const el = document.createElement('span');
+        el.className = 'ch on';
+        if (cid) el.setAttribute(cid, '');
+        el.textContent = c;
+        q.appendChild(el);
+      });
+    };
     const d = root.dataset;
     const messages = {
       home: 'Home screen. Opening Audio Dex.',
@@ -942,6 +1022,12 @@ const detected: string[] = Array.isArray(moment.detected) ? (moment.detected as 
       window.setTimeout(() => { status.textContent = msg; }, 30);
     };
     const clear = () => { timers.forEach(clearTimeout); timers = []; };
+    const press = (k, ms) => {
+      const el = keys.get(k);
+      if (!el) return;
+      el.classList.add('hit');
+      timers.push(window.setTimeout(() => el.classList.remove('hit'), ms || 150));
+    };
     const restLabel = tap.getAttribute('aria-label') || '';
 
     const stopClip = () => {
@@ -976,13 +1062,30 @@ const detected: string[] = Array.isArray(moment.detected) ? (moment.detected as 
       if (replaying) root.classList.add('rewind');
 
       timers.push(window.setTimeout(() => {
-        root.classList.remove('rewind', 'home', ...STAGES);
+        root.classList.remove('rewind', 'home', 'pick', ...STAGES);
         root.dataset.stage = '0';
         setView(null);
+        setQuery('');
         timers.push(window.setTimeout(() => { root.classList.add('home'); say(messages.home); }, 0));
-        schedule(chars, reduce.matches).forEach((t, i) => {
+        const times = schedule(typingMs, reduce.matches);
+        times.forEach((t, i) => {
           timers.push(window.setTimeout(() => setStage(i + 1), t));
         });
+        if (reduce.matches) {
+          timers.push(window.setTimeout(() => setQuery(finalText), times[1]));
+        } else {
+          // the typing: each stroke lights its key and rewrites the field
+          let text = '';
+          strokeTimes.forEach((st, i) => timers.push(window.setTimeout(() => {
+            const k = strokes[i];
+            text = k === '⌫' ? text.slice(0, -1) : text + k;
+            press(k);
+            setQuery(text);
+          }, times[1] + st)));
+          timers.push(window.setTimeout(() => press('search', 280), times[2] - 460)); // the search key, then the results
+          timers.push(window.setTimeout(() => root.classList.add('pick'), times[3] - 760)); // the finger on the first result, then it opens
+        }
+        timers.push(window.setTimeout(() => setQuery(finalText), times[2])); // whatever happened, the word is whole when the results land
       }, lead));
     };
 
@@ -995,19 +1098,21 @@ const detected: string[] = Array.isArray(moment.detected) ? (moment.detected as 
     root.addEventListener('hero:finish', () => {
       if (!running) return;
       clear();
-      root.classList.remove('rewind');
+      root.classList.remove('rewind', 'pick');
       root.classList.add('home', ...STAGES);
       root.dataset.stage = '6';
+      setQuery(finalText);
       running = false;
       setView('moment');
     });
     root.addEventListener('hero:reset', () => {
       clear();
       stopClip();
-      root.classList.remove('rewind', 'home', ...STAGES);
+      root.classList.remove('rewind', 'home', 'pick', ...STAGES);
       root.dataset.stage = '0';
       running = false;
       setView(null);
+      setQuery('');
       tap.removeAttribute('aria-disabled');
       tap.setAttribute('aria-label', restLabel);
     });
