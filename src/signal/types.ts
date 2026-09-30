@@ -409,7 +409,7 @@ export const DEVICE_H = 850;
  *  .si-seg.col with button[data-v="major"|"minor"]) are the KEYBED's (its top-left block); `key-` and `key+` are GONE
  *  (no arrow caps: an arrow-shaped cap read as the real ← → keys). The keys' foot holds `chord` · `chord-glass` · `hold`. */
 export const CTL = {
-  device: ['title-drums', 'title-keys', 'title-bass', 'power', 'stop'],   // R4: the head (Signal.astro's titles; power.ts's switch; the hands' esc)
+  device: ['title-drums', 'title-keys', 'title-bass', 'power', 'stop', 'export'],   // R4: the head (Signal.astro's titles; power.ts's switch; the hands' esc); 2026-09-30: export your song (export-view.ts)
   drums: ['drums-power', 'drums-bpm', 'drums-tap', 'drums-cover', 'drums-grid', 'drums-pattern', 'drums-swing', 'drums-density',
     'drums-sidechain', 'drums-texture', 'drums-texseg', 'drums-delay', 'drums-mix', 'drums-fb', 'drums-time', 'drums-mute', 'drums-solo', 'drums-gain'],
   keys: ['keys-voice', 'keys-voice-up', 'keys-voice-down', 'keys-filter',

@@ -32,6 +32,7 @@ import { mountDrumsView } from './view/drums-view.ts';
 import { mountKeysView } from './view/keys-view.ts';
 import { mountBassView } from './view/bass-view.ts';
 import { mountHandsView } from './view/hands-view.ts';
+import { mountExportView } from './view/export-view.ts';
 
 export const SAMPLE_RATE = 48000;
 
@@ -118,6 +119,7 @@ export async function boot(root: HTMLElement): Promise<Booted | null> {
   mount('keys', slot('keys'), mountKeysView);
   mount('bass', slot('bass'), mountBassView);
   mount('hands', strata, mountHandsView);
+  mount('export', root.querySelector<HTMLElement>('[data-corner="export"]'), mountExportView);   // export your song (2026-09-30)
   root.dataset.booted = '1';
 
   // ── the keyboard: KeyAction → the instrument ─────────────────────────────────────────────────────────
