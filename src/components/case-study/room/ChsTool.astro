@@ -1,0 +1,419 @@
+---
+// CHS · THE TOOL (Stream C, 2026-10-05). The lead object of /case-studies/chs: the platform's docs assistant as one
+// window. Idle = everything it can do, nothing you would ask (the comprehension gap). Pick a role → its three
+// starters → a run (sent → thinking → streamed answer → chip + tail). Paints ONLY with the --sys-* tokens an ancestor
+// `.chs` defines (chs-tokens.css, imported by the page): `data-sys="dark"` on `.chs` flips it with no rule here.
+// ROLES from ChsRolePicker, CAPABILITY + REACH from ComprehensionSurface. Motion = setTimeout only (never rAF).
+
+const ROLES = [
+  {
+    id: "sales",
+    name: "Sales",
+    blurb: "Account research, follow-ups, deal-review summaries.",
+    starters: [
+      {
+        label: "Build a KB from our last 10 deal-review decks",
+        kind: "Knowledge base",
+        chip: "TEMPLATE · embedded resource",
+        body: "Point the assistant at the /Sales/Deal Reviews SharePoint folder. I'll watch for new decks weekly and re-embed.",
+        tail: "indexes 10 decks · ~28k tokens · refresh: weekly Mon 06:00 CST",
+      },
+      {
+        label: "Draft a follow-up email in our sales voice",
+        kind: "Voice-trained prompt",
+        chip: "PROMPT · sales-voice-v3",
+        body: "Thanks for the time on Tuesday, Mike. Two things you flagged that I want to come back to before our next sync...",
+        tail: "uses sales-voice-v3 · trained on 412 closed-won emails",
+      },
+      {
+        label: "Summarize the Acme Co. Q2 transcript",
+        kind: "Task flow",
+        chip: "WORKFLOW · transcript → brief",
+        body: "Three takeaways for the deal team:  1) Mike is the budget owner, not Sarah.  2) Renewal cycle moved to Q4.  3) They're evaluating Sunchild for the Q3 pilot.",
+        tail: "pulls from Gong · 38 min transcript · 3-bullet brief",
+      },
+    ],
+  },
+  {
+    id: "gtm",
+    name: "GTM",
+    blurb: "Launch comms, campaign briefs, customer story reframes.",
+    starters: [
+      {
+        label: "Build a KB from the GTM Drive, refresh weekly",
+        kind: "Knowledge base",
+        chip: "TEMPLATE · embedded resource",
+        body: "Build a KB from our shared GTM Drive folder, tagged by quarter, with weekly auto-refresh.",
+        tail: "indexes 184 files across 6 quarters · refresh: Sun 23:00 CST",
+      },
+      {
+        label: "Write a launch blurb for the seed-treatment module",
+        kind: "Voice-trained prompt",
+        chip: "PROMPT · gtm-voice-v2",
+        body: "Headline: a seed-treatment system that talks to your planter.  Sub: row-by-row decisions, made before the row.",
+        tail: "uses gtm-voice-v2 · audience: ag retailer · channel: LinkedIn",
+      },
+      {
+        label: "Reframe a customer story for LinkedIn",
+        kind: "Task flow",
+        chip: "WORKFLOW · case-study → social",
+        body: "From a 4-page case study, you get: 1 carousel deck, 1 short post, 1 newsletter pull-quote. Each one routes to the right channel cadence.",
+        tail: "outputs 3 channel variants · keeps the customer quote verbatim",
+      },
+    ],
+  },
+  {
+    id: "finance",
+    name: "Finance",
+    blurb: "Variance summaries, trend pulls, board narratives.",
+    starters: [
+      {
+        label: "Variance summary on the latest grain-trading PnL",
+        kind: "Task flow",
+        chip: "WORKFLOW · pnl → variance brief",
+        body: "Three movers vs forecast:  · Soybean basis tightened 14¢ in IL  · Rail tender costs +9% MoM  · Hedging gains carried Q2.",
+        tail: "reads the Q2 PnL workbook · 3-mover summary by default",
+      },
+      {
+        label: "Pull last quarter's freight cost trend",
+        kind: "Knowledge base",
+        chip: "DATASET · freight-costs-2026q1",
+        body: "Trend: total freight up 6.4% QoQ, driven by Pacific Northwest rail. Truck spot rates flat. Most affected lanes: Tacoma, Portland, Long Beach.",
+        tail: "queries the freight-costs view · returns trend + top affected lanes",
+      },
+      {
+        label: "Summarize Q4 board narrative for the FP&A team",
+        kind: "Voice-trained prompt",
+        chip: "PROMPT · board-voice",
+        body: "Q4 delivered against the three commitments tabled at the September board: margin recovery, freight discipline, and seed-treatment ramp.",
+        tail: "uses board-voice · 3-paragraph cap · plain language only",
+      },
+    ],
+  },
+  {
+    id: "ops",
+    name: "Ops",
+    blurb: "SOP conversion, safety stand-down search, field translation.",
+    starters: [
+      {
+        label: "Convert this SOP into a how-to flow",
+        kind: "Task flow",
+        chip: "WORKFLOW · sop → checklist",
+        body: "Step 1: Verify shutoff. Step 2: Visual inspection of seal. Step 3: Pressure test at 80 PSI. Step 4: Log result to inspection board.",
+        tail: "reads PDF SOP · outputs role-tagged checklist + log fields",
+      },
+      {
+        label: "Find every Confluence page on safety stand-down",
+        kind: "Knowledge base",
+        chip: "DATASET · confluence-safety",
+        body: "12 pages found, 4 are policy-of-record. Most recent revision: 2026-04-18 (Topeka site). The others are quarterly drills.",
+        tail: "searches Confluence · flags policy vs drill · last-modified ranked",
+      },
+      {
+        label: "Translate this checklist into Spanish for Topeka",
+        kind: "Voice-trained prompt",
+        chip: "PROMPT · field-spanish",
+        body: "Paso 1: Verificar el cierre. Paso 2: Inspección visual del sello. Paso 3: Prueba de presión a 80 PSI. Paso 4: Registrar el resultado.",
+        tail: "uses field-spanish · keeps measurement units, line-by-line parity",
+      },
+    ],
+  },
+];
+
+const CAPABILITY = ["vector embeddings","RAG pipelines","function calling","custom models on internal data","prompt engineering","multi-step agents"];
+const REACH = ["“what does this do for me?”","“is this different from GPT?”","“where do I start?”","“how do I add my data?”","“what's a knowledge base?”","“can it just do the thing?”"];
+
+// CAPABILITY in the assistant's own words, in the order it says them
+const SAY: Record<string, string> = { "vector embeddings": "build knowledge bases", "RAG pipelines": "run RAG pipelines",
+  "function calling": "call functions", "custom models on internal data": "train custom models on internal data",
+  "prompt engineering": "prompt engineering", "multi-step agents": "multi-step agents" };
+const CAN = `I can ${[0, 3, 2, 1, 5, 4].map((i) => SAY[CAPABILITY[i] as string]).join(", ")}.`;
+
+// the picker's splitLines: break on the copy's double-space beats, else on sentence ends
+const splitLines = (body: string): string[] =>
+  (body.includes("  ") ? body.split(/\s{2,}/) : body.split(/(?<=[.!?])\s+/)).map((p) => p.trim()).filter(Boolean);
+
+const uid = `ct-${Math.random().toString(36).slice(2, 8)}`;
+---
+
+<div class="chs-tool" data-chs-tool>
+  <div class="ct-bar">
+    <span class="ct-dot" aria-hidden="true"></span>
+    <span class="ct-title" id={`${uid}-t`}>CHS · assistant</span>
+    <span class="ct-you" data-ct-you>you</span>
+  </div>
+  <div class="ct-body">
+    <div class="ct-rail" role="tablist" aria-orientation="vertical" aria-labelledby={`${uid}-t`}>
+      {ROLES.map((r, i) => (
+        <button type="button" class="ct-role" role="tab" id={`${uid}-${r.id}`} aria-selected="false"
+          aria-controls={`${uid}-main`} tabindex={i === 0 ? 0 : -1} data-ct-role={r.id}>
+          <span class="ct-role-name">{r.name}</span>
+          <span class="ct-role-blurb">{r.blurb}</span>
+        </button>
+      ))}
+    </div>
+    <div class="ct-main" id={`${uid}-main`} role="tabpanel" tabindex="0" aria-labelledby={`${uid}-t`} data-ct-main>
+      <div class="ct-view" data-ct-view>
+        <div class="ct-pane" data-ct-pane="idle">
+          <p class="ct-msg ct-msg-a">{CAN}</p>
+          <div class="ct-reach">
+            <p class="ct-reach-t">what people ask</p>
+            <ul>{REACH.map((q) => <li>{q}</li>)}</ul>
+          </div>
+          <p class="ct-hint">pick a role</p>
+        </div>
+        {ROLES.map((r) => (
+          <div class="ct-pane" data-ct-pane={r.id} hidden>
+            <p class="ct-msg ct-msg-u">Hi, I'm new here. Where do I start as someone in {r.name}?</p>
+            <p class="ct-msg ct-msg-a">Three starting flows match your role. Pick one and I'll run it.</p>
+            <div class="ct-starters">
+              {r.starters.map((s, j) => (
+                <button type="button" class="ct-starter" data-ct-starter={`${r.id}-${j}`}>
+                  <span class="ct-glyph" aria-hidden="true"><span class="ct-arrow">→</span><span class="ct-dots"><i></i><i></i><i></i></span><span class="ct-tick">✓</span></span>
+                  <span class="ct-label">{s.label}</span>
+                  <span class="ct-chip">{s.kind}</span>
+                </button>
+              ))}
+            </div>
+            <div class="ct-thread" aria-live="polite" data-ct-thread>
+              {r.starters.map((s, j) => (
+                <template data-ct-tpl={`${r.id}-${j}`}>
+                  <div class="ct-run" data-run="sent">
+                    <p class="ct-msg ct-msg-u ct-sent">{s.label}</p>
+                    <div class="ct-reply">
+                      <div class="ct-msg ct-msg-a ct-out">
+                        <span class="ct-think" aria-hidden="true"><i></i><i></i><i></i></span>
+                        <span class="ct-chip ct-chip-run">{s.chip}</span>
+                        <span class="ct-lines">{splitLines(s.body).map((l) => <span class="ct-line">{l}</span>)}</span>
+                      </div>
+                      <p class="ct-tail">{s.tail}</p>
+                    </div>
+                  </div>
+                </template>
+              ))}
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  document.querySelectorAll<HTMLElement>("[data-chs-tool]").forEach((root) => {
+    const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    // nodes the script mounts must carry the scope attribute or the scoped styles miss them
+    const cid = Array.from(root.attributes).map((a) => a.name).find((n) => n.startsWith("data-astro-cid-"));
+    const stamp = (el: Element) => { if (cid) [el, ...Array.from(el.querySelectorAll("*"))].forEach((n) => n.setAttribute(cid, "")); };
+    const tabs = Array.from(root.querySelectorAll<HTMLButtonElement>("[data-ct-role]"));
+    const panes = Array.from(root.querySelectorAll<HTMLElement>("[data-ct-pane]"));
+    const main = root.querySelector<HTMLElement>("[data-ct-main]");
+    const view = root.querySelector<HTMLElement>("[data-ct-view]");
+    const you = root.querySelector<HTMLElement>("[data-ct-you]");
+    if (!main || !view) return;
+
+    const FADE = 180, THINK_AT = 350, THINK = 650, STREAM = 600;
+    let current = "", fadeT = 0, timers: number[] = [];
+    const after = (ms: number, fn: () => void) => { timers.push(window.setTimeout(fn, ms)); };
+    const stop = () => { timers.forEach((t) => window.clearTimeout(t)); timers = []; };
+    const toBottom = () => { main.scrollTop = main.scrollHeight; };
+    // the thread back to empty (the inert templates stay), every starter back to rest
+    const wipe = () => {
+      stop();
+      root.querySelectorAll("[data-ct-live]").forEach((n) => n.remove());
+      root.querySelectorAll(".ct-starter").forEach((s) => s.classList.remove("is-running", "is-done"));
+    };
+    const show = (id: string) => {
+      wipe();
+      panes.forEach((p) => { p.hidden = p.dataset.ctPane !== (id || "idle"); });
+      main.scrollTop = 0;
+    };
+
+    const pick = (tab: HTMLButtonElement, focus = false) => {
+      tabs.forEach((t) => { t.setAttribute("aria-selected", t === tab ? "true" : "false"); t.tabIndex = t === tab ? 0 : -1; });
+      if (focus) tab.focus();
+      const id = tab.dataset.ctRole || "";
+      if (id === current) return;
+      current = id;
+      stop();
+      main.setAttribute("aria-labelledby", tab.id);
+      if (you) you.textContent = `you · ${tab.querySelector(".ct-role-name")?.textContent ?? ""}`;
+      window.clearTimeout(fadeT);
+      if (reduce) { show(id); return; }
+      view.classList.add("is-out");
+      fadeT = window.setTimeout(() => { show(current); view.classList.remove("is-out"); }, FADE);
+    };
+    tabs.forEach((t, i) => {
+      t.addEventListener("click", () => pick(t));
+      t.addEventListener("keydown", (e) => {
+        const n = ({ ArrowDown: i + 1, ArrowRight: i + 1, ArrowUp: i - 1, ArrowLeft: i - 1, Home: 0, End: tabs.length - 1 } as Record<string, number>)[e.key];
+        const next = n === undefined ? undefined : tabs[(n + tabs.length) % tabs.length];
+        if (!next) return;
+        e.preventDefault();
+        pick(next, true);
+      });
+    });
+
+    // a run: sent → thinking → the answer streams a line at a time → chip + tail
+    const run = (btn: HTMLButtonElement) => {
+      const pane = btn.closest<HTMLElement>("[data-ct-pane]");
+      const thread = pane?.querySelector<HTMLElement>("[data-ct-thread]");
+      const src = pane?.querySelector<HTMLTemplateElement>(`template[data-ct-tpl="${btn.dataset.ctStarter}"]`)?.content.firstElementChild;
+      if (!thread || !src) return;
+      wipe();
+      const el = src.cloneNode(true) as HTMLElement;
+      el.dataset.ctLive = "";
+      stamp(el);
+      thread.append(el);
+      const sent = el.querySelector(".ct-sent");
+      const lines = Array.from(el.querySelectorAll(".ct-line"));
+      btn.classList.add("is-running");
+      const done = () => {
+        el.dataset.run = "done";
+        [sent, ...lines].forEach((n) => n?.classList.add("is-in"));
+        btn.classList.replace("is-running", "is-done");
+        toBottom();
+      };
+      if (reduce) { done(); return; }
+      after(20, () => { sent?.classList.add("is-in"); toBottom(); });
+      after(THINK_AT, () => { el.dataset.run = "thinking"; toBottom(); });
+      const t0 = THINK_AT + THINK, per = STREAM / Math.max(lines.length, 1);
+      after(t0, () => { el.dataset.run = "streaming"; });
+      lines.forEach((l, i) => after(t0 + i * per, () => { l.classList.add("is-in"); toBottom(); }));
+      after(t0 + STREAM + 80, done);
+    };
+    root.querySelectorAll<HTMLButtonElement>("[data-ct-starter]").forEach((b) => b.addEventListener("click", () => run(b)));
+  });
+</script>
+
+<style>
+  .chs-tool {
+    display: flex; flex-direction: column; width: 100%; height: 520px; min-height: 520px; box-sizing: border-box;
+    border: 1px solid var(--sys-line); border-radius: var(--sys-radius); background: var(--sys-paper); overflow: hidden;
+    color: var(--sys-ink); font-family: var(--sys-font); font-size: var(--sys-fs); line-height: 1.45; text-align: left;
+  }
+  .chs-tool *, .chs-tool *::before, .chs-tool *::after { box-sizing: border-box; }
+  [hidden] { display: none !important; }
+  button { font: inherit; color: inherit; cursor: pointer; }
+
+  /* the bar */
+  .ct-bar {
+    flex: none; display: flex; align-items: center; gap: 8px; height: var(--sys-row); padding-inline: 16px; white-space: nowrap;
+    border-bottom: 1px solid var(--sys-line); font-family: var(--sys-mono); font-size: var(--sys-fs-sm); letter-spacing: 0.08em;
+  }
+  .ct-dot { flex: none; width: 7px; height: 7px; border-radius: 50%; background: var(--sys-ok); }
+  .ct-you { margin-inline-start: auto; color: var(--sys-dim); overflow: hidden; text-overflow: ellipsis; }
+  .ct-body { flex: 1 1 auto; min-height: 0; display: grid; grid-template-columns: 220px minmax(0, 1fr); }
+
+  /* the rail: the four roles, a vertical tablist */
+  .ct-rail { display: flex; flex-direction: column; min-height: 0; overflow-y: auto; border-inline-end: 1px solid var(--sys-line); }
+  .ct-role {
+    position: relative; flex: none; display: flex; flex-direction: column; justify-content: center; gap: 2px;
+    width: 100%; height: 56px; padding-block: 0; padding-inline: 16px 12px; border: 0; border-radius: 0;
+    background: transparent; text-align: left; transition: background-color 120ms ease;
+  }
+  .ct-role + .ct-role { border-top: 1px solid var(--sys-line); }
+  .ct-role-name { font-size: var(--sys-fs); font-weight: 500; line-height: 16px; color: color-mix(in oklab, var(--sys-ink) 70%, var(--sys-dim)); }
+  .ct-role-blurb {
+    font-size: var(--sys-fs-sm); line-height: 14px; color: var(--sys-dim);
+    display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2; overflow: hidden;
+  }
+  .ct-role:hover { background: var(--sys-field); }
+  .ct-role:active { transform: translateY(1px); background: color-mix(in oklab, var(--sys-line) 70%, var(--sys-field)); }
+  .ct-role[aria-selected="true"]::before { content: ""; position: absolute; inset-block: 0; inset-inline-start: 0; width: 2px; background: var(--sys-accent); }
+  .ct-role[aria-selected="true"] .ct-role-name { color: var(--sys-ink); }
+  .ct-role:focus-visible, .ct-starter:focus-visible, .ct-main:focus-visible { outline: 2px solid var(--sys-accent); outline-offset: -2px; }
+
+  /* the main column: one pane at a time, crossfaded */
+  .ct-main { min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding-block: 20px; padding-inline: 24px; }
+  .ct-view { transition: opacity 180ms ease; }
+  .ct-view.is-out { opacity: 0; pointer-events: none; }
+  .ct-pane { display: flex; flex-direction: column; align-items: flex-start; gap: 12px; }
+  .ct-msg {
+    max-width: 60ch; margin-block: 0; padding-block: 10px; padding-inline: 14px; border-radius: var(--sys-radius);
+    font-size: var(--sys-fs-lg); line-height: 1.45; color: var(--sys-ink);
+  }
+  .ct-msg-a { background: var(--sys-field); }
+  .ct-msg-u { align-self: flex-end; background: color-mix(in oklab, var(--sys-accent) 12%, transparent); }
+
+  /* idle: what people ask */
+  .ct-reach { align-self: stretch; max-width: 60ch; margin-block-start: 6px; }
+  .ct-reach-t, .ct-hint { margin-block: 0; font-family: var(--sys-mono); font-size: var(--sys-fs-sm); letter-spacing: 0.08em; color: var(--sys-dim); }
+  .ct-reach-t { padding-block-end: 6px; }
+  .ct-reach ul { list-style: none; margin-block: 0; padding: 0; }
+  .ct-reach li { padding-block: 7px; font-size: var(--sys-fs); color: var(--sys-dim); }
+  .ct-reach li + li { border-top: 1px solid var(--sys-line); }
+  .ct-hint { margin-block-start: 4px; }
+
+  /* the starters */
+  .ct-starters { align-self: stretch; display: flex; flex-direction: column; border: 1px solid var(--sys-line); border-radius: var(--sys-radius); overflow: hidden; }
+  .ct-starter {
+    display: grid; grid-template-columns: 16px minmax(0, 1fr) auto; align-items: center; column-gap: 10px;
+    width: 100%; min-height: var(--sys-row); padding-block: 6px; padding-inline: 12px; border: 0; border-radius: 0;
+    background: transparent; font-size: var(--sys-fs); text-align: left; transition: background-color 120ms ease;
+  }
+  .ct-starter + .ct-starter { border-top: 1px solid var(--sys-line); }
+  .ct-starter:hover, .ct-starter.is-running { background: var(--sys-field); }
+  .ct-starter:active { transform: translateY(1px); }
+  .ct-glyph { display: grid; place-items: center; height: 16px; font-family: var(--sys-mono); color: var(--sys-dim); }
+  .ct-glyph > span { grid-area: 1 / 1; }
+  .ct-starter:hover .ct-arrow { color: var(--sys-ink); }
+  .ct-dots, .ct-tick, .ct-think, .ct-starter.is-running .ct-arrow, .ct-starter.is-done .ct-arrow { display: none; }
+  .ct-starter.is-running .ct-dots { display: inline-flex; }
+  .ct-starter.is-done .ct-tick { display: inline; color: var(--sys-ok); }
+  .ct-chip {
+    font-family: var(--sys-mono); font-size: var(--sys-fs-sm); line-height: 1.3; letter-spacing: 0.08em; text-transform: uppercase;
+    white-space: nowrap; color: var(--sys-dim); padding-block: 2px; padding-inline: 6px;
+    border: 1px solid var(--sys-line); border-radius: var(--sys-radius-sm);
+  }
+
+  /* dots: a running starter's glyph, and the assistant thinking */
+  .ct-dots, .ct-think { gap: 3px; align-items: center; }
+  .ct-dots i, .ct-think i { display: block; width: 3px; height: 3px; border-radius: 50%; background: currentColor; animation: ct-pulse 900ms ease-in-out infinite; }
+  .ct-think i { width: 5px; height: 5px; }
+  .ct-dots i:nth-child(2), .ct-think i:nth-child(2) { animation-delay: 150ms; }
+  .ct-dots i:nth-child(3), .ct-think i:nth-child(3) { animation-delay: 300ms; }
+  @keyframes ct-pulse { 0%, 80%, 100% { opacity: 0.25; } 40% { opacity: 1; } }
+
+  /* the thread: one run at a time (data-run: sent, thinking, streaming, done) */
+  .ct-thread { align-self: stretch; display: flex; flex-direction: column; }
+  .ct-run, .ct-reply, .ct-out { display: flex; flex-direction: column; align-items: flex-start; }
+  .ct-run { gap: 10px; }
+  .ct-reply { gap: 6px; max-width: 100%; }
+  .ct-out { gap: 8px; }
+  .ct-sent { opacity: 0; transition: opacity 180ms ease; }
+  .ct-run[data-run="sent"] .ct-reply, .ct-run[data-run="thinking"] .ct-chip-run, .ct-run[data-run="thinking"] .ct-lines { display: none; }
+  .ct-run[data-run="thinking"] .ct-think { display: inline-flex; padding-block: 7px; color: var(--sys-dim); }
+  .ct-chip-run {
+    max-width: 100%; white-space: normal; color: var(--sys-accent); border-color: color-mix(in oklab, var(--sys-accent) 40%, transparent);
+    opacity: 0; transition: opacity 200ms ease;
+  }
+  .ct-lines { display: flex; flex-direction: column; gap: 4px; }
+  .ct-line { opacity: 0; transition: opacity 200ms ease; }
+  .ct-tail {
+    margin-block: 0; padding-inline: 14px; font-family: var(--sys-mono); font-size: var(--sys-fs-sm); color: var(--sys-dim);
+    opacity: 0; transition: opacity 200ms ease;
+  }
+  .ct-sent.is-in, .ct-line.is-in, .ct-run[data-run="done"] .ct-chip-run, .ct-run[data-run="done"] .ct-tail { opacity: 1; }
+
+  /* phone: the rail becomes a strip of role chips above the main */
+  @media (max-width: 720px) {
+    .chs-tool { height: auto; min-height: 420px; }
+    .ct-body { grid-template-columns: minmax(0, 1fr); grid-template-rows: auto minmax(0, 1fr); }
+    .ct-rail {
+      flex-direction: row; gap: 6px; padding-block: 8px; padding-inline: 12px; overflow-x: auto; overflow-y: hidden;
+      scrollbar-width: none; border-inline-end: 0; border-bottom: 1px solid var(--sys-line);
+    }
+    .ct-role, .ct-role + .ct-role { width: auto; height: 30px; padding-inline: 12px; border: 1px solid var(--sys-line); border-radius: var(--sys-radius-sm); }
+    .ct-role-blurb { display: none; }
+    .ct-role[aria-selected="true"] { border-color: var(--sys-accent); background: color-mix(in oklab, var(--sys-accent) 12%, transparent); }
+    .ct-role[aria-selected="true"]::before { content: none; }
+    .ct-main { overflow-y: visible; padding-block: 16px; padding-inline: 16px; }
+    .ct-starter { grid-template-columns: 16px minmax(0, 1fr); row-gap: 4px; padding-block: 9px; }
+    .ct-starter .ct-chip { grid-column: 2; justify-self: start; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .ct-view, .ct-role, .ct-starter, .ct-sent, .ct-line, .ct-chip-run, .ct-tail { transition: none; }
+    .ct-dots i, .ct-think i { animation: none; opacity: 1; }
+  }
+</style>

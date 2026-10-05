@@ -1,0 +1,97 @@
+---
+/**
+ * Room — a case study in the WORK room's material (Stream C, 2026-10-05). The homepage's work room has a material:
+ * paper on paper, hairlines at 18 % ink, JetBrains Mono keys, Instrument Sans body on a 36rem measure, Outfit hooks,
+ * the build's name centred at 2.125rem, UNDER THE HOOD folded inside the story card, ink by day and light ink by
+ * night, one rhythm (hook→object 32 · object→caption 24 · caption→read 48 · ¶ 16). This frame brings a study into it:
+ * the label and the hook at the top, then whatever the page puts in the slot — the LEAD OBJECT first, full width, in
+ * the first viewport — on the room's ground, with the room's inks and scale as custom properties (--rm-*).
+ * The chrome (rail · résumé · switch · floor) is CSLayout's, in its room material.
+ */
+import CSLayout from "../CSLayout.astro";
+
+interface Props {
+  title: string;
+  description?: string;
+  /** the mono label above the hook: the study's name (and, if any, its when) */
+  label: string;
+  /** the hook: one sentence in Outfit, the reader's own moment */
+  hook: string;
+  /** a class on the article, for the page's own scope (`chs`) */
+  cls?: string;
+}
+const { title, description, label, hook, cls = "" } = Astro.props;
+---
+
+<CSLayout title={title} description={description} material="room">
+  <article class:list={["rm", cls]}>
+    <header class="rm-head">
+      <p class="rm-label">{label}</p>
+      <h1 class="rm-hook">{hook}</h1>
+    </header>
+    <slot />
+  </article>
+</CSLayout>
+
+<style is:global>
+  /* ── the room's material on the study ── */
+  .room-cs {
+    --rm-ink: #141210;
+    --rm-dim: #6a6660;
+    --rm-paper: #e9e8e5;
+    --rm-card: #ffffff;
+    --rm-line: color-mix(in oklab, var(--rm-ink) 18%, transparent);
+    --rm-sans: "Instrument Sans", "Helvetica Neue", Arial, sans-serif;
+    --rm-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+    --rm-display: "Outfit", var(--rm-sans);
+    --rm-measure: 36rem;
+    --sp-3: 12px; --sp-4: 16px; --sp-6: 24px; --sp-8: 32px; --sp-12: 48px;
+    background: var(--rm-paper);
+    color: var(--rm-ink);
+    font-family: var(--rm-sans);
+    line-height: 1.6;
+  }
+  @media screen {
+    html[data-night] .room-cs { --rm-ink: #e8ecf4; --rm-dim: #7d8798; --rm-paper: #0b0e14; --rm-card: #1c1c1f; }
+  }
+  /* the study's prose does not take the older route's Geist/17px rules */
+  /* every paragraph inherits (the older route painted its own ink and size on `.cs-main p`, which leaked into the objects'
+     bubbles); the room's prose containers (.rm-read, the story card) set the body face on themselves */
+  .room-cs .cs-main p { font-family: inherit; font-size: inherit; line-height: inherit; color: inherit; margin: 0; max-width: none; }
+  .room-cs .cs-main a { color: inherit; text-decoration-color: color-mix(in oklab, var(--rm-ink) 40%, transparent); }
+  .room-cs .cs-main a:hover { text-decoration-color: var(--rm-ink); }
+  .room-cs .cs-main { padding-bottom: 64px; }
+  /* the floor: the room's inks */
+  .room-cs .floor { --floor-ink: var(--rm-ink); --floor-dim: var(--rm-dim); --floor-hot: var(--rm-ink); border-top-color: var(--rm-line); max-width: 1080px; padding-left: 0; padding-right: 0; }
+
+  /* ── the column: the work room's 1080, centred in the rail-inset area; 14 px gutters on phones ── */
+  .rm { max-width: 1080px; margin: 0 auto; padding: clamp(48px, 9vh, 112px) 24px 0; }
+  @media (max-width: 899px) { .rm { padding-left: 14px; padding-right: 14px; } }
+
+  /* ── the head: the mono label, then the hook (the work room's title face) ── */
+  .rm-head { margin: 0 0 var(--sp-8); }
+  .rm-label { margin: 0 0 var(--sp-3); font: 500 0.6875rem/1.5 var(--rm-mono); letter-spacing: 0.12em; text-transform: lowercase; color: var(--rm-dim); }
+  .rm-hook { margin: 0; max-width: 24ch; font: 500 2.125rem/1.15 var(--rm-display); letter-spacing: -0.01em; text-wrap: balance; color: var(--rm-ink); }
+  @media (max-width: 720px) { .rm-hook { font-size: 1.75rem; } }
+
+  /* ── an object on the ground: full width; its caption beneath in the mono ── */
+  .rm-object { margin: 0; }
+  .rm-object + .rm-object { margin-top: var(--sp-12); }
+  .rm-cap { margin: var(--sp-6) 0 0; max-width: var(--rm-measure); font: 600 0.75rem/1.5 var(--rm-mono); letter-spacing: 0.04em; color: var(--rm-ink); }
+
+  /* ── the one consequential number, set apart ── */
+  .rm-number { display: flex; align-items: baseline; gap: 20px; margin: var(--sp-12) 0 var(--sp-12); }
+  .rm-number b { font: 500 3.5rem/1 var(--rm-display); letter-spacing: -0.02em; }
+  .rm-number span { max-width: 44ch; font: 500 0.6875rem/1.6 var(--rm-mono); letter-spacing: 0.12em; text-transform: lowercase; color: var(--rm-dim); }
+  .rm-number + .rm-object { margin-top: 0; }
+
+  /* ── the read on the ground (when a study wants words outside the card): the measure, moment headings in the display face ── */
+  .rm-read { max-width: var(--rm-measure); margin: var(--sp-12) 0 0; font: 400 1rem/1.6 var(--rm-sans); }
+  .rm-read p + p { margin-top: var(--sp-4); }
+  .rm-m { margin: var(--sp-8) 0 var(--sp-3); font: 500 1.375rem/1.2 var(--rm-display); letter-spacing: -0.01em; color: var(--rm-ink); }
+  .rm-read > .rm-m:first-child { margin-top: 0; }
+
+  @media (prefers-reduced-motion: no-preference) {
+    .room-cs { transition: background-color 560ms ease, color 560ms ease; }
+  }
+</style>

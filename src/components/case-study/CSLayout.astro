@@ -22,9 +22,12 @@ interface Props {
   description?: string;
   /** Open-graph cover URL. Falls back to the site card, /og-tape.png. */
   ogImage?: string;
+  /** "room" = the WORK room's material (Stream C, 2026-10-05: Room.astro's tokens + faces on the body, the room's
+      fonts loaded); the default keeps the older studies as they are until they migrate. */
+  material?: "cs" | "room";
 }
 
-const { title, description, ogImage = "/og-tape.png" } = Astro.props;
+const { title, description, ogImage = "/og-tape.png", material = "cs" } = Astro.props;
 // Same source of truth as Layout.astro: astro.config `site` (the www host —
 // the apex 308-redirects to it, so canonical/og URLs must not name the apex).
 const siteOrigin = Astro.site?.origin ?? "https://www.uxjon.com";
@@ -54,8 +57,15 @@ const railBack = Astro.url.pathname.startsWith("/case-studies/") ? "resume" : "h
     {/* Same pre-paint night bootstrap as Layout.astro — the case-study
         route follows the sitewide day/night axis. */}
     <NightBoot />
+    {material === "room" && (
+      <>
+        {/* the work room's three faces (Layout.astro loads the same link for the homepage objects) */}
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+        <link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600&family=Outfit:wght@300;400;500&display=swap" rel="stylesheet" />
+      </>
+    )}
   </head>
-  <body class="cs-body">
+  <body class:list={["cs-body", { "room-cs": material === "room" }]}>
     {/* The site's nav column (home + résumé + night switch), themed by the
         sitewide axis, with the comet trail riding its right edge. */}
     <AwayRail back={railBack} />
