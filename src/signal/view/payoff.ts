@@ -78,7 +78,7 @@ function tape(sgm: HTMLElement, onSeen: () => void): Payoff {
   head.append(name, yours);
   const wave = el('div', 'sgx-tape-wave');
   const firstLn = el('span', 'sgx-tape-first');
-  label.append(head, wave, firstLn);
+  label.append(head, firstLn, wave);   // the line sits under the name, above the waveform: the band over the hubs
   const hubL = el('img', 'sgx-hub sgx-hub-l') as HTMLImageElement; hubL.src = '/studio/tape-hub-l.webp'; hubL.alt = '';
   const hubR = el('img', 'sgx-hub sgx-hub-r') as HTMLImageElement; hubR.src = '/studio/tape-hub-r.webp'; hubR.alt = '';
   const reelL = el('img', 'sgx-reel sgx-reel-l') as HTMLImageElement; reelL.src = '/studio/tape-core-l.webp'; reelL.alt = '';
