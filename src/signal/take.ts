@@ -119,7 +119,23 @@ export interface Take {
   reset(): void;
   /** The song as a WAV, or null when nothing sounded. */
   wav(): { blob: Blob; frames: number; seconds: number } | null;
+  /** The song's shape: `n` peaks (0..1) over the trimmed run, for a drawn waveform (the payoff, 2026-10-05). Read-only. */
+  peaks(n: number): number[];
   dispose(): void;
+}
+
+/** `n` peaks over the trimmed run of chunks, each the max of its share, normalised to the loudest. Pure. */
+export function peaksOf(chunks: ReadonlyArray<TakeChunk>, sampleRate: number, n: number): number[] {
+  const b = trimBounds(chunks, sampleRate);
+  if (!b || n <= 0) return [];
+  const run = chunks.slice(b[0], b[1]);
+  const out = new Array<number>(n).fill(0);
+  for (let i = 0; i < run.length; i++) {
+    const k = Math.min(n - 1, Math.floor((i / run.length) * n));
+    if (run[i].peak > out[k]) out[k] = run[i].peak;
+  }
+  const top = Math.max(...out, 1e-6);
+  return out.map((v) => v / top);
 }
 
 /** Hang the take on the exit. Resolves null when the browser has no AudioWorklet. */
@@ -152,6 +168,7 @@ export async function createTake(ctx: AudioContext, tap: AudioNode): Promise<Tak
       const w = wavOf(chunks, sr);
       return w ? { ...w, seconds: w.frames / sr } : null;
     },
+    peaks: (n) => peaksOf(chunks, sr, n),
     dispose() {
       node.port.onmessage = null;
       try { tap.disconnect(node); } catch { /* */ }

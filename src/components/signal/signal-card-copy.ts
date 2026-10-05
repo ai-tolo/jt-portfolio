@@ -7,12 +7,14 @@ export type CardRow = { k: string; tool: string; html: string };
 export const CARD = {
   title: "SIGNAL",
   // DRAFT — Jon rewrites
+  // 2026-10-05 (the first-song round): the pitch in one paragraph — the first file, how it got made, what it is named,
+  // what to do with it — and one line on the instrument. Fewer words than the first draft (was four paragraphs).
   story: [
-    "Most people have never made a piece of music. Not because they can't. Because the first hour is all setup: the software, the account, the interface, the fear of the interface. I wanted the first hour to be the fun part.",
-    "This is an instrument built from my studio. A drum machine, a 303-style bass, and a keyboard voiced with rips of my own synths. All of it is Web Audio, running in this page. Turn it on and play the letters. Hold a few and it finds you a chord.",
-    "It listens the whole time. There is nothing to arm and nothing to name. When something happens that you like, press export and the song is yours: a WAV with the key and the tempo in its name, ready for whatever you make music in.",
-    "The studio version of this prints stems into Ableton. This one prints a first song for anyone who has never had one.",
+    "For a lot of people this is the first piece of music they have ever made, and the first audio file. It happened the easy way: you turned it on and played the letters. The instrument listened the whole time, so there was nothing to arm and nothing to name. Press export and the song is yours, a WAV named for the day, the key and the tempo, ready for whatever you make music in next.",
+    "Under the keys is my studio: a drum machine, a 303-style bass, and a keyboard voiced with rips of my own synths, all of it Web Audio running in this page.",
   ],
+  // DRAFT — the one line a first-timer sees with their file (once per device)
+  first: "That's your first song. It's in your downloads.",
   howTitle: "how to play",
   hoodTitle: "under the hood",
   rows: [
