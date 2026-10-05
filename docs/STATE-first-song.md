@@ -17,11 +17,11 @@ Brief: `docs/PROMPT-finish-line.md` → STREAM B. Laws: THE INSTRUMENT is sacred
 ## Verified
 - Frames (scratch `song-print.mjs`): /signal/?mute=1&test=1 at 1440 day + night and 1100 day + night: alive → press → +260 band in (DRUMS lit) → +640 mid (KEYS) → +1000 out (BASS) → +1500 `0:03 / saved` → key → bpm → first → the clock; 0 console errors; scrollWidth == innerWidth; the device 1256×834 at 1440, 923×614 at 1100. Sheet `~/Documents/studio-build/first-song/print-sheet.png` (copy on ~/Desktop: first-song-the-print.png); frames `print-*.png`.
 - WAV assertion (scratch `song-wav-assert.mjs`) 7/7: RIFF/WAVE · 2 ch · 16-bit · 48 kHz · bytes agree · the head's clock stopped on the file's length · −15 dBFS RMS · the file holds the played span + the take's 0.55 s pad/tail + the voice's own decay.
-- The gate `--round r5` was ALL PASS ×3 browsers BEFORE any edit (scratch `gate-before.log`); the AFTER run's verdict is in scratch `gate-after.log` (see the chat report / the memory).
+- The gate `--round r5` ALL PASS ×3 browsers BEFORE any edit and ALL PASS ×3 AFTER the build (chromium · webkit · firefox, 0 FAIL, nothing leaked; `node scripts/signal/gate.mjs --round r5 --port 4647 --cdp-port 9365 --scratch <scratchpad>`).
 - The directions round that led here (the tape · the sleeve · the device, the 3-lens panel, Jon's pick) is in file memory `finish_line_round`.
 
 ## Open
-- The gate's after-verdict (running at the time of writing). QA law: no audio in a live preview pane; `?mute=1` headless only.
+- Nothing on this lane: Jon's hands on :4638/signal/ (power on, play, press export), then "push it". QA law: no audio in a live preview pane; `?mute=1` headless only.
 
 ## Ship (only on Jon's "push it", from the MAIN checkout)
 git -C ~/sites/jt-portfolio branch backup/main-pre-$(date +%F) main
