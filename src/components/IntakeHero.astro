@@ -10,6 +10,8 @@
 //          fonts loaded once in the base layout:
 //          <link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;500&family=Outfit:wght@300;400;500&display=swap" rel="stylesheet">
 import run from '../data/intake-run.json';
+// LIVE (Stream A, 2026-10-05): the live control's own words, Jon's to edit
+import { LIVE_COPY } from './studio/objects-copy';
 
 interface Props {
   step?: number;
@@ -18,6 +20,7 @@ interface Props {
 }
 const { step = 9, theme = 'auto', class: cls = '' } = Astro.props;
 const runJson = JSON.stringify(run);
+const liveJson = JSON.stringify(LIVE_COPY);
 // the host may seat the room's words in the module's own columns (2026-09-24):
 // a `head` slot above the watch (left axis), a `cap` slot at the run's foot
 const hasHead = Astro.slots.has('head');
@@ -25,6 +28,7 @@ const hasCap = Astro.slots.has('cap');
 ---
 <section class={`intake-hero${theme !== 'auto' ? ' ' + theme : ''}${cls ? ' ' + cls : ''}${hasHead ? ' has-head' : ''}`} data-intake-hero data-step={step} aria-label="Intake: one voice memo becoming tickets">
   <script type="application/json" data-intake-run set:html={runJson}></script>
+  <script type="application/json" data-intake-live set:html={liveJson}></script>
   <div class="grid">
     {hasHead && <div class="hook"><slot name="head" /></div>}
     <div class="watch-col">
@@ -32,6 +36,7 @@ const hasCap = Astro.slots.has('cap');
         <div class="screen">
           <div class="face face-rec">
             <div class="brand">INTAKE</div>
+            <div class="livemark"><i></i>{LIVE_COPY.listening}</div>
             <div class="wave">
           <i style="height:2.53cqw;--m:16%;animation-duration:1.98s;animation-delay:0.00s"></i>
           <i style="height:4.43cqw;--m:22%;animation-duration:2.30s;animation-delay:-0.40s"></i>
@@ -71,14 +76,26 @@ const hasCap = Astro.slots.has('cap');
             <div class="saved">Saved</div>
             <div class="meta">{run.memo.id} · {run.memo.duration}</div>
           </div>
-          <button type="button" class="replay" aria-label="Replay the run">
-            <svg viewBox="0 0 20 20" class="ico" aria-hidden="true"><path d="M4 10a6 6 0 1 0 1.8-4.3" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M4 3v3.5h3.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-            Replay
-          </button>
+          <div class="pills">
+            <button type="button" class="replay" aria-label="Replay the run">
+              <svg viewBox="0 0 20 20" class="ico" aria-hidden="true"><path d="M4 10a6 6 0 1 0 1.8-4.3" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M4 3v3.5h3.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              Replay
+            </button>
+            <button type="button" class="talk" data-talk aria-label="Talk to it: say your own things to do">
+              <svg viewBox="0 0 20 20" class="ico" aria-hidden="true"><rect x="7" y="2.5" width="6" height="10" rx="3" fill="none" stroke="currentColor" stroke-width="2"/><path d="M4.5 9.5a5.5 5.5 0 0 0 11 0M10 15v2.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+              {LIVE_COPY.talk}
+            </button>
+          </div>
         </div>
         <img src="/intake/watch-blank.png" alt="" width="521" height="781" loading="lazy" decoding="async" />
       </figure>
-      <div class="hint">tap stop</div>
+      <div class="hint">
+        <span class="hint-w" data-hint>tap stop</span>
+        <button type="button" class="hint-talk" data-talk aria-label="Talk to it: say your own things to do">
+          <svg viewBox="0 0 20 20" class="ico" aria-hidden="true"><rect x="7" y="2.5" width="6" height="10" rx="3" fill="none" stroke="currentColor" stroke-width="2"/><path d="M4.5 9.5a5.5 5.5 0 0 0 11 0M10 15v2.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+          {LIVE_COPY.talk}
+        </button>
+      </div>
       {hasCap && <div class="cap"><slot name="cap" /></div>}
     </div>
     <div class="run">
@@ -86,7 +103,7 @@ const hasCap = Astro.slots.has('cap');
         <i class="node node-transcript"></i>
         <div class="body">
           <div class="label">transcript</div>
-          <div class="stream"><div><span class="typed"></span><span class="caret"></span></div></div>
+          <div class="stream"><div class="typedwrap"><span class="typed"></span><span class="interim"></span><span class="caret"></span></div><textarea class="typein" rows="5" maxlength="1500" spellcheck="false" aria-label="Type what you would have said"></textarea></div>
         </div>
       </div>
       <div class="row">
@@ -95,7 +112,7 @@ const hasCap = Astro.slots.has('cap');
           <div class="label">verdict</div>
           <div class="verdict">
             {['execute', 'surface', 'store'].map((v) => (
-              <span data-on={run.verdict === v ? '' : undefined}>{v}</span>
+              <span data-on={(run.verdicts ?? [run.verdict]).includes(v) ? '' : undefined}>{v}</span>
             ))}
           </div>
         </div>
@@ -122,7 +139,7 @@ const hasCap = Astro.slots.has('cap');
             {run.tickets.map((t) => (
               <article class="card">
                 <div class="card-top">
-                  <span class="when">{run.when ?? 'today'}</span>
+                  <span class="when">{('when' in t && t.when) || run.when || 'today'}</span>
                   <span class="chip">{t.kind.toUpperCase()}</span>
                   <span class="card-x" aria-hidden="true"><svg width="12" height="12" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><path d="M3 3l8 8M11 3l-8 8"></path></svg></span>
                 </div>
@@ -300,7 +317,7 @@ const hasCap = Astro.slots.has('cap');
 .intake-hero .check svg { width: 8.86cqw; height: 8.86cqw; }
 .intake-hero .saved { position: absolute; left: 0; top: 63.29cqw; width: 100%; text-align: center; font-size: 7.59cqw; font-weight: 400; letter-spacing: 0.01em; line-height: 1; color: #F2F0EA; animation: ih-in .5s ease-out .3s both; }
 .intake-hero .meta { position: absolute; left: 0; top: 75.32cqw; width: 100%; text-align: center; font-family: var(--mono); font-size: 3.48cqw; letter-spacing: 0.08em; color: #8C8A84; animation: ih-in .5s ease-out .4s both; }
-.intake-hero .hint { text-align: center; font: 500 0.6875rem/1.5 var(--mono); letter-spacing: 0.12em; color: var(--dim); }
+.intake-hero .hint { display: flex; align-items: center; justify-content: center; flex-wrap: wrap; gap: 6px 12px; min-height: 26px; text-align: center; font: 500 0.6875rem/1.5 var(--mono); letter-spacing: 0.12em; color: var(--dim); }
 .intake-hero.s1 .hint { visibility: hidden; }
 .intake-hero .fly { display: none; position: absolute; width: 12px; height: 12px; border-radius: 50%; background: var(--accent); box-shadow: 0 0 18px var(--accent); z-index: 3; pointer-events: none; }
 .intake-hero.s1:not(.s3) .fly { display: block; animation: ih-fly 1s cubic-bezier(.4, 0, .2, 1) both; }
@@ -381,12 +398,56 @@ const hasCap = Astro.slots.has('cap');
 
 /* the replay is the phone's pill, at the foot of the screen (Jon, 2026-09-22); the
    screen is the query container, so its cqw match the phone's */
-.intake-hero .replay { display: none; position: absolute; left: 0; right: 0; bottom: 6.5cqw; z-index: 3; width: max-content; margin-inline: auto; align-items: center; gap: 1.4cqw; padding: 2.4cqw 4.6cqw; border: 0; border-radius: 999px; background: #ECE9E2; color: #1A1917; font: 500 3.5cqw/1 var(--sans); cursor: pointer; pointer-events: auto; } /* the page's paper on the screen (Jon, 2026-09-24): plainly not the device's own UI */
-.intake-hero .replay .ico { width: 1.1em; height: 1.1em; }
-.intake-hero .replay:hover { background: #DDD9CF; }
-.intake-hero .replay:focus-visible { outline: 2px solid #F2F0EA; outline-offset: 2px; }
-.intake-hero.s6 .replay { display: inline-flex; animation: ih-in .4s ease-out .5s both; }
+.intake-hero .pills { display: none; position: absolute; left: 0; right: 0; bottom: 6.5cqw; z-index: 3; justify-content: center; gap: 2cqw; pointer-events: none; }
+.intake-hero .replay, .intake-hero .talk { display: inline-flex; align-items: center; gap: 1.4cqw; padding: 2.4cqw 4.6cqw; border: 0; border-radius: 999px; background: #ECE9E2; color: #1A1917; font: 500 3.5cqw/1 var(--sans); cursor: pointer; pointer-events: auto; } /* the page's paper on the screen (Jon, 2026-09-24): plainly not the device's own UI */
+.intake-hero :is(.replay, .talk) .ico { width: 1.1em; height: 1.1em; }
+.intake-hero :is(.replay, .talk):hover { background: #DDD9CF; }
+.intake-hero :is(.replay, .talk):focus-visible { outline: 2px solid #F2F0EA; outline-offset: 2px; }
+.intake-hero.s6 .pills { display: flex; }
+.intake-hero.s6 .pills > button { animation: ih-in .4s ease-out .5s both; }
 .intake-hero .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
+/* ---- LIVE (Stream A, 2026-10-05): the same stage on the stranger's own words. The talk control (a pill at the
+   screen's foot beside Replay once the replay has run, and a small one in the hint at rest) opens the microphone on
+   their click only — never on load, scroll or hover. While it listens the face counts down from 1:30 and the
+   transcript row prints what the browser's own speech service hears; a tap on stop runs the stage on those words:
+   heard → parsing → the verdict → the tickets → the cards, and the face ends on "nothing kept". A browser with no
+   speech service (Firefox), or a declined microphone, types instead: the transcript box is the input. ---- */
+.intake-hero .hint-talk { display: inline-flex; align-items: center; gap: 6px; height: 26px; padding: 0 10px; border: 1px solid var(--btn-line); border-radius: 999px; background: var(--btn); color: var(--ink); font: inherit; letter-spacing: inherit; text-transform: lowercase; cursor: pointer; }
+.intake-hero .hint-talk .ico { width: 12px; height: 12px; }
+.intake-hero .hint-talk:hover { border-color: var(--accent); color: var(--accent); }
+.intake-hero .hint-talk:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.intake-hero.live .hint-talk { display: none; }
+.intake-hero.live .hint { visibility: visible; max-width: 36ch; margin-inline: auto; }
+.intake-hero.live.s1 .hint { visibility: hidden; }
+.intake-hero .livemark { display: none; position: absolute; left: 0; top: 14.5cqw; width: 100%; justify-content: center; align-items: center; gap: 1.8cqw; font-family: var(--mono); font-size: 3.2cqw; letter-spacing: 0.14em; color: #8C8A84; }
+.intake-hero .livemark i { width: 2.2cqw; height: 2.2cqw; border-radius: 50%; background: #FF3B30; animation: ih-blink 1.2s steps(1) infinite; }
+.intake-hero.live .livemark { display: flex; }
+.intake-hero.live.asking .livemark i { background: #5A5955; animation: none; }
+.intake-hero.live .time { color: var(--accent); }
+.intake-hero.live .wave { transform: scaleY(var(--amp, 0.4)); transition: transform .35s ease; }
+.intake-hero.live.asking .wave, .intake-hero.live.typing .wave { transform: scaleY(0.25); }
+/* while it listens the transcript row is awake: the module's own s2, set by the live script from the press */
+.intake-hero .interim { color: var(--grey); }
+/* typed: the transcript box is the input */
+.intake-hero .typein { display: none; width: 100%; height: 100%; box-sizing: border-box; margin: 0; padding: 8px 10px; resize: none; border: 1px solid var(--card-line); border-radius: 10px; background: transparent; color: var(--ink-2); font: inherit; line-height: 1.65; outline: none; }
+.intake-hero .typein:focus { border-color: var(--accent); }
+.intake-hero.typing .stream { visibility: visible; -webkit-mask-image: none; mask-image: none; justify-content: stretch; }
+.intake-hero.typing .typedwrap { display: none; }
+.intake-hero.typing .typein { display: block; }
+/* parsing: the verdict's node breathes until the fate comes back */
+.intake-hero.parsing .run > .row:nth-of-type(2) .label { opacity: 1; }
+.intake-hero.parsing .node-verdict { opacity: 1; transform: none; background: var(--amber); animation: ih-breathe 1.1s ease-in-out infinite; }
+.intake-hero.parsing .run > .row:nth-of-type(2)::before { transform: none; transition: transform .55s ease-out .2s; }
+/* provenance: a local parse says so on the stub and on the card (the real Intake's chip for its Ollama fallback) */
+.intake-hero .lp { font-family: var(--mono); font-size: 9px; font-weight: 600; letter-spacing: 0.14em; text-transform: uppercase; color: var(--grey); border: 1px dashed color-mix(in oklab, var(--grey) 70%, transparent); border-radius: 4px; padding: 3px 6px; white-space: nowrap; }
+.intake-hero .stub .lp { margin-left: 8px; padding: 1px 5px; vertical-align: middle; }
+.intake-hero .card.exec { border-left-color: var(--amber); }
+.intake-hero .card.exec .chip:not(.lp) { color: var(--amber); border-color: color-mix(in oklab, var(--amber) 55%, transparent); }
+/* a longer live run may need more room than the art run reserved: the run grows ONCE, before the cards drop, and glides */
+@container hero (min-width: 820px) {
+  .intake-hero .run { transition: min-height .55s ease; }
+}
 
 @keyframes ih-bar { 0%, 100% { transform: scaleY(.5); } 50% { transform: scaleY(1); } }
 @keyframes ih-blink { 0%, 49% { opacity: 1; } 50%, 100% { opacity: 0; } }
@@ -399,11 +460,12 @@ const hasCap = Astro.slots.has('cap');
 @media (prefers-reduced-motion: reduce) {
   .intake-hero .wave i, .intake-hero .caret, .intake-hero .fly, .intake-hero.s4:not(.s5) .node-deck { animation: none; }
   .intake-hero .stop::before, .intake-hero .stop::after { animation: none; opacity: 0.75; }
-  .intake-hero .card, .intake-hero .stream, .intake-hero .tickets, .intake-hero .replay, .intake-hero .flat, .intake-hero .check, .intake-hero .saved, .intake-hero .meta { animation-duration: .01s !important; animation-delay: 0s !important; }
+  .intake-hero .card, .intake-hero .stream, .intake-hero .tickets, .intake-hero .pills > button, .intake-hero .flat, .intake-hero .check, .intake-hero .saved, .intake-hero .meta { animation-duration: .01s !important; animation-delay: 0s !important; }
 }
 </style>
 
 <script>
+import { localParse } from '../lib/intake-local.ts';
 document.querySelectorAll('[data-intake-hero]').forEach((hero) => {
   const run = JSON.parse(hero.querySelector('script[data-intake-run]').textContent);
   const words = run.transcript.trim().split(/\s+/);
@@ -460,18 +522,19 @@ document.querySelectorAll('[data-intake-hero]').forEach((hero) => {
     timers.forEach(clearTimeout); timers = [];
     stage(0); typed.textContent = ''; caret.hidden = false; status.textContent = '';
   }
-  stopBtn.addEventListener('click', play);
-  hero.querySelector('.replay').addEventListener('click', reset);
+  stopBtn.addEventListener('click', () => { if (live.active()) live.finish('stop'); else play(); });
+  hero.querySelector('.replay').addEventListener('click', () => { live.leave(); reset(); });
   // the host (StudioOne's first settle) may FINISH a run it started — the
   // visitor pressed during it, so it lands on its end frame at once — or
   // REWIND one the visitor scrolled away from before it said anything
   hero.addEventListener('hero:finish', () => {
+    if (live.on()) return;
     if (!hero.classList.contains('s1') || hero.classList.contains('s6')) return;
     timers.forEach(clearTimeout); timers = [];
     typed.textContent = words.join(' '); caret.hidden = true;
     stage(6); status.textContent = run.tickets.length + ' tickets in the deck.';
   });
-  hero.addEventListener('hero:reset', reset);
+  hero.addEventListener('hero:reset', () => { live.leave(); reset(); });
 
   // the run's final height, measured with every stage on and no motion, so
   // the column can reserve it beside the watch (see --run-final in the styles);
@@ -492,5 +555,229 @@ document.querySelectorAll('[data-intake-hero]').forEach((hero) => {
   if (document.fonts && document.fonts.ready) document.fonts.ready.then(reserve);
   let rt = 0;
   new ResizeObserver(() => { clearTimeout(rt); rt = setTimeout(reserve, 80); }).observe(hero);
+
+  // ── LIVE (Stream A, 2026-10-05): the same stage, the stranger's own words. Nothing opens until they press talk.
+  // Speech → text is the browser's own service (SpeechRecognition; interim results so the transcript types as they
+  // talk); the triage is the site's one function (/api/intake, Claude) with the local rule-based parse behind it, which
+  // says so with a chip. Nothing is stored anywhere: the words live in this closure and leave with the page. ──
+  const LIVE = JSON.parse(hero.querySelector('script[data-intake-live]').textContent);
+  const MAX_CHARS = 1500, MAX_S = 90;
+  const SRC = window.SpeechRecognition || window.webkitSpeechRecognition || null;
+  const cid = Array.from(hero.attributes).map((a) => a.name).find((n) => n.startsWith('data-astro-cid-'));
+  const scope = (root) => { if (!cid) return; root.querySelectorAll('*').forEach((el) => el.setAttribute(cid, '')); };
+  const esc = (x) => String(x).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+  const timeEl = hero.querySelector('.face-rec .time');
+  const savedEl = hero.querySelector('.face-saved .saved');
+  const metaEl = hero.querySelector('.face-saved .meta');
+  const hintEl = hero.querySelector('[data-hint]');
+  const interimEl = hero.querySelector('.interim');
+  const typein = hero.querySelector('.typein');
+  const ticketsEl = hero.querySelector('.tickets');
+  const deckEl = hero.querySelector('.deck');
+  const verdictEl = hero.querySelector('.verdict');
+  const capEl = hero.querySelector('.cap .wk-cap');
+  const art = { time: timeEl.textContent, saved: savedEl.textContent, meta: metaEl.textContent, hint: hintEl.textContent, tickets: ticketsEl.innerHTML, deck: deckEl.innerHTML, verdict: verdictEl.innerHTML, cap: capEl ? capEl.textContent : '', reserve: '' };
+  const X = '<span class="card-x" aria-hidden="true"><svg width="12" height="12" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><path d="M3 3l8 8M11 3l-8 8"></path></svg></span>';
+  const ACTS = '<div class="card-actions"><button type="button" class="act primary">Claude <svg width="11" height="11" viewBox="0 0 12 12" aria-hidden="true"><path d="M6 0.5 L7.3 4.7 L11.5 6 L7.3 7.3 L6 11.5 L4.7 7.3 L0.5 6 L4.7 4.7 Z" fill="currentColor"></path></svg></button><button type="button" class="act">Zzzz</button><button type="button" class="act">Add to…</button></div>';
+  const fmt = (sec) => { const t = Math.max(0, Math.round(sec)); return Math.floor(t / 60) + ':' + String(t % 60).padStart(2, '0'); };
+  let mode = 'idle';   // idle · asking · listening · typing · transcribing · parsing · landing · done
+  let rec = null, prior = '', session = '', interim = '', t0 = 0, tick = 0, settleT = 0, stopping = false, lastLen = 0, lastAt = 0, dur = 0, forceDown = false, liveTimers = [];
+  const lat = (ms, fn) => liveTimers.push(setTimeout(fn, reduce ? Math.round(ms * 0.15) : ms));
+  const setMode = (m) => { mode = m; hero.dataset.live = m; };
+  const hint = (t) => { hintEl.textContent = t; };
+  const text = () => (prior + ' ' + session + ' ' + interim).replace(/\s+/g, ' ').trim().slice(0, MAX_CHARS);
+  const paint = () => {
+    const f = (prior + ' ' + session).replace(/\s+/g, ' ').trim();
+    typed.textContent = f + (f && interim ? ' ' : '');
+    interimEl.textContent = interim;
+    const len = text().length;
+    if (len !== lastLen) { lastAt = performance.now(); lastLen = len; }
+    amp();
+  };
+  const amp = () => { hero.style.setProperty('--amp', mode === 'listening' && performance.now() - lastAt < 900 ? '1' : '0.4'); };
+  const enter = () => {   // the stage is theirs: whatever the art run was doing stops and clears
+    if (mode === 'idle' && !hero.classList.contains('live')) art.reserve = runEl.style.getPropertyValue('--run-final');   // the floor the words beneath were laid on
+    leave(); reset();
+    hero.classList.add('live', 's2');   // s2 wakes the transcript row AND tells the host's self-run the stage is spent
+    prior = session = interim = ''; stopping = false; lastLen = 0; lastAt = 0; dur = 0;
+    typed.textContent = ''; interimEl.textContent = ''; caret.hidden = false;
+    savedEl.textContent = LIVE.heard;
+    status.textContent = '';
+  };
+  const listening = () => {
+    setMode('listening'); hero.classList.remove('asking'); hint(LIVE.privacy);
+    caret.hidden = false;
+    t0 = performance.now();
+    clearInterval(tick);
+    tick = setInterval(() => { const left = MAX_S - (performance.now() - t0) / 1000; timeEl.textContent = fmt(left); amp(); if (left <= 0) finish('time'); }, 200);
+    status.textContent = 'Listening.';
+  };
+  const toTyped = (why) => {
+    if (rec) { try { rec.onend = null; rec.abort(); } catch (_) { /* */ } rec = null; }
+    clearInterval(tick);
+    setMode('typing'); hero.classList.remove('asking'); hero.classList.add('typing'); hint(why);
+    t0 = performance.now();
+    timeEl.textContent = '0:00';
+    tick = setInterval(() => { timeEl.textContent = fmt((performance.now() - t0) / 1000); }, 500);
+    typein.value = '';
+    typein.focus();
+  };
+  const start = () => {   // their click is the one opener
+    enter();
+    if (!SRC) { toTyped(LIVE.noSpeech); return; }
+    setMode('asking'); hero.classList.add('asking'); hint(LIVE.asking); timeEl.textContent = fmt(MAX_S);
+    rec = new SRC();
+    rec.continuous = true; rec.interimResults = true; rec.maxAlternatives = 1;
+    rec.lang = document.documentElement.lang || navigator.language || 'en-US';
+    rec.onstart = () => { if (mode === 'asking') listening(); };
+    rec.onaudiostart = rec.onstart;
+    rec.onresult = (e) => {
+      let f = '', i = '';
+      for (let k = 0; k < e.results.length; k++) { const r = e.results[k]; const w = r[0] ? r[0].transcript : ''; if (r.isFinal) f += w + ' '; else i += w; }
+      session = f.trim(); interim = i.trim();
+      if (mode === 'asking') listening();
+      paint();
+      if (text().length >= MAX_CHARS) finish('cap');
+    };
+    rec.onerror = (e) => {
+      const err = e && e.error;
+      if (err === 'not-allowed' || err === 'service-not-allowed' || err === 'audio-capture') { toTyped(LIVE.denied); return; }
+      if (err === 'no-speech' || err === 'aborted') return;   // the service's silence timer: onend restarts it below
+      if (!text()) toTyped(LIVE.noSpeech);
+    };
+    rec.onend = () => {
+      if (stopping) { settle(); return; }
+      if (mode === 'listening' || mode === 'asking') {   // a session ends on silence: carry its words, keep listening
+        prior = (prior + ' ' + session).trim(); session = ''; interim = '';
+        try { rec.start(); } catch (_) { settleT = setTimeout(() => { try { rec.start(); } catch (__) { /* */ } }, 300); }
+      }
+    };
+    try { rec.start(); } catch (_) { toTyped(LIVE.noSpeech); }
+  };
+  const finish = (why) => {
+    if (mode !== 'listening' && mode !== 'asking' && mode !== 'typing') return;
+    clearInterval(tick);
+    dur = Math.max(1, (performance.now() - t0) / 1000);
+    if (mode === 'typing') { prior = typein.value.trim(); session = interim = ''; typein.blur(); hero.classList.remove('typing'); }
+    stopping = true;
+    setMode('transcribing');
+    hero.classList.remove('asking');
+    stage(2);   // the face: heard; the transcript row stays
+    metaEl.textContent = LIVE.source + ' · ' + fmt(dur);
+    paint();
+    if (rec) { try { rec.stop(); } catch (_) { settle(); return; } settleT = setTimeout(settle, 1500); }   // the last finals land in onend
+    else settle();
+  };
+  const settle = () => {
+    if (mode !== 'transcribing') return;
+    clearTimeout(settleT);
+    if (rec) { try { rec.onend = null; rec.onresult = null; rec.onerror = null; } catch (_) { /* */ } rec = null; }
+    prior = text(); session = interim = ''; paint(); caret.hidden = true;
+    if (!prior) { empty(); return; }
+    parse(prior);
+  };
+  const empty = () => {
+    stopping = false;
+    stage(0); setMode('idle');
+    hero.classList.remove('live', 'asking', 'typing');
+    timeEl.textContent = art.time; savedEl.textContent = art.saved; metaEl.textContent = art.meta;
+    hint(LIVE.empty); status.textContent = LIVE.empty;
+  };
+  const parse = async (src) => {
+    setMode('parsing'); hero.classList.add('parsing');
+    status.textContent = 'Heard. Parsing.';
+    let result = null;
+    const ac = new AbortController();
+    const tt = setTimeout(() => ac.abort(), 10000);
+    try {
+      if (forceDown) throw new Error('down');
+      const r = await fetch('/api/intake', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ text: src }), signal: ac.signal });
+      const j = await r.json();
+      if (r.ok && j && Array.isArray(j.tickets) && Array.isArray(j.verdicts) && !j.fallback) result = j;
+    } catch (_) { /* the local parse */ }
+    clearTimeout(tt);
+    if (mode !== 'parsing') return;   // left meanwhile
+    if (!result) result = localParse(src);
+    land(result);
+  };
+  const land = (r) => {
+    hero.classList.remove('parsing');
+    verdictEl.querySelectorAll('span').forEach((sp) => { if (r.verdicts.includes(sp.textContent.trim())) sp.setAttribute('data-on', ''); else sp.removeAttribute('data-on'); });
+    const local = r.source === 'local';
+    const lp = local ? '<span class="lp">' + esc(LIVE.local) + '</span>' : '';
+    ticketsEl.innerHTML = r.tickets.map((t) => '<div class="stub"><span class="p">{ </span><span class="k">kind</span><span class="p">: </span><span class="v">"' + esc(t.kind) + '"</span><span class="p">, </span><span class="k">items</span><span class="p">: </span><span class="v">' + t.items.length + '</span><span class="p">, </span><span class="k">title</span><span class="p">: </span><span class="v">"' + esc(t.title) + '"</span><span class="p"> }</span>' + lp + '</div>').join('')
+      + (r.stored ? '<div class="stub stored"><span class="p">{ </span><span class="k">store</span><span class="p">: </span><span class="v">"' + esc(r.stored) + '"</span><span class="p"> }</span>' + lp + '</div>' : '');
+    deckEl.innerHTML = r.tickets.map((t) => '<article class="card' + (t.execute ? ' exec' : '') + '"><div class="card-top"><span class="when">' + esc(t.when || 'today') + '</span><span class="chip">' + esc(String(t.kind).toUpperCase()) + '</span>' + (local ? '<span class="chip lp">' + esc(LIVE.local) + '</span>' : '') + X + '</div><h3 class="card-title">' + esc(t.title) + '</h3><ul class="card-items">' + t.items.map((i) => '<li>' + esc(i) + '</li>').join('') + '</ul>' + ACTS + '<div class="card-src">' + esc(t.execute ? LIVE.preview : LIVE.source + ' · ' + LIVE.kept) + '</div></article>').join('');
+    scope(ticketsEl); scope(deckEl);
+    reseat();
+    const n = r.tickets.length;
+    const nWord = n === 0 ? 'Nothing to file' : (n === 1 ? '1 ticket' : n + ' tickets') + ' it became';
+    setMode('landing');
+    lat(0, () => { stage(3); status.textContent = 'Verdict: ' + r.verdicts.join(' and ') + '.'; });
+    lat(900, () => stage(4));
+    lat(2700, () => { stage(5); status.textContent = nWord + '. ' + LIVE.kept + '.'; });
+    lat(3850, () => {
+      stage(6); setMode('done');
+      metaEl.textContent = fmt(dur) + ' · ' + LIVE.kept;
+      if (capEl) capEl.textContent = LIVE.caption.replace('{dur}', fmt(dur)).replace('{n}', nWord);
+    });
+  };
+  const reseat = () => {   // the reserve may GROW once for a longer run, before anything drops, and glides; it never shrinks below the art run's
+    const before = runEl.style.getPropertyValue('--run-final');
+    reserve();
+    let after = runEl.style.getPropertyValue('--run-final');
+    if (art.reserve && parseFloat(after) < parseFloat(art.reserve)) { after = art.reserve; runEl.style.setProperty('--run-final', after); }
+    if (before && after && after !== before) { runEl.style.setProperty('--run-final', before); void runEl.offsetHeight; runEl.style.setProperty('--run-final', after); }
+  };
+  const leave = () => {   // back to the art run: its words, its cards, its reserve
+    liveTimers.forEach(clearTimeout); liveTimers = [];
+    clearInterval(tick); clearTimeout(settleT);
+    if (rec) { try { rec.onend = null; rec.abort(); } catch (_) { /* */ } rec = null; }
+    stopping = false;
+    const was = mode !== 'idle' || hero.classList.contains('live');
+    hero.classList.remove('live', 'asking', 'typing', 'parsing');
+    delete hero.dataset.live; mode = 'idle';
+    hero.style.removeProperty('--amp');
+    hint(art.hint);   // an empty session leaves its word in the hint: the art run takes its own back
+    if (!was) return;
+    timeEl.textContent = art.time; savedEl.textContent = art.saved; metaEl.textContent = art.meta;
+    ticketsEl.innerHTML = art.tickets; deckEl.innerHTML = art.deck; verdictEl.innerHTML = art.verdict;
+    if (capEl) capEl.textContent = art.cap;
+    typed.textContent = ''; interimEl.textContent = ''; typein.value = '';
+    reseat();
+  };
+  const live = {
+    active: () => mode === 'asking' || mode === 'listening' || mode === 'typing',
+    on: () => mode !== 'idle',
+    finish, leave,
+  };
+  hero.querySelectorAll('[data-talk]').forEach((b) => b.addEventListener('click', start));
+  typein.addEventListener('keydown', (e) => { if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') { e.preventDefault(); finish('stop'); } });
+
+  // ── the dev switch (?state=…; ships disabled: this block is dropped from the production bundle) ──
+  if (import.meta.env.DEV) {
+    const SAMPLE = "I need to call the plumber about the kitchen tap, it's dripping again. Remind me Friday morning to pick up the dry cleaning. And what if we painted the hallway, like a warm grey, I keep thinking about it.";
+    const asIf = (left, t) => { enter(); listening(); clearInterval(tick); prior = t; paint(); timeEl.textContent = fmt(left); t0 = performance.now() - (MAX_S - left) * 1000; };
+    const show = (name) => {
+      forceDown = false;
+      leave(); reset();
+      switch (name) {
+        case 'asking': enter(); setMode('asking'); hero.classList.add('asking'); hint(LIVE.asking); timeEl.textContent = fmt(MAX_S); break;
+        case 'denied': enter(); toTyped(LIVE.denied); break;
+        case 'unsupported': case 'typed': enter(); toTyped(LIVE.noSpeech); break;
+        case 'listening': asIf(72, "I need to call the plumber about the kitchen tap, it's dripping"); interim = 'again'; lastAt = performance.now() + 1e9; paint(); break;
+        case 'transcribing': asIf(60, SAMPLE); dur = 30; stopping = true; setMode('transcribing'); stage(2); metaEl.textContent = LIVE.source + ' · ' + fmt(dur); break;
+        case 'parsing': asIf(60, SAMPLE); dur = 30; stage(2); metaEl.textContent = LIVE.source + ' · 0:30'; caret.hidden = true; setMode('parsing'); hero.classList.add('parsing'); break;
+        case 'result': asIf(60, SAMPLE); finish('stop'); break;
+        case 'local': case 'down': forceDown = true; asIf(60, SAMPLE); finish('stop'); break;
+        case 'empty': asIf(80, ''); finish('stop'); break;
+        case 'toolong': asIf(0, (SAMPLE + ' ').repeat(8).slice(0, MAX_CHARS)); break;
+        default: break;
+      }
+    };
+    window.__intakeLive = { show, run: (t) => { asIf(78, t); finish('stop'); }, down: (v) => { forceDown = !!v; }, mode: () => mode, text };
+    const want = new URLSearchParams(location.search).get('state');
+    if (want) setTimeout(() => show(want), 400);
+  }
 });
 </script>
