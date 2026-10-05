@@ -1,80 +1,40 @@
+<!-- DRAFT (2026-10-05): written for Jon to rewrite in his own words. Facts checked against the repo; the voice is a draft. -->
+
 # uxjon.com
 
-Source for [uxjon.com](https://uxjon.com). A site built to demonstrate the
-system that built it.
+The source for [uxjon.com](https://www.uxjon.com): my site, and the way I make things now.
 
-## Stack
+## How the site is made
 
-- **Astro v6**, TypeScript strict
-- **Notion** as the content layer (Case Studies + Resumes databases)
-- **Vercel** for deploy and SSL
-- **Geist Variable**, self-hosted via Fontsource
-- **CSS custom properties** for four chromatic themes (Carbon, Powder,
-  Field, Honey). Press `T` to cycle.
+I design in Figma, then I build with Claude Code as the pair, with a live preview open the whole time. The commit log is the record of that: every round is one thing I asked for, built, verified, and put under my hands before the next.
 
-## How it works
+**Render before build.** When a change is a matter of taste, I don't argue about it in prose. The directions get written as real code on a dev switch, rendered headless as contact sheets, judged, and I pick at the pad. Then the pick gets built for real and the others are deleted. The homepage ledger, the cassette player, the résumé's index tabs and the instrument's head all went this way.
 
-Case studies and resumes live as Notion database rows. The build queries
-them at compile time, downloads any Notion-hosted images locally so URLs
-don't expire, and renders Notion's block tree as editorial prose. A new
-tailored resume variant is one new database row; the route auto-generates
-on next deploy.
+**Verify behind the ship, never in front.** Every round ends with something touchable; verification rides behind it: a build gate (the exit code, nothing else), headless Chrome at 375 and 1440 in day and night, `scrollWidth <= viewport`, zero console errors, and for the instrument a three-browser gate that plays it and listens. Screenshots get looked at, not just measured.
 
-More architecture detail on the [colophon](https://uxjon.com/colophon).
+**Working rules live in the repo.** `CLAUDE.md` is the contract every session follows: the branch and deploy model, the sacred files, the copy laws, the verification norms. It gets rewritten when a law changes, so a fresh session can start cold.
 
-## Local dev
+## What's in here
+
+- **Astro 6**, output `server`, the Vercel adapter. Every page prerenders to static HTML; the one on-demand route is `src/pages/api/intake.ts`.
+- **The homepage** (`src/components/studio/StudioOne.astro`): four rooms, each its own viewport. WORK holds two objects I designed in Claude Design and installed as components: the watch (`IntakeHero.astro`) and the phone (`ArchiveHero.astro`). LOOK is the pictures. LISTEN is the cassette. PLAY is the instrument.
+- **The instrument** (`src/components/signal/Signal.astro` + `src/signal/*`): drums, a 303-style bass and a keyboard voiced with rips of my own synths, all Web Audio in the page. A lookahead scheduler books every hit ahead of the audio clock; effects run as audio worklets; one exit node with a limiter and a soft clamp. A worklet on that exit keeps the last five minutes of what you play, and **export** prints it as a 16-bit WAV named for the day, the key and the tempo. Its contract is `src/signal/types.ts`; the code map is `docs/signal-map/`; the gate is `scripts/signal/gate.mjs`.
+- **Intake, live** (`src/pages/api/intake.ts`, `src/lib/intake-*.ts`): the watch on the homepage can take your own words. Your browser's speech service does the transcription; one serverless function sends the transcript to Claude with the same three-fates prompt my real Intake runs (execute, surface, store), validates the JSON, and hands back tickets. If the function is unreachable or has no key, a rule-based parse in your browser does the triage and says so with a chip. Nothing is stored; nothing is logged.
+- **The résumé** (`src/pages/resume/`, `src/lib/resume-print.ts`): one annotated sheet, one source of prose, a one-page PDF regenerated from it. Its proof numbers come from a dated ledger snapshot, never typed by hand.
+- **The case studies** (`src/pages/case-studies/`): CHS, Crediverso, Raylu, and Finishable, each built on shared primitives with live objects you can put your hands on.
+
+## What is real and what is art
+
+The systems are real: Intake runs on a Mac that never sleeps and transcribes my voice memos with Whisper; AudioDex is a catalogue of every recording I've made; the instrument is cut from the studio I play at my desk. The **examples** on the site are art. The watch's replay, the phone's search, the case-study demos are invented, universal examples that carry the story, never my own diary. The engineering facts under each object (the tools, the stages, the numbers) are true or absent. What a visitor makes on the site (their transcript, their tickets, their song) is theirs alone and is not kept.
+
+## Working on it
 
 ```sh
 npm install
-cp .env.example .env   # fill in NOTION_TOKEN
-npm run dev            # → http://localhost:4321
+npm run dev      # http://localhost:4321
+npm run build    # the gate: judge the exit code only
 ```
 
-The dev server auto-runs `scripts/sync-notion-images.mjs`, which mirrors
-Notion-hosted images into `/public/case-studies/[slug]/` so URLs don't
-expire between builds.
+Branches are worktrees; `main` is production and deploys on push. The instrument's assets under `public/s/<8hex>/` ship immutable: a re-encode is a new folder, never a change in place.
 
-```sh
-npm run build          # → /dist
-npm run preview        # serve /dist locally
-```
-
-## Environment
-
-`NOTION_TOKEN` — internal integration token from Notion. Required.
-
-`CONSOLE_API_KEY` and `CONSOLE_API_BASE` — auth for the M1 brain that
-powers the Portal. Without them the Portal pages render but engine calls
-401 or 502. If you rotate either, **restart `npm run dev`**: Astro reads
-`.env` at process start and a long-running dev server keeps sending the
-stale value silently.
-
-Source-database IDs are constants in `src/lib/notion.ts` and
-`src/lib/resumes.ts`; swap them when forking against your own Notion
-workspace.
-
-## Portal · Buckets tab (M3 scaffold)
-
-New triage surface at `/portal/buckets/[bucket]` (Inbox / Voice Memos /
-Loops / Songs / Trash). `/portal/buckets` redirects to
-`/portal/buckets/inbox`. Keyboard-first: arrow keys move focus between
-cards; **V / L / S / X** assign the focused card to a bucket; **0–3**
-sets quality stars; **Space** auditions; **Enter** confirms; **Esc**
-blurs. The full keymap is documented in the page's collapsible legend.
-
-The surface ships against mocked data while the M1 engine builds out the
-matching `bucket`, `quality_star`, `waveform_path`, and `parent_id`
-columns (Task A) plus the HTTP endpoints (Task E). When the engine is
-ready, swap two places:
-
-- **`src/lib/buckets-mock-data.ts`** — the fixture; delete the file
-  after wiring.
-- **`src/lib/console-api.ts`** — the five `// MOCK:` blocks
-  (`getBucketsList`, `setBucket`, `setQualityStar`, `getLineage`,
-  `revealInFinder`). Each comment names the engine endpoint it will
-  call. The API route stubs in `src/pages/api/console/buckets-*.ts`
-  already forward through these functions, so they need no change.
-
-Existing Portal tabs (Library, Workbench, Diary, Surprise) are
-untouched; the only shared edits are additive entries in `TabStrip` and
-the `current` union in `PortalLayout`.
+`ANTHROPIC_API_KEY` (a Vercel environment variable, and `.env` locally) powers the Intake function. Without it the demo runs on the local parse.
