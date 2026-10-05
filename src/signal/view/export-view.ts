@@ -3,25 +3,22 @@
 // so there is nothing to arm: the control is DORMANT until a sound has been made, then it is the most alive thing in
 // the head short of the power switch — a glass SCREEN with the song's clock (22 px amber over `song`: your song is this
 // long) and a taller CAP whose LED and inner glow breathe. A press prints the take as a WAV named for the day, the key
-// and the tempo, and runs THE PAYOFF (payoff.ts: the ceremony with its object; `?dir=1|2|3` while Jon picks), then hands
-// the file to the browser as a download as the object lands. The words on the cap say what happens: export → printing →
-// saved, then export again. A new power-on starts a new song (the state on #sgm, watched here) and folds the payoff.
-// FIRST TIME on this device (localStorage, in try/catch): the payoff carries one line (signal-card-copy.ts `first`, a
-// DRAFT in Jon's voice); every later song gets the same ceremony without it.
+// and the tempo, and runs THE PRINT (payoff.ts, Jon's pick of 2026-10-05: the device celebrates in its own grammar — a
+// band of light crosses the chassis, the titles and the piano's lamps light under it), then hands the file to the browser
+// as a download as the band leaves; after `saved` the screen keeps the evidence (length · key · tempo) before the clock
+// comes back. The words on the cap say what happens: export → printing → saved, then export again. A new power-on starts
+// a new song (the state on #sgm, watched here). FIRST TIME on this device (localStorage, in try/catch): the screen
+// prints `first` once among the facts; every later song gets the same ceremony without it.
 import type { SignalInstrumentX } from '../instrument.ts';
 import { createTake, type Take } from '../take.ts';
 import { accent, cap, screen } from './common.ts';
-import { createPayoff, type Dir, type Payoff, type SongInfo } from './payoff.ts';
-// the direction under render: 1 THE TAPE · 3 THE DEVICE are the two Jon picks from (the panel killed 2, kept on disk until the pick)
-import { CARD } from '../../components/signal/signal-card-copy.ts';
+import { createPayoff, type Payoff, type SongInfo } from './payoff.ts';
 
 const el = (tag: string, cls: string): HTMLElement => { const e = document.createElement(tag); e.className = cls; return e; };
 
 const KEY_NAMES = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
 const ICON = '<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 2v8M4.6 6.8 8 10.2l3.4-3.4M3 13h10"/></svg>';
 const FIRST_KEY = 'signal-first-song';
-/** The direction under render (the dev switch; the pick becomes the default and the switch goes). */
-const DEFAULT_DIR: Dir = 0;
 
 export const fmtClock = (s: number): string => {
   const t = Math.max(0, Math.floor(s));
@@ -36,7 +33,6 @@ export function songName(key: number, scale: string, bpm: number, when = new Dat
 }
 const firstTime = (): boolean => { try { return localStorage.getItem(FIRST_KEY) !== '1'; } catch { return false; } };
 const markFirst = (): void => { try { localStorage.setItem(FIRST_KEY, '1'); } catch { /* a locked store: every song is the first */ } };
-const dirOf = (): Dir => { const d = Number(new URLSearchParams(location.search).get('dir')); return d === 1 || d === 2 || d === 3 ? d : DEFAULT_DIR; };
 
 export function mountExportView(host: HTMLElement, inst: SignalInstrumentX): { dispose(): void } {
   const wrap = el('div', 'sgx');
@@ -95,21 +91,20 @@ export function mountExportView(host: HTMLElement, inst: SignalInstrumentX): { d
       const bpm = inst.time.bpm();
       const when = new Date();
       const name = songName(m.key, m.scale, bpm, when);
-      const info: SongInfo = { name, seconds: w.seconds, key: KEY_NAMES[((m.key % 12) + 12) % 12] || 'C', scale: m.scale === 'minor' ? 'minor' : 'major', bpm: Math.round(bpm), day: dayOf(when), peaks: take.peaks(96), blob: w.blob };
+      const info: SongInfo = { name, seconds: w.seconds, key: KEY_NAMES[((m.key % 12) + 12) % 12] || 'C', scale: m.scale === 'minor' ? 'minor' : 'major', bpm: Math.round(bpm), day: dayOf(when), first: firstTime() };
       scrB.textContent = fmtClock(w.seconds);   // the clock stops on the song's length: ONE source for it
-      const first = firstTime();
       const land = (): void => {
         if (!alive) return;
         download(w.blob, name);
-        if (!payoff || !payoff.seen) markFirst();   // an object marks the first time when it is seen; no object: now
+        markFirst();
         button.classList.add('saved');
+        if (led) { led.classList.remove('sg-t-flash'); void led.offsetWidth; led.classList.add('sg-t-flash'); }
         say('saved');
-        // the device's own residue (the facts on the screen) runs with the cap held at `saved`; the clock paints again after
-        const rest = (): void => { if (!alive) return; wordT = setTimeout(() => { word.textContent = 'export'; button.classList.remove('busy', 'saved'); scrS.textContent = 'song'; wordT = null; paint(); }, 1600); };
-        if (payoff?.after) void payoff.after(info).then(rest, rest);
-        else wordT = setTimeout(() => { word.textContent = 'export'; button.classList.remove('busy', 'saved'); wordT = null; paint(); }, 2400);
+        // the evidence on the screen runs with the cap held at `saved`; then the clock paints again
+        const rest = (): void => { if (!alive) return; wordT = setTimeout(() => { word.textContent = 'export'; button.classList.remove('busy', 'saved'); scrS.textContent = 'song'; wordT = null; paint(); }, 600); };
+        if (payoff) void payoff.after(info).then(rest, rest); else rest();
       };
-      if (payoff) void payoff.show(info, first, CARD.first).then(land, land);
+      if (payoff) void payoff.show(info).then(land, land);
       else land();
     }, 360);
   };
@@ -128,7 +123,7 @@ export function mountExportView(host: HTMLElement, inst: SignalInstrumentX): { d
     take = t;
     if (!take) return;                     // no AudioWorklet: the corner stays empty
     host.appendChild(wrap);
-    if (sgm) payoff = createPayoff(dirOf(), sgm, scrB, scrS, markFirst);
+    if (sgm) payoff = createPayoff(sgm, scrB, scrS);
     paint();
     tick = setInterval(paint, 250);
   });
