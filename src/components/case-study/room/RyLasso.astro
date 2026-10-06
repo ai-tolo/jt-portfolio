@@ -1,0 +1,362 @@
+---
+// RAYLU · THE LASSO (Stream C, 2026-10-06): the UMAP slice surface, MOVED out of the old page with its behaviour
+// unchanged (the seeded point cloud, the marquee, Enter/Space to slice the vehicle cluster, Escape to clear, the
+// reset, the server-resolved slice for no-JS and reduced motion, the aria) and re-clothed in the room's material:
+// the faux dark Figma chrome is gone; the surface is the real hi-fi screenshot in a paper frame with a 1px hairline.
+// The pill and the marquee keep their accent (the product's own slice teal); the frame paints from the room (--rm-*).
+// Test hook: window.__ryLasso = { slice(), clear() }.
+
+// ── the lasso surface: a deterministic point cloud over the real UMAP screenshot (viewBox 900×575, matching the
+// asset). It mirrors what the screenshot already shows: a tight "vehicle" cluster top-left (the slice the investor
+// drew), a small cluster lower-middle, and a broad cluster at right. Generated server-side so the resolved slice
+// exists with no JS.
+function mulberry32(a: number) {
+  return function () {
+    a |= 0;
+    a = (a + 0x6d2b79f5) | 0;
+    let t = Math.imul(a ^ (a >>> 15), 1 | a);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+const rnd = mulberry32(20231004);
+const clamp = (v: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, v));
+function blob(cx: number, cy: number, sx: number, sy: number, n: number) {
+  const out: { x: number; y: number }[] = [];
+  for (let i = 0; i < n; i++) {
+    const a = rnd();
+    const b = rnd();
+    const g1 = Math.sqrt(-2 * Math.log(a + 1e-9)) * Math.cos(6.2831853 * b);
+    const g2 = Math.sqrt(-2 * Math.log(a + 1e-9)) * Math.sin(6.2831853 * b);
+    out.push({
+      x: +clamp(cx + g1 * sx, 298, 858).toFixed(1),
+      y: +clamp(cy + g2 * sy, 136, 506).toFixed(1),
+    });
+  }
+  return out;
+}
+const CLUSTERS = [
+  // the hinted target — what the investor sliced, what you'll slice
+  { name: "vehicle", count: 47, color: "green", cx: 398, cy: 218, sx: 20, sy: 17, n: 18, target: true },
+  { name: "road", count: 318, color: "coral", cx: 705, cy: 320, sx: 34, sy: 60, n: 46, target: false },
+  { name: "water", count: 29, color: "coral", cx: 527, cy: 392, sx: 11, sy: 9, n: 8, target: false },
+];
+const POINTS = CLUSTERS.flatMap((cl, ci) =>
+  blob(cl.cx, cl.cy, cl.sx, cl.sy, cl.n).map((p) => ({
+    x: p.x,
+    y: p.y,
+    ci,
+    color: cl.color,
+    target: cl.target,
+  }))
+);
+const CLUSTER_META = CLUSTERS.map((c) => ({ name: c.name, count: c.count, target: c.target }));
+// the sentence the live region speaks after a slice (the old page's reveal line, now unprinted: the caption carries it)
+const REVEAL = "That's the gesture an investor made mid-demo. Now you've made it too.";
+---
+
+<div class="ry-lasso is-resolved" data-ry-lasso data-clusters={JSON.stringify(CLUSTER_META)} data-reveal={REVEAL}>
+  <span class="ry-l-live" data-ry-live aria-live="polite"></span>
+  <div
+    class="ry-l-stage"
+    data-ry-stage
+    tabindex="0"
+    role="application"
+    aria-roledescription="Embedding slice tool"
+    aria-label="UMAP embedding scatterplot. Drag a box around a cluster of points to save it as a slice. Press Enter to slice the vehicle cluster; Escape to clear."
+  >
+    <img
+      class="ry-l-img"
+      src="/case-studies/raylu/notion-35fed8d4704f8005968fd121bdbfc1d8.webp"
+      alt="Raylu UMAP slice surface, a real Figma frame: a left rail with the raylu wordmark and nav icons, a left control panel (point size, opacity, thumbnail size, a reduction-algorithm dropdown set to UMAP, an annotation field set to 'vehicle'), and a 2D embedding scatterplot of green and orange point clusters."
+      loading="lazy"
+      draggable="false"
+      width="900"
+      height="575"
+    />
+    <svg class="ry-l-svg" viewBox="0 0 900 575" preserveAspectRatio="none" data-ry-svg aria-hidden="true">
+      {/* cover the screenshot's baked points + frozen lasso so the live cloud is the only one; the white matches the
+          canvas exactly. */}
+      <rect class="ry-l-cover" x="289" y="127" width="578" height="389"></rect>
+      {/* the affordance: a soft hint box where the slice wants to be drawn */}
+      <rect class="ry-l-guide" x="346" y="170" width="104" height="96" rx="3"></rect>
+      {/* the live embedding */}
+      {POINTS.map((p) => (
+        <circle
+          class:list={["ry-l-pt", `ry-l-pt-${p.color}`, { "ry-l-sliced": p.target }]}
+          cx={p.x}
+          cy={p.y}
+          r="3.3"
+          data-cx={p.x}
+          data-cy={p.y}
+          data-cluster={p.ci}
+        ></circle>
+      ))}
+      {/* the marquee — SSR draws the pre-made vehicle slice */}
+      <rect class="ry-l-marq ry-l-marq-on" data-ry-marq x="346" y="170" width="104" height="96" rx="2"></rect>
+    </svg>
+    {/* the resolved slice label, anchored above its cluster */}
+    <span class="ry-l-pill" data-ry-pill style="left:44%; top:30%;">vehicle · 47 images</span>
+    <button class="ry-l-reset" data-ry-reset type="button" hidden>↺ slice again</button>
+  </div>
+</div>
+
+<script>
+  // THE LASSO. You drag a marquee around a cluster of embeddings; the points inside light up and the selection
+  // resolves into a named slice. Pointer + keyboard. The resolved slice is rendered server-side, so this script's
+  // first job (for non-reduced-motion users) is to CLEAR it back to an empty, operable canvas: progressive
+  // enhancement, not a hard dependency. (Moved verbatim from the old raylu page; the reveal sentence now rides on
+  // the root's data-reveal.)
+  (() => {
+    const root = document.querySelector<HTMLElement>("[data-ry-lasso]");
+    if (!root) return;
+    const stage = root.querySelector<HTMLElement>("[data-ry-stage]");
+    const marq = root.querySelector<SVGRectElement>("[data-ry-marq]");
+    const pill = root.querySelector<HTMLElement>("[data-ry-pill]");
+    const live = root.querySelector<HTMLElement>("[data-ry-live]");
+    const reset = root.querySelector<HTMLElement>("[data-ry-reset]");
+    const pts = Array.from(root.querySelectorAll<SVGCircleElement>(".ry-l-pt"));
+    if (!stage || !marq || !pill) return;
+
+    let clusters: { name: string; count: number; target: boolean }[] = [];
+    try { clusters = JSON.parse(root.dataset.clusters || "[]"); } catch {}
+
+    const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const VW = 900, VH = 575;
+    const PLOT = { x0: 289, y0: 127, x1: 867, y1: 516 };
+    const REVEAL = (root.dataset.reveal ?? "").trim();
+
+    const setMarq = (x: number, y: number, w: number, h: number) => {
+      marq.setAttribute("x", String(x));
+      marq.setAttribute("y", String(y));
+      marq.setAttribute("width", String(Math.max(0, w)));
+      marq.setAttribute("height", String(Math.max(0, h)));
+    };
+    const clusterOf = (c: SVGCircleElement) => Number(c.dataset.cluster);
+    const cx = (c: SVGCircleElement) => Number(c.dataset.cx);
+    const cy = (c: SVGCircleElement) => Number(c.dataset.cy);
+
+    const clearSlice = () => {
+      root.classList.remove("is-resolved");
+      pts.forEach((p) => p.classList.remove("ry-l-sliced", "ry-l-sel"));
+      marq.classList.remove("ry-l-marq-on");
+    };
+
+    const resolve = (idx: number, rect?: { x: number; y: number; w: number; h: number }) => {
+      const c = clusters[idx];
+      if (!c) return;
+      pts.forEach((p) => {
+        p.classList.remove("ry-l-sel");
+        p.classList.toggle("ry-l-sliced", clusterOf(p) === idx);
+      });
+      const sel = pts.filter((p) => clusterOf(p) === idx);
+      const ax = sel.reduce((a, p) => a + cx(p), 0) / sel.length;
+      const minY = Math.min(...sel.map(cy));
+      pill.textContent = `${c.name} · ${c.count} images`;
+      pill.style.left = (ax / VW) * 100 + "%";
+      pill.style.top = (minY / VH) * 100 + "%";
+      if (rect) setMarq(rect.x, rect.y, rect.w, rect.h);
+      marq.classList.add("ry-l-marq-on");
+      root.classList.add("is-resolved");
+      if (reset) reset.hidden = false;
+      if (live) live.textContent = `Saved slice: ${c.name}, ${c.count} images. ${REVEAL}`;
+    };
+
+    const toVB = (clientX: number, clientY: number) => {
+      const r = stage.getBoundingClientRect();
+      return {
+        x: ((clientX - r.left) / r.width) * VW,
+        y: ((clientY - r.top) / r.height) * VH,
+      };
+    };
+    const inPlot = (p: { x: number; y: number }) =>
+      p.x >= PLOT.x0 && p.x <= PLOT.x1 && p.y >= PLOT.y0 && p.y <= PLOT.y1;
+    const clampPlot = (p: { x: number; y: number }) => ({
+      x: Math.max(PLOT.x0, Math.min(PLOT.x1, p.x)),
+      y: Math.max(PLOT.y0, Math.min(PLOT.y1, p.y)),
+    });
+
+    let drag: { sx: number; sy: number } | null = null;
+
+    const paint = (x0: number, y0: number, w: number, h: number) => {
+      setMarq(x0, y0, w, h);
+      marq.classList.add("ry-l-marq-on");
+      pts.forEach((p) => {
+        const px = cx(p), py = cy(p);
+        p.classList.toggle("ry-l-sel", px >= x0 && px <= x0 + w && py >= y0 && py <= y0 + h);
+      });
+    };
+
+    const finish = () => {
+      if (!drag) return;
+      const x0 = Number(marq.getAttribute("x"));
+      const y0 = Number(marq.getAttribute("y"));
+      const w = Number(marq.getAttribute("width"));
+      const h = Number(marq.getAttribute("height"));
+      const counts: Record<number, number> = {};
+      pts.forEach((p) => {
+        if (p.classList.contains("ry-l-sel")) {
+          const k = clusterOf(p);
+          counts[k] = (counts[k] || 0) + 1;
+        }
+      });
+      let best = -1, bestN = 0;
+      for (const k of Object.keys(counts)) {
+        const n = counts[Number(k)] ?? 0;
+        if (n > bestN) { bestN = n; best = Number(k); }
+      }
+      drag = null;
+      stage.classList.remove("ry-l-dragging");
+      if (best >= 0 && bestN >= 3) {
+        resolve(best, { x: x0, y: y0, w, h });
+      } else {
+        marq.classList.remove("ry-l-marq-on");
+        pts.forEach((p) => p.classList.remove("ry-l-sel"));
+      }
+    };
+
+    stage.addEventListener("pointerdown", (e) => {
+      if (root.classList.contains("is-resolved")) clearSlice();
+      const raw = toVB(e.clientX, e.clientY);
+      if (!inPlot(raw)) return;
+      const p = clampPlot(raw);
+      drag = { sx: p.x, sy: p.y };
+      stage.setPointerCapture?.(e.pointerId);
+      stage.classList.add("ry-l-dragging");
+      setMarq(p.x, p.y, 0, 0);
+      e.preventDefault();
+    });
+    stage.addEventListener("pointermove", (e) => {
+      if (!drag) return;
+      const p = clampPlot(toVB(e.clientX, e.clientY));
+      paint(Math.min(drag.sx, p.x), Math.min(drag.sy, p.y), Math.abs(p.x - drag.sx), Math.abs(p.y - drag.sy));
+    });
+    stage.addEventListener("pointerup", (e) => { finish(); stage.releasePointerCapture?.(e.pointerId); });
+    stage.addEventListener("pointercancel", () => { drag = null; stage.classList.remove("ry-l-dragging"); });
+
+    // committed keyboard gesture: Enter/Space slices the vehicle (target) cluster, the same result as dragging a
+    // box around it. Esc clears.
+    const sliceCanonical = () => {
+      const idx = Math.max(0, clusters.findIndex((c) => c.target));
+      const sel = pts.filter((p) => clusterOf(p) === idx);
+      if (!sel.length) return;
+      const xs = sel.map(cx), ys = sel.map(cy);
+      const pad = 16;
+      const rx = Math.min(...xs) - pad;
+      const ry = Math.min(...ys) - pad;
+      const rw = Math.max(...xs) - Math.min(...xs) + pad * 2;
+      const rh = Math.max(...ys) - Math.min(...ys) + pad * 2;
+      clearSlice();
+      const done = () => resolve(idx, { x: rx, y: ry, w: rw, h: rh });
+      if (reduce) { done(); return; }
+      // grow the marquee from the cluster center so the gesture reads. Stepped via timeouts (not rAF) so it
+      // survives a throttled/headless preview tab, and the final timeout guarantees the slice resolves regardless.
+      const mx = rx + rw / 2, my = ry + rh / 2;
+      const steps = 8;
+      for (let i = 1; i <= steps; i++) {
+        const t = i / steps;
+        window.setTimeout(() => paint(mx - (rw / 2) * t, my - (rh / 2) * t, rw * t, rh * t), i * 32);
+      }
+      window.setTimeout(done, steps * 32 + 40);
+    };
+
+    stage.addEventListener("keydown", (e) => {
+      if (e.key === "Enter" || e.key === " ") { e.preventDefault(); sliceCanonical(); }
+      else if (e.key === "Escape") { clearSlice(); }
+    });
+
+    reset?.addEventListener("click", () => { clearSlice(); stage.focus(); });
+
+    // the planner's headless QA: the same state a real gesture leaves
+    const w = window as unknown as { __ryLasso?: { slice: () => void; clear: () => void } };
+    if (!w.__ryLasso) w.__ryLasso = { slice: sliceCanonical, clear: clearSlice };
+
+    // INIT. SSR shipped the resolved "vehicle · 47 images" slice so no-JS and reduced-motion users get the named
+    // result. For everyone else, clear it back to an operable empty canvas and let them perform the gesture.
+    if (reset) reset.hidden = false;
+    if (!reduce) clearSlice();
+  })();
+</script>
+
+<style>
+  /* ── the frame: paper on paper, the room's hairline; the product surface inside keeps its own white ── */
+  .ry-lasso {
+    position: relative; box-sizing: border-box; width: 100%; padding: 12px; border: 1px solid var(--rm-line); border-radius: 8px;
+    background: var(--rm-card); color: var(--rm-ink);
+  }
+  .ry-lasso *, .ry-lasso *::before, .ry-lasso *::after { box-sizing: border-box; }
+
+  /* the "slice again" affordance, shown once resolved (JS un-hides it): an outlined room button in the corner */
+  .ry-l-reset {
+    position: absolute; right: 12px; bottom: 12px; z-index: 5;
+    display: none; align-items: center; gap: 6px; height: 32px; margin: 0; padding: 0 12px;
+    border: 1px solid var(--rm-line); border-radius: 6px; background: var(--rm-card); color: var(--rm-ink);
+    font: 500 0.6875rem/1 var(--rm-mono); letter-spacing: 0.08em; cursor: pointer;
+  }
+  .ry-l-reset:hover { border-color: var(--rm-ink); }
+  .ry-l-reset:focus-visible { outline: 2px solid var(--ry-accent); outline-offset: 2px; }
+  .ry-lasso.is-resolved .ry-l-reset:not([hidden]) { display: inline-flex; }
+
+  /* the interactive stage: the real screenshot + an SVG overlay */
+  .ry-l-stage {
+    position: relative; display: block; aspect-ratio: 900 / 575; overflow: hidden;
+    border: 1px solid var(--rm-line); border-radius: 4px; background: #fff;
+    touch-action: pan-y; cursor: crosshair; user-select: none; -webkit-user-select: none; outline: none;
+  }
+  .ry-l-stage:focus-visible { outline: 2px solid var(--ry-accent); outline-offset: 2px; }
+  .ry-l-img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: fill; display: block; pointer-events: none; }
+  .ry-l-svg { position: absolute; inset: 0; width: 100%; height: 100%; }
+
+  /* white cover hides the screenshot's baked scatter + frozen lasso box (the screenshot is white in both themes) */
+  .ry-l-cover { fill: #ffffff; }
+
+  /* the affordance hint, only while there's no slice yet */
+  .ry-l-guide {
+    fill: rgba(14, 196, 252, 0.04); stroke: rgba(70, 80, 92, 0.55); stroke-width: 1.4; stroke-dasharray: 6 5;
+    opacity: 0; transition: opacity 280ms ease;
+  }
+  .ry-lasso:not(.is-resolved) .ry-l-guide { opacity: 1; animation: ry-l-guide-pulse 2.4s ease-in-out infinite; }
+  @keyframes ry-l-guide-pulse { 0%, 100% { stroke-opacity: 0.5; } 50% { stroke-opacity: 0.95; } }
+
+  /* the points (the screenshot's own green and coral) */
+  .ry-l-pt { transition: r 160ms ease, fill 160ms ease; }
+  .ry-l-pt-green { fill: #2fbf9b; }
+  .ry-l-pt-coral { fill: #df733b; }
+  .ry-l-pt.ry-l-sel { r: 4.4; }
+  .ry-l-pt-green.ry-l-sel { fill: #16c79a; }
+  .ry-l-pt-coral.ry-l-sel { fill: #ff7a3a; }
+  /* a saved slice locks brighter (no halo: the room has no glows) */
+  .ry-l-pt.ry-l-sliced { r: 4.4; }
+  .ry-l-pt-green.ry-l-sliced { fill: #10d8a3; }
+  .ry-l-pt-coral.ry-l-sliced { fill: #ff7a3a; }
+
+  /* the marquee: echoes the product's own dashed select box */
+  .ry-l-marq { fill: rgba(47, 191, 155, 0.08); stroke: rgba(47, 150, 130, 0.9); stroke-width: 1.6; stroke-dasharray: 7 5; opacity: 0; }
+  .ry-l-marq-on { opacity: 1; }
+  .ry-lasso.is-resolved .ry-l-marq { fill: rgba(16, 199, 163, 0.1); stroke: rgba(16, 199, 163, 0.95); }
+
+  /* the resolved slice label */
+  .ry-l-pill {
+    position: absolute; z-index: 4; transform: translate(-50%, calc(-100% - 10px));
+    padding: 5px 11px; border-radius: 4px; background: #10d8a3; color: #07120e;
+    font: 600 12px/1.2 var(--rm-mono); letter-spacing: 0.01em; white-space: nowrap;
+    opacity: 0; pointer-events: none;
+    transition: opacity 240ms ease, transform 240ms cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+  .ry-l-pill::after {
+    content: ""; position: absolute; left: 50%; bottom: -5px; width: 9px; height: 9px;
+    transform: translateX(-50%) rotate(45deg); background: #10d8a3;
+  }
+  .ry-lasso.is-resolved .ry-l-pill { opacity: 1; }
+
+  .ry-l-live { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
+  @media (max-width: 720px) {
+    .ry-lasso { padding: 8px; }
+    .ry-l-pill { font-size: 11px; padding: 4px 8px; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .ry-l-guide { animation: none; }
+    .ry-l-pt, .ry-l-pill { transition: none; }
+  }
+</style>

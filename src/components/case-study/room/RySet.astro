@@ -1,0 +1,508 @@
+---
+// RAYLU · THE SET (Stream C, 2026-10-06). The lead object of /case-studies/raylu: the one Figma file the founders
+// carried into the rooms, as a design-tool window in the room's material. The only chrome is the file's name and its
+// five pages (each with its stamp); every page is a CANVAS of that section's components laid out as a sheet: Brand
+// (the whale, the sampled palette, the wordmark, the tone chips), Competitive analysis (the 2×2, selectable), Strategy
+// (the slide and the thesis rows), Wireframes (the sketch and the frame side by side, the two-path entry), Hi-fi (the
+// product's own primitives in their states). Two materials, as on CHS: the window and the canvas ground paint from the
+// room (--rm-*); every artboard and component on it paints from the product's contract (--ry-*, ry-tokens.css).
+// Content: SECTIONS of the old RayluFigmaTimeline (notes verbatim, em dashes replaced) and the five screenshots.
+// TWO DIRECTIONS behind `?dir=` (an inline script writes data-dir on the root before paint; default 1):
+//   1 · PAGES: a tab row of the five pages, one canvas at a time, crossfaded; 520 tall on desks, inner scroll.
+//   2 · THE SHEET: no tabs; the five pages stacked, the page names and stamps on the left margin; grows to content.
+// One DOM serves both (the tabs become the margin labels), so no word is printed twice.
+// Test hooks: window.__ry = { page(id), pick(name), state(tile, state) }.
+
+const PAGES = [
+  { id: "brand", name: "Brand", date: "Apr 2023", note: "First palette explorations, the whale mascot, and the headline thesis: “tools to make ML safe.”" },
+  { id: "competitive", name: "Competitive analysis", date: "Apr 2023", note: "Five sibling ML-tooling products mapped on a 2×2 of fidelity vs scope." },
+  { id: "strategy", name: "Strategy", date: "May 2023", note: "Goal: provide the tools to make ML safe. Deterministic vs unbounded: we built for the unbounded case." },
+  { id: "wireframes", name: "Wireframes", date: "Jun 2023", note: "Founder sketches translated into low-fi frames. Two starting paths: talk to a chat bot, or boot a premade system." },
+  { id: "hifi", name: "Hi-fi", date: "Jul 2023", note: "Pipeline builder hi-fi: model-integration nav, label-errors workflow, UMAP slicing. Clickable for investor demos." },
+];
+
+// the palette, SAMPLED (modal pixels): five from the whale cover (cover.webp), the warm one from the strategy slide's star
+const SWATCHES = [
+  { n: "teal", v: "#258c79" },
+  { n: "deep", v: "#0f5e95" },
+  { n: "sky", v: "#229ae8" },
+  { n: "foam", v: "#deeeeb" },
+  { n: "outline", v: "#000000" },
+  { n: "star", v: "#fce200" },
+];
+const CHIPS = ["palette", "whale", "tone-of-voice"];
+
+// the 2×2, positions verbatim from the old .ry-pg-matrix
+const MATRIX = [
+  { n: "Snorkel", qx: 0, qy: 0 },
+  { n: "W&B", qx: 1, qy: 0 },
+  { n: "Galileo", qx: 0, qy: 0.5 },
+  { n: "Roboflow", qx: 0, qy: 1 },
+  { n: "DataRobot", qx: 1, qy: 1 },
+  { n: "raylu", qx: 0.5, qy: 0.5, us: true },
+];
+const THESIS = ["observability", "pipelines, not models", "human-rules over"];
+const PATHS = [
+  { id: "chat", label: "talk to a chat bot" },
+  { id: "premade", label: "boot a premade system" },
+];
+
+// the hi-fi primitives, rebuilt from the two hi-fi screenshots
+const TILES = [
+  { id: "nav", name: "Nav item", what: "Where you are.", states: ["rest", "selected"] },
+  { id: "slider", name: "Slider", what: "Tunes the plot in place.", states: ["rest", "drag"] },
+  { id: "dropdown", name: "Dropdown", what: "Picks the reduction.", states: ["rest", "open"] },
+  { id: "pill", name: "Slice pill", what: "A saved selection.", states: ["rest", "hover"] },
+  { id: "thumb", name: "Thumbnail", what: "A possible label error.", states: ["candidate", "flagged", "confirmed"] },
+  { id: "button", name: "Button", what: "The one action.", states: ["rest", "hover", "pressed"] },
+];
+
+const IMG = {
+  whale: "/case-studies/raylu/cover.webp",
+  slide: "/case-studies/raylu/notion-35fed8d4704f80d780aaf0ab65e049a7.webp",
+  sketch: "/case-studies/raylu/notion-35fed8d4704f808d9ca0f53a5b38a89d.webp",
+  errors: "/case-studies/raylu/notion-35fed8d4704f802581d3cfb7be04a5c8.webp",
+};
+const uid = `ry-${Math.random().toString(36).slice(2, 8)}`;
+---
+
+<div class="ry-set" data-ry-set data-dir="1">
+  <script is:inline>
+    (function () { var r = document.currentScript && document.currentScript.parentNode; if (!r) return;
+      try { if (new URLSearchParams(location.search).get("dir") === "2") r.setAttribute("data-dir", "2"); } catch (e) {} })();
+  </script>
+  <div class="ry-bar"><span class="ry-file" id={`${uid}-t`}>raylu — workspace.fig</span></div>
+  <div class="ry-body">
+    <div class="ry-tabs" role="tablist" aria-labelledby={`${uid}-t`} data-ry-tabs>
+      {PAGES.map((p, i) => (
+        <button type="button" class="ry-tab" role="tab" id={`${uid}-tab-${p.id}`} aria-controls={`${uid}-pg-${p.id}`}
+          aria-selected={i === 0 ? "true" : "false"} tabindex={i === 0 ? 0 : -1} data-ry-tab={p.id} style={`--r:${i + 1};--o:${i * 2 + 1}`}>
+          <span class="ry-tab-n">{p.name}</span>
+          <span class="ry-tab-d">{p.date} · added by me</span>
+        </button>
+      ))}
+    </div>
+    <div class="ry-view" data-ry-view>
+      {PAGES.map((p, i) => (
+        <section class="ry-page" role="tabpanel" id={`${uid}-pg-${p.id}`} aria-labelledby={`${uid}-tab-${p.id}`} tabindex="0"
+          data-ry-page={p.id} hidden={i !== 0} style={`--r:${i + 1};--o:${i * 2 + 2}`}>
+          <div class="ry-note">{p.note}</div>
+
+          {p.id === "brand" && (
+            <div class="ry-brand">
+              <figure class="ry-ab ry-whale"><img src={IMG.whale} alt="Raylu pixel-art whale mascot on teal." width="1422" height="777" /></figure>
+              <div class="ry-ab ry-id">
+                <span class="ry-mark">raylu</span>
+                <span class="ry-thesis">tools to make ML safe</span>
+                <div class="ry-chips" role="group" aria-label="Tone chips">
+                  {CHIPS.map((c) => (
+                    <button type="button" class="ry-chip" aria-pressed={c === "whale" ? "true" : "false"} data-ry-chip={c}>{c}</button>
+                  ))}
+                </div>
+              </div>
+              <div class="ry-ab ry-pal">
+                {SWATCHES.map((s) => (
+                  <div class="ry-sw"><span class="ry-sq" style={`background:${s.v}`}></span><code class="ry-sw-v">{s.v}</code></div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {p.id === "competitive" && (
+            <div class="ry-comp">
+              <div class="ry-ab ry-mx" role="group" aria-label="Fidelity by scope">
+                <span class="ry-mx-axis is-y" aria-hidden="true">fidelity ↑</span>
+                <span class="ry-mx-axis is-x" aria-hidden="true">scope →</span>
+                {MATRIX.map((m) => (
+                  <button type="button" class:list={["ry-q", { "is-us": m.us }]} style={`--qx:${m.qx};--qy:${m.qy}`}
+                    aria-pressed={m.us ? "true" : "false"} data-ry-q={m.n}>{m.n}</button>
+                ))}
+              </div>
+              <div class="ry-mx-side"><span class="ry-lbl">selected</span><span class="ry-mx-name" data-ry-qname>raylu</span></div>
+            </div>
+          )}
+
+          {p.id === "strategy" && (
+            <div class="ry-strat">
+              <figure class="ry-ab ry-slide"><img src={IMG.slide} alt="Strategy slide: Raylu's goal is to provide tools that make ML safe. ML splits into Deterministic and Unbounded; we work in the unbounded case via pipelines." width="693" height="326" /></figure>
+              <ol class="ry-ab ry-rows">
+                {THESIS.map((t) => (<li class="ry-row"><span class="ry-row-k" aria-hidden="true"></span><span class="ry-row-t">{t}</span></li>))}
+              </ol>
+            </div>
+          )}
+
+          {p.id === "wireframes" && (
+            <div class="ry-wire">
+              <div class="ry-pair">
+                <figure class="ry-frame is-sketch">
+                  <figcaption class="ry-lbl">sketch · mid-Zoom call</figcaption>
+                  <div class="ry-ab"><img src={IMG.sketch} width="375" height="318" alt="Founder sketch for the model-prototype starting page: a sidebar with three abstract icons, a chat-style interface up top with a “submit prompt below” note, and an “All systems” grid of eight “Recommendation System” cards. Annotated in red: “either talk to chat bot - or boot up premade system.”" /></div>
+                </figure>
+                <figure class="ry-frame is-hifi">
+                  <figcaption class="ry-lbl">frame · same afternoon</figcaption>
+                  <div class="ry-ab"><img src={IMG.errors} width="987" height="575" alt="Raylu hi-fi label-errors workflow, a real Figma frame: a left rail with the raylu wordmark and nav icons, a metrics bar (false-positive count, confidence and IOU threshold sliders), and a grid of selectable image thumbnails with bounding boxes, each a candidate the model flagged as wrong." /></div>
+                </figure>
+              </div>
+              <div class="ry-paths">
+                <span class="ry-lbl" id={`${uid}-paths`}>two-path entry</span>
+                <div class="ry-paths-row" role="group" aria-labelledby={`${uid}-paths`}>
+                  {PATHS.map((o, j) => (
+                    <button type="button" class="ry-opt" aria-pressed={j === 0 ? "true" : "false"} data-ry-opt={o.id}>
+                      <svg class="ry-ic" viewBox="0 0 24 24" aria-hidden="true">
+                        {o.id === "chat"
+                          ? <path d="M4 5h16v11H10l-6 4z" />
+                          : <Fragment><rect x="4" y="4" width="7" height="7" rx="1" /><rect x="13" y="4" width="7" height="7" rx="1" /><rect x="4" y="13" width="7" height="7" rx="1" /><rect x="13" y="13" width="7" height="7" rx="1" /></Fragment>}
+                      </svg>
+                      <span>{o.label}</span>
+                      <span class="ry-opt-dot" aria-hidden="true"></span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {p.id === "hifi" && (
+            <div class="ry-grid">
+              {TILES.map((t) => (
+                <article class:list={["ry-ab", "ry-tile", `is-${t.id}`]} data-ry-tile={t.id}>
+                  <div class="ry-stage" aria-hidden="true">
+                    {t.states.map((s) => (
+                      <div class="ry-st" data-ry-st={s}>
+                        {t.id === "nav" && (
+                          <span class:list={["c-nav", { "is-on": s === "selected" }]}>
+                            <svg class="ry-ic" viewBox="0 0 24 24"><circle cx="12" cy="5.5" r="2.3" /><circle cx="7.5" cy="12" r="2.3" /><circle cx="16.5" cy="12" r="2.3" /><circle cx="5" cy="18.5" r="2.3" /><circle cx="12" cy="18.5" r="2.3" /><circle cx="19" cy="18.5" r="2.3" /></svg>
+                          </span>
+                        )}
+                        {t.id === "slider" && (
+                          <span class:list={["c-sl", { "is-drag": s === "drag" }]}>
+                            <span class="c-sl-l">point size</span>
+                            <span class="c-sl-t"><i></i></span>
+                            <span class="c-sl-v">{s === "drag" ? "1.8x" : "1.0x"}</span>
+                          </span>
+                        )}
+                        {t.id === "dropdown" && (
+                          <span class:list={["c-dd", { "is-open": s === "open" }]}>
+                            <span class="c-dd-box">UMAP<svg class="c-dd-car" viewBox="0 0 12 12"><path d={s === "open" ? "M3 7.5 6 4.5 9 7.5" : "M3 4.5 6 7.5 9 4.5"} /></svg></span>
+                            {s === "open" && <span class="c-dd-menu"><span class="is-cur">UMAP</span><span>t-SNE</span><span>PCA</span></span>}
+                          </span>
+                        )}
+                        {t.id === "pill" && <span class:list={["c-pill", { "is-hover": s === "hover" }]}>vehicle · 47 images</span>}
+                        {t.id === "thumb" && (
+                          <span class:list={["c-th", `is-${s}`]}>
+                            <span class="c-th-box"></span>
+                            <span class="c-th-img"><i></i></span>
+                          </span>
+                        )}
+                        {t.id === "button" && <span class:list={["c-btn", s !== "rest" && `is-${s}`]}>Model Integration</span>}
+                        <span class="ry-st-l">{s}</span>
+                      </div>
+                    ))}
+                  </div>
+                  <div class="ry-doc">
+                    <h3 class="ry-doc-n">{t.name}</h3>
+                    <span class="ry-doc-w">{t.what}</span>
+                  </div>
+                </article>
+              ))}
+            </div>
+          )}
+        </section>
+      ))}
+    </div>
+  </div>
+</div>
+
+<script>
+  document.querySelectorAll<HTMLElement>("[data-ry-set]").forEach((root) => {
+    const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const sheet = root.dataset.dir === "2";
+    const tablist = root.querySelector<HTMLElement>("[data-ry-tabs]");
+    const tabs = Array.from(root.querySelectorAll<HTMLButtonElement>("[data-ry-tab]"));
+    const pages = Array.from(root.querySelectorAll<HTMLElement>("[data-ry-page]"));
+    const view = root.querySelector<HTMLElement>("[data-ry-view]");
+    if (!view || !tablist) return;
+
+    // ── dir 2 · THE SHEET: every page shown; the tabs stand down to margin labels (each page names itself as a region)
+    if (sheet) {
+      tablist.removeAttribute("role");
+      tabs.forEach((t) => { t.removeAttribute("role"); t.removeAttribute("aria-selected"); t.tabIndex = -1; t.setAttribute("aria-hidden", "true"); });
+      pages.forEach((p) => { p.hidden = false; p.setAttribute("role", "region"); p.removeAttribute("tabindex"); });
+    }
+
+    // ── dir 1 · PAGES: one canvas at a time, crossfaded
+    let current = tabs[0]?.dataset.ryTab ?? "brand", fadeT = 0;
+    const show = (id: string) => { pages.forEach((p) => { p.hidden = p.dataset.ryPage !== id; }); view.scrollTop = 0; };
+    const select = (id: string, focus = false) => {
+      const tab = tabs.find((t) => t.dataset.ryTab === id);
+      if (!tab) return;
+      if (sheet) {
+        const pg = pages.find((p) => p.dataset.ryPage === id);
+        pg?.scrollIntoView({ block: "start", behavior: reduce ? "auto" : "smooth" });
+        return;
+      }
+      tabs.forEach((t) => { const on = t === tab; t.setAttribute("aria-selected", on ? "true" : "false"); t.tabIndex = on ? 0 : -1; });
+      if (focus) tab.focus();
+      tab.scrollIntoView({ block: "nearest", inline: "nearest" });
+      if (id === current) return;
+      current = id;
+      window.clearTimeout(fadeT);
+      if (reduce) { show(id); return; }
+      view.classList.add("is-out");
+      fadeT = window.setTimeout(() => { show(current); view.classList.remove("is-out"); }, 180);
+    };
+    if (!sheet) {
+      tabs.forEach((t, i) => {
+        t.addEventListener("click", () => select(t.dataset.ryTab ?? ""));
+        t.addEventListener("keydown", (e) => {
+          const n = ({ ArrowRight: i + 1, ArrowDown: i + 1, ArrowLeft: i - 1, ArrowUp: i - 1, Home: 0, End: tabs.length - 1 } as Record<string, number>)[e.key];
+          if (n === undefined) return;
+          e.preventDefault();
+          const next = tabs[(n + tabs.length) % tabs.length];
+          if (next) select(next.dataset.ryTab ?? "", true);
+        });
+      });
+    }
+
+    // ── Brand: the tone chips (rest · selected), each a toggle
+    root.querySelectorAll<HTMLButtonElement>("[data-ry-chip]").forEach((c) =>
+      c.addEventListener("click", () => c.setAttribute("aria-pressed", c.getAttribute("aria-pressed") === "true" ? "false" : "true")));
+
+    // ── Competitive: one name selected at a time; the side label prints it
+    const qs = Array.from(root.querySelectorAll<HTMLButtonElement>("[data-ry-q]"));
+    const qname = root.querySelector<HTMLElement>("[data-ry-qname]");
+    const pick = (name: string) => {
+      const q = qs.find((b) => b.dataset.ryQ === name);
+      if (!q) return;
+      qs.forEach((b) => b.setAttribute("aria-pressed", b === q ? "true" : "false"));
+      if (qname) qname.textContent = name;
+    };
+    qs.forEach((b) => b.addEventListener("click", () => pick(b.dataset.ryQ ?? "")));
+
+    // ── Wireframes: the two-path entry, one path at a time
+    const opts = Array.from(root.querySelectorAll<HTMLButtonElement>("[data-ry-opt]"));
+    opts.forEach((o) => o.addEventListener("click", () => opts.forEach((x) => x.setAttribute("aria-pressed", x === o ? "true" : "false"))));
+
+    // ── Hi-fi: state(tile, state) marks one drawn state (the QA's pointer; the sheet draws every state at once)
+    const state = (tile: string, st: string) => {
+      root.querySelectorAll<HTMLElement>(`[data-ry-tile="${tile}"] [data-ry-st]`).forEach((s) => s.classList.toggle("is-marked", s.dataset.rySt === st));
+    };
+
+    const w = window as unknown as { __ry?: { page: (id: string) => void; pick: (n: string) => void; state: (t: string, s: string) => void } };
+    if (!w.__ry) w.__ry = { page: (id) => select(id), pick, state };
+  });
+</script>
+
+<style>
+  /* ── the window: the room's card, hairlines and mono; 520 tall on desks with the canvas scrolling inside ── */
+  .ry-set {
+    container: ry-set / inline-size;
+    display: flex; flex-direction: column; width: 100%; height: 520px; box-sizing: border-box;
+    border: 1px solid var(--rm-line); border-radius: 8px; background: var(--rm-card); overflow: hidden;
+    color: var(--rm-ink); font-family: var(--rm-sans); text-align: left;
+  }
+  .ry-set *, .ry-set *::before, .ry-set *::after { box-sizing: border-box; }
+  .ry-set [hidden] { display: none !important; }
+  .ry-set :where(button) { font: inherit; color: inherit; cursor: pointer; margin: 0; }
+  .ry-set figure { margin: 0; }
+  .ry-set img { display: block; width: 100%; height: auto; }
+  .ry-lbl { font: 500 0.6875rem/1.3 var(--rm-mono); letter-spacing: 0.12em; text-transform: lowercase; color: var(--rm-dim); }
+
+  .ry-bar { flex: none; display: flex; align-items: center; height: 40px; padding-inline: 16px; border-bottom: 1px solid var(--rm-line); }
+  .ry-file { font: 500 0.6875rem/1 var(--rm-mono); letter-spacing: 0.08em; color: var(--rm-ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .ry-body { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; }
+
+  /* the page tabs: a row; name over stamp */
+  .ry-tabs { flex: none; display: flex; border-bottom: 1px solid var(--rm-line); overflow-x: auto; scrollbar-width: none; }
+  .ry-tab {
+    position: relative; flex: 1 1 0; min-width: 0; display: grid; gap: 3px; align-content: center; height: 58px;
+    padding: 0 16px; border: 0; border-radius: 0; background: transparent; text-align: left; transition: background-color 120ms ease;
+  }
+  .ry-tab + .ry-tab { border-left: 1px solid var(--rm-line); }
+  .ry-tab-n { font: 500 0.8125rem/1.2 var(--rm-sans); color: color-mix(in oklab, var(--rm-ink) 72%, var(--rm-dim)); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .ry-tab-d { font: 400 0.6875rem/1.2 var(--rm-mono); letter-spacing: 0.04em; color: var(--rm-dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .ry-tab:hover { background: color-mix(in oklab, var(--rm-ink) 4%, transparent); }
+  .ry-tab[aria-selected="true"] .ry-tab-n { color: var(--rm-ink); }
+  .ry-tab[aria-selected="true"]::after { content: ""; position: absolute; inset-inline: 0; bottom: -1px; height: 2px; background: var(--ry-accent); }
+  .ry-tab:focus-visible, .ry-page:focus-visible { outline: 2px solid var(--ry-accent); outline-offset: -2px; }
+
+  /* the canvas: the room's paper (the tool's ground), one page at a time */
+  .ry-view { flex: 1 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior: contain; background: var(--rm-paper); transition: opacity 180ms ease; }
+  .ry-view.is-out { opacity: 0; pointer-events: none; }
+  .ry-page { padding: 18px 24px 24px; }
+  .ry-note { margin: 0 0 16px; max-width: 72ch; font: 500 0.75rem/1.5 var(--rm-mono); letter-spacing: 0.04em; color: var(--rm-ink); }
+
+  /* an artboard: the product's paper, its hairline */
+  .ry-ab { margin: 0; background: var(--ry-paper); border: 1px solid var(--ry-line); border-radius: var(--ry-radius); color: var(--ry-ink); font: 400 var(--ry-fs)/1.4 var(--ry-font); overflow: hidden; }
+  .ry-ic { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linejoin: round; flex: none; }
+
+  /* ── Brand: the whale small in its frame, the wordmark and thesis, the tone chips; the palette across ── */
+  .ry-brand { display: grid; grid-template-columns: minmax(0, 300px) minmax(0, 1fr); gap: 16px; }
+  .ry-whale { align-self: start; }
+  .ry-id { display: flex; flex-direction: column; justify-content: center; gap: 6px; padding: 20px 24px; }
+  .ry-mark { font: 500 3rem/1 var(--rm-display); letter-spacing: -0.01em; color: var(--ry-accent); }
+  .ry-thesis { font: 400 1.0625rem/1.35 var(--ry-font); color: var(--ry-ink); }
+  .ry-chips { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
+  .ry-chip {
+    height: 32px; padding: 0 12px; border: 1px solid var(--ry-line); border-radius: 999px; background: var(--ry-paper);
+    font: 500 var(--ry-fs-sm)/1 var(--ry-mono); letter-spacing: 0.04em; color: var(--ry-dim);
+    transition: background-color 120ms ease, border-color 120ms ease, color 120ms ease;
+  }
+  .ry-chip:hover { border-color: var(--ry-dim); color: var(--ry-ink); }
+  .ry-chip[aria-pressed="true"] { background: color-mix(in oklab, var(--ry-accent) 14%, var(--ry-paper)); border-color: var(--ry-accent); color: color-mix(in oklab, var(--ry-accent) 70%, var(--ry-ink)); }
+  .ry-pal { grid-column: 1 / -1; display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 12px; padding: 16px; }
+  .ry-sw { display: grid; gap: 4px; min-width: 0; }
+  .ry-sq { display: block; height: 48px; margin-bottom: 4px; border: 1px solid var(--ry-line); border-radius: var(--ry-radius-sm); }
+  .ry-sw-v { padding: 0; background: none; font: 400 var(--ry-fs-sm)/1.3 var(--ry-mono); color: var(--ry-ink); }
+
+  /* ── Competitive: the 2×2 as a component; a name hovers, one is selected and printed beside ── */
+  .ry-comp { display: grid; grid-template-columns: minmax(0, 1fr) 180px; gap: 16px; align-items: start; }
+  .ry-mx { position: relative; aspect-ratio: 2 / 1; min-height: 240px; }
+  .ry-mx::before, .ry-mx::after { content: ""; position: absolute; background: var(--ry-line); }
+  .ry-mx::before { left: 50%; top: 12%; bottom: 12%; width: 1px; }
+  .ry-mx::after { top: 50%; left: 6%; right: 6%; height: 1px; }
+  .ry-mx-axis { position: absolute; font: 500 var(--ry-fs-sm)/1 var(--ry-mono); letter-spacing: 0.08em; color: var(--ry-dim); }
+  .ry-mx-axis.is-y { top: 12px; left: 12px; }
+  .ry-mx-axis.is-x { bottom: 12px; right: 12px; }
+  .ry-q {
+    position: absolute; z-index: 1; left: calc(16% + var(--qx) * 68%); top: calc(18% + var(--qy) * 64%); translate: -50% -50%;
+    height: 32px; padding: 0 12px; border: 1px solid var(--ry-line); border-radius: 999px; background: var(--ry-paper);
+    font: 500 var(--ry-fs)/1 var(--ry-font); color: var(--ry-ink); white-space: nowrap;
+    transition: background-color 120ms ease, border-color 120ms ease, color 120ms ease;
+  }
+  .ry-q:hover { border-color: var(--ry-ink); }
+  .ry-q.is-us { border-color: var(--ry-accent); color: color-mix(in oklab, var(--ry-accent) 70%, var(--ry-ink)); }
+  .ry-q[aria-pressed="true"] { background: var(--ry-accent); border-color: var(--ry-accent); color: var(--ry-accent-ink); }
+  .ry-mx-side { display: grid; gap: 6px; padding-top: 4px; }
+  .ry-mx-name { font: 500 1.75rem/1.1 var(--rm-display); letter-spacing: -0.01em; color: var(--rm-ink); overflow-wrap: anywhere; }
+
+  /* ── Strategy: the slide in its frame, the thesis as three labelled rows ── */
+  .ry-strat { display: grid; grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr); gap: 16px; align-items: start; }
+  .ry-rows { list-style: none; padding: 0; }
+  .ry-row { display: grid; grid-template-columns: 14px minmax(0, 1fr); align-items: baseline; column-gap: 12px; gap: 8px; padding: 14px 16px; }
+  .ry-row + .ry-row { border-top: 1px solid var(--ry-line); }
+  .ry-row-k { display: block; width: 14px; height: 2px; translate: 0 -0.3em; background: var(--ry-accent); }
+  .ry-row-t { font: 500 1.0625rem/1.3 var(--ry-font); color: var(--ry-ink); }
+
+  /* ── Wireframes: the sketch and the frame at one height, side by side; the two-path entry beneath ── */
+  .ry-pair { display: grid; grid-template-columns: minmax(0, 1.179fr) minmax(0, 1.717fr); gap: 16px; }
+  .ry-frame { display: grid; gap: 8px; align-content: start; min-width: 0; }
+  .ry-paths { display: grid; gap: 8px; margin-top: 20px; }
+  .ry-paths-row { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+  .ry-opt {
+    display: flex; align-items: center; gap: 10px; min-height: 48px; padding: 0 16px; text-align: left;
+    border: 1px solid var(--ry-line); border-radius: var(--ry-radius); background: var(--ry-paper);
+    font: 500 0.9375rem/1.2 var(--ry-font); color: var(--ry-ink);
+    transition: background-color 120ms ease, border-color 120ms ease;
+  }
+  .ry-opt .ry-ic { color: var(--ry-dim); }
+  .ry-opt > span:not(.ry-opt-dot) { flex: 1 1 auto; }
+  .ry-opt-dot { width: 14px; height: 14px; border: 1px solid var(--ry-line); border-radius: 50%; flex: none; }
+  .ry-opt:hover { border-color: var(--ry-ink); }
+  .ry-opt[aria-pressed="true"] { border-color: var(--ry-accent); background: color-mix(in oklab, var(--ry-accent) 10%, var(--ry-paper)); }
+  .ry-opt[aria-pressed="true"] .ry-ic { color: var(--ry-accent); }
+  .ry-opt[aria-pressed="true"] .ry-opt-dot { border: 4px solid var(--ry-accent); }
+  .ry-chip:focus-visible, .ry-q:focus-visible, .ry-opt:focus-visible { outline: 2px solid var(--ry-accent); outline-offset: 2px; }
+
+  /* ── Hi-fi: the product's primitives, each a tile: the drawn states over a mono label each, then name + purpose ── */
+  .ry-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+  .ry-tile { display: flex; flex-direction: column; min-width: 0; }
+  .ry-stage { flex: 1 1 auto; display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 14px 12px; min-height: 112px; padding: 18px 16px 14px; background: var(--ry-field); border-bottom: 1px solid var(--ry-line); }
+  .ry-st { display: grid; justify-items: center; gap: 8px; min-width: 0; padding: 4px; border-radius: var(--ry-radius-sm); outline: 1px dashed transparent; }
+  .ry-st.is-marked { outline-color: var(--ry-accent); }
+  .ry-st-l { font: 400 var(--ry-fs-sm)/1 var(--ry-mono); letter-spacing: 0.04em; color: var(--ry-dim); }
+  .ry-doc { display: grid; gap: 2px; padding: 12px 14px 14px; }
+  .ry-doc-n { margin: 0; font: 600 0.875rem/1.3 var(--ry-font); color: var(--ry-ink); }
+  .ry-doc-w { font: 400 var(--ry-fs)/1.4 var(--ry-font); color: var(--ry-dim); }
+  .is-slider .ry-stage, .is-pill .ry-stage, .is-button .ry-stage { flex-direction: column; align-items: center; flex-wrap: nowrap; }
+  .is-dropdown .ry-stage { align-items: flex-start; }
+  .is-thumb .ry-stage { flex-wrap: nowrap; gap: 6px; padding-inline: 10px; }
+
+  /* the drawn components (the product's own, from the screenshots) */
+  .c-nav { display: grid; place-items: center; width: 40px; height: 40px; border-radius: var(--ry-radius-sm); color: var(--ry-dim); }
+  .c-nav.is-on { background: color-mix(in oklab, var(--ry-accent) 14%, var(--ry-paper)); color: var(--ry-accent); box-shadow: inset 2px 0 0 var(--ry-accent); }
+  .c-nav .ry-ic { width: 22px; height: 22px; fill: currentColor; stroke: none; }
+
+  .c-sl { display: grid; grid-template-columns: 92px 96px 32px; align-items: center; gap: 8px; font: 400 var(--ry-fs-sm)/1 var(--ry-font); color: var(--ry-ink); }
+  .c-sl-v { font-family: var(--ry-mono); color: var(--ry-dim); text-align: right; }
+  .c-sl-t { position: relative; height: 2px; background: color-mix(in oklab, var(--ry-accent) 45%, var(--ry-line)); border-radius: 1px; }
+  .c-sl-t i { position: absolute; top: 50%; left: 8%; width: 10px; height: 10px; translate: -50% -50%; border-radius: 50%; background: var(--ry-accent); }
+  .c-sl.is-drag .c-sl-t i { left: 72%; width: 14px; height: 14px; box-shadow: 0 0 0 4px color-mix(in oklab, var(--ry-accent) 22%, transparent); }
+  .c-sl.is-drag .c-sl-v { color: var(--ry-ink); }
+
+  .c-dd { position: relative; display: grid; gap: 4px; width: 96px; font: 400 var(--ry-fs)/1 var(--ry-font); }
+  .c-dd-box { display: flex; align-items: center; justify-content: space-between; height: 28px; padding: 0 8px; background: var(--ry-paper); border: 1px solid var(--ry-line); border-radius: var(--ry-radius-sm); color: var(--ry-ink); }
+  .c-dd.is-open .c-dd-box { border-color: var(--ry-accent); }
+  .c-dd-car { width: 12px; height: 12px; fill: none; stroke: var(--ry-dim); stroke-width: 1.5; }
+  .c-dd-menu { display: grid; padding: 4px; background: var(--ry-paper); border: 1px solid var(--ry-line); border-radius: var(--ry-radius-sm); }
+  .c-dd-menu span { padding: 5px 6px; border-radius: 3px; color: var(--ry-dim); }
+  .c-dd-menu .is-cur { background: color-mix(in oklab, var(--ry-accent) 14%, var(--ry-paper)); color: var(--ry-ink); }
+
+  .c-pill { display: inline-flex; align-items: center; height: 26px; padding: 0 10px; border-radius: var(--ry-radius-sm); border: 1px solid color-mix(in oklab, var(--ry-accent) 45%, transparent); background: color-mix(in oklab, var(--ry-accent) 12%, var(--ry-paper)); color: color-mix(in oklab, var(--ry-accent) 70%, var(--ry-ink)); font: 600 var(--ry-fs-sm)/1 var(--ry-mono); white-space: nowrap; }
+  .c-pill.is-hover { background: var(--ry-accent); border-color: var(--ry-accent); color: var(--ry-accent-ink); }
+
+  .c-th { position: relative; display: block; width: 58px; padding: 18px 8px 10px; border: 1px solid var(--ry-line); border-radius: var(--ry-radius-sm); background: var(--ry-paper); }
+  .c-th-box { position: absolute; top: 4px; left: 4px; display: grid; place-items: center; width: 11px; height: 11px; border: 1px solid var(--ry-dim); border-radius: 2px; }
+  .c-th:not(.is-candidate) .c-th-box::after { content: ""; width: 5px; height: 3px; margin-top: -2px; border: solid var(--ry-accent-ink); border-width: 0 0 1.5px 1.5px; rotate: -45deg; }
+  .c-th-img { position: relative; display: block; height: 34px; border-radius: 2px; background: color-mix(in oklab, var(--ry-ink) 22%, var(--ry-field)); }
+  .c-th-img i { position: absolute; left: 22%; top: 22%; width: 52%; height: 52%; border: 2px dashed var(--ry-dim); }
+  .c-th.is-flagged { background: color-mix(in oklab, var(--ry-accent) 22%, var(--ry-paper)); border-color: color-mix(in oklab, var(--ry-accent) 40%, var(--ry-line)); }
+  .c-th.is-flagged .c-th-box { background: var(--ry-accent); border-color: var(--ry-accent); }
+  .c-th.is-flagged .c-th-img i { border: 2px solid var(--ry-accent); }
+  .c-th.is-confirmed { border-color: var(--ry-ok); }
+  .c-th.is-confirmed .c-th-box { background: var(--ry-ok); border-color: var(--ry-ok); }
+  .c-th.is-confirmed .c-th-img i { border: 2px solid var(--ry-ok); }
+
+  .c-btn { display: inline-flex; align-items: center; height: 30px; padding: 0 12px; border: 1px solid var(--ry-line); border-radius: var(--ry-radius-sm); background: var(--ry-paper); color: var(--ry-ink); font: 500 var(--ry-fs)/1 var(--ry-font); white-space: nowrap; }
+  .c-btn.is-hover { border-color: var(--ry-accent); color: color-mix(in oklab, var(--ry-accent) 70%, var(--ry-ink)); }
+  .c-btn.is-pressed { background: var(--ry-accent); border-color: var(--ry-accent); color: var(--ry-accent-ink); translate: 0 1px; }
+
+
+  /* ── phones (and narrow columns): the tabs become a strip of chips; the canvas grows with its page ── */
+  @container ry-set (max-width: 760px) {
+    .ry-brand { grid-template-columns: minmax(0, 1fr); }
+    .ry-whale { max-width: 280px; }
+    .ry-pal { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    .ry-comp, .ry-strat { grid-template-columns: minmax(0, 1fr); }
+    .ry-mx { aspect-ratio: 4 / 3; }
+    .ry-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  }
+  @container ry-set (max-width: 520px) {
+    .ry-pair, .ry-paths-row, .ry-grid { grid-template-columns: minmax(0, 1fr); }
+    .ry-page { padding: 14px 14px 18px; }
+    .ry-mark { font-size: 2.5rem; }
+  }
+  @media (max-width: 720px) {
+    .ry-set { height: auto; }
+    .ry-view { overflow: visible; }
+    .ry-tabs { gap: 6px; padding: 8px 12px; }
+    .ry-tab, .ry-tab + .ry-tab { flex: none; height: 44px; padding: 0 12px; border: 1px solid var(--rm-line); border-radius: 6px; }
+    .ry-tab[aria-selected="true"] { border-color: var(--ry-accent); background: color-mix(in oklab, var(--ry-accent) 10%, transparent); }
+    .ry-tab[aria-selected="true"]::after { content: none; }
+  }
+
+  /* ════ DIRECTION 2 · THE SHEET (delete this block if PAGES wins) ════ */
+  .ry-set[data-dir="2"] { height: auto; }
+  .ry-set[data-dir="2"] .ry-body { display: grid; grid-template-columns: 208px minmax(0, 1fr); }
+  .ry-set[data-dir="2"] .ry-tabs, .ry-set[data-dir="2"] .ry-view { display: contents; }
+  .ry-set[data-dir="2"] .ry-page { display: block !important; grid-column: 2; grid-row: var(--r); background: var(--rm-paper); }
+  .ry-set[data-dir="2"] .ry-tab, .ry-set[data-dir="2"] .ry-tab + .ry-tab {
+    grid-column: 1; grid-row: var(--r); align-content: start; gap: 6px; height: auto; padding: 20px 20px; border: 0;
+    border-radius: 0; background: transparent; pointer-events: none; cursor: default;
+  }
+  .ry-set[data-dir="2"] .ry-tab::after { content: none; }
+  .ry-set[data-dir="2"] .ry-tab-n { font: 500 1rem/1.25 var(--rm-sans); color: var(--rm-ink); white-space: normal; }
+  .ry-set[data-dir="2"] .ry-tab-d { white-space: normal; }
+  .ry-set[data-dir="2"] .ry-tab:not(:first-child), .ry-set[data-dir="2"] .ry-page:not(:first-child) { border-top: 1px solid var(--rm-line); }
+  .ry-set[data-dir="2"] .ry-page { padding-top: 20px; border-left: 1px solid var(--rm-line); }
+  @media (max-width: 720px) {
+    .ry-set[data-dir="2"] .ry-body { grid-template-columns: minmax(0, 1fr); }
+    .ry-set[data-dir="2"] .ry-tab, .ry-set[data-dir="2"] .ry-tab + .ry-tab { grid-column: 1; grid-row: var(--o); padding: 16px 14px 4px; flex: none; }
+    .ry-set[data-dir="2"] .ry-page { grid-column: 1; grid-row: var(--o); border-left: 0; border-top: 0 !important; padding-top: 12px; }
+  }
+  /* ════ end DIRECTION 2 ════ */
+
+  @media (prefers-reduced-motion: reduce) {
+    .ry-view, .ry-tab, .ry-chip, .ry-q, .ry-opt { transition: none; }
+  }
+</style>
