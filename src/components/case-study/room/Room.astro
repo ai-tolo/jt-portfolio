@@ -57,7 +57,10 @@ const { title, description, label, hook, cls = "" } = Astro.props;
   /* the study's prose does not take the older route's Geist/17px rules */
   /* every paragraph inherits (the older route painted its own ink and size on `.cs-main p`, which leaked into the objects'
      bubbles); the room's prose containers (.rm-read, the story card) set the body face on themselves */
-  .room-cs .cs-main p { font-family: inherit; font-size: inherit; line-height: inherit; color: inherit; margin: 0; max-width: none; }
+  /* :where() keeps this reset at two classes of specificity, so the frame's own rules below (.rm .rm-label, .rm .rm-number,
+     the story card's .rs .rs-p) win over it; as a plain three-class rule it silently beat them (2026-10-06: the label
+     rendered 16px sans, the number lost its margins, on every page) */
+  .room-cs .cs-main :where(p) { font-family: inherit; font-size: inherit; line-height: inherit; color: inherit; margin: 0; max-width: none; }
   .room-cs .cs-main a { color: inherit; text-decoration-color: color-mix(in oklab, var(--rm-ink) 40%, transparent); }
   .room-cs .cs-main a:hover { text-decoration-color: var(--rm-ink); }
   .room-cs .cs-main { padding-bottom: 64px; }
@@ -70,7 +73,7 @@ const { title, description, label, hook, cls = "" } = Astro.props;
 
   /* ── the head: the mono label, then the hook (the work room's title face) ── */
   .rm-head { margin: 0 0 var(--sp-8); }
-  .rm-label { margin: 0 0 var(--sp-3); font: 500 0.6875rem/1.5 var(--rm-mono); letter-spacing: 0.12em; text-transform: lowercase; color: var(--rm-dim); }
+  .rm .rm-label { margin: 0 0 var(--sp-3); font: 500 0.6875rem/1.5 var(--rm-mono); letter-spacing: 0.12em; text-transform: lowercase; color: var(--rm-dim); }
   .rm-hook { margin: 0; max-width: 24ch; font: 500 2.125rem/1.15 var(--rm-display); letter-spacing: -0.01em; text-wrap: balance; color: var(--rm-ink); }
   @media (max-width: 720px) { .rm-hook { font-size: 1.75rem; } }
 
@@ -80,14 +83,16 @@ const { title, description, label, hook, cls = "" } = Astro.props;
   .rm-cap { margin: var(--sp-6) 0 0; max-width: var(--rm-measure); font: 600 0.75rem/1.5 var(--rm-mono); letter-spacing: 0.04em; color: var(--rm-ink); }
 
   /* ── the one consequential number, set apart ── */
-  .rm-number { display: flex; align-items: baseline; gap: 20px; margin: var(--sp-12) 0 var(--sp-12); }
+  .rm .rm-number { display: flex; align-items: baseline; gap: 20px; margin: var(--sp-12) 0 var(--sp-12); }
   .rm-number b { font: 500 3.5rem/1 var(--rm-display); letter-spacing: -0.02em; }
   .rm-number span { max-width: 44ch; font: 500 0.6875rem/1.6 var(--rm-mono); letter-spacing: 0.12em; text-transform: lowercase; color: var(--rm-dim); }
   .rm-number + .rm-object { margin-top: 0; }
+  /* a wide number (40 → 25 %) drops its words under itself on a phone instead of squeezing them (Crediverso, 2026-10-06) */
+  @media (max-width: 520px) { .rm .rm-number { flex-wrap: wrap; row-gap: 8px; } }
 
   /* ── the read on the ground (when a study wants words outside the card): the measure, moment headings in the display face ── */
   .rm-read { max-width: var(--rm-measure); margin: var(--sp-12) 0 0; font: 400 1rem/1.6 var(--rm-sans); }
-  .rm-read p + p { margin-top: var(--sp-4); }
+  .rm .rm-read p + p { margin-top: var(--sp-4); }
   .rm-m { margin: var(--sp-8) 0 var(--sp-3); font: 500 1.375rem/1.2 var(--rm-display); letter-spacing: -0.01em; color: var(--rm-ink); }
   .rm-read > .rm-m:first-child { margin-top: 0; }
 
