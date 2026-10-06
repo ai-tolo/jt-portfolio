@@ -1,149 +1,110 @@
 ---
-// PROOF for the Engineer bullet: the taste model was overfitting my ratings, so
-// the judging moved out of the model and into a blind, loudness-matched test.
+// PROOF for the mastering agent's evidence bullet: every candidate is
+// loudness-matched and judged blind against the untouched original.
 //
-// This module is the CHECKABLE ARTIFACT: it does not assert the story, it shows
-// the ledger. Every row, date, LUFS value, listening note and aggregate below
-// is read from src/lib/judge-ledger.json, a dated snapshot of the real harness
-// database (mix_judgements / mix_jobs / mix_variants on the M1). Nothing here is
-// authored for effect and nothing animates a number into existence.
+// This module is the CHECKABLE ARTIFACT, the blind test's ledger. Every date,
+// axis, LUFS value, winner and count below is read from
+// src/lib/judge-ledger.json, a dated snapshot of the real harness database
+// (mix_judgements / mix_jobs / mix_variants on the M1). Nothing is typed by
+// hand (even the counts that print as words, the caption's "Ten" and the
+// foot's "nine", are spelled from the rows), and nothing animates a number
+// into existence. The listening notes stay in the JSON; the module no longer
+// shows them.
 //
-// It opens by default, so it is built for a cold glance: the numbers are static
-// in the HTML, only the ledger lines and the two bars have a reveal, and any
-// reduced-motion or no-JS reader gets the settled state immediately.
+// Clothes (2026-10-06): the room's material, no dark panel. The module draws
+// no ground of its own: it reads the .proof-panel tokens (--pf-*, each with its
+// day value as the fallback; night flips them on the panel) and sets its one
+// object, the ledger, as paper on that ground: a card, 1px hairlines, a firmer
+// rule where the session changes. Three faces (JetBrains Mono for labels and
+// cells, Instrument Sans for the lead, Outfit for the one big number), the 4/8
+// spacing scale, and ONE accent, green, kept for the original's wins: the
+// filled dot and the word in the ledger, and the bar's fill.
+//
+// It is built for a cold glance: the numbers are static in the HTML, only the
+// ledger rows and the one bar have a reveal, and any reduced-motion or no-JS
+// reader gets the settled state immediately.
 import ledger from "../../lib/judge-ledger.json";
 
 type Row = { d: string; axis: string; lufs: number; orig: boolean; note?: string };
 
 const rows = ledger.rows as Row[];
 const b = ledger.blind;
-const j = ledger.jobs;
-const r = ledger.renders;
 
-// share of decisions where the winning take was the untouched original
-const pctVotes = Math.round((b.chose_original / b.votes) * 100); // 45
-const pctRuns = Math.round((j.champion_original / j.with_champion) * 100); // 54
+// the share of blind votes the untouched original won: the one bar's length
+const share = (b.chose_original / b.votes) * 100;
 
-// flatten to display lines so the ledger reveal can stagger row + note alike,
-// and so a date only prints when the session changes (as the log reads)
-type Line =
-  | { kind: "row"; d: string; axis: string; lufs: string; orig: boolean; newDay: boolean }
-  | { kind: "note"; text: string };
+// counts that print as words are spelled from the rows themselves, so a new
+// snapshot can never leave a stale "nine" under the table
+const SPELLED = ["zero", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten", "eleven", "twelve"];
+const spell = (n: number) => SPELLED[n] ?? String(n);
+const shown = spell(rows.length);
+const shownCap = shown.charAt(0).toUpperCase() + shown.slice(1);
+const leading = spell(rows.length - 1);
 
-const lines: Line[] = [];
-rows.forEach((row, i) => {
-  lines.push({
-    kind: "row",
-    d: row.d,
-    axis: row.axis,
-    lufs: row.lufs.toFixed(2),
-    orig: row.orig,
-    newDay: i === 0 || rows[i - 1].d !== row.d,
-  });
-  if (row.note) lines.push({ kind: "note", text: row.note });
-});
-
-const BARS = [
-  { label: "blind votes", pct: pctVotes, num: b.chose_original, den: b.votes },
-  { label: "decided runs", pct: pctRuns, num: j.champion_original, den: j.with_champion },
-];
+// a date prints only when the session changes (as the log reads), and the row
+// that closes a session carries the firmer rule beneath it
+const lines = rows.map((row, i) => ({
+  d: row.d,
+  axis: row.axis,
+  lufs: row.lufs.toFixed(2),
+  orig: row.orig,
+  newDay: i === 0 || rows[i - 1].d !== row.d,
+  endDay: i < rows.length - 1 && rows[i + 1].d !== row.d,
+}));
 ---
 
 <div class="pf pf-judge" data-proof="judge">
   <header class="pf-head">
-    <p class="pf-kicker">the harness ledger · snapshot {ledger.snapshot}</p>
-    <h4 class="pf-title">
-      The taste model was overfitting my ratings, not improving the audio. I shelved it and built a blind judge.
-    </h4>
-    <p class="jg-method">
-      each round: two takes, unlabeled, matched to the same LUFS, judged on one axis
-      (focal, dynamics, space, raw vs processed). the original is always on the ballot.
+    <p class="pf-kicker">the blind test's ledger · snapshot <span class="jg-date">{ledger.snapshot}</span></p>
+    <p class="jg-lead">
+      Each round plays two takes at the same loudness, unlabeled, judged on one axis; the untouched original is always one of them.
     </p>
   </header>
 
   <div class="jg-body">
     <section class="jg-ledger" aria-label="Ledger rows">
-      <div class="jg-secthead">
-        <span class="jg-seclabel">the ledger</span>
-        <span class="jg-secmeta">{rows.length} of {b.rounds} rounds</span>
-      </div>
-
       <div class="jg-tablewrap">
         <table class="jg-table">
           <caption class="jg-sr">
-            Ten rounds from the blind listening ledger: date, axis, the LUFS both takes were
-            matched to, and which take won. Listening notes are quoted under their round.
+            {shownCap} rounds of the blind test: date, axis, the loudness both takes were matched to, and the winner.
           </caption>
-          <colgroup>
-            <col class="jg-c-d" /><col class="jg-c-a" /><col class="jg-c-l" /><col class="jg-c-w" />
-          </colgroup>
           <thead>
             <tr>
               <th scope="col">date</th>
               <th scope="col">axis</th>
-              <th scope="col" class="jg-num">matched lufs</th>
+              <th scope="col" class="jg-num">lufs</th>
               <th scope="col">winner</th>
             </tr>
           </thead>
           <tbody>
-            {lines.map((l, i) =>
-              l.kind === "row" ? (
-                <tr class:list={["jg-line", "jg-row", { "is-day": l.newDay }]} style={`--i:${i}`}>
-                  <td class="jg-d">{l.newDay ? l.d : ""}</td>
-                  <td class="jg-a">{l.axis}</td>
-                  <td class="jg-l jg-num">{l.lufs}</td>
-                  <td class="jg-w"><span class:list={["jg-dot", l.orig ? "is-keep" : "is-move"]} aria-hidden="true"></span><span class={l.orig ? "jg-win-keep" : "jg-win-move"}>{l.orig ? "original" : "render"}</span></td>
-                </tr>
-              ) : (
-                <tr class="jg-line jg-noteline" style={`--i:${i}`}>
-                  <td colspan="4"><span class="jg-note">{l.text}</span></td>
-                </tr>
-              )
-            )}
+            {lines.map((l, i) => (
+              <tr class:list={["jg-line", "jg-row", { "is-day": l.newDay, "is-break": l.endDay }]} style={`--i:${i}`}>
+                <td class="jg-d">{l.newDay ? l.d : ""}</td>
+                <td class="jg-a">{l.axis}</td>
+                <td class="jg-l jg-num">{l.lufs}</td>
+                <td class="jg-w"><span class:list={["jg-dot", l.orig ? "is-keep" : "is-move"]} aria-hidden="true"></span><span class={l.orig ? "jg-win-keep" : "jg-win-move"}>{l.orig ? "original" : "render"}</span></td>
+              </tr>
+            ))}
           </tbody>
         </table>
       </div>
-
-      <p class="jg-foot">the first nine rounds and the latest. behind them: {j.total_runs} runs, {r.total} renders, {r.avg_per_run} per run ({r.max_per_run} at most).</p>
+      <p class="jg-foot">the first {leading} of {b.rounds} rounds, and the latest</p>
     </section>
 
     <section class="jg-verdict" aria-label="What the ledger adds up to">
-      <dl class="jg-agg">
-        <dt class="jg-n">{b.votes}</dt>
-        <dd class="jg-t">blind loudness-matched votes</dd>
-        <dt class="jg-n">{b.chose_original}</dt>
-        <dd class="jg-t">kept the original</dd>
-        <dt class="jg-n jg-word">single</dt>
-        <dd class="jg-t">rater</dd>
-      </dl>
-
-      <div class="jg-restraint">
-        <p class="jg-rlabel">how often the original won</p>
-        <div class="jg-bars">
-          {BARS.map((bar, i) => (
-            <div class="jg-barrow">
-              <span class="jg-blabel">{bar.label}</span>
-              <span class="jg-track">
-                <span class="jg-fill" style={`width:${bar.pct}%;--i:${i}`}></span>
-                <span class="jg-half" aria-hidden="true"></span>
-              </span>
-              <span class="jg-bval">{bar.num}<span class="jg-slash">/</span>{bar.den}</span>
-            </div>
-          ))}
-        </div>
-        <p class="jg-scale"><span class="jg-halfkey" aria-hidden="true"></span> dashed line: 50%</p>
-        <p class="jg-read">
-          of {j.with_champion} runs that reached a champion, {j.champion_original} champions were the
-          original. doing nothing won {pctRuns}% of decided runs.
-        </p>
-      </div>
-
-      <p class="jg-caveat">
-        <span class="jg-flag" aria-hidden="true"></span>
-        <span>
-          single rater so far, {b.rounds} rounds across {b.sessions} sessions, {b.first} to {b.last}.
-          no catch trials yet.
+      <p class="jg-n">{b.chose_original} of {b.votes}</p>
+      <p class="jg-t">blind votes went to the untouched original</p>
+      <div class="jg-bar" aria-hidden="true">
+        <span class="jg-track">
+          <span class="jg-fill" style={`width:${share.toFixed(2)}%`}></span>
+          <span class="jg-half"></span>
         </span>
+        <span class="jg-halfmark">50%</span>
+      </div>
+      {/* one line where it fits; in a narrow column each clause keeps its own
+          line (a date never splits at its hyphen) and the dot leads it */}
+      <p class="jg-caveat">
+        <span>one rater (me)</span> <span>· {b.rounds} rounds in {b.sessions} sessions</span> <span>· {b.first} to {b.last}</span> <span>· no catch trials yet</span>
       </p>
     </section>
   </div>
@@ -175,24 +136,31 @@ const BARS = [
 </script>
 
 <style>
-  /* The module sits inside the sheet's dark proof panel (#101216), so it draws
-     no card of its own and it does not read theme tokens: the surrounding page
-     is a white résumé in a light theme. Palette is stated outright. */
+  /* The module sits on the proof panel's ground (the room's, day and night)
+     and states no palette of its own: every ink, card and hairline is the
+     panel's token, with its day value as the fallback. The one exception is
+     the accent, green, which is declared here with its night value. */
   .pf-judge {
-    --ink: #e7ecf3;
-    --mid: #97a2b3;
-    --dim: #6c7787;
-    --line: rgba(160, 190, 230, 0.14);
-    --line-soft: rgba(160, 190, 230, 0.07);
-    --keep: #00d44a;
-    --move: #0ec4fc;
-    --warn: #ffb347;
-    --mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+    --jg-ink: var(--pf-ink, #141210);
+    --jg-dim: var(--pf-dim, #6a6660);
+    --jg-card: var(--pf-card, #ffffff);
+    --jg-line: var(--pf-line, color-mix(in oklab, #141210 18%, transparent));
+    --jg-soft: var(--pf-soft, color-mix(in oklab, #141210 9%, transparent));
+    --jg-sans: var(--pf-sans, "Instrument Sans", "Helvetica Neue", Arial, sans-serif);
+    --jg-mono: var(--pf-mono, "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace);
+    --jg-display: var(--pf-display, "Outfit", "Instrument Sans", "Helvetica Neue", Arial, sans-serif);
+    /* the original's wins, and nothing else */
+    --jg-accent: #178650;
 
+    container: judge / inline-size;
     margin: 0;
-    color: var(--ink);
+    color: var(--jg-ink);
+    font-family: var(--jg-sans);
     font-weight: 400;
     text-align: left;
+  }
+  :global(html[data-night]) .pf-judge {
+    --jg-accent: #4cc38a;
   }
 
   .jg-sr {
@@ -204,267 +172,198 @@ const BARS = [
     white-space: nowrap;
   }
 
-  /* ── head ── */
+  /* labels and captions: one voice */
+  .pf-kicker,
+  .jg-table th,
+  .jg-foot,
+  .jg-t,
+  .jg-halfmark,
+  .jg-caveat {
+    font-family: var(--jg-mono);
+    font-weight: 500;
+    font-size: 0.6875rem;
+    line-height: 1.5;
+    letter-spacing: 0.12em;
+    text-transform: lowercase;
+    color: var(--jg-dim);
+  }
+
+  /* ── head: what it is, then how a round works ── */
   .pf-head {
-    display: block;
-    margin: 0 0 clamp(12px, 2vw, 18px);
+    margin: 0;
   }
   .pf-kicker {
-    margin: 0 0 7px;
-    font-family: var(--mono);
-    font-size: 0.625rem;
-    letter-spacing: 0.1em;
-    color: var(--move);
-  }
-  .pf-title {
     margin: 0;
-    max-width: 62ch;
-    font-size: clamp(0.95rem, 1.5vw, 1.075rem);
-    font-weight: 500;
-    line-height: 1.35;
-    letter-spacing: -0.01em;
-    color: var(--ink);
   }
-  .jg-method {
-    margin: 8px 0 0;
-    max-width: 68ch;
-    font-family: var(--mono);
-    font-size: 0.6875rem;
+  .jg-date {
+    white-space: nowrap;
+  }
+  .jg-lead {
+    margin: 12px 0 0;
+    max-width: 60ch;
+    font-family: var(--jg-sans);
+    font-size: 1rem;
     line-height: 1.6;
-    color: var(--mid);
+    color: var(--jg-ink);
+    text-wrap: balance;
   }
 
-  /* ── body: ledger left, what it adds up to right ── */
+  /* ── body: the ledger, and beside it on a wide panel what it adds up to ── */
   .jg-body {
     display: grid;
-    gap: clamp(14px, 2.4vw, 26px);
-    border-top: 1px solid var(--line);
-    padding-top: clamp(12px, 2vw, 18px);
+    grid-template-columns: minmax(0, 1fr);
+    gap: 32px;
+    margin-top: 24px;
   }
-  @media (min-width: 46rem) {
+  @container judge (min-width: 40rem) {
     .jg-body {
-      grid-template-columns: minmax(0, 1.22fr) minmax(0, 0.9fr);
-    }
-    .jg-verdict {
-      border-left: 1px solid var(--line);
-      padding-left: clamp(14px, 2.4vw, 26px);
+      /* the ledger keeps its natural width; the verdict takes the rest */
+      grid-template-columns: auto minmax(0, 1fr);
     }
   }
 
-  /* ── the ledger ── */
-  .jg-ledger { min-width: 0; }
-  .jg-secthead {
-    display: flex;
-    align-items: baseline;
-    justify-content: space-between;
-    gap: 12px;
-    margin-bottom: 8px;
-    font-family: var(--mono);
-    font-size: 0.625rem;
-    letter-spacing: 0.08em;
+  /* ── the ledger: one card of paper ── */
+  .jg-ledger {
+    min-width: 0;
   }
-  .jg-seclabel { color: var(--ink); }
-  .jg-secmeta { color: var(--dim); }
-
-  /* on a phone the ledger scrolls sideways rather than breaking a field name
+  /* on a phone the card scrolls sideways rather than breaking a field name
      like raw_vs_processed across two lines */
-  .jg-tablewrap { overflow-x: auto; }
+  .jg-tablewrap {
+    overflow-x: auto;
+    background: var(--jg-card);
+    border: 1px solid var(--jg-line);
+    border-radius: 12px;
+  }
   .jg-table {
     width: 100%;
-    min-width: 356px;
-    table-layout: fixed;
-    border-collapse: collapse;
-    font-family: var(--mono);
-    font-size: 0.6875rem;
-    line-height: 1.4;
-  }
-  .jg-c-d { width: 24%; }
-  .jg-c-a { width: 30%; }
-  .jg-c-l { width: 21%; }
-  .jg-c-w { width: 25%; }
-
-  .jg-table th {
-    padding: 0 0 6px;
+    border-collapse: separate;
+    border-spacing: 0;
+    font-family: var(--jg-mono);
+    font-size: 0.75rem;
     font-weight: 400;
-    font-size: 0.5625rem;
-    letter-spacing: 0.12em;
-    color: var(--dim);
+    line-height: 1.5;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+    color: var(--jg-ink);
+  }
+  .jg-table th {
+    padding: 12px 12px 8px;
     text-align: left;
-    border-bottom: 1px solid var(--line);
+    border-bottom: 1px solid var(--jg-line);
   }
   .jg-table td {
-    padding: 5px 8px 5px 0;
+    padding: 8px 12px;
     vertical-align: baseline;
-    border-bottom: 1px solid var(--line-soft);
+    border-bottom: 1px solid var(--jg-soft);
   }
-  .jg-table td:last-child { padding-right: 0; }
-  .jg-num { text-align: right; font-variant-numeric: tabular-nums; }
-  .jg-table th.jg-num { text-align: right; padding-right: 10px; }
-  .jg-table td.jg-l { padding-right: 10px; color: var(--mid); }
-  .jg-d { color: var(--mid); font-variant-numeric: tabular-nums; }
-  .jg-a { color: var(--ink); }
+  .jg-table th:first-child,
+  .jg-table td:first-child {
+    padding-left: 16px;
+  }
+  .jg-table th:last-child,
+  .jg-table td:last-child {
+    padding-right: 16px;
+  }
+  .jg-table tbody tr:last-child td {
+    border-bottom: 0;
+  }
+  /* a session break gets the firmer rule, the way the log groups by date */
+  .jg-row.is-break td {
+    border-bottom-color: var(--jg-line);
+  }
+  .jg-table .jg-num {
+    text-align: right;
+  }
+  .jg-d {
+    color: var(--jg-dim);
+  }
 
-  /* a session break gets a real rule, the way the log groups by date */
-  .jg-row.is-day:not(:first-child) td { border-top: 1px solid var(--line); }
-
-  .jg-w { white-space: nowrap; }
   .jg-dot {
     display: inline-block;
-    width: 5px;
-    height: 5px;
-    margin-right: 7px;
+    box-sizing: border-box;
+    width: 6px;
+    height: 6px;
+    margin-right: 8px;
     border-radius: 50%;
     vertical-align: 1px;
   }
-  .jg-dot.is-keep { background: var(--keep); }
-  .jg-dot.is-move { background: transparent; box-shadow: inset 0 0 0 1.5px var(--move); }
-  .jg-win-keep { color: var(--keep); }
-  .jg-win-move { color: var(--move); opacity: 0.85; }
-
-  .jg-noteline td {
-    padding: 0 0 7px;
-    border-bottom: 1px solid var(--line-soft);
+  .jg-dot.is-keep {
+    background: var(--jg-accent);
   }
-  .jg-note {
-    display: block;
-    padding-left: 9px;
-    border-left: 1px solid var(--line);
-    font-size: 0.65rem;
-    line-height: 1.5;
-    color: var(--dim);
+  .jg-dot.is-move {
+    border: 1px solid var(--jg-dim);
   }
-  .jg-note::before { content: "\201C"; }
-  .jg-note::after { content: "\201D"; }
+  .jg-win-keep {
+    color: var(--jg-accent);
+  }
+  .jg-win-move {
+    color: var(--jg-dim);
+  }
 
   .jg-foot {
-    margin: 9px 0 0;
-    font-family: var(--mono);
-    font-size: 0.625rem;
-    line-height: 1.55;
-    color: var(--dim);
+    margin: 8px 0 0;
   }
 
-  /* ── what it adds up to ── */
-  .jg-verdict { min-width: 0; }
-  /* the aggregate, big and quiet: the number, then what it counts */
-  .jg-agg {
-    display: grid;
-    grid-template-columns: auto minmax(0, 1fr);
-    align-items: baseline;
-    column-gap: 11px;
-    row-gap: 5px;
-    margin: 0;
-    font-family: var(--mono);
+  /* ── what it adds up to: the number, what it counts, the one bar ── */
+  .jg-verdict {
+    min-width: 0;
   }
   .jg-n {
     margin: 0;
-    text-align: right;
-    font-size: 1.3rem;
-    line-height: 1.15;
-    letter-spacing: -0.02em;
-    color: var(--ink);
-    font-variant-numeric: tabular-nums;
+    font-family: var(--jg-display);
+    font-weight: 500;
+    font-size: 2.5rem;
+    line-height: 1.1;
+    letter-spacing: -0.01em;
+    color: var(--jg-ink);
   }
-  .jg-word { font-size: 0.95rem; }
   .jg-t {
-    margin: 0;
-    font-size: 0.6875rem;
-    line-height: 1.4;
-    color: var(--mid);
+    margin: 8px 0 0;
+    text-wrap: balance;
   }
 
-  .jg-restraint {
-    margin-top: clamp(12px, 2vw, 18px);
-    padding-top: clamp(11px, 1.8vw, 15px);
-    border-top: 1px solid var(--line);
+  .jg-bar {
+    display: block;
+    margin: 24px 0 0;
   }
-  .jg-rlabel {
-    margin: 0 0 9px;
-    font-family: var(--mono);
-    font-size: 0.5625rem;
-    letter-spacing: 0.12em;
-    color: var(--dim);
-  }
-  .jg-bars { display: grid; gap: 7px; }
-  .jg-barrow {
-    display: grid;
-    grid-template-columns: minmax(0, auto) minmax(60px, 1fr) auto;
-    align-items: center;
-    gap: 9px;
-    font-family: var(--mono);
-    font-size: 0.625rem;
-  }
-  .jg-blabel { color: var(--mid); white-space: nowrap; }
   .jg-track {
     position: relative;
     display: block;
-    height: 6px;
-    border-radius: 3px;
-    background: rgba(160, 190, 230, 0.1);
+    height: 8px;
+    border-radius: 4px;
+    background: var(--jg-soft);
   }
   .jg-fill {
     display: block;
     height: 100%;
-    border-radius: 3px;
-    background: var(--keep);
-    opacity: 0.8;
+    border-radius: 4px;
+    background: var(--jg-accent);
     transform-origin: left center;
   }
+  /* even odds: where a coin would land */
   .jg-half {
     position: absolute;
-    top: -3px;
-    bottom: -3px;
+    top: -4px;
+    bottom: -4px;
     left: 50%;
     width: 0;
-    border-left: 1px dashed rgba(231, 236, 243, 0.5);
+    border-left: 1px dashed var(--jg-dim);
   }
-  .jg-bval { color: var(--ink); font-variant-numeric: tabular-nums; }
-  .jg-slash { color: var(--dim); padding: 0 1px; }
-
-  .jg-scale {
-    margin: 7px 0 0;
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    font-family: var(--mono);
-    font-size: 0.5625rem;
-    color: var(--dim);
-  }
-  .jg-halfkey {
-    display: inline-block;
-    width: 0;
-    height: 12px;
-    transform: translateY(2px);
-    border-left: 1px dashed rgba(231, 236, 243, 0.5);
-  }
-  .jg-read {
-    margin: 10px 0 0;
-    font-family: var(--mono);
-    font-size: 0.6875rem;
-    line-height: 1.6;
-    color: var(--mid);
+  .jg-halfmark {
+    display: block;
+    width: max-content;
+    margin: 8px 0 0 50%;
+    transform: translateX(-50%);
   }
 
   /* ── the caveat, stated plainly and last ── */
   .jg-caveat {
-    display: flex;
-    align-items: baseline;
-    gap: 8px;
-    margin: clamp(11px, 1.8vw, 16px) 0 0;
-    padding-top: clamp(10px, 1.6vw, 14px);
-    border-top: 1px solid var(--line);
-    font-family: var(--mono);
-    font-size: 0.625rem;
-    line-height: 1.6;
-    color: var(--dim);
+    margin: 24px 0 0;
+    padding-top: 12px;
+    border-top: 1px solid var(--jg-line);
   }
-  .jg-flag {
-    flex: none;
-    width: 5px;
-    height: 5px;
-    border-radius: 1px;
-    background: var(--warn);
-    transform: translateY(-1px);
+  .jg-caveat span {
+    white-space: nowrap;
   }
 
   /* ── reveal: settled by default, armed only when the script takes over ── */
@@ -481,11 +380,6 @@ const BARS = [
   }
   .pf-judge.is-armed.is-on .jg-line { opacity: 1; transform: none; }
   .pf-judge.is-armed.is-on .jg-fill { transform: scaleX(1); }
-
-  @media (max-width: 30rem) {
-    .jg-table { font-size: 0.625rem; }
-    .jg-barrow { grid-template-columns: minmax(0, auto) minmax(44px, 1fr) auto; gap: 7px; }
-  }
 
   @media (prefers-reduced-motion: reduce) {
     .pf-judge .jg-line {
