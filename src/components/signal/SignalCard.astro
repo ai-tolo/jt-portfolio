@@ -2,13 +2,13 @@
 /**
  * SignalCard — the expandable card under the instrument (2026-09-30, the export round): the work room's card, for
  * SIGNAL. Closed, it shows the name and the opening lines under a fade; the whole lower edge opens it. Inside: the
- * write-up (signal-card-copy.ts, Jon's to rewrite) · HOW TO PLAY (signal-copy.ts LEGEND drawn as keycaps) · UNDER THE
- * HOOD (the engine, a spine of steps) · WHERE IT CAME FROM. Mounted by StudioOne's play room (inside .sig-desktop, so
+ * write-up (signal-card-copy.ts, Jon's to rewrite) · HOW TO PLAY (./HowToPlay.astro: one keyboard diagram drawn from
+ * signal-copy.ts LEGEND, 2026-10-06) · UNDER THE HOOD (the engine, a spine of steps) · WHERE IT CAME FROM. Mounted by StudioOne's play room (inside .sig-desktop, so
  * it exists only where the instrument plays) and by /signal. Its own fold script and styles: nothing here depends on
  * the work room's.
  */
 import { CARD, type CardRow } from "./signal-card-copy.ts";
-import { LEGEND } from "./signal-copy.ts";
+import HowToPlay from "./HowToPlay.astro";
 
 const halves = (rows: ReadonlyArray<CardRow>): CardRow[][] => {
   const cut = Math.ceil(rows.length / 2);
@@ -33,22 +33,7 @@ const id = "sc-clip-" + Math.random().toString(36).slice(2, 7);
     </div>
     <div class="sc-hood">
       <p class="sc-t">{CARD.howTitle}</p>
-      <div class="sc-legend">
-        {LEGEND.map((row) => (
-          <div class="sc-lrow">
-            {row.map((it) => (
-              <span class="sc-item">
-                <span class="sc-keys">
-                  {it.range
-                    ? <><kbd>{it.keys[0]}</kbd><i>–</i><kbd>{it.keys[it.keys.length - 1]}</kbd></>
-                    : it.keys.map((k) => <kbd class:list={{ wide: k.length > 1 && !/^[←→↑↓]$/.test(k) }}>{k}</kbd>)}
-                </span>
-                <span class="sc-word">{it.word}</span>
-              </span>
-            ))}
-          </div>
-        ))}
-      </div>
+      <HowToPlay />
 
       <p class="sc-t">{CARD.hoodTitle}</p>
       <div class="sc-cols">
@@ -99,7 +84,10 @@ const id = "sc-clip-" + Math.random().toString(36).slice(2, 7);
     container-type: inline-size;
     transition: border-color 560ms ease, background-color 560ms ease, color 560ms ease;
   }
-  :global(html[data-night]) .sc { --sc-card: #1c1c1f; }
+  /* night: the ink flips with the card. On the homepage `.one` pins --ink to its day value, so var(--ink) alone left
+     the card's words dark on dark whenever the instrument took the site to night; --night-ink is .one's own night
+     ink, and /signal (no .one) falls back to the page's --ink, which flips there. */
+  :global(html[data-night]) .sc { --sc-card: #1c1c1f; --sc-ink: var(--night-ink, var(--ink)); }
   .sc-clip { overflow: hidden; transition: height 0.55s cubic-bezier(0.2, 0.8, 0.2, 1); }
   .sc:not([data-open]) .sc-clip {
     -webkit-mask-image: linear-gradient(to bottom, #000 calc(100% - 64px), transparent);
@@ -133,21 +121,6 @@ const id = "sc-clip-" + Math.random().toString(36).slice(2, 7);
     color: var(--sc-dim);
   }
   .sc-hood > .sc-t:first-child { margin-top: 0; }
-  /* HOW TO PLAY: the legend's keys as small carbon caps, the word beside them */
-  .sc-legend { display: flex; flex-direction: column; gap: 14px; }
-  .sc-lrow { display: flex; flex-wrap: wrap; gap: 12px 28px; }
-  .sc-item { display: inline-flex; align-items: center; gap: 10px; }
-  .sc-keys { display: inline-flex; align-items: center; gap: 4px; }
-  .sc-keys i { font-style: normal; color: var(--sc-dim); font-family: var(--sc-mono); font-size: 0.75rem; }
-  .sc-keys kbd {
-    display: inline-grid; place-items: center; min-width: 30px; height: 30px; padding: 0 8px; box-sizing: border-box;
-    border-radius: 7px; font: 500 0.75rem/1 var(--sc-mono); letter-spacing: 0.02em; text-transform: lowercase;
-    color: #dce5ee; background: linear-gradient(180deg, #232a36, #151a23);
-    border-top: 1px solid rgba(255, 255, 255, 0.14);
-    box-shadow: inset 0 -3px 5px rgba(0, 0, 0, 0.45), 0 2px 0 #05070a, 0 3px 5px rgba(0, 0, 0, 0.35);
-  }
-  .sc-keys kbd.wide { padding: 0 14px; }
-  .sc-word { font: 500 0.75rem/1 var(--sc-mono); letter-spacing: 0.06em; color: var(--sc-dim); }
   /* UNDER THE HOOD: the spine */
   .sc-steps { list-style: none; margin: 0; padding: 0; }
   .sc-step { position: relative; padding: 0 0 24px 28px; }
