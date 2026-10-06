@@ -19,13 +19,10 @@ import ProofSignalKeys from "../../components/resume/ProofSignalKeys.astro";
 import { CASE_LINKS } from "../../lib/case-links";
 import SiteFloor from "../../components/studio/SiteFloor.astro";
 
-// The sheet's chrome is IBM Plex Mono (bundled locally, house rule: no CDN
-// fonts). 120+ elements on this page declared the face without the page ever
-// loading it — the screen résumé was falling back to Menlo. Same weights the
-// homepage imports; PrintResume.astro declares no mono, so the print/ATS
-// sheet is untouched.
-import "@fontsource/ibm-plex-mono/400.css";
-import "@fontsource/ibm-plex-mono/500.css";
+// The chrome is the work room's material (2026-10-06): JetBrains Mono labels,
+// Instrument Sans body, Outfit names, the faces Layout.astro already loads for
+// the homepage and the case studies. IBM Plex Mono is gone from this page, so
+// it carries three faces around the printed sheet and no fourth.
 
 export const prerender = true;
 
@@ -56,7 +53,8 @@ const STUDIES = [
   {
     slug: "the-console",
     name: "Finishable",
-    lede: "Three tools, solo: a catalog that reads files by sound, a studio that plays them back like a band, and a blind listening test that gates every mastering change.",
+    // DRAFT (2026-10-06, the writing law): what the study holds, plainly
+    lede: "A catalog of my audio files, a studio that turns found sounds into playable instruments, and the blind listening test behind the mastering agent.",
   },
   ...CASE_LINKS,
 ];
@@ -64,8 +62,18 @@ const STUDIES = [
 
 <Layout
   title="Résumé · Jonathan Tollefson"
-  description="Jonathan Tollefson résumé. Design engineer working across interface design, front-end, and applied AI."
+  description="Résumé of Jonathan Tollefson, design engineer: front-end, audio tools, and applied AI."
 >
+  {/* ?dir= (lane R, 2026-10-06, while Jon picks): a = the printed sheet kept,
+      b = the sheet re-set in the work room's material. Set before the sheet
+      parses, so neither direction flashes the other. Deleted with the loser. */}
+  <script is:inline>
+    (() => {
+      let d = "a";
+      try { if (new URLSearchParams(location.search).get("dir") === "b") d = "b"; } catch {}
+      document.documentElement.setAttribute("data-rdir", d);
+    })();
+  </script>
   <div class="resume-world" data-resume-view="paper">
     <AwayRail resume={false} home="house" />
     <main class="resume-page">
@@ -336,6 +344,17 @@ const STUDIES = [
        first since 2026-08-28, so the old anti-black-band !important pin
        is gone — html/body already match, and flip at night) */
     .resume-world {
+      /* the work room's material for the chrome (2026-10-06): its three faces,
+         hairlines at 18 % ink; the sheet's width and inner gutter are shared by
+         the actions row, the case studies and the floor so all four align */
+      --sheet-w: 8.5in;
+      /* 46px = the PDF's 0.48in side margin, so the screen sheet wraps every
+         line exactly where the printed page does */
+      --sheet-pad: clamp(22px, 5vw, 46px);
+      --r-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+      --r-sans: "Instrument Sans", "Helvetica Neue", Arial, sans-serif;
+      --r-display: "Outfit", "Instrument Sans", "Helvetica Neue", Arial, sans-serif;
+      --r-line: color-mix(in oklab, var(--text) 18%, transparent);
       background: var(--bg);
       transition: background 560ms ease;
       /* the marks are seated to the viewport edge at the narrowest widths;
@@ -346,31 +365,37 @@ const STUDIES = [
     /* ── actions row: one honest control + one quiet hint ── */
     .r-actions {
       display: flex;
-      align-items: baseline;
+      align-items: center;
       justify-content: space-between;
-      gap: 14px;
-      max-width: 8.5in;
+      gap: 16px;
+      max-width: var(--sheet-w);
       margin: 0 auto;
       /* align with the sheet's inner type column, not its outer edge */
-      padding: 0 clamp(22px, 5vw, 62px) 18px;
-      font-family: "IBM Plex Mono", ui-monospace, monospace;
+      padding: 0 var(--sheet-pad) 24px;
+      font-family: var(--r-mono);
     }
+    /* the room's link grammar: a hairline underline that goes to full ink */
     .r-pdf {
       display: inline-flex;
       align-items: center;
-      gap: 7px;
-      font-size: 0.76rem;
-      letter-spacing: 0.07em;
+      gap: 8px;
+      font-size: 0.75rem;
+      font-weight: 500;
+      letter-spacing: 0.04em;
       color: var(--text);
       text-decoration: underline;
+      text-decoration-thickness: 1px;
+      text-decoration-color: color-mix(in oklab, currentColor 32%, transparent);
       text-underline-offset: 4px;
+      transition: text-decoration-color 140ms ease;
     }
     .r-pdf svg {
       width: 14px;
       height: 14px;
     }
-    .r-pdf:hover {
-      color: var(--accent);
+    .r-pdf:hover,
+    .r-pdf:focus-visible {
+      text-decoration-color: currentColor;
     }
     .r-li {
       display: inline-flex;
@@ -392,15 +417,15 @@ const STUDIES = [
        clothes — the name IS the control, the lede sits beneath it ── */
     .r-studies {
       width: 100%;
-      max-width: 8.5in;
-      margin: 56px auto 0;
-      padding: 0 20px;
+      max-width: var(--sheet-w);
+      margin: 64px auto 0;
+      padding: 0 var(--sheet-pad);
     }
     .r-studies-t {
-      margin: 0 0 22px;
-      font-family: "IBM Plex Mono", ui-monospace, monospace;
-      font-size: 0.72rem;
-      letter-spacing: 0.09em;
+      margin: 0 0 24px;
+      font: 500 0.6875rem/1.5 var(--r-mono);
+      letter-spacing: 0.12em;
+      text-transform: lowercase;
       color: var(--muted);
     }
     .r-studies ul {
@@ -409,31 +434,27 @@ const STUDIES = [
       padding: 0;
       display: flex;
       flex-direction: column;
-      gap: 28px;
+      gap: 32px;
     }
     .r-studies a {
-      font-family: "IBM Plex Sans", ui-sans-serif, system-ui, sans-serif;
-      font-size: 1.14rem;
-      font-weight: 600;
+      font: 500 1.375rem/1.25 var(--r-display);
       letter-spacing: -0.01em;
       color: var(--text);
       text-decoration: underline;
       text-underline-offset: 5px;
       text-decoration-thickness: 1px;
-      text-decoration-color: color-mix(in srgb, currentColor 30%, transparent);
-      transition: color 160ms ease, text-decoration-color 160ms ease;
+      text-decoration-color: color-mix(in oklab, currentColor 32%, transparent);
+      transition: text-decoration-color 160ms ease;
     }
     .r-studies a:hover,
     .r-studies a:focus-visible {
-      color: var(--accent);
       text-decoration-color: currentColor;
     }
     .r-studies li p {
-      margin: 7px 0 0;
-      font-size: 0.9rem;
-      line-height: 1.6;
+      margin: 8px 0 0;
+      font: 400 1rem/1.6 var(--r-sans);
       color: var(--muted);
-      max-width: 62ch;
+      max-width: 36rem;
     }
     .r-studies li p strong {
       font-weight: 600;
@@ -445,13 +466,10 @@ const STUDIES = [
        shrink-wrap), a hairline above, under the case-study row */
     .floor {
       width: 100%;
-      max-width: 8.5in;
+      max-width: var(--sheet-w);
       margin: 48px auto 0;
-      padding: 22px 20px 8px;
-      border-top: 1px solid rgba(90, 74, 50, 0.2);
-    }
-    html[data-night] .floor {
-      border-top-color: #1c222e;
+      padding: 24px var(--sheet-pad) 8px;
+      border-top: 1px solid var(--r-line);
     }
 
     /* ── THE STACK (2026-09-22, Jon: "knowing that case studies are beneath
@@ -572,7 +590,6 @@ const STUDIES = [
       scroll-margin-top: 24px;
     }
     .r-studies li[data-hit] a {
-      color: var(--accent);
       text-decoration-color: currentColor;
     }
     /* phones: a flick past the paper's end settles on the case studies */
@@ -594,12 +611,12 @@ const STUDIES = [
     }
     .sheet-wrap {
       position: relative;
-      width: min(8.5in, 100%);
+      width: min(var(--sheet-w), 100%);
     }
     .paper-stage .print-resume {
       width: 100%;
       background: #ffffff;
-      padding: clamp(26px, 5vw, 58px) clamp(22px, 5vw, 62px);
+      padding: clamp(26px, 5vw, 58px) var(--sheet-pad);
       border: 1px solid rgba(90, 74, 50, 0.25);
       border-radius: 4px;
       box-shadow: 0 26px 60px -30px rgba(20, 12, 4, 0.45);
@@ -611,6 +628,48 @@ const STUDIES = [
     html[data-night] .paper-stage .print-resume {
       background: #0b0e14;
       border-color: #1c222e;
+    }
+
+    /* ── ?dir=b: the sheet re-set as the work room's paper (lane R, 2026-10-06,
+       while Jon picks). One white card on the ground, the story card's recipe
+       (1px at 16 % ink, 28px corners, no shadow); its type is re-set inside
+       PrintResume.astro. The pages beneath take the same corners. ── */
+    html[data-rdir="b"] .resume-world {
+      --sheet-w: 880px;
+      --sheet-pad: clamp(20px, 5vw, 56px);
+    }
+    html[data-rdir="b"] .paper-stage .print-resume,
+    html[data-rdir="b"] .paper-stage .sheet-wrap .print-resume {
+      background: #ffffff;
+      padding: clamp(28px, 5vw, 56px) var(--sheet-pad) clamp(28px, 5vw, 48px);
+      border: 1px solid color-mix(in oklab, #141210 16%, transparent);
+      border-radius: 28px;
+      box-shadow: none;
+    }
+    html[data-rdir="b"][data-night] .paper-stage .print-resume,
+    html[data-rdir="b"][data-night] .paper-stage .sheet-wrap .print-resume {
+      background: #1c1c1f;
+      border-color: color-mix(in oklab, #e8ecf4 16%, transparent);
+    }
+    html[data-rdir="b"] .r-stack i {
+      border-radius: 28px;
+      border-color: color-mix(in oklab, #141210 16%, transparent);
+    }
+    html[data-rdir="b"] .r-stack i:nth-child(4) {
+      box-shadow: none;
+    }
+    html[data-rdir="b"] .r-stack-tab {
+      border-color: color-mix(in oklab, #141210 16%, transparent);
+    }
+    html[data-rdir="b"][data-night] .r-stack i,
+    html[data-rdir="b"][data-night] .r-stack-tab {
+      background: #1c1c1f;
+      border-color: color-mix(in oklab, #e8ecf4 16%, transparent);
+    }
+    @media (max-width: 899px) {
+      html[data-rdir="b"] .paper-stage {
+        padding: 0 14px 60px;
+      }
     }
 
     /* ── the marks: index tabs cut from the sheet's outer edge (Jon,
