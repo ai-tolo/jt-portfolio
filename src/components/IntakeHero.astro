@@ -4,7 +4,7 @@
 // (saved face → transcript prints verbatim → verdict → ticket stubs → cards drop into the deck).
 //
 // Usage:   <IntakeHero />            (data from src/data/intake-run.json; follows the site theme)
-//          <IntakeHero step={20} />  (ms per transcript word; default 15)
+//          <IntakeHero step={20} />  (ms per transcript word; default: a ≈ 650 ms pour whatever the memo's length)
 //          <IntakeHero theme="dark" /> (force a mode; default 'auto' = html.dark / [data-theme] / prefers-color-scheme)
 // Needs:   public/intake/watch-blank.png
 //          fonts loaded once in the base layout:
@@ -18,7 +18,7 @@ interface Props {
   theme?: 'light' | 'dark' | 'auto';
   class?: string;
 }
-const { step = 9, theme = 'auto', class: cls = '' } = Astro.props;
+const { step = 0, theme = 'auto', class: cls = '' } = Astro.props;   // 0 = the pour (the script's default)
 const runJson = JSON.stringify(run);
 const liveJson = JSON.stringify(LIVE_COPY);
 // the host may seat the room's words in the module's own columns (2026-09-24):
@@ -469,7 +469,10 @@ import { localParse } from '../lib/intake-local.ts';
 document.querySelectorAll('[data-intake-hero]').forEach((hero) => {
   const run = JSON.parse(hero.querySelector('script[data-intake-run]').textContent);
   const words = run.transcript.trim().split(/\s+/);
-  const STEP = Number(hero.dataset.step || 9);
+  // THE POUR (Jon, 2026-10-06: the shorter art memo "felt snappier" — he kept his own memo and asked for its pace):
+  // the transcript lands in ≈ 650 ms whatever its length (per-word ms = 650 ÷ words, floor 2), unless the host passes
+  // an explicit step (ms per word)
+  const STEP = Number(hero.dataset.step) || Math.max(2, Math.round(650 / words.length));
   const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   const typed = hero.querySelector('.typed');
   const caret = hero.querySelector('.caret');

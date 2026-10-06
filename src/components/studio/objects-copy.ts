@@ -9,11 +9,12 @@ export const WATCH_COPY = {
   title: "Intake",
   // one line under the locked headline: what the object is, in his voice
   dek: "I talk to my watch. It comes back as a calendar event, an organized idea, or a prompt for Claude.",
-  // the mono line under the module. 2026-10-05 (the art law, feedback_art_not_diary):
-  // the replay is a universal example — three everyday things said into a
-  // watch (src/data/intake-run.json), one on the calendar, two in the queue.
-  // DRAFT, his to edit.
-  caption: "One memo, 0:41 long. Three things said: one on the calendar, two in the queue.",
+  // the mono line under the module, true to the run it replays (capture 31
+  // in intake.db: 3:52, seven tickets; the module shows the first two).
+  // 2026-10-06 (Jon): the Harbor example was dropped — less charm, and its
+  // calendar ticket contradicted the system (an actionable thing goes straight
+  // to the calendar, no card); his own memo stays, typed at the faster pace.
+  caption: "A real memo, 3:52 long. Two of the seven tickets it became.",
 };
 
 // LIVE (Stream A, 2026-10-05): the words the watch's live mode prints — the
