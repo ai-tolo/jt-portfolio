@@ -1,6 +1,6 @@
 // UNDER THE HOOD (2026-09-30): the engineering under each object, stage by
 // stage, printed INSIDE the story's card under the story (Jon: one
-// expandable box). Jon-editable; the tools are named, the diary is not.
+// expandable box). Jon-editable (DRAFT); the tools are named, the diary is not.
 // `k` is the stage, `tool` what does it, `html` one sentence on what happens.
 export type SpecRow = { k: string; tool: string; html: string };
 export type Spec = { title: string; rows: SpecRow[] };
