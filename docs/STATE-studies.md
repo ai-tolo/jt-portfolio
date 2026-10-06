@@ -6,7 +6,7 @@ Brief: `docs/PROMPT-finish-line.md` → STREAM C, then `docs/PROMPT-case-studies
 ## Where Jon looks (the DRAFT PR's Vercel preview; never merge the PR)
 - PR: https://github.com/ai-tolo/jt-portfolio/pull/5 (DRAFT, `studies` → `main`, "do not merge"; it exists so Vercel builds a preview of every push).
 - Preview base: https://jt-portfolio-git-studies-tolo-ai.vercel.app (the Vercel bot's link on the PR; the deployment status on the head commit reads success).
-  - /case-studies/chs/ · /case-studies/crediverso/ (+ `?dir=2`) · /case-studies/raylu/ (+ `?dir=2`) · /case-studies/the-console/ · /resume/ (the `.r-studies` row)
+  - /case-studies/chs/ · /case-studies/crediverso/ · /case-studies/raylu/ · /case-studies/the-console/ · /resume/ (the `.r-studies` row)
 - Shots: branch `studies-shots` (never merged), `shots/<page>/` — four full-page renders, the hands, one `contact-<page>.png` each; `shots/before/` holds main's three old pages.
 
 ## Built
@@ -22,12 +22,12 @@ Brief: `docs/PROMPT-finish-line.md` → STREAM C, then `docs/PROMPT-case-studies
 
 ### Crediverso (2026-10-06, cloud run)
 - `room/CvDoor.astro` — THE DOOR, the lead object: the bilingual app as one phone (`room/cv-tokens.css`: `.cv` → `--cv-*`, night under `html[data-night] .cv`, accent #5b54d6), EN · ES on every string (`<span lang>` pairs; the hidden language aria-hidden; the two canonical pairs from the old page verbatim), the "send your cousin $200" flow walked as before (`a family tab`, Split, 7 taps) and after (`family on the home`, Combined, 5 taps) from CrediversoNavSwot's own `SCENARIO_TAPS`, each tap lighting its control on the screen it happens on (launch → home → family → card → Move Money → the cousin → $200 → sent). The tie is the old gate, behaviour kept: both flows walked → "which one would you ship?" → `what tipped it` branched on the pick, verbatim (em dashes made commas/periods); the SWOT matrix verbatim in a `<details>` fold. Status line aria-live. Hooks `window.__cv = { lang, flow, step, ship }`.
-- Two directions behind `?dir=` (an inline script writes `data-dir` before paint): **1 ONE PHONE (the default, the panel's pick)** · 2 TWO PHONES on one shared stepper (the after phone reaches `sent` at 5 while before needs 6 and 7). The dir-2 rules sit in one `[data-dir="2"]` block plus one `if` in the script: deleting the loser is one block.
+- THE FORM (Jon's pick, 2026-10-06, of two directions rendered for him): **TWO PHONES** on one shared stepper (the after phone reaches `sent` at 5 while before needs 6 and 7; stacked on phones with the stepper sticky above the bottom bar). The root carries `data-dir="2"`; the one-phone direction's rules and the `?dir=` switch were deleted (the script's dir branch stays).
 - `pages/case-studies/crediverso.astro` — label · hook · THE DOOR (+ caption) · the one number (40 → 25 %) · the story card (four DRAFT moments) with the hood. `CrediversoNavSwot.astro` stays on disk, unimported.
 
 ### Raylu (2026-10-06, cloud run)
 - `room/RySet.astro` — THE SET, the lead object: the file the founders carried in, as a design-tool window in the room's material (`room/ry-tokens.css`: `.ry` → `--ry-*`, accent #258c79 sampled from the whale cover): a mono bar `raylu — workspace.fig` and five page tabs with their `<date> · added by me` stamps from RayluFigmaTimeline's SECTIONS, verbatim. Each page is a canvas of its components: brand (the whale, the wordmark, six sampled swatches printing their values, the tone chips as toggles) · competitive (the 2×2 rebuilt with its six names at their --qx/--qy, selectable, a side label) · strategy (the slide, three statement rows) · wireframes (the sketch beside the same-afternoon frame, the two-path entry as options) · hi-fi (six of the product's primitives drawn in their states, the ChsSystem recipe: nav item · slider · dropdown · slice pill · thumbnail · button). 520 tall on desks with an inner scroll; a chip strip on phones. Hooks `window.__ry = { page, pick, state }`.
-- Two directions behind `?dir=`: **1 PAGES (the default, the panel's pick)** · 2 THE SHEET (all five pages stacked, margin labels, no inner scroll; 2312px tall at 1440). The dir-2 rules sit in one marked block.
+- THE FORM (Jon's pick, 2026-10-06): **THE SHEET**: all five pages stacked, the names and stamps as margin labels, no tabs, no inner scroll (the set is 2312px tall at 1440, 4026 at 375). The root carries `data-dir="2"`; the `?dir=` switch was deleted (the tab markup stays as the margin labels; the base rules under the `[data-dir="2"]` block are its skeleton).
 - `room/RyLasso.astro` — the lasso moved out of the page with its behaviour, seed (20231004), CLUSTERS and geometry unchanged (drag a box / Enter slices `vehicle · 47 images`, Escape clears, the SSR-resolved slice), re-clothed: the dark Figma chrome, cursors and presence are gone; the screenshot sits in a paper frame with a hairline. Hooks `window.__ryLasso = { slice, clear }`.
 - `pages/case-studies/raylu.astro` — label · hook · THE SET (+ caption) · $4M set apart (the caveat lives in the story) · the lasso (+ caption) · the story card (four DRAFT moments) with the hood. `RayluFigmaTimeline.astro` stays on disk, unimported.
 
@@ -51,12 +51,12 @@ Brief: `docs/PROMPT-finish-line.md` → STREAM C, then `docs/PROMPT-case-studies
 Finishable's hands: the bench's take 2 + `r` reveal (keys only, no play), the finale's after tab, the fold. 0 errors, no overflow at 375 and 1440, day and night.
 
 ## Open (Jon's gate)
-- Jon picks the direction per page (the panel defaulted both to dir 1): Crediverso `?dir=2` (two phones) and Raylu `?dir=2` (the sheet) are live on the preview. On his pick, delete the losing `[data-dir="2"]` block (or make dir 2 the default) and the inline `?dir=` script.
 - Every Jon-voiced line is DRAFT (`// DRAFT (Jon edits)` in the four pages): the hooks, the captions, the number lines, the four moments per page, the hood rows.
 - Two art details to keep or drop: Raylu's open dropdown lists t-SNE and PCA (generic algorithm names, not on the old page); Crediverso's "Open app" step lights Log In on the launch screen.
 - The cloud VM could not fetch the Vercel preview (its network policy blocks `*.vercel.app`); the links above were verified by the deployment status on the PR, not by a 200 from the VM.
 
-## Ship (only on Jon's "push it", from the MAIN checkout, after Jon's reaction)
+## Ship
+SHIPPED 2026-10-06 from the cloud session on Jon's "push to live": `origin/main` fast-forwarded to `studies` (backup ref `backup/main-pre-2026-10-06` pushed first). The recipe below stays for the next round, from the MAIN checkout on the Mac:
 git -C ~/sites/jt-portfolio branch backup/main-pre-$(date +%F) main
 git -C ~/sites/jt-portfolio-studies rebase main
 git -C ~/sites/jt-portfolio fetch . studies && git -C ~/sites/jt-portfolio merge --ff-only studies && git -C ~/sites/jt-portfolio push
