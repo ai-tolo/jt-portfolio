@@ -1,0 +1,617 @@
+---
+// CREDIVERSO · THE DOOR (Stream C, 2026-10-06). The lead object of /case-studies/crediverso: the bilingual app as one
+// phone the reader puts their hands on, and the V1 nav decision as a walk. You are the Garcia sending your cousin
+// $200; step through BEFORE (a Family tab, 7 taps) and AFTER (family on the home, Move Money its own surface, 5 taps),
+// flip the phone EN · ES (Spanish is the longer string; the layout holds it), and once you have walked both to the end
+// the tie opens: ship one, read what tipped it. The matrix (both SWOTs) folds under the tie.
+// DATA from CrediversoNavSwot (SCENARIO_TAPS, SWOT, the two mock home screens, the gate's three paragraphs) and the
+// old page's bilingual card (the two canonical EN/ES pairs) and launch screen, verbatim; the em dashes became commas
+// and periods (the copy law). ART, not reality: Juan, the balances, the cousin are the old mock's example.
+// TWO DIRECTIONS behind ?dir= (the inline script below writes data-dir before paint):
+//   dir 1 · ONE PHONE: the before · after switch, one flow at a time, the tap figures side by side.
+//   dir 2 · TWO PHONES: before and after side by side (stacked on phones), ONE shared stepper; after holds `sent`
+//           from step 5 while before needs two more taps. Its rules are grouped under `[data-dir="2"]` blocks.
+// Paints: the phone ONLY from --cv-* (cv-tokens.css, on this root); the chrome around it ONLY from --rm-* (Room).
+// Styles are is:global with a cv- namespace: dir 2 clones the phone at runtime and set:html strings carry no scope.
+// A flow counts as WALKED when its last step is reached (dir 2: the shared stepper reaching 5 walks after, 7 before).
+
+// SCENARIO_TAPS, verbatim (split = before, combined = after); the " · n" rides as the list's own number
+const SCENARIO_TAPS = {
+  before: ["Open app · 1", "Tap Family tab · 2", "Tap Garcia Family · 3", "Tap Move Money · 4", "Tap cousin · 5", "Enter $200 · 6", "Confirm · 7"],
+  after: ["Open app · 1", "Tap Move Money · 2", "Tap Garcia → cousin · 3", "Enter $200 · 4", "Confirm · 5"],
+};
+const words = (s: string) => s.replace(/ · \d+$/, "");
+// each tap: the screen it happens on, and the control it hits (that control rings in the accent)
+const PLAN = {
+  before: [["launch", "login"], ["home-b", "tab-family"], ["family", "card-garcia"], ["card", "btn-move"], ["pick", "cousin"], ["amount", "field"], ["amount", "confirm"]],
+  after: [["launch", "login"], ["home-a", "tab-move"], ["pick", "cousin"], ["amount", "field"], ["amount", "confirm"]],
+};
+
+// SWOT, verbatim
+const SWOT = {
+  split: {
+    s: ["Single-user clarity on the home screen", "Family feature visible in all UI previews", "Easy to implement page-specific features"],
+    w: ["Lacks a dedicated Move Money page", "25% of menu nav irrelevant for single-user", "Primary accounts compete for clarity"],
+    o: ["Family page → primary onboarding for new household members"],
+    t: ["Buries the family thesis behind a tab"],
+  },
+  combined: {
+    s: ["Accounts is all-inclusive", "Family accounts visible on the same page as primary", "Lots of info on the home page"],
+    w: ["Higher screen density", "Move Money becomes its own action surface"],
+    o: ["Develops an intuitive UI muscle other partner products inherit"],
+    t: ["Requires careful UI lift to avoid feeling cluttered"],
+  },
+} as const;
+const QUADS = [["s", "strengths"], ["w", "weaknesses"], ["o", "opportunities"], ["t", "threats"]] as const;
+
+// the phone's words, both languages (the two canonical pairs from the old page: the card's line and Move Money).
+// Merchant descriptors (Netflix sub, Macy's, Amazon) are the merchant's own words and stay as they come.
+const esc = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;");
+const t = (en: string, es: string) => `<span lang="en">${esc(en)}</span><span lang="es" aria-hidden="true">${esc(es)}</span>`;
+const L = {
+  signup: t("Sign Up", "Regístrate"),
+  login: t("Log In", "Iniciar sesión"),
+  invited: t("I was invited by family", "Me invitó mi familia"),
+  greetB: t("Juan's Account", "Cuenta de Juan"),
+  greetA: t("Hi, Juan.", "Hola, Juan."),
+  ach: t("ACH payment", "Pago ACH"),
+  family: t("Family", "Familia"),
+  garcia: t("Garcia Family", "Familia Garcia"),
+  buddies: t("College Buddies", "Amigos de la universidad"),
+  members: t("members", "miembros"),
+  line: t("Send money to the people who count on you.", "Envía dinero a las personas que cuentan contigo."),
+  move: t("Move Money", "Enviar dinero"),
+  cousin: t("your cousin", "tu primo"),
+  toCousin: t("To your cousin", "Para tu primo"),
+  confirm: t("Confirm", "Confirmar"),
+  sent: t("Sent", "Enviado"),
+  sentTo: t("to your cousin", "a tu primo"),
+  account: t("Account", "Cuenta"),
+  accounts: t("Accounts", "Cuentas"),
+  atm: t("ATM Map", "Mapa de cajeros"),
+  more: t("More", "Más"),
+};
+const uid = `cv-${Math.random().toString(36).slice(2, 7)}`;
+---
+
+<div class="cv" data-cv data-dir="1" data-lang="en" data-flow="before" data-plan={JSON.stringify(PLAN)}>
+  <script is:inline>
+    (function () { var r = document.currentScript && document.currentScript.parentElement; if (!r) return;
+      var d = new URLSearchParams(location.search).get("dir"); r.setAttribute("data-dir", d === "2" ? "2" : "1"); })();
+  </script>
+
+  <div class="cv-bar">
+    <div class="cv-flows" role="tablist" aria-label="Which nav">
+      <button type="button" class="cv-flow" role="tab" id={`${uid}-before`} data-flow="before" aria-selected="true" aria-controls={`${uid}-stage`} tabindex="0">
+        <span class="cv-flow-w">before · a family tab</span><span class="cv-flow-s">split</span>
+      </button>
+      <button type="button" class="cv-flow" role="tab" id={`${uid}-after`} data-flow="after" aria-selected="false" aria-controls={`${uid}-stage`} tabindex="-1">
+        <span class="cv-flow-w">after · family on the home</span><span class="cv-flow-s">combined</span>
+      </button>
+    </div>
+    <div class="cv-taps"><span class="cv-fig is-on" data-f="before"><b>7</b> taps</span><span class="cv-fig" data-f="after"><b>5</b> taps</span></div>
+    <div class="cv-lang" role="group" aria-label="Phone language">
+      <button type="button" data-set-lang="en" aria-pressed="true">EN</button>
+      <button type="button" data-set-lang="es" aria-pressed="false">ES</button>
+    </div>
+  </div>
+
+  <div class="cv-stage" id={`${uid}-stage`} role="tabpanel" aria-labelledby={`${uid}-before`}>
+    <div class="cv-unit" data-unit="before" data-flow="before" data-step="1">
+      <div class="cv-phone" role="group" aria-label="The Crediverso app" data-screen="launch">
+        <div class="cv-screen">
+          <div class="cv-body">
+            <section class="cv-s cv-launch" data-in="launch">
+              <div class="cv-mark"><span class="cv-logo" aria-hidden="true"></span><span class="cv-word">crediverso</span></div>
+              <div class="cv-ctas">
+                <span class="cv-btn is-fill" set:html={L.signup} />
+                <span class="cv-btn" data-hit="login" set:html={L.login} />
+                <span class="cv-link" set:html={L.invited} />
+              </div>
+            </section>
+            <div class="cv-s cv-h" data-in="home-b" set:html={L.greetB} />
+            <div class="cv-s cv-h" data-in="home-a" set:html={L.greetA} />
+            <div class="cv-s cv-h" data-in="pick" set:html={L.move} />
+            <div class="cv-s cv-h" data-in="amount" set:html={L.toCousin} />
+            <div class="cv-s cv-bal" data-in="home-b home-a">$3,450.76 <span class="cv-mask">····1234</span></div>
+            <ul class="cv-s cv-tx" data-in="home-b home-a">
+              <li><span>Netflix sub</span><span>−$12.01</span></li>
+              <li class="cv-b-only"><span>Macy's</span><span>−$32.99</span></li>
+              <li class="cv-b-only"><span>Amazon</span><span>−$18.07</span></li>
+              <li class="is-plus"><span set:html={L.ach} /><span>+$1,200.07</span></li>
+            </ul>
+            <div class="cv-s cv-h cv-fam-h" data-in="family home-a" set:html={L.family} />
+            <div class="cv-s cv-cards" data-in="family home-a">
+              <span class="cv-fc" data-hit="card-garcia">
+                <span class="cv-fc-n" set:html={L.garcia} />
+                <span class="cv-fc-a">$5,000.00</span>
+                <span class="cv-fc-m"><span class="cv-dots" aria-hidden="true"><i></i><i></i><i></i><i></i></span><span class="cv-nw">4 <span set:html={L.members} /></span></span>
+              </span>
+              <span class="cv-fc is-alt">
+                <span class="cv-fc-n" set:html={L.buddies} />
+                <span class="cv-fc-a">$2,000.00</span>
+                <span class="cv-fc-m"><span class="cv-dots" aria-hidden="true"><i></i><i></i><i></i></span><span class="cv-nw">3 <span set:html={L.members} /></span></span>
+              </span>
+            </div>
+            <div class="cv-s cv-card" data-in="card">
+              <span class="cv-card-e" set:html={L.garcia} />
+              <span class="cv-card-l" set:html={L.line} />
+              <span class="cv-card-row"><span class="cv-dots" aria-hidden="true"><i></i><i></i><i></i><i></i></span><span class="cv-card-a">$5,000.00</span></span>
+              <span class="cv-card-b" data-hit="btn-move" set:html={L.move} />
+            </div>
+            <div class="cv-s cv-pick" data-in="pick">
+              <span class="cv-pick-g" set:html={L.garcia} />
+              <span class="cv-row"><i aria-hidden="true">M</i>Maria</span>
+              <span class="cv-row"><i aria-hidden="true">J</i>Jose</span>
+              <span class="cv-row" data-hit="cousin"><i aria-hidden="true"></i><span set:html={L.cousin} /></span>
+            </div>
+            <div class="cv-s cv-amt" data-in="amount">
+              <span class="cv-field" data-hit="field">$200</span>
+              <span class="cv-btn is-fill" data-hit="confirm" set:html={L.confirm} />
+            </div>
+          </div>
+          <div class="cv-tabs">
+            <span class="cv-tab" data-tab="account" data-only="before" set:html={L.account} />
+            <span class="cv-tab" data-tab="accounts" data-only="after" set:html={L.accounts} />
+            <span class="cv-tab" data-tab="family" data-only="before" data-hit="tab-family" set:html={L.family} />
+            <span class="cv-tab" data-tab="move" data-only="after" data-hit="tab-move" set:html={L.move} />
+            <span class="cv-tab" set:html={L.atm} />
+            <span class="cv-tab" set:html={L.more} />
+          </div>
+          <div class="cv-sent">
+            <svg class="cv-tick" viewBox="0 0 48 48" aria-hidden="true"><circle cx="24" cy="24" r="22.5" fill="none" stroke="currentColor" stroke-width="1.5" /><path d="M15 24.5l6 6 12-13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" /></svg>
+            <span class="cv-sent-h" set:html={L.sent} />
+            <span class="cv-sent-p">$200 <span set:html={L.sentTo} /></span>
+          </div>
+        </div>
+      </div>
+      {(["before", "after"] as const).map((f) => (
+        <ol class="cv-steps" data-steps={f} aria-label={`${f}: the taps`}>
+          {SCENARIO_TAPS[f].map((s, i) => (
+            <li><button type="button" class="cv-step" data-n={i + 1}><span>{words(s)}</span></button></li>
+          ))}
+        </ol>
+      ))}
+    </div>
+  </div>
+
+  <div class="cv-nav">
+    <button type="button" class="cv-ob" data-go="-1" disabled>back</button>
+    <button type="button" class="cv-ob" data-go="1">next</button>
+    <div class="cv-status" aria-live="polite" data-status></div>
+  </div>
+
+  <div class="cv-gate" data-gate="locked">
+    <div class="cv-lock"><span>walk both</span><span class="cv-seen" data-seen="before">before</span><span class="cv-seen" data-seen="after">after</span></div>
+    <div class="cv-tie" hidden>
+      <div class="cv-tie-q">You walked both. Which one would you ship?</div>
+      <div class="cv-ship" role="group" aria-label="Ship a nav">
+        <button type="button" class="cv-ob" data-ship="before" aria-pressed="false">ship before</button>
+        <button type="button" class="cv-ob" data-ship="after" aria-pressed="false">ship after</button>
+      </div>
+      <div class="cv-tip" hidden>
+        <div class="cv-lbl">what tipped it</div>
+        <div class="cv-tip-lead" data-lead="after" hidden>You shipped Combined, the call I made too. And <em>not</em> because it saved two taps.</div>
+        <div class="cv-tip-lead" data-lead="before" hidden>You shipped Split, genuinely cleaner for one user, and the tap-count is on your side. I made the other call; here's the trade you took.</div>
+        <div class="cv-tip-p">Both SWOTs are defensible. Split is genuinely cleaner for a single user. But splitting the household behind a tab buries the family thesis the whole product is built on, the family you were just invited into. The tiebreaker isn't the matrix and it isn't the tap-count. It's the identity: <em>family-first.</em> That's why Combined shipped, with Move Money as its own dedicated action surface inside the combined home.</div>
+      </div>
+    </div>
+  </div>
+
+  <details class="cv-mx">
+    <summary><span class="cv-lbl">the matrix</span><svg class="cv-chev" viewBox="0 0 20 20" aria-hidden="true"><path d="M5 8l5 5 5-5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" /></svg></summary>
+    <div class="cv-mx-grid">
+      <span class="cv-mx-0" aria-hidden="true"></span>
+      <div class="cv-mx-h">before · split</div>
+      <div class="cv-mx-h">after · combined</div>
+      {QUADS.map(([k, name]) => (
+        <Fragment>
+          <div class="cv-mx-k">{name}</div>
+          <ul class="cv-mx-l">{SWOT.split[k].map((x) => <li>{x}</li>)}</ul>
+          <ul class="cv-mx-l">{SWOT.combined[k].map((x) => <li>{x}</li>)}</ul>
+        </Fragment>
+      ))}
+    </div>
+  </details>
+</div>
+
+<script>
+  type Flow = "before" | "after";
+  const LAST: Record<Flow, number> = { before: 7, after: 5 };
+  document.querySelectorAll<HTMLElement>("[data-cv]").forEach((root) => {
+    const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const dir = root.dataset.dir === "2" ? "2" : "1";
+    const plan = JSON.parse(root.dataset.plan || "{}") as Record<Flow, [string, string][]>;
+    const stage = root.querySelector<HTMLElement>(".cv-stage");
+    const first = root.querySelector<HTMLElement>(".cv-unit");
+    if (!stage || !first) return;
+
+    // dir 2: a second phone (the same markup), and the switch's words move over each phone as its head
+    if (dir === "2") {
+      const second = first.cloneNode(true) as HTMLElement;
+      second.dataset.unit = "after";
+      second.querySelector(".cv-phone")?.setAttribute("aria-label", "The Crediverso app, after");
+      first.querySelector(".cv-phone")?.setAttribute("aria-label", "The Crediverso app, before");
+      stage.append(second);
+      stage.removeAttribute("role"); stage.removeAttribute("aria-labelledby");
+      root.querySelectorAll<HTMLButtonElement>(".cv-flow").forEach((tab) => {
+        const f = tab.dataset.flow as Flow;
+        const unit = stage.querySelector<HTMLElement>(`.cv-unit[data-unit="${f}"]`);
+        const head = document.createElement("div");
+        head.className = "cv-unit-h";
+        head.append(...Array.from(tab.childNodes));
+        const fig = root.querySelector(`.cv-fig[data-f="${f}"]`);
+        if (fig) head.append(fig);
+        unit?.prepend(head);
+      });
+      root.querySelector(".cv-flows")?.remove();
+      root.querySelector(".cv-taps")?.remove();
+    }
+
+    const units = Array.from(root.querySelectorAll<HTMLElement>(".cv-unit"));
+    const tabs = Array.from(root.querySelectorAll<HTMLButtonElement>(".cv-flow"));
+    const figs = Array.from(root.querySelectorAll<HTMLElement>(".cv-fig"));
+    const status = root.querySelector<HTMLElement>("[data-status]");
+    const [back, next] = Array.from(root.querySelectorAll<HTMLButtonElement>("[data-go]"));
+    const gate = root.querySelector<HTMLElement>(".cv-gate");
+    const tie = root.querySelector<HTMLElement>(".cv-tie");
+    const tip = root.querySelector<HTMLElement>(".cv-tip");
+
+    const st = { flow: "before" as Flow, step: { before: 1, after: 1 } as Record<Flow, number>, shared: 1, seen: new Set<Flow>(), ship: "" as Flow | "" };
+    const lc = (s: string) => s.charAt(0).toLowerCase() + s.slice(1);
+    const label = (f: Flow, n: number) => lc(root.querySelector(`.cv-steps[data-steps="${f}"] [data-n="${n}"]`)?.textContent?.trim() ?? "");
+    const stepOf = (f: Flow) => (dir === "2" ? Math.min(st.shared, LAST[f]) : st.step[f]);
+    const ON: Record<string, string> = { "home-b": "account", family: "family", card: "family", "home-a": "accounts" };
+
+    const paint = (unit: HTMLElement, f: Flow, n: number) => {
+      unit.dataset.flow = f; unit.dataset.step = String(n);
+      const phone = unit.querySelector<HTMLElement>(".cv-phone");
+      if (!phone) return;
+      const [screen, hit] = plan[f][n - 1] ?? ["launch", ""];
+      if (phone.dataset.screen !== screen && !reduce) {
+        const body = phone.querySelector<HTMLElement>(".cv-body");
+        body?.classList.remove("is-in"); void body?.offsetWidth; body?.classList.add("is-in");
+      }
+      phone.dataset.screen = screen;
+      phone.querySelectorAll<HTMLElement>("[data-hit]").forEach((e) => e.classList.toggle("is-hit", e.dataset.hit === hit));
+      const on = ON[screen] ?? (f === "before" ? "family" : "move");
+      phone.querySelectorAll<HTMLElement>(".cv-tab[data-tab]").forEach((e) => e.classList.toggle("is-on", e.dataset.tab === on));
+      phone.toggleAttribute("data-done", n === LAST[f]);
+      unit.querySelectorAll<HTMLButtonElement>(`.cv-steps[data-steps="${f}"] .cv-step`).forEach((b) => {
+        const k = Number(b.dataset.n);
+        b.classList.toggle("is-past", k < n); b.classList.toggle("is-now", k === n);
+        if (k === n) b.setAttribute("aria-current", "step"); else b.removeAttribute("aria-current");
+      });
+    };
+
+    const render = () => {
+      root.dataset.flow = st.flow;
+      units.forEach((u) => { const f = (dir === "2" ? u.dataset.unit : st.flow) as Flow; paint(u, f, stepOf(f)); });
+      tabs.forEach((tb) => { const on = tb.dataset.flow === st.flow; tb.setAttribute("aria-selected", String(on)); tb.tabIndex = on ? 0 : -1; });
+      figs.forEach((fg) => fg.classList.toggle("is-on", dir === "2" || fg.dataset.f === st.flow));
+      const tabOn = tabs.find((tb) => tb.dataset.flow === st.flow);
+      if (tabOn) stage.setAttribute("aria-labelledby", tabOn.id);
+      // walked: a flow's last step reached
+      (["before", "after"] as Flow[]).forEach((f) => { if (stepOf(f) === LAST[f]) st.seen.add(f); });
+      if (dir === "2") {
+        const s = st.shared, b = stepOf("before"), a = stepOf("after");
+        if (status) status.textContent = `step ${s} of 7 · before: ${label("before", b)}${b === 7 ? " · sent" : ""} · after: ${s >= 5 ? "sent" : label("after", a)}`;
+        if (back) back.disabled = s <= 1;
+        if (next) next.disabled = s >= 7;
+      } else {
+        const f = st.flow, n = st.step[f];
+        if (status) status.textContent = `${f} · tap ${n} of ${LAST[f]} · ${label(f, n)}${n === LAST[f] ? " · sent" : ""}`;
+        if (back) back.disabled = n <= 1;
+        if (next) next.disabled = n >= LAST[f];
+      }
+      root.querySelectorAll<HTMLElement>("[data-seen]").forEach((e) => e.classList.toggle("is-on", st.seen.has(e.dataset.seen as Flow)));
+      const open = st.seen.has("before") && st.seen.has("after");
+      if (gate) gate.dataset.gate = st.ship ? "shipped" : open ? "open" : "locked";
+      if (tie) tie.hidden = !open;
+      if (tip) tip.hidden = !st.ship;
+      root.querySelectorAll<HTMLElement>("[data-lead]").forEach((e) => { e.hidden = e.dataset.lead !== st.ship; });
+      root.querySelectorAll<HTMLButtonElement>("[data-ship]").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.ship === st.ship)));
+    };
+
+    const api = {
+      lang(l: "en" | "es") {
+        const v = l === "es" ? "es" : "en";
+        root.dataset.lang = v;
+        root.querySelectorAll<HTMLElement>(".cv-phone [lang]").forEach((e) => {
+          if (e.getAttribute("lang") === v) e.removeAttribute("aria-hidden"); else e.setAttribute("aria-hidden", "true");
+        });
+        root.querySelectorAll<HTMLButtonElement>("[data-set-lang]").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.setLang === v)));
+      },
+      flow(f: Flow) { if (f !== "before" && f !== "after") return; st.flow = f; render(); },
+      step(n: number) {
+        if (dir === "2") st.shared = Math.max(1, Math.min(7, Math.round(n)));
+        else st.step[st.flow] = Math.max(1, Math.min(LAST[st.flow], Math.round(n)));
+        render();
+      },
+      ship(f: Flow) {
+        if (!(st.seen.has("before") && st.seen.has("after")) || (f !== "before" && f !== "after")) return false;
+        st.ship = f; render(); return true;
+      },
+    };
+
+    root.querySelectorAll<HTMLButtonElement>("[data-set-lang]").forEach((b) => b.addEventListener("click", () => api.lang(b.dataset.setLang as "en" | "es")));
+    tabs.forEach((tb, i) => {
+      tb.addEventListener("click", () => api.flow(tb.dataset.flow as Flow));
+      tb.addEventListener("keydown", (e) => {
+        const k = ({ ArrowRight: i + 1, ArrowDown: i + 1, ArrowLeft: i - 1, ArrowUp: i - 1, Home: 0, End: tabs.length - 1 } as Record<string, number>)[e.key];
+        if (k === undefined) return;
+        e.preventDefault();
+        const to = tabs[(k + tabs.length) % tabs.length];
+        if (to) { api.flow(to.dataset.flow as Flow); to.focus(); }
+      });
+    });
+    root.querySelectorAll<HTMLButtonElement>("[data-go]").forEach((b) => b.addEventListener("click", () => {
+      const d = Number(b.dataset.go);
+      api.step((dir === "2" ? st.shared : st.step[st.flow]) + d);
+    }));
+    root.querySelectorAll<HTMLButtonElement>(".cv-step").forEach((b) => b.addEventListener("click", () => api.step(Number(b.dataset.n))));
+    root.querySelectorAll<HTMLButtonElement>("[data-ship]").forEach((b) => b.addEventListener("click", () => api.ship(b.dataset.ship as Flow)));
+
+    render();
+    const w = window as unknown as { __cv?: typeof api };
+    if (!w.__cv) w.__cv = api;
+  });
+</script>
+
+<style is:global>
+  /* ── the object: chrome in the room's tokens; the phone in --cv-* ── */
+  .cv { --cv-hair: color-mix(in oklab, var(--rm-ink) 18%, transparent); position: relative; color: var(--rm-ink); font-family: var(--rm-sans); text-align: left; }
+  .cv *, .cv *::before, .cv *::after { box-sizing: border-box; }
+  .cv [hidden] { display: none !important; }
+  .cv :where(button) { font: inherit; color: inherit; cursor: pointer; margin: 0; }
+  .cv :where(ul, ol) { list-style: none; margin: 0; padding: 0; }
+  .cv em { font-style: italic; }
+  .cv button:focus-visible, .cv summary:focus-visible { outline: 2px solid var(--cv-accent); outline-offset: 2px; }
+  .cv-lbl { margin: 0; font: 500 0.6875rem/1.4 var(--rm-mono); letter-spacing: 0.12em; text-transform: lowercase; color: var(--rm-dim); }
+
+  /* outlined buttons (back · next · ship) */
+  .cv-ob {
+    display: inline-flex; align-items: center; justify-content: center; min-height: 36px; padding: 0 16px;
+    border: 1px solid color-mix(in oklab, var(--rm-ink) 28%, transparent); border-radius: 8px; background: transparent;
+    font: 500 0.75rem/1 var(--rm-mono); letter-spacing: 0.06em; color: var(--rm-ink);
+    transition: border-color 160ms ease, background-color 160ms ease;
+  }
+  .cv-ob:hover:not(:disabled) { border-color: var(--rm-ink); }
+  .cv-ob:disabled { opacity: 0.35; cursor: default; }
+  .cv-ob[aria-pressed="true"] { background: var(--rm-ink); border-color: var(--rm-ink); color: var(--rm-paper); }
+
+  /* ── the bar: the switch (before · after), the two figures, EN · ES ── */
+  .cv-bar { grid-area: bar; display: flex; flex-wrap: wrap; align-items: center; gap: 16px 24px; }
+  .cv-flows { display: inline-flex; gap: 2px; padding: 2px; border: 1px solid var(--cv-hair); border-radius: 10px; }
+  .cv-flow {
+    display: flex; flex-direction: column; align-items: flex-start; gap: 3px; min-height: 48px; padding: 7px 14px;
+    border: 0; border-radius: 8px; background: none; text-align: left; transition: background-color 160ms ease, color 160ms ease;
+  }
+  .cv-flow-w { font: 500 0.875rem/1.25 var(--rm-sans); }
+  .cv-flow-s, .cv-unit-h .cv-flow-s { font: 500 0.6875rem/1.2 var(--rm-mono); letter-spacing: 0.12em; color: var(--rm-dim); }
+  .cv-flow[aria-selected="false"] { color: var(--rm-dim); }
+  .cv-flow[aria-selected="false"]:hover { color: var(--rm-ink); }
+  .cv-flow[aria-selected="true"] { background: var(--rm-ink); color: var(--rm-paper); }
+  .cv-flow[aria-selected="true"] .cv-flow-s { color: color-mix(in oklab, var(--rm-paper) 70%, var(--rm-ink)); }
+  .cv-taps { display: flex; gap: 18px; margin: 0; }
+  .cv-fig { display: inline-flex; align-items: baseline; gap: 5px; font: 500 0.6875rem/1 var(--rm-mono); letter-spacing: 0.12em; color: var(--rm-dim); transition: color 160ms ease; }
+  .cv-fig b { font: 500 1.75rem/1 var(--rm-display); letter-spacing: -0.01em; }
+  .cv-fig.is-on { color: var(--rm-ink); }
+  .cv-lang { display: inline-flex; gap: 2px; margin-inline-start: auto; padding: 2px; border: 1px solid var(--cv-hair); border-radius: 9px; }
+  .cv-lang button { min-width: 44px; min-height: 32px; padding: 0 10px; border: 0; border-radius: 7px; background: none; font: 500 0.75rem/1 var(--rm-mono); letter-spacing: 0.08em; color: var(--rm-dim); }
+  .cv-lang button:hover { color: var(--rm-ink); }
+  .cv-lang button[aria-pressed="true"] { background: var(--rm-ink); color: var(--rm-paper); }
+
+  /* ── the steps: a spine (the story card's recipe), the list's own numbers ── */
+  .cv-steps { counter-reset: tap; position: relative; }
+  .cv-steps li { counter-increment: tap; position: relative; }
+  .cv-steps li::after { content: ""; position: absolute; left: 4.5px; top: 25px; bottom: -11px; width: 1px; background: var(--cv-hair); }
+  .cv-steps li:last-child::after { display: none; }
+  .cv-step {
+    position: relative; display: grid; grid-template-columns: 10px 2.4ch minmax(0, 1fr); align-items: center; column-gap: 14px;
+    width: 100%; min-height: 36px; padding: 0; border: 0; background: none; text-align: left;
+    font: 400 0.9375rem/1.35 var(--rm-sans); color: var(--rm-dim); transition: color 160ms ease;
+  }
+  .cv-step::before { content: ""; width: 10px; height: 10px; border-radius: 50%; border: 1px solid color-mix(in oklab, var(--rm-ink) 35%, transparent); background: var(--rm-paper); }
+  .cv-step::after { content: counter(tap); grid-column: 2; grid-row: 1; font: 500 0.6875rem/1 var(--rm-mono); letter-spacing: 0.06em; color: var(--rm-dim); }
+  .cv-step:hover { color: var(--rm-ink); }
+  .cv-step.is-past { color: color-mix(in oklab, var(--rm-ink) 62%, var(--rm-dim)); }
+  .cv-step.is-past::before { background: color-mix(in oklab, var(--rm-ink) 45%, var(--rm-paper)); border-color: transparent; }
+  .cv-step.is-now { color: var(--rm-ink); font-weight: 500; }
+  .cv-step.is-now::before { background: var(--cv-accent); border-color: var(--cv-accent); box-shadow: 0 0 0 3px color-mix(in oklab, var(--cv-accent) 22%, transparent); }
+  .cv-step.is-now::after { color: var(--rm-ink); }
+  .cv-step > span { grid-column: 3; grid-row: 1; }
+  .cv-step::before { grid-column: 1; grid-row: 1; }
+
+  /* ── back · next · the status ── */
+  .cv-nav { grid-area: nav; display: flex; flex-wrap: wrap; align-items: center; gap: 10px 10px; align-self: start; }
+  .cv-status { flex: 1 1 18ch; margin: 0 0 0 8px; min-height: 1.5em; font: 500 0.75rem/1.5 var(--rm-mono); letter-spacing: 0.04em; color: var(--rm-dim); }
+
+  /* ── the tie (the gate), then the matrix ── */
+  .cv-gate { grid-area: gate; margin-top: 8px; padding-top: var(--sp-6); border-top: 1px solid var(--cv-hair); }
+  .cv-lock { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 14px; margin: 0; font: 500 0.6875rem/1.4 var(--rm-mono); letter-spacing: 0.12em; color: var(--rm-dim); }
+  .cv-seen { display: inline-flex; align-items: center; gap: 7px; }
+  .cv-seen::before { content: ""; width: 8px; height: 8px; border-radius: 50%; border: 1px solid color-mix(in oklab, var(--rm-ink) 40%, transparent); }
+  .cv-seen.is-on { color: var(--rm-ink); }
+  .cv-seen.is-on::before { background: var(--cv-accent); border-color: var(--cv-accent); }
+  .cv-gate:not([data-gate="locked"]) .cv-lock { display: none; }
+  .cv-tie { max-width: var(--rm-measure); }
+  .cv-tie-q { margin: 0 0 var(--sp-4); font: 500 1.375rem/1.25 var(--rm-display); letter-spacing: -0.01em; }
+  .cv-ship { display: flex; flex-wrap: wrap; gap: 10px; }
+  .cv-tip { margin-top: var(--sp-6); font: 400 1rem/1.6 var(--rm-sans); }
+  .cv-tip > div + div { margin-top: var(--sp-3); }
+  .cv-tip > .cv-lbl { margin-bottom: 8px; }
+  .cv-tip-lead { font-weight: 500; }
+  @media (prefers-reduced-motion: no-preference) {
+    .cv-tie:not([hidden]), .cv-tip:not([hidden]) { animation: cv-rise 360ms cubic-bezier(0.2, 0.8, 0.2, 1) both; }
+  }
+  @keyframes cv-rise { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+
+  .cv-mx { grid-area: mx; margin-top: 0; border-top: 1px solid var(--cv-hair); }
+  .cv-mx summary { display: flex; align-items: center; gap: 8px; min-height: 44px; list-style: none; cursor: pointer; }
+  .cv-mx summary::-webkit-details-marker { display: none; }
+  .cv-mx summary:hover .cv-lbl { color: var(--rm-ink); }
+  .cv-chev { width: 16px; height: 16px; color: var(--rm-dim); transition: transform 240ms ease; }
+  .cv-mx[open] .cv-chev { transform: rotate(180deg); }
+  .cv-mx-grid { display: grid; grid-template-columns: 9rem minmax(0, 1fr) minmax(0, 1fr); gap: 0 32px; padding: 4px 0 8px; }
+  .cv-mx-h { margin: 0; padding-bottom: 10px; font: 500 0.6875rem/1.4 var(--rm-mono); letter-spacing: 0.12em; color: var(--rm-ink); border-bottom: 1px solid var(--cv-hair); }
+  .cv-mx-0 { border-bottom: 1px solid var(--cv-hair); }
+  .cv-mx-k { margin: 0; padding: 12px 0; font: 500 0.6875rem/1.6 var(--rm-mono); letter-spacing: 0.12em; color: var(--rm-dim); border-bottom: 1px solid var(--cv-hair); }
+  .cv-mx-l { padding: 10px 0; border-bottom: 1px solid var(--cv-hair); }
+  .cv-mx-l li { font: 400 0.875rem/1.5 var(--rm-sans); padding: 2px 0; }
+
+  /* ═════ THE PHONE (the product surface: --cv-* only) ═════ */
+  .cv-phone { grid-area: phone; position: relative; width: 300px; height: 612px; padding: 7px; border: 1px solid var(--cv-hair); border-radius: 46px; }
+  .cv-screen {
+    position: relative; display: flex; flex-direction: column; height: 100%; overflow: hidden;
+    border: 1px solid var(--cv-line); border-radius: 39px; background: var(--cv-paper); color: var(--cv-ink);
+    font-family: var(--cv-font); font-size: var(--cv-fs); line-height: 1.35;
+  }
+  .cv-body { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; gap: 14px; padding: 40px 20px 16px; }
+  .cv-body.is-in { animation: cv-in 200ms ease both; }
+  @keyframes cv-in { from { opacity: 0.25; transform: translateY(4px); } to { opacity: 1; transform: none; } }
+  /* the language: one of each pair shows */
+  .cv[data-lang="en"] .cv-phone [lang="es"], .cv[data-lang="es"] .cv-phone [lang="en"] { display: none; }
+  /* a screen = the sections it lists */
+  .cv-s { display: none; margin: 0; }
+  .cv-phone[data-screen="launch"] [data-in~="launch"], .cv-phone[data-screen="home-b"] [data-in~="home-b"],
+  .cv-phone[data-screen="home-a"] [data-in~="home-a"], .cv-phone[data-screen="family"] [data-in~="family"],
+  .cv-phone[data-screen="card"] [data-in~="card"], .cv-phone[data-screen="pick"] [data-in~="pick"],
+  .cv-phone[data-screen="amount"] [data-in~="amount"] { display: flex; }
+  .cv-h { font-size: var(--cv-fs-md); font-weight: 600; letter-spacing: -0.01em; line-height: 1.25; }
+  .cv-phone[data-screen="home-a"] .cv-fam-h { margin-top: 6px; font-size: var(--cv-fs); font-weight: 600; }
+  /* the tapped control: an outline ring in the accent */
+  .cv-phone .is-hit { outline: 2px solid var(--cv-accent); outline-offset: 3px; }
+  .cv-card .is-hit { outline-color: var(--cv-accent-ink); }
+
+  /* launch */
+  .cv-launch { flex: 1; flex-direction: column; justify-content: space-between; padding: 64px 0 8px; }
+  .cv-mark { display: flex; flex-direction: column; align-items: center; gap: 14px; }
+  .cv-logo { width: 44px; height: 44px; border-radius: 50%; border: 6px solid var(--cv-accent); }
+  .cv-word { font-size: 26px; font-weight: 600; letter-spacing: -0.02em; }
+  .cv-ctas { display: flex; flex-direction: column; align-items: stretch; gap: 10px; }
+  .cv-btn {
+    display: flex; align-items: center; justify-content: center; min-height: var(--cv-row); padding: 6px 14px; text-align: center;
+    border: 1px solid var(--cv-accent); border-radius: var(--cv-radius-sm); color: var(--cv-accent); font-weight: 600;
+  }
+  .cv-btn.is-fill { background: var(--cv-accent); color: var(--cv-accent-ink); }
+  .cv-link { align-self: center; padding: 6px 4px 0; font-size: var(--cv-fs); color: var(--cv-ink); text-decoration: underline; text-underline-offset: 3px; text-decoration-color: var(--cv-accent); }
+
+  /* the homes */
+  .cv-bal { align-items: baseline; flex-wrap: wrap; gap: 8px; font-size: var(--cv-fs-lg); font-weight: 600; letter-spacing: -0.02em; line-height: 1.1; }
+  .cv-mask { font: 400 var(--cv-fs-sm)/1 var(--cv-mono); letter-spacing: 0.04em; color: var(--cv-dim); }
+  .cv-tx { flex-direction: column; border-top: 1px solid var(--cv-line); }
+  .cv-tx li { display: flex; justify-content: space-between; gap: 12px; padding: 9px 0; border-bottom: 1px solid var(--cv-line); }
+  .cv-tx li > span:last-child { font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .cv-tx li.is-plus > span:last-child { color: var(--cv-ok); font-weight: 600; }
+  .cv-phone[data-screen="home-a"] .cv-b-only { display: none; }
+  .cv-cards { flex-direction: column; gap: 10px; }
+  .cv-phone[data-screen="home-a"] .cv-cards { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 8px; }
+  .cv-fc { display: flex; flex-direction: column; gap: 4px; padding: 14px; border-radius: var(--cv-radius); background: var(--cv-accent); color: var(--cv-accent-ink); }
+  .cv-fc.is-alt { background: var(--cv-tint); color: var(--cv-ink); }
+  .cv-fc-n { font-weight: 600; line-height: 1.25; }
+  .cv-fc-a { font-size: var(--cv-fs-md); font-weight: 600; letter-spacing: -0.01em; font-variant-numeric: tabular-nums; }
+  .cv-fc-m { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; font-size: var(--cv-fs-sm); opacity: 0.85; }
+  .cv-phone[data-screen="home-a"] .cv-fc { padding: 12px; }
+  .cv-phone[data-screen="home-a"] .cv-fc-a { font-size: 15px; }
+  .cv-dots { display: inline-flex; margin-inline-end: 4px; }
+  .cv-nw { white-space: nowrap; }
+  .cv-dots i { width: 13px; height: 13px; border-radius: 50%; border: 1.5px solid currentColor; background: color-mix(in oklab, currentColor 18%, transparent); }
+  .cv-dots i + i { margin-inline-start: -4px; }
+
+  /* the family card (the old bilingual demo, kept: its line is the longer string in Spanish) */
+  .cv-card { flex-direction: column; gap: 12px; padding: 18px; border-radius: var(--cv-radius); background: var(--cv-accent); color: var(--cv-accent-ink); }
+  .cv-card-e { font: 500 var(--cv-fs-sm)/1.2 var(--cv-mono); letter-spacing: 0.1em; text-transform: uppercase; opacity: 0.85; }
+  .cv-card-l { font-size: var(--cv-fs-md); font-weight: 600; line-height: 1.25; letter-spacing: -0.01em; }
+  .cv-card-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+  .cv-card-a { font-size: var(--cv-fs-md); font-weight: 600; font-variant-numeric: tabular-nums; }
+  .cv-card-b { display: flex; align-items: center; justify-content: center; min-height: 40px; padding: 6px 12px; border-radius: var(--cv-radius-sm); background: var(--cv-paper); color: var(--cv-accent); font-weight: 600; text-align: center; }
+
+  /* the pick */
+  .cv-pick { flex-direction: column; }
+  .cv-pick-g { padding-bottom: 8px; font: 500 var(--cv-fs-sm)/1.2 var(--cv-mono); letter-spacing: 0.1em; text-transform: uppercase; color: var(--cv-dim); border-bottom: 1px solid var(--cv-line); }
+  .cv-row { display: flex; align-items: center; gap: 12px; min-height: var(--cv-row); padding: 0 6px; border-bottom: 1px solid var(--cv-line); border-radius: 2px; }
+  .cv-row i { display: grid; place-items: center; width: 28px; height: 28px; border-radius: 50%; background: var(--cv-tint); color: var(--cv-accent); font: 600 var(--cv-fs-sm)/1 var(--cv-font); font-style: normal; }
+
+  /* the amount */
+  .cv-amt { flex: 1; flex-direction: column; justify-content: space-between; gap: 16px; }
+  .cv-field { display: flex; align-items: center; justify-content: center; min-height: 84px; border: 1px solid var(--cv-line); border-radius: var(--cv-radius); background: var(--cv-field); font-size: 40px; font-weight: 600; letter-spacing: -0.02em; }
+
+  /* the tab bar (per flow) */
+  .cv-tabs { flex: none; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); align-items: center; min-height: 60px; padding: 6px 8px 14px; border-top: 1px solid var(--cv-line); }
+  .cv-tab { display: flex; align-items: center; justify-content: center; min-height: 34px; padding: 2px 3px; border-radius: 8px; text-align: center; font-size: var(--cv-fs-sm); line-height: 1.2; color: var(--cv-dim); }
+  .cv-tab.is-on { color: var(--cv-accent); font-weight: 600; }
+  .cv-unit[data-flow="before"] .cv-tab[data-only="after"], .cv-unit[data-flow="after"] .cv-tab[data-only="before"] { display: none; }
+  .cv-phone[data-screen="launch"] .cv-tabs { display: none; }
+
+  /* sent: the confirm tap lands, then the receipt */
+  .cv-sent {
+    position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px;
+    padding: 24px; background: var(--cv-paper); text-align: center;
+    opacity: 0; visibility: hidden; transition: opacity 240ms ease, visibility 0s linear 240ms;
+  }
+  .cv-phone[data-done] .cv-sent { opacity: 1; visibility: visible; transition: opacity 280ms ease 650ms, visibility 0s linear 650ms; }
+  .cv-tick { width: 56px; height: 56px; color: var(--cv-ok); }
+  .cv-sent-h { font-size: 24px; font-weight: 600; letter-spacing: -0.02em; }
+  .cv-sent-p { font-size: 15px; color: var(--cv-dim); }
+
+  /* ═════ dir 1 · ONE PHONE ═════ */
+  .cv[data-dir="1"] { display: grid; grid-template-columns: 300px minmax(0, 1fr); grid-template-areas: "phone bar" "phone steps" "phone nav" "gate gate" "mx mx"; grid-template-rows: auto auto 1fr auto auto; column-gap: 64px; row-gap: 28px; }
+  .cv[data-dir="1"] .cv-stage, .cv[data-dir="1"] .cv-unit { display: contents; }
+  .cv[data-dir="1"] .cv-steps { grid-area: steps; }
+  .cv[data-dir="1"][data-flow="before"] .cv-steps[data-steps="after"], .cv[data-dir="1"][data-flow="after"] .cv-steps[data-steps="before"] { display: none; }
+  @media (max-width: 760px) {
+    .cv[data-dir="1"] { grid-template-columns: minmax(0, 1fr); grid-template-areas: "bar" "phone" "steps" "nav" "gate" "mx"; grid-template-rows: none; row-gap: 20px; }
+    .cv[data-dir="1"] .cv-phone { justify-self: center; }
+  }
+
+  /* ═════ dir 2 · TWO PHONES (one block: delete it with the loser) ═════ */
+  .cv[data-dir="2"] { display: grid; grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: "stage stage" "nav bar" "gate gate" "mx mx"; gap: 24px 24px; }
+  .cv[data-dir="2"] .cv-bar { justify-content: flex-end; align-self: center; }
+  .cv[data-dir="2"] .cv-stage { grid-area: stage; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 32px; }
+  .cv[data-dir="2"] .cv-unit { display: grid; grid-template-columns: 272px minmax(0, 1fr); grid-template-areas: "h h" "phone steps"; gap: 18px 28px; align-items: start; }
+  .cv[data-dir="2"] .cv-phone { width: 272px; height: 560px; }
+  .cv[data-dir="2"] .cv-unit[data-flow="before"] .cv-steps[data-steps="after"], .cv[data-dir="2"] .cv-unit[data-flow="after"] .cv-steps[data-steps="before"] { display: none; }
+  .cv[data-dir="2"] .cv-steps { grid-area: steps; padding-top: 40px; }
+  .cv-unit-h { grid-area: h; display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 14px; margin: 0; padding-bottom: 12px; border-bottom: 1px solid var(--cv-hair); }
+  .cv-unit-h .cv-flow-w { font: 500 1.125rem/1.25 var(--rm-display); letter-spacing: -0.01em; }
+  .cv-unit-h .cv-fig { margin-inline-start: auto; color: var(--rm-ink); }
+  .cv[data-dir="2"] .cv-nav { justify-content: flex-start; }
+  .cv[data-dir="2"] .cv-status { flex: 0 1 auto; }
+  @media (max-width: 1100px) {
+    .cv[data-dir="2"] .cv-unit { grid-template-columns: minmax(0, 1fr); grid-template-areas: "h" "phone" "steps"; justify-items: center; }
+    .cv[data-dir="2"] .cv-unit-h { justify-self: stretch; }
+    .cv[data-dir="2"] .cv-steps { padding-top: 0; justify-self: stretch; }
+  }
+  @media (max-width: 760px) {
+    .cv[data-dir="2"] { grid-template-columns: minmax(0, 1fr); grid-template-areas: "bar" "stage" "nav" "gate" "mx"; }
+    .cv[data-dir="2"] .cv-stage { grid-template-columns: minmax(0, 1fr); gap: 40px; }
+    .cv[data-dir="2"] .cv-phone { width: 272px; height: 560px; }
+    .cv[data-dir="2"] .cv-step:not(.is-now) { display: none; }
+    .cv[data-dir="2"] .cv-steps li::after { display: none; }
+    .cv[data-dir="2"] .cv-steps li:has(.cv-step:not(.is-now)) { display: none; }
+    .cv[data-dir="2"] .cv-nav {
+      position: sticky; bottom: calc(62px + env(safe-area-inset-bottom)); z-index: 2; padding: 10px 0;
+      background: var(--rm-paper); border-top: 1px solid var(--cv-hair);
+    }
+  }
+
+  /* ── phones (both directions) ── */
+  @media (max-width: 760px) {
+    .cv-bar { gap: 12px 16px; }
+    .cv-flows { width: 100%; }
+    .cv-flow { flex: 1 1 0; min-width: 0; }
+    .cv-flow-w { font-size: 0.8125rem; }
+    .cv-phone { width: 272px; height: 560px; }
+    .cv-body { padding: 34px 16px 14px; gap: 12px; }
+    .cv-launch { padding-top: 48px; }
+    .cv-status { flex-basis: 100%; order: -1; margin: 0; }
+    .cv-mx-grid { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 0 16px; }
+    .cv-mx-0 { display: none; }
+    .cv-mx-k { grid-column: 1 / -1; padding: 14px 0 4px; border-bottom: 0; }
+    .cv-mx-l { padding-top: 4px; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .cv *, .cv *::before, .cv *::after { transition: none !important; animation: none !important; }
+  }
+</style>
