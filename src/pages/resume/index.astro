@@ -34,14 +34,20 @@ export const prerender = true;
 // the run (bullet 0) and the evidence clause (bullet 2, since 2026-10-06) of
 // the mastering agent, the instrument's one bullet, and the dbt tool (CHS
 // bullet 1). A reworded sheet must re-check these or the tabs silently detach.
+// Each tab's panel follows it in the DOM (the panels are absolutely placed,
+// so the order is free): Tab from an open tab lands inside its own proof.
 const MARKS = [
-  { key: "agent", word: "watch it", side: "right",
+  { key: "agent", word: "watch it", side: "right", Proof: ProofAgentLoop,
+    label: "One run of the mastering agent",
     target: '[data-pr-org="AI mastering agent"] li[data-bi="0"]' },
-  { key: "judge", word: "the catch", side: "left",
+  { key: "judge", word: "the catch", side: "left", Proof: ProofJudge,
+    label: "The blind test's ledger",
     target: '[data-pr-org="AI mastering agent"] li[data-bi="2"]' },
-  { key: "signal", word: "play it", side: "right",
+  { key: "signal", word: "play it", side: "right", Proof: ProofSignalKeys,
+    label: "Five playable notes",
     target: '[data-pr-org="Browser instrument"] li[data-bi="0"]' },
-  { key: "parser", word: "trace it", side: "left",
+  { key: "parser", word: "trace it", side: "left", Proof: ProofDbtPipeline,
+    label: "The dbt lineage parser on a sample project",
     target: '[data-pr-org="CHS Inc."] li[data-bi="1"]' },
 ];
 
@@ -107,34 +113,27 @@ const STUDIES = [
             ))}
           </div>
           <PrintResume />
-          {MARKS.map((m) => (
-            <button
-              type="button"
-              class={`r-mark r-mark-${m.side}`}
-              data-mark={m.key}
-              data-mark-target={m.target}
-              aria-expanded="false"
-              aria-controls={`proof-${m.key}`}
-            >
-              {/* nothing to read on the tab; the word is its accessible name */}
-              <span class="r-mark-word">{m.word}</span>
-            </button>
-          ))}
-
-          {/* the dock: panels float into the parted paper at their bullet */}
+          {/* the dock: each tab, then its panel, which floats into the parted
+              paper at its bullet */}
           <div class="proof-dock" data-dock>
-          <section id="proof-agent" class="proof-panel" data-proof-panel="agent" hidden aria-label="The mastering run, live">
-            <ProofAgentLoop />
-          </section>
-          <section id="proof-judge" class="proof-panel" data-proof-panel="judge" hidden aria-label="The blind judge, live">
-            <ProofJudge />
-          </section>
-          <section id="proof-parser" class="proof-panel" data-proof-panel="parser" hidden aria-label="The dbt parser, live">
-            <ProofDbtPipeline />
-          </section>
-          <section id="proof-signal" class="proof-panel" data-proof-panel="signal" hidden aria-label="Five playable keys">
-            <ProofSignalKeys />
-          </section>
+            {MARKS.map(({ Proof, ...m }) => (
+              <>
+                <button
+                  type="button"
+                  class={`r-mark r-mark-${m.side}`}
+                  data-mark={m.key}
+                  data-mark-target={m.target}
+                  aria-expanded="false"
+                  aria-controls={`proof-${m.key}`}
+                >
+                  {/* nothing to read on the tab; the word is its accessible name */}
+                  <span class="r-mark-word">{m.word}</span>
+                </button>
+                <section id={`proof-${m.key}`} class="proof-panel" data-proof-panel={m.key} hidden aria-label={m.label}>
+                  <Proof />
+                </section>
+              </>
+            ))}
           </div>
         </div>
 
@@ -802,7 +801,11 @@ const STUDIES = [
       background: rgba(232, 236, 244, 0.09);
     }
 
-    /* ── the dock: the dark slab under the parted paper — the studio under it ── */
+    /* ── the dock (2026-10-06): no dark slab. The paper parts and the room's
+       ground shows through; each module sets its objects on that ground as
+       paper. The panel hands every module one contract of tokens (the work
+       room's inks, card, hairline at 18 % ink and three faces), day and night,
+       so a module never states a palette of its own beyond one accent hue. ── */
     .proof-dock {
       /* panels float into the parted paper; the dock itself has no box */
       display: contents;
@@ -813,18 +816,33 @@ const STUDIES = [
       }
     }
     .proof-panel {
+      --pf-ink: #141210;
+      --pf-dim: #6a6660;
+      --pf-ground: #e9e8e5;
+      --pf-card: #ffffff;
+      --pf-line: color-mix(in oklab, #141210 18%, transparent);
+      --pf-soft: color-mix(in oklab, #141210 9%, transparent);
+      --pf-sans: "Instrument Sans", "Helvetica Neue", Arial, sans-serif;
+      --pf-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+      --pf-display: "Outfit", "Instrument Sans", "Helvetica Neue", Arial, sans-serif;
       position: absolute;
       left: clamp(10px, 2vw, 26px);
       right: clamp(10px, 2vw, 26px);
       z-index: 3;
       padding: clamp(16px, 3vw, 28px);
-      background: #101216;
-      border: 1px solid rgba(160, 190, 230, 0.24);
-      border-radius: 0;
+      background: var(--pf-ground);
+      border: 1px solid var(--pf-line);
+      border-radius: 12px;
+      color: var(--pf-ink);
+      font-family: var(--pf-sans);
     }
-    /* on the dark sheet the dark panel needs a firmer edge */
     html[data-night] .proof-panel {
-      border-color: rgba(160, 190, 230, 0.32);
+      --pf-ink: #e8ecf4;
+      --pf-dim: #7d8798;
+      --pf-ground: #0b0e14;
+      --pf-card: #1c1c1f;
+      --pf-line: color-mix(in oklab, #e8ecf4 18%, transparent);
+      --pf-soft: color-mix(in oklab, #e8ecf4 9%, transparent);
     }
   }
 

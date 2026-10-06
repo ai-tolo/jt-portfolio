@@ -1,16 +1,25 @@
 ---
-// ProofSignalKeys — the SIGNAL bullet's in-place proof (2026-08-26).
-// Five playable keys built on the same Web Audio primitives as the
-// homepage instrument. Hard constraints: SILENT until a deliberate
-// press (no autoplay, no sound on hover), and it says it will make
-// sound before it does — recruiters screen in open offices.
-// A minor pentatonic so any order of presses sounds intentional.
+// PROOF for the browser instrument's bullet: five notes, synthesized in this
+// page. Five playable keys (A S D F G, an A minor pentatonic, so any order of
+// presses sounds intentional), each two detuned triangles through a closing
+// lowpass with a short attack and release, on the same Web Audio primitives as
+// the homepage instrument. Hard constraints: SILENT until a deliberate press
+// (no autoplay, no sound on hover; the AudioContext is made on the first
+// press, never before), and the tag says it will make sound before it does,
+// because recruiters screen in open offices.
+//
+// Clothes (2026-10-06): the room's material, no dark panel. The module draws
+// no ground of its own: it reads the .proof-panel tokens (--pf-*, each with its
+// day value as the fallback; night flips them on the panel). The keys are
+// paper keycaps: a card face, 1px hairlines, depth drawn as a thicker bottom
+// border and never a shadow; a press sinks the face 2px onto its base. Mono
+// for the label, the tag and the caps, Instrument Sans for the note, the 4/8
+// spacing scale, and ONE accent, blue, for a pressed key's letter and lamp.
 ---
 
 <div class="pf pf-keys" data-proof="signalkeys">
-  <div class="pf-head">
-    <span class="pf-kicker">web audio, in this page</span>
-    <h4 class="pf-title">The instrument claim, pressable.</h4>
+  <div class="pk-head">
+    <p class="pk-label">five notes, synthesized in this page</p>
     <span class="pk-soundtag" aria-hidden="true">
       <svg viewBox="0 0 16 16" width="12" height="12" fill="none" stroke="currentColor"
         stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round">
@@ -30,8 +39,7 @@
   </div>
 
   <p class="pk-note">
-    Synthesis, envelope, and filter run right here, in the résumé.
-    The full instrument lives at <a href="https://www.uxjon.com/#play">uxjon.com/#play</a>.
+    Press a key. The whole instrument is at <a href="https://www.uxjon.com/#play">uxjon.com/#play</a>.
   </p>
 </div>
 
@@ -134,100 +142,147 @@
 </script>
 
 <style>
+  /* The room's material. The proof panel hands down the tokens (day values
+     are the fallbacks; night flips them on the panel), so the module states
+     no palette of its own beyond its one accent. */
   .pf-keys {
-    font-family: "IBM Plex Mono", ui-monospace, monospace;
-    color: #e8ecf4;
+    --pk-ink: var(--pf-ink, #141210);
+    --pk-dim: var(--pf-dim, #6a6660);
+    --pk-card: var(--pf-card, #ffffff);
+    --pk-line: var(--pf-line, color-mix(in oklab, #141210 18%, transparent));
+    --pk-soft: var(--pf-soft, color-mix(in oklab, #141210 9%, transparent));
+    --pk-sans: var(--pf-sans, "Instrument Sans", "Helvetica Neue", Arial, sans-serif);
+    --pk-mono: var(--pf-mono, "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace);
+    /* the one hue: a pressed key's letter and lamp (5.5:1 on the day card) */
+    --pk-accent: #2a62d9;
+    margin: 0;
+    color: var(--pk-ink);
+    font-family: var(--pk-sans);
   }
-  .pf-head {
+  :global(html[data-night]) .pf-keys {
+    --pk-accent: #7aa2ff; /* 6.8:1 on the night card */
+  }
+
+  /* labels: one mono voice */
+  .pk-label,
+  .pk-soundtag {
+    font-family: var(--pk-mono);
+    font-size: 0.6875rem;
+    font-weight: 500;
+    line-height: 1.5;
+    letter-spacing: 0.12em;
+    text-transform: lowercase;
+    color: var(--pk-dim);
+  }
+
+  /* ── head: what it is, and the warning before any sound ── */
+  .pk-head {
     display: flex;
-    align-items: baseline;
-    gap: 12px;
+    align-items: center;
+    justify-content: space-between;
     flex-wrap: wrap;
+    gap: 8px 16px;
     margin-bottom: 16px;
   }
-  .pf-kicker {
-    font-size: 0.66rem;
-    letter-spacing: 0.08em;
-    color: #0ec4fc;
-  }
-  .pf-title {
+  .pk-label {
     margin: 0;
-    font-family: "Geist Variable", ui-sans-serif, system-ui, sans-serif;
-    font-size: 1rem;
-    font-weight: 600;
-    color: #f5f1e8;
   }
   .pk-soundtag {
-    margin-left: auto;
     display: inline-flex;
     align-items: center;
-    gap: 5px;
-    font-size: 0.62rem;
-    letter-spacing: 0.06em;
-    color: #ffb347;
+    gap: 8px;
   }
+  .pk-soundtag svg {
+    display: block;
+    flex: none;
+  }
+
+  /* ── the keys: five paper keycaps ── */
   .pk-row {
     display: flex;
+    align-items: flex-start;
     gap: 8px;
   }
   .pk-key {
     position: relative;
     flex: 1 1 0;
-    height: 74px;
-    border: 1px solid #2a2f3a;
+    min-width: 0;
+    /* a 60px face on a 1px top hairline and a 3px base: the cap stands 64px.
+       content-box, so a press can thin the base without resizing the face */
+    box-sizing: content-box;
+    height: 60px;
+    display: grid;
+    place-items: center;
+    margin: 0;
+    padding: 0;
+    appearance: none;
+    background: var(--pk-card);
+    border: 1px solid var(--pk-line);
+    border-bottom-width: 3px;
     border-radius: 8px;
-    background: linear-gradient(180deg, #1d212b 0%, #12151c 60%, #0e1117 100%);
-    color: #cfd6e2;
+    color: var(--pk-ink);
+    font: inherit;
     cursor: pointer;
-    box-shadow:
-      inset 0 1px 0 rgba(255, 255, 255, 0.07),
-      0 3px 0 #05070c,
-      0 5px 12px rgba(5, 7, 12, 0.35);
-    transition: transform 90ms ease, box-shadow 90ms ease;
     touch-action: none;
+    transition: border-color 160ms ease, color 160ms ease;
   }
   .pk-cap {
-    font-size: 0.95rem;
-    letter-spacing: 0.04em;
+    font-family: var(--pk-mono);
+    font-size: 0.9375rem;
+    font-weight: 500;
+    line-height: 1;
   }
   .pk-lamp {
     position: absolute;
-    top: 7px;
+    top: 8px;
     right: 8px;
-    width: 4px;
-    height: 4px;
+    width: 6px;
+    height: 6px;
     border-radius: 50%;
-    background: rgba(14, 196, 252, 0.25);
-    transition: background 90ms ease, box-shadow 90ms ease;
+    background: var(--pk-soft);
+    transition: background-color 160ms ease;
   }
   .pk-key:hover {
-    border-color: #3a4150;
+    border-color: var(--pk-ink);
   }
   .pk-key:focus-visible {
-    outline: 2px solid #0ec4fc;
+    outline: 2px solid var(--pk-ink);
     outline-offset: 2px;
   }
+  /* pressed: the face sinks 2px onto its base, which thins from 3px to 1px,
+     so the cap's foot stays put; the margin keeps the row's height. The press
+     lands at once, the release eases. */
   .pk-key[data-lit] {
-    transform: translateY(3px);
-    box-shadow:
-      inset 0 2px 6px rgba(0, 0, 0, 0.55),
-      0 0 0 #05070c;
-    color: #0ec4fc;
+    transform: translateY(2px);
+    border-bottom-width: 1px;
+    margin-bottom: 2px;
+    color: var(--pk-accent);
+    transition: none;
   }
   .pk-key[data-lit] .pk-lamp {
-    background: #0ec4fc;
-    box-shadow: 0 0 8px rgba(14, 196, 252, 0.9);
+    background: var(--pk-accent);
+    transition: none;
   }
+
+  /* ── the note: how to play, and where the whole instrument is ── */
   .pk-note {
     margin: 16px 0 0;
-    font-size: 0.7rem;
-    letter-spacing: 0.03em;
+    font-family: var(--pk-sans);
+    font-size: 0.875rem;
     line-height: 1.6;
-    color: #7d8798;
+    color: var(--pk-dim);
   }
+  /* the room's link grammar: a hairline underline that goes to full ink */
   .pk-note a {
-    color: #cfd6e2;
+    color: var(--pk-ink);
     text-decoration: underline;
-    text-underline-offset: 3px;
+    text-decoration-thickness: 1px;
+    text-decoration-color: color-mix(in oklab, currentColor 32%, transparent);
+    text-underline-offset: 4px;
+    transition: text-decoration-color 140ms ease;
+  }
+  .pk-note a:hover,
+  .pk-note a:focus-visible {
+    text-decoration-color: currentColor;
   }
 </style>

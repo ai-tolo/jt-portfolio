@@ -1,19 +1,30 @@
 ---
-// PROOF — the CHS bullet: "parses the dbt API manifest into Excel, Power BI,
-// and stakeholder briefs."
+// PROOF for the CHS bullet: "Built a Python tool that writes each dbt model's
+// lineage to Excel, Power BI, and stakeholder briefs in one pass."
 //
-// What this module shows is the mechanism, not a mockup of the output. A dbt
-// manifest excerpt (jaffle-shop-style, public sample names) goes into a real
-// parser below: it filters model nodes, resolves depends_on refs to models,
-// drops the source refs it cannot resolve, derives each model's depth by
-// longest path, and returns the graph. Every number on screen and every column
-// in the diagram comes out of that function. Nothing is hand-placed.
+// What this is: a real parser run on dbt's public sample, not a mockup of its
+// output. A slice of a manifest in the shape of the jaffle_shop project (its
+// project name, raw sources and staging models; the intermediate and mart
+// names are this slice's own) goes into parseManifest below: it keeps the
+// model nodes, resolves depends_on refs to models, drops the source refs it
+// cannot resolve, derives each model's depth by longest path, and returns the
+// graph. Every number on screen and every column of the diagram comes out of
+// that function. Nothing is hand-placed.
 //
-// Hovering a model runs a second computation in the browser: transitive
-// upstream and downstream closure over the parsed edges, with the wires routed
-// from measured node geometry. The three outputs are named as plain labels.
-// The documents themselves are not shown, because the ones that matter are the
+// Pointing at a model (hover or focus; a click pins it) runs a second
+// computation in the browser: the transitive upstream and downstream closure
+// over the parsed edges, with the wires routed from measured node geometry.
+// The three outputs are named, not shown: the documents that matter are the
 // company's and cannot be.
+//
+// Clothes (2026-10-06): the room's material, no dark panel. The module draws
+// no ground of its own: it reads the .proof-panel tokens (--pf-*, each with its
+// day value as the fallback; night flips them on the panel) and sets its
+// objects as paper on that ground: the graph is a card, its models are
+// outlined paper buttons on it, the outputs are outlined pills. Mono for every
+// word, the 4/8 spacing scale, and ONE accent, blue, kept for the lineage
+// trace alone: the traced model's border and name, the lit wires, and the
+// traced name in the readout.
 
 type ManifestModel = {
   name: string;
@@ -36,12 +47,6 @@ const manifest = {
     "source.jaffle_shop.raw.payments": { name: "payments" },
   },
   nodes: {
-    "model.jaffle_shop.stg_customers": {
-      name: "stg_customers",
-      resource_type: "model",
-      config: { materialized: "view" },
-      depends_on: { nodes: ["source.jaffle_shop.raw.customers"] },
-    },
     "model.jaffle_shop.stg_orders": {
       name: "stg_orders",
       resource_type: "model",
@@ -53,6 +58,15 @@ const manifest = {
       resource_type: "model",
       config: { materialized: "view" },
       depends_on: { nodes: ["source.jaffle_shop.raw.payments"] },
+    },
+    // stg_customers is listed last so the depth-0 column ends with it: its two
+    // wires skip a depth and pass UNDER the intermediate model instead of
+    // behind it (2026-10-06; the parse and its graph are unchanged)
+    "model.jaffle_shop.stg_customers": {
+      name: "stg_customers",
+      resource_type: "model",
+      config: { materialized: "view" },
+      depends_on: { nodes: ["source.jaffle_shop.raw.customers"] },
     },
     "model.jaffle_shop.int_order_items": {
       name: "int_order_items",
@@ -151,63 +165,60 @@ const { columns, edges, stats } = graph;
 ---
 
 <div class="pf pf-dbt" data-proof="dbt">
-  <div class="pf-head">
-    <span class="pf-kicker">the mechanism, on sample data</span>
-    <h4 class="pf-title">One manifest in, three documents out</h4>
-    <p class="pf-sub">sample models; the real one runs on the company manifest</p>
-  </div>
+  <p class="pf-label">the parser, on a sample dbt project</p>
 
-  <div class="pf-strip">
+  {/* the mechanism in one line: the file, the step, what the parse returned */}
+  <p class="pf-strip">
     <code class="pf-strip-file">manifest.json</code>
-    <span class="pf-strip-tag">jaffle-shop sample</span>
     <span class="pf-strip-arrow" aria-hidden="true">→</span>
     <code class="pf-strip-step">parse</code>
     <span class="pf-strip-arrow" aria-hidden="true">→</span>
-    <span class="pf-strip-out">
-      {stats.models} models · {stats.edges} edges · {stats.layers} layers
-    </span>
-  </div>
-
-  <div class="pf-dag" data-dag style={`--pd-cols:${columns.length}`}>
-    <svg class="pf-wires" data-wires preserveAspectRatio="none" aria-hidden="true">
-      {edges.map((e) => (
-        <path class="pf-wire" data-from={e.from} data-to={e.to} fill="none" />
-      ))}
-    </svg>
-
-    {columns.map((col, i) => (
-      <div class="pf-col">
-        <span class="pf-depth">depth {i}</span>
-        <div class="pf-stack">
-          {col.map((m) => (
-            <button
-              type="button"
-              class="pf-node"
-              data-node={m.name}
-              data-deps={m.deps.join(",")}
-              aria-pressed="false"
-            >
-              <span class="pf-node-name">{m.name}</span>
-              <span class="pf-node-mat">{m.materialized}</span>
-            </button>
-          ))}
-        </div>
-      </div>
-    ))}
-  </div>
-
-  <p class="pf-readout" data-readout aria-live="polite">
-    <span class="pf-read-idle" data-r-idle>hover a model to trace its lineage</span>
-    <span class="pf-read-trace">
-      <span class="pf-read-name" data-r-name></span>
-      <span class="pf-read-arrow" aria-hidden="true">←</span>
-      <span class="pf-read-deps" data-r-deps></span>
-      <span class="pf-read-count" data-r-count></span>
-    </span>
+    <span class="pf-strip-out">{stats.models} models · {stats.edges} edges · {stats.layers} layers</span>
   </p>
 
+  {/* the graph is one card of paper; its readout is the card's foot */}
+  <div class="pf-graph">
+    <div class="pf-dag" data-dag style={`--pd-cols:${columns.length}`}>
+      <svg class="pf-wires" data-wires preserveAspectRatio="none" aria-hidden="true">
+        {edges.map((e) => (
+          <path class="pf-wire" data-from={e.from} data-to={e.to} fill="none" />
+        ))}
+      </svg>
+
+      {columns.map((col, i) => (
+        <div class="pf-col">
+          <span class="pf-depth">depth {i}</span>
+          <div class="pf-stack">
+            {col.map((m) => (
+              <button
+                type="button"
+                class="pf-node"
+                data-node={m.name}
+                data-deps={m.deps.join(",")}
+                aria-pressed="false"
+              >
+                <span class="pf-node-name">{m.name}</span>
+                <span class="pf-node-mat">{m.materialized}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+      ))}
+    </div>
+
+    <p class="pf-readout" data-readout aria-live="polite">
+      <span class="pf-read-idle" data-r-idle>pick a model to trace its lineage</span>
+      <span class="pf-read-trace">
+        <span class="pf-read-name" data-r-name></span>
+        <span class="pf-read-arrow" aria-hidden="true">←</span>
+        <span class="pf-read-deps" data-r-deps></span>
+        <span class="pf-read-count" data-r-count></span>
+      </span>
+    </p>
+  </div>
+
   <div class="pf-out">
-    <span class="pf-out-label">fans out to</span>
+    <span class="pf-out-label">writes to</span>
     <span class="pf-chip">Excel</span>
     <span class="pf-chip">Power BI</span>
     <span class="pf-chip">briefs</span>
@@ -347,76 +358,91 @@ const { columns, edges, stats } = graph;
 </script>
 
 <style>
-  /* The module renders inside the sheet's dark panel, so it carries its own
-     ink and never inherits the paper's light tokens. */
-  .pf.pf-dbt {
-    --pd-ink: #e8edf4;
-    --pd-dim: #93a0b1;
-    --pd-faint: #6b7686;
-    --pd-line: rgba(160, 190, 230, 0.14);
-    --pd-well: #0c0e12;
-    --pd-chip: #14181f;
-    --pd-cy: #0ec4fc;
-    --pd-mono: "IBM Plex Mono", ui-monospace, monospace;
+  /* The room's material. The proof panel hands down the tokens (day values are
+     the fallbacks; night flips them on the panel), so the module states no
+     palette of its own beyond its one accent, declared here with its night
+     value. Nothing here paints a ground: the objects are paper on the panel's. */
+  .pf-dbt {
+    --pd-ink: var(--pf-ink, #141210);
+    --pd-dim: var(--pf-dim, #6a6660);
+    --pd-card: var(--pf-card, #ffffff);
+    --pd-line: var(--pf-line, color-mix(in oklab, #141210 18%, transparent));
+    --pd-soft: var(--pf-soft, color-mix(in oklab, #141210 9%, transparent));
+    --pd-mono: var(--pf-mono, "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace);
+    /* the one hue, for the lineage trace alone. #2a62d9 taken a hair darker:
+       it read 4.46:1 on the panel's ground; this is 4.53:1 there and 5.55:1
+       on the card */
+    --pd-accent: #2961d7;
 
     display: flex;
     flex-direction: column;
-    gap: 14px;
+    margin: 0;
     color: var(--pd-ink);
+    font-family: var(--pd-mono);
     font-weight: 400;
+    text-align: left;
+  }
+  :global(html[data-night]) .pf-dbt {
+    --pd-accent: #7aa2ff;
   }
 
-  /* ── head ── */
-  .pf-head { display: flex; flex-direction: column; gap: 5px; }
-  .pf-kicker {
+  /* labels and captions: one mono voice */
+  .pf-label,
+  .pf-depth,
+  .pf-node-mat,
+  .pf-out-label {
     font-family: var(--pd-mono);
-    font-size: 0.625rem;
-    letter-spacing: 0.16em;
-    color: var(--pd-cy);
-  }
-  .pf-title {
-    margin: 0;
-    font-size: 0.9375rem;
-    font-weight: 600;
-    letter-spacing: -0.01em;
-    color: var(--pd-ink);
-  }
-  .pf-sub {
-    margin: 0;
-    font-family: var(--pd-mono);
-    font-size: 0.625rem;
-    line-height: 1.5;
-    color: var(--pd-faint);
-  }
-
-  /* ── the mechanism, one line ── */
-  .pf-strip {
-    display: flex;
-    align-items: center;
-    flex-wrap: wrap;
-    gap: 8px;
-    padding: 7px 10px;
-    border: 1px solid var(--pd-line);
-    border-radius: 5px;
-    background: var(--pd-well);
-    font-family: var(--pd-mono);
+    font-weight: 500;
     font-size: 0.6875rem;
+    line-height: 1.5;
+    letter-spacing: 0.12em;
+    text-transform: lowercase;
     color: var(--pd-dim);
   }
-  .pf-strip-file { color: var(--pd-ink); }
-  .pf-strip-step { color: var(--pd-ink); }
-  .pf-strip-tag { font-size: 0.5625rem; color: var(--pd-faint); }
-  .pf-strip-arrow { color: var(--pd-faint); }
-  .pf-strip-out { color: var(--pd-cy); font-variant-numeric: tabular-nums; }
 
-  /* ── the graph ── */
+  /* ── head: what it is, then the mechanism in one line ── */
+  .pf-label {
+    margin: 0;
+  }
+  .pf-strip {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    margin: 8px 0 0;
+    font-size: 0.75rem;
+    line-height: 1.5;
+    white-space: nowrap;
+    color: var(--pd-ink);
+  }
+  .pf-strip code {
+    font: inherit;
+    color: var(--pd-ink);
+  }
+  .pf-strip-arrow {
+    color: var(--pd-dim);
+  }
+  .pf-strip-out {
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* ── the graph: one card of paper, the models paper on paper ── */
+  .pf-graph {
+    margin: 16px 0 0;
+    padding: 16px 24px 0;
+    background: var(--pd-card);
+    border: 1px solid var(--pd-line);
+    border-radius: 12px;
+  }
   .pf-dag {
     position: relative;
     display: grid;
-    grid-template-columns: repeat(var(--pd-cols, 3), minmax(0, 1fr));
-    gap: 0 clamp(30px, 7%, 68px);
+    /* each depth is as wide as its longest name; the room between the
+       depths belongs to the wires */
+    grid-template-columns: repeat(var(--pd-cols, 3), minmax(0, max-content));
+    justify-content: space-between;
+    column-gap: 48px;
     align-items: stretch;
-    padding: 12px 2px 14px;
+    padding: 0 0 16px;
   }
   /* addressed through .pf-dag so the rules never depend on the scope
      attribute landing on SVG children */
@@ -432,98 +458,91 @@ const { columns, edges, stats } = graph;
   }
   .pf-dag[data-wired="true"] .pf-wires { opacity: 1; }
   .pf-dag .pf-wire {
-    stroke: rgba(160, 190, 230, 0.22);
+    stroke: var(--pd-line);
     stroke-width: 1;
     transition: stroke 180ms ease, stroke-width 180ms ease, opacity 180ms ease;
   }
-  .pf-dag .pf-wire.is-lit { stroke: var(--pd-cy); stroke-width: 1.6; }
+  .pf-dag .pf-wire.is-lit { stroke: var(--pd-accent); stroke-width: 1.5; }
   .pf-dag .pf-wire.is-off { opacity: 0.18; }
 
-  .pf-col { position: relative; z-index: 1; display: flex; flex-direction: column; gap: 8px; }
-  .pf-depth {
-    font-family: var(--pd-mono);
-    font-size: 0.5625rem;
-    letter-spacing: 0.1em;
-    color: var(--pd-faint);
+  .pf-col {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    min-width: 0;
   }
   .pf-stack {
     flex: 1 1 auto;
     display: flex;
     flex-direction: column;
     justify-content: center;
-    gap: 8px;
+    gap: 12px;
   }
+  /* a depth holding one model stands it in the top row, so the wires that
+     skip that depth run beneath it and never read as feeding it */
+  .pf-stack:has(> .pf-node:only-child) { justify-content: flex-start; }
 
+  /* a model: outlined paper on the card */
   .pf-node {
     appearance: none;
     display: flex;
     flex-direction: column;
-    gap: 2px;
+    align-items: flex-start;
     width: 100%;
-    padding: 6px 8px;
+    margin: 0;
+    padding: 8px 12px;
+    font: inherit;
     text-align: left;
+    background: var(--pd-card);
     border: 1px solid var(--pd-line);
-    border-radius: 5px;
-    background: var(--pd-chip);
+    border-radius: 8px;
     color: var(--pd-ink);
     cursor: pointer;
-    transition: border-color 180ms ease, background 180ms ease, color 180ms ease,
-      opacity 180ms ease;
+    transition: border-color 180ms ease, color 180ms ease, opacity 180ms ease;
   }
   .pf-node-name {
-    font-family: var(--pd-mono);
-    font-size: 0.6875rem;
-    line-height: 1.2;
+    max-width: 100%;
+    font-size: 0.75rem;
+    font-weight: 500;
+    line-height: 1.5;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
   }
-  .pf-node-mat {
-    font-family: var(--pd-mono);
-    font-size: 0.5rem;
-    letter-spacing: 0.08em;
-    color: var(--pd-faint);
-  }
-  .pf-node:hover { border-color: rgba(14, 196, 252, 0.45); }
-  .pf-node.is-up {
-    border-color: rgba(14, 196, 252, 0.45);
-    color: var(--pd-ink);
-  }
-  .pf-node.is-target {
-    border-color: var(--pd-cy);
-    background: rgba(14, 196, 252, 0.1);
-  }
-  .pf-node.is-target .pf-node-name { color: var(--pd-cy); }
+  .pf-node:hover { border-color: var(--pd-ink); }
+  /* the trace: upstream in ink, the traced model in the accent */
+  .pf-node.is-up { border-color: var(--pd-ink); }
+  .pf-node.is-target { border-color: var(--pd-accent); }
+  .pf-node.is-target .pf-node-name { color: var(--pd-accent); }
   .pf-node.is-off { opacity: 0.3; }
   .pf-node:focus-visible {
-    outline: 1px solid var(--pd-cy);
+    outline: 2px solid var(--pd-ink);
     outline-offset: 2px;
   }
 
-  /* ── readout ── */
+  /* ── readout: the card's foot ── */
   .pf-readout {
     display: flex;
     align-items: baseline;
     flex-wrap: wrap;
-    gap: 6px 10px;
-    min-height: 1.15rem;
-    margin: 0;
-    padding-top: 10px;
-    border-top: 1px solid var(--pd-line);
-    font-family: var(--pd-mono);
-    font-size: 0.625rem;
-    line-height: 1.15rem;
+    gap: 4px 8px;
+    margin: 0 -24px;
+    padding: 12px 24px;
+    border-top: 1px solid var(--pd-soft);
+    font-size: 0.75rem;
+    line-height: 1.5;
     color: var(--pd-dim);
   }
-  .pf-read-idle { color: var(--pd-faint); }
-  .pf-read-trace { display: none; align-items: baseline; flex-wrap: wrap; gap: 6px; }
+  .pf-read-trace { display: none; align-items: baseline; flex-wrap: wrap; gap: 8px; }
   .pf-dbt.is-tracing .pf-read-idle { display: none; }
   .pf-dbt.is-tracing .pf-read-trace { display: inline-flex; }
-  .pf-read-name { color: var(--pd-cy); }
-  .pf-read-arrow { color: var(--pd-faint); }
+  .pf-read-name { color: var(--pd-accent); font-weight: 500; }
+  .pf-read-arrow { color: var(--pd-dim); }
   .pf-read-deps { color: var(--pd-ink); }
   .pf-read-count { color: var(--pd-dim); font-variant-numeric: tabular-nums; }
-  .pf-read-count::before { content: "·"; margin-right: 8px; color: var(--pd-faint); }
+  .pf-read-count::before { content: "·"; margin-right: 8px; }
 
   /* ── the three destinations, named plainly ── */
   .pf-out {
@@ -531,24 +550,24 @@ const { columns, edges, stats } = graph;
     align-items: center;
     flex-wrap: wrap;
     gap: 8px;
-    font-family: var(--pd-mono);
-    font-size: 0.625rem;
+    margin: 16px 0 0;
   }
-  .pf-out-label { color: var(--pd-faint); letter-spacing: 0.1em; }
+  .pf-out-label { margin-right: 4px; }
   .pf-chip {
-    padding: 4px 9px;
+    padding: 4px 12px;
+    background: transparent;
     border: 1px solid var(--pd-line);
     border-radius: 999px;
-    background: var(--pd-chip);
+    font-size: 0.75rem;
+    line-height: 1.5;
     color: var(--pd-ink);
-    font-size: 0.625rem;
   }
 
   /* Stacked fallback: one column, so a wire between two boxes would run
      straight down behind the boxes between them and say nothing. The depth
      headings carry the flow instead; the lineage highlight still works. */
   @media (max-width: 34rem) {
-    .pf-dag { grid-template-columns: 1fr; gap: 14px 0; }
+    .pf-dag { grid-template-columns: minmax(0, 1fr); gap: 16px 0; }
     .pf-stack { justify-content: flex-start; }
     .pf-dag .pf-wires { display: none; }
   }
