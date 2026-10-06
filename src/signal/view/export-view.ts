@@ -35,6 +35,12 @@ const firstTime = (): boolean => { try { return localStorage.getItem(FIRST_KEY) 
 const markFirst = (): void => { try { localStorage.setItem(FIRST_KEY, '1'); } catch { /* a locked store: every song is the first */ } };
 
 export function mountExportView(host: HTMLElement, inst: SignalInstrumentX): { dispose(): void } {
+  // THE BOW (2026-10-05, dev switch): ?head=1|2|3 renders the group's three placements (export.css); 3 mounts it in the
+  // keybed's block instead of the head's corner. Removed after Jon's pick.
+  const headDir = ((): string => { try { return new URLSearchParams(location.search).get('head') ?? ''; } catch { return ''; } })();
+  const sig = host.closest<HTMLElement>('.sig');
+  if (headDir && sig) sig.setAttribute('data-head', headDir);
+  const mountIn = (headDir === '3' && sig?.querySelector<HTMLElement>('.sgh-caps')) || host;
   const wrap = el('div', 'sgx');
   const scr = accent(screen('0:00', 'song', 'sgx-screen'), 'tempo');
   const scrB = scr.querySelector<HTMLElement>('b')!;
@@ -122,7 +128,7 @@ export function mountExportView(host: HTMLElement, inst: SignalInstrumentX): { d
     if (!alive) { t?.dispose(); return; }
     take = t;
     if (!take) return;                     // no AudioWorklet: the corner stays empty
-    host.appendChild(wrap);
+    mountIn.appendChild(wrap);
     if (sgm) payoff = createPayoff(sgm, scrB, scrS);
     paint();
     tick = setInterval(paint, 250);
