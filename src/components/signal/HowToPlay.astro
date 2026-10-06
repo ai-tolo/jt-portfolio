@@ -1,0 +1,224 @@
+---
+/**
+ * HowToPlay — the card's HOW TO PLAY as ONE picture (2026-10-06, Jon: "a diagram with the view of a keyboard with
+ * color-coded highlighting for groups of controls"). A US keyboard with true stagger, only the rows that matter: the
+ * keys SIGNAL answers to are coloured by group in the device's own palette, every other key a hairline ghost. The two
+ * letter rows read as a piano: A–L light, W E T Y U O dark between them (each top-row key straddles a home-row seam),
+ * R and I quiet where a piano has no black key. ← → and ↑ ↓ wear the notes' sapphire because they belong to the keys.
+ * Every group is also told apart without colour: its label, and fill vs hollow, 1 px vs 2 px, pale vs deep.
+ *
+ * The words and the groups are LEGEND (./signal-copy.ts); the geometry is the table below; KEYMAP (src/signal/types.ts)
+ * is the truth both are checked against at build time. A picture, not a control: nothing in it is focusable, hoverable
+ * or sounds. Below a 900 px card the in-picture labels give way to a legend list under it; below 480 the key letters go
+ * too and the picture is a colour map beside the list.
+ */
+import { KEYMAP, KEYCAP_ROWS } from "../../signal/types.ts";
+import { LEGEND, type LegendItem } from "./signal-copy.ts";
+
+const U = 50;                      // one key unit in the viewBox
+const X0 = 66;                     // the block's left edge (the margin holds `notes` and its bracket)
+const W = 984;                     // the card's content width at its max: 1 viewBox px = 1 css px there
+const H = 336;
+
+// ── the keyboard: [code, col, width]; code null = a ghost. Rows by their top y.
+type Slot = [string | null, number, number?];
+const ROWS: Array<{ y: number; keys: Slot[] }> = [
+  { y: 5, keys: [["Escape", 0]] },
+  { y: 80, keys: [[null, 0], [null, 1], [null, 2], [null, 3], [null, 4], [null, 5], [null, 6], [null, 7], [null, 8], [null, 9],
+    [null, 10], [null, 11], ["Equal", 12], [null, 13, 2]] },
+  { y: 130, keys: [[null, 0, 1.5], [null, 1.5], ["KeyW", 2.5], ["KeyE", 3.5], ["KeyR", 4.5], ["KeyT", 5.5], ["KeyY", 6.5],
+    ["KeyU", 7.5], ["KeyI", 8.5], ["KeyO", 9.5], [null, 10.5], [null, 11.5], [null, 12.5], [null, 13.5, 1.5]] },
+  { y: 180, keys: [[null, 0, 1.75], ["KeyA", 1.75], ["KeyS", 2.75], ["KeyD", 3.75], ["KeyF", 4.75], ["KeyG", 5.75],
+    ["KeyH", 6.75], ["KeyJ", 7.75], ["KeyK", 8.75], ["KeyL", 9.75], [null, 10.75], [null, 11.75], [null, 12.75, 2.25]] },
+  { y: 230, keys: [["KeyZ", 2.25], ["KeyB", 6.25], ["KeyM", 8.25], ["ArrowUp", 16.25]] },
+  { y: 280, keys: [["Space", 3.75, 6.25], ["ArrowLeft", 15.25], ["ArrowDown", 16.25], ["ArrowRight", 17.25]] },
+];
+
+const GLYPH: Record<string, string> = {
+  Escape: "esc", Space: "space", Equal: "=", ArrowLeft: "←", ArrowRight: "→", ArrowUp: "↑", ArrowDown: "↓",
+};
+const glyphOf = (code: string): string => GLYPH[code] ?? code.replace(/^Key/, "");
+
+// ── the check: LEGEND and the drawing cover KEYMAP exactly (a remap that forgets the picture fails the build)
+const groupOf = new Map<string, LegendItem>();
+for (const it of LEGEND) for (const c of it.codes) {
+  if (!(c in KEYMAP)) throw new Error(`HowToPlay: LEGEND names ${c}, which KEYMAP does not bind`);
+  groupOf.set(c, it);
+}
+const drawn = new Set(ROWS.flatMap((r) => r.keys.map((k) => k[0]).filter(Boolean) as string[]));
+for (const c of Object.keys(KEYMAP)) {
+  if (!groupOf.has(c)) throw new Error(`HowToPlay: KEYMAP binds ${c}, which LEGEND does not name`);
+  if (!drawn.has(c)) throw new Error(`HowToPlay: KEYMAP binds ${c}, which the keyboard does not draw`);
+}
+const dormant = new Set<string>(KEYCAP_ROWS.colour.filter((c) => !(c in KEYMAP)));   // R and I: drawn, play nothing
+
+// ── a key's state: the structure that survives greyscale (see the tokens in the style block)
+type State = "ghost" | "dormant" | "note" | "black" | "drums" | "bass" | "hands" | "stop";
+const stateOf = (code: string | null): State => {
+  if (!code || !(code in KEYMAP)) return code && dormant.has(code) ? "dormant" : "ghost";
+  const it = groupOf.get(code)!;
+  if (it.hue === "keys") {
+    const a = KEYMAP[code];
+    return a.kind === "note" && a.colour ? "black" : "note";
+  }
+  return it.hue;
+};
+const thick = (s: State): boolean => s === "drums" || s === "bass" || s === "hands" || s === "stop";
+
+type Key = { code: string | null; state: State; x: number; y: number; w: number; h: number; cx: number; cy: number;
+  slotL: number; slotR: number; glyph: string; small: boolean };
+const keys: Key[] = ROWS.flatMap((r) => r.keys.map(([code, col, w = 1]) => {
+  const state = stateOf(code);
+  const inset = thick(state) ? 3 : 2;           // 2 px rims inset 3, 1 px lines inset 2: the outer edges line up
+  const slotL = X0 + col * U, slotR = slotL + w * U;
+  const glyph = state === "ghost" || !code ? "" : glyphOf(code);
+  return { code, state, x: slotL + inset, y: r.y + inset, w: w * U - inset * 2, h: U - inset * 2,
+    cx: slotL + (w * U) / 2, cy: r.y + U / 2, slotL, slotR, glyph, small: glyph.length > 1 && !/^[←→↑↓]$/.test(glyph) };
+}));
+// draw order: ghosts, dormant, then the groups
+const order: State[] = ["ghost", "dormant", "note", "black", "drums", "bass", "hands", "stop"];
+keys.sort((a, b) => order.indexOf(a.state) - order.indexOf(b.state));
+const key = (code: string): Key => keys.find((k) => k.code === code)!;
+
+// ── the labels: each hugs its group's key, 8 px off the key's slot, on the key's centre line (+4 for the baseline)
+const GAP = 8;
+const rowTop = (k: Key): number => k.cy - U / 2;
+const word = (id: string): LegendItem => LEGEND.find((it) => it.id === id)!;
+const withKeys = (it: LegendItem): string => `${it.keys} ${it.word}`;   // the arrow pairs carry their glyphs
+const labels: Array<{ text: string; x: number; y: number; anchor: "start" | "middle" | "end"; state: State }> = [
+  { text: word("stop").word, x: key("Escape").slotR + GAP, y: rowTop(key("Escape")) + 29, anchor: "start", state: "stop" },
+  { text: word("tap").word, x: key("Equal").cx, y: rowTop(key("Equal")) - 9, anchor: "middle", state: "hands" },
+  { text: word("gate").word, x: key("KeyZ").slotL - GAP, y: rowTop(key("KeyZ")) + 29, anchor: "end", state: "hands" },
+  { text: word("bass").word, x: key("KeyB").slotL - GAP, y: rowTop(key("KeyB")) + 29, anchor: "end", state: "bass" },
+  { text: word("dive").word, x: key("KeyM").slotR + GAP, y: rowTop(key("KeyM")) + 29, anchor: "start", state: "hands" },
+  { text: withKeys(word("sound")), x: key("ArrowUp").slotL - GAP, y: rowTop(key("ArrowUp")) + 29, anchor: "end", state: "note" },
+  { text: word("drums").word, x: key("Space").slotR + GAP, y: rowTop(key("Space")) + 29, anchor: "start", state: "drums" },
+  { text: withKeys(word("octave")), x: key("ArrowLeft").slotL - GAP, y: rowTop(key("ArrowLeft")) + 29, anchor: "end", state: "note" },
+];
+// `notes`: a bracket spanning the two piano rows, its word to the left
+const bTop = key("KeyW").y, bBot = key("KeyA").y + key("KeyA").h, bX = 51;
+
+// ── the words a screen reader gets (the picture as one paragraph)
+const desc =
+  "A US keyboard. A, S, D, F, G, H, J, K and L play the notes of the scale; W, E, T, Y, U and O are the black keys " +
+  "between them; R and I play nothing. Space turns the drums on and off. B turns the bass on and off. Hold Z for the " +
+  "gate and hold M for the dive. The left and right arrows move the notes an octave; the up and down arrows change the " +
+  "sound of the notes through rhodes, piano, pad and lead. The equals key taps the tempo. Escape stops everything. " +
+  "The keys answer once the red power switch is on.";
+const uid = "kd-" + Math.random().toString(36).slice(2, 7);
+---
+
+<figure class="kd">
+  <svg class="kd-svg" viewBox={`0 0 ${W} ${H}`} role="img" aria-labelledby={`${uid}-t ${uid}-d`}>
+    <title id={`${uid}-t`}>How to play SIGNAL from a computer keyboard</title>
+    <desc id={`${uid}-d`}>{desc}</desc>
+    <g class="kd-keys">
+      {keys.map((k) => <rect class={`kd-k s-${k.state}`} x={k.x} y={k.y} width={k.w} height={k.h} rx="6" />)}
+    </g>
+    <g class="kd-glyphs">
+      {keys.filter((k) => k.glyph).map((k) => (
+        <text class:list={["kd-g", `s-${k.state}`, { sm: k.small }]} x={k.cx} y={k.cy}>{k.glyph}</text>
+      ))}
+    </g>
+    <g class="kd-labels">
+      <path class="kd-bracket" d={`M${bX + 4} ${bTop} H${bX} V${bBot} H${bX + 4}`} />
+      <text class="kd-l s-note" x={bX - 7} y={(bTop + bBot) / 2 + 4} text-anchor="end">{word("notes").word}</text>
+      {labels.map((l) => <text class={`kd-l s-${l.state}`} x={l.x} y={l.y} text-anchor={l.anchor}>{l.text}</text>)}
+    </g>
+  </svg>
+  <ul class="kd-legend">
+    {LEGEND.map((it) => {
+      const states: State[] = it.id === "notes" ? ["note", "black"] : [stateOf(it.codes[0])];
+      return (
+        <li class="kd-li">
+          <span class="kd-sw" aria-hidden="true">
+            {states.map((s) => (
+              <svg viewBox="0 0 16 16"><rect class={`kd-k s-${s}`} x={thick(s) ? 2 : 1.5} y={thick(s) ? 2 : 1.5} width={thick(s) ? 12 : 13} height={thick(s) ? 12 : 13} rx="3" /></svg>
+            ))}
+          </span>
+          <span class="kd-lk">{it.keys}</span>
+          <span class={`kd-lw s-${states[0]}`}>{it.word}</span>
+        </li>
+      );
+    })}
+  </ul>
+</figure>
+
+<style>
+  /* the device's colours on paper (src/styles/signal/material.css: --sg-sapphire #0ec4fc · --sg-drums #ff7a3c ·
+     --sg-bass #3914c0 / --sg-bass-lit #7a4fe0 · --sg-amber #ff9a4a · --sg-red #ff463a), re-lit for a white card and a
+     night one; the three warm hues spread to 24° / 48° / 72° so stop, drums and the hands never read as one thing */
+  .kd {
+    --kd-ink: var(--sc-ink, #141210);
+    --kd-ghost: color-mix(in oklab, var(--kd-ink) 18%, transparent);
+    --kd-dormant: color-mix(in oklab, var(--kd-ink) 30%, transparent);
+    --kd-note-fill: oklch(0.945 0.03 228);  --kd-note-line: oklch(0.64 0.13 228);
+    --kd-note-glyph: oklch(0.40 0.10 232);  --kd-note-label: oklch(0.40 0.10 232);
+    --kd-dark-fill: oklch(0.46 0.12 232);   --kd-dark-glyph: oklch(0.98 0.01 228);
+    --kd-drum-fill: oklch(0.93 0.05 55);    --kd-drum-line: oklch(0.68 0.17 48);
+    --kd-drum-glyph: oklch(0.44 0.12 44);   --kd-drum-label: oklch(0.44 0.12 44);
+    --kd-bass-fill: oklch(0.88 0.06 288);   --kd-bass-line: oklch(0.50 0.21 288);
+    --kd-bass-glyph: oklch(0.38 0.21 282);  --kd-bass-label: oklch(0.38 0.21 282);
+    --kd-amber-line: oklch(0.70 0.14 72);   --kd-amber-ink: oklch(0.54 0.12 70);
+    --kd-red-line: oklch(0.62 0.21 24);     --kd-red-ink: oklch(0.54 0.20 24);
+    margin: 0;
+  }
+  :global(html[data-night]) .kd {
+    --kd-note-fill: oklch(0.84 0.05 228);   --kd-note-line: oklch(0.70 0.13 228);
+    --kd-note-glyph: oklch(0.30 0.07 232);  --kd-note-label: oklch(0.78 0.10 228);
+    --kd-dark-fill: oklch(0.44 0.11 232);   --kd-dark-glyph: oklch(0.95 0.02 228);
+    --kd-drum-fill: oklch(0.42 0.09 48);    --kd-drum-line: oklch(0.73 0.18 46);
+    --kd-drum-glyph: oklch(0.92 0.06 60);   --kd-drum-label: oklch(0.80 0.14 52);
+    --kd-bass-fill: oklch(0.36 0.11 288);   --kd-bass-line: oklch(0.62 0.20 292);
+    --kd-bass-glyph: oklch(0.92 0.04 290);  --kd-bass-label: oklch(0.76 0.14 292);
+    --kd-amber-line: oklch(0.76 0.14 72);   --kd-amber-ink: oklch(0.84 0.13 76);
+    --kd-red-line: oklch(0.68 0.21 26);     --kd-red-ink: oklch(0.76 0.17 26);
+  }
+  .kd-svg { display: block; width: 100%; height: auto; font-family: var(--sc-mono); user-select: none; -webkit-user-select: none; cursor: default; }
+  .kd-svg text { font-weight: 500; }
+  .kd-k { vector-effect: non-scaling-stroke; fill: none; stroke: var(--kd-ghost); stroke-width: 1; }
+  .kd-k.s-note { fill: var(--kd-note-fill); stroke: var(--kd-note-line); }
+  .kd-k.s-black { fill: var(--kd-dark-fill); stroke: none; }
+  .kd-k.s-drums { fill: var(--kd-drum-fill); stroke: var(--kd-drum-line); stroke-width: 2; }
+  .kd-k.s-bass { fill: var(--kd-bass-fill); stroke: var(--kd-bass-line); stroke-width: 2; }
+  .kd-k.s-hands { stroke: var(--kd-amber-line); stroke-width: 2; }
+  .kd-k.s-stop { stroke: var(--kd-red-line); stroke-width: 2; }
+  .kd-g { font-size: 15px; text-anchor: middle; dominant-baseline: central; }
+  .kd-g.sm { font-size: 12px; letter-spacing: 0.08em; }
+  .kd-g.s-dormant { fill: var(--kd-dormant); }
+  .kd-g.s-note { fill: var(--kd-note-glyph); }
+  .kd-g.s-black { fill: var(--kd-dark-glyph); }
+  .kd-g.s-drums { fill: var(--kd-drum-glyph); }
+  .kd-g.s-bass { fill: var(--kd-bass-glyph); }
+  .kd-g.s-hands { fill: var(--kd-amber-ink); }
+  .kd-g.s-stop { fill: var(--kd-red-ink); }
+  .kd-l { font-size: 11px; letter-spacing: 0.12em; }
+  .kd-l.s-note { fill: var(--kd-note-label); }
+  .kd-l.s-drums { fill: var(--kd-drum-label); }
+  .kd-l.s-bass { fill: var(--kd-bass-label); }
+  .kd-l.s-hands { fill: var(--kd-amber-ink); }
+  .kd-l.s-stop { fill: var(--kd-red-ink); }
+  .kd-bracket { fill: none; stroke: var(--kd-note-line); stroke-width: 1; vector-effect: non-scaling-stroke; }
+
+  /* the narrow legend: the same groups as rows (swatch · keys · word), shown only where the in-picture labels would
+     shrink under ~9 px */
+  .kd-legend { display: none; list-style: none; margin: 20px 0 0; padding: 0; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 10px 28px; }
+  .kd-li { display: flex; align-items: center; gap: 10px; min-width: 0; }
+  .kd-sw { display: inline-flex; gap: 3px; flex: none; }
+  .kd-sw svg { width: 16px; height: 16px; display: block; }
+  .kd-lk { font: 500 0.75rem/1.2 var(--sc-mono); letter-spacing: 0.04em; color: var(--kd-ink); white-space: nowrap; }
+  .kd-lw { font: 500 0.6875rem/1.2 var(--sc-mono); letter-spacing: 0.12em; }
+  .kd-lw.s-note { color: var(--kd-note-label); }
+  .kd-lw.s-drums { color: var(--kd-drum-label); }
+  .kd-lw.s-bass { color: var(--kd-bass-label); }
+  .kd-lw.s-hands { color: var(--kd-amber-ink); }
+  .kd-lw.s-stop { color: var(--kd-red-ink); }
+  @container (max-width: 899px) {
+    .kd-labels { display: none; }
+    .kd-legend { display: grid; }
+  }
+  @container (max-width: 479px) {
+    .kd-glyphs { display: none; }
+    .kd-legend { grid-template-columns: minmax(0, 1fr); }
+  }
+</style>
