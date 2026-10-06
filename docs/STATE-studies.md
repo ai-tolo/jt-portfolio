@@ -31,12 +31,13 @@ Brief: `docs/PROMPT-finish-line.md` → STREAM C, then `docs/PROMPT-case-studies
 - `room/RyLasso.astro` — the lasso moved out of the page with its behaviour, seed (20231004), CLUSTERS and geometry unchanged (drag a box / Enter slices `vehicle · 47 images`, Escape clears, the SSR-resolved slice), re-clothed: the dark Figma chrome, cursors and presence are gone; the screenshot sits in a paper frame with a hairline. Hooks `window.__ryLasso = { slice, clear }`.
 - `pages/case-studies/raylu.astro` — label · hook · THE SET (+ caption) · $4M set apart (the caveat lives in the story) · the lasso (+ caption) · the story card (four DRAFT moments) with the hood. `RayluFigmaTimeline.astro` stays on disk, unimported.
 
-### Finishable (2026-10-06, cloud run)
-- `pages/case-studies/the-console.astro` — on the Room frame: label · hook · the three deaths in one line · chapter marks in the room's faces (`.fn-ch`: the mono `01 · the catalog`, the Outfit job, a sans tagline) · each object on the paper with a mono caption · the story card (four DRAFT moments) with the hood. Every object kept with its behaviour: ChaosToBuckets · StudioChapter · TheBench + TasteLoop · EngineDial · Finale; the round count still read from `judge-ledger.json`. The objects are product surfaces and keep their skins; the page hands them the room's mono (`--cs-mono: var(--rm-mono)`) and maps their display face to the room's sans (`.fin-cs :is(.sx-direction, .sx-tower-name, …)`), un-bleeds the Studio (`.fin-cs .sx.cs-bleed`) and hangs the Studio's lines and the Finale on the column's left edge. "louder always wins" dropped from the deaths line (a killed claim). FinHero, Chapter, CSShortVersion stay on disk, unimported here.
+### Finishable (2026-10-06, cloud run; FOCUSED the same day on Jon's reaction: "the modules feel a bit gimmicky, as though we've just been keeping stuff around because it's there")
+- `pages/case-studies/the-console.astro` — ONE object leads: THE BENCH (the blind round; its own caption is the figure's caption, restyled in the room's caption face), then the ledger's own number set apart (`chose_original / votes` · rounds · one rater, read from `judge-ledger.json`), then THE RECORD (Finale: the memo against the master, the whole side), then the story card: four moments (the question · the catalog · the studio · the blind round) with the hood (the catalog's and the studio's real counts). The deaths line stays under the hook. ChaosToBuckets, StudioChapter, TasteLoop and EngineDial are unmounted (on disk, importable; the Studio's `#engineer` anchor now points at the bench figure). The two objects keep their skins; the page hands them the room's mono and its sans. "louder always wins" dropped from the deaths line (a killed claim).
+- The first cloud pass (07e473f) kept all six objects on the frame; Jon called it unfocused; this is cut 1 of the three offered (one object, the bench).
 
 ## Verified (2026-10-06, headless + muted, playwright; 375 with touch emulation)
-- Build `npm run build` exit 0 on e8ed8c1.
-- Every page at 1440 and 375, day and night: `scrollWidth == innerWidth`, 0 console errors, fonts Instrument Sans · JetBrains Mono · Outfit (+ the chrome's IBM Plex Mono). Hands at 1440 day: CHS (a role, a starter to `done`, the dark flip, the fold) · Crediverso (ES, after to step 3, both flows walked, the tie, `ship after`, the matrix, the fold) · Raylu (`page('hifi')`, `pick('Galileo')`, the lasso slice to `vehicle · 47 images`, the fold) · Finishable (the catalog's `__ctb.setProgress(1)` to its real counts, the dial to DO MORE with four modules lit, the finale's after tab, the fold). Momence 1440 day + night: 0 errors, untouched (669 words, as before).
+- Build `npm run build` exit 0 on the focused Finishable (after e8ed8c1).
+- Every page at 1440 and 375, day and night: `scrollWidth == innerWidth`, 0 console errors, fonts Instrument Sans · JetBrains Mono · Outfit (+ the chrome's IBM Plex Mono). Hands at 1440 day: CHS (a role, a starter to `done`, the dark flip, the fold) · Crediverso (ES, after to step 3, both flows walked, the tie, `ship after`, the matrix, the fold) · Raylu (`page('hifi')`, `pick('Galileo')`, the lasso slice to `vehicle · 47 images`, the fold) · Finishable (see below). Momence 1440 day + night: 0 errors, untouched (669 words, as before).
 - The résumé's `.r-studies` row: the four names with the canon ledes, linking to each slug; unchanged and reads right.
 - WORDS (`scripts/cs-words.mjs`, served page; the prose split by a DOM count of everything outside `.rm-object`):
 
@@ -45,9 +46,9 @@ Brief: `docs/PROMPT-finish-line.md` → STREAM C, then `docs/PROMPT-case-studies
 | CHS | 1142 | 962 | 543 | 352 | 18 |
 | Crediverso | 1493 | 741 | 392 | 265 | 27 |
 | Raylu | 1159 | 579 | 252 | 275 | 26 |
-| Finishable | 1161 | 1392 | 823 (five kept objects, their words locked) | 372 | 143 (was 338) |
+| Finishable | 1161 | 603 | 159 (the bench, the record) | 387 | 57 (was 338) |
 
-Finishable's total is above its before because the kept objects alone carry 823 words; the prose between the objects is halved (338 → 143) and the story card replaced the hero + the short version.
+Finishable's hands: the bench's take 2 + `r` reveal (keys only, no play), the finale's after tab, the fold. 0 errors, no overflow at 375 and 1440, day and night.
 
 ## Open (Jon's gate)
 - Jon picks the direction per page (the panel defaulted both to dir 1): Crediverso `?dir=2` (two phones) and Raylu `?dir=2` (the sheet) are live on the preview. On his pick, delete the losing `[data-dir="2"]` block (or make dir 2 the default) and the inline `?dir=` script.
