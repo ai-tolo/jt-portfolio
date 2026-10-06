@@ -3,9 +3,10 @@
 // grammar, nothing added to the page. THE PRINT: one band of the keys' own light travels across the whole chassis as
 // the cap says `printing`, each module title brightening as it passes and the piano's lamps lighting in turn under it;
 // the rocker's red breathes once; the file lands as the band leaves. THE EVIDENCE stays on the device: after `saved`
-// the head's screen prints the song's length, its key and its tempo (and, on a first-time device, `first`), then the
-// clock comes back. Lighting only: nothing in the engine, the keymap, the views' effects or the geometry changes.
-// (The tape and the sleeve directions were rendered and judged on 2026-10-05; Jon chose the device.)
+// the head's screen prints the song's length, its key and its tempo, one line each (and, on a first-time device,
+// `1st song`), then the clock comes back. Lighting only: nothing in the engine, the keymap, the views' effects or the
+// geometry changes. (The tape and the sleeve directions were rendered and judged on 2026-10-05; Jon chose the device.
+// 2026-10-06 THE BOW: the screen lost its caption, so each fact is one line.)
 export interface SongInfo {
   name: string;       // the file's name (songName)
   seconds: number;    // the trimmed length
@@ -34,7 +35,7 @@ export const PRINT_MS = 1150;
 /** Each fact holds this long on the screen after the save. */
 export const EVIDENCE_MS = 1800;
 
-export function createPayoff(sgm: HTMLElement, screenB: HTMLElement, screenS: HTMLElement): Payoff {
+export function createPayoff(sgm: HTMLElement, screenB: HTMLElement): Payoff {
   const dev = sgm.querySelector<HTMLElement>('.device') ?? sgm;
   // the band's housing: inside the device, over the strata, clipped to the chassis; drawn by export.css
   const band = document.createElement('i');
@@ -43,7 +44,10 @@ export function createPayoff(sgm: HTMLElement, screenB: HTMLElement, screenS: HT
   dev.appendChild(band);
   // the piano's lamps and the titles light in turn under the band: each gets its moment once (lighting only, from here)
   dev.querySelectorAll<HTMLElement>('.sgh-w').forEach((k, i) => k.style.setProperty('--sgx-i', String(i)));
-  const titles: Record<string, number> = { drums: 120, keys: 500, bass: 880 };
+  // each title's moment = when the band's bright centre (90 px into its 180 px gradient, translateX −200 → 1300 over
+  // PRINT_MS on cubic-bezier(.3,0,.2,1)) reaches the title's own centre (device x 179 · 640 · 1101 → 215 · 359 · 586 ms),
+  // less the 210 ms to the flash's peak (35 % of its .6 s)
+  const titles: Record<string, number> = { drums: 5, keys: 149, bass: 376 };
   dev.querySelectorAll<HTMLElement>('.sg-title').forEach((t) => { const d = titles[t.dataset.title ?? '']; if (d != null) t.style.setProperty('--sgx-t', `${d}ms`); });
   let gen = 0;
   const lit = (on: boolean): void => { for (const e of [sgm, dev, sgm.querySelector('#pwr')]) e?.classList.toggle('sgx-print', on); };
@@ -56,15 +60,15 @@ export function createPayoff(sgm: HTMLElement, screenB: HTMLElement, screenS: HT
     },
     async after(info) {
       const g = ++gen;
-      const steps: Array<[string, string]> = [[fmt(info.seconds), 'saved'], [`${info.key} ${info.scale === 'minor' ? 'min' : 'maj'}`, 'key'], [String(info.bpm), 'bpm']];
-      if (info.first) steps.push(['first', 'song']);
-      for (const [b, s] of steps) {
+      const steps: string[] = [fmt(info.seconds), `${info.key} ${info.scale === 'minor' ? 'min' : 'maj'}`, `${info.bpm} bpm`];
+      if (info.first) steps.push('1st song');
+      for (const b of steps) {
         if (g !== gen) return;
-        screenB.textContent = b; screenS.textContent = s; blink();
+        screenB.textContent = b; blink();
         await wait(reduce() ? 600 : EVIDENCE_MS);
       }
       if (g !== gen) return;
-      screenB.textContent = fmt(info.seconds); screenS.textContent = 'song'; blink();
+      screenB.textContent = fmt(info.seconds); blink();
     },
     reset() { gen++; lit(false); },
     dispose() { gen++; lit(false); band.remove(); },

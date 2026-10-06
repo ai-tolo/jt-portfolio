@@ -389,8 +389,9 @@ export const NUMERAL_MIN_PX = 22;
  *  letter rows in a recessed TRAY (a key well in the keycaps' own grey) centred; the KEY block top-left and the OCTAVE
  *  group top-right, both on the colour row's line; Z and M just outside the tray, a bottom-row step lower than the home
  *  row, `gate` / `dive` etched over them, their knob pairs outboard (RATE nearest Z then SWING; SPEED nearest M then
- *  DIST); no hairlines: adjacency joins them. The device ≈ 850 tall (DEVICE_H below is the measured height). */
-export const DEVICE_H = 850;
+ *  DIST); no hairlines: adjacency joins them. The device was 850 tall through R5; 2026-10-06 THE BOW gave the head
+ *  a second line (the system row with THE SONG on the spine, then the titles' line): 878 (DEVICE_H below is the measured height). */
+export const DEVICE_H = 878;
 
 /** THE SURFACE HOOKS (what the gate and the test surface's click() find; every view keeps these exact strings):
  *  data-ctl on the control's host (its .si-knob / button / glass), data-code on every KEYCAP (`.sg-key`) for the

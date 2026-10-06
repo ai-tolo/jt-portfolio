@@ -58,12 +58,15 @@ session must follow.
   floor (no control word under 12px, no screen numeral under 22px, BPM the
   largest), `.dormant` on a control whose effect waits on another, nothing
   printed beneath the device (signal-copy.ts is unmounted, Jon writes it).
-  R4 (2026-09-24, Jon's render): the device is 1280 × 882 (`DEVICE_H`); its
-  top is THE HEAD (Signal.astro, static): `esc STOP` in the left corner, the
-  three module TITLES over their towers in their accents (words, never
-  controls), and `#pwr` = a RED ROCKER SWITCH in the right corner (the disc
-  is gone; every host hook kept: the host's `.pwr` block in StudioOne is
-  written for the switch). THE ARPEGGIATOR IS OFF THE SURFACE (no ARP cap,
+  R4 (2026-09-24, Jon's render): its top is THE HEAD (Signal.astro, static):
+  `esc STOP` in the left corner, the three module TITLES over their towers in
+  their accents (words, never controls), and `#pwr` = a RED ROCKER SWITCH in
+  the right corner (the disc is gone; every host hook kept: the host's `.pwr`
+  block in StudioOne is written for the switch). THE BOW (2026-10-06, Jon's
+  pick): the head is TWO LINES (72): the system row (esc STOP · THE SONG on
+  the device's spine — the song's clock screen + the export cap as ONE UNIT in
+  a dark well, 134 × 38 each, export.css — · the switch), then the titles'
+  line; the device is 1280 × 878 (`DEVICE_H`); the still is 1280/878. THE ARPEGGIATOR IS OFF THE SURFACE (no ARP cap,
   no arp knobs; the engine keeps it, it loads off in main.ts).
   R5 (2026-09-25, Jon's second mock, docs/signal-map/r5-mock.webp): the keys'
   foot is the chord's (CHORD · the glass wide and centred · HOLD); the KEY

@@ -1,14 +1,14 @@
-// SIGNAL · EXPORT YOUR SONG (2026-09-30, the export round; 2026-10-05 THE FIRST-SONG ROUND). The head's export corner
-// (Signal.astro's [data-corner="export"], at the keys column's right edge). The instrument keeps everything (take.ts),
-// so there is nothing to arm: the control is DORMANT until a sound has been made, then it is the most alive thing in
-// the head short of the power switch — a glass SCREEN with the song's clock (22 px amber over `song`: your song is this
-// long) and a taller CAP whose LED and inner glow breathe. A press prints the take as a WAV named for the day, the key
-// and the tempo, and runs THE PRINT (payoff.ts, Jon's pick of 2026-10-05: the device celebrates in its own grammar — a
-// band of light crosses the chassis, the titles and the piano's lamps light under it), then hands the file to the browser
-// as a download as the band leaves; after `saved` the screen keeps the evidence (length · key · tempo) before the clock
-// comes back. The words on the cap say what happens: export → printing → saved, then export again. A new power-on starts
-// a new song (the state on #sgm, watched here). FIRST TIME on this device (localStorage, in try/catch): the screen
-// prints `first` once among the facts; every later song gets the same ceremony without it.
+// SIGNAL · THE SONG (2026-09-30, the export round; 2026-10-05 THE FIRST-SONG ROUND; 2026-10-06 THE BOW). The head's
+// system row holds THE SONG on the device's spine (Signal.astro's [data-corner="export"], centred by export.css): ONE
+// UNIT in a dark well — the song's SCREEN (its clock, 22 px amber, no caption: your song is this long) and the CAP that
+// prints it, two parts of one size. The instrument keeps everything (take.ts), so there is nothing to arm: the unit is
+// DORMANT until a sound has been made, then the LED and the cap's inner glow breathe. A press prints the take as a WAV
+// named for the day, the key and the tempo, and runs THE PRINT (payoff.ts, Jon's pick of 2026-10-05: the device
+// celebrates in its own grammar — a band of light crosses the chassis, the titles and the piano's lamps light under it),
+// then hands the file to the browser as a download as the band leaves; after `saved` the screen keeps the evidence
+// (the length · the key · the tempo, one line each) before the clock comes back. The words on the cap say what happens:
+// export → printing → saved, then export again. A new power-on starts a new song (the state on #sgm, watched here).
+// FIRST TIME on this device (localStorage, in try/catch): the screen prints `1st song` once among the facts.
 import type { SignalInstrumentX } from '../instrument.ts';
 import { createTake, type Take } from '../take.ts';
 import { accent, cap, screen } from './common.ts';
@@ -35,29 +35,9 @@ const firstTime = (): boolean => { try { return localStorage.getItem(FIRST_KEY) 
 const markFirst = (): void => { try { localStorage.setItem(FIRST_KEY, '1'); } catch { /* a locked store: every song is the first */ } };
 
 export function mountExportView(host: HTMLElement, inst: SignalInstrumentX): { dispose(): void } {
-  // THE BOW (2026-10-05, dev switch): ?head=1|2|3 renders the group's three placements (export.css); 3 mounts it in the
-  // keybed's block instead of the head's corner. Removed after Jon's pick.
-  const headDir = ((): string => { try { return new URLSearchParams(location.search).get('head') ?? ''; } catch { return ''; } })();
-  const sig = host.closest<HTMLElement>('.sig');
-  if (headDir && sig) sig.setAttribute('data-head', headDir);
-  const mountIn = (headDir === '3' && sig?.querySelector<HTMLElement>('.sgh-caps')) || host;
-  // THE NAMEPLATE PASS (2026-10-06, dev switch): ?plate=1|2|3 keeps the group on the spine and moves the three module
-  // titles to one coherent home (export.css): 1 each tower's top-right corner · 2 each tower's mixer rail · 3 a second
-  // head line. Removed after Jon's pick.
-  const plate = ((): string => { try { return new URLSearchParams(location.search).get('plate') ?? ''; } catch { return ''; } })();
-  if (plate && sig) {
-    sig.setAttribute('data-plate', plate);
-    const RAIL: Record<string, string> = { drums: '.sd-foot', keys: '.kv-foot', bass: '.sb-foot' };
-    for (const t of [...sig.querySelectorAll<HTMLElement>('.sig-head .sg-title')]) {
-      const n = t.dataset.title ?? '';
-      if (plate === '1') sig.querySelector<HTMLElement>(`[data-slot="${n}"]`)?.appendChild(t);
-      else if (plate === '2') sig.querySelector<HTMLElement>(RAIL[n] ?? '')?.prepend(t);
-    }
-  }
-  const wrap = el('div', 'sgx');
-  const scr = accent(screen('0:00', 'song', 'sgx-screen'), 'tempo');
+  const wrap = el('div', 'sgx');   // THE UNIT: the well (export.css) around the screen and the cap
+  const scr = accent(screen('0:00', '', 'sgx-screen'), 'tempo');
   const scrB = scr.querySelector<HTMLElement>('b')!;
-  const scrS = scr.querySelector<HTMLElement>('small')!;
   const button = cap('', { led: true, icon: ICON, cls: 'sgx-cap', name: 'Export your song', acc: 'tempo' });
   button.dataset.ctl = 'export';
   const word = el('span', 'sgx-word'); word.textContent = 'export';
@@ -86,7 +66,7 @@ export function mountExportView(host: HTMLElement, inst: SignalInstrumentX): { d
   const say = (w: string, back?: number): void => {
     word.textContent = w;
     if (wordT) { clearTimeout(wordT); wordT = null; }
-    if (back) wordT = setTimeout(() => { word.textContent = 'export'; button.classList.remove('busy', 'saved'); scrS.textContent = 'song'; wordT = null; paint(); }, back);
+    if (back) wordT = setTimeout(() => { word.textContent = 'export'; button.classList.remove('busy', 'saved'); wordT = null; paint(); }, back);
   };
   const download = (blob: Blob, name: string): void => {
     const url = URL.createObjectURL(blob);
@@ -120,7 +100,7 @@ export function mountExportView(host: HTMLElement, inst: SignalInstrumentX): { d
         if (led) { led.classList.remove('sg-t-flash'); void led.offsetWidth; led.classList.add('sg-t-flash'); }
         say('saved');
         // the evidence on the screen runs with the cap held at `saved`; then the clock paints again
-        const rest = (): void => { if (!alive) return; wordT = setTimeout(() => { word.textContent = 'export'; button.classList.remove('busy', 'saved'); scrS.textContent = 'song'; wordT = null; paint(); }, 600); };
+        const rest = (): void => { if (!alive) return; wordT = setTimeout(() => { word.textContent = 'export'; button.classList.remove('busy', 'saved'); wordT = null; paint(); }, 600); };
         if (payoff) void payoff.after(info).then(rest, rest); else rest();
       };
       if (payoff) void payoff.show(info).then(land, land);
@@ -141,8 +121,8 @@ export function mountExportView(host: HTMLElement, inst: SignalInstrumentX): { d
     if (!alive) { t?.dispose(); return; }
     take = t;
     if (!take) return;                     // no AudioWorklet: the corner stays empty
-    mountIn.appendChild(wrap);
-    if (sgm) payoff = createPayoff(sgm, scrB, scrS);
+    host.appendChild(wrap);
+    if (sgm) payoff = createPayoff(sgm, scrB);
     paint();
     tick = setInterval(paint, 250);
   });
