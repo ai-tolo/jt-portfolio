@@ -14,7 +14,7 @@ export const WATCH_COPY = {
   // 2026-10-06 (Jon): the Harbor example was dropped — less charm, and its
   // calendar ticket contradicted the system (an actionable thing goes straight
   // to the calendar, no card); his own memo stays, typed at the faster pace.
-  caption: "A real memo, 3:52 long. Two of the seven tickets it became.",
+  caption: "A real memo, 3:52 long, spoken into the watch. The program I built turned it into seven tickets; two are shown.",
 };
 
 // LIVE (Stream A, 2026-10-05): the words the watch's live mode prints — the
@@ -25,18 +25,17 @@ export const WATCH_COPY = {
 export const LIVE_COPY = {
   talk: "Talk",
   listening: "listening",
-  privacy: "your voice goes to your browser's speech service. nothing is kept here.",
+  privacy: "your voice goes to your browser's speech service, the words to Claude. this site keeps nothing.",
   asking: "allow the microphone, then talk.",
-  typed: "type it, then tap stop.",
   noSpeech: "this browser has no speech service. type it, then tap stop.",
   denied: "the microphone was declined. type it, then tap stop.",
   empty: "nothing heard. tap talk to try again.",
   heard: "Heard",
   kept: "nothing kept",
   source: "your memo",
-  local: "local parse",
+  local: "without Claude",
   preview: "a preview. nothing was added.",
-  caption: "Your memo, {dur} long. {n}. Nothing was kept.",
+  caption: "Your memo, {dur} long. {n}.",
 };
 
 export const ARCHIVE_COPY = {
@@ -47,5 +46,5 @@ export const ARCHIVE_COPY = {
   // the mono line under the module. 2026-09-30 (Jon): the run is ART, an
   // example anyone gets, not a row from his library — the idea from three
   // summers ago, found by one word. DRAFT, his to edit.
-  caption: "One word typed. Six recordings the system had already named, and the twelve seconds that were the point.",
+  caption: "One word typed into the app I built: six recordings it had already named, then the twelve seconds inside one that match.",
 };
