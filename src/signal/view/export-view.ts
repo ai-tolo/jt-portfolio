@@ -41,6 +41,19 @@ export function mountExportView(host: HTMLElement, inst: SignalInstrumentX): { d
   const sig = host.closest<HTMLElement>('.sig');
   if (headDir && sig) sig.setAttribute('data-head', headDir);
   const mountIn = (headDir === '3' && sig?.querySelector<HTMLElement>('.sgh-caps')) || host;
+  // THE NAMEPLATE PASS (2026-10-06, dev switch): ?plate=1|2|3 keeps the group on the spine and moves the three module
+  // titles to one coherent home (export.css): 1 each tower's top-right corner · 2 each tower's mixer rail · 3 a second
+  // head line. Removed after Jon's pick.
+  const plate = ((): string => { try { return new URLSearchParams(location.search).get('plate') ?? ''; } catch { return ''; } })();
+  if (plate && sig) {
+    sig.setAttribute('data-plate', plate);
+    const RAIL: Record<string, string> = { drums: '.sd-foot', keys: '.kv-foot', bass: '.sb-foot' };
+    for (const t of [...sig.querySelectorAll<HTMLElement>('.sig-head .sg-title')]) {
+      const n = t.dataset.title ?? '';
+      if (plate === '1') sig.querySelector<HTMLElement>(`[data-slot="${n}"]`)?.appendChild(t);
+      else if (plate === '2') sig.querySelector<HTMLElement>(RAIL[n] ?? '')?.prepend(t);
+    }
+  }
   const wrap = el('div', 'sgx');
   const scr = accent(screen('0:00', 'song', 'sgx-screen'), 'tempo');
   const scrB = scr.querySelector<HTMLElement>('b')!;
