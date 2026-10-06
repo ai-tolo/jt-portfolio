@@ -29,6 +29,11 @@
 // - Every bullet: what I did, to what, with what result, 30 words max. If a
 //   line could sit unchanged on a stranger's résumé, make it specific or cut
 //   it.
+// - The writing law (Jon, 2026-10-06): only what is necessary; say what a
+//   thing IS (a program, an app, a pipeline) before describing it; one idea
+//   once, so a tool named in a build's stack line is not named again in its
+//   bullets; never explain what a smart reader knows (mastering, dbt,
+//   lineage). After any edit, count the words and run a word-frequency pass.
 // - One page at TRUE print width (US Letter, 9.7pt body, ~543pt of content
 //   width). Add a line, cut a line. Verify with a headless-Chrome print and
 //   pypdf after any edit (CLAUDE.md, "Résumé subsystem").
@@ -100,8 +105,8 @@ if (blind.loudness_matched !== blind.votes) {
   );
 }
 const evidence =
-  `The untouched original won ${blind.chose_original} of ${blind.votes} blind, loudness-matched votes ` +
-  `(one rater, me, ${spanOf(blind.first, blind.last)}), so I moved the rigor into the test, which now gates every change.`;
+  `Every candidate is now loudness-matched (ITU-R BS.1770, true-peak limited) and judged blind against the untouched original, ` +
+  `which won ${blind.chose_original} of ${blind.votes} votes (one rater, me, ${spanOf(blind.first, blind.last)}).`;
 
 export const printContent: PrintResumeContent = {
   name: "Jonathan Tollefson",
@@ -115,20 +120,21 @@ export const printContent: PrintResumeContent = {
     "Minneapolis, MN",
     "remote (US)",
   ],
-  // Jon's words (2026-09-21). Its colon is the page's one colon-led sentence.
+  // Jon's words (2026-09-21), cut 2026-10-06: the title above already says
+  // "Design engineer", and the banking app is the Crediverso entry's to say.
+  // Its colon is the page's one colon-led sentence.
   summary:
-    "Design engineer with five years across marketing, UX, and enterprise data. " +
-    "I led design for a mobile banking app, building its design system by hand, and I now build what I design: front-end, audio tools, and applied AI. " +
-    "Looking for a product team working in audio, transcription, or AI.",
+    "Five years across marketing, UX, and enterprise data. " +
+    "I now build what I design: front-end, audio tools, and applied AI. " +
+    "Looking for a product team in audio, transcription, or AI.",
   builds: [
     {
       org: "AI mastering agent",
-      pos: "Python, pedalboard, FabFilter, FastAPI, TypeScript, React, Astro",
+      pos: "Python, pedalboard, Claude",
       dates: "2026 – Present",
       bullets: [
-        "Built an agent that takes a finished mix through its final loudness and tone pass, rendering candidate masters with FabFilter plugins and keeping state across a multi-step run.",
-        "It renders every candidate to the same integrated loudness (ITU-R BS.1770, true-peak limited), compares them blind, and composes the final master from the strongest takes.",
-        "Built an active-learning model of my own taste and shelved it when blind results showed it had learned the bias in my unblinded ratings, the known reward-model overoptimization failure.",
+        "Built an agent that masters a mix in a stateful, multi-step run, rendering candidates through FabFilter plugins.",
+        "Shelved an active-learning model of my taste when blind tests showed it had learned the bias in my unblinded ratings, the known reward-model overoptimization failure.",
         evidence,
       ],
       url: {
@@ -141,15 +147,15 @@ export const printContent: PrintResumeContent = {
       pos: "Python, Whisper, librosa, Claude",
       dates: "2026 – Present",
       bullets: [
-        "Built a searchable catalog of roughly 20,000 audio files as its sole engineer; a Whisper, librosa, and Claude pipeline transcribes speech, fingerprints, deduplicates, and classifies each file by its content.",
+        "A pipeline I wrote alone transcribes, fingerprints, deduplicates, and classifies about 20,000 audio files by content; a phone app finds any of them by a word.",
       ],
     },
     {
       org: "Browser instrument",
-      pos: "Web Audio API",
+      pos: "TypeScript, Web Audio API",
       dates: "2026 – Present",
       bullets: [
-        "Built a playable instrument that runs in a browser tab, with Web Audio synthesis, sequencing, and a performance layer; the sound engine and the interface were designed as one system.",
+        "Drum and bass patterns under keys played from the computer keyboard; it records takes as WAV files.",
       ],
     },
   ],
@@ -159,10 +165,10 @@ export const printContent: PrintResumeContent = {
       pos: "Business Analyst, AI & BI Engineering",
       dates: "Aug 2023 – Present",
       bullets: [
-        "Designed the self-serve onboarding surface for the company's internal AI platform, embedded with engineering, from a 250-person beta toward company-wide rollout; other teams are adopting it as a design system.",
-        "Built a Python tool that reads the dbt manifest and writes each model's lineage (which tables feed which) to Excel, Power BI, and stakeholder briefs in one pass.",
-        "Used AI to find which data models lacked semantic context and worked with developers to add it in Alation, so engineers and other teams understand the models the same way.",
-        "Coordinate releases for the go-to-market data engineering team at a Fortune 500 agricultural cooperative; its AI and BI products serve thousands of employees and the cooperative's farmers and growers.",
+        "Designed the self-serve onboarding for the company's internal AI platform, from a 250-person beta toward a company-wide rollout; other teams are adopting it as a design system.",
+        "Built a Python tool that writes each dbt model's lineage to Excel, Power BI, and stakeholder briefs in one pass.",
+        "Used AI to find data models missing semantic context and added it in Alation with their developers.",
+        "Coordinate releases for the go-to-market data engineering team at a Fortune 500 agricultural cooperative; its AI and BI products serve thousands of employees, farmers, and growers.",
       ],
     },
     {
@@ -170,7 +176,7 @@ export const printContent: PrintResumeContent = {
       pos: "Product Designer (Freelance)",
       dates: "Jan – Oct 2023",
       bullets: [
-        "Designed the brand, Figma components, and prototypes for an AI chat platform; the founders carried them into meetings that closed a $4M seed and engineering built from the same file.",
+        "Designed the brand, components, and prototypes for an AI chat platform; the founders carried them into meetings that closed a $4M seed, and engineers built from the same file.",
       ],
     },
     {
@@ -178,9 +184,9 @@ export const printContent: PrintResumeContent = {
       pos: "UX Design Lead",
       dates: "Feb 2021 – Jan 2023",
       bullets: [
-        "Designed the primitives, patterns, and onboarding flows for a bilingual banking app for US Hispanic households.",
-        "Ran usability testing with 50+ participants; the iterated primary flow cut bounce from 40% to 25%.",
-        "Grew the pre-launch channel from 700 to 2,100 followers on A/B-tested messaging before the App Store launch.",
+        "Led the design system and onboarding for a bilingual banking app serving US Hispanic households.",
+        "Ran usability tests with 50+ participants; the revised main flow cut bounce from 40% to 25%.",
+        "Grew the pre-launch channel from 700 to 2,100 followers with A/B-tested messaging.",
       ],
     },
   ],
@@ -195,7 +201,6 @@ export const printContent: PrintResumeContent = {
       name: "University of Minnesota",
       dates: "2016 – 2018",
       degree: "Transfer years; returned to Harvard to graduate",
-      honors: "Coursework in product design and business marketing education",
     },
   ],
   skillRows: [
@@ -208,10 +213,11 @@ export const printContent: PrintResumeContent = {
       { label: "Data", items: "SQL, dbt, Power BI, Alation" },
     ],
   ],
+  // the Substack line is gone (Jon stopped writing there, 2026-09-23); the
+  // records are "set", never "holds"
   closer: {
-    label: "Outside work",
+    label: "Athletics",
     html:
-      "<em>Diary of a Soundbender</em>, a Substack on sound and design. " +
-      "Set the Minnesota all-time state record in the high hurdles and the University of Minnesota freshman 110m hurdles record; six-time state champion (110m and 300m hurdles, three years running).",
+      "Six-time state hurdles champion; set Minnesota's all-time 110m record and the University of Minnesota freshman record.",
   },
 };
