@@ -281,10 +281,12 @@ session must follow.
   the watch is 70cqw and the phone 80cqw, centred. The host caps both
   devices on desks only (the cap lives inside the ≥820 container query;
   unscoped it shrank the stacked phone): since 2026-10-07 (Jon: "too in
-  your face") the watch 51.3svh at 67.5% of its column and the phone 57svh
-  (both a quarter under the old 68.4/76). The OBJECTS shrink, never the
+  your face") the watch 51.3svh at 67.5% of its column and the phone 63svh
+  (the old 68.4/76; 57 was "a bit too small"). The OBJECTS shrink, never the
   words: the run beside the watch stays full size, and the face's cqw words
-  are set back up from the host ("Cinder 32 · 3:52" bigger + 600). NEVER
+  are set back up from the host ("Cinder 32 · 3:52" bigger + 600, INTAKE
+  5.6cqw, the saved face's check 25cqw centred between INTAKE and "Saved",
+  its line through the check's centre). NEVER
   `zoom` or scale the run: zoomed, its reserve re-rounded every frame and
   walked the whole page a pixel up and down. THE TOUCH SIGNAL (2026-09-22) is ONE vocabulary on both
   objects: `::after` the blue→purple gradient edge (masked ring / rim),
