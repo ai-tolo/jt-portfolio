@@ -1,11 +1,11 @@
 // The three job case studies, surfaced on /resume below the sheet
 // (2026-08-31 IA: homepage = Builds only; CHS / Crediverso / Raylu live
-// with the résumé now). Model 1 — clean typographic links; model 2's
-// inline overlay experiences are a later pass.
+// with the résumé now).
 //
-// The lede lines are CANON carried over from the shipped homepage shelf
-// (hand-written in Jon's register, 2026-08-16/19) — not new words. The
-// copy chat may swap them here without touching the page.
+// The ledes say what each study holds, plainly (rewritten 2026-10-06 at
+// Jon's word "go for it": the old canon carried em dashes, a setup-then-
+// reveal and, for Raylu, a line that read as if the file closed the round).
+// DRAFT: Jon may swap them here without touching the page.
 export interface CaseLink {
   slug: string;
   name: string;
@@ -16,16 +16,16 @@ export const CASE_LINKS: CaseLink[] = [
   {
     slug: "chs",
     name: "CHS",
-    lede: "CHS has 10,000 employees and, suddenly, AI. I taught it — from a 250-person beta to the whole company, until <strong>non-technical teams were building their own models</strong>.",
+    lede: "The onboarding chat to try, the design system under it, and the questions a 250-person beta asked before launch.",
   },
   {
     slug: "crediverso",
     name: "Crediverso",
-    lede: "Most banking apps treat family like a liability. We shipped one in two languages where <strong>family is the point</strong> — and the front door stopped losing people: bounce fell 40% to 25%.",
+    lede: "Two navigation designs for sending family money, side by side in English and Spanish, and why we shipped the five-tap one.",
   },
   {
     slug: "raylu",
     name: "Raylu",
-    lede: "Raylu had a product in their heads and pitch meetings on the calendar. I built the brand and the prototypes <strong>they carried into the rooms that closed $4M</strong>.",
+    lede: "The Figma file the founders took into their seed meetings, page by page: brand, market, strategy, wireframes and the clickable prototype.",
   },
 ];

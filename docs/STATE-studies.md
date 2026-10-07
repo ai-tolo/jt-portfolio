@@ -3,6 +3,19 @@
 Lane: worktree `~/sites/jt-portfolio-studies` · branch `studies` (off main 76c9ae0; the cloud run of 2026-10-06 added four commits on top of the approved CHS commit 5f79039) · preview `studies` :4639 (`~/.claude/launch.json`, cwd = the worktree, own node_modules).
 Brief: `docs/PROMPT-finish-line.md` → STREAM C, then `docs/PROMPT-case-studies-CLOUD.md` (the rest of the stream, run in a cloud session). Rules: lead with one live object; second person; headings are moments; no stat grid, one number set apart; half the words or fewer (counted); one UNDER THE HOOD fold; art not reality; day/night via html[data-night]; CSLayout keeps the rail + floor; og stays /og-tape.png; Momence untouched.
 
+
+## Round 2 SHIPPED 2026-10-06 (with lanes R and S)
+main fast-forwarded to `ship/2026-10-06` (all three lanes replayed on main 7139908, then the orchestrator's commit of
+Jon's answers). Jon: "ship. i can edit later" (the DRAFT words went out). His calls: every cut and keep in "Open"
+stands; the two art details stay. CHS: "I design the internal AI platform" was too bold, so the hook now reads "I built
+AI agents at CHS, a 10,000-person farm cooperative, and the guides and onboarding chat that teach people to use them."
+(his account: he built the agents and contexts, and designed and wrote the docs, guides, how-tos and the onboarding
+chat, because many people would never have reached the platform without them); the "You ask the docs" moment no longer
+says the chat replaced the docs. Raylu: "then an ML-tooling startup" (it is now an AI research platform for investors).
+The homepage findings from section 7: "It became 2 tickets", the Archive's "Send to Studio" dropped, builds-copy's
+"I had hundreds" → "I had thousands" (Jon's word), the work room's captions show at rest; the Intake watch keeps his
+REAL memo and its "Zzzz" (his choice).
+
 ## Where Jon looks (the DRAFT PR's Vercel preview; never merge the PR)
 - PR: https://github.com/ai-tolo/jt-portfolio/pull/6 (DRAFT, `studies` → `main`, "DO NOT MERGE", opened 2026-10-06 for round 2; #5 closed as merged when main fast-forwarded to `studies` on the first ship).
 - Preview base: https://jt-portfolio-git-studies-tolo-ai.vercel.app (the Vercel bot's link on the PR; the deployment status on the head commit reads success).

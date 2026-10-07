@@ -6,6 +6,16 @@ in the main checkout (untracked). This lane owns `src/lib/resume-print.ts`, `src
 `src/components/resume/**`, `public/jonathan-tollefson-resume.pdf` and this file; nothing else.
 Model note: the whole lane ran on Opus 5.5 (the session's model from the start); no subagent wrote prose.
 
+
+## SHIPPED 2026-10-06 (with lanes S and F)
+main fast-forwarded to the integration branch `ship/2026-10-06` (all three lanes replayed on main 7139908, then the
+orchestrator's commit of Jon's answers). Jon's answers applied here: Raylu = "an AI startup" (true across its history:
+ML tooling in 2023, now an AI research and deal-sourcing platform for private-market investors, $8M Series A Dec 2025;
+the case study keeps "then an ML-tooling startup"); CHS bullet 0 = "Built agents on the internal AI platform, then
+designed and wrote the docs, guides, and onboarding chat that teach people to use them; other tools are adopting its
+design system." (Jon: the platform claim was too bold); the case-study blurbs under the sheet rewritten plainly
+(case-links.ts, his "go for it"). PDF regenerated: one page, 464 words.
+
 ## Built
 - **Step 1, THE TEXT** (2d50477): `resume-print.ts` rewritten under the writing law. PDF 608 → 462 words, prose
   483 → 359. The judge tab re-keyed to the mastering agent's bullet 2 (the evidence clause). The contact link

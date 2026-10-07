@@ -4,6 +4,11 @@ Mission (Jon, 2026-10-06): HOW TO PLAY becomes ONE keyboard diagram (colour-code
 W E T Y U O are all notes); the card's words stand alone for a stranger. Prompt: `docs/PROMPT-signal-card.md` (main
 checkout, untracked). Owns `src/components/signal/**` + this file only; never `src/signal/**` or StudioOne.astro.
 
+
+## SHIPPED 2026-10-06 (with lanes R and F)
+main fast-forwarded to `ship/2026-10-06` (all three lanes replayed on main 7139908). Jon: "ship. i can edit later":
+the DRAFT words went out as written; the controller / MIDI hardware / Ableton lines stay cut ("cool").
+
 ## Built (off main 7139908)
 - `ecf648a` THE DIAGRAM. `src/components/signal/HowToPlay.astro` (new): inline SVG (viewBox 984 × 336, u = 50), a US
   keyboard with true stagger, only the rows that matter. Groups, in the device's palette (material.css) re-lit for

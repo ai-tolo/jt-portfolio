@@ -83,7 +83,10 @@ session must follow.
 - `src/components/studio/builds-copy.ts` holds **JON'S LOCKED WORDS**
   (installed verbatim from his copy chat, 2026-08-31): never edit, polish,
   or reflow a sentence. Structure/media `src` fields may change; prose may
-  not. Same rule for the ledes in `src/lib/case-links.ts` (canon).
+  not. (2026-10-06, at his word: the Archive's "I had hundreds" now reads
+  "I had thousands".) The ledes in `src/lib/case-links.ts` are no longer
+  canon: Jon had them rewritten plainly on 2026-10-06 (what each study
+  holds); they are DRAFT for him.
 - `src/components/studio/StudioOne.astro`: python start..end splicing has
   repeatedly eaten neighboring blocks. Use anchored exact-string edits, and
   verify every scripted replace actually matched (a silent no-match shipped a
@@ -97,6 +100,20 @@ session must follow.
 - `/resume` is the annotated sheet: marks + proofs are screen-only; the
   print/ATS contract in `PrintResume.astro` must never regress (verify with
   print emulation + pypdf: exactly 1 page, clean text extraction).
+- ON SCREEN the sheet is re-set in the work room's material (Jon's pick,
+  2026-10-06: "direction b but don't round the corners"): Instrument Sans
+  body, JetBrains Mono labels in a left column, Outfit names, hairlines at
+  18 % ink, no red, one white card (night #1c1c1f), SQUARE, no shadows —
+  the pages beneath, the study tabs and the proof panels too. Those rules
+  live in PrintResume.astro inside `@media screen`, after the print rules
+  at equal weight; print keeps the Geist sheet. IBM Plex Mono stays loaded
+  on /resume for the sitewide rail and floor only.
+- The proofs sit on the room's ground (no dark slab): `.proof-panel` hands
+  each module `--pf-ink/-dim/-ground/-card/-line/-soft` and the three faces,
+  day and night; one accent hue per module; each tab's panel follows it in
+  the DOM. MARKS (2026-10-06): agent → mastering agent bullet 0, judge →
+  bullet 2 (the evidence clause), signal → the instrument's bullet 0,
+  parser → CHS bullet 1.
 - After ANY résumé content change, regenerate
   `public/jonathan-tollefson-resume.pdf` (headless `Page.printToPDF` of
   /resume with `preferCSSPageSize`, then pypdf page-count check). Fit is
@@ -131,7 +148,10 @@ session must follow.
 - Voice: plain, understated, first-person, lowercase chrome, no em dashes in
   résumé/application copy. Jon-voiced surfaces (hero lines, ledes, bio) are
   HIS: draft only when asked, flag as DRAFT, never committee-polish.
-- Chrome is quiet IBM Plex Mono; case studies use the `--cs-mono` token.
+- Chrome (the rail, the floor) is quiet IBM Plex Mono. Pages in the work
+  room's material (the four studies, /resume) set their words in the room's
+  three faces (the studies read `--rm-*`; `--cs-mono` is the older
+  material's, Momence only).
 - Night mode: `html[data-night]`, two sources (manual switch OR instrument
   power). Dark-until-power is lighting only.
 - The GEAR family is GONE from the homepage (round 3e, 2026-09-02): no
@@ -209,7 +229,10 @@ session must follow.
   nodes and the object: a node's words arrive with its stage (2026-09-22). Object one = the Intake
   hero (`IntakeHero.astro` + `src/data/intake-run.json`; its memo cue
   "Cinder 32" is Intake's real alias for capture 31, length 3:52, seven
-  tickets of which the module shows two). Object two = the Archive
+  tickets of which the module shows two). It is Jon's REAL memo BY CHOICE
+  (2026-10-06: "i like the reality and authenticity of it, do not change"):
+  the art-not-diary rule covers the Archive, not the watch, and its "Zzzz"
+  button stays. Object two = the Archive
   (`ArchiveHero.astro` with `story={false}` — the room frames it with the
   locked words — + `src/data/archive-run.json`). 2026-09-30 (Jon): the
   run is ART, an example anyone gets, never a row from his library — the
@@ -254,9 +277,9 @@ session must follow.
   `::before` its light (the watch's outward, the phone's inward), both on
   `touch-breathe` 2s ease-in-out 0.45↔1 — an EXACT COPY of the keyframe in
   each module, change both or neither; hover = still + full, `.s1` = off,
-  reduced motion = still at 0.75; no halo, no ping. The mono CAPTIONS arrive
-  with the run (`.wk:has(.intake-hero.s1, .archive-hero.s1)`), space held
-  at rest. Beside the watch the run column RESERVES its stage-six height
+  reduced motion = still at 0.75; no halo, no ping. The mono CAPTIONS show
+  AT REST (2026-10-06, Jon: "try it") and flash the commit's signal colour
+  when the run lands (`wk-cap-in`, colour only). Beside the watch the run column RESERVES its stage-six height
   (`--run-final`, measured by IntakeHero's script under a motion-free
   `measuring` class, re-measured on fonts/resize) so the words under the
   module never move while it runs; stacked, no reservation. The rail's
@@ -365,7 +388,7 @@ session must follow.
   Carousel is `keys={false}`: no arrows, no swipe, never steals ←/→.
 - THE STACK (/resume, same branch): the sheet is the top page of four
   (`.r-stack`, screen-only, each 4px narrower and 5px lower, painted top
-  sheet highest; the foot carries the drop shadow); four wordless paper
+  sheet highest; flat and square since 2026-10-06, no shadow); four wordless paper
   tabs (`.r-stack-tab`, same-page links to `#study-<slug>`) stand 12px
   above the top edge; they rise once per load (`data-riffle`). Blank-tape
   hover lifts the mini 8px with a ground shadow over 220ms. Phones snap a flick past the paper onto the

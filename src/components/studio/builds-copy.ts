@@ -54,7 +54,7 @@ export const BUILDS: BuildPiece[] = [
       },
       {
         type: "p",
-        html: "My phone never caught on. Photos get faces, places, and search. Recordings get a date, a duration, and a name like New Recording 47. I had hundreds, spread across phones and laptops and drives: technically saved, practically gone. Every so often I'd open one by accident and be wrecked by how good it felt to be back there. Then a year would pass before I found another.",
+        html: "My phone never caught on. Photos get faces, places, and search. Recordings get a date, a duration, and a name like New Recording 47. I had thousands, spread across phones and laptops and drives: technically saved, practically gone. Every so often I'd open one by accident and be wrecked by how good it felt to be back there. Then a year would pass before I found another.",
       },
       { type: "break" },
       {

@@ -165,7 +165,7 @@ export const printContent: PrintResumeContent = {
       pos: "Business Analyst, AI & BI Engineering",
       dates: "Aug 2023 – Present",
       bullets: [
-        "Designed the self-serve onboarding for the company's internal AI platform, from a 250-person beta toward a company-wide rollout; other teams are adopting it as a design system.",
+        "Built agents on the internal AI platform, then designed and wrote the docs, guides, and onboarding chat that teach people to use them; other tools are adopting its design system.",
         "Built a Python tool that writes each dbt model's lineage to Excel, Power BI, and stakeholder briefs in one pass.",
         "Used AI to find data models missing semantic context and added it in Alation with their developers.",
         "Coordinate releases for the go-to-market data engineering team at a Fortune 500 agricultural cooperative; its AI and BI products serve thousands of employees, farmers, and growers.",
@@ -176,7 +176,7 @@ export const printContent: PrintResumeContent = {
       pos: "Product Designer (Freelance)",
       dates: "Jan – Oct 2023",
       bullets: [
-        "Designed the brand, components, and prototypes for an AI chat platform; the founders carried them into meetings that closed a $4M seed, and engineers built from the same file.",
+        "Designed the brand, components, and prototypes for an AI startup; the founders carried them into meetings that closed a $4M seed, and engineers built from the same file.",
       ],
     },
     {
