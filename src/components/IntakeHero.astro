@@ -545,6 +545,7 @@ document.querySelectorAll('[data-intake-hero]').forEach((hero) => {
   const runEl = hero.querySelector('.run');
   const reserve = () => {
     const had = Array.from(hero.classList).filter((c) => /^s[1-6]$/.test(c));
+    const prev = parseFloat(runEl.style.getPropertyValue('--run-final')) || 0;
     hero.classList.add('measuring', 's1', 's2', 's3', 's4', 's5', 's6');
     runEl.style.removeProperty('--run-final');
     const h = runEl.getBoundingClientRect().height;
@@ -552,7 +553,10 @@ document.querySelectorAll('[data-intake-hero]').forEach((hero) => {
     had.forEach((c) => hero.classList.add(c));
     void runEl.offsetHeight; // settle the stage styles before motion returns
     hero.classList.remove('measuring');
-    runEl.style.setProperty('--run-final', Math.ceil(h) + 'px');
+    // a 2 px dead band (2026-10-07): the host draws the run scaled, so a sub-pixel re-measure must never resize the
+    // hero, re-fire the observer and walk the page a pixel at a time; within the band the old reserve holds
+    const next = Math.ceil(h);
+    runEl.style.setProperty('--run-final', (prev && Math.abs(next - prev) <= 2 ? prev : next) + 'px');
   };
   reserve();
   if (document.fonts && document.fonts.ready) document.fonts.ready.then(reserve);

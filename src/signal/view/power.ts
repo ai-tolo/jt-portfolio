@@ -4,10 +4,11 @@
 // multiswitch power outlet where it's a red switch you flick"): the disc became THE SWITCH. Only the DOM inside the
 // button and its CSS changed; every law below is the disc's, byte for byte in behaviour.
 //   the SWITCH button.pwr#pwr in the head's RIGHT corner (Signal.astro's .sgh-power slot, [data-corner="power"]). The
-//              button is the HOUSING, a 68 × 30 recessed dark well; in it span.pwr-rocker, a red plastic rocker on its
+//              button is the HOUSING, a 92 × 40 recessed dark well (68 × 30 until 2026-10-07: Jon, "a bit bigger"); in it span.pwr-rocker, a red plastic rocker on its
 //              vertical centre line (OFF: its left half proud; .lit: flicked, its right half proud) holding i.pwr-lamp
 //              (the plastic lit red from within while .lit) and the ⏻ printed on its ON half. At rest a faint red
-//              ember in the plastic and a halo that breathes while the device shows (.inview). The host's .pwr
+//              ember in the plastic, a halo that breathes and THE RUN (svg.pwr-run: a light lapping the border at a
+//              changing speed) while the device shows (.inview). The host's .pwr
 //              overrides (StudioOne: the brighter standby) land on it unchanged. power.css draws every state.
 //   the STATE  #sgm[data-state] standby → boot → live → powerdown → standby. The host WATCHES it (boot/live = the site
 //              goes night) and clicks #pwr when the room scrolls away; nothing else talks to it. data-live="1" and
@@ -16,10 +17,11 @@
 //              while live, run back on power-off.
 //   the SOUND  Jon's boot sound (public/s/59e8a3b3/boot.m4a: the old machine's inline AAC, byte for byte) AT THE PRESS,
 //              gain .675 straight to the destination, never through the instrument's master; ?mute=1 → a 0-gain.
-//   the DOOR   in standby the device answers nothing but the switch: its keys are the page's (guardKeys, installed before
+//   the DOOR   in standby the device answers nothing but the switch (and a [data-awake] corner: the "?", 2026-10-07): its keys are the page's (guardKeys, installed before
 //              the keymap), its controls take no pointer (power.css) and leave the tab order (inert, here).
 import type { SignalInstrument } from '../types.ts';
 import { KEYMAP } from '../types.ts';
+import { TRAIL, mountRun } from './pwr-run.ts';
 
 export type PowerState = 'standby' | 'boot' | 'live' | 'powerdown';
 
@@ -36,9 +38,18 @@ export const BOOT_GAIN = 0.675;
 const INVIEW_RATIO = 0.25;
 /** SignalMachine.astro:19 — the old disc's glyph, verbatim: R4 prints it small on the rocker's ON half. */
 const GLYPH = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3.5 V11"/><path d="M6.6 6.8 a7.5 7.5 0 1 0 10.8 0"/></svg>';
+/** 2026-10-07 · THE RUN (Jon: "a more tron like border trace … an aerial view of a vehicle ripping around a circuit",
+ *  "a cool gradient"): a rounded rect 4 px outside the well (pathLength 100), drawn as the faint circuit (the rail) and
+ *  SEGS ribbon dashes, printed tail first so the head paints on top. ./pwr-run.ts drives them (a little car sim) only while the device shows and
+ *  the switch is off. */
+const RUN_D = 'M52 2H93A9 9 0 0 1 102 11V41A9 9 0 0 1 93 50H11A9 9 0 0 1 2 41V11A9 9 0 0 1 11 2Z';
+const RUN = '<svg class="pwr-run" viewBox="0 0 104 52" aria-hidden="true">'
+  + `<path class="pwr-run-rail" pathLength="100" d="${RUN_D}"/>`
+  + TRAIL.map(([ink, o]) => `<path class="pwr-run-seg" pathLength="100" d="${RUN_D}" stroke="${ink}" stroke-opacity="${o.toFixed(2)}"/>`).reverse().join('')
+  + '</svg>';
 /** R4 · the switch's inside: the red rocker, its lamp (the plastic lit from within), the ⏻ on its ON half. Pure
  *  lighting for power.css; none of it takes a pointer (the button, the housing, is the whole hit). */
-const ROCKER = `<span class="pwr-rocker" aria-hidden="true"><i class="pwr-lamp"></i>${GLYPH}</span>`;
+const ROCKER = `<span class="pwr-rocker" aria-hidden="true"><i class="pwr-lamp"></i>${GLYPH}</span>${RUN}`;
 
 const num = (v: number): string => String(Math.round(v * 100) / 100);
 
@@ -109,6 +120,7 @@ export function mountPower(sgm: HTMLElement, inst: SignalInstrument): PowerHandl
   const slot = sgm.querySelector<HTMLElement>('.sig-head .sgh-power') ?? sgm.querySelector<HTMLElement>('.sgh-power');
   if (!slot) console.warn('[signal/power] no .sgh-power slot: the switch sits on the device');
   (slot ?? device).appendChild(pwr);
+  const stopRun = mountRun(sgm, pwr, reduce);   // THE RUN: a precomputed loop the browser plays, gated on .inview + standby
 
   // ── the state ────────────────────────────────────────────────────────────────────────────────────────────────
   let st: PowerState = 'standby';
@@ -125,7 +137,7 @@ export function mountPower(sgm: HTMLElement, inst: SignalInstrument): PowerHandl
     for (let n: HTMLElement | null = pwr; n && n !== device; n = n.parentElement) {
       const p: HTMLElement | null = n.parentElement;
       if (!p) break;
-      for (const s of Array.from(p.children)) if (s !== n && s instanceof HTMLElement) s.inert = dark;
+      for (const s of Array.from(p.children)) if (s !== n && s instanceof HTMLElement && !s.hasAttribute('data-awake')) s.inert = dark;
     }
   };
 
@@ -304,6 +316,7 @@ export function mountPower(sgm: HTMLElement, inst: SignalInstrument): PowerHandl
       for (const t of timers) clearTimeout(t);
       timers.clear();
       io?.disconnect();
+      stopRun();
       ro?.disconnect();
       window.removeEventListener('pagehide', onHide);
       window.removeEventListener('pageshow', onShow);

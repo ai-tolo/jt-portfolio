@@ -412,6 +412,33 @@ export const mountHandsView: MountView = (root, inst) => {
   if (stopCorner) stopCorner.append(stopGrp); else root.prepend(stopGrp);
   root.append(keybed);
 
+  // [2026-10-07] THE "?" (Jon: "simple intuitive navigation that when clicked it scrolls down to the how-to diagram"):
+  // a small round keycap beside esc STOP, in the head's help corner (Signal.astro marks it data-awake, so power.ts leaves
+  // it answering in standby too). It and ? on the keyboard (the PAGE's key, never in KEYMAP) bring the write-up into
+  // view from its top (Jon: "the top … and title and whatnot are in view", the diagram still shows beneath) on any page
+  // that mounts the card ([data-write-up], SignalCard.astro); a page without the card gets no key.
+  const howTo = document.querySelector<HTMLElement>('[data-write-up]');
+  const helpCorner = root.querySelector<HTMLElement>('.sig-head [data-corner="help"]');
+  let help: HTMLButtonElement | null = null;
+  const toHowTo = (): void => {
+    howTo?.scrollIntoView({ block: 'start', behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
+  };
+  const onHelpKey = (e: KeyboardEvent): void => {
+    if (e.key !== '?' || e.metaKey || e.ctrlKey || e.altKey || e.repeat) return;
+    const t = e.target as HTMLElement | null;
+    if (t && (t.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName))) return;
+    e.preventDefault();
+    toHowTo();
+  };
+  if (howTo && helpCorner) {
+    help = key('Slash', '?', { name: 'How to play' });
+    help.classList.add('sgh-help');
+    help.tabIndex = 0;           // a way to the page's words, not a note: it keeps a tab stop
+    help.addEventListener('click', toHowTo);
+    helpCorner.append(help);
+    window.addEventListener('keydown', onHelpKey);
+  }
+
   // ═══ PAINT FROM THE STATE (inst.onChange) ═════════════════════════════════════════════════════════════════════════
   let musicSig = '';
   const paintState = (): void => {
@@ -521,7 +548,8 @@ export const mountHandsView: MountView = (root, inst) => {
       document.removeEventListener('visibilitychange', onVis);
       letGo();                   // a pointer still on Z / M lets go through the counter first (the key may still hold it)
       H.gesture = rawGesture;    // then the key's door goes back to the instrument
-      stopGrp.remove(); keybed.remove();
+      window.removeEventListener('keydown', onHelpKey);
+      stopGrp.remove(); keybed.remove(); help?.remove();
     },
   };
 };

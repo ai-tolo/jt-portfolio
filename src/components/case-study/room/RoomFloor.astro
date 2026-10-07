@@ -1,0 +1,59 @@
+---
+/**
+ * RoomFloor — the floor of a case study in the room's material (2026-10-07, Jon: "the line and the email link aren't
+ * aligned … i'd rather the four case studies be in the footers of the case studies"). One hairline on the ROOM's
+ * text column (the 1032 the study's words stand in, so nothing slides under the rail), then the four studies in one row in
+ * the résumé's order (the one you're on in the dim ink, not a link), then the house floor centred beneath it
+ * (SiteFloor.astro: email + LinkedIn, unchanged). The older material (Momence) keeps the plain floor.
+ */
+import SiteFloor from "../../studio/SiteFloor.astro";
+import { CASE_LINKS } from "../../../lib/case-links";
+
+// the résumé's order (src/pages/resume/index.astro): Finishable first, then the three jobs
+const STUDIES = [{ slug: "the-console", name: "Finishable" }, ...CASE_LINKS.map(({ slug, name }) => ({ slug, name }))];
+const here = Astro.url.pathname.replace(/\/+$/, "");
+---
+
+<div class="rf">
+  <nav class="rf-studies" aria-label="Case studies">
+    {STUDIES.map((s) =>
+      here === `/case-studies/${s.slug}` ? (
+        <span class="rf-study rf-here" aria-current="page">{s.name}</span>
+      ) : (
+        <a class="rf-study" href={`/case-studies/${s.slug}`}>{s.name}</a>
+      )
+    )}
+  </nav>
+  <SiteFloor />
+</div>
+
+<style>
+  .rf {
+    box-sizing: border-box;
+    width: calc(100% - 48px); /* the room's text column: its 1080 less its 24 px gutters */
+    max-width: 1032px;
+    margin: 96px auto 0;
+    padding: 40px 0 48px;
+    border-top: 1px solid var(--rm-line);
+  }
+  .rf-studies {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 12px 40px;
+    margin: 0 0 32px;
+    font: 500 1.125rem/1.3 var(--rm-display);
+    letter-spacing: -0.005em;
+  }
+  .rf-study { color: var(--rm-ink); text-decoration: underline; text-underline-offset: 5px; text-decoration-thickness: 1px; }
+  .room-cs .cs-main a.rf-study { text-decoration-color: color-mix(in oklab, var(--rm-ink) 30%, transparent); transition: text-decoration-color 160ms ease; }
+  .room-cs .cs-main a.rf-study:hover,
+  .room-cs .cs-main a.rf-study:focus-visible { text-decoration-color: var(--rm-ink); }
+  .rf-here { color: var(--rm-dim); text-decoration: none; }
+  /* the house floor sits under the row: its own line and box give way to the floor's */
+  .rf :global(.floor) { max-width: none; margin: 0; padding: 0; border-top: 0; }
+  @media (max-width: 899px) {
+    .rf { width: auto; margin-left: 14px; margin-right: 14px; }
+    .rf-studies { gap: 10px 28px; }
+  }
+</style>

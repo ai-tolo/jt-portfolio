@@ -13,15 +13,15 @@
    that centres the switch on the head's line, the line esc STOP stands on in the left corner ── */
 .sig .sgh-power { display: flex; align-items: center; height: 44px; }
 
-/* ── THE SWITCH. The button is the HOUSING: a 68 × 30 well sunk in the carbon, the dark glass ground behind a 1 px
-   seam. The RED ROCKER (span.pwr-rocker, 56 × 20) rides in it on its vertical centre line; its tilt is faked by a
+/* ── THE SWITCH. The button is the HOUSING: a 92 × 40 well sunk in the carbon (68 × 30 until 2026-10-07, Jon: "a bit
+   bigger"), the dark glass ground behind a 1 px seam. The RED ROCKER (span.pwr-rocker, 76 × 28) rides in it on its vertical centre line; its tilt is faked by a
    perspective turn of the rocker alone plus light (nothing else moves, nothing lays out). OFF: the right half pushed
    in, the left half proud (the ON end: the ⏻ is printed on it, its rim catches the light). .lit (boot + live): flicked
    in 110 ms, the left half in, the right half proud, the plastic LIT from within (i.pwr-lamp), steady. The halo
    ::after lies UNDER the housing (z −1: the button is no stacking context, so it sinks to the strata's) and only ever
    shows in standby, breathing by opacity alone. ── */
 .sgm .pwr {
-  position: relative; display: block; flex: none; width: 68px; height: 30px; margin: 0; padding: 0; border-radius: 6px;
+  position: relative; display: block; flex: none; width: 92px; height: 40px; margin: 0; padding: 0; border-radius: 7px;
   cursor: pointer; -webkit-tap-highlight-color: transparent;
   background: radial-gradient(130% 130% at 50% 0%, #080e16, #04060b 80%);
   border: 1px solid rgba(155,167,187,.16);
@@ -30,15 +30,15 @@
 }
 /* the rocker: dull translucent red plastic, lit from above; OFF tilts it +12° (its right half away, into the well) */
 .sgm .pwr-rocker {
-  position: absolute; left: 50%; top: 50%; width: 56px; height: 20px; margin: -10px 0 0 -28px; border-radius: 4px;
+  position: absolute; left: 50%; top: 50%; width: 76px; height: 28px; margin: -14px 0 0 -38px; border-radius: 5px;
   overflow: hidden; pointer-events: none;
   background: linear-gradient(180deg, #7c2622, #6e1f1c 42%, #4a1412);
   box-shadow: inset 0 0 0 1px rgba(20,2,2,.5), 4px 0 5px -2px rgba(0,0,0,.85), 0 1px 2px rgba(0,0,0,.75);
-  transform: perspective(140px) rotateY(12deg); transform-origin: 50% 50%;
+  transform: perspective(190px) rotateY(12deg); transform-origin: 50% 50%;
   transition: transform .11s ease-out, box-shadow .11s ease-out, filter .12s ease-out;
 }
 .sgm .pwr.lit .pwr-rocker {
-  transform: perspective(140px) rotateY(-12deg);
+  transform: perspective(190px) rotateY(-12deg);
   box-shadow: inset 0 0 0 1px rgba(70,6,3,.45), -4px 0 5px -2px rgba(0,0,0,.85), 0 1px 2px rgba(0,0,0,.75);
 }
 .sgm .pwr:hover .pwr-rocker { filter: brightness(1.14); }
@@ -71,9 +71,9 @@
 }
 .sgm .pwr.lit .pwr-rocker::before { opacity: 0; }
 .sgm .pwr.lit .pwr-rocker::after { opacity: 1; }
-/* the ⏻, 10 px, printed on the ON half: pale ink the room lights (OFF); lit from behind, the print reads dark (ON) */
+/* the ⏻, 13 px, printed on the ON half: pale ink the room lights (OFF); lit from behind, the print reads dark (ON) */
 .sgm .pwr-rocker > svg {
-  position: absolute; left: 9px; top: 5px; z-index: 3; display: block; width: 10px; height: 10px;
+  position: absolute; left: 12px; top: 7.5px; z-index: 3; display: block; width: 13px; height: 13px;
   filter: drop-shadow(0 -.5px 0 rgba(30,4,3,.6));
 }
 .sgm .pwr-rocker path { fill: none; stroke: rgba(255,222,214,.66); stroke-width: 2.8; stroke-linecap: round; transition: stroke .12s ease-out; }
@@ -97,6 +97,21 @@
 /* while the line runs, the pointer cannot press again (a double click is not an off); power.ts still takes a
    programmatic click during the boot (the host's scroll-away) */
 .sgm:is([data-state="boot"], [data-state="powerdown"]) .pwr { pointer-events: none; }
+/* ── THE RUN (2026-10-07, Jon: a tron-like trace "as though it's like an aerial view of a vehicle ripping around a
+   circuit", "a cool gradient", "won't bog the page's performance"): power.ts prints svg.pwr-run (a rounded rect
+   4 px outside the well) and ./pwr-run.ts drives its ribbon from a small car sim (only in standby + in view; the
+   browser plays a precomputed ~20 s loop, no script per frame). Here: the box, the faint circuit, the ribbon's one
+   width and a tight electric glow (cyan core, indigo bloom). Lit, it all goes dark. ── */
+.sgm .pwr-run {
+  position: absolute; left: -6px; top: -6px; width: calc(100% + 12px); height: calc(100% + 12px); z-index: 4;
+  overflow: visible; pointer-events: none; opacity: 0; transition: opacity .25s ease-out;
+  filter: drop-shadow(0 0 1.5px rgba(95, 240, 255, .9)) drop-shadow(0 0 4px rgba(110, 92, 255, .45));
+}
+.sgm .pwr-run path { fill: none; stroke-linecap: round; }
+.sgm .pwr-run-rail { stroke: rgba(95, 240, 255, .13); stroke-width: 1; }
+.sgm .pwr-run-seg { stroke-dasharray: 0 100; stroke-width: 2; stroke-linecap: butt; }
+.sgm .pwr-run-seg:last-child { stroke-linecap: round; }   /* only the head is round: butt joints leave no beads */
+.sgm.inview .device:not(.live) .pwr:not(.lit) .pwr-run { opacity: 1; }
 @keyframes sgm-breathe { 0%, 100% { opacity: .22; } 50% { opacity: .85; } }
 @keyframes sgm-flare { 0%, 100% { opacity: .25; } 35% { opacity: 1; } }
 
@@ -121,6 +136,9 @@
 /* the door: nothing but the switch takes a pointer (power.ts also seals the rest inert: no tab stops, no a11y tree) */
 .sgm:not([data-state="live"]) > .device { pointer-events: none; }
 .sgm > .device .pwr { pointer-events: auto; }
+/* the "?" (2026-10-07) answers in every state and keeps its light: a way to the words, never part of the dark */
+.sgm > .device [data-awake] .sg-key { pointer-events: auto; }
+.sgm:not([data-state="live"]) .sig [data-awake] .sg-key { filter: none; }
 
 /* the towers: the accent rim and its inner glow go to a plain dark edge (same four insets: the change fades) */
 .sgm:not([data-state="live"]) .sig .sg-tower {
@@ -208,5 +226,7 @@
 .sgm.bulb .sig .sgh-keybed { --sgm-d: 220ms; }
 @media (prefers-reduced-motion: reduce) {
   .sgm.inview .device:not(.live) .pwr:not(.lit)::after { animation: none; opacity: .5; }
+  /* no run (pwr-run.ts never starts): the circuit lit steady */
+  .sgm .pwr-run-rail { stroke: rgba(95, 240, 255, .45); }
   .sgm .sig, .sgm .sig * { --sgm-d: 0ms !important; }   /* the fades stay, the stagger goes */
 }

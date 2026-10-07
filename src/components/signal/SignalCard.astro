@@ -1,11 +1,11 @@
 ---
 /**
- * SignalCard — the expandable card under the instrument (2026-09-30, the export round): the work room's card, for
- * SIGNAL. Closed, it shows the name and the opening lines under a fade; the whole lower edge opens it. Inside: the
+ * SignalCard — the card under the instrument (2026-09-30, the export round): the work room's card, for SIGNAL. Always
+ * open (Jon, 2026-10-07: the same law as the case studies). The "?" key in the instrument's head lands on its TOP
+ * ([data-write-up]): the title and the words in view, the diagram beneath them. 96 px under the device: air, still SIGNAL's (a room gap would detach it). Inside: the
  * write-up (signal-card-copy.ts, Jon's to rewrite) · HOW TO PLAY (./HowToPlay.astro: one keyboard diagram drawn from
  * signal-copy.ts LEGEND, 2026-10-06) · UNDER THE HOOD (the engine, a spine of steps) · WHERE IT CAME FROM. Mounted by StudioOne's play room (inside .sig-desktop, so
- * it exists only where the instrument plays) and by /signal. Its own fold script and styles: nothing here depends on
- * the work room's.
+ * it exists only where the instrument plays) and by /signal. Its own styles: nothing here depends on the work room's.
  */
 import { CARD, type CardRow } from "./signal-card-copy.ts";
 import HowToPlay from "./HowToPlay.astro";
@@ -18,11 +18,10 @@ const cols = (ps: ReadonlyArray<string>): string[][] => {
   const cut = Math.ceil(ps.length / 2);
   return [ps.slice(0, cut), ps.slice(cut)];
 };
-const id = "sc-clip-" + Math.random().toString(36).slice(2, 7);
 ---
 
-<div class="sc" data-signal-card>
-  <div class="sc-clip" id={id}>
+<div class="sc" data-signal-card data-write-up>
+  <div class="sc-clip">
     <div class="sc-body">
       <h4 class="sc-title">{CARD.title}</h4>
       <div class="sc-cols">
@@ -32,7 +31,7 @@ const id = "sc-clip-" + Math.random().toString(36).slice(2, 7);
       </div>
     </div>
     <div class="sc-hood">
-      <p class="sc-t">{CARD.howTitle}</p>
+      <p class="sc-t" id="how-to-play">{CARD.howTitle}</p>
       <HowToPlay />
 
       <p class="sc-t">{CARD.hoodTitle}</p>
@@ -57,9 +56,6 @@ const id = "sc-clip-" + Math.random().toString(36).slice(2, 7);
       </div>
     </div>
   </div>
-  <button class="sc-more" type="button" aria-expanded="false" aria-controls={id} aria-label="Read the whole story">
-    <svg class="sc-chev" viewBox="0 0 20 20" aria-hidden="true"><path d="M5 8l5 5 5-5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
-  </button>
 </div>
 
 <style>
@@ -75,24 +71,21 @@ const id = "sc-clip-" + Math.random().toString(36).slice(2, 7);
     box-sizing: border-box;
     width: 100%;
     max-width: 1080px;
-    margin: 56px auto 0;
+    margin: 96px auto 0;
     border: 1px solid color-mix(in oklab, var(--sc-ink) 16%, transparent);
     border-radius: 28px;
     background: var(--sc-card);
     color: var(--sc-ink);
     font-family: var(--sc-sans);
     container-type: inline-size;
+    scroll-margin-top: 32px; /* the "?" key's landing: the whole write-up from its top (the title, the words, the diagram) */
     transition: border-color 560ms ease, background-color 560ms ease, color 560ms ease;
   }
   /* night: the ink flips with the card. On the homepage `.one` pins --ink to its day value, so var(--ink) alone left
      the card's words dark on dark whenever the instrument took the site to night; --night-ink is .one's own night
      ink, and /signal (no .one) falls back to the page's --ink, which flips there. */
   :global(html[data-night]) .sc { --sc-card: #1c1c1f; --sc-ink: var(--night-ink, var(--ink)); }
-  .sc-clip { overflow: hidden; transition: height 0.55s cubic-bezier(0.2, 0.8, 0.2, 1); }
-  .sc:not([data-open]) .sc-clip {
-    -webkit-mask-image: linear-gradient(to bottom, #000 calc(100% - 64px), transparent);
-    mask-image: linear-gradient(to bottom, #000 calc(100% - 64px), transparent);
-  }
+  .sc-clip { padding-bottom: 32px; }
   .sc-body { padding: 32px 32px 32px; }
   .sc-title {
     margin: 0 0 40px;
@@ -132,66 +125,11 @@ const id = "sc-clip-" + Math.random().toString(36).slice(2, 7);
   .sc-step-k { font: 500 0.6875rem/1.6 var(--sc-mono); letter-spacing: 0.12em; text-transform: uppercase; color: color-mix(in oklab, var(--sc-acc) 70%, var(--sc-ink)); }
   .sc-step-tool { font: 500 0.6875rem/1 var(--sc-mono); letter-spacing: 0.04em; color: var(--sc-dim); padding: 4px 8px; border: 1px solid color-mix(in oklab, var(--sc-ink) 16%, transparent); border-radius: 999px; }
   .sc-step-p { margin: 0; font-size: 0.9375rem; line-height: 1.55; text-wrap: pretty; }
-  /* the handle: the whole lower edge */
-  .sc-more {
-    display: flex; align-items: center; justify-content: center;
-    width: 100%; height: 56px; margin: 0; padding: 0; border: 0; border-radius: 0 0 28px 28px;
-    background: transparent; color: var(--sc-dim); cursor: pointer; transition: color 0.3s;
-  }
-  .sc-more:hover { color: var(--sc-ink); }
-  .sc-more:focus-visible { outline: 2px solid var(--sc-ink); outline-offset: -6px; }
-  .sc-chev { width: 20px; height: 20px; transition: transform 0.45s cubic-bezier(0.2, 0.8, 0.2, 1); animation: sc-breathe 2s ease-in-out infinite; }
-  .sc[data-open] .sc-chev { transform: rotate(180deg); animation: none; }
-  @keyframes sc-breathe { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(3px); } }
   @container (min-width: 820px) {
     .sc-body { padding: 48px 48px 40px; }
     .sc-hood { margin: 0 48px; padding-top: 32px; }
+    .sc-clip { padding-bottom: 40px; }
     .sc-cols { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
-  }
-  @media (prefers-reduced-motion: reduce) {
-    .sc-clip { transition: none; }
-    .sc-chev { animation: none; transition: none; }
   }
 </style>
 
-<script>
-  document.querySelectorAll<HTMLElement>("[data-signal-card]").forEach((card) => {
-    const clip = card.querySelector<HTMLElement>(".sc-clip");
-    const btn = card.querySelector<HTMLButtonElement>(".sc-more");
-    const first = card.querySelector<HTMLElement>(".sc-p");
-    if (!clip || !btn || !first) return;
-    const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    const isOpen = () => card.hasAttribute("data-open");
-    const peek = () => Math.ceil(first.offsetTop + first.offsetHeight + 64);
-    const settle = () => { if (!isOpen()) clip.style.height = peek() + "px"; };
-    const open = () => {
-      if (isOpen()) return;
-      const from = clip.getBoundingClientRect().height;
-      card.setAttribute("data-open", "");
-      btn.setAttribute("aria-expanded", "true");
-      btn.setAttribute("aria-label", "Fold the story");
-      if (reduce) { clip.style.height = "auto"; return; }
-      clip.style.height = from + "px";
-      const to = clip.scrollHeight;
-      const done = (e: TransitionEvent) => { if (e.target !== clip) return; clip.style.height = "auto"; clip.removeEventListener("transitionend", done); };
-      clip.addEventListener("transitionend", done);
-      requestAnimationFrame(() => { clip.style.height = to + "px"; });
-    };
-    const close = () => {
-      if (!isOpen()) return;
-      clip.style.height = clip.getBoundingClientRect().height + "px";
-      void clip.offsetHeight;
-      card.removeAttribute("data-open");
-      btn.setAttribute("aria-expanded", "false");
-      btn.setAttribute("aria-label", "Read the whole story");
-      requestAnimationFrame(() => { clip.style.height = peek() + "px"; });
-      if (card.getBoundingClientRect().top < 0) card.scrollIntoView({ block: "start", behavior: reduce ? "auto" : "smooth" });
-    };
-    btn.addEventListener("click", () => { if (isOpen()) close(); else open(); });
-    let t = 0;
-    const later = () => { window.clearTimeout(t); t = window.setTimeout(settle, 30); };
-    new ResizeObserver(later).observe(clip.firstElementChild as Element);
-    settle();
-    if (document.fonts && document.fonts.ready) document.fonts.ready.then(later);
-  });
-</script>
