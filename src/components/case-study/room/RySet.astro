@@ -3,7 +3,8 @@
 // carried into the rooms, as a design-tool window in the room's material. The only chrome is the file's name and its
 // five pages (each with its stamp); every page is a CANVAS of that section's components laid out as a sheet: Brand
 // (the whale, the sampled palette, the wordmark, the tone chips), Competitive analysis (the 2×2, selectable), Strategy
-// (the slide and the thesis rows), Wireframes (the sketch and the frame side by side, the two-path entry), Hi-fi (the
+// (the slide and the thesis rows), Wireframes (the sketch and the frame side by side; the two-path toggle that stood under them did nothing and was
+// cut, 2026-10-07: the sketch's own note and the page's say it), Hi-fi (the
 // product's own primitives in their states). Two materials, as on CHS: the window and the canvas ground paint from the
 // room (--rm-*); every artboard and component on it paints from the product's contract (--ry-*, ry-tokens.css).
 // Content: SECTIONS of the old RayluFigmaTimeline (notes verbatim, em dashes replaced) and the five screenshots.
@@ -42,10 +43,6 @@ const MATRIX = [
   { n: "raylu", qx: 0.5, qy: 0.5, us: true },
 ];
 const THESIS = ["observability", "pipelines, not models", "human rules over the chain"];
-const PATHS = [
-  { id: "chat", label: "talk to a chat bot" },
-  { id: "premade", label: "boot a premade system" },
-];
 
 // the hi-fi primitives, rebuilt from the two hi-fi screenshots
 const TILES = [
@@ -138,22 +135,6 @@ const uid = `ry-${Math.random().toString(36).slice(2, 8)}`;
                   <figcaption class="ry-lbl">frame · same afternoon</figcaption>
                   <div class="ry-ab"><img src={IMG.errors} width="987" height="575" alt="Raylu hi-fi label-errors workflow, a real Figma frame: a left rail with the raylu wordmark and nav icons, a metrics bar (false-positive count, confidence and IOU threshold sliders), and a grid of selectable image thumbnails with bounding boxes, each a candidate the model flagged as wrong." /></div>
                 </figure>
-              </div>
-              <div class="ry-paths">
-                <span class="ry-lbl" id={`${uid}-paths`}>two-path entry</span>
-                <div class="ry-paths-row" role="group" aria-labelledby={`${uid}-paths`}>
-                  {PATHS.map((o, j) => (
-                    <button type="button" class="ry-opt" aria-pressed={j === 0 ? "true" : "false"} data-ry-opt={o.id}>
-                      <svg class="ry-ic" viewBox="0 0 24 24" aria-hidden="true">
-                        {o.id === "chat"
-                          ? <path d="M4 5h16v11H10l-6 4z" />
-                          : <Fragment><rect x="4" y="4" width="7" height="7" rx="1" /><rect x="13" y="4" width="7" height="7" rx="1" /><rect x="4" y="13" width="7" height="7" rx="1" /><rect x="13" y="13" width="7" height="7" rx="1" /></Fragment>}
-                      </svg>
-                      <span>{o.label}</span>
-                      <span class="ry-opt-dot" aria-hidden="true"></span>
-                    </button>
-                  ))}
-                </div>
               </div>
             </div>
           )}
@@ -275,10 +256,6 @@ const uid = `ry-${Math.random().toString(36).slice(2, 8)}`;
     };
     qs.forEach((b) => b.addEventListener("click", () => pick(b.dataset.ryQ ?? "")));
 
-    // ── Wireframes: the two-path entry, one path at a time
-    const opts = Array.from(root.querySelectorAll<HTMLButtonElement>("[data-ry-opt]"));
-    opts.forEach((o) => o.addEventListener("click", () => opts.forEach((x) => x.setAttribute("aria-pressed", x === o ? "true" : "false"))));
-
     // ── Hi-fi: state(tile, state) marks one drawn state (the QA's pointer; the sheet draws every state at once)
     const state = (tile: string, st: string) => {
       root.querySelectorAll<HTMLElement>(`[data-ry-tile="${tile}"] [data-ry-st]`).forEach((s) => s.classList.toggle("is-marked", s.dataset.rySt === st));
@@ -380,25 +357,10 @@ const uid = `ry-${Math.random().toString(36).slice(2, 8)}`;
   .ry-row-k { display: block; width: 14px; height: 2px; translate: 0 -0.3em; background: var(--ry-accent); }
   .ry-row-t { font: 500 1.0625rem/1.3 var(--ry-font); color: var(--ry-ink); }
 
-  /* ── Wireframes: the sketch and the frame at one height, side by side; the two-path entry beneath ── */
+  /* ── Wireframes: the sketch and the frame at one height, side by side ── */
   .ry-pair { display: grid; grid-template-columns: minmax(0, 1.179fr) minmax(0, 1.717fr); gap: 16px; }
   .ry-frame { display: grid; gap: 8px; align-content: start; min-width: 0; }
-  .ry-paths { display: grid; gap: 8px; margin-top: 20px; }
-  .ry-paths-row { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
-  .ry-opt {
-    display: flex; align-items: center; gap: 10px; min-height: 48px; padding: 0 16px; text-align: left;
-    border: 1px solid var(--ry-line); border-radius: var(--ry-radius); background: var(--ry-paper);
-    font: 500 0.9375rem/1.2 var(--ry-font); color: var(--ry-ink);
-    transition: background-color 120ms ease, border-color 120ms ease;
-  }
-  .ry-opt .ry-ic { color: var(--ry-dim); }
-  .ry-opt > span:not(.ry-opt-dot) { flex: 1 1 auto; }
-  .ry-opt-dot { width: 14px; height: 14px; border: 1px solid var(--ry-line); border-radius: 50%; flex: none; }
-  .ry-opt:hover { border-color: var(--ry-ink); }
-  .ry-opt[aria-pressed="true"] { border-color: var(--ry-accent); background: color-mix(in oklab, var(--ry-accent) 10%, var(--ry-paper)); }
-  .ry-opt[aria-pressed="true"] .ry-ic { color: var(--ry-accent); }
-  .ry-opt[aria-pressed="true"] .ry-opt-dot { border: 4px solid var(--ry-accent); }
-  .ry-chip:focus-visible, .ry-q:focus-visible, .ry-opt:focus-visible { outline: 2px solid var(--ry-accent); outline-offset: 2px; }
+  .ry-chip:focus-visible, .ry-q:focus-visible { outline: 2px solid var(--ry-accent); outline-offset: 2px; }
 
   /* ── Hi-fi: the product's primitives, each a tile: the drawn states over a mono label each, then name + purpose ── */
   .ry-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
@@ -464,7 +426,7 @@ const uid = `ry-${Math.random().toString(36).slice(2, 8)}`;
     .ry-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   }
   @container ry-set (max-width: 520px) {
-    .ry-pair, .ry-paths-row, .ry-grid { grid-template-columns: minmax(0, 1fr); }
+    .ry-pair, .ry-grid { grid-template-columns: minmax(0, 1fr); }
     .ry-page { padding: 14px 14px 18px; }
     .ry-mark { font-size: 2.5rem; }
   }
@@ -499,6 +461,6 @@ const uid = `ry-${Math.random().toString(36).slice(2, 8)}`;
   /* ════ end DIRECTION 2 ════ */
 
   @media (prefers-reduced-motion: reduce) {
-    .ry-view, .ry-tab, .ry-chip, .ry-q, .ry-opt { transition: none; }
+    .ry-view, .ry-tab, .ry-chip, .ry-q { transition: none; }
   }
 </style>
