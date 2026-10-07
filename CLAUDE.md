@@ -280,11 +280,13 @@ session must follow.
   with the text 32px in; collapse under 820px of MODULE width; stacked,
   the watch is 70cqw and the phone 80cqw, centred. The host caps both
   devices on desks only (the cap lives inside the ≥820 container query;
-  unscoped it shrank the stacked phone): the phone 76svh; the watch 51.3svh
-  at 67.5% of its column since 2026-10-07 (Jon: "too in your face"; the
-  phone kept its size on his word), its run drawn at scale(0.85) with the
-  box squared by hand. NEVER `zoom` the run: zoomed, its reserve re-rounded
-  every frame and walked the whole page a pixel up and down. THE TOUCH SIGNAL (2026-09-22) is ONE vocabulary on both
+  unscoped it shrank the stacked phone): since 2026-10-07 (Jon: "too in
+  your face") the watch 51.3svh at 67.5% of its column and the phone 57svh
+  (both a quarter under the old 68.4/76). The OBJECTS shrink, never the
+  words: the run beside the watch stays full size, and the face's cqw words
+  are set back up from the host ("Cinder 32 · 3:52" bigger + 600). NEVER
+  `zoom` or scale the run: zoomed, its reserve re-rounded every frame and
+  walked the whole page a pixel up and down. THE TOUCH SIGNAL (2026-09-22) is ONE vocabulary on both
   objects: `::after` the blue→purple gradient edge (masked ring / rim),
   `::before` its light (the watch's outward, the phone's inward), both on
   `touch-breathe` 2s ease-in-out 0.45↔1 — an EXACT COPY of the keyframe in
