@@ -11,17 +11,16 @@
 // rebuilds it on that label. The library sizes the canvas from its parent
 // and skips frames while it is off screen on its own.
 //
-// Tuned in ~/sites/shaders-lab station 4: CRT counts its stripes and lines
-// across the CANVAS, so these are scaled for the label alone (Jon picked the
-// finest pixels on the whole tape: 128 → 112 here, 200 lines → 130), and
-// the vignette stays at the edge (the default buries the label's corners).
+// Tuned in ~/sites/shaders-lab station 4, which is the label alone, so the
+// numbers carry over 1:1. Jon's pick (2026-10-07, second pass): coarse
+// phosphor stripes and a little colour split; no scanlines, no vignette.
 const CRT = {
-  pixelSize: 112,
-  scanlineFrequency: 130,
-  scanlineIntensity: 0.4,
-  colorShift: 1,
-  vignetteIntensity: 0.5,
-  vignetteRadius: 0.15,
+  pixelSize: 16,
+  scanlineFrequency: 180,
+  scanlineIntensity: 0,
+  colorShift: 1.4,
+  vignetteIntensity: 0,
+  vignetteRadius: 0,
 };
 const FADE_MS = 600; // matches .cs-crt's transition
 
