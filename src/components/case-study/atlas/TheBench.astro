@@ -437,6 +437,8 @@ const BARS = Array.from({ length: 128 }, (_, i) => {
       k.addEventListener("pointerdown", startHold);
       k.addEventListener("pointerup", endHold);
       k.addEventListener("pointerleave", () => { k.dataset.holding = "false"; if (holdTimer) clearTimeout(holdTimer); });
+      // a finger that starts a scroll on a key (touch-action: pan-y) cancels the press: no audition, no crown
+      k.addEventListener("pointercancel", () => { k.dataset.holding = "false"; if (holdTimer) clearTimeout(holdTimer); held = true; });
     });
 
     let crowned = -1;
@@ -479,7 +481,9 @@ const BARS = Array.from({ length: 128 }, (_, i) => {
     let hovered = false;
     root.addEventListener("pointerenter", () => (hovered = true));
     root.addEventListener("pointerleave", () => (hovered = false));
-    const engaged = () => hovered || root.contains(document.activeElement);
+    // focus engages the keys only when a KEYBOARD put it here (:focus-visible): a mouse click must not leave Space
+    // playing and pausing the bench after the reader has scrolled away (2026-10-07)
+    const engaged = () => hovered || (root.contains(document.activeElement) && !!document.activeElement?.matches(":focus-visible"));
 
     document.addEventListener("keydown", (e) => {
       if (!engaged()) return;
@@ -646,7 +650,7 @@ const BARS = Array.from({ length: 128 }, (_, i) => {
     display: flex; flex-direction: column; align-items: center; gap: 3px;
     padding: 12px 10px 11px; cursor: pointer;
     font-family: var(--rm-mono);
-    color: #ece3f2; user-select: none; touch-action: none;
+    color: #ece3f2; user-select: none; touch-action: pan-y; /* a swipe that starts on a key still scrolls the page (2026-10-07) */
     border: 1px solid rgba(236, 227, 242, 0.22); border-bottom-color: rgba(0, 0, 0, 0.55);
     border-radius: 8px;
     background: linear-gradient(180deg, rgba(255, 255, 255, 0.12) 0%, rgba(236, 227, 242, 0.05) 46%, rgba(0, 0, 0, 0.12) 100%);

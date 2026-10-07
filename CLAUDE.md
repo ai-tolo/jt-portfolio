@@ -372,6 +372,19 @@ session must follow.
   the résumé's order (the current one dim, not a link), the floor beneath.
   Case-study write-ups (RoomStory) and SIGNAL's card never fold (Jon,
   2026-10-06/07: a reader there is already interested).
+- CASE-STUDY OBJECTS NEVER TRAP THE PAGE'S SCROLL (2026-10-07, Jon: "scrolling
+  isn't working when i click in the chs module … ensure nowhere else"): no
+  `overscroll-behavior: contain` on an inner scroller (ChsTool's thread and
+  RySet's view had it); Room.astro drops focus after any MOUSE click inside a
+  study (detail > 0; text fields and keyboard activation keep focus), so
+  Space / arrows / Page keys scroll again; TheBench's keys engage on hover or
+  on KEYBOARD focus only (:focus-visible), its take keys are `touch-action:
+  pan-y` with pointercancel ending the press. Probe: click each module, then
+  wheel over it, Space, ArrowDown, and assert scrollY moved.
+- Every study object has a NIGHT: CHS's --sys-* follow `html[data-night]`
+  unless ChsSystem's switch wrote `data-sys` (the site's switch clears it);
+  Raylu's --ry-* flip in ry-tokens.css and the lasso's white prototype screen
+  is inverted with its hues turned back (invert .93 + hue-rotate 180°).
 - The homepage corner (top right) is the résumé link alone with its ember
   bead; no city. The "back to selected work" end-line is retired from
   every case study (dead link); the rail carries every exit. AwayRail

@@ -33,6 +33,21 @@ const { title, description, label, hook, cls = "" } = Astro.props;
   </article>
 </CSLayout>
 
+<script>
+  // A MOUSE CLICK NEVER KEEPS THE PAGE'S KEYS (2026-10-07, Jon: "scrolling isn't working when i click in the chs
+  // module … ensure nowhere else in the case studies has a similar issue"). A pointer click (detail > 0) anywhere in a
+  // study drops focus from the control it landed on (a role tab, a starter, the lasso's stage, the bench), so Space,
+  // the arrows and Page keys scroll the page again; text fields keep it, and keyboard activation (detail 0) keeps
+  // focus where a keyboard user put it.
+  document.addEventListener("click", (e) => {
+    if (e.detail === 0) return;
+    const a = document.activeElement as HTMLElement | null;
+    if (!a || a === document.body || !a.closest(".rm")) return;
+    if (a.matches("input, textarea, select, [contenteditable]:not([contenteditable='false'])")) return;
+    a.blur();
+  });
+</script>
+
 <style is:global>
   /* ── the room's material on the study ── */
   .room-cs {

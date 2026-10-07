@@ -185,8 +185,11 @@ const st = (s: string) => (s === "rest" ? "" : `is-${s}`);
       fade = window.setTimeout(() => vals.forEach((el) => el.classList.remove("is-new")), 1400);
     };
 
+    // the mode: the switch's word if it said one, else the site's night (chs-tokens.css paints the same rule)
+    const night = () => document.documentElement.hasAttribute("data-night");
+    const modeNow = () => { const s = host.getAttribute("data-sys"); return s === "dark" || s === "light" ? s : night() ? "dark" : "light"; };
     const sync = (mark: boolean) => {
-      const mode = host.getAttribute("data-sys") === "dark" ? "dark" : "light";
+      const mode = modeNow();
       root.dataset.sysMode = mode;
       caps.forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.sysSet === mode)));
       read(mark);
@@ -194,13 +197,18 @@ const st = (s: string) => (s === "rest" ? "" : `is-${s}`);
 
     caps.forEach((b) =>
       b.addEventListener("click", () => {
-        if (b.dataset.sysSet === "dark") host.setAttribute("data-sys", "dark");
-        else host.removeAttribute("data-sys");
+        // the site's own mode needs no word on the root (it follows the night); the other one is written
+        const want = b.dataset.sysSet === "dark" ? "dark" : "light";
+        if (want === (night() ? "dark" : "light")) host.removeAttribute("data-sys");
+        else host.setAttribute("data-sys", want);
         sync(true);
       })
     );
     // anything else that flips the root (a second sheet, the tool) keeps this sheet honest
     new MutationObserver(() => sync(true)).observe(host, { attributes: true, attributeFilter: ["data-sys"] });
+    // the site's switch takes the sheet with it (any word the sheet's switch wrote is dropped)
+    new MutationObserver(() => { if (host.hasAttribute("data-sys")) host.removeAttribute("data-sys"); else sync(true); })
+      .observe(document.documentElement, { attributes: true, attributeFilter: ["data-night"] });
     sync(false);
   });
 </script>
