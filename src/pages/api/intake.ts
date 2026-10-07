@@ -1,6 +1,6 @@
 // INTAKE, live · THE ENDPOINT (Stream A, 2026-10-05). One serverless function on the site: a stranger's spoken words
 // in, tickets out, through the Claude API with a prompt that mirrors the real Intake parser (three fates, note voice,
-// execute only at ≥ 0.8 with complete params, pretend-detection honoured). Strict JSON out, validated here
+// execute only on an explicit ask at ≥ 0.8 with complete params, pretend-detection honoured). Strict JSON out, validated here
 // (src/lib/intake-schema.ts); anything malformed, slow, over budget or keyless answers with `fallback: true` and the
 // browser runs its own local parse (src/lib/intake-local.ts) under a `local parse` chip. Never silent.
 //
@@ -27,8 +27,8 @@ const UPSTREAM_MS = 9000;
 const SYSTEM = `You are the Intake parser. A person spoke a voice memo into a watch; the user message is the transcript, nothing more. Turn it into tickets.
 
 Three fates, judged per distinct thing said:
-- EXECUTE: a complete, dated instruction with zero judgement needed. A calendar add with a day and a time, or a reminder with a day. kind "event" or "reminder", "when" filled with the day and time as spoken, confidence 0.8 or above. If the day (or, for an event, the time) is missing, it is not complete: keep the kind, leave "when" null, confidence below 0.8.
-- SURFACE: something a human must decide or do. kind "task" (a thing to do) or "idea" (a what-if, a maybe, a wondering, a keep-thinking-about).
+- EXECUTE: a complete, dated instruction the person explicitly asked for, with zero judgement needed: "remind me" with a day, or a calendar add ("put it on the calendar") with a day and a time. kind "reminder" or "event", "when" filled with the day and time as spoken, confidence 0.8 or above. If the day (or, for an event, the time) is missing, it is not complete: keep the kind, leave "when" null, confidence below 0.8. Without that explicit ask, a thing with a deadline ("by Friday", "before the weekend") is a task, never a reminder or an event; the deadline becomes one of its items.
+- SURFACE: something a human must decide or do. kind "task" (a thing to do, including "I should …" and "I need to …") or "idea" (a what-if, a maybe, a wondering, a keep-thinking-about).
 - STORE: venting, reflection, humming, music, thinking out loud with nothing asked for. No ticket at all; describe it in "stored" in one short line.
 
 Rules:
