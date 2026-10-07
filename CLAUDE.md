@@ -46,8 +46,14 @@ session must follow.
   never change a file in place; re-encoding = a new 8-hex folder name.
   The HOST hooks StudioOne relies on (keep them on both sides):
   `#sgm[data-state]` standby → boot → live → powerdown (boot/on/live = the
-  site goes night; the host clicks `#pwr` when the room is < 35% visible),
-  `#pwr` (the power switch since R4; the host's `.pwr` overrides light it),
+  site goes night; the host clicks `#pwr` when the play ROOM — the device
+  AND its write-up card, 2026-10-07 — fills < 35% of the screen, so reading
+  the how-to keeps it on and the room dark),
+  `#pwr` (the power switch since R4, 92 × 40 since 2026-10-07; the host's
+  `.pwr` overrides light it; in standby THE RUN laps its border: a
+  cool-gradient ribbon, src/signal/view/pwr-run.ts precomputes a ~20 s
+  car-sim loop the browser plays via Web Animations — never a per-frame
+  script, never a style write per frame),
   `.sgm .device` (the 1280px box — `DEVICE_W` in types.ts since R3,
   2026-09-24 — the host zooms with `--sig-zoom` from BOTH axes: 98% of the
   column, or the room's height ÷ the device's height; `.sgm`'s parent is the
@@ -59,7 +65,10 @@ session must follow.
   largest), `.dormant` on a control whose effect waits on another, nothing
   printed beneath the device (signal-copy.ts is unmounted, Jon writes it).
   R4 (2026-09-24, Jon's render): its top is THE HEAD (Signal.astro, static):
-  `esc STOP` in the left corner, the three module TITLES over their towers in
+  `esc STOP` in the left corner (beside it since 2026-10-07 the round `?`
+  key, `[data-corner="help"][data-awake]`: it and the ? key scroll to the
+  write-up card's top, `[data-write-up]`, and answer in standby too), the
+  three module TITLES over their towers in
   their accents (words, never controls), and `#pwr` = a RED ROCKER SWITCH in
   the right corner (the disc is gone; every host hook kept: the host's `.pwr`
   block in StudioOne is written for the switch). THE BOW (2026-10-06, Jon's
@@ -270,9 +279,12 @@ session must follow.
   10px on a 1px line
   with the text 32px in; collapse under 820px of MODULE width; stacked,
   the watch is 70cqw and the phone 80cqw, centred. The host caps both
-  devices at 76svh on desks only (the cap lives inside the ≥820 container
-  query; unscoped it shrank the stacked phone) so they stand the same height
-  under the lamp. THE TOUCH SIGNAL (2026-09-22) is ONE vocabulary on both
+  devices on desks only (the cap lives inside the ≥820 container query;
+  unscoped it shrank the stacked phone): the phone 76svh; the watch 51.3svh
+  at 67.5% of its column since 2026-10-07 (Jon: "too in your face"; the
+  phone kept its size on his word), its run drawn at scale(0.85) with the
+  box squared by hand. NEVER `zoom` the run: zoomed, its reserve re-rounded
+  every frame and walked the whole page a pixel up and down. THE TOUCH SIGNAL (2026-09-22) is ONE vocabulary on both
   objects: `::after` the blue→purple gradient edge (masked ring / rim),
   `::before` its light (the watch's outward, the phone's inward), both on
   `touch-breathe` 2s ease-in-out 0.45↔1 — an EXACT COPY of the keyframe in
@@ -351,6 +363,11 @@ session must follow.
   `<style is:global>` block (`:global()` is NOT compiled there and the
   rule silently dies: /resume, 2026-09-21), and hand in inks through
   `--floor-ink` / `--floor-dim` / `--floor-hot`. Never re-inline a footer.
+  The four room studies wrap it in `case-study/room/RoomFloor.astro`
+  (2026-10-07): a hairline on the room's text column, the four studies in
+  the résumé's order (the current one dim, not a link), the floor beneath.
+  Case-study write-ups (RoomStory) and SIGNAL's card never fold (Jon,
+  2026-10-06/07: a reader there is already interested).
 - The homepage corner (top right) is the résumé link alone with its ember
   bead; no city. The "back to selected work" end-line is retired from
   every case study (dead link); the rail carries every exit. AwayRail
