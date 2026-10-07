@@ -4,10 +4,17 @@
 // (src/lib/intake-schema.ts); anything malformed, slow, over budget or keyless answers with `fallback: true` and the
 // browser runs its own local parse (src/lib/intake-local.ts) under a `local parse` chip. Never silent.
 //
-// GUARDS: same-origin only · the text capped at INTAKE_MAX_CHARS · max_tokens 800 · a 9 s upstream timeout (Vercel's
-// function budget is 10 s on Hobby) · no storage, no logs of content (a status word at most) · Cache-Control: no-store.
-// THE KEY: ANTHROPIC_API_KEY, a Vercel environment variable (production + preview) and the lane's local .env
-// (gitignored). Jon pastes it himself; its spend cap lives in the Anthropic console (recommended: $10 / month).
+// GUARDS: same-origin only · the text capped at INTAKE_MAX_CHARS · max_tokens 800 · a 9 s upstream budget for the
+// exchange and the call together (Vercel's function budget is 10 s on Hobby) · no storage, no logs of content (a
+// status word at most) · Cache-Control: no-store.
+// THE CREDENTIAL (2026-10-06, Jon: workload identity federation, no stored key): in production the function trades
+// Vercel's own OIDC token (the `x-vercel-oidc-token` request header: RS256, iss https://oidc.vercel.com/tolo-ai, a
+// two-hour life, no jti) for a short-lived Anthropic token at POST /v1/oauth/token (RFC 7523 jwt-bearer) under the
+// federation rule named by ANTHROPIC_FEDERATION_RULE_ID + ANTHROPIC_ORGANIZATION_ID + ANTHROPIC_SERVICE_ACCOUNT_ID
+// (+ ANTHROPIC_WORKSPACE_ID only if the rule spans workspaces). Those are IDs, not secrets; they live in Vercel's
+// environment so they stay out of this public repo. The minted token is cached per warm instance until 60 s before it
+// expires. ANTHROPIC_API_KEY still works where there is no OIDC token (local development). Spend is capped by the
+// workspace's prepaid credit.
 import type { APIRoute } from 'astro';
 import { INTAKE_MAX_CHARS, validateResult } from '../../lib/intake-schema.ts';
 
@@ -41,6 +48,51 @@ Example 1. Transcript: "Remind me Friday morning to pick up the dry cleaning, an
 Example 2. Transcript: "Honestly today was rough, nothing landed, I just needed to say it."
 {"tickets":[],"stored":"A rough day, said out loud. Nothing asked for."}`;
 
+const env = (name: string): string => String(import.meta.env[name] || process.env[name] || '').trim();
+
+/** the minted federation token, per warm instance */
+let minted: { token: string; until: number } | null = null;
+
+/** The request's Claude credential as headers: a federated bearer token when federation is configured and Vercel
+ *  handed this request its OIDC token, else the API key, else null (the caller falls back). Never logs a token. */
+const credential = async (request: Request, signal: AbortSignal): Promise<Record<string, string> | null> => {
+  const rule = env('ANTHROPIC_FEDERATION_RULE_ID');
+  const org = env('ANTHROPIC_ORGANIZATION_ID');
+  const account = env('ANTHROPIC_SERVICE_ACCOUNT_ID');
+  const workspace = env('ANTHROPIC_WORKSPACE_ID');
+  const assertion = request.headers.get('x-vercel-oidc-token') || '';
+  if (rule && org && account && assertion) {
+    if (minted && Date.now() < minted.until) return { authorization: `Bearer ${minted.token}` };
+    try {
+      const r = await fetch('https://api.anthropic.com/v1/oauth/token', {
+        method: 'POST',
+        signal,
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          grant_type: 'urn:ietf:params:oauth:grant-type:jwt-bearer',
+          assertion,
+          federation_rule_id: rule,
+          organization_id: org,
+          service_account_id: account,
+          ...(workspace ? { workspace_id: workspace } : {}),
+        }),
+      });
+      if (r.ok) {
+        const d = (await r.json()) as { access_token?: string; expires_in?: number };
+        if (d.access_token) {
+          minted = { token: d.access_token, until: Date.now() + Math.max(0, (Number(d.expires_in) || 0) - 60) * 1000 };
+          return { authorization: `Bearer ${d.access_token}` };
+        }
+      }
+      console.warn('[intake] exchange', r.status);                  // the status word only
+    } catch (e) {
+      console.warn('[intake] exchange', (e as Error)?.name === 'AbortError' ? 'timeout' : 'failed');
+    }
+  }
+  const key = env('ANTHROPIC_API_KEY');
+  return key ? { 'x-api-key': key } : null;
+};
+
 const json = (body: unknown, status = 200): Response =>
   new Response(JSON.stringify(body), { status, headers: { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store' } });
 
@@ -71,16 +123,15 @@ export const POST: APIRoute = async ({ request }) => {
   if (!text) return json({ error: 'empty' }, 400);
   if (text.length > INTAKE_MAX_CHARS) return json({ error: 'long', fallback: true }, 413);
 
-  const key = import.meta.env.ANTHROPIC_API_KEY || process.env.ANTHROPIC_API_KEY || '';
-  if (!key) return json({ error: 'no key', fallback: true }, 503);
-
   const ac = new AbortController();
   const timer = setTimeout(() => ac.abort(), UPSTREAM_MS);
   try {
+    const auth = await credential(request, ac.signal);
+    if (!auth) return json({ error: 'no key', fallback: true }, 503);
     const r = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       signal: ac.signal,
-      headers: { 'content-type': 'application/json', 'x-api-key': key, 'anthropic-version': '2023-06-01' },
+      headers: { 'content-type': 'application/json', ...auth, 'anthropic-version': '2023-06-01' },
       body: JSON.stringify({
         model: MODEL,
         max_tokens: MAX_TOKENS,
