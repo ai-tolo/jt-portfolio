@@ -10,7 +10,6 @@
 // flips at once either way; only the picture of it is animated.
 
 const WINDOW_MS = 900; // a change this soon after a press counts as the press's
-const DURATION = 480;
 
 let hand = { t: -Infinity, x: NaN, y: NaN };
 addEventListener("pointerdown", (e) => { hand = { t: performance.now(), x: e.clientX, y: e.clientY }; }, { capture: true, passive: true });
@@ -38,22 +37,18 @@ export function setNight(on: boolean, apply: () => void, from?: Element | null) 
   }
   hand = { t: -Infinity, x: NaN, y: NaN }; // one press, one reveal
   running = true;
+  // the whole motion is the stylesheet's (tokens.css, keyed on html[data-lights]):
+  // it exists the moment the transition's layers do, so no frame ever shows the
+  // wrong one. Here only the circle's centre and full radius are handed over.
   const root = document.documentElement;
-  // the light is always the moving part: going dark, the OLD (lit) picture sits
-  // on top and shrinks into the switch; going light, the NEW one grows out of it
-  root.toggleAttribute("data-lights-out", on);
+  root.style.setProperty("--lights-x", `${x}px`);
+  root.style.setProperty("--lights-y", `${y}px`);
+  root.style.setProperty("--lights-max", `${Math.ceil(Math.hypot(Math.max(x, innerWidth - x), Math.max(y, innerHeight - y)))}px`);
+  root.dataset.lights = on ? "off" : "on";
   const t = vt.call(document, apply);
-  const r = Math.hypot(Math.max(x, innerWidth - x), Math.max(y, innerHeight - y));
-  const full = `circle(${r}px at ${x}px ${y}px)`, none = `circle(0px at ${x}px ${y}px)`;
-  t.ready
-    .then(() => {
-      root.animate(
-        { clipPath: on ? [full, none] : [none, full] },
-        on
-          ? { duration: DURATION, easing: "cubic-bezier(.55, 0, .8, .4)", pseudoElement: "::view-transition-old(root)", fill: "forwards" }
-          : { duration: DURATION, easing: "cubic-bezier(.2, .6, .35, 1)", pseudoElement: "::view-transition-new(root)" },
-      );
-    })
-    .catch(() => {});
-  t.finished.catch(() => {}).finally(() => { running = false; root.removeAttribute("data-lights-out"); });
+  t.finished.catch(() => {}).finally(() => {
+    running = false;
+    delete root.dataset.lights;
+    for (const p of ["--lights-x", "--lights-y", "--lights-max"]) root.style.removeProperty(p);
+  });
 }

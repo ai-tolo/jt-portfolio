@@ -173,13 +173,29 @@ img {
 
 /* THE LIGHTS (2026-10-07): night-reveal.ts moves the LIGHT as a circle on
    the switch that changed it; the default cross-fade is off so only that
-   circle moves (no view-transition is named anywhere else). Going dark the
-   lit picture (old) rides on top and shrinks into the switch */
+   circle moves (no view-transition is named anywhere else) */
 ::view-transition-old(root),
 ::view-transition-new(root) {
   animation: none;
   mix-blend-mode: normal;
 }
-html[data-lights-out]::view-transition-old(root) {
-  z-index: 1;
+@property --lights-t {
+  syntax: "<number>";
+  inherits: false;
+  initial-value: 0;
 }
+/* lights OFF: the dark (new) is uncovered around a hole of light that
+   shrinks into the switch; lights ON: the light (new) grows out of it.
+   --lights-x/-y/-max come from night-reveal.ts; the animation lives here so
+   it is in place from the transition's first frame */
+html[data-lights="off"]::view-transition-new(root) {
+  -webkit-mask-image: radial-gradient(circle at var(--lights-x) var(--lights-y), transparent calc(var(--lights-t) * var(--lights-max)), #000 calc(var(--lights-t) * var(--lights-max) + 1px));
+  mask-image: radial-gradient(circle at var(--lights-x) var(--lights-y), transparent calc(var(--lights-t) * var(--lights-max)), #000 calc(var(--lights-t) * var(--lights-max) + 1px));
+  animation: lights-off 480ms cubic-bezier(.3, 0, .6, 1) both;
+}
+html[data-lights="on"]::view-transition-new(root) {
+  clip-path: circle(calc(var(--lights-t) * var(--lights-max)) at var(--lights-x) var(--lights-y));
+  animation: lights-on 480ms cubic-bezier(.2, .6, .35, 1) both;
+}
+@keyframes lights-off { from { --lights-t: 1; } to { --lights-t: 0; } }
+@keyframes lights-on { from { --lights-t: 0; } to { --lights-t: 1; } }
