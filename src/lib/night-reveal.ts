@@ -1,6 +1,8 @@
 // THE LIGHTS (Jon, 2026-10-07): when a hand changes the room's light (the
-// instrument's power switch, the night toggle, Esc), the new light spreads
-// as a circle from where the hand was, ~half a second, then it's done.
+// instrument's power switch, the night toggle, Esc), the switch is the
+// light's source: lights OFF, the light pulls back into the switch and the
+// dark is what's left; lights ON, the light pours out of it again. A circle
+// on where the hand was, ~half a second, then it's done.
 // Snappy first: any change no hand made in the last moment (powering off by
 // scrolling away, the page's first paint) stays instant, as do reduced
 // motion, a hidden tab, a browser without view transitions, and a change
@@ -36,15 +38,22 @@ export function setNight(on: boolean, apply: () => void, from?: Element | null) 
   }
   hand = { t: -Infinity, x: NaN, y: NaN }; // one press, one reveal
   running = true;
+  const root = document.documentElement;
+  // the light is always the moving part: going dark, the OLD (lit) picture sits
+  // on top and shrinks into the switch; going light, the NEW one grows out of it
+  root.toggleAttribute("data-lights-out", on);
   const t = vt.call(document, apply);
   const r = Math.hypot(Math.max(x, innerWidth - x), Math.max(y, innerHeight - y));
+  const full = `circle(${r}px at ${x}px ${y}px)`, none = `circle(0px at ${x}px ${y}px)`;
   t.ready
     .then(() => {
-      document.documentElement.animate(
-        { clipPath: [`circle(0px at ${x}px ${y}px)`, `circle(${r}px at ${x}px ${y}px)`] },
-        { duration: DURATION, easing: "cubic-bezier(.4, 0, .2, 1)", pseudoElement: "::view-transition-new(root)" },
+      root.animate(
+        { clipPath: on ? [full, none] : [none, full] },
+        on
+          ? { duration: DURATION, easing: "cubic-bezier(.55, 0, .8, .4)", pseudoElement: "::view-transition-old(root)", fill: "forwards" }
+          : { duration: DURATION, easing: "cubic-bezier(.2, .6, .35, 1)", pseudoElement: "::view-transition-new(root)" },
       );
     })
     .catch(() => {});
-  t.finished.catch(() => {}).finally(() => { running = false; });
+  t.finished.catch(() => {}).finally(() => { running = false; root.removeAttribute("data-lights-out"); });
 }

@@ -1379,20 +1379,6 @@ const columns = (blocks: BuildBlock[]): StoryBlock[][] =>
   /* the watch's caption stands under the watch (Jon, 2026-09-24: under the
      run it left the screen), on the object's own left edge */
   #build-watch .wk-cap { padding-left: 0; }
-  /* GLASS (2026-10-07): one soft reflection on each object's screen, under
-     the device's own frame (the screen clips it; the PNG paints over its
-     edge). It drifts by transform from --gx/--gy (the script below); at rest
-     and on touch it sits where the pointer would be mid-room */
-  .work :global(:is(.intake-hero, .archive-hero) .screen::after) {
-    content: "";
-    position: absolute;
-    inset: -40%;
-    z-index: 50;
-    pointer-events: none;
-    background: linear-gradient(118deg, transparent 38%, rgba(255, 255, 255, 0.065) 47%, rgba(255, 255, 255, 0.02) 54%, transparent 62%);
-    transform: translate3d(calc((var(--gx, 0.5) - 0.5) * 18%), calc((var(--gy, 0.5) - 0.5) * 8%), 0);
-    transition: transform 0.6s cubic-bezier(0.2, 0.7, 0.3, 1);
-  }
   :global(.wk:has(.intake-hero.s6) .wk-cap) { --cap-signal: #34C759; animation: wk-cap-in 3.2s ease-out 0.3s both; }
   :global(.wk:has(.archive-hero.s6) .wk-cap) { --cap-signal: #b9701a; animation: wk-cap-in 3.2s ease-out 1.5s both; }
   @keyframes wk-cap-in {
@@ -3022,29 +3008,6 @@ const columns = (blocks: BuildBlock[]): StoryBlock[][] =>
   );
   syncNightBtn();
   applyNight();
-
-  // ── GLASS (2026-10-07): the watch's and the phone's screens carry one soft
-  // reflection (CSS, .screen::after). With a mouse it drifts a little as the
-  // pointer crosses the work room, as glass catches a light that moves with
-  // you: the pointer is read once a frame at most, written to the two screens
-  // only, and the reflection moves by transform (the compositor's job) with a
-  // slow ease so it never twitches. Touch and reduced motion keep it still.
-  const glassRoom = document.getElementById("work");
-  const glass = Array.from(document.querySelectorAll<HTMLElement>(".intake-hero .screen, .archive-hero .screen"));
-  if (glassRoom && glass.length && matchMedia("(hover: hover) and (pointer: fine)").matches
-      && !matchMedia("(prefers-reduced-motion: reduce)").matches) {
-    let gx = 0.5, gy = 0.5, queued = false;
-    glassRoom.addEventListener("pointermove", (e) => {
-      gx = e.clientX / innerWidth;
-      gy = e.clientY / innerHeight;
-      if (queued) return;
-      queued = true;
-      requestAnimationFrame(() => {
-        queued = false;
-        for (const g of glass) { g.style.setProperty("--gx", gx.toFixed(3)); g.style.setProperty("--gy", gy.toFixed(3)); }
-      });
-    }, { passive: true });
-  }
 
   // The instrument is observed, never edited — we only watch its data-state: boot →
   // the site goes night; powerdown/standby → the machine's claim on the
