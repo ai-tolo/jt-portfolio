@@ -220,6 +220,15 @@ session must follow.
   `display: none` (the strip's own display rule beats the attribute).
   The wallet holds exactly the manifest's tapes in every environment (the
   dev-only stand-in fill was removed 2026-09-22).
+  THE VOLUME (2026-10-07, Jon: a standard vertical slider right of the tape,
+  perpendicular to the timeline): `.ls-vol` on every slide, a 120px fader
+  standing on the rail's line 34px right of the tape (3px track, ink below a
+  13px round thumb); one level for all tapes (audio.volume = level², kept in
+  localStorage `uxj-tape-vol`); drag/click or arrows/Page/Home/End; no wheel;
+  pointer focus is dropped on release (never preventDefault its pointerdown:
+  that froze the site's cursor dot, which follows mousemove); hidden < 900px
+  and where a page can't set volume (iOS → `.au[data-novol]`). A first cut
+  ran the tape's full height: "wayyyy too long".
 - Carousel.astro has two modes: `slide` (translate) and `dissolve`
   (slides stacked in one grid cell, crossfade + a 300ms top-down render
   with a scan on the arriving slide, `data-on` on the active slide, a

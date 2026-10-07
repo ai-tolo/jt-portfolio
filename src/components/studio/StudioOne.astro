@@ -486,6 +486,8 @@ const columns = (blocks: BuildBlock[]): StoryBlock[][] =>
             width="1600" height="979" alt="" loading="eager" decoding="async" />
         </button>
         <div class="ls-deck ls-deck-dead" aria-hidden="true"><i class="ls-rail"></i></div>
+        {/* the volume (2026-10-07): one level for every tape, a fader on each slide so it never moves */}
+        <div class="ls-vol" role="slider" tabindex="0" aria-label="Volume" aria-orientation="vertical" aria-valuemin="0" aria-valuemax="100" aria-valuenow="100" aria-valuetext="100%" data-au-vol><i class="ls-vol-track"></i><i class="ls-vol-fill"></i><i class="ls-vol-thumb"></i></div>
       </article>
       {tapes.map(({ t, fill }, i) => (
         <article class="ls" style={`--cs-tint:${fill.day};--cs-tint-night:${fill.night}`}>
@@ -539,6 +541,7 @@ const columns = (blocks: BuildBlock[]): StoryBlock[][] =>
           <div class="ls-deck">
             <Transport src={t.src!} peaks={t.peaks ?? undefined} title={t.title} accent="var(--ember)" compact />
           </div>
+          <div class="ls-vol" role="slider" tabindex="0" aria-label="Volume" aria-orientation="vertical" aria-valuemin="0" aria-valuemax="100" aria-valuenow="100" aria-valuetext="100%" data-au-vol><i class="ls-vol-track"></i><i class="ls-vol-fill"></i><i class="ls-vol-thumb"></i></div>
         </article>
       ))}
     </Carousel>
@@ -2229,6 +2232,77 @@ const columns = (blocks: BuildBlock[]): StoryBlock[][] =>
     width: var(--cs-w);
     margin: clamp(24px, 7vh, 72px) auto 0;
   }
+  /* THE VOLUME (2026-10-07, Jon: "a traditional standard vertical slider bar
+     … perpendicular to the timeline and right of the tape"; a first cut ran
+     the tape's whole height: "wayyyy too long"): a short standard fader,
+     120px, standing on the rail's line (22px above the slide's foot), 34px
+     right of the tape. A 3px rounded track, ink below the round thumb, the
+     hairline above; the band is 44px wide (the rail's own seek band). Desks
+     only, and only where the browser lets a page set a level (iOS does not:
+     the script marks the room data-novol). No wheel: it never takes the
+     page's scroll. */
+  .ls {
+    position: relative;
+  }
+  .ls-vol {
+    --vol: 1;
+    position: absolute;
+    left: calc(50% + var(--cs-w) / 2 + 12px);
+    bottom: 22px;
+    width: 44px;
+    height: 120px;
+    cursor: ns-resize;
+    touch-action: none;
+    user-select: none;
+    -webkit-user-select: none;
+    outline: none;
+  }
+  .ls-vol i {
+    position: absolute;
+    left: 50%;
+    display: block;
+    pointer-events: none;
+  }
+  .ls-vol-track {
+    top: 0;
+    bottom: 0;
+    width: 3px;
+    margin-left: -1.5px;
+    border-radius: 2px;
+    background: var(--au-seam);
+  }
+  .ls-vol-fill {
+    bottom: 0;
+    width: 3px;
+    margin-left: -1.5px;
+    border-radius: 2px;
+    height: calc(var(--vol) * 100%);
+    background: var(--au-ink);
+  }
+  .ls-vol-thumb {
+    bottom: calc(var(--vol) * 100%);
+    width: 13px;
+    height: 13px;
+    margin: 0 0 -6.5px -6.5px;
+    border-radius: 50%;
+    background: var(--au-ink);
+    transition: transform 120ms ease;
+  }
+  .ls-vol:hover .ls-vol-thumb,
+  .ls-vol[data-dragging] .ls-vol-thumb {
+    transform: scale(1.25);
+  }
+  .ls-vol:focus-visible .ls-vol-thumb {
+    box-shadow: 0 0 0 3px var(--bg), 0 0 0 4px var(--au-ink);
+  }
+  .au[data-novol] .ls-vol {
+    display: none;
+  }
+  @media (max-width: 899px) {
+    .ls-vol {
+      display: none;
+    }
+  }
   #soundlab .ls-deck :global(.tp) {
     display: contents;
   }
@@ -3117,6 +3191,62 @@ const columns = (blocks: BuildBlock[]): StoryBlock[][] =>
   // more) drive the carousel's own chassis buttons; mechanics untouched.
   const auRoom = document.getElementById("soundlab");
   if (auRoom) {
+    // ── THE VOLUME (2026-10-07): one level for every tape, kept per viewer.
+    // The fader's position is the level; the audio hears its square (a
+    // level feels even along the travel). Drag or click the band, or the
+    // arrows / Page / Home / End once focused; a mouse never leaves focus on
+    // it (the page's keys stay the page's), and there is no wheel. Where a
+    // page cannot set a level (iOS fixes media volume at 1) it never shows.
+    const faders = Array.from(auRoom.querySelectorAll<HTMLElement>("[data-au-vol]"));
+    const tapesAudio = () => Array.from(auRoom.querySelectorAll<HTMLAudioElement>("[data-tp-audio]"));
+    const VOL_KEY = "uxj-tape-vol";
+    const probe = document.createElement("audio");
+    probe.volume = 0.5;
+    if (probe.volume !== 0.5) auRoom.querySelector(".au")?.toggleAttribute("data-novol", true);
+    let vol = 1;
+    try { const v = parseFloat(localStorage.getItem(VOL_KEY) ?? ""); if (v >= 0 && v <= 1) vol = v; } catch {}
+    const setVol = (v: number, save = true) => {
+      vol = Math.round(Math.min(1, Math.max(0, v)) * 100) / 100;
+      tapesAudio().forEach((a) => { a.volume = vol * vol; });
+      const pct = String(Math.round(vol * 100));
+      faders.forEach((f) => {
+        f.style.setProperty("--vol", String(vol));
+        f.setAttribute("aria-valuenow", pct);
+        f.setAttribute("aria-valuetext", vol === 0 ? "muted" : `${pct}%`);
+      });
+      if (save) { try { localStorage.setItem(VOL_KEY, String(vol)); } catch {} }
+    };
+    // a tape that loads later starts at the room's level
+    tapesAudio().forEach((a) => a.addEventListener("loadedmetadata", () => { a.volume = vol * vol; }));
+    faders.forEach((f) => {
+      const at = (y: number) => { const r = f.getBoundingClientRect(); return (r.bottom - y) / r.height; };
+      f.addEventListener("pointerdown", (e) => {
+        if (e.button !== 0) return;
+        // (no preventDefault: it would also swallow the mousemoves the site's cursor dot follows; the
+        // pointer's focus is dropped on release instead, and the band selects no text)
+        f.setPointerCapture(e.pointerId);
+        f.toggleAttribute("data-dragging", true);
+        setVol(at(e.clientY));
+      });
+      f.addEventListener("pointermove", (e) => { if (f.hasPointerCapture(e.pointerId)) setVol(at(e.clientY)); });
+      const end = (e: PointerEvent) => {
+        if (f.hasPointerCapture(e.pointerId)) f.releasePointerCapture(e.pointerId);
+        f.removeAttribute("data-dragging");
+        f.blur(); // a pointer never leaves focus here: the page's keys stay the page's
+      };
+      f.addEventListener("pointerup", end);
+      f.addEventListener("pointercancel", end);
+      f.addEventListener("keydown", (e) => {
+        const step = ({ ArrowUp: 0.05, ArrowRight: 0.05, ArrowDown: -0.05, ArrowLeft: -0.05, PageUp: 0.2, PageDown: -0.2 } as Record<string, number>)[e.key];
+        if (step !== undefined) setVol(vol + step);
+        else if (e.key === "Home") setVol(0);
+        else if (e.key === "End") setVol(1);
+        else return;
+        e.preventDefault();
+      });
+    });
+    setVol(vol, false);
+
     auRoom.querySelectorAll<HTMLElement>(".ls").forEach((ls) => {
       const tape = ls.querySelector<HTMLButtonElement>("[data-cs-tape]");
       const toggle = ls.querySelector<HTMLButtonElement>("[data-tp-toggle]");
