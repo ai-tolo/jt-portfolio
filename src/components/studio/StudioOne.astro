@@ -2107,6 +2107,23 @@ const columns = (blocks: BuildBlock[]): StoryBlock[][] =>
     height: 100%;
     object-fit: cover;
   }
+  /* THE TAPE'S SCREEN (2026-10-07): while a tape plays, tape-crt.ts lays a
+     CRT canvas over its label (the label only: the shell's cut-out frames
+     it). It fades in on play and out on pause; the <img> under it is the
+     fallback and what every tape shows at rest */
+  .cs-label :global(.cs-crt) {
+    position: absolute;
+    inset: 0;
+    display: block;
+    width: 100%;
+    height: 100%;
+    opacity: 0;
+    transition: opacity 600ms ease;
+    pointer-events: none;
+  }
+  .cs-label :global(.cs-crt[data-on]) {
+    opacity: 1;
+  }
   /* the hubs, under the shell's two circular cut-outs (centres 630.5,570
      and 1507,570 of 2132 × 1305, radius 133): a still BASE disc (the
      original render's hub — ring, highlight and all, radius 150 so it
@@ -2707,6 +2724,7 @@ const columns = (blocks: BuildBlock[]): StoryBlock[][] =>
 </style>
 
 <script>
+  import { tapeCrt } from "./tape-crt";
   // The sidebar is always present; scroll-spy highlights the section in
   // view (none while the hero owns the viewport). IO-triggered recompute —
   // no rAF, no per-frame scroll work.
@@ -3257,6 +3275,7 @@ const columns = (blocks: BuildBlock[]): StoryBlock[][] =>
       const live = (on: boolean) => {
         ls.toggleAttribute("data-playing", on);
         tape.setAttribute("aria-label", `${on ? "Pause" : "Play"} ${title}`);
+        tapeCrt(ls, on); // the label runs through a CRT while the tape plays
       };
       audio.addEventListener("play", () => live(true));
       audio.addEventListener("pause", () => live(false));
