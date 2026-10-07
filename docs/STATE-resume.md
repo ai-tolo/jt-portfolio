@@ -24,25 +24,26 @@ Model note: the whole lane ran on Opus 5.5 (the session's model from the start);
   ledger, blue #2a62d9 or #2961d7 / #7aa2ff for the parser and the keys). Each tab sits right before its own panel in
   the DOM. Words 409 → 234 (agent 69 → 55, ledger 236 → 102, parser 70 → 53, keys 34 → 24).
 
+- **Jon's pick** (2026-10-06): "i like direction b but don't round the corners." B is now the page's only screen
+  sheet (its rules unconditional in PrintResume.astro; `--sheet-w` 880px, `--sheet-pad` clamp(20px, 5vw, 56px)),
+  direction A and the `?dir=` switch are deleted, the old red night-ink block is gone (B's `--rb-*` inks flip at
+  night), and every box on the page is square: the card, the sheets beneath, the case-study tabs, the proof panel,
+  and the cards, keycaps, nodes, buttons and bars inside the proofs (dots stay round). No shadows.
+
 ## Verified (2026-10-06, on the built site served from dist/client)
-- Build exit 0. Headless at 1440 and 375 (touch), day and night, both directions: scrollWidth = viewport, 0
+- Build exit 0. Headless at 1440 and 375 (touch), day and night (both directions before the pick, B square after it): scrollWidth = viewport, 0
   console errors, each proof opens on a click and closes on Esc, every panel on the room's ground, the keyboard path
   (Enter opens, Tab lands inside the open proof, Esc closes).
 - PDF: 1 page, ~23pt spare, headings in order, links mailto / tel / www.uxjon.com / the-console, no tab words, no
   em dashes, no spurious spaces; public/jonathan-tollefson-resume.pdf matches the build.
 
 ## Open
-- Jon's pick between `?dir=a` and `?dir=b`. If A: delete the `html[data-rdir="b"]` blocks (PrintResume.astro's
-  "?dir=b" section, index.astro's "?dir=b" paper block). If B: make those rules unconditional (drop the
-  `html[data-rdir="b"]` prefix) and set B's `--sheet-w` / `--sheet-pad` as the defaults. Either way delete the inline
-  `?dir=` script, then rebuild, re-run the QA pass and reprint the PDF.
 - Jon's edits to the sheet's text (the block in the lane report).
 - Raylu's descriptor: the sheet says "an AI chat platform" (Jon's June master); raylu.astro says "an ML-tooling
   startup". Jon knows which is true.
 
 ## Links
 - Résumé (this Mac): http://localhost:4640/resume/ · on the tailnet: http://100.89.96.67:4640/resume/
-- Direction A: http://100.89.96.67:4640/resume/?dir=a · direction B: http://100.89.96.67:4640/resume/?dir=b
 - The PDF: http://100.89.96.67:4640/jonathan-tollefson-resume.pdf
 - Contact sheets: ~/Desktop/resume-before-after.png · resume-before.png · resume-dir-a.png · resume-dir-b.png
 - Captures: ~/Documents/studio-build/resume-read-2026-10-06/ (before/, text/, design/, after/)

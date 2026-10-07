@@ -70,16 +70,6 @@ const STUDIES = [
   title="Résumé · Jonathan Tollefson"
   description="Résumé of Jonathan Tollefson, design engineer: front-end, audio tools, and applied AI."
 >
-  {/* ?dir= (lane R, 2026-10-06, while Jon picks): a = the printed sheet kept,
-      b = the sheet re-set in the work room's material. Set before the sheet
-      parses, so neither direction flashes the other. Deleted with the loser. */}
-  <script is:inline>
-    (() => {
-      let d = "a";
-      try { if (new URLSearchParams(location.search).get("dir") === "b") d = "b"; } catch {}
-      document.documentElement.setAttribute("data-rdir", d);
-    })();
-  </script>
   <div class="resume-world" data-resume-view="paper">
     <AwayRail resume={false} home="house" />
     <main class="resume-page">
@@ -346,10 +336,8 @@ const STUDIES = [
       /* the work room's material for the chrome (2026-10-06): its three faces,
          hairlines at 18 % ink; the sheet's width and inner gutter are shared by
          the actions row, the case studies and the floor so all four align */
-      --sheet-w: 8.5in;
-      /* 46px = the PDF's 0.48in side margin, so the screen sheet wraps every
-         line exactly where the printed page does */
-      --sheet-pad: clamp(22px, 5vw, 46px);
+      --sheet-w: 880px;
+      --sheet-pad: clamp(20px, 5vw, 56px);
       --r-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
       --r-sans: "Instrument Sans", "Helvetica Neue", Arial, sans-serif;
       --r-display: "Outfit", "Instrument Sans", "Helvetica Neue", Arial, sans-serif;
@@ -490,8 +478,8 @@ const STUDIES = [
       inset: 0 calc(var(--n) * 4px);
       z-index: -1;
       background: #ffffff;
-      border: 1px solid rgba(90, 74, 50, 0.25);
-      border-radius: 4px;
+      border: 1px solid color-mix(in oklab, #141210 16%, transparent);
+      border-radius: 0;
       transform: translateY(calc(var(--n) * 5px));
       transition: transform 320ms cubic-bezier(0.2, 0.7, 0.3, 1) calc(var(--n) * 60ms), background 560ms ease, border-color 560ms ease;
     }
@@ -500,15 +488,11 @@ const STUDIES = [
     .r-stack i:nth-child(1) { --n: 1; z-index: -1; }
     .r-stack i:nth-child(2) { --n: 2; z-index: -2; }
     .r-stack i:nth-child(3) { --n: 3; z-index: -3; }
-    .r-stack i:nth-child(4) { --n: 4; z-index: -4; box-shadow: 0 26px 60px -30px rgba(20, 12, 4, 0.45); }
-    /* the stack's foot carries the drop shadow now; the top page keeps only a
-       contact shadow, so the edges beneath it stay paper-white */
-    .paper-stage .sheet-wrap .print-resume {
-      box-shadow: 0 1px 3px rgba(20, 12, 4, 0.1);
-    }
+    .r-stack i:nth-child(4) { --n: 4; z-index: -4; }
+    /* flat paper on paper (the work room's recipe): no shadows anywhere */
     html[data-night] .r-stack i {
-      background: #0b0e14;
-      border-color: #1c222e;
+      background: #1c1c1f;
+      border-color: color-mix(in oklab, #e8ecf4 16%, transparent);
     }
     .r-stack-tabs {
       position: absolute;
@@ -526,8 +510,8 @@ const STUDIES = [
       height: 24px;
       margin-top: -12px; /* 12px stands above the résumé's top edge; the rest is tucked under it */
       background: #ffffff;
-      border: 1px solid rgba(90, 74, 50, 0.25);
-      border-radius: 3px 3px 0 0;
+      border: 1px solid color-mix(in oklab, #141210 16%, transparent);
+      border-radius: 0;
       transition: transform 160ms cubic-bezier(0.2, 0.7, 0.3, 1), background 560ms ease, border-color 560ms ease;
     }
     /* a 34 × 44 hand, reaching up into the clear ground above the paper */
@@ -545,8 +529,8 @@ const STUDIES = [
       outline-offset: 2px;
     }
     html[data-night] .r-stack-tab {
-      background: #0b0e14;
-      border-color: #1c222e;
+      background: #1c1c1f;
+      border-color: color-mix(in oklab, #e8ecf4 16%, transparent);
     }
     .r-stack-word {
       position: absolute;
@@ -602,11 +586,19 @@ const STUDIES = [
       }
     }
 
-    /* ── the sheet, as paper ── */
+    /* ── the sheet, as the work room's paper (Jon's pick, 2026-10-06: "i like
+       direction b but don't round the corners"): one white card on the
+       ground, 1px at 16 % ink, square, no shadow; its type is re-set on
+       screen inside PrintResume.astro, and print keeps the Geist sheet. ── */
     .paper-stage {
       display: grid;
       justify-items: center;
       padding: 0 20px 60px;
+    }
+    @media (max-width: 899px) {
+      .paper-stage {
+        padding: 0 14px 60px;
+      }
     }
     .sheet-wrap {
       position: relative;
@@ -615,60 +607,16 @@ const STUDIES = [
     .paper-stage .print-resume {
       width: 100%;
       background: #ffffff;
-      padding: clamp(26px, 5vw, 58px) var(--sheet-pad);
-      border: 1px solid rgba(90, 74, 50, 0.25);
-      border-radius: 4px;
-      box-shadow: 0 26px 60px -30px rgba(20, 12, 4, 0.45);
-      transition: background 560ms ease, border-color 560ms ease;
-    }
-    /* night: the paper goes dark with the room (Jon's sheet rule, made
-       sitewide 2026-08-28) — same clothes as the homepage sheets; the
-       sheet's INKS flip inside PrintResume.astro, screen-only */
-    html[data-night] .paper-stage .print-resume {
-      background: #0b0e14;
-      border-color: #1c222e;
-    }
-
-    /* ── ?dir=b: the sheet re-set as the work room's paper (lane R, 2026-10-06,
-       while Jon picks). One white card on the ground, the story card's recipe
-       (1px at 16 % ink, 28px corners, no shadow); its type is re-set inside
-       PrintResume.astro. The pages beneath take the same corners. ── */
-    html[data-rdir="b"] .resume-world {
-      --sheet-w: 880px;
-      --sheet-pad: clamp(20px, 5vw, 56px);
-    }
-    html[data-rdir="b"] .paper-stage .print-resume,
-    html[data-rdir="b"] .paper-stage .sheet-wrap .print-resume {
-      background: #ffffff;
       padding: clamp(28px, 5vw, 56px) var(--sheet-pad) clamp(28px, 5vw, 48px);
       border: 1px solid color-mix(in oklab, #141210 16%, transparent);
-      border-radius: 28px;
-      box-shadow: none;
+      border-radius: 0;
+      transition: background 560ms ease, border-color 560ms ease;
     }
-    html[data-rdir="b"][data-night] .paper-stage .print-resume,
-    html[data-rdir="b"][data-night] .paper-stage .sheet-wrap .print-resume {
+    /* night: the room's night card; the sheet's inks flip inside
+       PrintResume.astro, screen-only */
+    html[data-night] .paper-stage .print-resume {
       background: #1c1c1f;
       border-color: color-mix(in oklab, #e8ecf4 16%, transparent);
-    }
-    html[data-rdir="b"] .r-stack i {
-      border-radius: 28px;
-      border-color: color-mix(in oklab, #141210 16%, transparent);
-    }
-    html[data-rdir="b"] .r-stack i:nth-child(4) {
-      box-shadow: none;
-    }
-    html[data-rdir="b"] .r-stack-tab {
-      border-color: color-mix(in oklab, #141210 16%, transparent);
-    }
-    html[data-rdir="b"][data-night] .r-stack i,
-    html[data-rdir="b"][data-night] .r-stack-tab {
-      background: #1c1c1f;
-      border-color: color-mix(in oklab, #e8ecf4 16%, transparent);
-    }
-    @media (max-width: 899px) {
-      html[data-rdir="b"] .paper-stage {
-        padding: 0 14px 60px;
-      }
     }
 
     /* ── the marks: index tabs cut from the sheet's outer edge (Jon,
@@ -758,7 +706,7 @@ const STUDIES = [
       }
       html[data-night] .r-mark {
         --tab-ink: #e8ecf4;
-        --tab-paper: #0b0e14;
+        --tab-paper: #1c1c1f;
       }
       /* the depth move is the whole motion; the states still differ,
          they just arrive at once */
@@ -832,7 +780,7 @@ const STUDIES = [
       padding: clamp(16px, 3vw, 28px);
       background: var(--pf-ground);
       border: 1px solid var(--pf-line);
-      border-radius: 12px;
+      border-radius: 0;
       color: var(--pf-ink);
       font-family: var(--pf-sans);
     }
