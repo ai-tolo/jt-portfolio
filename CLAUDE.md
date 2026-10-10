@@ -239,18 +239,22 @@ session must follow.
   dots sit ABOVE the painted picture (`--lk-top`, measured) and the
   placard sits right under it (Jon, 2026-09-09).
 - THE SHEETS + BANDS (2026-10-10, Jon: titles above the items, each module
-  in one sheet that expands, for a first-time visitor). Every room opens with
-  a BAND = name + one line saying what it is (`.band` / `.band-name` /
-  `.band-what`; copy = `objects-copy.ts` title+dek per build, `BANDS` for
-  play/look/listen, all DRAFT). Each build is ONE SHEET (`.wk` = the old
+  in one sheet that expands, for a first-time visitor). The builds and SIGNAL
+  open with a BAND = name (Outfit 3.25rem; 2.5rem under 900) + one line
+  saying what it is (`.band` / `.band-name` / `.band-what`; copy =
+  `objects-copy.ts` title+dek per build, `BANDS.play`, all DRAFT). LOOK AND
+  LISTEN GET NO BAND and stay untouched (Jon: "i didn't ask that music /
+  drawings get titles or changed"). Each build is ONE SHEET (`.wk` = the old
   story card's white/hairline/28px): band → object + run + caption → the
   fold (hairline; the locked hook opens it as `.wk-lede`, then the story
   and under the hood; the sheet's lower edge is the handle). All five names
-  stand on one left edge: the 1080 column + `--sheet-pad` (48 / 20 under
-  900). Rooms that size by the viewport subtract `--band-room` (look's
-  picture, listen's `--cs-reserve`); SIGNAL's fit adds `.sig-band`'s height
-  to its reserve. AudioDex comes FIRST (the first rail mark names the
-  object "work" centres). The modules no longer get a `head` slot.
+  stand on one left edge: the 1080 column + `--sheet-pad` (56 / 20 under
+  900). One sheet rhythm: pad 56 · name→line 14 · band→object 56 ·
+  object→fold 56 · fold top 48; sheets 48–80 apart. SIGNAL's fit adds
+  `.sig-band`'s height to its reserve. AudioDex comes FIRST (the first rail
+  mark names the object "work" centres). The modules no longer get a `head`
+  slot, so the host re-applies the Archive's rail-centred-on-the-phone rule
+  (Jon, 2026-09-24) itself.
 - WORK is OBJECTS (2026-09-18; the ledger/matrix is DEAD): the room holds
   Jon's Claude Design modules, one per build, framed by words — the locked
   headline from builds-copy.ts above (the DRAFT dek under it was removed

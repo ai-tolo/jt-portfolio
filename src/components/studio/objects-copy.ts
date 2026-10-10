@@ -54,11 +54,10 @@ export const ARCHIVE_COPY = {
   caption: "One word typed into the app I built: six recordings it had already named, then the twelve seconds inside one that match.",
 };
 
-// THE BANDS (2026-10-10): the same title band over every other room — the
-// name, then one line saying what it is. ⚠️ DRAFT: Jon owns every word.
-// look: all fifteen pictures in the manifest are Procreate on iPad, 2021–2026.
+// THE BANDS (2026-10-10): SIGNAL's title over the instrument — the name,
+// then one line saying what it is. ⚠️ DRAFT: Jon owns every word. (Look and
+// listen keep no band: Jon, 2026-10-10, "i didn't ask that music / drawings
+// get titles or changed".)
 export const BANDS = {
   play: { name: "SIGNAL", what: "An instrument that runs in this web page, played from your computer keyboard." },
-  look: { name: "Drawings", what: "Made in Procreate on an iPad, 2021 to 2026." },
-  listen: { name: "Music", what: "Tracks I've made, some built from field recordings and voice memos." },
 };
