@@ -31,7 +31,7 @@ const halves = (rows: SpecRow[]): SpecRow[][] => {
   const cut = Math.ceil(rows.length / 2);
   return [rows.slice(0, cut), rows.slice(cut)];
 };
-import { WATCH_COPY, ARCHIVE_COPY, BANDS } from "./objects-copy";
+import { WATCH_COPY, ARCHIVE_COPY } from "./objects-copy";
 import SiteFloor from "./SiteFloor.astro";
 
 // The one-liner. Jon rewrites this string at will (his voice: plain,
@@ -387,10 +387,6 @@ const columns = (blocks: BuildBlock[]): StoryBlock[][] =>
       fits it and watches #sgm[data-state]; #play is the anchor + spy target. */}
   <section class="live-signal room" id="play" aria-label="Signal — a playable instrument" data-signal-host>
     <div class="sig-desktop">
-      <header class="band room-band sig-band">
-        <h2 class="band-name">{BANDS.play.name}</h2>
-        <p class="band-what">{BANDS.play.what}</p>
-      </header>
       <Signal />
       {/* the instrument's card (2026-09-30): the write-up, how to play, under
           the hood, where it came from — inside .sig-desktop, so it exists only
@@ -1260,8 +1256,7 @@ const columns = (blocks: BuildBlock[]): StoryBlock[][] =>
      shorter. */
   :global(:root) {
     --mbar-h: 60px; /* the phone bar's pinned height; rooms subtract it */
-    /* THE SHEETS (2026-10-10): a sheet's inner gutter, which is also every
-       room band's inset, so all titles share one left edge */
+    /* THE SHEETS (2026-10-10): a sheet's inner gutter */
     --sheet-pad: 56px;
   }
   @media (max-width: 899px) {
@@ -1369,8 +1364,8 @@ const columns = (blocks: BuildBlock[]): StoryBlock[][] =>
   @media (max-width: 899px) {
     .wk { border-radius: 20px; }
   }
-  /* THE BAND (2026-10-10): the name, then one line saying what it is — the
-     same over every build and every room, on one left edge */
+  /* THE BAND (2026-10-10): the build's name, then one line saying what it
+     is — the same over both sheets */
   .band {
     --bd-ink: var(--ink);
     --bd-dim: var(--dim);
@@ -1395,17 +1390,6 @@ const columns = (blocks: BuildBlock[]): StoryBlock[][] =>
     color: color-mix(in oklab, var(--bd-ink) 72%, transparent);
     text-wrap: balance;
     transition: color 560ms ease;
-  }
-  /* a room's band stands on the work column (1080, centred) at the sheet's
-     inset, so its name lines up with the names inside the sheets */
-  .room-band {
-    box-sizing: border-box;
-    width: min(1080px, calc(100% - 48px));
-    margin: 0 auto 32px;
-    padding-inline: var(--sheet-pad);
-  }
-  @media (max-width: 899px) {
-    .room-band { width: calc(100% - 28px); }
   }
   @media (max-width: 899px) {
     .band { margin-bottom: 36px; }
@@ -3127,9 +3111,7 @@ const columns = (blocks: BuildBlock[]): StoryBlock[][] =>
       const cs = getComputedStyle(sigWrap);
       const w = sigWrap.clientWidth - (parseFloat(cs.paddingLeft) || 0) - (parseFloat(cs.paddingRight) || 0);
       if (w <= 0) return; // hidden (touch layout) — nothing to fit
-      // the room's ground above and below the device (it may stand into the room's padding), plus the band over it (2026-10-10)
-      const band = sigBox.querySelector<HTMLElement>(".sig-band");
-      const reserve = 60 + (band ? band.offsetHeight + (parseFloat(getComputedStyle(band).marginBottom) || 0) : 0);
+      const reserve = 60; // the room's ground above and below the device (it may stand into the room's padding)
       const h = sigDev.offsetHeight || 878; // unzoomed (offsetHeight ignores zoom); 878 = types.ts DEVICE_H (THE BOW)
       const z = Math.max(0.25, Math.min((WIDTH_SHARE * w) / REF, Math.max(120, window.innerHeight - reserve) / h)).toFixed(4);
       if (z === last) return;

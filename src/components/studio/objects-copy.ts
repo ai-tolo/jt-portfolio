@@ -53,11 +53,3 @@ export const ARCHIVE_COPY = {
   // summers ago, found by one word. DRAFT, his to edit.
   caption: "One word typed into the app I built: six recordings it had already named, then the twelve seconds inside one that match.",
 };
-
-// THE BANDS (2026-10-10): SIGNAL's title over the instrument — the name,
-// then one line saying what it is. ⚠️ DRAFT: Jon owns every word. (Look and
-// listen keep no band: Jon, 2026-10-10, "i didn't ask that music / drawings
-// get titles or changed".)
-export const BANDS = {
-  play: { name: "SIGNAL", what: "An instrument that runs in this web page, played from your computer keyboard." },
-};
