@@ -31,7 +31,7 @@ const halves = (rows: SpecRow[]): SpecRow[][] => {
   const cut = Math.ceil(rows.length / 2);
   return [rows.slice(0, cut), rows.slice(cut)];
 };
-import { WATCH_COPY, ARCHIVE_COPY } from "./objects-copy";
+import { WATCH_COPY, ARCHIVE_COPY, BANDS } from "./objects-copy";
 import SiteFloor from "./SiteFloor.astro";
 
 // The one-liner. Jon rewrites this string at will (his voice: plain,
@@ -229,8 +229,8 @@ const columns = (blocks: BuildBlock[]): StoryBlock[][] =>
         track, one per object in the work room. The bead on a dash = that
         object centred on screen; the first shares the word's own knot, since
         "work" now frames the watch centred (its scroll-margin is set live). */}
-    <i class="rail-mark" data-mark-for="build-watch" data-center=".watch-col" aria-hidden="true"></i>
     <i class="rail-mark" data-mark-for="build-archive" data-center=".phone" aria-hidden="true"></i>
+    <i class="rail-mark" data-mark-for="build-watch" data-center=".watch-col" aria-hidden="true"></i>
     <span class="comet" data-comet aria-hidden="true">
       <i class="comet-track"></i>
       <i class="comet-fill"></i>
@@ -287,63 +287,25 @@ const columns = (blocks: BuildBlock[]): StoryBlock[][] =>
   {SHOW.has("work") && <section class="work room" id="work" aria-labelledby="work-t">
     <h2 id="work-t" class="sr-only">Work</h2>
     <div class="objects">
-      {/* ONE ARRANGEMENT for both objects (Jon's mockup, 2026-09-24): the hook
-          top-left, the object under it on the left axis, the run beside both
-          from the top with the caption at its foot — the module seats the
-          room's words in its own columns through its `head` and `cap` slots —
-          then the story, in a card that opens (closed, it shows its first
-          paragraph; it opens itself when the run ends untouched). The words
-          stay locked in builds-copy.ts. */}
-      <article class="wk" id="build-watch">
-        <IntakeHero class="obj obj-intake">
-          <h3 slot="head" class="wk-hook">{WATCH.headline}</h3>
-          <p slot="cap" class="wk-cap">{WATCH_COPY.caption}</p>
-        </IntakeHero>
-        <div class="wk-story" data-story>
-          <div class="wk-story-clip" id="story-watch">
-            <div class="wk-story-body">
-              <h4 class="wk-title">{WATCH_COPY.title}</h4>
-              {columns(WATCH.blocks).map((col) => (
-                <div class="wk-col">
-                  {col.map((blk) =>
-                    blk.type === "p" ? <p class:list={["wk-p", { hinge: blk.hinge }]} set:html={blk.html} /> : <ul class="wk-list">{blk.items.map((it) => <li set:html={it} />)}</ul>
-                  )}
-                </div>
-              ))}
-            </div>
-            <div class="wk-hood">
-              <p class="wk-hood-t">{SPEC.watch.title}</p>
-              <div class="wk-hood-cols">
-                {halves(SPEC.watch.rows).map((col) => (
-                  <ol class="wk-steps">
-                    {col.map((r) => (
-                      <li class="wk-step">
-                        <div class="wk-step-head"><span class="wk-step-k">{r.k}</span><span class="wk-step-tool">{r.tool}</span></div>
-                        <p class="wk-step-p" set:html={r.html} />
-                      </li>
-                    ))}
-                  </ol>
-                ))}
-              </div>
-            </div>
-          </div>
-          <button class="wk-more" type="button" aria-expanded="false" aria-controls="story-watch" aria-label="Read the whole story">
-            <svg class="wk-chev" viewBox="0 0 20 20" aria-hidden="true"><path d="M5 8l5 5 5-5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
-          </button>
-        </div>
-      </article>
-      {/* object two: THE ARCHIVE (Jon's Claude Design module, 2026-09-18) —
-          the phone at rest is the stock Voice Memos list; a tap searches
-          the real library. story={false}: the room frames it */}
-      <article class="wk" id="build-archive">
+      {/* THE SHEETS (2026-10-10, Jon: "the titles go above the items; each
+          module wrapped in its whole sheet that can expand", for a first-time
+          visitor who knows nothing of him). Each build is ONE sheet: the band
+          (its name + what it is) above the object, the object and its run,
+          then the fold — the hook opens the story, the story and under the
+          hood unfold inside the same sheet. AudioDex first: it answers the
+          "audio" in the role line. */}
+      <article class="wk" id="build-archive" aria-labelledby="build-archive-t">
+        <header class="band">
+          <h3 class="band-name" id="build-archive-t">{ARCHIVE_COPY.title}</h3>
+          <p class="band-what">{ARCHIVE_COPY.dek}</p>
+        </header>
         <ArchiveHero story={false}>
-          <h3 slot="head" class="wk-hook">{ARCHIVE.headline}</h3>
           <p slot="cap" class="wk-cap">{ARCHIVE_COPY.caption}</p>
         </ArchiveHero>
         <div class="wk-story" data-story>
           <div class="wk-story-clip" id="story-archive">
             <div class="wk-story-body">
-              <h4 class="wk-title">{ARCHIVE_COPY.title}</h4>
+              <p class="wk-lede">{ARCHIVE.headline}</p>
               {columns(ARCHIVE.blocks).map((col) => (
                 <div class="wk-col">
                   {col.map((blk) =>
@@ -373,6 +335,48 @@ const columns = (blocks: BuildBlock[]): StoryBlock[][] =>
           </button>
         </div>
       </article>
+      {/* object two: INTAKE (Jon's Claude Design module, 2026-09-18) */}
+      <article class="wk" id="build-watch" aria-labelledby="build-watch-t">
+        <header class="band">
+          <h3 class="band-name" id="build-watch-t">{WATCH_COPY.title}</h3>
+          <p class="band-what">{WATCH_COPY.dek}</p>
+        </header>
+        <IntakeHero class="obj obj-intake">
+          <p slot="cap" class="wk-cap">{WATCH_COPY.caption}</p>
+        </IntakeHero>
+        <div class="wk-story" data-story>
+          <div class="wk-story-clip" id="story-watch">
+            <div class="wk-story-body">
+              <p class="wk-lede">{WATCH.headline}</p>
+              {columns(WATCH.blocks).map((col) => (
+                <div class="wk-col">
+                  {col.map((blk) =>
+                    blk.type === "p" ? <p class:list={["wk-p", { hinge: blk.hinge }]} set:html={blk.html} /> : <ul class="wk-list">{blk.items.map((it) => <li set:html={it} />)}</ul>
+                  )}
+                </div>
+              ))}
+            </div>
+            <div class="wk-hood">
+              <p class="wk-hood-t">{SPEC.watch.title}</p>
+              <div class="wk-hood-cols">
+                {halves(SPEC.watch.rows).map((col) => (
+                  <ol class="wk-steps">
+                    {col.map((r) => (
+                      <li class="wk-step">
+                        <div class="wk-step-head"><span class="wk-step-k">{r.k}</span><span class="wk-step-tool">{r.tool}</span></div>
+                        <p class="wk-step-p" set:html={r.html} />
+                      </li>
+                    ))}
+                  </ol>
+                ))}
+              </div>
+            </div>
+          </div>
+          <button class="wk-more" type="button" aria-expanded="false" aria-controls="story-watch" aria-label="Read the whole story">
+            <svg class="wk-chev" viewBox="0 0 20 20" aria-hidden="true"><path d="M5 8l5 5 5-5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </button>
+        </div>
+      </article>
     </div>
   </section>}
 
@@ -383,6 +387,10 @@ const columns = (blocks: BuildBlock[]): StoryBlock[][] =>
       fits it and watches #sgm[data-state]; #play is the anchor + spy target. */}
   <section class="live-signal room" id="play" aria-label="Signal — a playable instrument" data-signal-host>
     <div class="sig-desktop">
+      <header class="band room-band sig-band">
+        <h2 class="band-name">{BANDS.play.name}</h2>
+        <p class="band-what">{BANDS.play.what}</p>
+      </header>
       <Signal />
       {/* the instrument's card (2026-09-30): the write-up, how to play, under
           the hood, where it came from — inside .sig-desktop, so it exists only
@@ -400,7 +408,10 @@ const columns = (blocks: BuildBlock[]): StoryBlock[][] =>
       stay in the tree, live at their URLs; only this room is unrouted. */}
 
   {SHOW.has("illustrations") && <section class="look-band room" id="illustrations" aria-labelledby="illustrations-t">
-    <h2 id="illustrations-t" class="sr-only">Look</h2>
+    <header class="band room-band">
+      <h2 class="band-name" id="illustrations-t">{BANDS.look.name}</h2>
+      <p class="band-what">{BANDS.look.what}</p>
+    </header>
     <Carousel count={illos.length} label="Visual work" accent="var(--brand-yellow, #ffc94d)" mode="dissolve" dots loop titles={illos.map((it) => it.title)}>
       {illos.map((it, i) => (
         <figure class="lk">
@@ -440,8 +451,12 @@ const columns = (blocks: BuildBlock[]): StoryBlock[][] =>
       insert; hovering a sleeve prints that tape's title and note into the
       placard; pressing one loads it into the deck, where the tape itself
       is the play switch. */}
-  {SHOW.has("soundlab") && <section class="room" id="soundlab" aria-labelledby="soundlab-t"><div class="au">
-    <h2 id="soundlab-t" class="sr-only">Listen</h2>
+  {SHOW.has("soundlab") && <section class="room" id="soundlab" aria-labelledby="soundlab-t">
+    <header class="band room-band">
+      <h2 class="band-name" id="soundlab-t">{BANDS.listen.name}</h2>
+      <p class="band-what">{BANDS.listen.what}</p>
+    </header>
+    <div class="au">
     <Carousel count={tracks.length + 1} label="Music" accent="var(--ember)" mode="dissolve" keys={false}>
       {/* slide 0: the EMPTY DECK — the shell with its label unprinted, its
           window dark, hubs still; an empty placard behind a blank mini; a
@@ -1252,6 +1267,18 @@ const columns = (blocks: BuildBlock[]): StoryBlock[][] =>
      shorter. */
   :global(:root) {
     --mbar-h: 60px; /* the phone bar's pinned height; rooms subtract it */
+    /* THE SHEETS (2026-10-10): a sheet's inner gutter, which is also every
+       room band's inset, so all titles share one left edge */
+    --sheet-pad: 48px;
+    /* what a room band takes from its room (name + line + its margin):
+       the rooms that size their object by the viewport subtract it */
+    --band-room: 112px;
+  }
+  @media (max-width: 899px) {
+    :global(:root) {
+      --sheet-pad: 20px;
+      --band-room: 104px;
+    }
   }
   .room {
     box-sizing: border-box;
@@ -1327,24 +1354,81 @@ const columns = (blocks: BuildBlock[]): StoryBlock[][] =>
     justify-content: flex-start;
   }
   /* the same air between two objects as between two rooms (.one > .room) */
+  /* two sheets, one stack (2026-10-10: the sheets carry their own edges,
+     so the ground between them only has to part them) */
   .wk + .wk {
-    margin-top: clamp(96px, 18vh, 200px);
+    margin-top: clamp(40px, 7vh, 72px);
   }
   /* one frame for every object: hook → dek → the object → caption → the
      read, on one rhythm (hook→dek 12 · dek→object 32 · object→caption 24 ·
      caption→read 48 · ¶ 16); the words sit on the room's ink pair so night
      flips them */
+  /* THE SHEET (2026-10-10): the build's whole surface — band, object, run,
+     caption and the fold — in the material the story card had (the card's
+     white, its hairline, its 28px corner), so one build reads as one thing */
   .wk {
+    box-sizing: border-box;
     width: 100%;
     max-width: 1080px;
+    padding: var(--sheet-pad) var(--sheet-pad) 0;
+    border: 1px solid color-mix(in oklab, var(--mx-ink) 14%, transparent);
+    border-radius: 28px;
+    background: var(--wk-card);
+    transition: border-color 560ms ease, background-color 560ms ease;
   }
   .wk { container-type: inline-size; }
-  .wk-hook {
+  @media (max-width: 899px) {
+    .wk { border-radius: 20px; }
+  }
+  /* THE BAND (2026-10-10): the name, then one line saying what it is — the
+     same over every build and every room, on one left edge */
+  .band {
+    --bd-ink: var(--ink);
+    --bd-dim: var(--dim);
+    margin: 0 0 40px;
+  }
+  :global(html[data-night]) .band {
+    --bd-ink: var(--night-ink);
+    --bd-dim: var(--night-dim);
+  }
+  .band-name {
     margin: 0;
+    font: 500 2.125rem/1.15 "Outfit", "Instrument Sans", "Helvetica Neue", sans-serif;
+    letter-spacing: -0.01em;
+    color: var(--bd-ink);
+    transition: color 560ms ease;
+  }
+  .band-what {
+    margin: 8px 0 0;
+    max-width: 36rem;
+    font: 400 1rem/1.5 "Instrument Sans", "Helvetica Neue", Arial, sans-serif;
+    color: color-mix(in oklab, var(--bd-ink) 72%, transparent);
+    text-wrap: pretty;
+    transition: color 560ms ease;
+  }
+  /* a room's band stands on the work column (1080, centred) at the sheet's
+     inset, so its name lines up with the names inside the sheets */
+  .room-band {
+    box-sizing: border-box;
+    width: min(1080px, calc(100% - 48px));
+    margin: 0 auto 32px;
+    padding-inline: var(--sheet-pad);
+  }
+  @media (max-width: 899px) {
+    .room-band { width: calc(100% - 28px); }
+  }
+  @media (max-width: 720px) {
+    .band-name { font-size: 1.75rem; line-height: 1.2; }
+  }
+  /* the locked hook opens the story (2026-10-10: the band names the build
+     above the object; the hook is the first thing the fold says) */
+  .wk-lede {
+    grid-column: 1 / -1;
+    margin: 0 0 var(--sp-6);
     font-family: var(--wk-display);
-    font-size: 2.125rem; /* the title carries the object (Jon, 2026-09-24: bigger, more air) */
+    font-size: 1.75rem;
     font-weight: 500;
-    line-height: 1.15;
+    line-height: 1.2;
     letter-spacing: -0.01em;
     text-wrap: balance;
     color: var(--mx-ink);
@@ -1409,7 +1493,7 @@ const columns = (blocks: BuildBlock[]): StoryBlock[][] =>
   #build-watch .wk-story { --spec-ink: #ff6b4a; }
   #build-archive .wk-story { --spec-ink: #b9701a; }
   .wk-hood {
-    margin: 0 var(--sp-8);
+    margin: 0;
     padding: var(--sp-6) 0 var(--sp-4);
     border-top: 1px solid color-mix(in oklab, var(--mx-ink) 12%, transparent);
     transition: border-color 560ms ease;
@@ -1459,29 +1543,17 @@ const columns = (blocks: BuildBlock[]): StoryBlock[][] =>
     margin-right: 0.3em;
   }
   @container (min-width: 820px) {
-    .wk-hood { margin: 0 var(--sp-12); padding-top: var(--sp-8); }
+    .wk-hood { padding-top: var(--sp-8); }
     .wk-hood-cols { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
   }
+  /* the fold: the sheet's lower part, under one hairline that runs edge to
+     edge of the sheet; the sheet's own lower edge is the handle */
   .wk-story {
     position: relative;
-    margin-top: 64px; /* the caption → the card (Jon, 2026-09-24: more air) */
-    border: 1px solid color-mix(in oklab, var(--mx-ink) 16%, transparent);
-    border-radius: 28px;
-    background: var(--wk-card);
-    transition: border-color 560ms ease, background-color 560ms ease;
-  }
-  /* the build's name, centred over its write-up (Jon, 2026-09-30) */
-  .wk-title {
-    grid-column: 1 / -1;
-    margin: 0 0 40px; /* more air under the name (Jon, 2026-09-30) */
-    text-align: center;
-    font-family: var(--wk-display);
-    font-size: 2.125rem;
-    font-weight: 500;
-    line-height: 1.15;
-    letter-spacing: -0.01em;
-    color: var(--mx-ink);
-    transition: color 560ms ease;
+    margin: 48px calc(-1 * var(--sheet-pad)) 0;
+    padding: 0 var(--sheet-pad);
+    border-top: 1px solid color-mix(in oklab, var(--mx-ink) 10%, transparent);
+    transition: border-color 560ms ease;
   }
   .wk-story-clip {
     overflow: hidden;
@@ -1496,12 +1568,12 @@ const columns = (blocks: BuildBlock[]): StoryBlock[][] =>
     display: grid;
     grid-template-columns: minmax(0, 1fr);
     gap: 0 var(--sp-12);
-    padding: var(--sp-8) var(--sp-8) var(--sp-8); /* more air under the words (Jon, 2026-09-30) */
+    padding: var(--sp-8) 0; /* the sheet carries the side gutter */
   }
   @container (min-width: 820px) {
     .wk-story-body {
       grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-      padding: var(--sp-12) var(--sp-12) var(--sp-10, 40px);
+      padding: 40px 0 var(--sp-8);
     }
   }
   .wk-col { min-width: 0; }
@@ -1544,9 +1616,9 @@ const columns = (blocks: BuildBlock[]): StoryBlock[][] =>
     display: flex;
     align-items: center;
     justify-content: center;
-    width: 100%;
+    width: calc(100% + 2 * var(--sheet-pad));
     height: 56px;
-    margin: 0;
+    margin: 0 calc(-1 * var(--sheet-pad));
     padding: 0;
     border: 0;
     border-radius: 0 0 28px 28px;
@@ -1627,9 +1699,8 @@ const columns = (blocks: BuildBlock[]): StoryBlock[][] =>
     }
   }
   @media (max-width: 720px) {
-    .wk-hook {
-      font-size: 1.75rem;
-      line-height: 1.2;
+    .wk-lede {
+      font-size: 1.5rem;
     }
   }
 
@@ -1776,7 +1847,7 @@ const columns = (blocks: BuildBlock[]): StoryBlock[][] =>
        two-line note; 380 keeps the rooms abutting with a longer one), plus
        the phone bar under 900px wide;
        1.634 is the PNG's aspect */
-    --cs-reserve: 380px; /* room for a four-line note */
+    --cs-reserve: calc(380px + var(--band-room)); /* room for a four-line note + the band (2026-10-10) */
     --cs-vw: 100%;
     --cs-w: min(760px, 100%, var(--cs-vw), calc((100svh - var(--cs-reserve)) * 1.634));
     display: grid;
@@ -1785,7 +1856,7 @@ const columns = (blocks: BuildBlock[]): StoryBlock[][] =>
   }
   @media (max-width: 899px) {
     .ls {
-      --cs-reserve: 440px; /* + the pinned phone bar (--mbar-h) */
+      --cs-reserve: calc(440px + var(--band-room)); /* + the pinned phone bar (--mbar-h) */
     }
     /* on a phone the wallet's mini is the room's only control: a thumb-sized
        object (80 × 49, the strip drops under it), not a title-line chip
@@ -2431,9 +2502,9 @@ const columns = (blocks: BuildBlock[]): StoryBlock[][] =>
        The pre-measure default carries the same cap (2026-09-09: the
        Next key ran off the page from 900 to 1240). */
     --lk-room: calc(var(--kc-gap) + var(--kc-sx) + var(--kc) + var(--kc-gap));
-    --lk-half: min(53.333svh, 50% - var(--lk-room));
+    --lk-half: min((80svh - var(--band-room)) * 2 / 3, 50% - var(--lk-room));
     --lk-top: 0px;
-    --lk-bottom: 80svh;
+    --lk-bottom: calc(80svh - var(--band-room));
     --kc-ink: var(--ink);
     --kc-face-hi: color-mix(in srgb, var(--kc-ink) 2%, var(--bg));
     --kc-face: color-mix(in srgb, var(--kc-ink) 5%, var(--bg));
@@ -2642,7 +2713,7 @@ const columns = (blocks: BuildBlock[]): StoryBlock[][] =>
          the dots and the placard stay with it instead of a void */
       max-width: calc(100% - 2 * var(--lk-room));
       aspect-ratio: 4 / 3;
-      max-height: 80svh;
+      max-height: calc(80svh - var(--band-room)); /* the band above takes its share (2026-10-10) */
     }
   }
   .lk-cap {
@@ -2870,7 +2941,9 @@ const columns = (blocks: BuildBlock[]): StoryBlock[][] =>
     // the spy's knot and the first mark all agree
     const frameWork = () => {
       const work = document.getElementById("work");
-      const obj = document.querySelector<HTMLElement>("#build-watch .watch-col");
+      // the FIRST build's object (AudioDex since 2026-10-10): the first mark names it
+      const m0 = document.querySelector<HTMLElement>("[data-mark-for]");
+      const obj = m0 ? document.querySelector<HTMLElement>(`#${m0.dataset.markFor} ${m0.dataset.center}`) : null;
       if (!work || !obj) return;
       const centre = obj.getBoundingClientRect().top - work.getBoundingClientRect().top + obj.offsetHeight / 2;
       work.style.scrollMarginTop = Math.max(0, Math.round(window.innerHeight / 2 - centre)) + "px";
@@ -3054,7 +3127,9 @@ const columns = (blocks: BuildBlock[]): StoryBlock[][] =>
       const cs = getComputedStyle(sigWrap);
       const w = sigWrap.clientWidth - (parseFloat(cs.paddingLeft) || 0) - (parseFloat(cs.paddingRight) || 0);
       if (w <= 0) return; // hidden (touch layout) — nothing to fit
-      const reserve = 60; // the room's ground above and below the device (it may stand into the room's padding)
+      // the room's ground above and below the device (it may stand into the room's padding), plus the band over it (2026-10-10)
+      const band = sigBox.querySelector<HTMLElement>(".sig-band");
+      const reserve = 60 + (band ? band.offsetHeight + (parseFloat(getComputedStyle(band).marginBottom) || 0) : 0);
       const h = sigDev.offsetHeight || 878; // unzoomed (offsetHeight ignores zoom); 878 = types.ts DEVICE_H (THE BOW)
       const z = Math.max(0.25, Math.min((WIDTH_SHARE * w) / REF, Math.max(120, window.innerHeight - reserve) / h)).toFixed(4);
       if (z === last) return;

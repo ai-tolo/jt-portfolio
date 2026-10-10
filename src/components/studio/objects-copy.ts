@@ -4,6 +4,9 @@
 // text for me, I'll edit later"): Jon owns every word here; edit freely.
 // 2026-09-22 (Jon): the dek is NOT rendered any more — the room goes
 // title → object; the strings stay here for the record.
+// 2026-10-10 (THE SHEETS, Jon's "go"): each build's BAND = `title` + `dek`,
+// above the object: what the thing is, for a stranger, before it plays. The
+// locked hook (builds-copy.ts) now opens the story inside the sheet.
 export const WATCH_COPY = {
   // the build's name, centred at the top of its card (Jon, 2026-09-30: the names were too small)
   title: "Intake",
@@ -41,10 +44,21 @@ export const LIVE_COPY = {
 export const ARCHIVE_COPY = {
   // one word, A and D capitalised: a riff on Pokédex
   title: "AudioDex",
-  // one line under the locked headline
-  dek: "Every recording I've made, read and named by what's inside it, and searchable the way photos are.",
+  // the band's line: what it is, first (DRAFT 2026-10-10, Jon edits; was
+  // "Every recording I've made, read and named by what's inside it, and
+  // searchable the way photos are.")
+  dek: "An app that reads every recording I've made, names each one by what's inside it, and makes them searchable the way photos are.",
   // the mono line under the module. 2026-09-30 (Jon): the run is ART, an
   // example anyone gets, not a row from his library — the idea from three
   // summers ago, found by one word. DRAFT, his to edit.
   caption: "One word typed into the app I built: six recordings it had already named, then the twelve seconds inside one that match.",
+};
+
+// THE BANDS (2026-10-10): the same title band over every other room — the
+// name, then one line saying what it is. ⚠️ DRAFT: Jon owns every word.
+// look: all fifteen pictures in the manifest are Procreate on iPad, 2021–2026.
+export const BANDS = {
+  play: { name: "SIGNAL", what: "An instrument that runs in this web page, played from your computer keyboard." },
+  look: { name: "Drawings", what: "Made in Procreate on an iPad, 2021 to 2026." },
+  listen: { name: "Music", what: "Tracks I've made, some built from field recordings and voice memos." },
 };

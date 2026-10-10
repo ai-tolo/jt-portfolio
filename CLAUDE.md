@@ -238,6 +238,19 @@ session must follow.
   `car:show` (detail.index) asks a chassis for a slide. In Visuals the
   dots sit ABOVE the painted picture (`--lk-top`, measured) and the
   placard sits right under it (Jon, 2026-09-09).
+- THE SHEETS + BANDS (2026-10-10, Jon: titles above the items, each module
+  in one sheet that expands, for a first-time visitor). Every room opens with
+  a BAND = name + one line saying what it is (`.band` / `.band-name` /
+  `.band-what`; copy = `objects-copy.ts` title+dek per build, `BANDS` for
+  play/look/listen, all DRAFT). Each build is ONE SHEET (`.wk` = the old
+  story card's white/hairline/28px): band → object + run + caption → the
+  fold (hairline; the locked hook opens it as `.wk-lede`, then the story
+  and under the hood; the sheet's lower edge is the handle). All five names
+  stand on one left edge: the 1080 column + `--sheet-pad` (48 / 20 under
+  900). Rooms that size by the viewport subtract `--band-room` (look's
+  picture, listen's `--cs-reserve`); SIGNAL's fit adds `.sig-band`'s height
+  to its reserve. AudioDex comes FIRST (the first rail mark names the
+  object "work" centres). The modules no longer get a `head` slot.
 - WORK is OBJECTS (2026-09-18; the ledger/matrix is DEAD): the room holds
   Jon's Claude Design modules, one per build, framed by words — the locked
   headline from builds-copy.ts above (the DRAFT dek under it was removed
