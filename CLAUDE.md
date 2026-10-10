@@ -242,7 +242,10 @@ session must follow.
   in one sheet that expands, for a first-time visitor). The two builds open
   with a BAND = name (Outfit 3.25rem; 2.5rem under 900) + one line saying
   what it is (`.band` / `.band-name` / `.band-what`; copy = `objects-copy.ts`
-  title + dek per build, DRAFT). NO OTHER ROOM GETS A BAND: SIGNAL, look and
+  title + dek per build, DRAFT), CENTRED on the sheet's centre line (Jon:
+  "signal is centered, the others are to the left"); the fold's hook is
+  centred too, and the phone and watch stand CENTRED in their 44cqw columns
+  (the left axis belonged to the retired top-left hook). NO OTHER ROOM GETS A BAND: SIGNAL, look and
   listen stay untouched (Jon: "i didn't ask that music / drawings get titles
   or changed"; "i don't like the signal heading at all"). Each build is ONE
   SHEET (`.wk` = the old story card's white/hairline/28px): band → object +
