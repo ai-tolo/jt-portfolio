@@ -45,10 +45,10 @@ session must follow.
   kit, IRs, boot sound) ship `immutable` (the postbuild adds the header):
   never change a file in place; re-encoding = a new 8-hex folder name.
   The HOST hooks StudioOne relies on (keep them on both sides):
-  `#sgm[data-state]` standby → boot → live → powerdown (boot/on/live = the
-  site goes night; the host clicks `#pwr` when the play ROOM — the device
-  AND its write-up card, 2026-10-07 — fills < 35% of the screen, so reading
-  the how-to keeps it on and the room dark),
+  `#sgm[data-state]` standby → boot → live → powerdown (SINCE 2026-10-13 the
+  site NEVER goes night on power: the rail/bar switch is the lights' only
+  source; the host clicks `#pwr` when the play ROOM — head sheet, device
+  and tail sheet, 2026-10-13 — fills < 35% of the screen),
   `#pwr` (the power switch since R4, 92 × 40 since 2026-10-07; the host's
   `.pwr` overrides light it; in standby THE RUN laps its border: a
   cool-gradient ribbon, src/signal/view/pwr-run.ts precomputes a ~20 s
@@ -66,8 +66,9 @@ session must follow.
   printed beneath the device (signal-copy.ts is unmounted, Jon writes it).
   R4 (2026-09-24, Jon's render): its top is THE HEAD (Signal.astro, static):
   `esc STOP` in the left corner (beside it since 2026-10-07 the round `?`
-  key, `[data-corner="help"][data-awake]`: it and the ? key scroll to the
-  write-up card's top, `[data-write-up]`, and answer in standby too), the
+  key, `[data-corner="help"][data-awake]`: it and the ? key scroll to
+  `[data-write-up]` = the TAIL sheet under the device ("how to play" at its
+  top, 2026-10-13), and answer in standby too), the
   three module TITLES over their towers in
   their accents (words, never controls), and `#pwr` = a RED ROCKER SWITCH in
   the right corner (the disc is gone; every host hook kept: the host's `.pwr`
@@ -161,8 +162,9 @@ session must follow.
   room's material (the four studies, /resume) set their words in the room's
   three faces (the studies read `--rm-*`; `--cs-mono` is the older
   material's, Momence only).
-- Night mode: `html[data-night]`, two sources (manual switch OR instrument
-  power). Dark-until-power is lighting only.
+- Night mode: `html[data-night]`, ONE source since 2026-10-13 (Jon: "allow
+  the user to control that"): the manual switch. The instrument's power no
+  longer touches the page's lighting (`nightPower` is deleted).
 - The GEAR family is GONE from the homepage (round 3e, 2026-09-02): no
   dark panels remain; the instrument is the only dark object in the room
   (the cassette, 2026-09-09, is the named exception: a photographed
@@ -257,7 +259,8 @@ session must follow.
   no faded peek, nothing opens them by itself; the comet re-measures on
   the body's height change, so the fold never misaligns the bead). One sheet rhythm: pad 56 (`--sheet-pad`, 20 under 900) ·
   name→line 14 · band→object 56 · object→fold 56 · fold top 48; sheets
-  48–80 apart. AudioDex comes FIRST (the first rail mark names the object
+  `--room-gap` apart (round three: ONE GAP for the whole homepage, see
+  ROOMS). AudioDex comes FIRST (the first rail mark names the object
   "work" centres). The modules no longer get a `head` slot, so the host
   re-applies the Archive's rail-centred-on-the-phone rule (Jon, 2026-09-24)
   itself.
@@ -274,8 +277,10 @@ session must follow.
   SignalCard (`.sc` is a `.sheet` too, on the homepage and /signal;
   HowToPlay's container queries measure the sheet's CONTENT box, thresholds
   787/367). Each sheet sets only `--sheet-acc` (archive #b9701a · watch
-  #ff6b4a · signal sapphire · studio #2a5bd7). THE KIND WORD: one mono word
-  centred 10px ABOVE each band name (`.sheet-kind`, the label face, dim):
+  #ff6b4a · signal sapphire · studio #2a5bd7). THE KIND WORD (2026-10-13 round three, Jon: "on the right side"): one
+  mono word in each sheet's TOP-RIGHT corner (`.sheet-kind`, absolute,
+  top 23px / right `--sheet-pad`, 15px on phones; `.sheet` is
+  `position: relative`; the label face, dim):
   `app` · `program` · `instrument` (above SignalCard's `.sc-title`) ·
   `suite`; DRAFT `kind` fields in objects-copy.ts / signal-card-copy.ts,
   Jon's words. No numbers anywhere on the sheets (`build-order.ts` is the
@@ -286,7 +291,10 @@ session must follow.
   after `#play` and before `#illustrations`, one `.wk.sheet#build-studio`:
   kind `suite` → band ("Signal Studio" + a DRAFT dek, `STUDIO_COPY` in
   objects-copy.ts) → THE OBJECT = three CAPTURE SLOTS in a dissolve
-  Carousel (`dots`, `keys={false}`), one 16:9 frame: while a capture is
+  Carousel (`dots`, `loop`, `keys` ON since round three: the look room's
+  arrow keycaps copied, "change both or neither"; the capture's title is
+  the placard under the frame in JetBrains Mono, dots 8px above the frame;
+  phones swipe, no keys), one 16:9 frame: while a capture is
   missing the slot is an HONEST EMPTY FRAME (a 1px outline, square, no
   fill, its caption centred in the label face: never a fake frame); when
   `public/builds/studio/radar.webm` · `chip.webm` · `rip.webm` exist at
@@ -363,9 +371,17 @@ session must follow.
   `::before` its light (the watch's outward, the phone's inward), both on
   `touch-breathe` 2s ease-in-out 0.45↔1 — an EXACT COPY of the keyframe in
   each module, change both or neither; hover = still + full, `.s1` = off,
-  reduced motion = still at 0.75; no halo, no ping. The mono CAPTIONS show
-  AT REST (2026-10-06, Jon: "try it") and flash the commit's signal colour
-  when the run lands (`wk-cap-in`, colour only). Beside the watch the run column RESERVES its stage-six height
+  reduced motion = still at 0.75; no halo, no ping. The mono CAPTIONS are HIDDEN AT REST since 2026-10-13 (Jon: the watch's
+  "A real memo…" not at default state; the phone's hidden too for
+  consistency: `.wk:has(.intake-hero:not(.s6), .archive-hero:not(.s6))
+  .wk-cap` keeps its space) and fade in with the colour flash when the run
+  lands (`wk-cap-in`). THE WATCH AT REST (2026-10-13): the hint row is
+  `tap to stop` alone, centred like the phone's `tap the list`; the live
+  control is hidden until the replay lands, then the row reads `replay` ·
+  `try it with your own voice` (the screen's foot pill says `Your own
+  voice`; all in `LIVE_COPY`, DRAFT). The phone types at 180ms a letter
+  (`--char` + `CHAR_MS`, was 300) with its stage waits trimmed to match
+  (press → s6 ≈ 11.7s, was 17.3s). Beside the watch the run column RESERVES its stage-six height
   (`--run-final`, measured by IntakeHero's script under a motion-free
   `measuring` class, re-measured on fonts/resize) so the words under the
   module never move while it runs; stacked, no reservation. The rail's
@@ -385,7 +401,8 @@ session must follow.
   intake → #build-watch · signal → #play · studio → #build-studio), then
   the rooms renamed illustrations (→ #illustrations) and music (→ #soundlab;
   "music" not "audio": "audio" collided with AudioDex and the role line).
-  Rows 36px, 4px apart, the lit pill as before; the column is centred above
+  Rows 40px, 12px apart, 28px above and below the divider (round three:
+  "too condensed"), the lit pill as before; the column is centred above
   the night switch; 128px rail, `--railw` follows (the AwayRail on the other
   pages is still 110). `MARKS` = the rooms (`id`, `has`; `SHOW` decides what
   renders; `studio` is a room too); `NAV` = two blocks of entries that the
@@ -421,7 +438,11 @@ session must follow.
   `.room` — min-height 100svh (minus the 64px bar below 900px), flex-centered
   object, scroll-margin 0. Since 2026-09-18 (Jon: "spacing between the
   modules") the rooms NO LONGER ABUT: `.one > .room { margin-top:
-  clamp(96px, 18vh, 200px) }` puts ground between them — declared on the
+  var(--room-gap) }` (`--room-gap: clamp(96px, 18vh, 200px)` on `.one`,
+  2026-10-13: the ONE gap that `.one > .room`, `.wk + .wk`, the floor's
+  margin and the play room's head→device→tail all read; `#work` and
+  `#studio` are content-sized rooms, `min-height: 0`, so a sheet's edge is
+  the room's edge) puts ground between them — declared on the
   column's child on purpose, because `.work`, `.live-signal` and
   `.look-band` set their own `margin` shorthand and would zero a plain
   `.room` margin. At any room's framed position no
@@ -459,6 +480,19 @@ session must follow.
   height-cap table is gone. No horizontal scroller exists, so nothing clips
   the device shadow at any width. Never scale inside the device; adjust
   the host fit instead.
+  AT REST THE DEVICE IS 70% (2026-10-13, Jon: "very in your face … scaled
+  down outside of use; powering it up scales it up"): the host-owned
+  `.sig-stage` (`.sgm`'s parent, the fit's measure) carries
+  `transform: scale(0.7)` (origin 50% 0) plus `margin-bottom:
+  calc(var(--sig-h) * -0.3)` while `#sgm` is standby/powerdown, keyed in
+  CSS with `:has()`, both on one 400ms ease (instant under reduced motion);
+  powered it is `transform: none` and the device's zoom is the untouched
+  full fit (1224.6 wide at 1440×900). `--sig-h` is written by the fit only.
+  THE WRITE-UP STANDS AROUND THE DEVICE (2026-10-13): `SignalCard`'s `part`
+  prop renders `head` (kind word · SIGNAL · the story) ABOVE the device and
+  `tail` (how to play · under the hood · where it came from, `[data-write-up]`)
+  BENEATH it in `.sig-desktop` (a flex column, gap `--room-gap`); `/signal`
+  keeps `all` under the device.
 - THE FLOOR is ONE object sitewide (2026-09-21, Jon's reference shot):
   `src/components/studio/SiteFloor.astro` = the email + the LinkedIn mark,
   centred, nothing else (the city and the résumé link are gone from every
