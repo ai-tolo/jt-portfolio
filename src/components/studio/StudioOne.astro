@@ -438,19 +438,27 @@ const columns = (blocks: BuildBlock[]): StoryBlock[][] =>
     </div>
   </section>}
 
-  {/* ── SIGNAL — the instrument itself, live, the site's finale.
-      Power-on takes the whole site dark; scrolling away powers it off and
-      the light returns. The instrument (src/components/signal/Signal.astro,
-      2026-09-23) is observed from here, never edited: this host frames it,
-      fits it and watches #sgm[data-state]; #play is the anchor + spy target. */}
+  {/* ── SIGNAL — the instrument itself, live.
+      It rests at 70 % and grows to its full fit on power (Jon, 2026-10-13:
+      "desired to be this large during use"); the lights are the rail's
+      switch alone (power never darkens the page). Scrolling away powers it
+      off. The instrument (src/components/signal/Signal.astro, 2026-09-23) is
+      observed from here, never edited: this host frames it, fits it and
+      scales it from #sgm[data-state]; #play is the anchor + spy target. */}
   <section class="live-signal room" id="play" aria-label="Signal — a playable instrument" data-signal-host>
     <div class="sig-desktop">
-      <Signal />
-      {/* the instrument's card (2026-09-30): the write-up, how to play, under
-          the hood, where it came from — inside .sig-desktop, so it exists only
-          where the instrument plays; the fit reads .sgm's parent's width, which
-          the card does not change */}
-      <SignalCard />
+      {/* THE WRITE-UP GOES AROUND THE INSTRUMENT (2026-10-13): the card's
+          head (the kind word, SIGNAL, the story) above the device, its tail
+          (how to play, under the hood, where it came from; [data-write-up],
+          the "?" key's landing) beneath. Inside .sig-desktop, so both exist
+          only where the instrument plays. .sig-stage is the host's own box
+          around .sgm: the fit's measure (.sgm's parent) and the rest scale's
+          handle; the sheets never change its width */}
+      <SignalCard part="head" />
+      <div class="sig-stage">
+        <Signal />
+      </div>
+      <SignalCard part="tail" />
     </div>
     {/* the phone exhibit that stood in here (a note + the lazy /more iframe)
         is gone (Jon, 2026-09-22): the room exists only where the instrument
@@ -1920,9 +1928,50 @@ const columns = (blocks: BuildBlock[]): StoryBlock[][] =>
   }
   .sig-desktop {
     display: none;
-    /* the fit measures .sgm's parent's CONTENT box: this gutter is the
-       1–3 % margin the device keeps from the rail and the viewport edge */
+    /* the fit measures .sgm's parent's CONTENT box (.sig-stage, as wide as
+       this box's content): this gutter is the 1–3 % margin the device keeps
+       from the rail and the viewport edge */
     padding-inline: clamp(12px, 1.5vw, 24px);
+    /* THE WRITE-UP AROUND THE INSTRUMENT (2026-10-13): head sheet → the
+       device → tail sheet, a room's gap between each (--room-gap is the
+       page's one gap, set on .one; the fallback is today's room margin) */
+    flex-direction: column;
+    gap: var(--room-gap, clamp(96px, 18vh, 200px));
+  }
+  /* the sheets: the sheet's own max width (1080), centred on the device's
+     axis (the column's centre, where .sgm stands) */
+  .sig-desktop > :global(.sc) {
+    margin-inline: auto;
+  }
+  /* AT REST, 70 % (Jon, 2026-10-13: "very in your face … desired to be this
+     large during use, but outside of use it could be scaled down. Powering
+     it up scales it up"). The fit's zoom (--sig-zoom, below) lays the device
+     out at its FULL fit in every state, so powered it is exactly today's
+     device; at rest (standby, and the power-down on its way there) the
+     host's own box scales it by 0.7 from its top centre, and a negative
+     margin of the same 30 % of its laid-out height (--sig-h, written by the
+     fit on resize only) gives the room back, so the tail sheet stands under
+     the drawn device. Both ride ONE 400 ms ease (a transform and a margin:
+     reliably animatable everywhere, unlike `zoom`), both linear in the same
+     scale, so the device's drawn foot and the page beneath move together:
+     no step, no jump, no script per frame. Powered, the transform is `none`
+     (no containing block, no layer left behind). Keyed on the instrument's
+     own #sgm[data-state] (observed, never edited). */
+  .live-signal :global(.sig-stage) {
+    --sig-rest: 0.7;
+    transform: none;
+    transform-origin: 50% 0;
+    margin-bottom: 0;
+    transition:
+      transform 400ms cubic-bezier(0.33, 0, 0.2, 1),
+      margin-bottom 400ms cubic-bezier(0.33, 0, 0.2, 1);
+  }
+  .live-signal :global(.sig-stage:has(> .sgm:is([data-state="standby"], [data-state="powerdown"]))) {
+    transform: scale(var(--sig-rest));
+    margin-bottom: calc(var(--sig-h, 0px) * (var(--sig-rest) - 1));
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .live-signal :global(.sig-stage) { transition: none; }
   }
   /* FIT (2026-09-02, Jon: "the drums module hangs off the side"). The
      sacred file pins the device to its 1120px reference and zooms it
@@ -1972,7 +2021,7 @@ const columns = (blocks: BuildBlock[]): StoryBlock[][] =>
   }
   @media (pointer: fine) {
     .sig-desktop {
-      display: block;
+      display: flex;
     }
   }
   /* the play room exists only where the instrument can play (Jon,
@@ -3224,20 +3273,22 @@ const columns = (blocks: BuildBlock[]): StoryBlock[][] =>
     new ResizeObserver(() => { buildAnchors(); onScroll(); }).observe(document.body);
   }
 
-  // ── NIGHT has two independent sources (2026-08-20): the instrument's
-  // power (ambience, as ever) and Jon's own switch at the rail's foot
-  // (persisted — dark-room reading). Either keeps the room dark; the
-  // switch survives the machine powering off.
+  // ── NIGHT has ONE source (2026-10-13, Jon: "maybe we don't 'turn off the
+  // lights' for power up and allow the user to control that"): the switch at
+  // the rail's foot and the bar's moon (persisted — dark-room reading). The
+  // instrument's power no longer touches the page's lighting (its own dark
+  // standby skin is the device's, power.css).
   const nightRoot = document.documentElement;
   let nightManual = false;
   try { nightManual = localStorage.getItem("studio-night") === "1"; } catch {}
-  let nightPower = false;
   const applyNight = () => {
-    const on = nightManual || nightPower;
+    const on = nightManual;
     // THE LIGHTS (2026-10-07): a change a hand made spreads from that hand
     // (night-reveal.ts); a key press spreads from the switch it acted on
     const act = document.activeElement;
-    const from = act?.matches?.("[data-night-toggle], #pwr") ? act : document.getElementById("pwr");
+    const from = act?.matches?.("[data-night-toggle]")
+      ? act
+      : Array.from(document.querySelectorAll<HTMLElement>("[data-night-toggle]")).find((b) => b.offsetParent) ?? null;
     setNight(on, () => {
       if (on) nightRoot.setAttribute("data-night", "");
       else nightRoot.removeAttribute("data-night");
@@ -3254,12 +3305,6 @@ const columns = (blocks: BuildBlock[]): StoryBlock[][] =>
     nightBtns.forEach((b) => b.setAttribute("aria-pressed", nightManual ? "true" : "false"));
   nightBtns.forEach((b) =>
     b.addEventListener("click", () => {
-      // if the instrument owns the dark, an OFF press means "lights on":
-      // power the machine down through its own button so the control
-      // never reports a state the room contradicts (QA 2026-08-28)
-      if (nightManual && nightPower) {
-        document.getElementById("pwr")?.click();
-      }
       nightManual = !nightManual;
       try { localStorage.setItem("studio-night", nightManual ? "1" : "0"); } catch {}
       syncNightBtn();
@@ -3269,9 +3314,9 @@ const columns = (blocks: BuildBlock[]): StoryBlock[][] =>
   syncNightBtn();
   applyNight();
 
-  // The instrument is observed, never edited — we only watch its data-state: boot →
-  // the site goes night; powerdown/standby → the machine's claim on the
-  // dark ends. Scrolling the instrument out of view powers it off.
+  // The instrument is observed, never edited — we only read its data-state
+  // (its rest scale follows that state in CSS: .sig-stage). Scrolling the
+  // instrument out of view powers it off, and so it settles back to 70 %.
   const sgm = document.getElementById("sgm");
   const host = document.querySelector("[data-signal-host]");
   if (sgm && host) {
@@ -3279,13 +3324,9 @@ const columns = (blocks: BuildBlock[]): StoryBlock[][] =>
       const st = sgm.getAttribute("data-state");
       return st === "boot" || st === "on" || st === "live";
     };
-    new MutationObserver(() => { nightPower = powered(); applyNight(); }).observe(sgm, {
-      attributes: true,
-      attributeFilter: ["data-state"],
-    });
     // "Scrolled away" = the play room has all but left the viewport. The
-    // room is the instrument AND its write-up (Jon, 2026-10-07: reading the
-    // how-to beneath it keeps it on and the room dark; the write-up is part of
+    // room is the instrument AND its write-up, above and below it (Jon,
+    // 2026-10-07: reading the how-to keeps it on; the write-up is part of
     // SIGNAL). The room is taller than the screen, so the measure is how much
     // of the SCREEN it fills: under 35 % (adjacent sections keep a sliver
     // visible, so 0 would never fire). Fine thresholds: the room's own ratio
@@ -3295,10 +3336,7 @@ const columns = (blocks: BuildBlock[]): StoryBlock[][] =>
       const vh = e.rootBounds?.height ?? window.innerHeight;
       const shown = e.intersectionRect.height / Math.max(1, Math.min(e.boundingClientRect.height, vh));
       if (shown < 0.35 && powered()) {
-        const pwr = document.getElementById("pwr");
-        pwr?.click(); // the machine's own powerdown path
-        nightPower = false;
-        applyNight();
+        document.getElementById("pwr")?.click(); // the machine's own powerdown path
       }
     }, { threshold: steps }).observe(host);
   }
@@ -3311,7 +3349,9 @@ const columns = (blocks: BuildBlock[]): StoryBlock[][] =>
   // wherever the height allows; on a short screen the height binds and
   // the whole device still shows in its room. The old height-cap table is
   // retired. Re-fires resize when the zoom changes so the comet's knots and
-  // the rail map re-measure the new page height.
+  // the rail map re-measure the new page height. It also hands the stage its
+  // laid-out height (--sig-h, the full fit's: the rest scale's margin reads
+  // it), on a fit only, never per frame.
   const sigHost = document.querySelector<HTMLElement>(".live-signal");
   const sigBox = sigHost?.querySelector<HTMLElement>(".sig-desktop");
   const sigWrap = sigBox?.querySelector<HTMLElement>(".sgm")?.parentElement ?? null;
@@ -3320,6 +3360,7 @@ const columns = (blocks: BuildBlock[]): StoryBlock[][] =>
     const REF = 1280; // = src/signal/types.ts DEVICE_W
     const WIDTH_SHARE = 0.98;
     let last = "";
+    let lastH = "";
     const fit = () => {
       const cs = getComputedStyle(sigWrap);
       const w = sigWrap.clientWidth - (parseFloat(cs.paddingLeft) || 0) - (parseFloat(cs.paddingRight) || 0);
@@ -3327,10 +3368,18 @@ const columns = (blocks: BuildBlock[]): StoryBlock[][] =>
       const reserve = 60; // the room's ground above and below the device (it may stand into the room's padding)
       const h = sigDev.offsetHeight || 878; // unzoomed (offsetHeight ignores zoom); 878 = types.ts DEVICE_H (THE BOW)
       const z = Math.max(0.25, Math.min((WIDTH_SHARE * w) / REF, Math.max(120, window.innerHeight - reserve) / h)).toFixed(4);
-      if (z === last) return;
-      last = z;
-      sigHost.style.setProperty("--sig-zoom", z);
-      window.dispatchEvent(new Event("resize"));
+      const zoomed = z !== last;
+      if (zoomed) {
+        last = z;
+        sigHost.style.setProperty("--sig-zoom", z);
+      }
+      // the stage's layout height at the full fit (a transform never moves it)
+      const sh = `${sigWrap.offsetHeight}px`;
+      if (sh !== lastH) {
+        lastH = sh;
+        sigWrap.style.setProperty("--sig-h", sh);
+      }
+      if (zoomed) window.dispatchEvent(new Event("resize"));
     };
     // deferred to the next frame: a fit written inside an observation re-sizes the observed device in the same
     // frame (WebKit: "ResizeObserver loop completed with undelivered notifications")

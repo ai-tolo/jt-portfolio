@@ -10,10 +10,21 @@
  * work-room sheets share: the kind word over its title (round two: the numbered readout line is gone), a hairline and
  * a label opening each section, the steps' spine. That file is its only dependency outside this folder; what stays
  * here is its own: the title, the 96 px under the device, the sapphire, and the names HowToPlay reads.
+ * 2026-10-13 round three (Jon: the write-up goes AROUND the instrument): `part` cuts the card in two for the homepage's
+ * play room. "head" = the kind word, the title and the story (above the device); "tail" = how to play, under the hood,
+ * where it came from (beneath it), opening on its first section's hairline + label as inside the whole card, no title
+ * repeated; "all" (the default) = the whole card, beneath the device, as /signal mounts it. The "?" key's landing,
+ * [data-write-up], sits on the part that holds HOW TO PLAY (the tail, or the whole card), so the key lands on the
+ * diagram's label. The host spaces the two parts; only "all" keeps its own 96 px above.
  */
 import "../../styles/sheet.css";
 import { CARD, type CardRow } from "./signal-card-copy.ts";
 import HowToPlay from "./HowToPlay.astro";
+
+interface Props { part?: "head" | "tail" | "all" }
+const { part = "all" } = Astro.props;
+const head = part !== "tail";
+const tail = part !== "head";
 
 const halves = (rows: ReadonlyArray<CardRow>): CardRow[][] => {
   const cut = Math.ceil(rows.length / 2);
@@ -25,15 +36,16 @@ const cols = (ps: ReadonlyArray<string>): string[][] => {
 };
 ---
 
-<div class="sc sheet" data-signal-card data-write-up>
-  <p class="sheet-kind">{CARD.kind}</p>
-  <h4 class="sc-title">{CARD.title}</h4>
-  <div class="sc-story sheet-cols">
+<div class="sc sheet" data-signal-card data-part={part} data-write-up={tail ? "" : undefined}>
+  {head && <p class="sheet-kind">{CARD.kind}</p>}
+  {head && <h4 class="sc-title">{CARD.title}</h4>}
+  {head && <div class="sc-story sheet-cols">
     {cols(CARD.story).map((col) => (
       <div class="sheet-col">{col.map((p) => <p class="sheet-p" set:html={p} />)}</div>
     ))}
-  </div>
+  </div>}
 
+  {tail && <Fragment>
   <div class="sheet-sec">
     <p class="sheet-t" id="how-to-play">{CARD.howTitle}</p>
     <HowToPlay />
@@ -63,6 +75,7 @@ const cols = (ps: ReadonlyArray<string>): string[][] => {
       ))}
     </div>
   </div>
+  </Fragment>}
 </div>
 
 <style>
@@ -73,10 +86,11 @@ const cols = (ps: ReadonlyArray<string>): string[][] => {
     --sc-ink: var(--sheet-ink);
     --sc-mono: var(--sheet-mono);
     position: relative;
-    margin: 96px auto 0;
+    margin: 0 auto; /* the parts: the host spaces them around the device */
     padding: var(--sheet-pad); /* the bottom: the last section's 16 + the gutter = the work sheets' 16 + their handle */
-    scroll-margin-top: 32px; /* the "?" key's landing: the whole write-up from its top (the title, the words, the diagram) */
+    scroll-margin-top: 32px; /* the "?" key's landing: the write-up from its top (the whole card's title, or the tail's "how to play") */
   }
+  .sc[data-part="all"] { margin-top: 96px; } /* the whole card, 96 px under the device (/signal) */
   .sc-title {
     margin: 0 0 40px;
     text-align: center;
@@ -87,4 +101,5 @@ const cols = (ps: ReadonlyArray<string>): string[][] => {
     letter-spacing: 0.06em;
   }
   .sc-story { margin-bottom: 32px; } /* the story → the first hairline, as the work sheets' story → their hood */
+  .sc[data-part="head"] .sc-story { margin-bottom: 0; } /* the head ends on its story: the gutter alone beneath */
 </style>
