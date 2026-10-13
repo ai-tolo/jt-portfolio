@@ -249,9 +249,13 @@ session must follow.
   listen stay untouched (Jon: "i didn't ask that music / drawings get titles
   or changed"; "i don't like the signal heading at all"). Each build is ONE
   SHEET (`.wk` = the old story card's white/hairline/28px): band → object +
-  run + caption → the fold (hairline; the locked hook opens it as
-  `.wk-lede`, then the story and under the hood; the sheet's lower edge is
-  the handle). One sheet rhythm: pad 56 (`--sheet-pad`, 20 under 900) ·
+  run + caption → the fold (hairline → the locked hook `.wk-lede`, ALWAYS
+  VISIBLE, outside the clip (Jon, 2026-10-13: "the subtitle visible, with
+  the arrow allowing the expansion") → the chevron `.wk-more` at the
+  sheet's lower edge; the story columns and under the hood sit in
+  `.wk-story-clip` at height 0 and `inert` until the chevron opens them,
+  no faded peek, nothing opens them by itself; the comet re-measures on
+  the body's height change, so the fold never misaligns the bead). One sheet rhythm: pad 56 (`--sheet-pad`, 20 under 900) ·
   name→line 14 · band→object 56 · object→fold 56 · fold top 48; sheets
   48–80 apart. AudioDex comes FIRST (the first rail mark names the object
   "work" centres). The modules no longer get a `head` slot, so the host
@@ -352,39 +356,46 @@ session must follow.
   383×653) so the visible watch sits on the axis and rhythm — never edit
   the PNG. Lesson: a grid item with `margin: 0 auto` and no intrinsic
   width shrink-wraps to its text (the 64px phone watch) — size it.
-  Homepage nav (2026-10-13, Jon: "builds" + the rest; the four verbs
-  work · play · look · listen are RETIRED): the desktop rail is TWO GROUPS,
-  `builds` (01 audiodex → #build-archive · 02 intake → #build-watch ·
-  03 signal → #play) and `art` (look · listen), group words in the mono
-  label face (0.6875rem/0.12em lowercase, not links), the builds' rows a
-  dim two-digit numeral in a fixed slot then the name, the art rows the
-  word then its Lucide glyph (eye · headphones; `ICONS`, no package), every
-  row flush right inside one 112px block in a 128px rail (`--railw` follows;
-  the AwayRail on the other pages is still 110). The numerals come from
-  `src/lib/build-order.ts` (`BUILD_ORDER`, `buildNo()`), the SAME list the
-  sheets' readout reads: never type a build number in markup. `NAV` (groups
-  → entries, generated from `MARKS`) feeds the rail, the bar (`BAR`: the
-  builds collapse to one word `builds` → #work; signal never reaches
-  phones) and the spy; `getDocIds()` reads the rendered `[data-for]`
-  targets (sheets AND rooms) sorted by on-screen top, `fyOf()` reads each
-  row's centre on the comet track, a row lights when its target is the
-  active one or contains it (that is how the bar's `builds` lights for
-  both sheets), the two sheets carry `scroll-margin-top: 24px` on desks.
-  The rows are a compact centred column (the 2026-08-20 even spread is
-  gone). Phone bar: builds · look · listen · résumé · moon, 0.7rem. The
-  hero corner (dot · résumé, 0.84rem, a 42px hit area) is `position: fixed`
-  on desks and HIDES while the instrument's device overlaps its band
-  (IntersectionObserver, `data-hush`); on phones the corner is gone (the
-  hero's own résumé link under the liner and the bar carry it). Section
-  ids stay work/play/soundlab/illustrations.
-  THE HERO (2026-10-13): shorter than the viewport so ~110px of the first
-  sheet PEEKS under it on desks (`--hero-peek` / `--hero-gap` on `.one`;
-  the gap rule is `.one > .hero ~ .work`, since the rail and the bar sit
-  between the hero and #work in the DOM) and ~80px above the bar on phones;
-  a cue link `↓ builds` (`.cue`) stands 28px above the hero's foot in the
-  label face, no animation; a second `résumé` link (`.hero-cv`) sits under
-  the liner at the liner's size. The rooms-proof still holds for the four
-  rooms; the hero is not a room.
+  Homepage nav (2026-10-13, Jon's round two: "redesign is the move"; the
+  four verbs work · play · look · listen, the two labelled groups and the
+  numerals are all RETIRED): the desktop rail is WORDS ALONE, one face
+  (IBM Plex Mono 0.74rem/500/0.07em lowercase), right-aligned on one x, in
+  two blocks with a 28px hairline divider between them (no words, no
+  glyphs, no numerals): the builds by name (audiodex → #build-archive ·
+  intake → #build-watch · signal → #play · studio → #build-studio), then
+  the rooms renamed illustrations (→ #illustrations) and music (→ #soundlab;
+  "music" not "audio": "audio" collided with AudioDex and the role line).
+  Rows 36px, 4px apart, the lit pill as before; the column is centred above
+  the night switch; 128px rail, `--railw` follows (the AwayRail on the other
+  pages is still 110). `MARKS` = the rooms (`id`, `has`; `SHOW` decides what
+  renders; `studio` is a room too); `NAV` = two blocks of entries that the
+  rail, the bar (`BAR`: the builds collapse to one word `builds` → #work
+  with `data-holds` naming every build id) and the spy read: one list,
+  never two. A rail or bar row whose `data-for` target is missing from the
+  page is hidden at runtime (never a dead link). `getDocIds()` reads the
+  rendered `[data-for]` targets (sheets AND rooms) sorted by on-screen top,
+  `fyOf()` reads each row's centre on the comet track, a row lights when
+  its target is the active one, contains it, or is named in `data-holds`;
+  the sheets carry `scroll-margin-top: 24px` on desks. `src/lib/
+  build-order.ts` (`BUILD_ORDER`, `buildNo()`) is the one ordered list of
+  the builds. Phone bar: builds · illustrations · music · résumé · moon,
+  0.7rem (0.02em tracking under 360px), nothing wraps. The hero corner
+  (dot · résumé, 0.84rem, a 42px hit area) is `position: fixed` on desks
+  and HIDES while the instrument's device overlaps its band
+  (IntersectionObserver, `data-hush`); on phones it stays with the hero
+  (absolute) and the bar carries résumé too. Section ids stay
+  work/play/studio/soundlab/illustrations.
+  THE HERO (2026-10-13, round two: Jon: "the down arrow with builds is
+  enough by itself"): a full viewport (`min-height: 100svh`, the standard
+  `.one > .room` gap to the first room; the round-one PEEK and the second
+  résumé link are gone) with ONE cue link `↓ builds` (`.cue`) 28px above
+  its foot on desks and 16px above the bar on phones, in the label face,
+  no animation. NOTHING PRESSES ITSELF (Jon: "I'd rather they have to be
+  clicked"): the watch and the phone run only from a visitor's press, the
+  page never scrolls by itself after a run starts, and a run never opens
+  a sheet's fold (the self-run, the phone-row trigger, the follow/glide and
+  the run-opens-the-story code are deleted; `firstSettle` survives for the
+  wallet alone).
 - ROOMS (2026-09-02, Jon: "each section has its own viewport"): the four
   homepage sections (`#play`, `#work`, `#soundlab`, `#illustrations`) carry
   `.room` — min-height 100svh (minus the 64px bar below 900px), flex-centered
@@ -478,14 +489,12 @@ session must follow.
   (in-memory keys; sessionStorage was tried and made a reload never show it
   again), and any hand takes it back. A pointer MOVING over the object makes
   the beat WAIT (re-checked every 300ms while in view), never cancel. One helper in StudioOne's script,
-  `firstSettle(el, {ratio, grace, ok, fire, leave})`. The watch and the
-  phone press their own control (a ghost press: `data-ghost`) and run for
-  real; a tap during the auto-run fires `hero:finish` (end frame), leaving
-  before stage 2 fires `hero:reset`; the status region is aria-live off
-  until the end. Phones: the watch also fires from
-  its first run row (no beat), and a run started at the watch is FOLLOWED
-  down main (transcript at 28%, first card at 35%; any touch/wheel/key lets
-  go). The WALLET: the blank tape is a real button that opens the same strip
+  `firstSettle(el, {ratio, grace, ok, fire, leave})`. SINCE 2026-10-13 it
+  serves the WALLET ONLY: the watch's and the phone's self-run, the phone's
+  run-row trigger and the follow-down-main are deleted (Jon: the visitor
+  in the driver's seat); the modules' `hero:finish` / `hero:reset`
+  listeners and `[data-ghost]` styles remain in IntakeHero/ArchiveHero,
+  unfired. The WALLET: the blank tape is a real button that opens the same strip
   (`data-blank-tape`, aria-controls wl-strip-0; both controls' aria-expanded
   stay in sync); its first settle seats the mini and opens the strip, which
   folds back after 2.4s under 1160px and stays open above. The audio
