@@ -446,7 +446,8 @@ session must follow.
   `.one > .room` gap to the first room; the round-one PEEK and the second
   résumé link are gone) with ONE cue link `↓ builds` (`.cue`, 0.8125rem since round four) ~44px
   above its foot on desks and 28px above the bar on phones, in the label
-  face, no animation. NOTHING PRESSES ITSELF (Jon: "I'd rather they have to be
+  face; since round five its ARROW (`.cue-arrow`) is 1.55em, 700, and bobs
+  4px on a 2.2s ease (still under reduced motion); the word does not move. NOTHING PRESSES ITSELF (Jon: "I'd rather they have to be
   clicked"): the watch and the phone run only from a visitor's press, the
   page never scrolls by itself after a run starts, and a run never opens
   a sheet's fold (the self-run, the phone-row trigger, the follow/glide and
@@ -457,7 +458,8 @@ session must follow.
   `.room` — min-height 100svh (minus the 64px bar below 900px), flex-centered
   object, scroll-margin 0. Since 2026-09-18 (Jon: "spacing between the
   modules") the rooms NO LONGER ABUT: `.one > .room { margin-top:
-  var(--room-gap) }` (`--room-gap: clamp(96px, 18vh, 200px)` on `.one`,
+  var(--room-gap) }` (`--room-gap: clamp(108px, 20vh, 224px)` on `.one`,
+  +12% at Jon's word in round five, was 96/18vh/200;
   2026-10-13: the ONE gap that `.one > .room`, `.wk + .wk` and the floor's
   margin read; since round four EVERY room is content-sized — `.room` has
   no min-height, no centring padding; the look room pads only the dots'
@@ -523,6 +525,13 @@ session must follow.
   visible`, `.sgm` is `width: max-content`, the document never widens). If
   the overhang reads wrong, Jon's fallback: widen ALL the sheets' paper to
   match, never their text. `/signal` keeps `part="all"` under the device.
+  THE POINTER (round five, Jon: "hand-written looking arrows pointing at the
+  power button, maybe in red"): `.sig-point`, a host-owned inline SVG inside
+  `.sig-stage` after `<Signal />`, an ember hand-drawn hook from the right
+  onto the switch, placed and sized in DEVICE pixels × `--sig-zoom` (left
+  50% + 540·z, top −70·z, width 260·z: the device's top-right is at
+  50% + 640·z) so it rides the rest scale and points true at every width;
+  it fades (opacity, 400ms) once `#sgm` leaves standby. Never inside `.sgm`.
 - THE FLOOR is ONE object sitewide (2026-09-21, Jon's reference shot):
   `src/components/studio/SiteFloor.astro` = the email + the LinkedIn mark,
   centred, nothing else (the city and the résumé link are gone from every
