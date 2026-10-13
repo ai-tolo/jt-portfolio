@@ -257,6 +257,24 @@ session must follow.
   "work" centres). The modules no longer get a `head` slot, so the host
   re-applies the Archive's rail-centred-on-the-phone rule (Jon, 2026-09-24)
   itself.
+  ONE ANATOMY + THE READOUT (2026-10-13, Jon: the three builds read as
+  modules of one system; the HUD feel comes from consistency and chrome,
+  NEVER from material: paper stays paper, no dark panels, no glow): the
+  shared sheet lives in `src/styles/sheet.css` (`.sheet` = fill, 14%
+  hairline, 28px/20px corners, `--sheet-pad`, inks `--sheet-ink/-dim`
+  that follow `--night-*`, a named container `sheet`; `.sheet-readout`,
+  `.sheet-sec` (12% hairline above every section), `.sheet-t` (the label
+  face, lowercase), `.sheet-cols/-col/-p`, `.sheet-step*`), imported by
+  StudioOne (both `.wk` articles are `.wk.sheet`) AND SignalCard (`.sc` is a
+  `.sheet` too, on the homepage and /signal; HowToPlay's container queries
+  now measure the sheet's CONTENT box, thresholds 787/367). Each sheet sets
+  only `--sheet-acc` (archive #b9701a · watch #ff6b4a · signal sapphire).
+  THE READOUT: a mono line at every sheet's top edge, `build 01 / 03` left
+  and `name · kind` right (JetBrains Mono 11px/0.12em/500 lowercase, dim);
+  the numbers come from `src/lib/build-order.ts`, the kinds are DRAFT `kind`
+  fields in objects-copy.ts / signal-card-copy.ts (app · program ·
+  instrument), Jon's words. SIGNAL still gets NO band; its card keeps its
+  own `.sc-title`.
 - WORK is OBJECTS (2026-09-18; the ledger/matrix is DEAD): the room holds
   Jon's Claude Design modules, one per build, framed by words — the locked
   headline from builds-copy.ts above (the DRAFT dek under it was removed
@@ -334,15 +352,39 @@ session must follow.
   383×653) so the visible watch sits on the axis and rhythm — never edit
   the PNG. Lesson: a grid item with `margin: 0 auto` and no intrinsic
   width shrink-wraps to its text (the 64px phone watch) — size it.
-  Homepage nav: work · play · look · listen, no emojis; since 2026-09-21
-  the desktop rail sets a small inline Lucide glyph (hammer · keyboard ·
-  eye · headphones; paths in `ICONS`, no package; 1.1em, stroke 1.5,
-  square caps, miter joins, one fixed slot) before each word, labels
-  left-aligned; the phone bar stays words-only (its night switch draws the
-  rail's sun/moon glyphs); the #work room comes first; the hero corner
-  (dot · minneapolis, mn · résumé) is `position: fixed` on desks so the
-  résumé is always one click away, and the phone bar carries a résumé
-  item. Section ids stay work/soundlab/illustrations.
+  Homepage nav (2026-10-13, Jon: "builds" + the rest; the four verbs
+  work · play · look · listen are RETIRED): the desktop rail is TWO GROUPS,
+  `builds` (01 audiodex → #build-archive · 02 intake → #build-watch ·
+  03 signal → #play) and `art` (look · listen), group words in the mono
+  label face (0.6875rem/0.12em lowercase, not links), the builds' rows a
+  dim two-digit numeral in a fixed slot then the name, the art rows the
+  word then its Lucide glyph (eye · headphones; `ICONS`, no package), every
+  row flush right inside one 112px block in a 128px rail (`--railw` follows;
+  the AwayRail on the other pages is still 110). The numerals come from
+  `src/lib/build-order.ts` (`BUILD_ORDER`, `buildNo()`), the SAME list the
+  sheets' readout reads: never type a build number in markup. `NAV` (groups
+  → entries, generated from `MARKS`) feeds the rail, the bar (`BAR`: the
+  builds collapse to one word `builds` → #work; signal never reaches
+  phones) and the spy; `getDocIds()` reads the rendered `[data-for]`
+  targets (sheets AND rooms) sorted by on-screen top, `fyOf()` reads each
+  row's centre on the comet track, a row lights when its target is the
+  active one or contains it (that is how the bar's `builds` lights for
+  both sheets), the two sheets carry `scroll-margin-top: 24px` on desks.
+  The rows are a compact centred column (the 2026-08-20 even spread is
+  gone). Phone bar: builds · look · listen · résumé · moon, 0.7rem. The
+  hero corner (dot · résumé, 0.84rem, a 42px hit area) is `position: fixed`
+  on desks and HIDES while the instrument's device overlaps its band
+  (IntersectionObserver, `data-hush`); on phones the corner is gone (the
+  hero's own résumé link under the liner and the bar carry it). Section
+  ids stay work/play/soundlab/illustrations.
+  THE HERO (2026-10-13): shorter than the viewport so ~110px of the first
+  sheet PEEKS under it on desks (`--hero-peek` / `--hero-gap` on `.one`;
+  the gap rule is `.one > .hero ~ .work`, since the rail and the bar sit
+  between the hero and #work in the DOM) and ~80px above the bar on phones;
+  a cue link `↓ builds` (`.cue`) stands 28px above the hero's foot in the
+  label face, no animation; a second `résumé` link (`.hero-cv`) sits under
+  the liner at the liner's size. The rooms-proof still holds for the four
+  rooms; the hero is not a room.
 - ROOMS (2026-09-02, Jon: "each section has its own viewport"): the four
   homepage sections (`#play`, `#work`, `#soundlab`, `#illustrations`) carry
   `.room` — min-height 100svh (minus the 64px bar below 900px), flex-centered
@@ -473,8 +515,8 @@ session must follow.
   homepage sheet (131 KB → 249 KB). Keep it a function.
 - `src/pages/404.astro` is the site's 404 (away-page chrome). The play room
   is `display: none` on phones (≤899px) and on any screen without a fine
-  pointer, "play" leaves the bar and the rail with it, and `getDocIds()`
-  counts only rooms that are laid out (`offsetParent`). Never bring an
+  pointer, "03 signal" leaves the rail with it (its whole `li`), and
+  `getDocIds()` counts only targets that are laid out (`offsetParent`). Never bring an
   instrument back to phones (see memory signal_mobile_halo).
 - PHONES (round 3, 2026-09-22): the hero is one left-aligned stack on the
   rooms' 14px gutter (the liner's right alignment is a desk gesture; the
