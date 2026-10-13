@@ -140,21 +140,15 @@ const illos: Illo[] = (illustrations as any).items ?? [];
 // round-2 call); 2026-09-22 the posts went to junkyard/ (URLs redirect home).
 
 // The nav (Jon, 2026-09-18): four verbs in page order, work · play · look ·
-// listen. 2026-10-13 (Jon): the rail reads two groups instead, the builds
-// named and numbered (01 audiodex · 02 intake · 03 signal), then the art
-// rooms (look · listen). Section ids are stable internals
-// (work/play/illustrations/soundlab) so deep links and the spy survive
-// renames. The rail reads DOCUMENT order (getDocIds), and this order is also
-// the order the targets sit in below.
-// The art rows' glyphs (2026-09-21): Lucide paths copied inline (ISC; no icon
-// package, no dependency), an eye and headphones. Desktop rail only; the
-// phone bar stays words. The build rows carry their number instead.
-const ICONS = {
-  eye:
-    '<path d="M2.062 12.348a1 1 0 0 1 0-.696 10.75 10.75 0 0 1 19.876 0 1 1 0 0 1 0 .696 10.75 10.75 0 0 1-19.876 0"/><circle cx="12" cy="12" r="3"/>',
-  headphones:
-    '<path d="M3 14h3a2 2 0 0 1 2 2v3a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-7a9 9 0 0 1 18 0v7a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3"/>',
-};
+// listen. 2026-10-13 round one: two labelled groups with numbered builds.
+// 2026-10-13 round two (Jon: "the numbering … looks super ugly", "remove the
+// eye and headphones"): the rail is WORDS ALONE, one face, one rhythm, one
+// right edge: the four builds by name, a short hairline, then the two art
+// rooms named for what they hold (illustrations · music; "audio" would
+// collide with AudioDex and the role line). No numerals, no group words, no
+// glyphs. Section ids are stable internals (work/play/illustrations/soundlab)
+// so deep links and the spy survive renames. The rail reads DOCUMENT order
+// (getDocIds), and this order is also the order the targets sit in below.
 // THE ROOMS: a room renders ONLY when it has something in it (SHOW).
 const MARKS = [
   // id "play" = the .live-signal HOST (has a box at every width); the
@@ -162,48 +156,51 @@ const MARKS = [
   // made the chip a dead link on phones (review, 2026-08-25)
   { id: "work", has: BUILDS.length > 0 },
   { id: "play", has: true },
+  // the Signal Studio sheet's room (#studio, holding #build-studio), placed
+  // after #play and before #illustrations. Its section lands in a later
+  // change: flip this to true in the same change that adds it
+  { id: "studio", has: false },
   { id: "illustrations", has: illos.length > 0 },
   { id: "soundlab", has: tracks.length > 0 },
 ].filter((m) => m.has);
 const SHOW = new Set(MARKS.map((m) => m.id));
-// THE NAV (2026-10-13), generated from the rooms: an entry whose room is
-// absent drops out and the build numbers close up. `id` is the spy and
-// scroll target (a build's sheet, or a room), `room` the section that must
-// render. The rail, the phone bar and the script (through the rendered
+// THE NAV, generated from the rooms: an entry whose room is absent drops out
+// at build time, and the script hides any row whose target is missing from
+// the page at runtime (so a nav row is never a dead link). `id` is the spy
+// and scroll target (a build's sheet, or a room), `room` the section that
+// must render. The rail, the phone bar and the script (through the rendered
 // data-for attributes) all read these entries: one list, never two.
-type NavEntry = { id: string; room: string; word: string; num?: string; icon?: string };
-type NavGroup = { key: string; word: string; entries: NavEntry[] };
-const NAV: NavGroup[] = [
-  {
-    key: "builds",
-    word: "builds",
-    entries: [
-      { id: "build-archive", room: "work", word: "audiodex", num: buildNo("audiodex").n },
-      { id: "build-watch", room: "work", word: "intake", num: buildNo("intake").n },
-      { id: "play", room: "play", word: "signal", num: buildNo("signal").n },
-    ],
-  },
-  {
-    key: "art",
-    word: "art",
-    entries: [
-      { id: "illustrations", room: "illustrations", word: "look", icon: ICONS.eye },
-      { id: "soundlab", room: "soundlab", word: "listen", icon: ICONS.headphones },
-    ],
-  },
-]
-  // the builds' numerals come from src/lib/build-order.ts, the same list the
-  // sheets' readout reads ("build 01 / 03"), so the rail and the sheets can
-  // never disagree; an absent room drops its row and keeps the others' numbers
+type NavEntry = { id: string; room: string; word: string };
+type NavBlock = { key: "builds" | "rooms"; entries: NavEntry[] };
+const NAV: NavBlock[] = (
+  [
+    {
+      key: "builds",
+      entries: [
+        { id: "build-archive", room: "work", word: "audiodex" },
+        { id: "build-watch", room: "work", word: "intake" },
+        { id: "play", room: "play", word: "signal" },
+        { id: "build-studio", room: "studio", word: "studio" },
+      ],
+    },
+    {
+      key: "rooms",
+      entries: [
+        { id: "illustrations", room: "illustrations", word: "illustrations" },
+        { id: "soundlab", room: "soundlab", word: "music" },
+      ],
+    },
+  ] as NavBlock[]
+)
   .map((g) => ({ ...g, entries: g.entries.filter((e) => SHOW.has(e.room)) }))
   .filter((g) => g.entries.length > 0);
-// the phone bar cannot hold seven items: the builds collapse to ONE word that
+// the phone bar cannot hold every build: the builds collapse to ONE word that
 // opens the work room (signal never reaches phones: its room is display:none
-// there), the art rooms keep their words
+// there; the studio sheet does, under the same word), the rooms keep theirs
 const BAR = NAV.flatMap((g) =>
   g.key === "builds"
-    ? SHOW.has("work") ? [{ id: "work", word: g.word }] : []
-    : g.entries.map((e) => ({ id: e.id, word: e.word }))
+    ? SHOW.has("work") ? [{ id: "work", word: "builds", holds: g.entries.map((e) => e.id).join(" ") }] : []
+    : g.entries.map((e) => ({ id: e.id, word: e.word, holds: undefined }))
 );
 // the watch piece's locked words (headline + paragraphs) frame its object
 const WATCH = BUILDS.find((b) => b.id === "watch")!;
@@ -260,34 +257,26 @@ const columns = (blocks: BuildBlock[]): StoryBlock[][] =>
   {/* ── THE SIDEBAR — persistent left column, nav only (Jon, 2026-08-16:
       always present from load; flat light panel; mobile deferred) ───────── */}
   <nav class="rail" data-rail aria-label="Sections">
-    {/* two groups (Jon, 2026-10-13): each a list labelled by its quiet word.
-        The label is not a link; the list's name carries it to a reader. The
-        builds' rows: number left, name flush right; the art rows: word, then
-        its glyph. Every row ends on the block's right edge. The builds'
-        dashes on the comet's track are gone: each row now has its own knot. */}
-    {NAV.map((g) => (
-      <div class="rail-grp" data-group={g.key}>
-        <span class="rail-group" id={`rail-g-${g.key}`}>{g.word}</span>
-        <ul class="rail-list" role="list" aria-labelledby={`rail-g-${g.key}`}>
-          {g.entries.map((e) => (
-            <li data-room={e.room}>
-              <a
-                class:list={["rail-item", e.num && "rail-build"]}
-                href={`#${e.id}`}
-                data-for={e.id}
-              >
-                {e.num && <span class="rail-num" aria-hidden="true">{e.num}</span>}
-                <span class="rail-word">{e.word}</span>
-                {e.icon && (
-                  <svg class="rail-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"
-                    stroke-linecap="square" stroke-linejoin="miter" aria-hidden="true" focusable="false" set:html={e.icon} />
-                )}
-              </a>
-            </li>
-          ))}
-        </ul>
-      </div>
-    ))}
+    {/* words alone (Jon, 2026-10-13, round two): the builds, a short
+        hairline, the art rooms. One face, one row height, every word ending
+        on one x (so each knot on the comet's track sits the same distance
+        from its word). No group words, no numerals, no glyphs. */}
+    <div class="rail-col">
+      {NAV.map((g, k) => (
+        <>
+          {k > 0 && <i class="rail-rule" aria-hidden="true"></i>}
+          <ul class="rail-list" role="list" data-block={g.key}>
+            {g.entries.map((e) => (
+              <li data-room={e.room}>
+                <a class="rail-item" href={`#${e.id}`} data-for={e.id}>
+                  <span class="rail-word">{e.word}</span>
+                </a>
+              </li>
+            ))}
+          </ul>
+        </>
+      ))}
+    </div>
     <span class="comet" data-comet aria-hidden="true">
       <i class="comet-track"></i>
       <i class="comet-fill"></i>
@@ -309,13 +298,15 @@ const columns = (blocks: BuildBlock[]): StoryBlock[][] =>
 
   {/* ── the MOBILE bar, the rail's phone form (2026-08-24): the words at
       the thumb, night switch at the end. Same spy lights both: "builds" (the
-      work room) lights while either build's sheet is the current one. */}
+      work room) lights while any build's sheet is the current one (it holds
+      the work room's two by containment, and names the others in data-holds). */}
   <nav class="mbar" data-mbar aria-label="Sections">
     {BAR.map((m) => (
       <a
         class="mbar-item"
         href={`#${m.id}`}
         data-for={m.id}
+        data-holds={m.holds}
       >
         <span class="mbar-word">{m.word}</span>
       </a>
@@ -875,68 +866,58 @@ const columns = (blocks: BuildBlock[]): StoryBlock[][] =>
     top: 0;
     bottom: 0;
     z-index: 50;
-    /* 128 since the builds are named (2026-10-13): "01 audiodex" needs the
-       112px block; the column's --railw follows it */
+    /* 128 since the builds were named (2026-10-13); the column's --railw
+       follows it. Round two's widest word, "illustrations", fits a 118px row
+       with ~8px either side of it in the lit pill */
     width: 128px;
     flex-direction: column;
     justify-content: center;
-    gap: 26px; /* between the two groups */
-    /* the foot is the light switch's own zone (Jon, 2026-08-20): the groups
-       centre in the height above it */
-    padding: 16px 8px 84px;
+    /* the foot is the light switch's own zone (Jon, 2026-08-20): the column
+       centres in the height above it. The rows run x 3..121: the comet's
+       bead (x 123..133) stands 2px clear of a lit pill */
+    padding: 16px 7px 84px 3px;
     background: #f4f3f0;
     border-right: 1px solid rgba(20, 18, 16, 0.14);
   }
-  .rail-grp {
+  /* WORDS ALONE (Jon, 2026-10-13, round two): one column, one face, one row
+     height, every word ending on one x. 36px rows, 4px apart in a block; a
+     28px hairline with 18px above and below between the two blocks */
+  .rail-col {
     display: flex;
     flex-direction: column;
-    gap: 4px;
-    width: 112px;
-  }
-  /* the group's word: the label face, quiet, never a link */
-  .rail-group {
-    padding: 0 8px;
-    font-family: "IBM Plex Mono", ui-monospace, monospace;
-    font-size: 0.6875rem;
-    font-weight: 400;
-    line-height: 1.4;
-    letter-spacing: 0.12em;
-    text-transform: lowercase;
-    color: #716d65;
-    user-select: none;
+    width: 118px;
   }
   .rail-list {
     display: flex;
     flex-direction: column;
-    gap: 6px;
+    gap: 4px;
     margin: 0;
     padding: 0;
     list-style: none;
   }
+  .rail-rule {
+    display: block;
+    align-self: flex-end;
+    width: 28px;
+    height: 1px;
+    /* right edge = the words' end (the row's 8px right padding) */
+    margin: 18px 8px 18px 0;
+    background: #716d65;
+  }
   .rail-item {
-    /* the word, then its glyph, everything flush RIGHT inside one fixed-width
-       block (Jon, 2026-09-21): the glyphs stand in a straight column on the
-       block's right edge and the words end on one x beside them. The
-       block itself sits centred in the rail */
     display: flex;
     align-items: center;
     justify-content: flex-end;
-    gap: 0.5em;
-    width: 112px;
-    padding: 11px 14px 11px 8px;
+    box-sizing: border-box;
+    width: 118px;
+    height: 36px;
+    padding: 0 8px 0 7px;
     border-radius: 11px;
     text-decoration: none;
     font-family: "IBM Plex Mono", ui-monospace, monospace;
     font-size: 0.74rem;
     color: #45423c;
     transition: background 160ms ease, color 160ms ease;
-  }
-  .rail-ico {
-    flex: none;
-    width: 1.1em;
-    height: 1.1em;
-    /* seat the glyph on the word's x-height (the line box centres a hair above it) */
-    transform: translateY(0.06em);
   }
   .rail-item:hover {
     background: rgba(20, 18, 16, 0.07);
@@ -952,34 +933,18 @@ const columns = (blocks: BuildBlock[]): StoryBlock[][] =>
   .rail-word {
     font-size: 0.74rem;
     font-weight: 500;
+    line-height: 1;
     letter-spacing: 0.07em;
+    /* the tracking's trailing space would push every word 0.07em off the
+       shared right edge (and unbalance the widest pill): take it back */
+    margin-right: -0.07em;
     white-space: nowrap;
   }
-  /* a build's row (2026-10-13): its number in the dim ink in a fixed slot at
-     the row's left, the name flush right, ending where the art rows' glyphs
-     end. No glyph. */
-  .rail-build {
-    justify-content: space-between;
-    align-items: baseline;
+  :global(html[data-night]) .rail-rule {
+    background: #778090;
   }
-  .rail-num {
-    flex: none;
-    font-size: 0.6875rem;
-    font-weight: 400;
-    letter-spacing: 0.04em;
-    font-variant-numeric: tabular-nums;
-    color: #716d65;
-    transition: color 160ms ease;
-  }
-  .rail-item[data-on] .rail-num {
-    color: rgba(245, 242, 234, 0.6);
-  }
-  :global(html[data-night]) .rail-group,
-  :global(html[data-night]) .rail-num {
-    color: #778090;
-  }
-  :global(html[data-night]) .rail-item[data-on] .rail-num {
-    color: rgba(16, 18, 22, 0.55);
+  :global(html[data-night]) .rail-item:hover {
+    background: rgba(232, 236, 244, 0.07);
   }
   /* the comet's knots sit beside the rows themselves: the script reads each
      row's centre on the track (fyOf), so the bead on a row = that target
@@ -988,7 +953,8 @@ const columns = (blocks: BuildBlock[]): StoryBlock[][] =>
      viewport's (the rail's targets, not the sheets' own styling) */
   @media (min-width: 900px) {
     #build-archive,
-    #build-watch {
+    #build-watch,
+    #build-studio {
       scroll-margin-top: 24px;
     }
   }
@@ -1266,7 +1232,10 @@ const columns = (blocks: BuildBlock[]): StoryBlock[][] =>
       transition: background 560ms ease, border-color 560ms ease;
     }
     .mbar-item {
-      flex: 1 1 0;
+      /* sized by its word, the bar's spare width shared EQUALLY (2026-10-13,
+         round two): "illustrations" is twice "music", so equal cells would
+         crowd it; equal shares keep the space between every two words even */
+      flex: 1 1 auto;
       min-width: 0;
       min-height: 44px;
       display: flex;
@@ -1280,7 +1249,7 @@ const columns = (blocks: BuildBlock[]): StoryBlock[][] =>
       font-family: "IBM Plex Mono", ui-monospace, monospace;
       color: #45423c;
     }
-    /* builds · look · listen, then résumé and the moon (2026-10-13) */
+    /* builds · illustrations · music, then résumé and the moon (2026-10-13) */
     .mbar-resume {
       order: 7;
       border-left: 1px solid rgba(20, 18, 16, 0.14);
@@ -1299,8 +1268,18 @@ const columns = (blocks: BuildBlock[]): StoryBlock[][] =>
       outline-color: #e8ecf4;
     }
     .mbar-word {
-      font-size: 0.7rem; /* builds · look · listen · résumé (2026-10-13) */
+      font-size: 0.7rem; /* builds · illustrations · music · résumé (2026-10-13) */
       letter-spacing: 0.05em;
+      margin-right: -0.05em; /* the tracking's trailing space, so each word centres */
+      white-space: nowrap;
+    }
+    /* the narrowest phones (320): the words keep their size, the tracking
+       gives back a little so the gaps stay comfortable */
+    @media (max-width: 359px) {
+      .mbar-word {
+        letter-spacing: 0.02em;
+        margin-right: -0.02em;
+      }
     }
     .mbar-item[data-on] {
       background: var(--ink);
@@ -2912,9 +2891,10 @@ const columns = (blocks: BuildBlock[]): StoryBlock[][] =>
   // ONE source of truth shared by the spy, the rows, and the comet: the
   // rail's targets in layout order, and each row's place on the comet's
   // track. The bead and the highlight both derive from these; they cannot
-  // disagree. The targets (2026-10-13) are the two builds' SHEETS
-  // (#build-archive, #build-watch), the play room, look and listen; the
-  // phone bar's "builds" (#work) is lit by containment, never by a second list.
+  // disagree. The targets (2026-10-13) are the builds' SHEETS
+  // (#build-archive, #build-watch, #build-studio once it exists), the play
+  // room, illustrations and music (#soundlab); the phone bar's "builds"
+  // (#work) is lit by containment and data-holds, never by a second list.
   // Computed FRESH each call: the mobile flex order makes layout position
   // width-dependent, so a one-time snapshot goes stale when the viewport
   // crosses 900px (tablet rotation; review, 2026-08-25). Sorted by the
@@ -2922,6 +2902,20 @@ const columns = (blocks: BuildBlock[]): StoryBlock[][] =>
   // Only targets that are laid out count: the play room is display:none where
   // the instrument cannot play (phones, coarse pointers — 2026-09-22), and a
   // hidden room would sort first at 0 and take a knot and a row.
+  // A row whose target is not on the page is no row at all (2026-10-13: the
+  // studio sheet's entry is in the nav data before its section exists; the
+  // build-time SHOW filter is the first guard, this is the second). A list
+  // left empty goes too, with the hairline before it.
+  document.querySelectorAll<HTMLElement>("[data-rail] [data-for], [data-mbar] [data-for]").forEach((el) => {
+    if (!document.getElementById(el.dataset.for as string)) (el.closest("li") ?? el).style.display = "none";
+  });
+  rail?.querySelectorAll<HTMLElement>(".rail-list").forEach((ul) => {
+    if (Array.from(ul.children).every((li) => (li as HTMLElement).style.display === "none")) {
+      ul.style.display = "none";
+      const rule = ul.previousElementSibling as HTMLElement | null;
+      if (rule?.classList.contains("rail-rule")) rule.style.display = "none";
+    }
+  });
   const topOf = (id: string) => document.getElementById(id)?.getBoundingClientRect().top ?? 0;
   const getDocIds = () =>
     rail
@@ -2953,7 +2947,7 @@ const columns = (blocks: BuildBlock[]): StoryBlock[][] =>
     // one spy lights whichever is on duty.
     const items = Array.from(
       document.querySelectorAll<HTMLElement>("[data-rail] [data-for], [data-mbar] [data-for]")
-    ).map((el) => ({ id: el.dataset.for as string, el }));
+    ).map((el) => ({ id: el.dataset.for as string, holds: (el.dataset.holds ?? "").split(" "), el }));
     // Document order (not nav order) so exact ties break toward the later
     // section — the one the reader is scrolling INTO.
     const recompute = () => {
@@ -2969,10 +2963,11 @@ const columns = (blocks: BuildBlock[]): StoryBlock[][] =>
         if (vis >= best) { best = vis; active = id; }
       }
       // a row is lit when its target IS the active one or HOLDS it: the
-      // phone bar's "builds" (#work) holds both builds' sheets
+      // phone bar's "builds" (#work) holds the work room's two sheets, and
+      // names every build in data-holds (the studio sheet has its own room)
       const hot = active ? document.getElementById(active) : null;
-      items.forEach(({ id, el }) => {
-        if (hot && (id === active || document.getElementById(id)?.contains(hot))) {
+      items.forEach(({ id, holds, el }) => {
+        if (hot && (id === active || holds.includes(active as string) || document.getElementById(id)?.contains(hot))) {
           el.setAttribute("data-on", "");
           el.setAttribute("aria-current", "true");
         } else {
@@ -3013,8 +3008,9 @@ const columns = (blocks: BuildBlock[]): StoryBlock[][] =>
   }
 
   // (the rail rhythm: until 2026-10-13 the words were pinned at an even beat
-  // down the track. The two groups read as one centred column now, a table
-  // of contents, and the knots follow the rows; nothing is pinned.)
+  // down the track. The rows read as one centred column now, a table of
+  // contents, and the knots follow the rows; nothing is pinned. The hairline
+  // between the builds and the rooms is not a target and has no knot.)
 
   // ── the comet: reading progress on the rail's right edge. rAF-throttled
   // passive scroll — motion only while scrolling, nothing at rest.
