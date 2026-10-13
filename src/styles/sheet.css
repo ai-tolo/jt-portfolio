@@ -1,0 +1,138 @@
+/* THE SHEET (2026-10-13): the one anatomy the three builds share, so AudioDex, Intake and SIGNAL read as three
+   modules of one system. Imported by StudioOne.astro (the two .wk sheets) and SignalCard.astro (SIGNAL's card, also
+   on /signal); each keeps only what is its own (the band, the object and the fold; the card's title and diagram).
+   Paper stays paper: the white sheet, hairlines, no dark panel by day, no glow, no motion beyond the night fade.
+   The ONLY thing that differs between the three is the accent: each module sets --sheet-acc (its one hue) on its
+   sheet; the dots, the stage words and the inline .k words read it.
+   Inks: day = the page's --ink and the room's --dim (the homepage's .one), falling back to --muted on /signal;
+   night = --night-ink / --night-dim (.one pins --ink to its day value, so var(--ink) alone would stay dark on the
+   night card), falling back to the page's own flipped --ink / --muted on /signal. */
+
+:root { --sheet-pad: 56px; } /* the sheet's inner gutter (2026-10-10) */
+@media (max-width: 899px) { :root { --sheet-pad: 20px; } }
+
+.sheet {
+  --sheet-ink: var(--ink, #141210);
+  --sheet-dim: var(--dim, var(--muted, #6a6660));
+  --sheet-card: #ffffff;
+  --sheet-sans: "Instrument Sans", "Helvetica Neue", Arial, sans-serif;
+  --sheet-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+  --sheet-display: "Outfit", var(--sheet-sans);
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 1080px;
+  border: 1px solid color-mix(in oklab, var(--sheet-ink) 14%, transparent);
+  border-radius: 28px;
+  background: var(--sheet-card);
+  color: var(--sheet-ink);
+  font-family: var(--sheet-sans);
+  container: sheet / inline-size;
+  transition: border-color 560ms ease, background-color 560ms ease, color 560ms ease;
+}
+html[data-night] .sheet {
+  --sheet-card: #1c1c1f;
+  --sheet-ink: var(--night-ink, var(--ink));
+  --sheet-dim: var(--night-dim, var(--muted));
+}
+@media (max-width: 899px) {
+  .sheet { border-radius: 20px; }
+}
+
+/* THE READOUT: the sheet's top edge, the same line on all three. Left: its number in the set (build-order.ts);
+   right: its name and its kind. Chrome, not a heading: the room's label face. Its top stands 24px under the sheet's
+   edge at every gutter, 20px above the sheet's name. */
+.sheet-readout {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 4px 24px;
+  margin: calc(24px - var(--sheet-pad)) 0 20px;
+  font: 500 0.6875rem/12px var(--sheet-mono);
+  letter-spacing: 0.12em;
+  text-transform: lowercase;
+  color: var(--sheet-dim);
+  transition: color 560ms ease;
+}
+/* phones: tighter (top 14, 10 to the name), so the line costs the work sheets 16px, which their band hands back
+   (StudioOne .band, 36 → 20 under 900): the phone and its hint land where they did before the readout */
+@media (max-width: 899px) {
+  .sheet-readout { margin: calc(14px - var(--sheet-pad)) 0 10px; }
+}
+
+/* A LABELLED SECTION: a hairline, then its label, then its body (under the hood on all three; how to play and where
+   it came from on SIGNAL's). */
+.sheet-sec {
+  padding: 24px 0;
+  border-top: 1px solid color-mix(in oklab, var(--sheet-ink) 12%, transparent);
+  transition: border-color 560ms ease;
+}
+.sheet-sec:last-child { padding-bottom: 16px; }
+.sheet-t {
+  margin: 0 0 24px;
+  font: 500 0.6875rem/1 var(--sheet-mono);
+  letter-spacing: 0.12em;
+  color: var(--sheet-dim);
+  transition: color 560ms ease;
+}
+
+/* TWO COLUMNS (the story, the steps, where it came from): one measure, one gap; stacked under 820px of sheet */
+.sheet-cols { display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px 48px; }
+.sheet-cols:has(> .sheet-steps) { row-gap: 24px; }
+.sheet-col { min-width: 0; }
+.sheet-col > :last-child { margin-bottom: 0; }
+.sheet-p {
+  margin: 0 0 16px;
+  font-size: 1rem;
+  line-height: 1.6;
+  text-wrap: pretty;
+  color: var(--sheet-ink);
+  transition: color 560ms ease;
+}
+
+/* THE STEPS (under the hood): a spine of dots in the module's hue, the stage word, the tool in a chip, one sentence */
+.sheet-steps { list-style: none; margin: 0; padding: 0; }
+.sheet-step { position: relative; padding: 0 0 24px 28px; }
+.sheet-step::before {
+  content: ''; position: absolute; left: 0; top: 5px;
+  width: 10px; height: 10px; border-radius: 50%;
+  background: var(--sheet-acc, var(--sheet-ink));
+}
+.sheet-step::after {
+  content: ''; position: absolute; left: 4.5px; top: 20px; bottom: 6px; width: 1px;
+  background: color-mix(in oklab, var(--sheet-ink) 16%, transparent);
+}
+.sheet-step:last-child::after { display: none; }
+.sheet-step:last-child { padding-bottom: 0; }
+.sheet-step-head { display: flex; align-items: center; gap: 10px; margin-bottom: 6px; }
+/* the stage word: the hue taken 30 % toward the ink, so the pale sapphire and the bright red read as words on paper.
+   (The inline <b class="k"> words inside a step's sentence stay the page's bold body face, as they have always
+   rendered: the old scoped `.wk-step-p .k` rule never reached set:html content.) */
+.sheet-step-k {
+  font: 500 0.6875rem/1.6 var(--sheet-mono);
+  letter-spacing: 0.12em;
+  color: color-mix(in oklab, var(--sheet-acc, var(--sheet-ink)) 70%, var(--sheet-ink));
+}
+.sheet-step-tool {
+  font: 500 0.6875rem/1 var(--sheet-mono);
+  letter-spacing: 0.04em;
+  color: var(--sheet-dim);
+  padding: 4px 8px;
+  border: 1px solid color-mix(in oklab, var(--sheet-ink) 16%, transparent);
+  border-radius: 999px;
+  transition: border-color 560ms ease, color 560ms ease;
+}
+.sheet-step-p {
+  margin: 0;
+  font-size: 0.9375rem;
+  line-height: 1.55;
+  color: var(--sheet-ink);
+  text-wrap: pretty;
+  transition: color 560ms ease;
+}
+
+@container sheet (min-width: 820px) {
+  .sheet-sec { padding-top: 32px; }
+  .sheet-sec:not(:last-child) { padding-bottom: 32px; }
+  .sheet-cols { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+}

@@ -5,8 +5,14 @@
  * ([data-write-up]): the title and the words in view, the diagram beneath them. 96 px under the device: air, still SIGNAL's (a room gap would detach it). Inside: the
  * write-up (signal-card-copy.ts, Jon's to rewrite) · HOW TO PLAY (./HowToPlay.astro: one keyboard diagram drawn from
  * signal-copy.ts LEGEND, 2026-10-06) · UNDER THE HOOD (the engine, a spine of steps) · WHERE IT CAME FROM. Mounted by StudioOne's play room (inside .sig-desktop, so
- * it exists only where the instrument plays) and by /signal. Its own styles: nothing here depends on the work room's.
+ * it exists only where the instrument plays) and by /signal.
+ * 2026-10-13 (ONE ANATOMY): the card is a `.sheet` (src/styles/sheet.css), the material, rhythm and parts the two
+ * work-room sheets share: the readout line at its top edge (its number from src/lib/build-order.ts), a hairline and
+ * a label opening each section, the steps' spine. Those two files are its only dependencies outside this folder; what
+ * stays here is its own: the title, the 96 px under the device, the sapphire, and the names HowToPlay reads.
  */
+import "../../styles/sheet.css";
+import { buildNo } from "../../lib/build-order";
 import { CARD, type CardRow } from "./signal-card-copy.ts";
 import HowToPlay from "./HowToPlay.astro";
 
@@ -18,118 +24,72 @@ const cols = (ps: ReadonlyArray<string>): string[][] => {
   const cut = Math.ceil(ps.length / 2);
   return [ps.slice(0, cut), ps.slice(cut)];
 };
+const no = buildNo("signal");
 ---
 
-<div class="sc" data-signal-card data-write-up>
-  <div class="sc-clip">
-    <div class="sc-body">
-      <h4 class="sc-title">{CARD.title}</h4>
-      <div class="sc-cols">
-        {cols(CARD.story).map((col) => (
-          <div class="sc-col">{col.map((p) => <p class="sc-p" set:html={p} />)}</div>
-        ))}
-      </div>
+<div class="sc sheet" data-signal-card data-write-up>
+  <div class="sheet-readout">
+    <span aria-hidden="true">build {no.n} / {no.of}</span>
+    <span>{CARD.title} · {CARD.kind}</span>
+  </div>
+  <h4 class="sc-title">{CARD.title}</h4>
+  <div class="sc-story sheet-cols">
+    {cols(CARD.story).map((col) => (
+      <div class="sheet-col">{col.map((p) => <p class="sheet-p" set:html={p} />)}</div>
+    ))}
+  </div>
+
+  <div class="sheet-sec">
+    <p class="sheet-t" id="how-to-play">{CARD.howTitle}</p>
+    <HowToPlay />
+  </div>
+
+  <div class="sheet-sec">
+    <p class="sheet-t">{CARD.hoodTitle}</p>
+    <div class="sheet-cols">
+      {halves(CARD.rows).map((col) => (
+        <ol class="sheet-steps">
+          {col.map((r) => (
+            <li class="sheet-step">
+              <div class="sheet-step-head"><span class="sheet-step-k">{r.k}</span><span class="sheet-step-tool">{r.tool}</span></div>
+              <p class="sheet-step-p" set:html={r.html} />
+            </li>
+          ))}
+        </ol>
+      ))}
     </div>
-    <div class="sc-hood">
-      <p class="sc-t" id="how-to-play">{CARD.howTitle}</p>
-      <HowToPlay />
+  </div>
 
-      <p class="sc-t">{CARD.hoodTitle}</p>
-      <div class="sc-cols">
-        {halves(CARD.rows).map((col) => (
-          <ol class="sc-steps">
-            {col.map((r) => (
-              <li class="sc-step">
-                <div class="sc-step-head"><span class="sc-step-k">{r.k}</span><span class="sc-step-tool">{r.tool}</span></div>
-                <p class="sc-step-p" set:html={r.html} />
-              </li>
-            ))}
-          </ol>
-        ))}
-      </div>
-
-      <p class="sc-t">{CARD.fromTitle}</p>
-      <div class="sc-cols">
-        {cols(CARD.from).map((col) => (
-          <div class="sc-col">{col.map((p) => <p class="sc-p" set:html={p} />)}</div>
-        ))}
-      </div>
+  <div class="sheet-sec">
+    <p class="sheet-t">{CARD.fromTitle}</p>
+    <div class="sheet-cols">
+      {cols(CARD.from).map((col) => (
+        <div class="sheet-col">{col.map((p) => <p class="sheet-p" set:html={p} />)}</div>
+      ))}
     </div>
   </div>
 </div>
 
 <style>
+  /* the card's own; the sheet (material, inks, night, readout, sections, steps) is src/styles/sheet.css */
   .sc {
-    --sc-ink: var(--ink, #141210);
-    --sc-dim: var(--muted, #6a6660);
-    --sc-card: #ffffff;
-    --sc-acc: #4fd1ff; /* the instrument's own light: the keys' sapphire */
-    --sc-sans: "Instrument Sans", "Helvetica Neue", Arial, sans-serif;
-    --sc-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
-    --sc-display: "Outfit", var(--sc-sans);
+    --sheet-acc: #4fd1ff; /* the instrument's own light: the keys' sapphire */
+    /* HowToPlay's diagram reads these two names; they follow the sheet's ink (day and night) and mono */
+    --sc-ink: var(--sheet-ink);
+    --sc-mono: var(--sheet-mono);
     position: relative;
-    box-sizing: border-box;
-    width: 100%;
-    max-width: 1080px;
     margin: 96px auto 0;
-    border: 1px solid color-mix(in oklab, var(--sc-ink) 16%, transparent);
-    border-radius: 28px;
-    background: var(--sc-card);
-    color: var(--sc-ink);
-    font-family: var(--sc-sans);
-    container-type: inline-size;
+    padding: var(--sheet-pad); /* the bottom: the last section's 16 + the gutter = the work sheets' 16 + their handle */
     scroll-margin-top: 32px; /* the "?" key's landing: the whole write-up from its top (the title, the words, the diagram) */
-    transition: border-color 560ms ease, background-color 560ms ease, color 560ms ease;
   }
-  /* night: the ink flips with the card. On the homepage `.one` pins --ink to its day value, so var(--ink) alone left
-     the card's words dark on dark whenever the instrument took the site to night; --night-ink is .one's own night
-     ink, and /signal (no .one) falls back to the page's --ink, which flips there. */
-  :global(html[data-night]) .sc { --sc-card: #1c1c1f; --sc-ink: var(--night-ink, var(--ink)); }
-  .sc-clip { padding-bottom: 32px; }
-  .sc-body { padding: 32px 32px 32px; }
   .sc-title {
     margin: 0 0 40px;
     text-align: center;
-    font-family: var(--sc-display);
+    font-family: var(--sheet-display);
     font-size: 2.125rem;
     font-weight: 500;
     line-height: 1.15;
     letter-spacing: 0.06em;
   }
-  .sc-cols { display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px 48px; } /* the row gap only matters where the columns stack */
-  .sc-cols:has(.sc-steps) { row-gap: 24px; }
-  .sc-col { min-width: 0; }
-  .sc-col > :last-child { margin-bottom: 0; }
-  .sc-p { margin: 0 0 16px; font-size: 1rem; line-height: 1.6; text-wrap: pretty; }
-  .sc-hood {
-    margin: 0 32px;
-    padding: 24px 0 16px;
-    border-top: 1px solid color-mix(in oklab, var(--sc-ink) 12%, transparent);
-  }
-  .sc-t {
-    margin: 32px 0 24px;
-    font: 500 0.6875rem/1 var(--sc-mono);
-    letter-spacing: 0.14em;
-    text-transform: uppercase;
-    color: var(--sc-dim);
-  }
-  .sc-hood > .sc-t:first-child { margin-top: 0; }
-  /* UNDER THE HOOD: the spine */
-  .sc-steps { list-style: none; margin: 0; padding: 0; }
-  .sc-step { position: relative; padding: 0 0 24px 28px; }
-  .sc-step::before { content: ''; position: absolute; left: 0; top: 5px; width: 10px; height: 10px; border-radius: 50%; background: var(--sc-acc); }
-  .sc-step::after { content: ''; position: absolute; left: 4.5px; top: 20px; bottom: 6px; width: 1px; background: color-mix(in oklab, var(--sc-ink) 16%, transparent); }
-  .sc-step:last-child::after { display: none; }
-  .sc-step:last-child { padding-bottom: 0; }
-  .sc-step-head { display: flex; align-items: center; gap: 10px; margin-bottom: 6px; }
-  .sc-step-k { font: 500 0.6875rem/1.6 var(--sc-mono); letter-spacing: 0.12em; text-transform: uppercase; color: color-mix(in oklab, var(--sc-acc) 70%, var(--sc-ink)); }
-  .sc-step-tool { font: 500 0.6875rem/1 var(--sc-mono); letter-spacing: 0.04em; color: var(--sc-dim); padding: 4px 8px; border: 1px solid color-mix(in oklab, var(--sc-ink) 16%, transparent); border-radius: 999px; }
-  .sc-step-p { margin: 0; font-size: 0.9375rem; line-height: 1.55; text-wrap: pretty; }
-  @container (min-width: 820px) {
-    .sc-body { padding: 48px 48px 40px; }
-    .sc-hood { margin: 0 48px; padding-top: 32px; }
-    .sc-clip { padding-bottom: 40px; }
-    .sc-cols { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
-  }
+  .sc-story { margin-bottom: 32px; } /* the story → the first hairline, as the work sheets' story → their hood */
 </style>
-
