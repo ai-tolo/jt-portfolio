@@ -76,11 +76,9 @@ const hasCap = Astro.slots.has('cap');
             <div class="saved">Saved</div>
             <div class="meta">{run.memo.id} · {run.memo.duration}</div>
           </div>
+          {/* the face's ONE pill (Jon, round four, 2026-10-13: "have the talk button on the watch's screen"): the live
+              control, once the run has landed; the replay stands under the watch, as the phone's */}
           <div class="pills">
-            <button type="button" class="replay" aria-label="Replay the run">
-              <svg viewBox="0 0 20 20" class="ico" aria-hidden="true"><path d="M4 10a6 6 0 1 0 1.8-4.3" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M4 3v3.5h3.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-              Replay
-            </button>
             <button type="button" class="talk" data-talk aria-label={LIVE_COPY.talkLabel}>
               <svg viewBox="0 0 20 20" class="ico" aria-hidden="true"><rect x="7" y="2.5" width="6" height="10" rx="3" fill="none" stroke="currentColor" stroke-width="2"/><path d="M4.5 9.5a5.5 5.5 0 0 0 11 0M10 15v2.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
               {LIVE_COPY.talk}
@@ -89,17 +87,20 @@ const hasCap = Astro.slots.has('cap');
         </div>
         <img src="/intake/watch-blank.png" alt="" width="521" height="781" loading="lazy" decoding="async" />
       </figure>
-      {/* the row under the watch (Jon, 2026-10-13): at rest ONLY "tap to stop", centred, as the phone's "tap the list";
-          once the replay has landed, replay and the live control, which says what it does */}
-      <div class="hint">
-        <span class="hint-w" data-hint>{LIVE_COPY.hintRest}</span>
-        <button type="button" class="hint-replay" data-replay aria-label="Replay the run">
+      {/* the foot under the watch = the phone's (Jon, round four, 2026-10-13: "make the replay appear identically to the
+          phone in how it looks and where it's located"): ONE slot, the hint at rest ("tap to stop"), the replay after the
+          run, so nothing below moves. The row's own talk button is only the "nothing heard" retry (and hides in live mode) */}
+      <div class="foot">
+        <div class="hint">
+          <span class="hint-w" data-hint>{LIVE_COPY.hintRest}</span>
+          <button type="button" class="hint-talk" data-talk aria-label={LIVE_COPY.talkLabel}>
+            <svg viewBox="0 0 20 20" class="ico" aria-hidden="true"><rect x="7" y="2.5" width="6" height="10" rx="3" fill="none" stroke="currentColor" stroke-width="2"/><path d="M4.5 9.5a5.5 5.5 0 0 0 11 0M10 15v2.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+            {LIVE_COPY.talkHint}
+          </button>
+        </div>
+        <button type="button" class="replay" data-replay aria-label="Replay the run">
           <svg viewBox="0 0 20 20" class="ico" aria-hidden="true"><path d="M4 10a6 6 0 1 0 1.8-4.3" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M4 3v3.5h3.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
           {LIVE_COPY.replay}
-        </button>
-        <button type="button" class="hint-talk" data-talk aria-label={LIVE_COPY.talkLabel}>
-          <svg viewBox="0 0 20 20" class="ico" aria-hidden="true"><rect x="7" y="2.5" width="6" height="10" rx="3" fill="none" stroke="currentColor" stroke-width="2"/><path d="M4.5 9.5a5.5 5.5 0 0 0 11 0M10 15v2.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
-          {LIVE_COPY.talkHint}
         </button>
       </div>
       {hasCap && <div class="cap"><slot name="cap" /></div>}
@@ -182,6 +183,12 @@ const hasCap = Astro.slots.has('cap');
   /* the tickets sit paper on paper (Jon, 2026-09-30: the white fill read as clickable); the fill went to the write-up's card */
   --card: transparent; --card-line: color-mix(in oklab, var(--ink) 18%, transparent); --btn: transparent; --btn-line: color-mix(in oklab, var(--ink) 22%, transparent);
   --glow-card: rgba(139, 114, 232, 0.28);
+  /* the replay under the watch is the PHONE'S pill (round four, 2026-10-13): ArchiveHero's --ink / --ground, carried
+     here so the two compute identically (change both or neither) */
+  --rp-ink: #141210; --rp-ground: #e9e8e5;
+  /* the hint in the sheet's accent, mixed toward the sheet's ink only as far as 4.5:1 on the white sheet needs
+     (#ff6b4a alone is 2.8:1 there; at 74 % it is 4.8:1); at night the accent stands alone (6.0:1 on #1c1c1f) */
+  --hint-mix: 74%;
 }
 .intake-hero.dark,
 :root.dark .intake-hero, :root[data-theme="dark"] .intake-hero, :root[data-mode="dark"] .intake-hero,
@@ -190,6 +197,8 @@ const hasCap = Astro.slots.has('cap');
   --amber: #FF9F1C; --pink: #F0568F; --rail: #B4A0F5;
   --card: transparent; --card-line: color-mix(in oklab, var(--ink) 20%, transparent); --btn: transparent; --btn-line: color-mix(in oklab, var(--ink) 24%, transparent);
   --glow-card: rgba(180, 160, 245, 0.35);
+  --rp-ink: #e8ecf4; --rp-ground: #0b0e14;
+  --hint-mix: 100%;
 }
 /* (the OS prefers-color-scheme rule is dropped on uxjon.com: the site is day
    until its own switch, html[data-night], which is wired above) */
@@ -323,21 +332,36 @@ const hasCap = Astro.slots.has('cap');
 .intake-hero .check svg { width: 8.86cqw; height: 8.86cqw; }
 .intake-hero .saved { position: absolute; left: 0; top: 63.29cqw; width: 100%; text-align: center; font-size: 7.59cqw; font-weight: 400; letter-spacing: 0.01em; line-height: 1; color: #F2F0EA; animation: ih-in .5s ease-out .3s both; }
 .intake-hero .meta { position: absolute; left: 0; top: 75.32cqw; width: 100%; text-align: center; font-family: var(--mono); font-size: 3.48cqw; letter-spacing: 0.08em; color: #8C8A84; animation: ih-in .5s ease-out .4s both; }
-/* the row under the watch: ONE vocabulary with the phone's "tap the list" (Jon, 2026-10-13): the same face, size,
-   colour (ink at 55 %) and distance from the object (the row's words sit at its top, as the phone's foot); at rest
-   it holds only "tap to stop", centred on the watch */
-.intake-hero .hint { display: flex; align-items: flex-start; justify-content: center; flex-wrap: wrap; gap: 6px 12px; min-height: 26px; text-align: center; font: 500 0.6875rem/1.5 var(--mono); letter-spacing: 0.12em; color: color-mix(in oklab, var(--ink) 55%, transparent); }
-.intake-hero.s1 .hint { visibility: hidden; }
-/* the row may run wider than the watch (its column is capped narrow on desks), centred on it: one line for the pair
-   below, bounded by the module (stacked) or by the object's own column (desks); live mode keeps its own measure */
-.intake-hero:not(.live) .hint { align-self: center; width: max-content; max-width: 100cqw; box-sizing: border-box; }
+/* THE FOOT under the watch = the phone's (ArchiveHero's .foot; round four, 2026-10-13): one slot, the hint at rest,
+   the replay after the run, so nothing below moves; 16px under the visible watch (the column's gap), as the phone's */
+.intake-hero .foot { display: grid; min-height: 30px; align-items: start; justify-items: center; }
+.intake-hero .foot > * { grid-area: 1 / 1; }
+/* the slot may run wider than the watch (its column is capped narrow on desks), centred on it: bounded by the module
+   (stacked) or by the object's own column (desks); live mode keeps its own measure */
+.intake-hero:not(.live) .foot { align-self: center; width: max-content; max-width: 100cqw; box-sizing: border-box; }
 @container hero (min-width: 820px) {
-  .intake-hero:not(.live) .hint { max-width: 44cqw; }
+  .intake-hero:not(.live) .foot { max-width: 44cqw; }
 }
-/* once the replay has landed (s6, the art run): the words step aside for replay and the live control */
-.intake-hero.s6:not(.live) .hint { visibility: visible; }
-.intake-hero.s6:not(.live) .hint-w { display: none; }
-.intake-hero.s6:not(.live) :is(.hint-replay, .hint-talk) { display: inline-flex; animation: ih-in .4s ease-out .5s both; }
+/* the hint: the phone's face, size and tracking; its words at rest ("tap to stop", or "nothing heard") stand out in
+   the sheet's accent at 600 (Jon, round four: "bolder or a more unique/noticeable colour"), read from the host's
+   --sheet-acc (the module's --accent off the sheet); live mode's notices keep the quiet ink */
+.intake-hero .hint { display: flex; align-items: flex-start; justify-content: center; flex-wrap: wrap; gap: 6px 12px; text-align: center; font: 500 0.6875rem/1.5 var(--mono); letter-spacing: 0.12em; color: color-mix(in oklab, var(--ink) 55%, transparent); }
+.intake-hero:not(.live) .hint-w { font-weight: 600; color: color-mix(in oklab, var(--sheet-acc, var(--accent)) var(--hint-mix), var(--sheet-ink, var(--ink))); transition: color 560ms ease; }
+.intake-hero.s1 .hint { visibility: hidden; }
+/* THE REPLAY: same as ArchiveHero's .replay (the ink pill, its face and padding, the foot's slot, the fade-in once the
+   run has landed); change both or neither */
+.intake-hero .replay {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 8px 14px; border: 0; border-radius: 999px;
+  background: var(--rp-ink); color: var(--rp-ground);
+  font: 500 0.72rem/1 var(--mono); letter-spacing: 0.04em;
+  cursor: pointer; opacity: 0; pointer-events: none;
+  transition: opacity 0.4s, background 120ms, color 560ms ease;
+}
+.intake-hero .replay .ico { width: 1.1em; height: 1.1em; }
+.intake-hero .replay:hover { background: color-mix(in oklab, var(--rp-ink) 82%, var(--rp-ground)); }
+.intake-hero .replay:focus-visible { outline: 2px solid var(--rp-ink); outline-offset: 2px; }
+.intake-hero.s6 .replay { opacity: 1; pointer-events: auto; transition: opacity 0.6s 2.6s, background 120ms, color 560ms ease; }
 .intake-hero .fly { display: none; position: absolute; width: 12px; height: 12px; border-radius: 50%; background: var(--accent); box-shadow: 0 0 18px var(--accent); z-index: 3; pointer-events: none; }
 .intake-hero.s1:not(.s3) .fly { display: block; animation: ih-fly 1s cubic-bezier(.4, 0, .2, 1) both; }
 
@@ -415,34 +439,44 @@ const hasCap = Astro.slots.has('cap');
 .intake-hero .act.primary { color: var(--accent); font-weight: 600; border-color: color-mix(in oklab, var(--accent) 55%, transparent); }
 .intake-hero .card-src { font-size: 11px; color: var(--dim); }
 
-/* the replay is the phone's pill, at the foot of the screen (Jon, 2026-09-22); the
-   screen is the query container, so its cqw match the phone's */
+/* the face's ONE pill at the foot of the screen, once the run has landed: the live control (round four, 2026-10-13;
+   the replay moved under the watch). The screen is the query container, so its cqw match the phone's */
 .intake-hero .pills { display: none; position: absolute; left: 0; right: 0; bottom: 6.5cqw; z-index: 3; justify-content: center; gap: 2cqw; pointer-events: none; }
-.intake-hero .replay, .intake-hero .talk { display: inline-flex; align-items: center; gap: 1.4cqw; padding: 2.4cqw 4.6cqw; border: 0; border-radius: 999px; background: #ECE9E2; color: #1A1917; font: 500 3.5cqw/1 var(--sans); cursor: pointer; pointer-events: auto; } /* the page's paper on the screen (Jon, 2026-09-24): plainly not the device's own UI */
-.intake-hero :is(.replay, .talk) .ico { width: 1.1em; height: 1.1em; }
-.intake-hero :is(.replay, .talk):hover { background: #DDD9CF; }
-.intake-hero :is(.replay, .talk):focus-visible { outline: 2px solid #F2F0EA; outline-offset: 2px; }
+.intake-hero .talk { display: inline-flex; align-items: center; gap: 1.4cqw; padding: 2.4cqw 4.6cqw; border: 0; border-radius: 999px; background: #ECE9E2; color: #1A1917; font: 500 3.5cqw/1 var(--sans); cursor: pointer; pointer-events: auto; } /* the page's paper on the screen (Jon, 2026-09-24): plainly not the device's own UI */
+.intake-hero .talk .ico { width: 1.1em; height: 1.1em; }
+.intake-hero .talk:hover { background: #DDD9CF; }
+.intake-hero .talk:focus-visible { outline: 2px solid #F2F0EA; outline-offset: 2px; }
+/* its size: the module's 3.5cqw stacked and the host's desk 4.3cqw, never under the face's control floor (12px
+   rendered), on one line. (This rule outranks the host's 4.3cqw so the floor holds; on a narrow screen the
+   microphone glyph steps aside before anything wraps) */
+.intake-hero .screen .pills > .talk { font-size: max(12px, 3.5cqw); white-space: nowrap; }
+@container hero (min-width: 820px) {
+  .intake-hero .screen .pills > .talk { font-size: max(12px, 4.3cqw); }
+}
+@container (width < 190px) {
+  .intake-hero .screen .pills > .talk .ico { display: none; }
+}
 .intake-hero.s6 .pills { display: flex; }
 .intake-hero.s6 .pills > button { animation: ih-in .4s ease-out .5s both; }
 .intake-hero .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 
-/* ---- LIVE (Stream A, 2026-10-05): the same stage on the stranger's own words. The talk control (a pill at the
-   screen's foot beside Replay once the replay has run, and a small one in the hint at rest) opens the microphone on
+/* ---- LIVE (Stream A, 2026-10-05): the same stage on the stranger's own words. The talk control (the one pill at the
+   screen's foot once the run has landed, and the row's retry after "nothing heard") opens the microphone on
    their click only — never on load, scroll or hover. While it listens the face counts down from 1:30 and the
    transcript row prints what the browser's own speech service hears; a tap on stop runs the stage on those words:
    heard → parsing → the verdict → the tickets → the cards, and the face ends on "nothing kept". A browser with no
    speech service (Firefox), or a declined microphone, types instead: the transcript box is the input. ---- */
-.intake-hero :is(.hint-replay, .hint-talk) { display: none; align-items: center; gap: 6px; height: 26px; padding: 0 10px; border: 1px solid var(--btn-line); border-radius: 999px; background: var(--btn); color: var(--ink); font: inherit; letter-spacing: inherit; text-transform: lowercase; white-space: nowrap; cursor: pointer; }
-.intake-hero :is(.hint-replay, .hint-talk) .ico { width: 12px; height: 12px; }
-.intake-hero :is(.hint-replay, .hint-talk):hover { border-color: var(--accent); color: var(--accent); }
-.intake-hero :is(.hint-replay, .hint-talk):focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
-/* nothing heard: back at rest, the row keeps its retry beside the words */
+.intake-hero .hint-talk { display: none; align-items: center; gap: 6px; height: 26px; padding: 0 10px; border: 1px solid var(--btn-line); border-radius: 999px; background: var(--btn); color: var(--ink); font: inherit; letter-spacing: inherit; text-transform: lowercase; white-space: nowrap; cursor: pointer; }
+.intake-hero .hint-talk .ico { width: 12px; height: 12px; }
+.intake-hero .hint-talk:hover { border-color: var(--accent); color: var(--accent); }
+.intake-hero .hint-talk:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+/* nothing heard: back at rest, the row keeps its retry beside the words (the face is recording again, so its pill
+   is not shown; this is the only time the row holds a button) */
 .intake-hero.unheard:not(.s1) .hint-talk { display: inline-flex; }
-/* stacked (a phone's width) the pair tightens its tracking so it stays one line under the watch */
+/* stacked (a phone's width) the retry tightens its tracking */
 @container hero (width < 820px) {
   .intake-hero:not(.live) .hint { column-gap: 8px; }
-  .intake-hero :is(.hint-replay, .hint-talk) { letter-spacing: 0.02em; padding: 0 9px; }
-  .intake-hero .hint-replay .ico { display: none; }
+  .intake-hero .hint-talk { letter-spacing: 0.02em; padding: 0 9px; }
 }
 .intake-hero.live .hint-talk { display: none; }
 .intake-hero.live .hint { visibility: visible; max-width: 36ch; margin-inline: auto; }
@@ -487,7 +521,8 @@ const hasCap = Astro.slots.has('cap');
 @media (prefers-reduced-motion: reduce) {
   .intake-hero .wave i, .intake-hero .caret, .intake-hero .fly, .intake-hero.s4:not(.s5) .node-deck { animation: none; }
   .intake-hero .stop::before, .intake-hero .stop::after { animation: none; opacity: 0.75; }
-  .intake-hero .card, .intake-hero .stream, .intake-hero .tickets, .intake-hero .pills > button, .intake-hero :is(.hint-replay, .hint-talk), .intake-hero .flat, .intake-hero .check, .intake-hero .saved, .intake-hero .meta { animation-duration: .01s !important; animation-delay: 0s !important; }
+  .intake-hero.s6 .replay { transition: opacity 0.2s 0.6s; } /* as the phone's */
+  .intake-hero .card, .intake-hero .stream, .intake-hero .tickets, .intake-hero .pills > button, .intake-hero .hint-talk, .intake-hero .flat, .intake-hero .check, .intake-hero .saved, .intake-hero .meta { animation-duration: .01s !important; animation-delay: 0s !important; }
 }
 </style>
 
@@ -553,7 +588,7 @@ document.querySelectorAll('[data-intake-hero]').forEach((hero) => {
     stage(0); typed.textContent = ''; caret.hidden = false; status.textContent = '';
   }
   stopBtn.addEventListener('click', () => { if (live.active()) live.finish('stop'); else play(); });
-  hero.querySelectorAll('.replay, .hint-replay').forEach((b) => b.addEventListener('click', () => { live.leave(); reset(); }));
+  hero.querySelector('[data-replay]').addEventListener('click', () => { live.leave(); reset(); });
   // the host (StudioOne's first settle) may FINISH a run it started — the
   // visitor pressed during it, so it lands on its end frame at once — or
   // REWIND one the visitor scrolled away from before it said anything

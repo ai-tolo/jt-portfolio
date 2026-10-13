@@ -31,15 +31,18 @@ export const WATCH_COPY = {
 // "2 tickets" / "1 ticket" / "nothing to file").
 export const LIVE_COPY = {
   // 2026-10-13 (Jon: "'talk' feels too generic"): the control says what it
-  // does. `talk` is the pill on the watch's screen beside Replay (cqw-sized,
-  // so the short form); `talkHint` is the button in the row under the watch
-  // after the run; `talkLabel` is both buttons' accessible name
-  talk: "Your own voice",
-  talkHint: "try it with your own voice",
+  // does. Round four, the same day (Jon: "one replay, one talk"): `talk` is
+  // the ONE live pill, on the watch's screen once the run has landed (cqw-
+  // sized, floored at 12px, one line); `talkHint` is only the "nothing
+  // heard" retry in the row under the watch; `talkLabel` is both buttons'
+  // accessible name
+  talk: "Try it with your voice",
+  talkHint: "try it with your voice",
   talkLabel: "Try it with your own voice: say your own things to do and watch them become tickets",
-  // the row under the watch: at rest, then once the replay has landed
+  // the foot under the watch: the hint at rest; the replay pill (the phone's,
+  // word for word) once the run has landed
   hintRest: "tap to stop",
-  replay: "replay",
+  replay: "Replay",
   listening: "listening",
   privacy: "your voice goes to your browser's speech service, the words to Claude. this site keeps nothing.",
   asking: "allow the microphone, then talk.",
