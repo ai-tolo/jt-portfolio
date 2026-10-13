@@ -207,8 +207,14 @@ const columns = (blocks: BuildBlock[]): StoryBlock[][] =>
         <p class="role-line">design engineer · audio &amp; real-time web</p>
       </div>
       <p class="liner">{ONE_LINER}</p>
+      {/* the résumé's second entrance, in the hero's own words (2026-10-13):
+          the corner stays the always-there one */}
+      <p class="hero-cv"><a href="/resume">résumé</a></p>
     </header>
 
+    {/* the cue (2026-10-13): one word at the hero's foot, above the first
+        sheet's peek, so the page says it goes on. No motion. */}
+    <a class="cue" href="#work"><span aria-hidden="true">↓</span> builds</a>
   </section>
 
   {/* ── THE SIDEBAR — persistent left column, nav only (Jon, 2026-08-16:
@@ -641,8 +647,23 @@ const columns = (blocks: BuildBlock[]): StoryBlock[][] =>
   }
 
   /* ── hero ────────────────────────────────────────────────────────────── */
+  /* THE PEEK (2026-10-13): the hero no longer fills the viewport. Its
+     height + the gap under it + the work room's own padding-top (mirrored
+     from `.one > .work`) = the viewport minus --hero-peek, so the first
+     sheet's top edge shows under the hero at rest and says "there's more".
+     The four rooms still abut nothing: framing #work puts its top at the
+     viewport's top, and the whole hero lies above that line */
+  .one {
+    --hero-peek: 110px;
+    --hero-gap: 48px;
+    --hero-room-pad: clamp(14px, 2.5vh, 28px);
+  }
   .hero {
-    min-height: 100svh;
+    box-sizing: border-box;
+    min-height: max(
+      360px,
+      calc(100svh - var(--hero-peek) - var(--hero-gap) - var(--hero-room-pad))
+    );
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -663,9 +684,20 @@ const columns = (blocks: BuildBlock[]): StoryBlock[][] =>
     gap: 12px;
     align-items: center;
     font-family: "IBM Plex Mono", ui-monospace, monospace;
-    font-size: 0.72rem;
+    font-size: 0.84rem;
     letter-spacing: 0.04em;
     color: var(--dim);
+    transition: opacity 160ms ease;
+  }
+  /* the corner steps aside while the instrument's device stands under it
+     (2026-10-13: it sat on the power switch); set by the observer at the
+     end of the script, never per scroll. A keyboard focus brings it back */
+  .corner[data-hush] {
+    opacity: 0;
+    pointer-events: none;
+  }
+  .corner[data-hush]:focus-within {
+    opacity: 1;
   }
   .corner .dot {
     width: 7px;
@@ -678,6 +710,12 @@ const columns = (blocks: BuildBlock[]): StoryBlock[][] =>
     color: var(--ink);
     text-decoration: underline;
     text-underline-offset: 4px;
+    /* a 42px hit area around the word; the negative margin keeps the
+       word where it always stood */
+    display: inline-block;
+    line-height: 16px;
+    padding: 13px 10px;
+    margin: -13px -10px;
   }
   .hero-name {
     width: min(720px, 88%);
@@ -715,6 +753,51 @@ const columns = (blocks: BuildBlock[]): StoryBlock[][] =>
     max-width: 34ch;
     line-height: 1.5;
     text-align: right;
+  }
+  /* the résumé's second entrance: under the liner, on its right edge, at
+     its size, in ink (2026-10-13) */
+  .hero-cv {
+    margin: 14px 0 0;
+    font-size: clamp(0.95rem, 1.4vw, 1.05rem);
+    line-height: 1.5;
+    text-align: right;
+  }
+  .hero-cv a {
+    color: var(--ink);
+    text-decoration: underline;
+    text-underline-offset: 4px;
+  }
+  :global(html[data-night]) .hero-cv a {
+    color: #e8ecf4;
+  }
+  /* the cue: one quiet word at the hero's foot, ~28px above its bottom
+     edge (the padding is its hit area), right above the sheet's peek */
+  .cue {
+    position: absolute;
+    left: 50%;
+    bottom: 16px;
+    transform: translateX(-50%);
+    padding: 12px 10px;
+    font-family: "IBM Plex Mono", ui-monospace, monospace;
+    font-size: 0.6875rem;
+    line-height: 1;
+    letter-spacing: 0.12em;
+    text-transform: lowercase;
+    white-space: nowrap;
+    text-decoration: none;
+    color: var(--dim);
+    transition: color 160ms ease;
+  }
+  .cue:hover,
+  .cue:focus-visible {
+    color: var(--ink);
+  }
+  :global(html[data-night]) .cue {
+    color: #7d8798;
+  }
+  :global(html[data-night]) .cue:hover,
+  :global(html[data-night]) .cue:focus-visible {
+    color: #e8ecf4;
   }
 
   /* ── the sidebar (persistent left column; desktop only) ──────────────── */
@@ -1220,11 +1303,14 @@ const columns = (blocks: BuildBlock[]): StoryBlock[][] =>
        the hero (the bar carries the résumé) */
     .corner {
       position: absolute;
-      font-size: 0.78rem;
+      font-size: 0.84rem;
       gap: 14px;
     }
-    .corner a {
-      padding: 8px 2px;
+    /* THE PEEK on a phone (2026-10-13): the sheet's edge ~80px above the
+       bar, so the bar's own height joins the peek */
+    .one {
+      --hero-peek: calc(80px + var(--mbar-h) + env(safe-area-inset-bottom, 0px));
+      --hero-gap: 32px;
     }
     /* THE HERO ON A PHONE (round 3, 2026-09-22): one left-aligned stack on
        the rooms' 14px gutter — the name, the role line, the liner — so the
@@ -1241,6 +1327,9 @@ const columns = (blocks: BuildBlock[]): StoryBlock[][] =>
     }
     .liner {
       margin-left: 0;
+      text-align: left;
+    }
+    .hero-cv {
       text-align: left;
     }
   }
@@ -1291,6 +1380,11 @@ const columns = (blocks: BuildBlock[]): StoryBlock[][] =>
   .one > .work {
     margin-top: clamp(48px, 9vh, 100px);
     padding-top: clamp(14px, 2.5vh, 28px);
+  }
+  /* the hero → first room gap is the peek's (2026-10-13; see THE PEEK in
+     the hero block): its own rule, every other room's gap untouched */
+  .one > .hero ~ .work {
+    margin-top: var(--hero-gap);
   }
 
   /* ── WORK: objects on the room ground (2026-09-18; the nav word was "learn" until that evening). The room's left
@@ -3770,4 +3864,36 @@ const columns = (blocks: BuildBlock[]): StoryBlock[][] =>
   });
   settleAll();
   if (document.fonts && document.fonts.ready) document.fonts.ready.then(settleAll);
+</script>
+
+<script>
+  // THE CORNER STEPS ASIDE (2026-10-13): at 1440×900 with the play room
+  // framed, the fixed résumé corner sat on the device's power switch. One
+  // IntersectionObserver whose root is cut down to the corner's band (the
+  // top 64px, from just left of the corner to the right edge) watches the
+  // device box; while they overlap the corner carries data-hush (CSS fades
+  // it out over 160ms). The band is recomputed on resize only: no scroll
+  // handler, no per-frame style write. Host-side only; the instrument's
+  // files are untouched.
+  {
+    const corner = document.querySelector<HTMLElement>(".hero .corner");
+    const device = document.querySelector<HTMLElement>("#play .sgm .device") ?? document.querySelector<HTMLElement>("#play .sgm");
+    if (corner && device && "IntersectionObserver" in window) {
+      const BAND = 64;
+      let io: IntersectionObserver | null = null;
+      const watch = () => {
+        io?.disconnect();
+        const left = Math.max(0, Math.floor(corner.getBoundingClientRect().left - 24));
+        const bottom = Math.max(0, window.innerHeight - BAND);
+        io = new IntersectionObserver((entries) => {
+          const e = entries[entries.length - 1];
+          corner.toggleAttribute("data-hush", e.isIntersecting);
+        }, { rootMargin: `0px 0px -${bottom}px -${left}px` });
+        io.observe(device);
+      };
+      watch();
+      let t = 0;
+      window.addEventListener("resize", () => { window.clearTimeout(t); t = window.setTimeout(watch, 150); });
+    }
+  }
 </script>
