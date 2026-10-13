@@ -247,13 +247,11 @@ const columns = (blocks: BuildBlock[]): StoryBlock[][] =>
         <p class="role-line">design engineer · audio &amp; real-time web</p>
       </div>
       <p class="liner">{ONE_LINER}</p>
-      {/* the résumé's second entrance, in the hero's own words (2026-10-13):
-          the corner stays the always-there one */}
-      <p class="hero-cv"><a href="/resume">résumé</a></p>
     </header>
 
-    {/* the cue (2026-10-13): one word at the hero's foot, above the first
-        sheet's peek, so the page says it goes on. No motion. */}
+    {/* the cue (2026-10-13): one word at the hero's foot, so the page says
+        it goes on. No motion, no peek (Jon: "the down arrow with builds is
+        enough by itself"). */}
     <a class="cue" href="#work"><span aria-hidden="true">↓</span> builds</a>
   </section>
 
@@ -365,9 +363,9 @@ const columns = (blocks: BuildBlock[]): StoryBlock[][] =>
           <p slot="cap" class="wk-cap">{ARCHIVE_COPY.caption}</p>
         </ArchiveHero>
         <div class="wk-story" data-story>
-          <div class="wk-story-clip" id="story-archive">
+          <p class="wk-lede">{ARCHIVE.headline}</p>
+          <div class="wk-story-clip" id="story-archive" inert>
             <div class="wk-story-body sheet-cols">
-              <p class="wk-lede">{ARCHIVE.headline}</p>
               {columns(ARCHIVE.blocks).map((col) => (
                 <div class="sheet-col">
                   {col.map((blk) =>
@@ -411,9 +409,9 @@ const columns = (blocks: BuildBlock[]): StoryBlock[][] =>
           <p slot="cap" class="wk-cap">{WATCH_COPY.caption}</p>
         </IntakeHero>
         <div class="wk-story" data-story>
-          <div class="wk-story-clip" id="story-watch">
+          <p class="wk-lede">{WATCH.headline}</p>
+          <div class="wk-story-clip" id="story-watch" inert>
             <div class="wk-story-body sheet-cols">
-              <p class="wk-lede">{WATCH.headline}</p>
               {columns(WATCH.blocks).map((col) => (
                 <div class="sheet-col">
                   {col.map((blk) =>
@@ -707,23 +705,11 @@ const columns = (blocks: BuildBlock[]): StoryBlock[][] =>
   }
 
   /* ── hero ────────────────────────────────────────────────────────────── */
-  /* THE PEEK (2026-10-13): the hero no longer fills the viewport. Its
-     height + the gap under it + the work room's own padding-top (mirrored
-     from `.one > .work`) = the viewport minus --hero-peek, so the first
-     sheet's top edge shows under the hero at rest and says "there's more".
-     The four rooms still abut nothing: framing #work puts its top at the
-     viewport's top, and the whole hero lies above that line */
-  .one {
-    --hero-peek: 110px;
-    --hero-gap: 48px;
-    --hero-room-pad: clamp(14px, 2.5vh, 28px);
-  }
+  /* the hero owns the whole first viewport (the round-one peek is gone,
+     Jon 2026-10-13: "I don't like that I can see the AudioDex sheet on
+     landing"); the cue at its foot is the only "there's more" */
   .hero {
-    box-sizing: border-box;
-    min-height: max(
-      360px,
-      calc(100svh - var(--hero-peek) - var(--hero-gap) - var(--hero-room-pad))
-    );
+    min-height: 100svh;
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -814,24 +800,8 @@ const columns = (blocks: BuildBlock[]): StoryBlock[][] =>
     line-height: 1.5;
     text-align: right;
   }
-  /* the résumé's second entrance: under the liner, on its right edge, at
-     its size, in ink (2026-10-13) */
-  .hero-cv {
-    margin: 14px 0 0;
-    font-size: clamp(0.95rem, 1.4vw, 1.05rem);
-    line-height: 1.5;
-    text-align: right;
-  }
-  .hero-cv a {
-    color: var(--ink);
-    text-decoration: underline;
-    text-underline-offset: 4px;
-  }
-  :global(html[data-night]) .hero-cv a {
-    color: #e8ecf4;
-  }
   /* the cue: one quiet word at the hero's foot, ~28px above its bottom
-     edge (the padding is its hit area), right above the sheet's peek */
+     edge (the padding is its hit area) */
   .cue {
     position: absolute;
     left: 50%;
@@ -1387,17 +1357,17 @@ const columns = (blocks: BuildBlock[]): StoryBlock[][] =>
     .one > :global(.floor) { order: 6; }
     .one > [data-end] { order: 7; }
 
-    /* the corner leaves the phone (2026-10-13): the hero carries its own
-       résumé link under the liner and the bar carries one too; three on one
-       screen was noise. The ember dot goes with it. */
+    /* bigger thumb targets on the hero corner; on a phone it stays with
+       the hero (the bar carries the résumé) */
     .corner {
-      display: none;
+      position: absolute;
+      font-size: 0.84rem;
+      gap: 14px;
     }
-    /* THE PEEK on a phone (2026-10-13): the sheet's edge ~80px above the
-       bar, so the bar's own height joins the peek */
-    .one {
-      --hero-peek: calc(80px + var(--mbar-h) + env(safe-area-inset-bottom, 0px));
-      --hero-gap: 32px;
+    /* the hero is a full 100svh on a phone too, and the pinned bar covers
+       its foot: the cue stands its usual 16px above the bar instead */
+    .cue {
+      bottom: calc(16px + var(--mbar-h) + env(safe-area-inset-bottom, 0px));
     }
     /* THE HERO ON A PHONE (round 3, 2026-09-22): one left-aligned stack on
        the rooms' 14px gutter — the name, the role line, the liner — so the
@@ -1414,9 +1384,6 @@ const columns = (blocks: BuildBlock[]): StoryBlock[][] =>
     }
     .liner {
       margin-left: 0;
-      text-align: left;
-    }
-    .hero-cv {
       text-align: left;
     }
   }
@@ -1461,11 +1428,6 @@ const columns = (blocks: BuildBlock[]): StoryBlock[][] =>
   .one > .work {
     margin-top: clamp(48px, 9vh, 100px);
     padding-top: clamp(14px, 2.5vh, 28px);
-  }
-  /* the hero → first room gap is the peek's (2026-10-13; see THE PEEK in
-     the hero block): its own rule, every other room's gap untouched */
-  .one > .hero ~ .work {
-    margin-top: var(--hero-gap);
   }
 
   /* ── WORK: objects on the room ground (2026-09-18; the nav word was "learn" until that evening). The room's left
@@ -1570,12 +1532,15 @@ const columns = (blocks: BuildBlock[]): StoryBlock[][] =>
     .band-what { margin-top: 10px; font-size: 1rem; }
   }
   /* the locked hook opens the story (2026-10-10: the band names the build
-     above the object; the hook is the first thing the fold says) */
+     above the object; the hook is the first thing the fold says). Since
+     2026-10-13 (Jon: "I'd rather the subtitle be visible … with the arrow
+     allowing the expansion") it stands OUTSIDE the clip: always read, the
+     chevron under it, the story beneath folded to nothing. Fold top 48
+     (32 on a narrow sheet); 12 to the handle, whose own 18px of air above
+     the chevron finishes the gap */
   .wk-lede {
-    grid-column: 1 / -1;
-    justify-self: center;
     max-width: 30ch;
-    margin: 0 0 var(--sp-4); /* + the story grid's 16px row gap = the hook → the story's 32 */
+    margin: var(--sp-8) auto var(--sp-3);
     text-align: center;
     font-family: var(--wk-display);
     font-size: 1.75rem;
@@ -1632,12 +1597,10 @@ const columns = (blocks: BuildBlock[]): StoryBlock[][] =>
     }
   }
   /* ── THE STORY: a card under the object (Jon's mockup, 2026-09-24).
-     Closed, it shows the first paragraph and lets the rest dissolve under a
-     fade; its whole lower edge is the handle. It opens on its own when the
-     object's run reaches its end and no hand has touched it — the run
-     ensures the story the way the host ensures the run — and never fights a
-     hand that has. Two columns on desks, one on phones; one type system with
-     the room. */
+     Closed (2026-10-13), the fold shows only the hook; the story and under
+     the hood are folded to nothing (height 0, no fade) and only the handle
+     opens them: nothing opens by itself any more. Two columns on desks, one
+     on phones; one type system with the room. */
   /* UNDER THE HOOD (2026-09-30, Jon: one expandable box): the system's
      stages INSIDE the story's card, under the story — a spine of steps in
      the object's ink (the phone's rail, in the page), the tool beside each
@@ -1655,24 +1618,26 @@ const columns = (blocks: BuildBlock[]): StoryBlock[][] =>
     border-top: 1px solid color-mix(in oklab, var(--sheet-ink) 12%, transparent);
     transition: border-color 560ms ease;
   }
+  /* closed = 0 tall (in CSS, so the first paint never shows the story);
+     open = auto. The fold script only drives the height between the two */
   .wk-story-clip {
+    height: 0;
     overflow: hidden;
     transition: height 0.55s cubic-bezier(0.2, 0.8, 0.2, 1);
   }
-  /* the cut: the lines past the first paragraph dissolve into the ground */
-  .wk-story:not([data-open]) .wk-story-clip {
-    -webkit-mask-image: linear-gradient(to bottom, #000 calc(100% - 64px), transparent);
-    mask-image: linear-gradient(to bottom, #000 calc(100% - 64px), transparent);
+  .wk-story[data-open] .wk-story-clip {
+    height: auto;
   }
   /* the story's two columns and paragraphs are .sheet-cols / .sheet-col /
-     .sheet-p (src/styles/sheet.css); .wk-p stays on each paragraph as the
-     fold script's hook (it measures the first one) */
+     .sheet-p (src/styles/sheet.css); .wk-p marks the hinge line */
   .wk-story-body {
-    padding: var(--sp-8) 0; /* the sheet carries the side gutter */
+    /* the hook's 12 + 20 = the hook → the story's 32 (the sheet carries
+       the side gutter) */
+    padding: 20px 0 var(--sp-8);
   }
   @container (min-width: 820px) {
-    .wk-story-body {
-      padding: var(--sp-12) 0 var(--sp-8);
+    .wk-lede {
+      margin-top: var(--sp-12);
     }
   }
   /* the hinge line, in the Intake's red */
@@ -3236,6 +3201,9 @@ const columns = (blocks: BuildBlock[]): StoryBlock[][] =>
   // until the pointer is still or gone, then goes (it never gives up while
   // the object is on screen). (2026-09-23: once per load, not per tab —
   // sessionStorage kept a reload from ever showing it again.)
+  // Since 2026-10-13 only the listen room's wallet uses it (Jon: "the auto
+  // initiation of the watch/phone and their sheets should all be removed"):
+  // the watch and the phone run only when a visitor presses them.
   const settleMem = new Set<string>();
   const wasShown = (k: string) => settleMem.has(k);
   const markShown = (k: string) => { settleMem.add(k); };
@@ -3250,7 +3218,7 @@ const columns = (blocks: BuildBlock[]): StoryBlock[][] =>
   const reaching = (el: Element) => el.matches(":hover") && performance.now() - (reachAt.get(el) ?? -1e9) < 1000;
   const settleReduce = window.matchMedia("(prefers-reduced-motion: reduce)");
   const firstSettle = (target: Element, o: {
-    ratio: number; grace: number; settle?: boolean; rootMargin?: string;
+    ratio: number; grace: number;
     ok: () => boolean; wait?: () => boolean; fire: () => void; leave?: () => void;
   }) => {
     let timer = 0;
@@ -3258,14 +3226,12 @@ const columns = (blocks: BuildBlock[]): StoryBlock[][] =>
     const arm = () => {
       window.clearTimeout(timer);
       if (!inView) return;
-      if (o.settle !== false) {
-        const idle = performance.now() - lastScroll;
-        if (idle < 160) { timer = window.setTimeout(arm, 170 - idle); return; }
-      }
+      const idle = performance.now() - lastScroll;
+      if (idle < 160) { timer = window.setTimeout(arm, 170 - idle); return; }
       const t0 = performance.now();
       timer = window.setTimeout(() => {
         if (!inView) return;
-        if (o.settle !== false && lastScroll > t0) return arm(); // they moved again: start the beat over
+        if (lastScroll > t0) return arm(); // they moved again: start the beat over
         if (!o.ok()) return;
         // hidden tab or a hand on its way: hold the beat and look again
         if (document.visibilityState !== "visible" || o.wait?.()) { timer = window.setTimeout(arm, 300); return; }
@@ -3278,93 +3244,8 @@ const columns = (blocks: BuildBlock[]): StoryBlock[][] =>
       if (inView) arm();
       else window.clearTimeout(timer);
       if (r < 0.3) o.leave?.();
-    }, { threshold: [0, 0.01, 0.3, o.ratio], rootMargin: o.rootMargin ?? "0px" }).observe(target);
-    return { cancel: () => window.clearTimeout(timer) };
+    }, { threshold: [0, 0.01, 0.3, o.ratio] }).observe(target);
   };
-
-  // THE EXHIBITS run themselves once: the object presses its own control
-  // (the watch's stop square dips; the phone's search field takes the pressed
-  // grey), then the module's real run plays on its real clock. A visitor who
-  // touched it first keeps today's ceremony exactly; a tap during the
-  // automatic run lands it on its end frame (WCAG 2.2.2); a run left before it
-  // said anything rewinds and waits for their return. Screen readers hear
-  // nothing they did not ask for: the module's status goes quiet until the end.
-  const phoneMq = window.matchMedia("(max-width: 899px)");
-  const selfRun = (hero: HTMLElement | null, object: HTMLElement | null, control: HTMLElement | null, key: string) => {
-    if (!hero || !object || !control) return null;
-    const status = hero.querySelector<HTMLElement>('[role="status"]');
-    let auto = false;
-    watchReach(object);
-    const quiet = (on: boolean) => status?.setAttribute("aria-live", on ? "off" : "polite");
-    const done = () => { auto = false; hero.removeAttribute("data-auto"); quiet(false); };
-    // (a visitor's own run needs no flag: it starts s1, and s2 spends the key)
-    // (only a real hand: the object's own programmatic press is not a tap)
-    hero.addEventListener("click", (e) => { if (auto && e.isTrusted) hero.dispatchEvent(new CustomEvent("hero:finish")); }, true);
-    document.addEventListener("keydown", (e) => { if (auto && e.key === "Escape") hero.dispatchEvent(new CustomEvent("hero:finish")); });
-    new MutationObserver(() => {
-      if (hero.classList.contains("s2")) markShown(key); // it has spoken: this visit is spent
-      if (hero.classList.contains("s6") && auto) done();
-    }).observe(hero, { attributes: true, attributeFilter: ["class"] });
-    // pinned: a run started by the phone's transcript row, not the object —
-    // the object leaving the screen is the point, so it never rewinds that one
-    let pinned = false;
-    const fire = (fromRow = false) => {
-      auto = true;
-      pinned = fromRow;
-      quiet(true);
-      hero.setAttribute("data-auto", "");
-      if (settleReduce.matches) { control.click(); return; }
-      hero.setAttribute("data-ghost", "");
-      window.setTimeout(() => { hero.removeAttribute("data-ghost"); control.click(); }, 160);
-    };
-    const ok = () => !hero.classList.contains("s1") && !wasShown(key);
-    const leave = () => {
-      if (auto && !pinned && !hero.classList.contains("s2")) { hero.dispatchEvent(new CustomEvent("hero:reset")); done(); }
-    };
-    firstSettle(object, { ratio: 0.6, grace: phoneMq.matches ? 400 : 700, ok, wait: () => reaching(object), fire: () => fire(), leave });
-    return { fire, ok, isAuto: () => auto };
-  };
-  const intakeHero = document.querySelector<HTMLElement>(".intake-hero");
-  const watchRun = selfRun(intakeHero, intakeHero?.querySelector<HTMLElement>(".watch-col") ?? null, intakeHero?.querySelector<HTMLElement>(".stop") ?? null, "uxj-ran-intake");
-  const archiveHero = document.querySelector<HTMLElement>(".archive-hero");
-  selfRun(archiveHero, archiveHero?.querySelector<HTMLElement>(".stage") ?? null, archiveHero?.querySelector<HTMLElement>("[data-tap]") ?? null, "uxj-ran-archive");
-
-  // PHONES, the watch: stacked, its run prints a screen below the watch. A
-  // second trigger fires as soon as the run's first row enters the top two
-  // thirds of the screen (no beat: thumbs don't settle), so a thumb flicking
-  // past the watch lands on the transcript as it prints. And a run started
-  // up at the watch (a tap, or the watch's own settle) is FOLLOWED: the page
-  // eases down to the transcript as it starts and to the first card as the
-  // deck fills, and lets go at any touch, wheel or key.
-  if (intakeHero && watchRun) {
-    let fromRow = false;
-    const row = intakeHero.querySelector<HTMLElement>(".run > .row");
-    if (row) firstSettle(row, {
-      ratio: 0.01, grace: 0, settle: false, rootMargin: "0px 0px -35% 0px",
-      ok: () => phoneMq.matches && watchRun.ok(),
-      fire: () => { fromRow = true; watchRun.fire(true); },
-    });
-    let following = false;
-    const letGo = () => { following = false; };
-    const stages = new Set<string>();
-    const glide = (el: Element | null, at: number) => {
-      const m = document.querySelector<HTMLElement>("main");
-      if (!following || !el || !m || getComputedStyle(m).overflowY === "visible") return;
-      const dy = el.getBoundingClientRect().top - window.innerHeight * at;
-      if (dy > 8) m.scrollTo({ top: m.scrollTop + dy, behavior: settleReduce.matches ? "instant" : "smooth" });
-    };
-    new MutationObserver(() => {
-      const on = (s: string) => intakeHero.classList.contains(s);
-      if (!on("s1")) { stages.clear(); fromRow = false; following = false; return; }
-      if (!stages.has("s1")) {
-        stages.add("s1");
-        following = phoneMq.matches && !fromRow;
-        if (following) ["touchstart", "wheel", "keydown"].forEach((t) => document.addEventListener(t, letGo, { capture: true, once: true, passive: true }));
-      }
-      if (on("s2") && !stages.has("s2")) { stages.add("s2"); glide(intakeHero.querySelector(".node-transcript"), 0.28); }
-      if (on("s5") && !stages.has("s5")) { stages.add("s5"); window.setTimeout(() => { glide(intakeHero.querySelector(".deck .card"), 0.35); following = false; }, 120); }
-    }).observe(intakeHero, { attributes: true, attributeFilter: ["class"] });
-  }
 
   // ── AUDIO: the cassette is the switch. Each tape's button clicks the
   // Transport's own (hidden) toggle inside the same slide, so the tap
@@ -3798,63 +3679,47 @@ const columns = (blocks: BuildBlock[]): StoryBlock[][] =>
 </script>
 
 <script>
-  // THE STORY CARDS (2026-09-24): closed to the first paragraph, open on the
-  // handle, and opened by the run itself when it ends untouched. The comet
-  // re-measures its knots on any change to the body's height (its own
-  // ResizeObserver), so a card opening moves the bead's map with it.
-  // every card closes to the SAME height (Jon, 2026-09-24: the watch's folded
-  // card matches the phone's): the shortest card's natural peek — its first
-  // paragraph whole plus the 64px the fade takes — governs them all
-  const peeks: (() => number)[] = [];
-  const settles: (() => void)[] = [];
-  const sharedPeek = () => Math.min(...peeks.map((f) => f()));
-  let settling = 0;
-  const settleAll = () => { window.clearTimeout(settling); settling = window.setTimeout(() => settles.forEach((f) => f()), 30); };
+  // THE FOLD (2026-09-24; 2026-10-13, Jon: the hook stays visible, "with the
+  // arrow allowing the expansion"). The hook stands outside the clip; the
+  // clip is 0 tall and inert while closed (CSS), auto while open, and only
+  // the handle moves it: nothing opens by itself. The script animates the
+  // height between the two and hands it back to CSS when the move ends. The
+  // comet re-measures its knots on any change to the body's height (its own
+  // ResizeObserver), so the bead's map follows the fold every frame.
   document.querySelectorAll<HTMLElement>("[data-story]").forEach((card) => {
     const clip = card.querySelector<HTMLElement>(".wk-story-clip");
     const btn = card.querySelector<HTMLButtonElement>(".wk-more");
-    const first = card.querySelector<HTMLElement>(".wk-p, .wk-list");
-    if (!clip || !btn || !first) return;
-    const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    let touched = false;
+    if (!clip || !btn) return;
+    const reduce = window.matchMedia("(prefers-reduced-motion: reduce)");
     const isOpen = () => card.hasAttribute("data-open");
-    peeks.push(() => Math.ceil(first.offsetTop + first.offsetHeight + 64));
-    const peek = () => sharedPeek();
-    const settle = () => { if (!isOpen()) clip.style.height = peek() + "px"; };
-    settles.push(settle);
+    // the move has ended: the inline height steps aside for the CSS state
+    clip.addEventListener("transitionend", (e) => {
+      if (e.target === clip && e.propertyName === "height") clip.style.height = "";
+    });
     const open = () => {
-      if (isOpen()) return;
       const from = clip.getBoundingClientRect().height;
       card.setAttribute("data-open", "");
+      clip.inert = false;
       btn.setAttribute("aria-expanded", "true");
       btn.setAttribute("aria-label", "Fold the story");
-      if (reduce) { clip.style.height = "auto"; return; }
+      if (reduce.matches) { clip.style.height = ""; return; }
       clip.style.height = from + "px";
       const to = clip.scrollHeight;
-      const done = (e: TransitionEvent) => { if (e.target !== clip) return; clip.style.height = "auto"; clip.removeEventListener("transitionend", done); };
-      clip.addEventListener("transitionend", done);
       requestAnimationFrame(() => { clip.style.height = to + "px"; });
     };
     const close = () => {
-      if (!isOpen()) return;
       clip.style.height = clip.getBoundingClientRect().height + "px";
       void clip.offsetHeight;
       card.removeAttribute("data-open");
+      clip.inert = true;
       btn.setAttribute("aria-expanded", "false");
       btn.setAttribute("aria-label", "Read the whole story");
-      requestAnimationFrame(() => { clip.style.height = peek() + "px"; });
-      if (card.getBoundingClientRect().top < 0) card.scrollIntoView({ block: "start", behavior: reduce ? "auto" : "smooth" });
+      if (reduce.matches) clip.style.height = "";
+      else requestAnimationFrame(() => { clip.style.height = "0px"; });
+      if (card.getBoundingClientRect().top < 0) card.scrollIntoView({ block: "start", behavior: reduce.matches ? "auto" : "smooth" });
     };
-    btn.addEventListener("click", () => { touched = true; if (isOpen()) close(); else open(); });
-    // the run ensures the story: the object beside the card reaching its end
-    const hero = card.parentElement?.querySelector<HTMLElement>("[data-intake-hero], [data-archive-hero]");
-    if (hero) {
-      new MutationObserver(() => { if (!touched && hero.classList.contains("s6")) open(); }).observe(hero, { attributes: true, attributeFilter: ["class"] });
-    }
-    new ResizeObserver(settleAll).observe(clip.firstElementChild as Element);
+    btn.addEventListener("click", () => { if (isOpen()) close(); else open(); });
   });
-  settleAll();
-  if (document.fonts && document.fonts.ready) document.fonts.ready.then(settleAll);
 </script>
 
 <script>
