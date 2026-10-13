@@ -461,16 +461,37 @@ const columns = (blocks: BuildBlock[]): StoryBlock[][] =>
       <SignalCard part="around">
         <div class="sig-stage">
           <Signal />
-          {/* THE POINTER (Jon, round five): a hand-drawn red arrow on the paper,
-              hooking in from the right onto the power switch. Host-owned, drawn
-              in the device's own pixels (its box is placed and sized by
-              --sig-zoom, and it rides the stage's rest scale), so it points at
-              the switch at every width; it fades once the switch is flicked */}
-          <svg class="sig-point" viewBox="0 0 260 90" aria-hidden="true" focusable="false" fill="none"
-            stroke="var(--ember)" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M241 21 C 214 9, 178 14, 150 27 C 128 37, 104 50, 82 63 C 73 68, 65 72, 58 75" />
-            <path d="M58 75 c 2 -10, 7 -19, 13 -27" />
-            <path d="M58 75 c 9 -2, 19 -3, 29 -1" />
+          {/* THE ARROWS (Jon, round six: "multiple arrows drawn ON THE PAPER
+              pointing at the power button, almost like concentric rays … as
+              though someone is looking at the closed state of the instrument
+              and doodling arrows around the power button"; "3 is great"):
+              three loose ember strokes converging on the switch, one from
+              ABOVE (in the air band under the story), one from the UPPER
+              RIGHT, one from the RIGHT (the paper beside the device). Each
+              head stops ~10 device px outside the casing's metal (which
+              reaches 10 px past the device box), so nothing is drawn on the
+              instrument. Host-owned, in the device's own pixels: the viewBox
+              IS device space (origin = the device's top-left, the switch's
+              centre at 1214,36), the box is placed and sized by --sig-zoom
+              and rides the stage's rest scale, so the rays point true at
+              every width. The box ends at the device's right edge (x 1280)
+              and the strokes beyond it paint as overflow, so the powered
+              device's growth never widens the document. They fade once the
+              switch is flicked */}
+          <svg class="sig-point" viewBox="1180 -122 100 202" aria-hidden="true" focusable="false" fill="none"
+            stroke="var(--ember)" stroke-linecap="round" stroke-linejoin="round">
+            <g data-ray="above" stroke-width="3.3">
+              <path d="M1188 -116 C1182 -96, 1199 -80, 1200 -62 C1201 -46, 1204 -33, 1207 -20" />
+              <path d="M1211.1 -36.5 Q1210.5 -27.9 1207 -20 Q1199.5 -25.9 1193.3 -33.2" />
+            </g>
+            <g data-ray="upright" stroke-width="3">
+              <path d="M1356 -104 C1325 -96, 1300 -72, 1290 -50 C1283 -36, 1276 -27, 1269 -19" />
+              <path d="M1288 -25.1 Q1278.2 -23.2 1269 -19 Q1272.6 -25.8 1273.2 -33.4" />
+            </g>
+            <g data-ray="right" stroke-width="3.5">
+              <path d="M1384 74 C1366 60, 1346 68, 1330 56 C1318 48, 1310 46, 1299 44" />
+              <path d="M1311.4 52.5 Q1304.6 49.1 1299 44 Q1307 39.6 1315.9 37.9" />
+            </g>
           </svg>
         </div>
       </SignalCard>
@@ -2301,16 +2322,25 @@ const columns = (blocks: BuildBlock[]): StoryBlock[][] =>
   @media (prefers-reduced-motion: reduce) {
     .live-signal :global(.sig-stage) { transition: none; }
   }
-  /* the pointer's box, in device pixels × the fit (the device's top-right is
-     at 50% + 640·z, 0): the arrowhead lands just above the switch, the tail
-     reaches ~140 device px past the casing's right edge, inside the paper */
+  /* THE ARROWS' box = their viewBox in device pixels × the fit (the device's
+     top-left is at 50% − 640·z, 0 of the stage): device x 1180..1280, y
+     −122..80. The box stops at the device's right edge on purpose: the
+     strokes run on to device x 1386 as SVG overflow (ink, never scrollable
+     overflow), so when the device powers up to its full fit the faded
+     arrows' box stays inside the viewport (a box out to x 1392 widened the
+     document to 1503 at 1440). Every stroke stays left of device x 1392,
+     on the paper at the fit's cap (z 1.0045: the sheet's edge at device
+     1408; at 1440×900 it is 1446), and below device y −122, under the
+     story's first line (−158 at the cap) */
   .live-signal :global(.sig-stage) { position: relative; }
   .sig-point {
     position: absolute;
     left: calc(50% + 540px * var(--sig-zoom, 1));
-    top: calc(-70px * var(--sig-zoom, 1));
-    width: calc(260px * var(--sig-zoom, 1));
-    height: auto;
+    top: calc(-122px * var(--sig-zoom, 1));
+    width: calc(100px * var(--sig-zoom, 1));
+    height: calc(202px * var(--sig-zoom, 1));
+    overflow: visible;
+    stroke: var(--ember);
     pointer-events: none;
     opacity: 1;
     transition: opacity 400ms ease;
