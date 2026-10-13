@@ -10,21 +10,23 @@
  * work-room sheets share: the kind word over its title (round two: the numbered readout line is gone), a hairline and
  * a label opening each section, the steps' spine. That file is its only dependency outside this folder; what stays
  * here is its own: the title, the 96 px under the device, the sapphire, and the names HowToPlay reads.
- * 2026-10-13 round three (Jon: the write-up goes AROUND the instrument): `part` cuts the card in two for the homepage's
- * play room. "head" = the kind word, the title and the story (above the device); "tail" = how to play, under the hood,
- * where it came from (beneath it), opening on its first section's hairline + label as inside the whole card, no title
- * repeated; "all" (the default) = the whole card, beneath the device, as /signal mounts it. The "?" key's landing,
- * [data-write-up], sits on the part that holds HOW TO PLAY (the tail, or the whole card), so the key lands on the
- * diagram's label. The host spaces the two parts; only "all" keeps its own 96 px above.
+ * 2026-10-13 round four (Jon: "I want the white sheet to go underneath the signal instrument to make it feel like
+ * it's one thing"): `part="around"` is the homepage's play room: ONE sheet that carries the kind word, the title and
+ * the story, then the device (the host's slot: its own stage, scaled and fitted from StudioOne), then how to play,
+ * under the hood and where it came from. The paper runs on behind the device; powered, the device is wider than the
+ * sheet and overhangs both its edges (the host keeps every box overflow-visible). Inside it the sheet's own rhythm:
+ * story → device 56, device → how to play's hairline 56 (the host's stage margins). The "?" key's landing,
+ * [data-write-up], is the HOW TO PLAY section there (its hairline and label in view at the top); on "all" (the
+ * default: the whole card, 96 px beneath the device, as /signal mounts it) it is still the whole card.
+ * (Round three's "head" / "tail" halves, two sheets around the device, are retired with it.)
  */
 import "../../styles/sheet.css";
 import { CARD, type CardRow } from "./signal-card-copy.ts";
 import HowToPlay from "./HowToPlay.astro";
 
-interface Props { part?: "head" | "tail" | "all" }
+interface Props { part?: "all" | "around" }
 const { part = "all" } = Astro.props;
-const head = part !== "tail";
-const tail = part !== "head";
+const around = part === "around";
 
 const halves = (rows: ReadonlyArray<CardRow>): CardRow[][] => {
   const cut = Math.ceil(rows.length / 2);
@@ -36,17 +38,18 @@ const cols = (ps: ReadonlyArray<string>): string[][] => {
 };
 ---
 
-<div class="sc sheet" data-signal-card data-part={part} data-write-up={tail ? "" : undefined}>
-  {head && <p class="sheet-kind">{CARD.kind}</p>}
-  {head && <h4 class="sc-title">{CARD.title}</h4>}
-  {head && <div class="sc-story sheet-cols">
+<div class="sc sheet" data-signal-card data-part={part} data-write-up={around ? undefined : ""}>
+  <p class="sheet-kind">{CARD.kind}</p>
+  <h4 class="sc-title">{CARD.title}</h4>
+  <div class="sc-story sheet-cols">
     {cols(CARD.story).map((col) => (
       <div class="sheet-col">{col.map((p) => <p class="sheet-p" set:html={p} />)}</div>
     ))}
-  </div>}
+  </div>
 
-  {tail && <Fragment>
-  <div class="sheet-sec">
+  {around && <slot />}
+
+  <div class="sheet-sec sc-how" data-write-up={around ? "" : undefined}>
     <p class="sheet-t" id="how-to-play">{CARD.howTitle}</p>
     <HowToPlay />
   </div>
@@ -75,7 +78,6 @@ const cols = (ps: ReadonlyArray<string>): string[][] => {
       ))}
     </div>
   </div>
-  </Fragment>}
 </div>
 
 <style>
@@ -86,10 +88,11 @@ const cols = (ps: ReadonlyArray<string>): string[][] => {
     --sc-ink: var(--sheet-ink);
     --sc-mono: var(--sheet-mono);
     position: relative;
-    margin: 0 auto; /* the parts: the host spaces them around the device */
+    margin: 0 auto; /* "around": the host's room spaces it like the other sheets */
     padding: var(--sheet-pad); /* the bottom: the last section's 16 + the gutter = the work sheets' 16 + their handle */
-    scroll-margin-top: 32px; /* the "?" key's landing: the write-up from its top (the whole card's title, or the tail's "how to play") */
   }
+  /* the "?" key's landing: the whole card from its top (/signal), or how to play's hairline + label (the homepage) */
+  [data-write-up] { scroll-margin-top: 32px; }
   .sc[data-part="all"] { margin-top: 96px; } /* the whole card, 96 px under the device (/signal) */
   .sc-title {
     margin: 0 0 40px;
@@ -101,5 +104,6 @@ const cols = (ps: ReadonlyArray<string>): string[][] => {
     letter-spacing: 0.06em;
   }
   .sc-story { margin-bottom: 32px; } /* the story → the first hairline, as the work sheets' story → their hood */
-  .sc[data-part="head"] .sc-story { margin-bottom: 0; } /* the head ends on its story: the gutter alone beneath */
+  .sc[data-part="around"] .sc-story { margin-bottom: 0; } /* the story ends on its last line: the device's stage
+     carries the 56 beneath it and the 56 to how to play's hairline (StudioOne) */
 </style>
