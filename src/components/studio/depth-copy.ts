@@ -36,6 +36,8 @@ export const SPEC: Record<"watch" | "archive" | "studio", Spec> = {
   studio: {
     title: "under the hood",
     rows: [
+      // the radar (Jon's description, 2026-10-13; DRAFT wording, his to edit)
+      { k: "radar", tool: "microphone", html: "A button opens any microphone, without feedback, and listens to the room: the chords being played, the scale they belong to when every note fits one, and the tempo. The studio can jam with whoever is playing out loud, a radio included." },
       { k: "record", tool: "take log", html: "The output is kept as a rolling log with a keyframe every 1.5 seconds, 600 seconds deep; a take is cut out of it after the fact, never armed in advance." },
       { k: "rip", tool: "zones", html: "A hardware synth is played every three semitones and recorded at 48 kHz / 24-bit into 21 zones; a loop finder refines the period from the root and keeps the longest clean loop under 3.5 seconds." },
       { k: "play", tool: "multisample", html: "Each key picks the nearest zone and repitches it; the loop seam is crossfaded at load so no codec shift lands on a cliff." },

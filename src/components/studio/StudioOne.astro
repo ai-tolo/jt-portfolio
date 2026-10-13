@@ -258,7 +258,7 @@ const columns = (blocks: BuildBlock[]): StoryBlock[][] =>
     {/* the cue (2026-10-13): one word at the hero's foot, so the page says
         it goes on. No motion, no peek (Jon: "the down arrow with builds is
         enough by itself"). */}
-    <a class="cue" href="#work"><span aria-hidden="true">↓</span> builds</a>
+    <a class="cue" href="#work"><span class="cue-arrow" aria-hidden="true">↓</span> builds</a>
   </section>
 
   {/* ── THE SIDEBAR — persistent left column, nav only (Jon, 2026-08-16:
@@ -461,6 +461,17 @@ const columns = (blocks: BuildBlock[]): StoryBlock[][] =>
       <SignalCard part="around">
         <div class="sig-stage">
           <Signal />
+          {/* THE POINTER (Jon, round five): a hand-drawn red arrow on the paper,
+              hooking in from the right onto the power switch. Host-owned, drawn
+              in the device's own pixels (its box is placed and sized by
+              --sig-zoom, and it rides the stage's rest scale), so it points at
+              the switch at every width; it fades once the switch is flicked */}
+          <svg class="sig-point" viewBox="0 0 260 90" aria-hidden="true" focusable="false" fill="none"
+            stroke="var(--ember)" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M241 21 C 214 9, 178 14, 150 27 C 128 37, 104 50, 82 63 C 73 68, 65 72, 58 75" />
+            <path d="M58 75 c 2 -10, 7 -19, 13 -27" />
+            <path d="M58 75 c 9 -2, 19 -3, 29 -1" />
+          </svg>
         </div>
       </SignalCard>
     </div>
@@ -784,7 +795,7 @@ const columns = (blocks: BuildBlock[]): StoryBlock[][] =>
        the floor) is this one value. Rooms read it on .one > .room, the
        sheets on .wk + .wk, the floor on its margin; the play room's own
        inner gaps read it too (with this value as their fallback) */
-    --room-gap: clamp(96px, 18vh, 200px);
+    --room-gap: clamp(108px, 20vh, 224px); /* +12% (Jon, 2026-10-13 round five; was 96 / 18vh / 200) */
     --ink: #141210;
     --dim: #6a5940;
     --paper: rgba(248, 244, 234, 0.96);
@@ -932,6 +943,23 @@ const columns = (blocks: BuildBlock[]): StoryBlock[][] =>
   .cue:hover,
   .cue:focus-visible {
     color: var(--ink);
+  }
+  /* the arrow: larger, bolder, and it moves a little (Jon, round five) */
+  .cue-arrow {
+    display: inline-block;
+    margin-right: 0.35em;
+    font-size: 1.55em;
+    font-weight: 700;
+    line-height: 0.8;
+    vertical-align: -0.12em;
+    animation: cue-bob 2.2s ease-in-out infinite;
+  }
+  @keyframes cue-bob {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(4px); }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .cue-arrow { animation: none; }
   }
   :global(html[data-night]) .cue {
     color: #7d8798;
@@ -2273,6 +2301,21 @@ const columns = (blocks: BuildBlock[]): StoryBlock[][] =>
   @media (prefers-reduced-motion: reduce) {
     .live-signal :global(.sig-stage) { transition: none; }
   }
+  /* the pointer's box, in device pixels × the fit (the device's top-right is
+     at 50% + 640·z, 0): the arrowhead lands just above the switch, the tail
+     reaches ~140 device px past the casing's right edge, inside the paper */
+  .live-signal :global(.sig-stage) { position: relative; }
+  .sig-point {
+    position: absolute;
+    left: calc(50% + 540px * var(--sig-zoom, 1));
+    top: calc(-70px * var(--sig-zoom, 1));
+    width: calc(260px * var(--sig-zoom, 1));
+    height: auto;
+    pointer-events: none;
+    opacity: 1;
+    transition: opacity 400ms ease;
+  }
+  .live-signal :global(.sig-stage:has(> .sgm:not([data-state="standby"]))) .sig-point { opacity: 0; }
   /* FIT (2026-09-02, Jon: "the drums module hangs off the side"). The
      sacred file pins the device to its 1120px reference and zooms it
      uniformly only at ≥1200px; below that it let the device go fluid, and

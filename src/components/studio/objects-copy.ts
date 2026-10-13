@@ -114,8 +114,10 @@ export const STUDIO_COPY: {
   // a chip, a synth sampled into keys."
   caption: "Screen recordings of the studio in use, muted.",
   captures: [
-    // ⚑ Jon: what is the radar, in one line?
-    { src: "/builds/studio/radar.webm", title: "the radar", caption: "the radar" },
+    // the radar (Jon, 2026-10-13): a button that opens a microphone, listens to the room without feedback and shows
+    // the chords being played, the scale they belong to and the tempo, so the studio can jam with whoever is playing
+    // out loud. DRAFT caption, his to edit
+    { src: "/builds/studio/radar.webm", title: "the radar", caption: "a microphone listens to the room and names the chords, the scale and the tempo" },
     { src: "/builds/studio/chip.webm", title: "a sound made a chip", caption: "a sound cropped, run through the effects, dropped on a key" },
     { src: "/builds/studio/rip.webm", title: "a synth sampled into keys", caption: "a synth sampled into keys, every third semitone" },
   ],
