@@ -15,7 +15,7 @@ export type CardRow = { k: string; tool: string; html: string };
 
 export const CARD = {
   title: "SIGNAL",
-  // DRAFT (2026-10-13), Jon owns the word: the build's kind on the card's readout line ("signal · instrument");
+  // DRAFT (2026-10-13), Jon owns the word: the build's kind, the one mono word over the card's title (the eyebrow);
   // the story's first sentence and the résumé ("browser instrument") already call it that
   kind: "instrument",
   // DRAFT — Jon rewrites. The closed card shows these two paragraphs: what it is, how to start, what it makes.

@@ -5,7 +5,7 @@
 export type SpecRow = { k: string; tool: string; html: string };
 export type Spec = { title: string; rows: SpecRow[] };
 
-export const SPEC: Record<"watch" | "archive", Spec> = {
+export const SPEC: Record<"watch" | "archive" | "studio", Spec> = {
   watch: {
     title: "under the hood",
     rows: [
@@ -29,6 +29,25 @@ export const SPEC: Record<"watch" | "archive", Spec> = {
       { k: "store", tool: "SQLite", html: "One file with three tiers (fresh, library, archive); a nightly eight-stage sweep is idempotent and says so when it fails." },
       { k: "search", tool: "one query", html: "Across titles, summaries and transcripts: a word lands on recordings, then on the seconds inside one." },
       { k: "reach", tool: "Tailscale", html: "The phone opens it over a private network from anywhere; a kept moment can be trimmed or shared." },
+    ],
+  },
+  // SIGNAL STUDIO (2026-10-13): DRAFT, from the signal-map notes; tools
+  // named, diary not. Jon owns every row.
+  studio: {
+    title: "under the hood",
+    rows: [
+      { k: "record", tool: "take log", html: "The output is kept as a rolling log with a keyframe every 1.5 seconds, 600 seconds deep; a take is cut out of it after the fact, never armed in advance." },
+      { k: "rip", tool: "zones", html: "A hardware synth is played every three semitones and recorded at 48 kHz / 24-bit into 21 zones; a loop finder refines the period from the root and keeps the longest clean loop under 3.5 seconds." },
+      { k: "play", tool: "multisample", html: "Each key picks the nearest zone and repitches it; the loop seam is crossfaded at load so no codec shift lands on a cliff." },
+      // ⚑ Jon: confirm the capture path (line-in / system audio) and that chips persist in IndexedDB
+      { k: "chip", tool: "crop + fx", html: "Any audio reaching the laptop can be captured, cropped, run through the racks and saved as a chip on a key, in the page's own IndexedDB store." },
+      { k: "effects", tool: "worklets + IRs", html: "Drive and modulation on the audio thread; the reverb is a convolver over six 24-bit impulse responses from my own library." },
+      // ⚑ Jon: confirm
+      { k: "capture", tool: "ARM / line-in", html: "A mic or line input with its own meter and a LIVE bus, so a voice or an outboard instrument records into the same take as the keys." },
+      // ⚑ Jon: confirm current
+      { k: "hands", tool: "MIDI + gamepad", html: "A MIDI keyboard and a game controller play it alongside the computer keyboard." },
+      // ⚑ Jon: confirm (R0 §2: event log, keyframes, stems; SIGNAL's card cut "stems into Ableton" as not checkable there)
+      { k: "export", tool: "stems", html: "A take renders offline to stems that open in Ableton." },
     ],
   },
 };

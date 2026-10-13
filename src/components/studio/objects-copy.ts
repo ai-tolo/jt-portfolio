@@ -10,9 +10,9 @@
 export const WATCH_COPY = {
   // the build's name, centred at the top of its card (Jon, 2026-09-30: the names were too small)
   title: "Intake",
-  // DRAFT (2026-10-13), Jon owns the word: the build's kind on its sheet's
-  // readout line ("intake · program"); the caption already calls it "the
-  // program I built"
+  // DRAFT (2026-10-13), Jon owns the word: the build's kind, the one mono
+  // word over its name (the sheet's eyebrow, .sheet-kind); the caption
+  // already calls it "the program I built"
   kind: "program",
   // one line under the locked headline: what the object is, in his voice
   dek: "I talk to my watch. It comes back as a calendar event, an organized idea, or a prompt for Claude.",
@@ -48,8 +48,8 @@ export const LIVE_COPY = {
 export const ARCHIVE_COPY = {
   // one word, A and D capitalised: a riff on Pokédex
   title: "AudioDex",
-  // DRAFT (2026-10-13), Jon owns the word: the build's kind on its sheet's
-  // readout line ("audiodex · app"); the band's line already calls it an app
+  // DRAFT (2026-10-13), Jon owns the word: the build's kind, the one mono
+  // word over its name (the sheet's eyebrow); the band's line already calls it an app
   kind: "app",
   // the band's line: what it is, first (DRAFT 2026-10-10, Jon edits; was
   // "Every recording I've made, read and named by what's inside it, and
@@ -59,4 +59,44 @@ export const ARCHIVE_COPY = {
   // example anyone gets, not a row from his library — the idea from three
   // summers ago, found by one word. DRAFT, his to edit.
   caption: "One word typed into the app I built: six recordings it had already named, then the twelve seconds inside one that match.",
+};
+
+// SIGNAL STUDIO (2026-10-13): the fourth sheet, its own room (#studio) after
+// the play room. ⚠️ DRAFT words (written from the signal-map notes); Jon owns
+// every word. The object is three screen recordings that do not exist yet:
+// each capture with `src` null renders an HONEST PENDING SLOT (a hairline
+// frame with its caption inside, never a fake frame). `src` names the file
+// Jon will drop under public/; the host renders the video only when that
+// file exists at build time (StudioOne's frontmatter checks it), so dropping
+// the file in is the whole upload. 1280×720, muted, ≤30 s.
+export type StudioCapture = {
+  /** the file under public/ (e.g. "/builds/studio/radar.webm"), or null */
+  src: string | null;
+  /** optional still for the frame before the video plays, same rule as src */
+  poster?: string | null;
+  /** the dot's accessible name */
+  title: string;
+  /** what the recording shows: inside the pending frame, under the video once it lands */
+  caption: string;
+};
+export const STUDIO_COPY: {
+  title: string;
+  kind: string;
+  dek: string;
+  caption: string;
+  captures: StudioCapture[];
+} = {
+  title: "Signal Studio",
+  // the one mono word over the name (the sheet's eyebrow)
+  kind: "suite",
+  // the band's line
+  dek: "A studio that lives in a browser tab: it records everything you play, samples any instrument you own into keys, and turns any sound on the laptop into a playable chip.",
+  // the mono line under the object
+  caption: "Three screen recordings of the real thing, muted: the radar, a sound cropped and made a chip, a synth sampled into keys.",
+  captures: [
+    // ⚑ Jon: what is the radar, in one line?
+    { src: "/builds/studio/radar.webm", title: "the radar", caption: "the radar" },
+    { src: "/builds/studio/chip.webm", title: "a sound made a chip", caption: "a sound cropped, run through the effects, dropped on a key" },
+    { src: "/builds/studio/rip.webm", title: "a synth sampled into keys", caption: "a synth sampled into keys, every third semitone" },
+  ],
 };
