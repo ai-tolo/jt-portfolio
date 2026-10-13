@@ -1471,50 +1471,34 @@ const columns = (blocks: BuildBlock[]): StoryBlock[][] =>
     }
   }
 
-  /* ── ROOMS (Jon, 2026-09-02: "each section has its own viewport — when
-     I enter Builds I shouldn't see the images below or the instrument
-     above"). A room is at least one viewport tall with its object
-     centered; rooms abut, so an anchor lands a room's top at the top of the
-     viewport (scroll-margin 0 — also the comet's framed knot) and neither
-     neighbor is on screen. Audio's dark panel sits INSIDE its room as a
-     panel-sized object; Builds and Visuals are their own rooms. Below 900px
-     the bottom bar owns --mbar-h of the viewport, so rooms are that much
-     shorter. */
+  /* ── ROOMS: every room is CONTENT-SIZED (Jon, 2026-10-13: "The spacing
+     between the cassette tape and the illustrations seems more than every
+     other spacing. I asked for the spacings to look and feel consistent.
+     Get it done properly"). The 2026-09-02 law (a room is at least one
+     viewport tall with its object centred, so no neighbour shows when it
+     is framed) is retired for every room: a room is its object's own box,
+     and the ground between the ink of one object and the ink of the next is
+     --room-gap and nothing else, hero to floor. An anchor still lands a
+     room's top at the top of the viewport (scroll-margin 0, also the
+     comet's framed knot); the next room may show beneath it. */
   :global(:root) {
     --mbar-h: 60px; /* the phone bar's pinned height; rooms subtract it */
     /* --sheet-pad (a sheet's inner gutter, 56 / 20 under 900) lives in src/styles/sheet.css since 2026-10-13 */
   }
   .room {
     box-sizing: border-box;
-    min-height: 100svh;
     display: flex;
     flex-direction: column;
-    justify-content: center;
-    padding-top: clamp(28px, 5vh, 56px);
-    padding-bottom: clamp(28px, 5vh, 56px);
     scroll-margin-top: 0;
   }
-  @media (max-width: 899px) {
-    .room {
-      min-height: calc(100svh - var(--mbar-h) - env(safe-area-inset-bottom, 0px));
-    }
-  }
-  /* the rooms no longer abut: air between the modules (Jon, 2026-09-18);
-     each still owns a viewport when framed, the gap is ground. Declared on
-     the column's child so a room's own margin shorthand (.work,
-     .live-signal, .look-band) cannot zero it */
+  /* the ONE gap between rooms (air between the modules since 2026-09-18).
+     Declared on the column's child so a room's own margin shorthand (.work,
+     .live-signal, .look-band) cannot zero it. No room pads itself to centre
+     anything: the sheets' edges are their rooms' edges, the look room keeps
+     only the dot row's own reach above the picture (see .look-band), the
+     music room's edges are the placard's top and the rail */
   .one > .room {
     margin-top: var(--room-gap);
-  }
-  /* the two SHEET rooms (#work, #studio) are their sheets' own edges (Jon,
-     2026-10-13: one gap between every object): no room padding and no
-     viewport-tall centring, so the ground above and below a sheet is the
-     gap and nothing else. The landing viewport's half-air (2026-09-24) is
-     retired with it: hero → the first sheet is the same gap too */
-  .one > .work,
-  .one > .studio {
-    min-height: 0;
-    padding-block: 0;
   }
 
   /* ── WORK: objects on the room ground (2026-09-18; the nav word was "learn" until that evening). The room's left
@@ -2622,6 +2606,14 @@ const columns = (blocks: BuildBlock[]): StoryBlock[][] =>
     display: flex;
     align-items: center;
   }
+  /* the music room's foot is the rail's HAIRLINE, not its seek band
+     (2026-10-13, one gap): the band (the dead one above, the Transport's
+     .tp-wave on a loaded tape) is a 44px hit area with the 1px line centred
+     in it, so the room gives back the band's lower half and the ground
+     from the line to the floor is --room-gap like every other gap */
+  .one > #soundlab {
+    margin-bottom: calc((1px - 44px) / 2);
+  }
   .ls-rail {
     display: block;
     width: 100%;
@@ -2981,9 +2973,30 @@ const columns = (blocks: BuildBlock[]): StoryBlock[][] =>
   .look-band {
     width: 100%;
     margin: 0;
+    /* the room's only padding (2026-10-13, every room content-sized): the
+       dot row stands 8 + 24px above the painted picture, outside the
+       chassis box, and its lit mark (6px × 1.45, centred in the 24px
+       target) is the room's first ink. This is exactly that reach, so the
+       gap above the dots is --room-gap like every other gap */
+    padding-top: calc(8px + 12px + 6px * 1.45 / 2);
   }
   .look-band :global(.car) {
     position: relative;
+  }
+  /* the stage follows the SHOWN picture (2026-10-13, one gap): dissolve
+     stacks every slide in one flex row, which would stand as tall as the
+     tallest piece and leave dead ground under a shorter one (94px under a
+     4:3 piece on a phone, where the art sizes to its own aspect). The slides
+     sit at the top and the measurer below sets the track to the shown
+     slide's own height, eased with the fade; on desks every slide is the
+     same 4:3 box, so nothing changes there */
+  #illustrations :global(.car[data-mode="dissolve"] .car-track) {
+    align-items: flex-start;
+  }
+  @media (prefers-reduced-motion: no-preference) {
+    #illustrations :global(.car[data-mode="dissolve"] .car-track) {
+      transition: height 260ms ease;
+    }
   }
   .look-band :global(.car-nav) {
     position: static;
@@ -3307,7 +3320,10 @@ const columns = (blocks: BuildBlock[]): StoryBlock[][] =>
   :global(.floor) {
     max-width: 1080px;
     margin: var(--room-gap) auto 0; /* the page's one gap, above the floor (24vh until 2026-10-13) */
-    padding: 4px clamp(26px, 4vw, 46px) 0;
+    /* no top padding (4px until 2026-10-13): the LinkedIn mark, the floor's
+       tallest ink, stands on the floor's own edge, so the gap above it is
+       --room-gap to the pixel */
+    padding: 0 clamp(26px, 4vw, 46px) 0;
     --floor-ink: var(--ink);
     --floor-dim: var(--dim);
     --floor-hot: #b33a2a;
@@ -3513,7 +3529,10 @@ const columns = (blocks: BuildBlock[]): StoryBlock[][] =>
         if (y <= first.s) {
           pv = first.s > 0 ? (y / first.s) * first.fy : first.fy;
         } else if (y >= last.s) {
-          pv = span > last.s ? last.fy + ((y - last.s) / (span - last.s)) * (1 - last.fy) : 1;
+          // a content-sized last room can sit closer to the page's end than a
+          // viewport (2026-10-13): its framed scroll is the end itself, and
+          // the bead stays on its row there, never the track's foot
+          pv = span > last.s ? last.fy + ((y - last.s) / (span - last.s)) * (1 - last.fy) : last.fy;
         } else {
           for (let k = 0; k < anchors.length - 1; k++) {
             const a = anchors[k], b = anchors[k + 1];
@@ -4078,6 +4097,22 @@ const columns = (blocks: BuildBlock[]): StoryBlock[][] =>
     lkImgs.forEach((im) => lkRO.observe(im));
     new MutationObserver(lkMeasure).observe(lkTrack, { attributes: true, attributeFilter: ["style"] });
     lkCar.addEventListener("car:change", lkMeasure); // dissolve mode writes no transform
+
+    // the stage is the SHOWN slide's height, not the tallest (2026-10-13,
+    // one gap from the placard to the music room): the slides sit at the
+    // top of the track (CSS above) and keep their own heights, so the active
+    // one's box is its picture + placard. Re-fit on every slide change and
+    // whenever a slide's own box changes (a picture loading, a resize)
+    const lkFit = () => {
+      const slide = Array.from(lkTrack.children).find((el) => !el.hasAttribute("aria-hidden")) as HTMLElement | undefined;
+      const h = slide ? slide.getBoundingClientRect().height : 0;
+      if (!h) return;
+      if (Math.abs(parseFloat(lkTrack.style.height || "0") - h) > 0.5) lkTrack.style.height = `${h.toFixed(2)}px`;
+    };
+    lkFit();
+    const lkFitRO = new ResizeObserver(lkFit);
+    Array.from(lkTrack.children).forEach((el) => lkFitRO.observe(el));
+    lkCar.addEventListener("car:change", lkFit);
 
     // phones: pinch the picture (the photo app's grammar — two fingers
     // scale it about the pinch point, 1×–3×, it lifts over the placard,
