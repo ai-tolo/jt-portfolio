@@ -31,13 +31,11 @@ const halves = (rows: SpecRow[]): SpecRow[][] => {
   const cut = Math.ceil(rows.length / 2);
   return [rows.slice(0, cut), rows.slice(cut)];
 };
-import { WATCH_COPY, ARCHIVE_COPY } from "./objects-copy";
+import { WATCH_COPY, ARCHIVE_COPY, STUDIO_COPY } from "./objects-copy";
 import SiteFloor from "./SiteFloor.astro";
-// THE SHEET (2026-10-13): the anatomy the three builds share (src/styles/sheet.css)
-// and their numbers in the set, from one list (src/lib/build-order.ts)
+// THE SHEET (2026-10-13): the anatomy the builds share (src/styles/sheet.css).
+// Round two (Jon): no numbers on the sheets; the kind word stands over each name.
 import "../../styles/sheet.css";
-import { buildNo } from "../../lib/build-order";
-const NO = { audiodex: buildNo("audiodex"), intake: buildNo("intake") };
 
 // The one-liner. Jon rewrites this string at will (his voice: plain,
 // human-centered function; explicitly NOT music-dramatic).
@@ -46,6 +44,14 @@ const ONE_LINER = "I design tools around how people actually use them.";
 const pub = (f: string) => path.join(process.cwd(), "public", "studio", f);
 const exists = (f: string) => fs.existsSync(pub(f));
 const etchAsset = ["etch.svg", "etch.webp", "etch.png"].filter(exists).map((f) => `/studio/${f}`)[0];
+// SIGNAL STUDIO's captures (2026-10-13): a capture's `src` (and `poster`) in
+// objects-copy.ts names a file under public/; it is kept only when that file
+// is there at build time, so a slot whose recording has not landed renders
+// the honest pending frame, never a broken video. Dropping the file in and
+// rebuilding is the whole upload.
+const inPublic = (url?: string | null) =>
+  url && fs.existsSync(path.join(process.cwd(), "public", url.replace(/^\//, ""))) ? url : null;
+const captures = STUDIO_COPY.captures.map((c) => ({ ...c, src: inPublic(c.src), poster: inPublic(c.poster) }));
 
 interface Track { src: string | null; title: string; note?: string; year?: number; duration?: string; peaks?: string | null; cover?: string | null; tint?: string | null; }
 const tracks: Track[] = ((soundlab as any).tracks ?? []).filter((t: Track) => t.src);
@@ -157,9 +163,8 @@ const MARKS = [
   { id: "work", has: BUILDS.length > 0 },
   { id: "play", has: true },
   // the Signal Studio sheet's room (#studio, holding #build-studio), placed
-  // after #play and before #illustrations. Its section lands in a later
-  // change: flip this to true in the same change that adds it
-  { id: "studio", has: false },
+  // after #play and before #illustrations (its section landed 2026-10-13)
+  { id: "studio", has: true },
   { id: "illustrations", has: illos.length > 0 },
   { id: "soundlab", has: tracks.length > 0 },
 ].filter((m) => m.has);
@@ -205,6 +210,10 @@ const BAR = NAV.flatMap((g) =>
 // the watch piece's locked words (headline + paragraphs) frame its object
 const WATCH = BUILDS.find((b) => b.id === "watch")!;
 const ARCHIVE = BUILDS.find((b) => b.id === "archive")!;
+// the Signal Studio piece (DRAFT words; its hook and its two columns). Jon's
+// LOCKED studio story is the piece "studio" ("Making music was never the hard
+// part."); to set his words here instead, look up "studio".
+const STUDIO = BUILDS.find((b) => b.id === "signal-studio")!;
 // a story's columns: its blocks split at every `break` (the room's card sets
 // them side by side on desks, stacked on phones); media slots don't print here
 type StoryBlock = Extract<BuildBlock, { type: "p" | "list" }>;
@@ -342,11 +351,8 @@ const columns = (blocks: BuildBlock[]): StoryBlock[][] =>
           hood unfold inside the same sheet. AudioDex first: it answers the
           "audio" in the role line. */}
       <article class="wk sheet" id="build-archive" aria-labelledby="build-archive-t">
-        <div class="sheet-readout">
-          <span aria-hidden="true">build {NO.audiodex.n} / {NO.audiodex.of}</span>
-          <span>{ARCHIVE_COPY.title} · {ARCHIVE_COPY.kind}</span>
-        </div>
         <header class="band">
+          <p class="sheet-kind">{ARCHIVE_COPY.kind}</p>
           <h3 class="band-name" id="build-archive-t">{ARCHIVE_COPY.title}</h3>
           <p class="band-what">{ARCHIVE_COPY.dek}</p>
         </header>
@@ -388,11 +394,8 @@ const columns = (blocks: BuildBlock[]): StoryBlock[][] =>
       </article>
       {/* object two: INTAKE (Jon's Claude Design module, 2026-09-18) */}
       <article class="wk sheet" id="build-watch" aria-labelledby="build-watch-t">
-        <div class="sheet-readout">
-          <span aria-hidden="true">build {NO.intake.n} / {NO.intake.of}</span>
-          <span>{WATCH_COPY.title} · {WATCH_COPY.kind}</span>
-        </div>
         <header class="band">
+          <p class="sheet-kind">{WATCH_COPY.kind}</p>
           <h3 class="band-name" id="build-watch-t">{WATCH_COPY.title}</h3>
           <p class="band-what">{WATCH_COPY.dek}</p>
         </header>
@@ -453,6 +456,75 @@ const columns = (blocks: BuildBlock[]): StoryBlock[][] =>
         is gone (Jon, 2026-09-22): the room exists only where the instrument
         can play; the exhibit itself is in junkyard/ */}
   </section>
+
+  {/* ── SIGNAL STUDIO (2026-10-13): the fourth build, the whole studio SIGNAL
+      is the web-sized part of. One sheet in its own room, after the play room
+      and before illustrations, the same anatomy as the work room's two: the
+      kind word → the band → THE OBJECT → the mono caption → the fold (the hook
+      always read, the story and under the hood folded behind the handle; the
+      fold script binds every [data-story] itself). THE OBJECT is three screen
+      recordings in one 16:9 frame, the house Carousel in dissolve with dots,
+      never taking ←/→ (keys={false}, as the music room). Until Jon drops the
+      files in (objects-copy.ts STUDIO_COPY.captures; the frontmatter keeps a
+      src only when its file exists), each slide is an HONEST PENDING SLOT: a
+      hairline frame with its caption inside it, nothing that pretends to be a
+      frame. Shown on phones too (captures, not the instrument). Words: DRAFT. */}
+  {SHOW.has("studio") && <section class="studio room" id="studio" aria-labelledby="build-studio-t">
+    <article class="wk sheet" id="build-studio" aria-labelledby="build-studio-t">
+      <header class="band">
+        <p class="sheet-kind">{STUDIO_COPY.kind}</p>
+        <h2 class="band-name" id="build-studio-t">{STUDIO_COPY.title}</h2>
+        <p class="band-what">{STUDIO_COPY.dek}</p>
+      </header>
+      <div class="st-obj">
+        <Carousel count={captures.length} label="Signal Studio, screen recordings" accent="var(--sheet-acc)" mode="dissolve" dots keys={false} titles={captures.map((c) => c.title)}>
+          {captures.map((c) => (
+            <figure class="st-slot" data-pending={c.src ? undefined : ""}>
+              <div class="st-frame">
+                {c.src && (
+                  <video class="st-video" src={c.src} poster={c.poster ?? undefined} muted playsinline loop preload="metadata" autoplay aria-label={c.caption} />
+                )}
+              </div>
+              <figcaption class="st-cap">{c.caption}</figcaption>
+            </figure>
+          ))}
+        </Carousel>
+        <p class="wk-cap">{STUDIO_COPY.caption}</p>
+      </div>
+      <div class="wk-story" data-story>
+        <p class="wk-lede">{STUDIO.headline}</p>
+        <div class="wk-story-clip" id="story-studio" inert>
+          <div class="wk-story-body sheet-cols">
+            {columns(STUDIO.blocks).map((col) => (
+              <div class="sheet-col">
+                {col.map((blk) =>
+                  blk.type === "p" ? <p class:list={["wk-p", "sheet-p", { hinge: blk.hinge }]} set:html={blk.html} /> : <ul class="wk-list">{blk.items.map((it) => <li set:html={it} />)}</ul>
+                )}
+              </div>
+            ))}
+          </div>
+          <div class="sheet-sec">
+            <p class="sheet-t">{SPEC.studio.title}</p>
+            <div class="sheet-cols">
+              {halves(SPEC.studio.rows).map((col) => (
+                <ol class="sheet-steps">
+                  {col.map((r) => (
+                    <li class="sheet-step">
+                      <div class="sheet-step-head"><span class="sheet-step-k">{r.k}</span><span class="sheet-step-tool">{r.tool}</span></div>
+                      <p class="sheet-step-p" set:html={r.html} />
+                    </li>
+                  ))}
+                </ol>
+              ))}
+            </div>
+          </div>
+        </div>
+        <button class="wk-more" type="button" aria-expanded="false" aria-controls="story-studio" aria-label="Read the whole story">
+          <svg class="wk-chev" viewBox="0 0 20 20" aria-hidden="true"><path d="M5 8l5 5 5-5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </button>
+      </div>
+    </article>
+  </section>}
 
   {/* the writing section left the homepage 2026-08-31 ("for now" — Jon's
       round-2 call). The tiles, manifests, and /writing/<slug> pages all
@@ -1330,6 +1402,9 @@ const columns = (blocks: BuildBlock[]): StoryBlock[][] =>
     }
     .one > .hero { order: 0; }
     .one > #work { order: 1; }
+    /* the Signal Studio sheet shares the work room's slot and follows it by
+       document order: after Intake, before illustrations (2026-10-13) */
+    .one > #studio { order: 1; }
     .one > .look-band { order: 2; }
     .one > #soundlab { order: 3; }
     .one > .live-signal { order: 5; }
@@ -1413,7 +1488,10 @@ const columns = (blocks: BuildBlock[]): StoryBlock[][] =>
      edge = the 1080 column's left edge (flush with the other rooms); the
      watch sits there, sized by the room's height so it reads as one object
      under the lamp, never centred. Nothing here has a background. */
-  .work {
+  /* the Signal Studio room (.studio, 2026-10-13) is a work room of one sheet:
+     the same inks, faces, scale and column as #work */
+  .work,
+  .studio {
     --mx-ink: var(--ink);
     --mx-dim: var(--dim);
     /* (the sheets' fill, --wk-card, is --sheet-card in src/styles/sheet.css since 2026-10-13) */
@@ -1442,7 +1520,8 @@ const columns = (blocks: BuildBlock[]): StoryBlock[][] =>
     color: var(--mx-ink);
     font-family: var(--wk-sans);
   }
-  :global(html[data-night]) .work {
+  :global(html[data-night]) .work,
+  :global(html[data-night]) .studio {
     --mx-ink: var(--night-ink);
     --mx-dim: var(--night-dim);
   }
@@ -1506,7 +1585,7 @@ const columns = (blocks: BuildBlock[]): StoryBlock[][] =>
     transition: color 560ms ease;
   }
   @media (max-width: 899px) {
-    .band { margin-bottom: 20px; } /* was 36: the readout line above the band takes the other 16 (2026-10-13) */
+    .band { margin-bottom: 20px; } /* was 36: the kind word over the name takes the other 16 (2026-10-13) */
     .band-name { font-size: 2.5rem; }
     .band-what { margin-top: 10px; font-size: 1rem; }
   }
@@ -1740,7 +1819,8 @@ const columns = (blocks: BuildBlock[]): StoryBlock[][] =>
     }
   }
   @media (max-width: 899px) {
-    .work {
+    .work,
+    .studio {
       margin-left: 14px; /* = the room's phone gutter, both sides */
       margin-right: 0; /* the desk's centring margin steps aside; the padding is the gutter */
       padding-right: 14px;
@@ -1750,6 +1830,80 @@ const columns = (blocks: BuildBlock[]): StoryBlock[][] =>
     .wk-lede {
       font-size: 1.5rem;
     }
+  }
+
+  /* ── SIGNAL STUDIO's sheet (2026-10-13): what is its own; the rest is the
+     work sheets' (.wk, .band, .wk-cap, the fold) and the shared .sheet.
+     Its hue: a deeper sapphire than SIGNAL's #4fd1ff, the same family, one
+     step toward ink, so the instrument and the studio read as kin and apart */
+  #build-studio { --sheet-acc: #2a5bd7; }
+  /* the object: one 16:9 frame, the sheet's content width up to 900, centred */
+  .st-obj {
+    width: 100%;
+    max-width: 900px;
+    margin: 0 auto;
+  }
+  .st-slot {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    margin: 0;
+  }
+  .st-frame {
+    grid-area: 1 / 1;
+    box-sizing: border-box;
+    width: 100%;
+    aspect-ratio: 16 / 9;
+    overflow: hidden;
+  }
+  .st-video {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+  /* the capture's own line: under the frame once its recording is in */
+  .st-cap {
+    grid-area: 2 / 1;
+    margin: 14px 0 0;
+    text-align: center;
+    font: 500 0.6875rem/1.5 var(--wk-mono);
+    letter-spacing: 0.12em;
+    text-transform: lowercase;
+    color: var(--sheet-dim);
+    text-wrap: balance;
+    transition: color 560ms ease;
+  }
+  /* THE PENDING SLOT (src null): a hairline in the sheet's dim ink at 18 %,
+     square, no fill, no shadow, the caption centred inside it. Nothing that
+     pretends to be a frame: no UI, no gradient, no play glyph */
+  .st-slot[data-pending] .st-frame {
+    border: 1px solid color-mix(in oklab, var(--sheet-dim) 18%, transparent);
+    transition: border-color 560ms ease;
+  }
+  .st-slot[data-pending] .st-cap {
+    grid-area: 1 / 1;
+    align-self: center;
+    justify-self: center;
+    max-width: 34ch;
+    margin: 0;
+    padding: 0 24px;
+  }
+  /* the dots under the frame; no arrows and no counter (the dots are the
+     control and the count). The lit dot takes the sheet's hue */
+  .studio :global(.car-nav) {
+    display: none;
+  }
+  .studio :global(.car-dots) {
+    margin-top: 16px;
+    color: var(--sheet-dim);
+    --car-dot-on: var(--sheet-acc);
+  }
+  /* the mono caption, centred under the dots on the band's axis */
+  #build-studio .wk-cap {
+    margin: 16px auto 0;
+    padding-left: 0;
+    text-align: center;
+    text-wrap: balance;
   }
 
   /* (the writing tiles left with their section, 2026-08-31 — the
@@ -3670,6 +3824,33 @@ const columns = (blocks: BuildBlock[]): StoryBlock[][] =>
       };
       lkRoom.addEventListener("touchend", lkEnd, { capture: true });
       lkRoom.addEventListener("touchcancel", lkEnd, { capture: true });
+    }
+  }
+</script>
+
+<script>
+  // SIGNAL STUDIO's captures (2026-10-13): once Jon's recordings are in, only
+  // the slide on show plays (the dissolve stacks all three in one place, so
+  // the hidden two would otherwise decode for nothing), and under reduced
+  // motion nothing plays by itself: the frames hold still with controls.
+  // Nothing to do while every slot is pending.
+  {
+    const car = document.querySelector<HTMLElement>("#build-studio [data-carousel]");
+    const vids = car ? Array.from(car.querySelectorAll<HTMLVideoElement>(".st-video")) : [];
+    if (car && vids.length) {
+      const still = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+      const slides = Array.from(car.querySelectorAll<HTMLElement>("[data-car-track] > *"));
+      const sync = (i: number) => {
+        slides.forEach((s, k) => {
+          const v = s.querySelector<HTMLVideoElement>(".st-video");
+          if (!v) return;
+          if (still) { v.pause(); v.controls = true; return; }
+          if (k === i) void v.play().catch(() => {});
+          else v.pause();
+        });
+      };
+      sync(0);
+      car.addEventListener("car:change", (e) => sync(Number((e as CustomEvent).detail?.index ?? 0)));
     }
   }
 </script>

@@ -211,4 +211,47 @@ export const BUILDS: BuildPiece[] = [
     draft: false,
     blocks: [],
   },
+  // SIGNAL STUDIO (2026-10-13): the fourth build's sheet, in its own room
+  // (#studio) after the play room. ⚠️ DRAFT, NOT LOCKED: written by the
+  // playcaller from the signal-map notes (NOTES-SIGNAL-R0 §2/§4, docs/signal-map
+  // A, C, G, signal-card-copy.ts `from`); Jon owns every word and edits freely.
+  // The headline is the hook (it stands outside the fold); the paragraphs
+  // fill the fold's two columns, split at the `break`. The object (three
+  // capture slots) lives in objects-copy.ts STUDIO_COPY.captures.
+  // Its id is "signal-studio": "studio" is Jon's LOCKED piece above ("Making
+  // music was never the hard part.", 2026-08-31), the same studio in his own
+  // words, which no room renders today. Using his piece instead is one word
+  // in StudioOne (the STUDIO lookup); it has no `break`, so it would set as
+  // one column.
+  {
+    id: "signal-studio",
+    name: "signal studio",
+    draft: true,
+    headline: "The DAW waits for you to press record. This one never stopped.",
+    blocks: [
+      {
+        type: "p",
+        // ⚑ Jon: "a controller in my hands" = the PlayStation controller (R0 §2 names the gamepad); confirm it is current
+        html: "SIGNAL, the instrument on this page, is the part of it that fits in a web page. The whole thing is what I make music on at home: drums, keys and bass under one keyboard, a controller in my hands, and every synth I own sampled into it so I can play them anywhere.",
+      },
+      {
+        type: "p",
+        // (docs/signal-map G: the take log, an always-on rolling log, kept 600 s)
+        html: "It is always recording. A take is never something I remembered to start; it is the last ten minutes, kept, and I cut the part I want after the fact.",
+      },
+      { type: "break" },
+      {
+        type: "p",
+        // ⚑ Jon: Spotify is NOT named here on purpose (capturing a streaming
+        // service's audio is against its terms; naming it on a public
+        // portfolio invites the wrong question). Jon decides.
+        html: "Any sound on the laptop can be cropped, run through the effects and dropped onto a key as a chip. A song, a voice memo, a sample from a record: it becomes an instrument in about the time it takes to play it once.",
+      },
+      {
+        type: "p",
+        // (R0 §4: 21 zones every 3 st, 48 k/24-bit; docs/signal-map C §3 analyzeZone)
+        html: "The synths are ripped the same way: the studio plays every third semitone into the hardware and records what comes back, finds the loop, and the keys play that.",
+      },
+    ],
+  },
 ];
