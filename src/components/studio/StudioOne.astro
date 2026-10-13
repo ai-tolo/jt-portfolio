@@ -2341,10 +2341,13 @@ const columns = (blocks: BuildBlock[]): StoryBlock[][] =>
     overflow: visible;
   }
   /* the slide: placard rows, then the tape's row, then the machine. The
-     carousel stretches every slide to the tallest, and the machine row
-     sits at the BOTTOM of that box (the tape closes up against it), so the
-     rule, the counter and the tape hold one y across tapes whose placards
-     differ in height — only the space under the placard varies */
+     carousel stretches every slide to the track, and the machine row
+     sits at the BOTTOM of that box (the tape closes up against it). The
+     loaded tapes share the tallest tape's height, so the rule, the counter
+     and the tape hold one y across tapes whose placards differ in height —
+     only the space under the placard varies. The blank deck is not a tape:
+     at rest it is its own height, the tape right under the mini (2026-10-13;
+     THE DECK'S HEIGHT in the script) */
   .ls {
     /* the tape's width, read by the tape AND the rail under it (Jon: the
        rail in line with the cassette): 760 at most, about half the
@@ -2850,6 +2853,14 @@ const columns = (blocks: BuildBlock[]): StoryBlock[][] =>
      page's scroll. */
   .ls {
     position: relative;
+  }
+  /* the deck's height is the SHOWN slide's (the script sets the track: the
+     blank deck's own at rest, the tapes' shared height otherwise), eased
+     like the look stage (2026-10-13) */
+  @media (prefers-reduced-motion: no-preference) {
+    #soundlab :global(.car[data-mode="dissolve"] .car-track) {
+      transition: height 260ms ease;
+    }
   }
   .ls-vol {
     --vol: 1;
@@ -4053,6 +4064,57 @@ const columns = (blocks: BuildBlock[]): StoryBlock[][] =>
       // carry a preview)
       wallets.forEach((_, i) => { print(i, i, false); showLen(i, null); });
     });
+
+    // THE DECK'S HEIGHT (2026-10-13, Jon: "the spacings should look and feel
+    // consistent"): the blank deck is not a tape, so at rest it reserves no
+    // placard: the mini, the tape's own margin, the tape, the rail, and the
+    // room's first ink is the mini with the tape right under it. The loaded
+    // tapes share ONE height (the longest placard's), so between tapes the
+    // tape and the rail hold one y. The blank deck takes the tapes' height
+    // too while its placard prints a tape's words (a preview) or a hand has
+    // its wallet open, so the words never push the tape and a chosen tape
+    // arrives exactly where the blank one stood; the first settle's peek
+    // alone moves nothing (it seats the mini and opens the strip, as ever). The
+    // track carries the height (eased in CSS); the slides stretch to it, the
+    // tape riding the bottom of its 1fr row. Measured from the parts' own
+    // sizes (the placard, the tape and its margin, the rail and its margin)
+    const auTrack = auCar?.querySelector<HTMLElement>("[data-car-track]") ?? null;
+    if (auTrack) {
+      const auSlidesAll = Array.from(auTrack.children) as HTMLElement[];
+      const auBlank = auSlidesAll.find((el) => el.hasAttribute("data-ls-blank")) ?? null;
+      const ownH = (el: HTMLElement) => {
+        const head = el.querySelector<HTMLElement>(".ls-head");
+        const cs = el.querySelector<HTMLElement>(".cs");
+        const deck = el.querySelector<HTMLElement>(".ls-deck");
+        if (!head || !cs || !deck) return 0;
+        // fractional sizes only, none of them moved by the stretch (rounded
+        // offsets flip a pixel as the tape rides its row) or by a translate
+        return head.getBoundingClientRect().height + parseFloat(getComputedStyle(cs).marginTop) + cs.getBoundingClientRect().height
+          + parseFloat(getComputedStyle(deck).marginTop) + deck.getBoundingClientRect().height;
+      };
+      const auFit = () => {
+        const tapesH = Math.max(0, ...auSlidesAll.filter((el) => el !== auBlank).map(ownH));
+        const shown = auSlidesAll[active] ?? auSlidesAll[0];
+        const strip0 = wallets[0]?.strip;
+        const roomy = shown !== auBlank
+          || !!wallets[0]?.head?.hasAttribute("data-preview")
+          || (!!strip0 && !strip0.hidden && !peeking);
+        const h = roomy && tapesH > 0 ? tapesH : ownH(shown);
+        if (!h) return;
+        if (Math.abs(parseFloat(auTrack.style.height || "0") - h) > 0.5) auTrack.style.height = `${h.toFixed(2)}px`;
+      };
+      auFit();
+      auCar?.addEventListener("car:change", auFit); // after the listener above has set `active`
+      const auStrip = wallets[0]?.strip;
+      if (auStrip) new MutationObserver(auFit).observe(auStrip, { attributes: true, attributeFilter: ["hidden"] });
+      const auHead = wallets[0]?.head;
+      if (auHead) new MutationObserver(auFit).observe(auHead, { attributes: true, attributeFilter: ["data-preview"] });
+      // a hand ends the peek (the capture listeners above run first): the
+      // open strip becomes theirs, and the deck makes room
+      ["pointerdown", "keydown"].forEach((t) => document.addEventListener(t, auFit, { capture: true }));
+      const auRO = new ResizeObserver(auFit);
+      auSlidesAll.forEach((el) => el.querySelectorAll(".ls-head, .cs, .ls-deck").forEach((c) => auRO.observe(c)));
+    }
   }
 
   // ── VISUALS: the keys stand off the PAINTED picture, not its box (the
