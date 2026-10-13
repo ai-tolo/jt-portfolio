@@ -412,34 +412,55 @@ session must follow.
   Homepage nav (2026-10-13, Jon's round two: "redesign is the move"; the
   four verbs work · play · look · listen, the two labelled groups and the
   numerals are all RETIRED): the desktop rail is WORDS ALONE, one face
-  (IBM Plex Mono 0.74rem/500/0.07em lowercase), right-aligned on one x, in
+  (IBM Plex Mono 0.875rem/600/0.06em lowercase since round six), right-aligned
+  on one x, in
   two blocks with a 28px hairline divider between them (no words, no
   glyphs, no numerals): the builds by name (audiodex → #build-archive ·
   intake → #build-watch · signal → #play · studio → #build-studio), then
   the rooms renamed illustrations (→ #illustrations) and music (→ #soundlab;
   "music" not "audio": "audio" collided with AudioDex and the role line).
-  Rows 44px, 20px apart, 40px above and below the divider (round four,
-  Jon: "still too condensed"), the lit pill as before; the column is centred above
-  the night switch; 128px rail, `--railw` follows (the AwayRail on the other
-  pages is still 110). `MARKS` = the rooms (`id`, `has`; `SHOW` decides what
+  Rows 48px, 20px apart, 40px above and below the divider, the lit pill
+  12px radius (round six: "wider, bolder, larger"); the column is centred above
+  the RÉSUMÉ PILL and the night switch; 160px rail since round six, `--railw`
+  follows (the AwayRail on the other pages is still 110; to keep the sheets at
+  1080 and the device fit identical the sheets' minimum gutter is 20px and
+  `.sig-desktop`'s side padding is `clamp(8px, calc(6vw - 72px), 24px)`).
+  RÉSUMÉ IS A BUTTON AT THE RAIL'S FOOT (round six, Jon: a floating corner
+  "breaks the laws of the design system"; bottom, not top: "I'm more proud of
+  the stuff on the landing page than anything on the résumé"): `a.rail-cv`
+  `résumé↗`, an outlined pill (1px rail ink, radius 999, the rail's mono
+  14px/600, padding 10px 14px) centred 84px above the rail's bottom, above
+  the switch's hairline; hover fills it ink on paper; night variant. The
+  phone bar's `résumé` wears the same pill (`.mbar-pill`). THE CORNER IS
+  GONE on every size (markup, CSS, the hush observer, the ≤1320px disc and
+  sheet.css's matching kind-word drop: the kind word is at top 23 at every
+  desk width again). `MARKS` = the rooms (`id`, `has`; `SHOW` decides what
   renders; `studio` is a room too); `NAV` = two blocks of entries that the
   rail, the bar (`BAR`: the builds collapse to one word `builds` → #work
   with `data-holds` naming every build id) and the spy read: one list,
   never two. A rail or bar row whose `data-for` target is missing from the
   page is hidden at runtime (never a dead link). `getDocIds()` reads the
   rendered `[data-for]` targets (sheets AND rooms) sorted by on-screen top,
-  `fyOf()` reads each row's centre on the comet track, a row lights when
-  its target is the active one, contains it, or is named in `data-holds`;
+  `fyOf()` reads each row's centre on the comet track. THE COMET LAW (round
+  six, Jon: "it makes things so much more simple"): a reference line at the
+  viewport's vertical centre (phones: `main`'s centre); the target that SPANS
+  the line is active: its row lit and the bead EXACTLY on its knot; in the
+  ground between two targets p = (line − bottom_i) ÷ (top_i+1 − bottom_i),
+  the bead rides between the two knots and the lit row flips at p = 0.5;
+  above the first target nothing is lit and the bead waits on the first
+  knot; below the last (the footer) the last stays lit. A target at its
+  framed position counts as active even if too short to reach the line
+  (never fires today). `locate()` + one rAF-coalesced `update()` on
+  capture-phase scroll + `scrollend`; knots cached by `measure()` on load,
+  resize and a ResizeObserver on body and `.one`; the old IntersectionObserver
+  spy, `buildAnchors` and the scroll→y map are gone. Containment and
+  `data-holds` still light the bar's `builds`;
   the sheets carry `scroll-margin-top: 24px` on desks. `src/lib/
   build-order.ts` (`BUILD_ORDER`, `buildNo()`) is the one ordered list of
   the builds. Phone bar: builds · illustrations · music · résumé · moon,
-  0.7rem (0.02em tracking under 360px), nothing wraps. The hero corner
-  (dot · résumé, 0.84rem, a 42px hit area; on desks ≤1320px it wears a
-  disc of the ground and the sheets' kind word drops to top 64px, level
-  with the band's name, out of its way) is `position: fixed` on desks
-  and HIDES while the instrument's device overlaps its band
-  (IntersectionObserver, `data-hush`); on phones it stays with the hero
-  (absolute) and the bar carries résumé too. Section ids stay
+  0.7rem (0.02em tracking under 360px), nothing wraps. The hero has NO
+  corner since round six (résumé is the rail's pill, the bar's pill and the
+  end room's title). Section ids stay
   work/play/studio/soundlab/illustrations.
   THE HERO (2026-10-13, round two: Jon: "the down arrow with builds is
   enough by itself"): a full viewport (`min-height: 100svh`, the standard
@@ -466,7 +487,8 @@ session must follow.
   24.35px above the picture, the music room's foot is its rail's hairline,
   the floor has no top padding, the look track follows the shown slide's
   height (`lkFit`, eased 260ms) — so the visible ink-to-ink distance down
-  the whole page is this one value, 162px at 1440, 146 on phones; a framed
+  the whole page is this one value, ~180px at 1440, ~162 on phones (the end
+  room, a full viewport, is the one exception by design); a framed
   room may show its neighbour beneath it (the 2026-09-02 "own viewport"
   law is RETIRED, Jon: "get it done properly")) puts ground between them — declared on the
   column's child on purpose, because `.work`, `.live-signal` and
@@ -525,17 +547,35 @@ session must follow.
   visible`, `.sgm` is `width: max-content`, the document never widens). If
   the overhang reads wrong, Jon's fallback: widen ALL the sheets' paper to
   match, never their text. `/signal` keeps `part="all"` under the device.
-  THE POINTER (round five, Jon: "hand-written looking arrows pointing at the
-  power button, maybe in red"): `.sig-point`, a host-owned inline SVG inside
-  `.sig-stage` after `<Signal />`, an ember hand-drawn hook from the right
-  onto the switch, placed and sized in DEVICE pixels × `--sig-zoom` (left
-  50% + 540·z, top −70·z, width 260·z: the device's top-right is at
-  50% + 640·z) so it rides the rest scale and points true at every width;
-  it fades (opacity, 400ms) once `#sgm` leaves standby. Never inside `.sgm`.
+  THE ARROWS (round six, Jon: "multiple arrows drawn ON THE PAPER pointing at
+  the power button, almost like concentric rays … doodling arrows around the
+  power button"; "3 is great"; round five's single pointer landed on the
+  casing and is gone): `.sig-point`, ONE host-owned inline SVG inside
+  `.sig-stage` after `<Signal />` whose viewBox IS device space (the switch's
+  centre at 1214,36): three ember hand-drawn rays, `g[data-ray]` above ·
+  upright · right, wobbly shafts + open uneven heads, round caps, 3–3.5
+  device px, lengths ~99 / ~125 / ~91, converging on the switch; every head
+  stops ~10 device px OUTSIDE the casing's metal (material.css's −10px
+  inset): NOTHING is drawn on the instrument. Placed and sized in device px
+  × `--sig-zoom` (left 50% + 540·z, top −122·z, 100·z × 202·z) so it rides
+  the rest scale and points true at every width; strokes stay inside device
+  x ≤ 1386 / y ≥ −122 (on the paper even at the fit's cap, clear of the
+  story). The SVG's BOX ends at the device's right edge on purpose and the
+  strokes past it paint as `overflow: visible`: a box past x 1280 widened
+  the document once the device powered up. Fades (opacity, 400ms) once
+  `#sgm` leaves standby. Never inside `.sgm`. Probe: qa arrows-check.
 - THE FLOOR is ONE object sitewide (2026-09-21, Jon's reference shot):
   `src/components/studio/SiteFloor.astro` = the email + the LinkedIn mark,
   centred, nothing else (the city and the résumé link are gone from every
-  floor; the rail / bottom bar and the homepage corner carry résumé).
+  floor; the rail / bottom bar carry résumé). ON THE HOMEPAGE (round six)
+  the floor sits inside THE END ROOM `section.room.end#end`, the page's
+  last room: a FULL VIEWPORT (100svh; 100svh − the bar on phones) with its
+  content centred: `a.end-cv` `résumé` → /resume in the band-name face
+  (Outfit 500, 52px; 40 on phones, −0.02em, the site ink, hover = dim,
+  night = `--night-ink`), 24px, then `<SiteFloor />`; the one gap stands
+  above it (Jon: "the footer happens too early" → this is the dead space);
+  no `[data-end]` sentinel, no floor margins of its own; `#end` is not a
+  nav target (music stays lit there).
   Pages own placement only (margins, hairline, max-width, order) through
   `:global(.floor)` in a scoped block, or a plain `.floor` inside a
   `<style is:global>` block (`:global()` is NOT compiled there and the
@@ -559,8 +599,8 @@ session must follow.
   unless ChsSystem's switch wrote `data-sys` (the site's switch clears it);
   Raylu's --ry-* flip in ry-tokens.css and the lasso's white prototype screen
   is inverted with its hues turned back (invert .93 + hue-rotate 180°).
-- The homepage corner (top right) is the résumé link alone with its ember
-  bead; no city. The "back to selected work" end-line is retired from
+- The homepage has NO corner since 2026-10-13 round six (résumé = the rail's
+  foot pill, the phone bar's pill, and the end room's title). The "back to selected work" end-line is retired from
   every case study (dead link); the rail carries every exit. AwayRail
   order on case studies: the house chip on TOP, 🡐 résumé MID-RAIL (auto
   margins split the column), the switch at the foot; phone bar ⌂ · 🡐
