@@ -74,9 +74,9 @@ export type StudioCapture = {
   src: string | null;
   /** optional still for the frame before the video plays, same rule as src */
   poster?: string | null;
-  /** the dot's accessible name */
+  /** the placard under the frame and the dot's accessible name (DRAFT) */
   title: string;
-  /** what the recording shows: inside the pending frame, under the video once it lands */
+  /** what the recording shows: inside the pending frame (unless it only repeats the title), the placard's second line once the video lands */
   caption: string;
 };
 export const STUDIO_COPY: {
@@ -87,12 +87,20 @@ export const STUDIO_COPY: {
   captures: StudioCapture[];
 } = {
   title: "Signal Studio",
-  // the one mono word over the name (the sheet's eyebrow)
+  // the one mono word in the sheet's top-right corner (.sheet-kind)
   kind: "suite",
-  // the band's line
-  dek: "A studio that lives in a browser tab: it records everything you play, samples any instrument you own into keys, and turns any sound on the laptop into a playable chip.",
-  // the mono line under the object
-  caption: "Three screen recordings of the real thing, muted: the radar, a sound cropped and made a chip, a synth sampled into keys.",
+  // the band's line. DRAFT (round three, 2026-10-13: fewer words, what it
+  // is, drawn from Jon's locked piece: it listens all the time, the room
+  // lives in the laptop, a game controller plays it; the captures' titles
+  // say the rest). Was: "A studio that lives in a browser tab: it records
+  // everything you play, samples any instrument you own into keys, and
+  // turns any sound on the laptop into a playable chip."
+  dek: "A studio that lives in my laptop: always recording, played from a game controller.",
+  // the mono line under the object. DRAFT (round three): says what the
+  // frames are, not what each shows (the placards do). Was: "Three screen
+  // recordings of the real thing, muted: the radar, a sound cropped and made
+  // a chip, a synth sampled into keys."
+  caption: "Screen recordings of the studio in use, muted.",
   captures: [
     // ⚑ Jon: what is the radar, in one line?
     { src: "/builds/studio/radar.webm", title: "the radar", caption: "the radar" },

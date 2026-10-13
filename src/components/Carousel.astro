@@ -300,9 +300,15 @@ const { count, label, accent = "var(--brand-cyan, #6ee0ff)", dots = false, title
       car.dispatchEvent(new CustomEvent("car:change", { detail: { index: i } }));
     };
 
-    prev?.addEventListener("click", () => show(i - 1));
-    next?.addEventListener("click", () => show(i + 1));
-    dots.forEach((d, k) => d.addEventListener("click", () => show(k)));
+    // a MOUSE press drops its focus (detail > 0; a keyboard's Enter/Space
+    // keeps it): a focused chassis keeps ←/→ for itself, so a clicked key
+    // would hold the arrows after its room scrolled away (2026-10-13: with
+    // two keyed rooms, the Studio's key took the look room's arrows; the
+    // house rule, as Room.astro and the tape's fader)
+    const press = (e: MouseEvent) => { if (e.detail > 0) (e.currentTarget as HTMLElement).blur(); };
+    prev?.addEventListener("click", (e) => { show(i - 1); press(e); });
+    next?.addEventListener("click", (e) => { show(i + 1); press(e); });
+    dots.forEach((d, k) => d.addEventListener("click", (e) => { show(k); press(e); }));
     // an arrow key steps the set AND seats the matching key, the way a
     // click does; the key lifts on keyup (Jon, 2026-09-15)
     const step = (d: number) => {
@@ -353,13 +359,16 @@ const { count, label, accent = "var(--brand-cyan, #6ee0ff)", dots = false, title
       // in the wallet must not steal ←/→ from the pictures)
       if (el?.closest?.('[data-carousel]:not([data-car-keys="false"])')) return;
       // route to the carousel covering most of the screen — only when one
-      // genuinely dominates (the full-viewport look band case)
+      // genuinely dominates (the full-viewport look band case), or stands
+      // wholly in view (a 16:9 frame on a sheet never covers 55 % of a
+      // screen: the Signal Studio's chassis, 2026-10-13); the most visible wins
       let best: (typeof registry)[number] | null = null;
-      let bestVis = window.innerHeight * 0.55;
+      let bestVis = 0;
       for (const c of registry) {
         const r = c.car.getBoundingClientRect();
         const vis = Math.min(r.bottom, window.innerHeight) - Math.max(r.top, 0);
-        if (vis >= bestVis) { bestVis = vis; best = c; }
+        const whole = r.height > 0 && r.top >= 0 && r.bottom <= window.innerHeight;
+        if ((vis >= window.innerHeight * 0.55 || whole) && vis > bestVis) { bestVis = vis; best = c; }
       }
       if (!best) return;
       e.preventDefault();

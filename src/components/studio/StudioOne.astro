@@ -463,12 +463,17 @@ const columns = (blocks: BuildBlock[]): StoryBlock[][] =>
       kind word → the band → THE OBJECT → the mono caption → the fold (the hook
       always read, the story and under the hood folded behind the handle; the
       fold script binds every [data-story] itself). THE OBJECT is three screen
-      recordings in one 16:9 frame, the house Carousel in dissolve with dots,
-      never taking ←/→ (keys={false}, as the music room). Until Jon drops the
-      files in (objects-copy.ts STUDIO_COPY.captures; the frontmatter keeps a
-      src only when its file exists), each slide is an HONEST PENDING SLOT: a
-      hairline frame with its caption inside it, nothing that pretends to be a
-      frame. Shown on phones too (captures, not the instrument). Words: DRAFT. */}
+      recordings in one 16:9 frame on THE LOOK ROOM'S CHASSIS (Jon, round
+      three: "the tiny carousel buttons aren't sufficient … adopt the arrow
+      key buttons from the Illustrations UI"): the house Carousel in dissolve,
+      looping, its two keycaps standing outside the frame, the dots above it,
+      the capture's title as the placard under it; ←/→ and swipes step it
+      (keys on, the look room's routing). Until Jon drops the files in
+      (objects-copy.ts STUDIO_COPY.captures; the frontmatter keeps a src only
+      when its file exists), each slide is an HONEST PENDING SLOT: a hairline
+      frame with its caption inside it (left out where the caption only
+      repeats the placard), nothing that pretends to be a frame. Shown on
+      phones too (captures, not the instrument). Words: DRAFT. */}
   {SHOW.has("studio") && <section class="studio room" id="studio" aria-labelledby="build-studio-t">
     <article class="wk sheet" id="build-studio" aria-labelledby="build-studio-t">
       <header class="band">
@@ -477,15 +482,23 @@ const columns = (blocks: BuildBlock[]): StoryBlock[][] =>
         <p class="band-what">{STUDIO_COPY.dek}</p>
       </header>
       <div class="st-obj">
-        <Carousel count={captures.length} label="Signal Studio, screen recordings" accent="var(--sheet-acc)" mode="dissolve" dots keys={false} titles={captures.map((c) => c.title)}>
+        <Carousel count={captures.length} label="Signal Studio, screen recordings" accent="var(--sheet-acc)" mode="dissolve" dots loop titles={captures.map((c) => c.title)}>
           {captures.map((c) => (
             <figure class="st-slot" data-pending={c.src ? undefined : ""}>
               <div class="st-frame">
-                {c.src && (
+                {c.src ? (
                   <video class="st-video" src={c.src} poster={c.poster ?? undefined} muted playsinline loop preload="metadata" autoplay aria-label={c.caption} />
+                ) : c.caption !== c.title && (
+                  <p class="st-cap">{c.caption}</p>
                 )}
               </div>
-              <figcaption class="st-cap">{c.caption}</figcaption>
+              {/* the placard (the look room's: the title carries the weight, a
+                  quiet line under it): the capture's title; its caption joins
+                  as the second line once the recording is in the frame */}
+              <figcaption class="st-placard">
+                <span class="st-title">{c.title}</span>
+                {c.src && <span class="st-meta">{c.caption}</span>}
+              </figcaption>
             </figure>
           ))}
         </Carousel>
@@ -753,6 +766,13 @@ const columns = (blocks: BuildBlock[]): StoryBlock[][] =>
        last room's placard) — see .floor's margin; a small tail remains */
     padding-bottom: 28px;
     --railw: 0px;
+    /* ONE GAP (Jon, 2026-10-13: "across every component of the homepage, the
+       spacing should be consistent"): the ground between any two objects on
+       the page (hero → sheet, sheet → sheet, room → room, the last room →
+       the floor) is this one value. Rooms read it on .one > .room, the
+       sheets on .wk + .wk, the floor on its margin; the play room's own
+       inner gaps read it too (with this value as their fallback) */
+    --room-gap: clamp(96px, 18vh, 200px);
     --ink: #141210;
     --dim: #6a5940;
     --paper: rgba(248, 244, 234, 0.96);
@@ -922,8 +942,9 @@ const columns = (blocks: BuildBlock[]): StoryBlock[][] =>
     border-right: 1px solid rgba(20, 18, 16, 0.14);
   }
   /* WORDS ALONE (Jon, 2026-10-13, round two): one column, one face, one row
-     height, every word ending on one x. 36px rows, 4px apart in a block; a
-     28px hairline with 18px above and below between the two blocks */
+     height, every word ending on one x. Round three (Jon: "too condensed"):
+     40px rows, 12px apart in a block; a 28px hairline with 28px above and
+     below between the two blocks (was 36 · 4 · 18: a list; now a column) */
   .rail-col {
     display: flex;
     flex-direction: column;
@@ -932,7 +953,7 @@ const columns = (blocks: BuildBlock[]): StoryBlock[][] =>
   .rail-list {
     display: flex;
     flex-direction: column;
-    gap: 4px;
+    gap: 12px;
     margin: 0;
     padding: 0;
     list-style: none;
@@ -943,7 +964,7 @@ const columns = (blocks: BuildBlock[]): StoryBlock[][] =>
     width: 28px;
     height: 1px;
     /* right edge = the words' end (the row's 8px right padding) */
-    margin: 18px 8px 18px 0;
+    margin: 28px 8px 28px 0;
     background: #716d65;
   }
   .rail-item {
@@ -952,7 +973,7 @@ const columns = (blocks: BuildBlock[]): StoryBlock[][] =>
     justify-content: flex-end;
     box-sizing: border-box;
     width: 118px;
-    height: 36px;
+    height: 40px;
     padding: 0 8px 0 7px;
     border-radius: 11px;
     text-decoration: none;
@@ -1475,13 +1496,17 @@ const columns = (blocks: BuildBlock[]): StoryBlock[][] =>
      the column's child so a room's own margin shorthand (.work,
      .live-signal, .look-band) cannot zero it */
   .one > .room {
-    margin-top: clamp(96px, 18vh, 200px);
+    margin-top: var(--room-gap);
   }
-  /* half the air after the landing viewport (Jon, 2026-09-24): the first
-     room's top margin and padding at half the others' */
-  .one > .work {
-    margin-top: clamp(48px, 9vh, 100px);
-    padding-top: clamp(14px, 2.5vh, 28px);
+  /* the two SHEET rooms (#work, #studio) are their sheets' own edges (Jon,
+     2026-10-13: one gap between every object): no room padding and no
+     viewport-tall centring, so the ground above and below a sheet is the
+     gap and nothing else. The landing viewport's half-air (2026-09-24) is
+     retired with it: hero → the first sheet is the same gap too */
+  .one > .work,
+  .one > .studio {
+    min-height: 0;
+    padding-block: 0;
   }
 
   /* ── WORK: objects on the room ground (2026-09-18; the nav word was "learn" until that evening). The room's left
@@ -1535,7 +1560,7 @@ const columns = (blocks: BuildBlock[]): StoryBlock[][] =>
   /* two sheets, one stack (2026-10-10: the sheets carry their own edges,
      so the ground between them only has to part them) */
   .wk + .wk {
-    margin-top: clamp(48px, 8vh, 80px);
+    margin-top: var(--room-gap); /* 48–80 until 2026-10-13 (Jon: "a bit more") */
   }
   /* one frame for every object: hook → dek → the object → caption → the
      read, on one rhythm (hook→dek 12 · dek→object 32 · object→caption 24 ·
@@ -1837,34 +1862,119 @@ const columns = (blocks: BuildBlock[]): StoryBlock[][] =>
      Its hue: a deeper sapphire than SIGNAL's #4fd1ff, the same family, one
      step toward ink, so the instrument and the studio read as kin and apart */
   #build-studio { --sheet-acc: #2a5bd7; }
-  /* the object: one 16:9 frame, the sheet's content width up to 900, centred */
+  /* THE OBJECT on THE LOOK ROOM'S CHASSIS (Jon, round three, 2026-10-13:
+     "the tiny carousel buttons aren't sufficient … adopt the arrow key
+     buttons from the Illustrations UI"): one 16:9 frame with the look
+     room's two keycaps standing outside it, 24px up from its foot, the dots
+     8px above it, the placard 14px under it. .st-obj is a container so the
+     keys stand on the frame's own geometry in pure CSS (the look room
+     measures a picture of unknown shape; this frame's shape is fixed). */
   .st-obj {
+    container: st / inline-size;
     width: 100%;
-    max-width: 900px;
     margin: 0 auto;
+    /* the look room's key (.look-band's --kc-*), unchanged in size and
+       travel; its faces are mixed over the SHEET's card instead of the
+       room's ground, since this one stands on paper. A copy: change both
+       or neither */
+    --kc: 61px;
+    --kc-sx: 7px;
+    --kc-sy: 9px;
+    --kc-r: 6px;
+    --kc-gap: 20px;
+    --kc-rise: 24px;
+    --kc-glyph: 29px;
+    --kc-inset: 4px;
+    --kc-ink: var(--sheet-ink);
+    --kc-face-hi: color-mix(in srgb, var(--kc-ink) 2%, var(--sheet-card));
+    --kc-face: color-mix(in srgb, var(--kc-ink) 5%, var(--sheet-card));
+    --kc-face-hover-hi: var(--sheet-card);
+    --kc-face-hover: color-mix(in srgb, var(--kc-ink) 1.5%, var(--sheet-card));
+    --kc-face-down: color-mix(in srgb, var(--kc-ink) 8%, var(--sheet-card));
+    --kc-bevel-hi: var(--sheet-card);
+    --kc-bevel-lo: color-mix(in srgb, var(--kc-ink) 14%, var(--sheet-card));
+    --kc-seam: color-mix(in srgb, var(--kc-ink) 26%, transparent);
+    --kc-skirt-c: color-mix(in srgb, var(--kc-ink) 15%, var(--sheet-card));
+    --kc-lip: color-mix(in srgb, var(--kc-ink) 26%, var(--sheet-card));
+    --kc-contact: color-mix(in srgb, var(--kc-ink) 22%, transparent);
+    --kc-ghost: color-mix(in srgb, var(--kc-ink) 34%, transparent);
+    /* the frame's width: the content's on phones (no keys); on desks the
+       content less one key's room a side (its gap, its body, its cap), so
+       the keys' outer faces stand on the content's edges, the sheet's 56px
+       gutter clear beyond them (cqw resolve against .st-obj where used) */
+    --st-room: calc(var(--kc-gap) + var(--kc-sx) + var(--kc));
+    --st-fw: 100cqw;
   }
+  /* night: the look room's carbon recipe over the night card */
+  :global(html[data-night]) .st-obj {
+    --kc-face-hi: color-mix(in srgb, var(--kc-ink) 15%, var(--sheet-card));
+    --kc-face: color-mix(in srgb, var(--kc-ink) 10%, var(--sheet-card));
+    --kc-face-hover-hi: color-mix(in srgb, var(--kc-ink) 22%, var(--sheet-card));
+    --kc-face-hover: color-mix(in srgb, var(--kc-ink) 15%, var(--sheet-card));
+    --kc-face-down: color-mix(in srgb, var(--kc-ink) 8%, var(--sheet-card));
+    --kc-bevel-hi: color-mix(in srgb, var(--kc-ink) 26%, var(--sheet-card));
+    --kc-bevel-lo: color-mix(in srgb, var(--kc-ink) 5%, var(--sheet-card));
+    --kc-seam: color-mix(in srgb, var(--kc-ink) 30%, transparent);
+    --kc-skirt-c: color-mix(in srgb, var(--kc-ink) 6.5%, var(--sheet-card));
+    --kc-lip: color-mix(in srgb, var(--kc-ink) 17%, var(--sheet-card));
+    --kc-contact: rgb(0 0 0 / 0.7);
+    --kc-ghost: color-mix(in srgb, var(--kc-ink) 30%, transparent);
+  }
+  @media (min-width: 900px) {
+    .st-obj {
+      --st-fw: calc(100cqw - 2 * var(--st-room));
+    }
+  }
+  /* phones: the dots need the 8 + 24 above the frame that the band's 56
+     gives them on desks (the phone band keeps 20) */
+  @media (max-width: 899px) {
+    .st-obj {
+      padding-top: 32px;
+    }
+  }
+  .studio :global(.car) {
+    position: relative;
+  }
+  /* the slide: the frame, then the placard 14px under it (the look room's .lk) */
   .st-slot {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 14px;
     margin: 0;
   }
   .st-frame {
-    grid-area: 1 / 1;
     box-sizing: border-box;
-    width: 100%;
+    width: var(--st-fw);
     aspect-ratio: 16 / 9;
     overflow: hidden;
+    display: grid;
+    place-items: center;
   }
   .st-video {
+    grid-area: 1 / 1;
     display: block;
     width: 100%;
     height: 100%;
     object-fit: cover;
   }
-  /* the capture's own line: under the frame once its recording is in */
+  @media (pointer: coarse) {
+    .st-frame {
+      touch-action: pan-y; /* a sideways drag is the chassis's swipe */
+    }
+  }
+  /* THE PENDING SLOT (src null): a hairline in the sheet's dim ink at 18 %,
+     square, no fill, no shadow, the capture's caption centred inside it.
+     Nothing that pretends to be a frame: no UI, no gradient, no play glyph */
+  .st-slot[data-pending] .st-frame {
+    border: 1px solid color-mix(in oklab, var(--sheet-dim) 18%, transparent);
+    transition: border-color 560ms ease;
+  }
   .st-cap {
-    grid-area: 2 / 1;
-    margin: 14px 0 0;
+    grid-area: 1 / 1;
+    max-width: 34ch;
+    margin: 0;
+    padding: 0 24px;
     text-align: center;
     font: 500 0.6875rem/1.5 var(--wk-mono);
     letter-spacing: 0.12em;
@@ -1873,34 +1983,190 @@ const columns = (blocks: BuildBlock[]): StoryBlock[][] =>
     text-wrap: balance;
     transition: color 560ms ease;
   }
-  /* THE PENDING SLOT (src null): a hairline in the sheet's dim ink at 18 %,
-     square, no fill, no shadow, the caption centred inside it. Nothing that
-     pretends to be a frame: no UI, no gradient, no play glyph */
-  .st-slot[data-pending] .st-frame {
-    border: 1px solid color-mix(in oklab, var(--sheet-dim) 18%, transparent);
-    transition: border-color 560ms ease;
+  /* THE PLACARD: the look room's (.lk-cap: the title carries the weight, a
+     quiet line beneath), in the room's mono (no fourth face on a sheet) */
+  .st-placard {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 3px;
+    max-width: var(--st-fw);
+    font-family: var(--wk-mono);
+    text-align: center;
   }
-  .st-slot[data-pending] .st-cap {
-    grid-area: 1 / 1;
-    align-self: center;
-    justify-self: center;
-    max-width: 34ch;
-    margin: 0;
-    padding: 0 24px;
+  .st-title {
+    font-size: 1.05rem;
+    font-weight: 500;
+    letter-spacing: 0.01em;
+    color: var(--sheet-ink);
+    transition: color 560ms ease;
   }
-  /* the dots under the frame; no arrows and no counter (the dots are the
-     control and the count). The lit dot takes the sheet's hue */
-  .studio :global(.car-nav) {
+  .st-meta {
+    max-width: 44ch;
+    font-size: 0.66rem;
+    letter-spacing: 0.06em;
+    color: var(--sheet-dim);
+    text-wrap: balance;
+    transition: color 560ms ease;
+  }
+  /* the chassis's counter would say what the dots say */
+  .studio :global(.car-counter) {
     display: none;
   }
+  /* the dots ABOVE the frame, centred, 8px clear of it (the look room's
+     row); the lit dot takes the sheet's hue */
   .studio :global(.car-dots) {
-    margin-top: 16px;
+    position: absolute;
+    left: 50%;
+    top: calc(-8px - 24px);
+    transform: translateX(-50%);
+    z-index: 2;
     color: var(--sheet-dim);
     --car-dot-on: var(--sheet-acc);
   }
-  /* the mono caption, centred under the dots on the band's axis */
+  /* phones: no keys, the frame swipes (the look room's rule) */
+  @media (max-width: 899px) {
+    .studio :global(.car-nav) {
+      display: none;
+    }
+  }
+  /* desks: THE KEYS, the look room's to the pixel (VISUALS KEYS,
+     2026-09-09): a 61px cap on a 7 × 9 oblique body, the stem-and-head
+     arrow, the press that seats the body, each key 20px outside the frame
+     with its body toward it, the bodies 24px above the frame's foot */
+  @media (min-width: 900px) {
+    .studio :global(.car-nav) {
+      position: static;
+      margin: 0;
+    }
+    .studio :global(.car-btn) {
+      position: absolute;
+      z-index: 2;
+      box-sizing: border-box;
+      width: var(--kc);
+      height: var(--kc);
+      margin: 0;
+      padding: 0;
+      top: calc(var(--st-fw) * 9 / 16 - var(--kc-rise) - var(--kc-sy) - var(--kc));
+      transform: none;
+      display: grid;
+      place-items: center;
+      appearance: none;
+      border: 1px solid var(--kc-seam);
+      border-radius: var(--kc-r);
+      color: var(--kc-ink);
+      background: linear-gradient(180deg, var(--kc-face-hi), var(--kc-face));
+      opacity: 1;
+      cursor: pointer;
+      box-shadow:
+        inset 1px 1px 0 var(--kc-bevel-hi),
+        inset -1px -1px 0 var(--kc-bevel-lo),
+        1px 1px 0 var(--kc-skirt-c),
+        2px 2px 0 var(--kc-skirt-c),
+        2px 3px 0 var(--kc-skirt-c),
+        3px 4px 0 var(--kc-skirt-c),
+        4px 5px 0 var(--kc-skirt-c),
+        5px 6px 0 var(--kc-skirt-c),
+        5px 7px 0 var(--kc-skirt-c),
+        6px 8px 0 var(--kc-skirt-c),
+        7px 9px 0 var(--kc-lip),
+        9px 12px 6px -3px var(--kc-contact);
+      transition: transform 70ms cubic-bezier(0.2, 0.7, 0.3, 1), box-shadow 70ms cubic-bezier(0.2, 0.7, 0.3, 1), background 120ms ease;
+    }
+    .studio :global([data-car-prev]) {
+      left: auto;
+      right: calc(50% + var(--st-fw) / 2 + var(--kc-gap) + var(--kc-sx));
+    }
+    .studio :global([data-car-next]) {
+      right: auto;
+      left: calc(50% + var(--st-fw) / 2 + var(--kc-gap) + var(--kc-sx));
+      box-shadow:
+        inset -1px 1px 0 var(--kc-bevel-hi),
+        inset 1px -1px 0 var(--kc-bevel-lo),
+        -1px 1px 0 var(--kc-skirt-c),
+        -2px 2px 0 var(--kc-skirt-c),
+        -2px 3px 0 var(--kc-skirt-c),
+        -3px 4px 0 var(--kc-skirt-c),
+        -4px 5px 0 var(--kc-skirt-c),
+        -5px 6px 0 var(--kc-skirt-c),
+        -5px 7px 0 var(--kc-skirt-c),
+        -6px 8px 0 var(--kc-skirt-c),
+        -7px 9px 0 var(--kc-lip),
+        -9px 12px 6px -3px var(--kc-contact);
+    }
+    .studio :global(.car-btn > svg) {
+      display: none;
+    }
+    .studio :global(.car-btn)::before {
+      content: "";
+      position: absolute;
+      inset: -4px;
+    }
+    .studio :global(.car-btn)::after {
+      content: "";
+      position: relative;
+      top: 0;
+      left: calc(-1 * var(--kc-inset));
+      width: var(--kc-glyph);
+      height: var(--kc-glyph);
+      background: currentColor;
+      -webkit-mask: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect x='3.5' y='14.4' width='15' height='3.2' rx='1.6'/><path d='M16.5 6.4 29 16 16.5 25.6z'/></svg>") center / contain no-repeat;
+      mask: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect x='3.5' y='14.4' width='15' height='3.2' rx='1.6'/><path d='M16.5 6.4 29 16 16.5 25.6z'/></svg>") center / contain no-repeat;
+      transition: opacity 120ms ease;
+    }
+    .studio :global([data-car-prev])::after {
+      left: var(--kc-inset);
+      transform: scaleX(-1);
+    }
+    .studio :global(.car-btn:hover:not(:disabled)) {
+      border-color: var(--kc-seam);
+      background: linear-gradient(180deg, var(--kc-face-hover-hi), var(--kc-face-hover));
+    }
+    .studio :global(.car-btn:active:not(:disabled)),
+    .studio :global(.car-btn[data-pressed]) {
+      transform: translate(calc(var(--kc-sx) - 1px), calc(var(--kc-sy) - 2px));
+      background: linear-gradient(180deg, var(--kc-face), var(--kc-face-down));
+      box-shadow:
+        inset 1px 1px 0 var(--kc-bevel-hi),
+        inset -1px -1px 0 var(--kc-bevel-lo),
+        1px 1px 0 var(--kc-skirt-c),
+        1px 2px 0 var(--kc-lip),
+        2px 3px 2px -1px var(--kc-contact);
+    }
+    .studio :global([data-car-next]:active:not(:disabled)),
+    .studio :global([data-car-next][data-pressed]) {
+      transform: translate(calc(1px - var(--kc-sx)), calc(var(--kc-sy) - 2px));
+      box-shadow:
+        inset -1px 1px 0 var(--kc-bevel-hi),
+        inset 1px -1px 0 var(--kc-bevel-lo),
+        -1px 1px 0 var(--kc-skirt-c),
+        -1px 2px 0 var(--kc-lip),
+        -2px 3px 2px -1px var(--kc-contact);
+    }
+    .studio :global(.car-btn:focus-visible) {
+      border-color: var(--kc-seam);
+      background: linear-gradient(180deg, var(--kc-face-hi), var(--kc-face));
+      outline: 2px solid var(--kc-ink);
+      outline-offset: 3px;
+    }
+    .studio :global(.car-btn:disabled) {
+      opacity: 1;
+      cursor: default;
+      background: linear-gradient(180deg, var(--kc-face-hi), var(--kc-face));
+    }
+    .studio :global(.car-btn:disabled)::after {
+      background: var(--kc-ghost);
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .studio :global(.car-btn),
+    .studio :global(.car-btn)::after {
+      transition: none;
+    }
+  }
+  /* the mono caption, centred under the placard on the band's axis */
   #build-studio .wk-cap {
-    margin: 16px auto 0;
+    margin: 24px auto 0;
     padding-left: 0;
     text-align: center;
     text-wrap: balance;
@@ -2985,7 +3251,7 @@ const columns = (blocks: BuildBlock[]): StoryBlock[][] =>
   /* the floor's placement (the object itself is SiteFloor.astro) */
   :global(.floor) {
     max-width: 1080px;
-    margin: clamp(120px, 24vh, 260px) auto 0; /* the page's breathing room, above the floor */
+    margin: var(--room-gap) auto 0; /* the page's one gap, above the floor (24vh until 2026-10-13) */
     padding: 4px clamp(26px, 4vw, 46px) 0;
     --floor-ink: var(--ink);
     --floor-dim: var(--dim);
