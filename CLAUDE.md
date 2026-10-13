@@ -261,24 +261,44 @@ session must follow.
   "work" centres). The modules no longer get a `head` slot, so the host
   re-applies the Archive's rail-centred-on-the-phone rule (Jon, 2026-09-24)
   itself.
-  ONE ANATOMY + THE READOUT (2026-10-13, Jon: the three builds read as
-  modules of one system; the HUD feel comes from consistency and chrome,
-  NEVER from material: paper stays paper, no dark panels, no glow): the
-  shared sheet lives in `src/styles/sheet.css` (`.sheet` = fill, 14%
-  hairline, 28px/20px corners, `--sheet-pad`, inks `--sheet-ink/-dim`
-  that follow `--night-*`, a named container `sheet`; `.sheet-readout`,
-  `.sheet-sec` (12% hairline above every section), `.sheet-t` (the label
-  face, lowercase), `.sheet-cols/-col/-p`, `.sheet-step*`), imported by
-  StudioOne (both `.wk` articles are `.wk.sheet`) AND SignalCard (`.sc` is a
-  `.sheet` too, on the homepage and /signal; HowToPlay's container queries
-  now measure the sheet's CONTENT box, thresholds 787/367). Each sheet sets
-  only `--sheet-acc` (archive #b9701a · watch #ff6b4a · signal sapphire).
-  THE READOUT: a mono line at every sheet's top edge, `build 01 / 03` left
-  and `name · kind` right (JetBrains Mono 11px/0.12em/500 lowercase, dim);
-  the numbers come from `src/lib/build-order.ts`, the kinds are DRAFT `kind`
-  fields in objects-copy.ts / signal-card-copy.ts (app · program ·
-  instrument), Jon's words. SIGNAL still gets NO band; its card keeps its
-  own `.sc-title`.
+  ONE ANATOMY + THE KIND WORD (2026-10-13; Jon's round two: the numbered
+  readout "build 01 / 04" was ugly, "leave just the descriptor"): the
+  three builds' sheets AND the fourth read as modules of one system; the
+  HUD feel comes from consistency and chrome, NEVER from material (paper
+  stays paper, no dark panels, no glow). The shared sheet lives in
+  `src/styles/sheet.css` (`.sheet` = fill, 14% hairline, 28px/20px corners,
+  `--sheet-pad`, inks `--sheet-ink/-dim` that follow `--night-*`, a named
+  container `sheet`; `.sheet-kind`, `.sheet-sec` (12% hairline above every
+  section), `.sheet-t` (the label face, lowercase), `.sheet-cols/-col/-p`,
+  `.sheet-step*`), imported by StudioOne (the `.wk.sheet` articles) AND
+  SignalCard (`.sc` is a `.sheet` too, on the homepage and /signal;
+  HowToPlay's container queries measure the sheet's CONTENT box, thresholds
+  787/367). Each sheet sets only `--sheet-acc` (archive #b9701a · watch
+  #ff6b4a · signal sapphire · studio #2a5bd7). THE KIND WORD: one mono word
+  centred 10px ABOVE each band name (`.sheet-kind`, the label face, dim):
+  `app` · `program` · `instrument` (above SignalCard's `.sc-title`) ·
+  `suite`; DRAFT `kind` fields in objects-copy.ts / signal-card-copy.ts,
+  Jon's words. No numbers anywhere on the sheets (`build-order.ts` is the
+  rail's ordered list only). SIGNAL still gets NO band.
+  THE FOURTH SHEET, SIGNAL STUDIO (2026-10-13, Jon: "loop that in"): its
+  own room `#studio` (`.room`, shown on PHONES too: captures, not the
+  instrument; phone `order: 1`, after the work sheets by document order)
+  after `#play` and before `#illustrations`, one `.wk.sheet#build-studio`:
+  kind `suite` → band ("Signal Studio" + a DRAFT dek, `STUDIO_COPY` in
+  objects-copy.ts) → THE OBJECT = three CAPTURE SLOTS in a dissolve
+  Carousel (`dots`, `keys={false}`), one 16:9 frame: while a capture is
+  missing the slot is an HONEST EMPTY FRAME (a 1px outline, square, no
+  fill, its caption centred in the label face: never a fake frame); when
+  `public/builds/studio/radar.webm` · `chip.webm` · `rip.webm` exist at
+  build time (`fs.existsSync`, like the etch asset) the slot plays the
+  muted looping video (only the shown slide plays; reduced motion = paused
+  with controls) → the mono caption → the fold carrying JON'S LOCKED studio
+  piece from builds-copy.ts (`id: "studio"`, "Making music was never the
+  hard part.", 2026-08-31; a `break` was inserted after its second
+  paragraph for the two columns, prose untouched) → under the hood from
+  `SPEC.studio` in depth-copy.ts (DRAFT; every unverified row carries a
+  `// ⚑ Jon:` comment). Spotify is deliberately NOT named anywhere on the
+  sheet (capturing a streaming service's audio breaks its terms).
 - WORK is OBJECTS (2026-09-18; the ledger/matrix is DEAD): the room holds
   Jon's Claude Design modules, one per build, framed by words — the locked
   headline from builds-copy.ts above (the DRAFT dek under it was removed
