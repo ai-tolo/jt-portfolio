@@ -47,8 +47,12 @@ session must follow.
   The HOST hooks StudioOne relies on (keep them on both sides):
   `#sgm[data-state]` standby → boot → live → powerdown (SINCE 2026-10-13 the
   site NEVER goes night on power: the rail/bar switch is the lights' only
-  source; the host clicks `#pwr` when the play ROOM — head sheet, device
-  and tail sheet, 2026-10-13 — fills < 35% of the screen),
+  source, and the casing goes GRAPHITE only under `html[data-night]`
+  (material.css): a live device by day stands on SILVER, with the words on
+  the bare casing inked for it in power.css's "THE SILVER BY DAY" block;
+  the host clicks `#pwr` when the play ROOM — ONE sheet holding the
+  write-up's head, the device and its tail, round four — fills < 35% of the
+  screen),
   `#pwr` (the power switch since R4, 92 × 40 since 2026-10-07; the host's
   `.pwr` overrides light it; in standby THE RUN laps its border: a
   cool-gradient ribbon, src/signal/view/pwr-run.ts precomputes a ~20 s
@@ -56,8 +60,8 @@ session must follow.
   script, never a style write per frame),
   `.sgm .device` (the 1280px box — `DEVICE_W` in types.ts since R3,
   2026-09-24 — the host zooms with `--sig-zoom` from BOTH axes: 98% of the
-  column, or the room's height ÷ the device's height; `.sgm`'s parent is the
-  fit's measure). The anchor/spy target stays the HOST `#play`. R3 laws: the
+  column, or the room's height ÷ the device's height; since round four the
+  fit measures `.sig-desktop`'s content box, the width `.sgm`'s parent had). The anchor/spy target stays the HOST `#play`. R3 laws: the
   taught keymap only (letters · Space · B · Z · M · arrows · = · Esc; HOLD,
   CHORD and the root lock are on-screen toggles), every taught key drawn
   as a `.sg-key` keycap (keycap.css) that goes `.pressed`/`.lit`, the size
@@ -67,8 +71,9 @@ session must follow.
   R4 (2026-09-24, Jon's render): its top is THE HEAD (Signal.astro, static):
   `esc STOP` in the left corner (beside it since 2026-10-07 the round `?`
   key, `[data-corner="help"][data-awake]`: it and the ? key scroll to
-  `[data-write-up]` = the TAIL sheet under the device ("how to play" at its
-  top, 2026-10-13), and answer in standby too), the
+  `[data-write-up]` = the HOW TO PLAY section under the device inside
+  SIGNAL's one sheet (round four), and answer in standby too; the ? glyph
+  is centred on the key's top face: `.sgh-help` padding 0, hands.css), the
   three module TITLES over their towers in
   their accents (words, never controls), and `#pwr` = a RED ROCKER SWITCH in
   the right corner (the disc is gone; every host hook kept: the host's `.pwr`
@@ -210,6 +215,13 @@ session must follow.
   display 814..1318 × 437..703, of 2132 × 1305) is baked into the
   `.cs-hub`/`.cs-reel`/`.cs-screen` percentages. The turn animation runs
   always and is paused at rest (a pause holds the angle).
+  ROUND FOUR (2026-10-13): the TRACK's height follows the SHOWN slide
+  (script after the wallet's `car:change`, eased 260ms): the blank deck has
+  NO placard reserve (mini → tape → rail, tight: the tape 54px under the
+  mini at 1440), takes the tapes' shared height the moment a hand opens its
+  wallet or a preview prints (the first settle's peek alone moves nothing),
+  so choosing a tape is a pure crossfade and between loaded tapes the tape
+  and rail still hold one y.
   2026-09-18 (Jon): the deck starts EMPTY — slide 0 is a blank tape
   (`.ls-blank`: unprinted label, dark window, inert button, dead rail) and
   `count = tracks + 1`. The title dropdown is RETIRED for THE WALLET: a
@@ -375,11 +387,16 @@ session must follow.
   "A real memo…" not at default state; the phone's hidden too for
   consistency: `.wk:has(.intake-hero:not(.s6), .archive-hero:not(.s6))
   .wk-cap` keeps its space) and fade in with the colour flash when the run
-  lands (`wk-cap-in`). THE WATCH AT REST (2026-10-13): the hint row is
-  `tap to stop` alone, centred like the phone's `tap the list`; the live
-  control is hidden until the replay lands, then the row reads `replay` ·
-  `try it with your own voice` (the screen's foot pill says `Your own
-  voice`; all in `LIVE_COPY`, DRAFT). The phone types at 180ms a letter
+  lands (`wk-cap-in`). THE WATCH AT REST (round four, Jon: "2× replay and talk buttons"):
+  the foot under the watch is the PHONE's slot (`.foot`, one grid cell):
+  `tap to stop` at rest, then after the run ONE `Replay` pill identical to
+  ArchiveHero's (`.replay`, ink pill, 0.72rem mono, 16px under the object,
+  fades in at s6 + 2.6s; "change both or neither"); the live control is ONE
+  pill on the watch FACE at its foot, `Try it with your voice` (floored at
+  12px, the mic glyph hidden under a 190px screen), hidden at rest; the
+  row's `.hint-talk` survives only as the "nothing heard" retry. THE HINTS
+  (`tap the list` · `tap to stop`) stand in each build's accent (`--sheet-acc`
+  mixed toward the sheet ink until ≥4.5:1, day and night) at 600. The phone types at 180ms a letter
   (`--char` + `CHAR_MS`, was 300) with its stage waits trimmed to match
   (press → s6 ≈ 11.7s, was 17.3s). Beside the watch the run column RESERVES its stage-six height
   (`--run-final`, measured by IntakeHero's script under a motion-free
@@ -401,8 +418,8 @@ session must follow.
   intake → #build-watch · signal → #play · studio → #build-studio), then
   the rooms renamed illustrations (→ #illustrations) and music (→ #soundlab;
   "music" not "audio": "audio" collided with AudioDex and the role line).
-  Rows 40px, 12px apart, 28px above and below the divider (round three:
-  "too condensed"), the lit pill as before; the column is centred above
+  Rows 44px, 20px apart, 40px above and below the divider (round four,
+  Jon: "still too condensed"), the lit pill as before; the column is centred above
   the night switch; 128px rail, `--railw` follows (the AwayRail on the other
   pages is still 110). `MARKS` = the rooms (`id`, `has`; `SHOW` decides what
   renders; `studio` is a room too); `NAV` = two blocks of entries that the
@@ -417,7 +434,9 @@ session must follow.
   build-order.ts` (`BUILD_ORDER`, `buildNo()`) is the one ordered list of
   the builds. Phone bar: builds · illustrations · music · résumé · moon,
   0.7rem (0.02em tracking under 360px), nothing wraps. The hero corner
-  (dot · résumé, 0.84rem, a 42px hit area) is `position: fixed` on desks
+  (dot · résumé, 0.84rem, a 42px hit area; on desks ≤1320px it wears a
+  disc of the ground and the sheets' kind word drops to top 64px, level
+  with the band's name, out of its way) is `position: fixed` on desks
   and HIDES while the instrument's device overlaps its band
   (IntersectionObserver, `data-hush`); on phones it stays with the hero
   (absolute) and the bar carries résumé too. Section ids stay
@@ -425,9 +444,9 @@ session must follow.
   THE HERO (2026-10-13, round two: Jon: "the down arrow with builds is
   enough by itself"): a full viewport (`min-height: 100svh`, the standard
   `.one > .room` gap to the first room; the round-one PEEK and the second
-  résumé link are gone) with ONE cue link `↓ builds` (`.cue`) 28px above
-  its foot on desks and 16px above the bar on phones, in the label face,
-  no animation. NOTHING PRESSES ITSELF (Jon: "I'd rather they have to be
+  résumé link are gone) with ONE cue link `↓ builds` (`.cue`, 0.8125rem since round four) ~44px
+  above its foot on desks and 28px above the bar on phones, in the label
+  face, no animation. NOTHING PRESSES ITSELF (Jon: "I'd rather they have to be
   clicked"): the watch and the phone run only from a visitor's press, the
   page never scrolls by itself after a run starts, and a run never opens
   a sheet's fold (the self-run, the phone-row trigger, the follow/glide and
@@ -439,10 +458,15 @@ session must follow.
   object, scroll-margin 0. Since 2026-09-18 (Jon: "spacing between the
   modules") the rooms NO LONGER ABUT: `.one > .room { margin-top:
   var(--room-gap) }` (`--room-gap: clamp(96px, 18vh, 200px)` on `.one`,
-  2026-10-13: the ONE gap that `.one > .room`, `.wk + .wk`, the floor's
-  margin and the play room's head→device→tail all read; `#work` and
-  `#studio` are content-sized rooms, `min-height: 0`, so a sheet's edge is
-  the room's edge) puts ground between them — declared on the
+  2026-10-13: the ONE gap that `.one > .room`, `.wk + .wk` and the floor's
+  margin read; since round four EVERY room is content-sized — `.room` has
+  no min-height, no centring padding; the look room pads only the dots'
+  24.35px above the picture, the music room's foot is its rail's hairline,
+  the floor has no top padding, the look track follows the shown slide's
+  height (`lkFit`, eased 260ms) — so the visible ink-to-ink distance down
+  the whole page is this one value, 162px at 1440, 146 on phones; a framed
+  room may show its neighbour beneath it (the 2026-09-02 "own viewport"
+  law is RETIRED, Jon: "get it done properly")) puts ground between them — declared on the
   column's child on purpose, because `.work`, `.live-signal` and
   `.look-band` set their own `margin` shorthand and would zero a plain
   `.room` margin. At any room's framed position no
@@ -482,17 +506,23 @@ session must follow.
   the host fit instead.
   AT REST THE DEVICE IS 70% (2026-10-13, Jon: "very in your face … scaled
   down outside of use; powering it up scales it up"): the host-owned
-  `.sig-stage` (`.sgm`'s parent, the fit's measure) carries
-  `transform: scale(0.7)` (origin 50% 0) plus `margin-bottom:
-  calc(var(--sig-h) * -0.3)` while `#sgm` is standby/powerdown, keyed in
-  CSS with `:has()`, both on one 400ms ease (instant under reduced motion);
-  powered it is `transform: none` and the device's zoom is the untouched
-  full fit (1224.6 wide at 1440×900). `--sig-h` is written by the fit only.
-  THE WRITE-UP STANDS AROUND THE DEVICE (2026-10-13): `SignalCard`'s `part`
-  prop renders `head` (kind word · SIGNAL · the story) ABOVE the device and
-  `tail` (how to play · under the hood · where it came from, `[data-write-up]`)
-  BENEATH it in `.sig-desktop` (a flex column, gap `--room-gap`); `/signal`
-  keeps `all` under the device.
+  `.sig-stage` carries `transform: scale(0.7)` (origin 50% 0) plus
+  `margin-bottom: calc(var(--sig-air) + var(--sig-h) * -0.3)` while `#sgm`
+  is standby/powerdown, keyed in CSS with `:has()`, both on one 400ms ease
+  (instant under reduced motion); powered it is `transform: none` and the
+  device's zoom is the untouched full fit (1224.6 wide at 1440×900).
+  `--sig-h` is written by the fit only.
+  SIGNAL IS ONE SHEET (round four, Jon: "the white sheet goes underneath the
+  instrument so it feels like one thing, expanded or not"): `SignalCard`'s
+  `part="around"` renders ONE `.sheet` (1080 like the others): kind word ·
+  SIGNAL · the story → the device stage (`--sig-air` 56px above and below,
+  the sheet's own rhythm, not the room gap) → how to play (`[data-write-up]`,
+  scroll-margin 32) · under the hood · where it came from. The powered
+  device OVERHANGS the sheet's sides (72px each at 1440; Jon: "I'm fine with
+  it jumping off the screen"; everything up to `.live-signal` is `overflow:
+  visible`, `.sgm` is `width: max-content`, the document never widens). If
+  the overhang reads wrong, Jon's fallback: widen ALL the sheets' paper to
+  match, never their text. `/signal` keeps `part="all"` under the device.
 - THE FLOOR is ONE object sitewide (2026-09-21, Jon's reference shot):
   `src/components/studio/SiteFloor.astro` = the email + the LinkedIn mark,
   centred, nothing else (the city and the résumé link are gone from every
