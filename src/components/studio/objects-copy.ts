@@ -30,13 +30,22 @@ export const WATCH_COPY = {
 // `{dur}` and `{n}` in `caption` are filled by the module (the memo's length;
 // "2 tickets" / "1 ticket" / "nothing to file").
 export const LIVE_COPY = {
-  talk: "Talk",
+  // 2026-10-13 (Jon: "'talk' feels too generic"): the control says what it
+  // does. `talk` is the pill on the watch's screen beside Replay (cqw-sized,
+  // so the short form); `talkHint` is the button in the row under the watch
+  // after the run; `talkLabel` is both buttons' accessible name
+  talk: "Your own voice",
+  talkHint: "try it with your own voice",
+  talkLabel: "Try it with your own voice: say your own things to do and watch them become tickets",
+  // the row under the watch: at rest, then once the replay has landed
+  hintRest: "tap to stop",
+  replay: "replay",
   listening: "listening",
   privacy: "your voice goes to your browser's speech service, the words to Claude. this site keeps nothing.",
   asking: "allow the microphone, then talk.",
   noSpeech: "this browser has no speech service. type it, then tap stop.",
   denied: "the microphone was declined. type it, then tap stop.",
-  empty: "nothing heard. tap talk to try again.",
+  empty: "nothing heard. try once more.",
   heard: "Heard",
   kept: "nothing kept",
   source: "your memo",

@@ -81,7 +81,7 @@ const hasCap = Astro.slots.has('cap');
               <svg viewBox="0 0 20 20" class="ico" aria-hidden="true"><path d="M4 10a6 6 0 1 0 1.8-4.3" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M4 3v3.5h3.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
               Replay
             </button>
-            <button type="button" class="talk" data-talk aria-label="Talk to it: say your own things to do">
+            <button type="button" class="talk" data-talk aria-label={LIVE_COPY.talkLabel}>
               <svg viewBox="0 0 20 20" class="ico" aria-hidden="true"><rect x="7" y="2.5" width="6" height="10" rx="3" fill="none" stroke="currentColor" stroke-width="2"/><path d="M4.5 9.5a5.5 5.5 0 0 0 11 0M10 15v2.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
               {LIVE_COPY.talk}
             </button>
@@ -89,11 +89,17 @@ const hasCap = Astro.slots.has('cap');
         </div>
         <img src="/intake/watch-blank.png" alt="" width="521" height="781" loading="lazy" decoding="async" />
       </figure>
+      {/* the row under the watch (Jon, 2026-10-13): at rest ONLY "tap to stop", centred, as the phone's "tap the list";
+          once the replay has landed, replay and the live control, which says what it does */}
       <div class="hint">
-        <span class="hint-w" data-hint>tap stop</span>
-        <button type="button" class="hint-talk" data-talk aria-label="Talk to it: say your own things to do">
+        <span class="hint-w" data-hint>{LIVE_COPY.hintRest}</span>
+        <button type="button" class="hint-replay" data-replay aria-label="Replay the run">
+          <svg viewBox="0 0 20 20" class="ico" aria-hidden="true"><path d="M4 10a6 6 0 1 0 1.8-4.3" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M4 3v3.5h3.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          {LIVE_COPY.replay}
+        </button>
+        <button type="button" class="hint-talk" data-talk aria-label={LIVE_COPY.talkLabel}>
           <svg viewBox="0 0 20 20" class="ico" aria-hidden="true"><rect x="7" y="2.5" width="6" height="10" rx="3" fill="none" stroke="currentColor" stroke-width="2"/><path d="M4.5 9.5a5.5 5.5 0 0 0 11 0M10 15v2.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
-          {LIVE_COPY.talk}
+          {LIVE_COPY.talkHint}
         </button>
       </div>
       {hasCap && <div class="cap"><slot name="cap" /></div>}
@@ -317,8 +323,21 @@ const hasCap = Astro.slots.has('cap');
 .intake-hero .check svg { width: 8.86cqw; height: 8.86cqw; }
 .intake-hero .saved { position: absolute; left: 0; top: 63.29cqw; width: 100%; text-align: center; font-size: 7.59cqw; font-weight: 400; letter-spacing: 0.01em; line-height: 1; color: #F2F0EA; animation: ih-in .5s ease-out .3s both; }
 .intake-hero .meta { position: absolute; left: 0; top: 75.32cqw; width: 100%; text-align: center; font-family: var(--mono); font-size: 3.48cqw; letter-spacing: 0.08em; color: #8C8A84; animation: ih-in .5s ease-out .4s both; }
-.intake-hero .hint { display: flex; align-items: center; justify-content: center; flex-wrap: wrap; gap: 6px 12px; min-height: 26px; text-align: center; font: 500 0.6875rem/1.5 var(--mono); letter-spacing: 0.12em; color: var(--dim); }
+/* the row under the watch: ONE vocabulary with the phone's "tap the list" (Jon, 2026-10-13): the same face, size,
+   colour (ink at 55 %) and distance from the object (the row's words sit at its top, as the phone's foot); at rest
+   it holds only "tap to stop", centred on the watch */
+.intake-hero .hint { display: flex; align-items: flex-start; justify-content: center; flex-wrap: wrap; gap: 6px 12px; min-height: 26px; text-align: center; font: 500 0.6875rem/1.5 var(--mono); letter-spacing: 0.12em; color: color-mix(in oklab, var(--ink) 55%, transparent); }
 .intake-hero.s1 .hint { visibility: hidden; }
+/* the row may run wider than the watch (its column is capped narrow on desks), centred on it: one line for the pair
+   below, bounded by the module (stacked) or by the object's own column (desks); live mode keeps its own measure */
+.intake-hero:not(.live) .hint { align-self: center; width: max-content; max-width: 100cqw; box-sizing: border-box; }
+@container hero (min-width: 820px) {
+  .intake-hero:not(.live) .hint { max-width: 44cqw; }
+}
+/* once the replay has landed (s6, the art run): the words step aside for replay and the live control */
+.intake-hero.s6:not(.live) .hint { visibility: visible; }
+.intake-hero.s6:not(.live) .hint-w { display: none; }
+.intake-hero.s6:not(.live) :is(.hint-replay, .hint-talk) { display: inline-flex; animation: ih-in .4s ease-out .5s both; }
 .intake-hero .fly { display: none; position: absolute; width: 12px; height: 12px; border-radius: 50%; background: var(--accent); box-shadow: 0 0 18px var(--accent); z-index: 3; pointer-events: none; }
 .intake-hero.s1:not(.s3) .fly { display: block; animation: ih-fly 1s cubic-bezier(.4, 0, .2, 1) both; }
 
@@ -413,10 +432,18 @@ const hasCap = Astro.slots.has('cap');
    transcript row prints what the browser's own speech service hears; a tap on stop runs the stage on those words:
    heard → parsing → the verdict → the tickets → the cards, and the face ends on "nothing kept". A browser with no
    speech service (Firefox), or a declined microphone, types instead: the transcript box is the input. ---- */
-.intake-hero .hint-talk { display: inline-flex; align-items: center; gap: 6px; height: 26px; padding: 0 10px; border: 1px solid var(--btn-line); border-radius: 999px; background: var(--btn); color: var(--ink); font: inherit; letter-spacing: inherit; text-transform: lowercase; cursor: pointer; }
-.intake-hero .hint-talk .ico { width: 12px; height: 12px; }
-.intake-hero .hint-talk:hover { border-color: var(--accent); color: var(--accent); }
-.intake-hero .hint-talk:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.intake-hero :is(.hint-replay, .hint-talk) { display: none; align-items: center; gap: 6px; height: 26px; padding: 0 10px; border: 1px solid var(--btn-line); border-radius: 999px; background: var(--btn); color: var(--ink); font: inherit; letter-spacing: inherit; text-transform: lowercase; white-space: nowrap; cursor: pointer; }
+.intake-hero :is(.hint-replay, .hint-talk) .ico { width: 12px; height: 12px; }
+.intake-hero :is(.hint-replay, .hint-talk):hover { border-color: var(--accent); color: var(--accent); }
+.intake-hero :is(.hint-replay, .hint-talk):focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+/* nothing heard: back at rest, the row keeps its retry beside the words */
+.intake-hero.unheard:not(.s1) .hint-talk { display: inline-flex; }
+/* stacked (a phone's width) the pair tightens its tracking so it stays one line under the watch */
+@container hero (width < 820px) {
+  .intake-hero:not(.live) .hint { column-gap: 8px; }
+  .intake-hero :is(.hint-replay, .hint-talk) { letter-spacing: 0.02em; padding: 0 9px; }
+  .intake-hero .hint-replay .ico { display: none; }
+}
 .intake-hero.live .hint-talk { display: none; }
 .intake-hero.live .hint { visibility: visible; max-width: 36ch; margin-inline: auto; }
 .intake-hero.live.s1 .hint { visibility: hidden; }
@@ -460,7 +487,7 @@ const hasCap = Astro.slots.has('cap');
 @media (prefers-reduced-motion: reduce) {
   .intake-hero .wave i, .intake-hero .caret, .intake-hero .fly, .intake-hero.s4:not(.s5) .node-deck { animation: none; }
   .intake-hero .stop::before, .intake-hero .stop::after { animation: none; opacity: 0.75; }
-  .intake-hero .card, .intake-hero .stream, .intake-hero .tickets, .intake-hero .pills > button, .intake-hero .flat, .intake-hero .check, .intake-hero .saved, .intake-hero .meta { animation-duration: .01s !important; animation-delay: 0s !important; }
+  .intake-hero .card, .intake-hero .stream, .intake-hero .tickets, .intake-hero .pills > button, .intake-hero :is(.hint-replay, .hint-talk), .intake-hero .flat, .intake-hero .check, .intake-hero .saved, .intake-hero .meta { animation-duration: .01s !important; animation-delay: 0s !important; }
 }
 </style>
 
@@ -526,7 +553,7 @@ document.querySelectorAll('[data-intake-hero]').forEach((hero) => {
     stage(0); typed.textContent = ''; caret.hidden = false; status.textContent = '';
   }
   stopBtn.addEventListener('click', () => { if (live.active()) live.finish('stop'); else play(); });
-  hero.querySelector('.replay').addEventListener('click', () => { live.leave(); reset(); });
+  hero.querySelectorAll('.replay, .hint-replay').forEach((b) => b.addEventListener('click', () => { live.leave(); reset(); }));
   // the host (StudioOne's first settle) may FINISH a run it started — the
   // visitor pressed during it, so it lands on its end frame at once — or
   // REWIND one the visitor scrolled away from before it said anything
@@ -687,6 +714,7 @@ document.querySelectorAll('[data-intake-hero]').forEach((hero) => {
     stopping = false;
     stage(0); setMode('idle');
     hero.classList.remove('live', 'asking', 'typing');
+    hero.classList.add('unheard');   // the row keeps its retry: the live control stands beside the words at rest
     timeEl.textContent = art.time; savedEl.textContent = art.saved; metaEl.textContent = art.meta;
     hint(LIVE.empty); status.textContent = LIVE.empty;
   };
@@ -742,7 +770,7 @@ document.querySelectorAll('[data-intake-hero]').forEach((hero) => {
     if (rec) { try { rec.onend = null; rec.abort(); } catch (_) { /* */ } rec = null; }
     stopping = false;
     const was = mode !== 'idle' || hero.classList.contains('live');
-    hero.classList.remove('live', 'asking', 'typing', 'parsing');
+    hero.classList.remove('live', 'asking', 'typing', 'parsing', 'unheard');
     delete hero.dataset.live; mode = 'idle';
     hero.style.removeProperty('--amp');
     hint(art.hint);   // an empty session leaves its word in the hint: the art run takes its own back

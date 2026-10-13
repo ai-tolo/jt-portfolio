@@ -1621,10 +1621,11 @@ const columns = (blocks: BuildBlock[]): StoryBlock[][] =>
     line-height: 1.5;
     color: var(--mx-ink);
     /* the caption is CONTEXT for the object, not the object (Jon,
-       2026-09-24). Since 2026-10-06 (Jon: "try it") it shows AT REST, so the
-       "what is this" line is there before any run; at the object's COMMIT —
-       the watch's "Saved", the phone's "Kept" — it takes that signal's
-       colour, then settles back to ink over three seconds */
+       2026-09-24). Since 2026-10-13 (Jon: "the 'A real memo, 3:52…'
+       shouldn't be visible at default state") the two builds' captions are
+       HIDDEN AT REST and arrive with the object's COMMIT — the watch's
+       "Saved", the phone's "Kept" — in that signal's colour, then settle
+       back to ink over three seconds (it showed at rest 2026-10-06..13) */
     --cap-signal: var(--mx-ink);
     transition: color 560ms ease;
   }
@@ -1638,12 +1639,17 @@ const columns = (blocks: BuildBlock[]): StoryBlock[][] =>
   /* the watch's caption stands under the watch (Jon, 2026-09-24: under the
      run it left the screen), on the object's own left edge */
   #build-watch .wk-cap { padding-left: 0; }
+  /* at rest (and while a run plays) the builds' captions hold their place unseen, so nothing beneath moves when
+     they arrive; the Studio sheet's caption is not a run's and always shows */
+  :global(.wk:has(.intake-hero:not(.s6), .archive-hero:not(.s6)) .wk-cap) { visibility: hidden; opacity: 0; }
   :global(.wk:has(.intake-hero.s6) .wk-cap) { --cap-signal: #34C759; animation: wk-cap-in 3.2s ease-out 0.3s both; }
   :global(.wk:has(.archive-hero.s6) .wk-cap) { --cap-signal: #b9701a; animation: wk-cap-in 3.2s ease-out 1.5s both; }
+  /* arrive (fade in over the first beat) in the signal's colour, hold it, settle to ink */
   @keyframes wk-cap-in {
-    0% { color: var(--cap-signal); }
+    0% { opacity: 0; color: var(--cap-signal); }
+    12% { opacity: 1; }
     34% { color: var(--cap-signal); }
-    100% { color: var(--mx-ink); }
+    100% { opacity: 1; color: var(--mx-ink); }
   }
   @media (prefers-reduced-motion: reduce) {
     .wk-cap { transform: none; }
