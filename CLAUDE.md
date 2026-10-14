@@ -413,14 +413,14 @@ session must follow.
   four verbs work · play · look · listen, the two labelled groups and the
   numerals are all RETIRED): the desktop rail is WORDS ALONE, one face
   (IBM Plex Mono 0.875rem/600/0.06em lowercase since round six), right-aligned
-  on one x, in
-  two blocks with a 28px hairline divider between them (no words, no
-  glyphs, no numerals): the builds by name (audiodex → #build-archive ·
+  on one x, one
+  even column (no words, no glyphs, no numerals, no line since round seven): the builds by name (audiodex → #build-archive ·
   intake → #build-watch · signal → #play · studio → #build-studio), then
   the rooms renamed illustrations (→ #illustrations) and music (→ #soundlab;
   "music" not "audio": "audio" collided with AudioDex and the role line).
-  Rows 48px, 20px apart, 40px above and below the divider, the lit pill
-  12px radius (round six: "wider, bolder, larger"); the column is centred above
+  Rows 48px with five EQUAL 32px gaps, NO divider since round seven (Jon:
+  "distracting … let them figure it out"; the column keeps its 448px), the
+  lit pill 12px radius; the column is centred above
   the RÉSUMÉ PILL and the night switch; 160px rail since round six, `--railw`
   follows (the AwayRail on the other pages is still 110; to keep the sheets at
   1080 and the device fit identical the sheets' minimum gutter is 20px and
@@ -428,9 +428,12 @@ session must follow.
   RÉSUMÉ IS A BUTTON AT THE RAIL'S FOOT (round six, Jon: a floating corner
   "breaks the laws of the design system"; bottom, not top: "I'm more proud of
   the stuff on the landing page than anything on the résumé"): `a.rail-cv`
-  `résumé↗`, an outlined pill (1px rail ink, radius 999, the rail's mono
-  14px/600, padding 10px 14px) centred 84px above the rail's bottom, above
-  the switch's hairline; hover fills it ink on paper; night variant. The
+  `résumé↗` (`data-for="end"`), an outlined pill (1px rail ink, radius 999,
+  the rail's mono 14px/600, a 36px box) centred on `--cv-foot` (102px above
+  the rail's bottom, on `.one`: ONE value shared by the pill, the comet
+  track's foot and the end room's floor row), above the switch's hairline;
+  hover AND lit (`[data-on]`, when the end room is the target) fill it ink
+  on paper; night variant. The
   phone bar's `résumé` wears the same pill (`.mbar-pill`). THE CORNER IS
   GONE on every size (markup, CSS, the hush observer, the ≤1320px disc and
   sheet.css's matching kind-word drop: the kind word is at top 23 at every
@@ -446,12 +449,20 @@ session must follow.
   viewport's vertical centre (phones: `main`'s centre); the target that SPANS
   the line is active: its row lit and the bead EXACTLY on its knot; in the
   ground between two targets p = (line − bottom_i) ÷ (top_i+1 − bottom_i),
-  the bead rides between the two knots and the lit row flips at p = 0.5;
-  above the first target nothing is lit and the bead waits on the first
-  knot; below the last (the footer) the last stays lit. A target at its
-  framed position counts as active even if too short to reach the line
-  (never fires today). `locate()` + one rAF-coalesced `update()` on
-  capture-phase scroll + `scrollend`; knots cached by `measure()` on load,
+  the bead rides between the two knots and the lit item flips with
+  HYSTERESIS (p 0.55 going down, 0.45 going up; round seven, Jon: a
+  "hiccup" flashing back to the previous section: two mechanisms were
+  reproduced under stress, ±1px jitter at a gap's midpoint and content
+  growing above the line mid-scroll, and both are closed: within a scroll
+  the state only moves the way the page moves, the true state settles
+  after 160ms without a scroll event, no `scrollend` listener). THE TRACK
+  RUNS FROM THE HERO TO RÉSUMÉ: the hero is a virtual first target whose
+  knot is the track's TOP (bead at the top, nothing lit, at scroll 0); the
+  end room `#end` is the last target whose knot is the RÉSUMÉ PILL (the
+  pill lights, filled, with the bead on it; the phone bar's pill likewise).
+  A target at its framed position counts as active even if too short to
+  reach the line (never fires today). `locate()` + one rAF-coalesced
+  `update()` on capture-phase scroll; knots cached by `measure()` on load,
   resize and a ResizeObserver on body and `.one`; the old IntersectionObserver
   spy, `buildAnchors` and the scroll→y map are gone. Containment and
   `data-holds` still light the bar's `builds`;
@@ -570,12 +581,16 @@ session must follow.
   floor; the rail / bottom bar carry résumé). ON THE HOMEPAGE (round six)
   the floor sits inside THE END ROOM `section.room.end#end`, the page's
   last room: a FULL VIEWPORT (100svh; 100svh − the bar on phones) with its
-  content centred: `a.end-cv` `résumé` → /resume in the band-name face
-  (Outfit 500, 52px; 40 on phones, −0.02em, the site ink, hover = dim,
-  night = `--night-ink`), 24px, then `<SiteFloor />`; the one gap stands
-  above it (Jon: "the footer happens too early" → this is the dead space);
-  no `[data-end]` sentinel, no floor margins of its own; `#end` is not a
-  nav target (music stays lit there).
+  `a.end-cv` `résumé↗` → /resume in the band-name face (Outfit 500,
+  52px; 40 on phones, −0.02em, the site ink, hover = dim, night =
+  `--night-ink`; the glyph 0.6em/300 raised 0.42em), 24px, then
+  `<SiteFloor />`; on DESKS the room is laid out FROM ITS FOOT (round
+  seven, Jon's option B): the floor row's centre sits at `--cv-foot`, the
+  same height as the rail's résumé pill, so the floor and the pill read as
+  one line across the page at the page's end; on phones the stack stays
+  centred. The one gap stands above it (Jon: "the footer happens too
+  early" → this is the dead space); no `[data-end]` sentinel; `#end` IS a
+  nav target (its knot is the pill).
   Pages own placement only (margins, hairline, max-width, order) through
   `:global(.floor)` in a scoped block, or a plain `.floor` inside a
   `<style is:global>` block (`:global()` is NOT compiled there and the
