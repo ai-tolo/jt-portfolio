@@ -412,29 +412,32 @@ session must follow.
   Homepage nav (2026-10-13, Jon's round two: "redesign is the move"; the
   four verbs work · play · look · listen, the two labelled groups and the
   numerals are all RETIRED): the desktop rail is WORDS ALONE, one face
-  (IBM Plex Mono 0.875rem/600/0.06em lowercase since round six), right-aligned
+  (IBM Plex Mono 0.8125rem/600/0.06em lowercase, ink #26241f day / #b4bdcb
+  night since round eight), right-aligned
   on one x, one
   even column (no words, no glyphs, no numerals, no line since round seven): the builds by name (audiodex → #build-archive ·
   intake → #build-watch · signal → #play · studio → #build-studio), then
   the rooms renamed illustrations (→ #illustrations) and music (→ #soundlab;
   "music" not "audio": "audio" collided with AudioDex and the role line).
-  Rows 48px with five EQUAL 32px gaps, NO divider since round seven (Jon:
-  "distracting … let them figure it out"; the column keeps its 448px), the
-  lit pill 12px radius; the column is centred above
-  the RÉSUMÉ PILL and the night switch; 160px rail since round six, `--railw`
+  Rows 44px with five EQUAL 30px gaps, NO divider since round seven (Jon:
+  "distracting … let them figure it out"), the lit pill 11px radius; the
+  column is centred above the RÉSUMÉ PILL and the night switch; 148px rail
+  since round eight (Jon: "scale down 5–10%"; 160 in rounds six–seven), its
+  paper a step LIGHTER than the ground (#fbfaf7 day / #161b24 night) with a
+  firmer edge (26% / 22%) so it reads as the page's outline; `--railw`
   follows (the AwayRail on the other pages is still 110; to keep the sheets at
   1080 and the device fit identical the sheets' minimum gutter is 20px and
   `.sig-desktop`'s side padding is `clamp(8px, calc(6vw - 72px), 24px)`).
   RÉSUMÉ IS A BUTTON AT THE RAIL'S FOOT (round six, Jon: a floating corner
   "breaks the laws of the design system"; bottom, not top: "I'm more proud of
   the stuff on the landing page than anything on the résumé"): `a.rail-cv`
-  `résumé↗` (`data-for="end"`), an outlined pill (1px rail ink, radius 999,
-  the rail's mono 14px/600, a 36px box) centred on `--cv-foot` (102px above
+  `résumé↗` (`data-for="end"`), an EMBER pill since round eight (Jon:
+  "orangey red … from our theme": `var(--ember)` fill, white word, radius
+  999, the rail's mono 13px/600, a 34px box; hover a deeper ember; LIT = a
+  paper + ember ring) centred on `--cv-foot` (102px above
   the rail's bottom, on `.one`: ONE value shared by the pill, the comet
   track's foot and the end room's floor row), above the switch's hairline;
-  hover AND lit (`[data-on]`, when the end room is the target) fill it ink
-  on paper; night variant. The
-  phone bar's `résumé` wears the same pill (`.mbar-pill`). THE CORNER IS
+  The phone bar's `résumé` wears the same ember pill (`.mbar-pill`). THE CORNER IS
   GONE on every size (markup, CSS, the hush observer, the ≤1320px disc and
   sheet.css's matching kind-word drop: the kind word is at top 23 at every
   desk width again). `MARKS` = the rooms (`id`, `has`; `SHOW` decides what
@@ -490,8 +493,9 @@ session must follow.
   `.room` — min-height 100svh (minus the 64px bar below 900px), flex-centered
   object, scroll-margin 0. Since 2026-09-18 (Jon: "spacing between the
   modules") the rooms NO LONGER ABUT: `.one > .room { margin-top:
-  var(--room-gap) }` (`--room-gap: clamp(108px, 20vh, 224px)` on `.one`,
-  +12% at Jon's word in round five, was 96/18vh/200;
+  var(--room-gap) }` (`--room-gap: clamp(124px, 23vh, 258px)` on `.one`,
+  +15% in round eight; was 108/20vh/224 after +12% in round five, 96/18vh/200
+  before;
   2026-10-13: the ONE gap that `.one > .room`, `.wk + .wk` and the floor's
   margin read; since round four EVERY room is content-sized — `.room` has
   no min-height, no centring padding; the look room pads only the dots'
@@ -584,11 +588,12 @@ session must follow.
   `a.end-cv` `résumé↗` → /resume in the band-name face (Outfit 500,
   52px; 40 on phones, −0.02em, the site ink, hover = dim, night =
   `--night-ink`; the glyph 0.6em/300 raised 0.42em), 24px, then
-  `<SiteFloor />`; on DESKS the room is laid out FROM ITS FOOT (round
-  seven, Jon's option B): the floor row's centre sits at `--cv-foot`, the
-  same height as the rail's résumé pill, so the floor and the pill read as
-  one line across the page at the page's end; on phones the stack stays
-  centred. The one gap stands above it (Jon: "the footer happens too
+  `<SiteFloor />`; on DESKS (round seven option B, corrected in round eight:
+  "I didn't ask you to move the title") the TITLE stays CENTRED in the
+  viewport and only the floor row is pinned to the room's foot at
+  `--cv-foot`, the same height as the rail's résumé pill, so the floor and
+  the pill read as one line across the page at the page's end; on phones
+  the stack stays centred. The one gap stands above it (Jon: "the footer happens too
   early" → this is the dead space); no `[data-end]` sentinel; `#end` IS a
   nav target (its knot is the pill).
   Pages own placement only (margins, hairline, max-width, order) through
