@@ -1046,19 +1046,22 @@ const columns = (blocks: BuildBlock[]): StoryBlock[][] =>
     position: absolute;
     /* its centre on --cv-foot (102 above the screen's foot, as in round six:
        84 + half its 36px box), the line the end room's floor stands on */
-    bottom: calc(var(--cv-foot) - 18px);
-    left: 50%;
-    transform: translateX(-50%);
+    bottom: calc(var(--cv-foot) - 17px);
+    /* round nine (Jon: "right-aligned like everything else"): a rectangle on
+       the rows' right edge (the rail's content edge, x 142), its ink ending
+       where the words end; the arrow stays after the word, the last glyph on
+       the column's axis */
+    right: 6px;
     display: inline-flex;
     align-items: center;
     gap: 6px;
     box-sizing: border-box;
     height: 34px;
-    padding: 0 14px;
+    padding: 0 11px;
     /* round eight (Jon: "orangey red … from our theme"): the ember, solid,
        day and night; the one coloured control on the rail */
     border: 1px solid var(--ember);
-    border-radius: 999px;
+    border-radius: 7px;
     font-family: "IBM Plex Mono", ui-monospace, monospace;
     font-size: 0.8125rem;
     font-weight: 600;
@@ -1139,6 +1142,15 @@ const columns = (blocks: BuildBlock[]): StoryBlock[][] =>
   .comet-track {
     background: rgba(20, 18, 16, 0.1);
   }
+  /* THE ENDS (round nine, Jon: "the comet stops short of the bottom … a
+     visual dock, or disappear"): at the page's top the comet is not there
+     at all and fades in as the first scroll begins; at the end the bead
+     DOCKS into the résumé button (its lit ring is the dock) and fades out
+     as it arrives; it comes back as soon as the page scrolls up */
+  .comet { transition: opacity 320ms ease; }
+  .rail[data-comet="top"] .comet { opacity: 0; }
+  .comet-bead { transition: opacity 240ms ease; }
+  .rail[data-comet="end"] .comet-bead { opacity: 0; }
   .comet-fill {
     background: linear-gradient(180deg, var(--brand-pink, #ff5c8a) 0%, var(--brand-orange, #ff8a3d) 50%, var(--brand-yellow, #ffc94d) 100%);
     clip-path: inset(0 0 calc((1 - var(--p, 0)) * 100%) 0);
@@ -1244,12 +1256,13 @@ const columns = (blocks: BuildBlock[]): StoryBlock[][] =>
   .rail-night {
     position: absolute;
     bottom: 16px;
-    left: 50%;
-    transform: translateX(-50%);
+    /* round nine: on the rows' right edge with the résumé button, the moon
+       ending where the words end */
+    right: 6px;
     display: flex;
     align-items: center;
     gap: 7px;
-    padding: 12px 8px;
+    padding: 12px 11px 12px 8px;
     border: 0;
     background: transparent;
     cursor: pointer;
@@ -3762,6 +3775,11 @@ const columns = (blocks: BuildBlock[]): StoryBlock[][] =>
       if (comet) {
         const v = p.toFixed(5);
         if (v !== pNow) { pNow = v; comet.style.setProperty("--p", v); }
+        // the ends: "top" while the bead waits at the track's top (the hero),
+        // "end" once it has reached the last knot (the résumé button)
+        const stage = s <= 0 ? "top" : s >= stops.length - 1 ? "end" : "mid";
+        const rail = comet.closest(".rail");
+        if (rail && rail.getAttribute("data-comet") !== stage) rail.setAttribute("data-comet", stage);
       }
       // the lit stop: the nearer of the two, with the band around 0.5
       let j = i;
