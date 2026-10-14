@@ -472,10 +472,14 @@ session must follow.
   distance left until the first target's top meets the line), so the bead
   leaves the track's top with the first pixel of scroll and arrives on
   audiodex's knot exactly as audiodex takes the line, nothing lit on the
-  way (never hidden at the top). THE END: `update()` writes
+  way (never hidden at the top). THE TRACK IS THE RAIL'S FULL HEIGHT (round eleven, Jon: "the gradient
+  isn't filling to the top and bottom"): `.comet` runs `top: 0; bottom: 0`,
+  behind the button and the switch; the knots are fractions of it (the
+  last, the button's centre, ≈ 0.887 at 900 tall). THE END: `update()` writes
   `data-comet="top" | "mid" | "end"` on `.rail`; at `end` (the bead on the
-  last knot, p = 1, the fill the full track) the bead keeps going, eased
-  down past the track's foot (`top: 100% + 72px`) and fades out: the SHOT;
+  last knot) the fill runs on to the track's foot (`.comet-fill` clip 0,
+  eased 460ms: the full gradient edge to edge) and the bead keeps going,
+  eased down past the foot (`top: 100% + 72px`) and fades out: the SHOT;
   the button stays lit with its ring; the bead is back the moment the page
   scrolls up. The eased `top` applies in the `end` state only (eased on the
   way, it trailed the scroll).
