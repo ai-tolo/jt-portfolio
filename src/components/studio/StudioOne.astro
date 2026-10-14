@@ -1047,21 +1047,21 @@ const columns = (blocks: BuildBlock[]): StoryBlock[][] =>
     /* its centre on --cv-foot (102 above the screen's foot, as in round six:
        84 + half its 36px box), the line the end room's floor stands on */
     bottom: calc(var(--cv-foot) - 17px);
-    /* round nine (Jon: "right-aligned like everything else"): a rectangle on
-       the rows' right edge (the rail's content edge, x 142), its ink ending
-       where the words end; the arrow stays after the word, the last glyph on
-       the column's axis */
-    right: 6px;
+    /* centred at the rail's foot (round ten: Jon reverted round nine's
+       right-aligned rectangle: "I liked everything about the previous
+       version more"); the corners halfway between the pill and the rectangle */
+    left: 50%;
+    transform: translateX(-50%);
     display: inline-flex;
     align-items: center;
     gap: 6px;
     box-sizing: border-box;
     height: 34px;
-    padding: 0 11px;
+    padding: 0 14px;
     /* round eight (Jon: "orangey red … from our theme"): the ember, solid,
        day and night; the one coloured control on the rail */
     border: 1px solid var(--ember);
-    border-radius: 7px;
+    border-radius: 12px;
     font-family: "IBM Plex Mono", ui-monospace, monospace;
     font-size: 0.8125rem;
     font-weight: 600;
@@ -1142,15 +1142,23 @@ const columns = (blocks: BuildBlock[]): StoryBlock[][] =>
   .comet-track {
     background: rgba(20, 18, 16, 0.1);
   }
-  /* THE ENDS (round nine, Jon: "the comet stops short of the bottom … a
-     visual dock, or disappear"): at the page's top the comet is not there
-     at all and fades in as the first scroll begins; at the end the bead
-     DOCKS into the résumé button (its lit ring is the dock) and fades out
-     as it arrives; it comes back as soon as the page scrolls up */
-  .comet { transition: opacity 320ms ease; }
-  .rail[data-comet="top"] .comet { opacity: 0; }
-  .comet-bead { transition: opacity 240ms ease; }
-  .rail[data-comet="end"] .comet-bead { opacity: 0; }
+  /* THE END (round ten, Jon: the comet "exists upon loading" at the track's
+     top and moves with the scroll from the start; at the end "the full
+     length shows the gradient and the comet has shot off the screen"): the
+     fill reaches the track's foot (p = 1) and the bead keeps going, down past
+     the track and out, fading as it leaves; it returns the moment the page
+     scrolls back up. Nothing hides at the top. */
+  .comet-bead { transition: opacity 300ms ease; }
+  /* the shot is the only time the bead's travel is eased: on the way it must
+     track the scroll frame for frame (an eased `top` made it trail) */
+  .rail[data-comet="end"] .comet-bead {
+    top: calc(100% + 72px);
+    opacity: 0;
+    transition: top 460ms cubic-bezier(0.4, 0, 0.9, 0.6), opacity 300ms ease 160ms;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .rail[data-comet="end"] .comet-bead { transition: none; }
+  }
   .comet-fill {
     background: linear-gradient(180deg, var(--brand-pink, #ff5c8a) 0%, var(--brand-orange, #ff8a3d) 50%, var(--brand-yellow, #ffc94d) 100%);
     clip-path: inset(0 0 calc((1 - var(--p, 0)) * 100%) 0);
@@ -1256,13 +1264,12 @@ const columns = (blocks: BuildBlock[]): StoryBlock[][] =>
   .rail-night {
     position: absolute;
     bottom: 16px;
-    /* round nine: on the rows' right edge with the résumé button, the moon
-       ending where the words end */
-    right: 6px;
+    left: 50%;
+    transform: translateX(-50%);
     display: flex;
     align-items: center;
     gap: 7px;
-    padding: 12px 11px 12px 8px;
+    padding: 12px 8px;
     border: 0;
     background: transparent;
     cursor: pointer;
@@ -3719,6 +3726,7 @@ const columns = (blocks: BuildBlock[]): StoryBlock[][] =>
     // framed); in the ground between Ti and Ti+1, s = i + p.
     const hero = document.querySelector<HTMLElement>(".hero");
     type Stop = { id: string | null; k: number };
+    const scrollPos = () => (inMain && main ? main.scrollTop : window.scrollY);
     const locate = (): { stops: Stop[]; s: number } | null => {
       const ids = getDocIds();
       if (ids.length === 0) return null;
@@ -3735,6 +3743,16 @@ const columns = (blocks: BuildBlock[]): StoryBlock[][] =>
         bx.push({ id, k: fy.get(id) ?? fyOf(id), top: r.top, bottom: r.bottom, framed: Math.abs(r.top - (smt.get(id) ?? 0)) <= 1 });
       }
       const stops = bx.map(({ id, k }) => ({ id, k }));
+      // THE START (round ten, Jon: the comet "exists upon loading … and
+      // moves down in correlation to the scroll until you get to audiodex"):
+      // from the first pixel of scroll the bead travels from the track's top
+      // toward the first knot, arriving exactly as the first target reaches
+      // the line; nothing is lit on the way
+      if (bx.length > 1 && bx[0].id === null && line < bx[1].top) {
+        const pos = scrollPos();
+        const rest = bx[1].top - line;
+        return { stops, s: Math.max(0, Math.min(1, pos / (pos + rest))) };
+      }
       for (let i = 0; i < bx.length; i++) {
         const b = bx[i];
         if ((b.top <= line && line <= b.bottom) || (b.framed && b.bottom < line)) return { stops, s: i };
@@ -3747,7 +3765,6 @@ const columns = (blocks: BuildBlock[]): StoryBlock[][] =>
       return { stops, s: bx.length - 1 };
     };
     const HYS = 0.05; // the flip's band: 0.55 going down, 0.45 going up
-    const scrollPos = () => (inMain && main ? main.scrollTop : window.scrollY);
     let litNow: string | null | undefined;
     let pNow = "";
     let sNow: number | null = null;
@@ -3788,6 +3805,7 @@ const columns = (blocks: BuildBlock[]): StoryBlock[][] =>
         j = t >= 0.5 ? i + 1 : i;
         if (cur === i + 1 && t >= 0.5 - HYS) j = i + 1;
         if (cur === i && t < 0.5 + HYS) j = i;
+        if (i === 0 && stops[0].id === null) j = 0; // the hero's span lights nothing until the first target takes the line
       }
       const lit = stops[j].id;
       if (lit === litNow) return;

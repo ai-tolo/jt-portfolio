@@ -431,14 +431,13 @@ session must follow.
   RÉSUMÉ IS A BUTTON AT THE RAIL'S FOOT (round six, Jon: a floating corner
   "breaks the laws of the design system"; bottom, not top: "I'm more proud of
   the stuff on the landing page than anything on the résumé"): `a.rail-cv`
-  `résumé↗` (`data-for="end"`), an EMBER RECTANGLE since round nine (Jon:
-  "right-aligned like everything else"; the pill of round eight is gone):
-  `var(--ember)` fill, white word, radius 7, the rail's mono 13px/600, a 34px
-  box, padding 0 11, RIGHT-ALIGNED on the rows' edge (`right: 6px`, the
-  rail's content edge, its ink ending where the words end; the arrow stays
-  after the word); hover a deeper ember; LIT = a paper + ember ring; the
-  night switch is right-aligned on the same edge (its moon ending on the
-  words' x). Its centre on `--cv-foot` (102px above
+  `résumé↗` (`data-for="end"`), an EMBER button CENTRED at the rail's foot
+  (round ten: Jon reverted round nine's right-aligned rectangle, "I liked
+  everything about the previous version more"; the corners halfway between
+  the pill and the rectangle: radius 12): `var(--ember)` fill, white word,
+  the rail's mono 13px/600, a 34px box, padding 0 14; hover a deeper ember;
+  LIT = a paper + ember ring; the night switch is centred beneath it as
+  before. Its centre on `--cv-foot` (102px above
   the rail's bottom, on `.one`: ONE value shared by the pill, the comet
   track's foot and the end room's floor row), above the switch's hairline;
   The phone bar's `résumé` wears the same ember pill (`.mbar-pill`). THE CORNER IS
@@ -466,13 +465,20 @@ session must follow.
   RUNS FROM THE HERO TO RÉSUMÉ: the hero is a virtual first target whose
   knot is the track's TOP (bead at the top, nothing lit, at scroll 0); the
   end room `#end` is the last target whose knot is the RÉSUMÉ BUTTON (it
-  lights with its ring; the phone bar's pill likewise). THE ENDS (round
-  nine, Jon: "the comet stops short of the bottom … a dock, or disappear"):
-  `update()` writes `data-comet="top" | "mid" | "end"` on `.rail`: at
-  `top` (the hero active) the whole comet is invisible and fades in as the
-  first scroll begins; at `end` (the bead on the last knot) the bead DOCKS
-  into the button and fades out, the button's lit ring being the dock; both
-  come back as the page scrolls away.
+  lights with its ring; the phone bar's pill likewise). THE ENDS (round ten, Jon: the comet "exists upon loading … moves down in
+  correlation to the scroll until you get to audiodex"; at the end "the full
+  length shows the gradient and the comet has shot off the screen"): THE
+  START: while the line is above the first target, s = pos ÷ (pos + the
+  distance left until the first target's top meets the line), so the bead
+  leaves the track's top with the first pixel of scroll and arrives on
+  audiodex's knot exactly as audiodex takes the line, nothing lit on the
+  way (never hidden at the top). THE END: `update()` writes
+  `data-comet="top" | "mid" | "end"` on `.rail`; at `end` (the bead on the
+  last knot, p = 1, the fill the full track) the bead keeps going, eased
+  down past the track's foot (`top: 100% + 72px`) and fades out: the SHOT;
+  the button stays lit with its ring; the bead is back the moment the page
+  scrolls up. The eased `top` applies in the `end` state only (eased on the
+  way, it trailed the scroll).
   A target at its framed position counts as active even if too short to
   reach the line (never fires today). `locate()` + one rAF-coalesced
   `update()` on capture-phase scroll; knots cached by `measure()` on load,
