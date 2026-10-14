@@ -261,14 +261,15 @@ const columns = (blocks: BuildBlock[]): StoryBlock[][] =>
   {/* ── THE SIDEBAR — persistent left column, nav only (Jon, 2026-08-16:
       always present from load; flat light panel; mobile deferred) ───────── */}
   <nav class="rail" data-rail aria-label="Sections">
-    {/* words alone (Jon, 2026-10-13, round two): the builds, a short
-        hairline, the art rooms. One face, one row height, every word ending
-        on one x (so each knot on the comet's track sits the same distance
-        from its word). No group words, no numerals, no glyphs. */}
+    {/* words alone (Jon, 2026-10-13, round two): the builds, then the art
+        rooms. One face, one row height, every word ending on one x (so each
+        knot on the comet's track sits the same distance from its word). No
+        group words, no numerals, no glyphs, and since round seven no line
+        between the blocks (Jon: "or just have them figure it out
+        themselves"): six rows, five equal gaps. */}
     <div class="rail-col">
-      {NAV.map((g, k) => (
+      {NAV.map((g) => (
         <>
-          {k > 0 && <i class="rail-rule" aria-hidden="true"></i>}
           <ul class="rail-list" role="list" data-block={g.key}>
             {g.entries.map((e) => (
               <li data-room={e.room}>
@@ -288,8 +289,11 @@ const columns = (blocks: BuildBlock[]): StoryBlock[][] =>
     </span>
     {/* résumé, the rail's one button (Jon, 2026-10-13 round six: "in the nav
         bar, on the bottom, and have it look like a button, visually a bit
-        different than the other words"): an outlined pill above the switch */}
-    <a class="rail-cv" href="/resume">résumé<span class="rail-cv-glyph" aria-hidden="true">↗</span></a>
+        different than the other words"): an outlined pill above the switch.
+        Round seven: it is also the comet's LAST knot (data-for="end"): while
+        the end room spans the screen's centre line the pill is lit and the
+        bead sits on it (Jon: "the nav/scroll should go down to résumé") */}
+    <a class="rail-cv" href="/resume" data-for="end">résumé<span class="rail-cv-glyph" aria-hidden="true">↗</span></a>
     <button class="rail-night" type="button" data-night-toggle aria-pressed="false" aria-label="Night mode" data-rail-night>
       <svg class="rn-glyph rn-sun" viewBox="0 0 12 12" fill="none" stroke="currentColor"
         stroke-width="1.3" stroke-linecap="round" aria-hidden="true">
@@ -319,7 +323,7 @@ const columns = (blocks: BuildBlock[]): StoryBlock[][] =>
         <span class="mbar-word">{m.word}</span>
       </a>
     ))}
-    <a class="mbar-item mbar-resume" href="/resume"><span class="mbar-word mbar-pill">résumé<span class="mbar-cv-glyph" aria-hidden="true">↗</span></span></a>
+    <a class="mbar-item mbar-resume" href="/resume" data-for="end"><span class="mbar-word mbar-pill">résumé<span class="mbar-cv-glyph" aria-hidden="true">↗</span></span></a>
     <button class="mbar-night" type="button" data-night-toggle aria-pressed="false" aria-label="Night mode">
       <svg class="mn-moon" viewBox="0 0 12 12" fill="none" stroke="currentColor"
         stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
@@ -743,10 +747,12 @@ const columns = (blocks: BuildBlock[]): StoryBlock[][] =>
       centred on the page in title-sized text with the email link and LinkedIn
       icon beneath it"). A full viewport, its words centred: résumé in the
       bands' name face, then the sitewide floor (SiteFloor.astro, untouched;
-      this page owns only its placement and inks). Not a nav target: the
-      comet holds music's knot while it is on screen. */}
+      this page owns only its placement and inks). Round seven: the comet's
+      last target, its knot the rail's résumé pill (lit while this room spans
+      the centre line); the title wears the pill's arrow, and on desks the
+      floor row stands on the pill's line (--cv-foot). */}
   <section class="room end" id="end" aria-label="Résumé and contact">
-    <a class="end-cv" href="/resume">résumé</a>
+    <a class="end-cv" href="/resume">résumé<span class="end-cv-glyph" aria-hidden="true">↗</span></a>
     <SiteFloor />
   </section>
 </div>
@@ -821,6 +827,11 @@ const columns = (blocks: BuildBlock[]): StoryBlock[][] =>
        sheets on .wk + .wk, the floor on its margin; the play room's own
        inner gaps read it too (with this value as their fallback) */
     --room-gap: clamp(108px, 20vh, 224px); /* +12% (Jon, 2026-10-13 round five; was 96 / 18vh / 200) */
+    /* THE FOOT LINE (round seven): the rail's résumé pill centres this far
+       above the screen's foot, the comet's track ends there, and on desks
+       the end room's floor row stands on it, so the pill and the floor read
+       as one line across the page at its end. One value; they cannot drift */
+    --cv-foot: 102px;
     --ink: #141210;
     --dim: #6a5940;
     --paper: rgba(248, 244, 234, 0.96);
@@ -969,28 +980,24 @@ const columns = (blocks: BuildBlock[]): StoryBlock[][] =>
      height, every word ending on one x. Round three (Jon: "too condensed"):
      40px rows, 12px apart in a block; a 28px hairline with 28px above and
      below between the two blocks (was 36 · 4 · 18: a list; now a column) */
+  /* round seven (Jon, 2026-10-13: "I'm considering removing the horizontal
+     line … keep the vertical spacing it has now, but redistribute"): the
+     hairline is gone and the column keeps its height (449: six 48px rows,
+     four 20px gaps and the rule's 40 + 1 + 40), now six rows with FIVE equal
+     gaps of 32 (448). The blocks part by nothing; the reader figures it out. */
   .rail-col {
     display: flex;
     flex-direction: column;
+    gap: 32px;
     width: 143px;
   }
   .rail-list {
     display: flex;
     flex-direction: column;
-    gap: 20px; /* round four (Jon: "still too condensed"): 12 → 20 */
+    gap: 32px;
     margin: 0;
     padding: 0;
     list-style: none;
-  }
-  .rail-rule {
-    display: block;
-    align-self: flex-end;
-    width: 28px;
-    height: 1px;
-    /* right edge = the words' end (the row's 12px right padding); 40 above
-       and below since round four */
-    margin: 40px 12px 40px 0;
-    background: #716d65;
   }
   .rail-item {
     display: flex;
@@ -1034,13 +1041,17 @@ const columns = (blocks: BuildBlock[]): StoryBlock[][] =>
      the hairline over the switch parts the two. Filled on hover. */
   .rail-cv {
     position: absolute;
-    bottom: 84px;
+    /* its centre on --cv-foot (102 above the screen's foot, as in round six:
+       84 + half its 36px box), the line the end room's floor stands on */
+    bottom: calc(var(--cv-foot) - 18px);
     left: 50%;
     transform: translateX(-50%);
     display: inline-flex;
     align-items: center;
     gap: 6px;
-    padding: 10px 14px;
+    box-sizing: border-box;
+    height: 36px;
+    padding: 0 14px;
     border: 1px solid #45423c;
     border-radius: 999px;
     font-family: "IBM Plex Mono", ui-monospace, monospace;
@@ -1057,7 +1068,10 @@ const columns = (blocks: BuildBlock[]): StoryBlock[][] =>
     font-size: 0.85em;
     letter-spacing: 0;
   }
-  .rail-cv:hover {
+  /* hover, and LIT (round seven: the end room is the comet's last target
+     and the pill its knot): filled ink on paper */
+  .rail-cv:hover,
+  .rail-cv[data-on] {
     background: var(--ink);
     border-color: var(--ink);
     color: #f5f2ea;
@@ -1070,16 +1084,14 @@ const columns = (blocks: BuildBlock[]): StoryBlock[][] =>
     border-color: #8f98a8;
     color: #8f98a8;
   }
-  :global(html[data-night]) .rail-cv:hover {
+  :global(html[data-night]) .rail-cv:hover,
+  :global(html[data-night]) .rail-cv[data-on] {
     background: #e8ecf4;
     border-color: #e8ecf4;
     color: #101216;
   }
   :global(html[data-night]) .rail-cv:focus-visible {
     outline-color: #e8ecf4;
-  }
-  :global(html[data-night]) .rail-rule {
-    background: #778090;
   }
   :global(html[data-night]) .rail-item:hover {
     background: rgba(232, 236, 244, 0.07);
@@ -1097,10 +1109,12 @@ const columns = (blocks: BuildBlock[]): StoryBlock[][] =>
     }
   }
   /* ── the comet: reading progress riding the rail's right edge ────────── */
+  /* the track runs from the hero's knot (its top, p = 0) down to the résumé
+     pill's centre (p = 1, the end room's knot): round seven */
   .comet {
     position: absolute;
     top: 18px;
-    bottom: 18px;
+    bottom: var(--cv-foot);
     right: -7px;
     width: 12px;
     pointer-events: none;
@@ -1404,6 +1418,25 @@ const columns = (blocks: BuildBlock[]): StoryBlock[][] =>
     .mbar-cv-glyph {
       font-size: 0.9em;
       letter-spacing: 0;
+    }
+    /* lit at the end (round seven): the PILL fills, not the cell */
+    .mbar-item.mbar-resume[data-on] {
+      background: transparent;
+      color: #45423c;
+    }
+    .mbar-resume[data-on] .mbar-pill {
+      background: var(--ink);
+      border-color: var(--ink);
+      color: #f5f2ea;
+    }
+    :global(html[data-night]) .mbar-item.mbar-resume[data-on] {
+      background: transparent;
+      color: #8f98a8;
+    }
+    :global(html[data-night]) .mbar-resume[data-on] .mbar-pill {
+      background: #e8ecf4;
+      border-color: #e8ecf4;
+      color: #101216;
     }
     .mbar-night {
       order: 8;
@@ -3473,6 +3506,17 @@ const columns = (blocks: BuildBlock[]): StoryBlock[][] =>
   .end-cv:focus-visible {
     color: var(--dim);
   }
+  /* the pill's arrow at the title's size (round seven): smaller than the
+     word, raised, a touch lighter */
+  .end-cv-glyph {
+    display: inline-block;
+    margin-left: 0.04em;
+    font-size: 0.6em;
+    font-weight: 300;
+    letter-spacing: 0;
+    vertical-align: 0.42em;
+    line-height: 1;
+  }
   :global(html[data-night]) .end-cv {
     color: var(--night-ink);
   }
@@ -3483,6 +3527,10 @@ const columns = (blocks: BuildBlock[]): StoryBlock[][] =>
   .end :global(.floor) {
     margin: 24px 0 0;
     padding: 0;
+    /* its box pinned to its row's height (the 21px mark): the floor centres
+       its items, so its centre is its box's and the foot line can hold it */
+    box-sizing: border-box;
+    height: 21px;
     --floor-ink: var(--ink);
     --floor-dim: var(--dim);
     --floor-hot: #b33a2a;
@@ -3492,6 +3540,16 @@ const columns = (blocks: BuildBlock[]): StoryBlock[][] =>
   :global(html[data-night]) .end :global(.floor) {
     --floor-ink: #8f98a8;
     --floor-dim: #8f98a8;
+  }
+  /* desks (Jon, 2026-10-13, round seven, option B): laid out from the
+     foot. The floor row's centre stands on --cv-foot, the line of the rail's
+     résumé pill, the title 24px above it, the viewport above them empty.
+     Phones keep the centred stack (no rail there; the bar carries the pill) */
+  @media (min-width: 900px) {
+    .end {
+      justify-content: flex-end;
+      padding-bottom: calc(var(--cv-foot) - 10.5px);
+    }
   }
   @media (max-width: 899px) {
     .end {
@@ -3534,15 +3592,13 @@ const columns = (blocks: BuildBlock[]): StoryBlock[][] =>
   // A row whose target is not on the page is no row at all (2026-10-13: the
   // studio sheet's entry is in the nav data before its section exists; the
   // build-time SHOW filter is the first guard, this is the second). A list
-  // left empty goes too, with the hairline before it.
+  // left empty goes too.
   document.querySelectorAll<HTMLElement>("[data-rail] [data-for], [data-mbar] [data-for]").forEach((el) => {
     if (!document.getElementById(el.dataset.for as string)) (el.closest("li") ?? el).style.display = "none";
   });
   rail?.querySelectorAll<HTMLElement>(".rail-list").forEach((ul) => {
     if (Array.from(ul.children).every((li) => (li as HTMLElement).style.display === "none")) {
       ul.style.display = "none";
-      const rule = ul.previousElementSibling as HTMLElement | null;
-      if (rule?.classList.contains("rail-rule")) rule.style.display = "none";
     }
   });
   const topOf = (id: string) => document.getElementById(id)?.getBoundingClientRect().top ?? 0;
@@ -3567,16 +3623,32 @@ const columns = (blocks: BuildBlock[]): StoryBlock[][] =>
     // makes things so much more simple"). The bead sits EXACTLY on a row's
     // knot the whole time that row is lit, and travels only across the ground
     // between two objects. For the targets T1..Tn of getDocIds() (sheets and
-    // rooms by on-screen top; #end is not one) and one REFERENCE LINE, the
-    // screen's centre (phones: the centre of <main>, the scroller there):
+    // rooms by on-screen top, and since round seven #end, whose "row" is the
+    // résumé pill) and one REFERENCE LINE, the screen's centre (phones: the
+    // centre of <main>, the scroller there):
     //   · Ti is ACTIVE while its box spans the line (top ≤ line ≤ bottom):
     //     its row is lit, the bead on its knot (fyOf);
     //   · in the ground between Ti and Ti+1, p = (line − bottom_i) /
     //     (top_i+1 − bottom_i): the bead rides fy_i → fy_i+1 by p, and the lit
     //     row is Ti while p < 0.5, Ti+1 from 0.5 on (the bead is always nearer
     //     the lit row than the other);
-    //   · above T1 the hero owns the screen: no row lit, the bead waits on
-    //     T1's knot; below Tn (the end room) Tn stays lit, the bead on its knot;
+    //   · ROUND SEVEN (Jon, 2026-10-13: "the comet scroll needs to be at the
+    //     top when at the top of the page" / "at the bottom … go down to
+    //     résumé"): the hero is a virtual T0 whose knot is the track's TOP
+    //     and which lights nothing, so the bead rides from the top to
+    //     audiodex through the first ground; the end room is Tn, its knot the
+    //     pill at the track's foot, the pill lit while it spans the line;
+    //   · THE HICCUP (round seven, Jon: "flashing back to the previous
+    //     section's highlight state, and back to the current one"): the state
+    //     is ONE number s (= i on Ti, i + p in the ground after it) and it
+    //     only moves the way the page is scrolling: within a scroll, a frame
+    //     whose geometry says otherwise (a box that moved under the line: a
+    //     picture landing, an eased height, an engine without scroll
+    //     anchoring) holds the last state, and the true state settles once
+    //     the scroll rests (160ms without a scroll event). The
+    //     lit item flips with a little hysteresis: at p = 0.55 going down and
+    //     0.45 going up, so a line resting at a gap's midpoint (sub-pixel
+    //     offsets, a momentum tail) cannot flicker between two rows;
     //   · a target FRAMED (its top within a pixel of its scroll-margin-top,
     //     where its row's click lands it) counts as active even when it is too
     //     short to reach the line (a guard: at every size measured each target
@@ -3617,43 +3689,85 @@ const columns = (blocks: BuildBlock[]): StoryBlock[][] =>
         else comet.removeAttribute("data-scrollable");
       }
     };
-    // the law itself: the lit target and the bead's place on the track
-    const locate = (): { lit: string | null; p: number | null } => {
+    // the law itself, as one number s along the targets (round seven):
+    // T0 = the hero (knot 0, the track's top, lights nothing), then the
+    // sheets and rooms of getDocIds(), the last being #end (its knot is the
+    // résumé pill's, fyOf("end")). s = i while Ti spans the line (or is
+    // framed); in the ground between Ti and Ti+1, s = i + p.
+    const hero = document.querySelector<HTMLElement>(".hero");
+    type Stop = { id: string | null; k: number };
+    const locate = (): { stops: Stop[]; s: number } | null => {
       const ids = getDocIds();
-      if (ids.length === 0) return { lit: null, p: null };
+      if (ids.length === 0) return null;
       const line = inMain && main
         ? main.getBoundingClientRect().top + main.clientHeight / 2
         : window.innerHeight / 2;
-      const bx = ids.map((id) => {
-        const r = document.getElementById(id)!.getBoundingClientRect();
-        return { id, top: r.top, bottom: r.bottom, k: fy.get(id) ?? fyOf(id) };
-      });
-      const framed = (b: (typeof bx)[number]) => Math.abs(b.top - (smt.get(b.id) ?? 0)) <= 1;
-      for (const b of bx) if ((b.top <= line && line <= b.bottom) || (framed(b) && b.bottom < line)) return { lit: b.id, p: b.k };
-      if (line < bx[0].top) return { lit: null, p: bx[0].k };
-      for (let k = 0; k < bx.length - 1; k++) {
-        const a = bx[k], b = bx[k + 1];
-        if (a.bottom < line && line < b.top) {
-          const t = (line - a.bottom) / (b.top - a.bottom);
-          return { lit: t < 0.5 ? a.id : b.id, p: a.k + t * (b.k - a.k) };
-        }
+      const bx: (Stop & { top: number; bottom: number; framed: boolean })[] = [];
+      if (hero && hero.offsetParent != null) {
+        const r = hero.getBoundingClientRect();
+        bx.push({ id: null, k: 0, top: r.top, bottom: r.bottom, framed: false });
       }
-      const last = bx[bx.length - 1];
-      return { lit: last.id, p: last.k };
+      for (const id of ids) {
+        const r = document.getElementById(id)!.getBoundingClientRect();
+        bx.push({ id, k: fy.get(id) ?? fyOf(id), top: r.top, bottom: r.bottom, framed: Math.abs(r.top - (smt.get(id) ?? 0)) <= 1 });
+      }
+      const stops = bx.map(({ id, k }) => ({ id, k }));
+      for (let i = 0; i < bx.length; i++) {
+        const b = bx[i];
+        if ((b.top <= line && line <= b.bottom) || (b.framed && b.bottom < line)) return { stops, s: i };
+      }
+      if (line < bx[0].top) return { stops, s: 0 };
+      for (let i = 0; i < bx.length - 1; i++) {
+        const a = bx[i], b = bx[i + 1];
+        if (a.bottom < line && line < b.top) return { stops, s: i + (line - a.bottom) / (b.top - a.bottom) };
+      }
+      return { stops, s: bx.length - 1 };
     };
+    const HYS = 0.05; // the flip's band: 0.55 going down, 0.45 going up
+    const scrollPos = () => (inMain && main ? main.scrollTop : window.scrollY);
     let litNow: string | null | undefined;
     let pNow = "";
-    const update = () => {
-      const { lit, p } = locate();
-      if (comet && p !== null) {
+    let sNow: number | null = null;
+    let posNow = 0;
+    let lastScrollAt = -1e9;
+    const update = (settle = false) => {
+      const L = locate();
+      if (!L) return;
+      const { stops } = L;
+      let s = L.s;
+      const pos = scrollPos();
+      const dir = Math.sign(pos - posNow);
+      posNow = pos;
+      // within a scroll the state only moves the way the page moves; a frame
+      // that says otherwise (or a geometry change mid-gesture) holds, and
+      // the settle (scrollend / the timer) applies the true state
+      if (!settle && sNow !== null && sNow <= stops.length - 1) {
+        if ((dir > 0 && s < sNow) || (dir < 0 && s > sNow)) s = sNow;
+        else if (dir === 0 && performance.now() - lastScrollAt < 200) s = sNow;
+      }
+      sNow = s;
+      const i = Math.min(Math.floor(s), stops.length - 1);
+      const t = s - i;
+      const p = t > 0 && i + 1 < stops.length ? stops[i].k + t * (stops[i + 1].k - stops[i].k) : stops[i].k;
+      if (comet) {
         const v = p.toFixed(5);
         if (v !== pNow) { pNow = v; comet.style.setProperty("--p", v); }
       }
+      // the lit stop: the nearer of the two, with the band around 0.5
+      let j = i;
+      if (t > 0 && i + 1 < stops.length) {
+        const cur = litNow === undefined ? -1 : stops.findIndex((x) => x.id === litNow);
+        j = t >= 0.5 ? i + 1 : i;
+        if (cur === i + 1 && t >= 0.5 - HYS) j = i + 1;
+        if (cur === i && t < 0.5 + HYS) j = i;
+      }
+      const lit = stops[j].id;
       if (lit === litNow) return;
       litNow = lit;
       // a row is lit when its target IS the active one or HOLDS it: the
       // phone bar's "builds" (#work) holds the work room's two sheets, and
-      // names every build in data-holds (the studio sheet has its own room)
+      // names every build in data-holds (the studio sheet has its own room);
+      // the pills (rail and bar, data-for="end") light for the end room
       const hot = lit ? document.getElementById(lit) : null;
       items.forEach(({ id, holds, el }) => {
         if (hot && (id === lit || holds.includes(lit as string) || document.getElementById(id)?.contains(hot))) {
@@ -3666,33 +3780,32 @@ const columns = (blocks: BuildBlock[]): StoryBlock[][] =>
       });
     };
     let ticking = false;
+    let settleT = 0;
+    const settle = () => { window.clearTimeout(settleT); update(true); };
     const onScroll = () => {
+      lastScrollAt = performance.now();
+      window.clearTimeout(settleT);
+      settleT = window.setTimeout(settle, 160);
       if (ticking) return;
       ticking = true;
       requestAnimationFrame(() => { ticking = false; update(); });
     };
-    const remeasure = () => { measure(); onScroll(); };
+    // a geometry change: at rest it applies at once; mid-scroll the settle
+    // picks it up when the scroll rests
+    const remeasure = () => {
+      measure();
+      if (performance.now() - lastScrollAt > 200) requestAnimationFrame(settle);
+    };
     // Capture phase on the document: scroll/scrollend do not bubble, and on
     // phones the scroller is <main>, not the document (2026-09-21) — capture
     // hears the inner scroller and, at target, the desk's document alike.
-    // scrollend (or a debounced scroll where it is missing) settles the
-    // state once more when a smooth scroll lands.
+    // the state settles when the scroll RESTS: 160ms without a scroll event,
+    // in every engine. Not on scrollend: Chrome fires it after each
+    // programmatic step and each wheel notch, mid-gesture, and a settle there
+    // re-opened the flash-back (round seven, the qa stress trace)
     document.addEventListener("scroll", onScroll, { capture: true, passive: true });
-    if ("onscrollend" in window) {
-      document.addEventListener("scrollend", () => update(), { capture: true, passive: true });
-    } else {
-      let t = 0;
-      document.addEventListener(
-        "scroll",
-        () => {
-          window.clearTimeout(t);
-          t = window.setTimeout(update, 120);
-        },
-        { capture: true, passive: true }
-      );
-    }
     window.addEventListener("resize", remeasure, { passive: true });
-    window.addEventListener("load", () => { measure(); update(); });
+    window.addEventListener("load", () => { measure(); settle(); });
     // the page's height moves while the reader is on it: the modules grow as
     // they run, the folds open, lazy media lands, the instrument re-fits. Any
     // change to the column's height re-measures (the body on desks; on phones
@@ -3702,7 +3815,7 @@ const columns = (blocks: BuildBlock[]): StoryBlock[][] =>
     const col = document.querySelector<HTMLElement>("[data-one]");
     if (col) ro.observe(col);
     measure();
-    update();
+    settle();
   }
 
   // ── NIGHT has ONE source (2026-10-13, Jon: "maybe we don't 'turn off the
