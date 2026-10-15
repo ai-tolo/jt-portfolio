@@ -15,19 +15,13 @@ export type Count = { n: string; w: string };
 export type Skim = { beats: [Beat, Beat, Beat] };
 
 // AudioDex's beats were retired 2026-10-15 (its fold is the Thanksgiving scene, objects-copy.ts ARCHIVE_COPY)
-export const SKIM: Record<"watch" | "studio", Skim> = {
+// SIGNAL STUDIO's beats were retired 2026-10-15 (its fold is the surface's sheet: StudioOne #build-studio)
+export const SKIM: Record<"watch", Skim> = {
   watch: {
     beats: [
       { html: "By the time I'd typed it, I had a note <em>about</em> an idea.", from: "watch, the hinge line" },
       { html: "They all wanted to be a companion. I just wanted a button.", from: "watch ¶9" },
       { html: "Now I click one button on my wrist and speak my mind freely.", from: "watch ¶3" },
-    ],
-  },
-  studio: {
-    beats: [
-      { html: "The hard part was everything between playing and keeping.", from: "studio ¶1" },
-      { html: "So I changed what a studio is. Mine listens all the time: there is no record button to forget.", from: "studio ¶3" },
-      { html: "Now the couch is a studio. The ocean is a studio.", from: "studio ¶4" },
     ],
   },
 };

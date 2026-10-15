@@ -7,7 +7,8 @@ export type SpecRow = { k: string; tool: string; html: string; glyph?: string };
 export type Spec = { title: string; rows: SpecRow[] };
 
 // AudioDex's rows were retired 2026-10-15: its hood is ONE RECORDING, BEFORE AND AFTER (StudioOne, ARCHIVE_COPY.hood)
-export const SPEC: Record<"watch" | "studio", Spec> = {
+// SIGNAL STUDIO's rows were retired 2026-10-15: its sheet has no under-the-hood section; the surface is it (StudioSurface.astro)
+export const SPEC: Record<"watch", Spec> = {
   watch: {
     title: "under the hood",
     rows: [
@@ -18,27 +19,6 @@ export const SPEC: Record<"watch" | "studio", Spec> = {
       { k: "execute", glyph: "bolt", tool: "applet", html: "Calendar events and reminders are written by a small signed applet with its own permissions; every action is idempotent by hash, retried, and receipted." },
       { k: "store", glyph: "db", tool: "SQLite", html: "Memos, tickets, and full-text search over both, in one file that stays on my own computers." },
       { k: "surface", glyph: "phone", tool: "web app", html: "A queue of open tickets and a day-grouped log on the phone; a ticket can be saved, snoozed, or turned into a paste-ready prompt." },
-    ],
-  },
-  // SIGNAL STUDIO (2026-10-13): DRAFT, from the signal-map notes; tools
-  // named, diary not. Jon owns every row.
-  studio: {
-    title: "under the hood",
-    rows: [
-      // the radar (Jon's description, 2026-10-13; DRAFT wording, his to edit)
-      { k: "radar", glyph: "radar", tool: "microphone", html: "A button opens any microphone, without feedback, and listens to the room: the chords being played, the scale they belong to when every note fits one, and the tempo. The studio can jam with whoever is playing out loud, a radio included." },
-      { k: "record", glyph: "log", tool: "take log", html: "The output is kept as a rolling log with a keyframe every 1.5 seconds, 600 seconds deep; a take is cut out of it after the fact, never armed in advance." },
-      { k: "rip", glyph: "zones", tool: "zones", html: "A hardware synth is played every three semitones and recorded at 48 kHz / 24-bit into 21 zones; a loop finder refines the period from the root and keeps the longest clean loop under 3.5 seconds." },
-      { k: "play", glyph: "keys", tool: "multisample", html: "Each key picks the nearest zone and repitches it; the loop seam is crossfaded at load so no codec shift lands on a cliff." },
-      // ⚑ Jon: confirm the capture path (line-in / system audio) and that chips persist in IndexedDB
-      { k: "chip", glyph: "crop", tool: "crop + fx", html: "Any audio reaching the laptop can be captured, cropped, run through the racks and saved as a chip on a key, in the page's own IndexedDB store." },
-      { k: "effects", glyph: "fx", tool: "worklets + IRs", html: "Drive and modulation on the audio thread; the reverb is a convolver over six 24-bit impulse responses from my own library." },
-      // ⚑ Jon: confirm
-      { k: "capture", glyph: "jack", tool: "ARM / line-in", html: "A mic or line input with its own meter and a LIVE bus, so a voice or an outboard instrument records into the same take as the keys." },
-      // ⚑ Jon: confirm current
-      { k: "hands", glyph: "pad", tool: "MIDI + gamepad", html: "A MIDI keyboard and a game controller play it alongside the computer keyboard." },
-      // ⚑ Jon: confirm (R0 §2: event log, keyframes, stems; SIGNAL's card cut "stems into Ableton" as not checkable there)
-      { k: "export", glyph: "stems", tool: "stems", html: "A take renders offline to stems that open in Ableton." },
     ],
   },
 };

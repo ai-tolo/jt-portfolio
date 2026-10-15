@@ -75,52 +75,75 @@ export const ARCHIVE_COPY = {
   rule: "Every recording I own lands here first. Intake and the Studio read from this.",
 };
 
-// SIGNAL STUDIO (2026-10-13): the fourth sheet, its own room (#studio) after
-// the play room. ⚠️ DRAFT words (written from the signal-map notes); Jon owns
-// every word. The object is three screen recordings that do not exist yet:
-// each capture with `src` null renders an HONEST PENDING SLOT (a hairline
-// frame with its caption inside, never a fake frame). `src` names the file
-// Jon will drop under public/; the host renders the video only when that
-// file exists at build time (StudioOne's frontmatter checks it), so dropping
-// the file in is the whole upload. 1280×720, muted, ≤30 s.
+// SIGNAL STUDIO (2026-10-13; THE SURFACE, 2026-10-15): the fourth sheet, its
+// own room (#studio) after the play room. Jon's thesis, his words: Ableton is
+// the most advanced DAW ever and it still failed him, because a notebook has
+// to open instantly, go where he goes, take any pen, and never ask to be set
+// up. "Make ten thousand songs, keep ten." SIGNAL (two sheets up) is the small
+// one; the Studio is SIGNAL on steroids. ⚠️ Every sentence here is a DRAFT in
+// his voice (written 2026-10-15); Jon owns every word, edit freely. Spotify is
+// never named on this sheet.
+//
+// THE OBJECT IS THE SURFACE: one still of the real Studio at rest
+// (public/builds/studio/surface.webp) with six press targets over it
+// (StudioSurface.astro; the rings' places are measured, studio-surface.json).
+// A press prints the target's `line` under the still. The `id`s name the
+// measured rects; `label` is the ring's accessible name.
+export type SurfaceLine = { id: string; label: string; line: string; focus?: [number, number]; fit?: boolean };
+// THE CIRCUMSTANCES: three capture frames, each titled by the PROBLEM with one
+// line of answer. `src` names the file under public/ without its extension:
+// the host keeps the first of .mp4 / .webm that exists at build time, so
+// dropping the file in and rebuilding is the whole upload. With sound; a
+// visible play key; plays on a press only. Until the file exists the frame is
+// the honest empty one (its key drawn, dimmed, inert). Jon records these.
 export type StudioCapture = {
-  /** the file under public/ (e.g. "/builds/studio/radar.webm"), or null */
-  src: string | null;
-  /** optional still for the frame before the video plays, same rule as src */
-  poster?: string | null;
-  /** the placard under the frame and the dot's accessible name (DRAFT) */
-  title: string;
-  /** what the recording shows: inside the pending frame (unless it only repeats the title), the placard's second line once the video lands */
-  caption: string;
+  /** the file under public/, no extension (e.g. "/builds/studio/plane") */
+  src: string;
+  /** the placard's title: the problem, in his voice */
+  problem: string;
+  /** the one line of answer under it */
+  answer: string;
 };
 export const STUDIO_COPY: {
   title: string;
   kind: string;
   dek: string;
-  caption: string;
+  surface: { alt: string; caption: string; targets: SurfaceLine[] };
+  said: string;
+  keep: string;
   captures: StudioCapture[];
 } = {
   title: "Signal Studio",
   // the one mono word in the sheet's top-right corner (.sheet-kind)
   kind: "suite",
-  // the band's line. DRAFT (round three, 2026-10-13: fewer words, what it
-  // is, drawn from Jon's locked piece: it listens all the time, the room
-  // lives in the laptop, a game controller plays it; the captures' titles
-  // say the rest). Was: "A studio that lives in a browser tab: it records
-  // everything you play, samples any instrument you own into keys, and
-  // turns any sound on the laptop into a playable chip."
-  dek: "A studio that lives in my laptop: always recording, played from a game controller.",
-  // the mono line under the object. DRAFT (round three): says what the
-  // frames are, not what each shows (the placards do). Was: "Three screen
-  // recordings of the real thing, muted: the radar, a sound cropped and made
-  // a chip, a synth sampled into keys."
-  caption: "Screen recordings of the studio in use, muted.",
+  // the band's line (DRAFT, 2026-10-15; was "A studio that lives in my laptop: always recording, played from a game controller.")
+  dek: "SIGNAL on steroids: the whole studio, in the laptop, for making the idea exist.",
+  surface: {
+    alt: "The Signal Studio at rest: three engines side by side with their effects, the chord rack, the keyboard with its letter keys, and the chips well beneath.",
+    // the mono caption under the still
+    caption: "The real thing, at rest. Press a part.",
+    // the six lines, one per ring, in the order they are pressed through
+    targets: [
+      { id: "engines", label: "The three engines", fit: true,
+        line: "Three engines that resample anything. The shorthand is drums, keys and bass, because that's a keyboard player's whole band." },
+      { id: "effects", label: "The effects, on the surface",
+        line: "Every engine's effects are on the surface at once. I can see which one has the delay and which has the sidechain without opening anything. Ableton makes you expand a rack and pop a window for that." },
+      { id: "take", label: "The take",
+        line: "It was already listening. There's no record button to forget. A take is cut out afterwards." },
+      { id: "chips", label: "The chips",
+        line: "Any sound on the laptop, cropped in two moves, becomes a key: re-pitched, re-timed, remixed." },
+      { id: "radar", label: "The radar's readout",
+        line: "Built in New York, jamming with a friend who won't stay in one key. One click and the room's chord, scale and tempo are on the screen. Join without interrupting him." },
+      { id: "hands", label: "The hands",
+        line: "A laptop, a MIDI keyboard, a travel keyboard, a PlayStation controller: writing utensils. The same moves on every one, every time." },
+    ],
+  },
+  // THE FOLD, under the locked hook: the line in his voice (.wk-said) and the one line beneath it
+  said: "Ableton is for producing ideas that already happened. This is for making the idea exist.",
+  keep: "Make ten thousand songs. Keep ten.",
   captures: [
-    // the radar (Jon, 2026-10-13): a button that opens a microphone, listens to the room without feedback and shows
-    // the chords being played, the scale they belong to and the tempo, so the studio can jam with whoever is playing
-    // out loud. DRAFT caption, his to edit
-    { src: "/builds/studio/radar.webm", title: "the radar", caption: "a microphone listens to the room and names the chords, the scale and the tempo" },
-    { src: "/builds/studio/chip.webm", title: "a sound made a chip", caption: "a sound cropped, run through the effects, dropped on a key" },
-    { src: "/builds/studio/rip.webm", title: "a synth sampled into keys", caption: "a synth sampled into keys, every third semitone" },
+    { src: "/builds/studio/plane", problem: "$3,000 of instruments in the bedroom. A laptop on the plane.", answer: "Every synth I own, sampled into keys once. The room travels." },
+    { src: "/builds/studio/pianist", problem: "Your friend won't stay in one key.", answer: "The radar names the chord, the scale and the tempo. Play along, no math." },
+    { src: "/builds/studio/window", problem: "The laptop's in the other room and you're looking out the window.", answer: "The controller sits on the keyboard: voices, drums in, drums out." },
   ],
 };
