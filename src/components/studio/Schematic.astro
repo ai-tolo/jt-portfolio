@@ -1,0 +1,99 @@
+---
+/**
+ * Schematic — UNDER THE HOOD as ONE PICTURE (2026-10-15, Jon: the hood "feels tiny, wordy, no images or actual
+ * understanding"). The system's stages drawn as a signal chain: a glyph in a hairline well for each stage, its word
+ * and its tool beneath, a line running through them left to right. ONE stage is lit at a time (the first by default,
+ * nothing lights itself) and only the lit stage's sentence prints under the chain, so the seven paragraphs the hood
+ * used to print become one line and a picture. Under it THE READOUT: real counts from the system's own store
+ * (src/lib/systems-ledger.json: value in ink, the unit dim, the source line in the label face) — numbers a skeptic
+ * can check, never invented. On a narrow sheet the chain stands as a column with its spine and the lit stage's
+ * sentence prints right under it. The rows are the hood's own (depth-copy.ts / signal-card-copy.ts); a row's `glyph`
+ * names a drawing below. Styles: src/styles/sheet.css (.skm-*).
+ */
+import type { Count } from "./skim-copy";
+export interface Row { k: string; tool: string; html: string; glyph?: string }
+interface Props { rows: Row[]; id: string; readout?: Count[]; source?: string }
+const { rows, id, readout, source } = Astro.props;
+
+// the drawings: 24-unit line glyphs, one stroke weight, round caps (the hero modules' icon idiom)
+const GLYPH: Record<string, string> = {
+  watch: '<rect x="7" y="6" width="10" height="12" rx="3"/><path d="M9.5 6V3h5v3M9.5 18v3h5v-3"/>',
+  laptop: '<rect x="4" y="5" width="16" height="11" rx="1.5"/><path d="M2 19h20"/>',
+  sparkle: '<path d="M12 3l1.9 5.6 5.6 1.9-5.6 1.9L12 18l-1.9-5.6L4.5 10.5l5.6-1.9z"/>',
+  chip: '<rect x="7" y="7" width="10" height="10" rx="1.5"/><path d="M10 7V4M14 7V4M10 20v-3M14 20v-3M7 10H4M7 14H4M20 10h-3M20 14h-3"/>',
+  bolt: '<path d="M13 3L5 14h6l-1 7 8-11h-6z"/>',
+  db: '<ellipse cx="12" cy="6" rx="7" ry="2.6"/><path d="M5 6v12c0 1.4 3.1 2.6 7 2.6s7-1.2 7-2.6V6M5 12c0 1.4 3.1 2.6 7 2.6s7-1.2 7-2.6"/>',
+  phone: '<rect x="7" y="2.5" width="10" height="19" rx="2.5"/><path d="M11 18.5h2"/>',
+  hash: '<path d="M9.5 4L7.5 20M16.5 4l-2 16M4 9.5h17M3 14.5h17"/>',
+  text: '<path d="M5 6h14M5 10h14M5 14h9M5 18h6"/>',
+  pulse: '<path d="M3 12h4l2-6 3 12 2-8 2 4h5"/>',
+  wave: '<path d="M3 11v2M6.5 8v8M10 4v16M13.5 7v10M17 9.5v5M20.5 11v2"/>',
+  search: '<circle cx="10.5" cy="10.5" r="6"/><path d="M15 15l5.5 5.5"/>',
+  globe: '<circle cx="12" cy="12" r="8.5"/><path d="M3.5 12h17M12 3.5c3 3 3 14 0 17M12 3.5c-3 3-3 14 0 17"/>',
+  mic: '<rect x="9" y="3" width="6" height="11" rx="3"/><path d="M6 11a6 6 0 0 0 12 0M12 17v4"/>',
+  out: '<path d="M4 9v6h4l5 4V5L8 9z"/><path d="M16 9a4 4 0 0 1 0 6M18.5 6.5a7.5 7.5 0 0 1 0 11"/>',
+  clock: '<circle cx="12" cy="12" r="8.5"/><path d="M12 7v5l3.5 2"/>',
+  keys: '<rect x="3" y="5" width="18" height="14" rx="1.5"/><path d="M8 5v14M14 5v14M5.5 5v8M11 5v8M16.5 5v8"/>',
+  fx: '<path d="M5 4v16M12 4v16M19 4v16"/><circle cx="5" cy="14" r="2.2" fill="var(--sheet-card)"/><circle cx="12" cy="8" r="2.2" fill="var(--sheet-card)"/><circle cx="19" cy="16" r="2.2" fill="var(--sheet-card)"/>',
+  ramp: '<path d="M3 6h5l8 12h5"/>',
+  rec: '<circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="3.5" fill="currentColor" stroke="none"/>',
+  radar: '<circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="4.5"/><path d="M12 12L6.5 6.5"/><circle cx="12" cy="12" r="1.2" fill="currentColor" stroke="none"/>',
+  log: '<path d="M4 6h16M4 12h16M4 18h16"/><circle cx="8" cy="6" r="1.6" fill="currentColor" stroke="none"/><circle cx="14" cy="12" r="1.6" fill="currentColor" stroke="none"/><circle cx="10" cy="18" r="1.6" fill="currentColor" stroke="none"/>',
+  zones: '<rect x="3" y="7" width="18" height="10" rx="1"/><path d="M9 7v10M15 7v10"/>',
+  crop: '<path d="M7 2v15h15M2 7h15v15"/>',
+  jack: '<rect x="10" y="3" width="4" height="8" rx="1.5"/><path d="M8 11h8l-1 4H9zM12 15v6"/>',
+  pad: '<rect x="2" y="7" width="20" height="11" rx="4"/><path d="M7 10v5M4.5 12.5h5"/><circle cx="16" cy="11" r="1.2" fill="currentColor" stroke="none"/><circle cx="18.5" cy="14" r="1.2" fill="currentColor" stroke="none"/>',
+  stems: '<path d="M3 8.5L12 4l9 4.5-9 4.5z"/><path d="M3 13l9 4.5 9-4.5"/><path d="M3 17.5l9 4.5 9-4.5"/>',
+  loop: '<path d="M17 4l3 3-3 3"/><path d="M20 7H8a4 4 0 0 0-4 4v1"/><path d="M7 20l-3-3 3-3"/><path d="M4 17h12a4 4 0 0 0 4-4v-1"/>',
+};
+const draw = (g?: string) => GLYPH[g ?? ""] ?? GLYPH.sparkle;
+---
+
+<div class="skm" data-skm style={`--skm-n: ${rows.length}`}>
+  <ol class="skm-flow" aria-label="the stages, left to right">
+    {rows.map((r, i) => (
+      <li class="skm-node">
+        <button class="skm-btn" type="button" aria-expanded={i === 0 ? "true" : "false"} aria-controls={`${id}-say-${i}`} data-i={i} data-on={i === 0 ? "" : undefined}>
+          <span class="skm-well" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" set:html={draw(r.glyph)} />
+          </span>
+          <span class="skm-k">{r.k}</span>
+          <span class="skm-tool">{r.tool}</span>
+        </button>
+        <p class="skm-say" id={`${id}-say-${i}`} data-on={i === 0 ? "" : undefined} set:html={r.html} />
+      </li>
+    ))}
+  </ol>
+  {readout && readout.length > 0 && (
+    <div class="skm-readout">
+      <p class="skm-counts">
+        {readout.map((c) => (
+          <span class="skm-count"><b>{c.n}</b> {c.w}</span>
+        ))}
+      </p>
+      {source && <p class="skm-source">{source}</p>}
+    </div>
+  )}
+</div>
+
+<script>
+  // one lit stage per schematic: a press moves the light (and the sentence) — hover does nothing, nothing lights
+  // itself; ← → walk the chain from a lit button
+  document.querySelectorAll<HTMLElement>("[data-skm]").forEach((skm) => {
+    const btns = [...skm.querySelectorAll<HTMLButtonElement>(".skm-btn")];
+    const says = [...skm.querySelectorAll<HTMLElement>(".skm-say")];
+    const light = (i: number) => {
+      btns.forEach((b, j) => { b.toggleAttribute("data-on", j === i); b.setAttribute("aria-expanded", j === i ? "true" : "false"); });
+      says.forEach((p, j) => p.toggleAttribute("data-on", j === i));
+    };
+    btns.forEach((b, i) => {
+      b.addEventListener("click", () => light(i));
+      b.addEventListener("keydown", (e) => {
+        if (e.key !== "ArrowRight" && e.key !== "ArrowLeft") return;
+        e.preventDefault();
+        const j = (i + (e.key === "ArrowRight" ? 1 : btns.length - 1)) % btns.length;
+        light(j); btns[j].focus();
+      });
+    });
+  });
+</script>

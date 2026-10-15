@@ -319,6 +319,30 @@ session must follow.
   `SPEC.studio` in depth-copy.ts (DRAFT; every unverified row carries a
   `// ⚑ Jon:` comment). Spotify is deliberately NOT named anywhere on the
   sheet (capturing a streaming service's audio breaks its terms).
+  THE SKIM (2026-10-15, branch `skim`, Jon: "the current scripting feels
+  too long to hold anyone's interest … the technical under the hood area
+  feels tiny, wordy, no images or actual understanding … everyone has
+  tiktok brains"): an OPEN fold reads beats → picture → whole story. (1)
+  THREE BEATS (`.sheet-beats`, skim-copy.ts): before · the turn · after,
+  each a sentence QUOTED VERBATIM from the locked script (never rewritten,
+  only chosen; the choice is Jon's to swap), the hook's face a step smaller,
+  centred, the turn in the sheet's accent (the hinge-line convention). (2)
+  UNDER THE HOOD IS A PICTURE (`src/components/studio/Schematic.astro`,
+  `.skm-*` in sheet.css): the hood's rows drawn as a signal chain — a line
+  glyph in a hairline well per stage (the `glyph` field on each row names
+  a drawing in the component), the stage word and tool beneath, one line
+  through the wells; ONE stage lit at a time (the first by default, a press
+  moves it, ← → walk it, nothing lights itself) and only the lit stage's
+  sentence prints under the chain; on a sheet under 620px it is a column
+  with its spine and the lit sentence prints under its node. (3) THE
+  READOUT under the picture: real counts from the systems' own stores in
+  `src/lib/systems-ledger.json` (a dated snapshot, the judge-ledger rule:
+  re-query to refresh, never type a number; a build with nothing mined,
+  the studio, prints no readout). (4) THE WHOLE STORY: the locked
+  paragraphs behind their own label-button at the fold's end
+  (`[data-whole]`, hidden until pressed). SIGNAL's card wears the same
+  schematic + readout in its under-the-hood section (its story stays,
+  always open). The `.sheet-step*` ledger styles are retired.
 - WORK is OBJECTS (2026-09-18; the ledger/matrix is DEAD): the room holds
   Jon's Claude Design modules, one per build, framed by words — the locked
   headline from builds-copy.ts above (the DRAFT dek under it was removed

@@ -24,13 +24,37 @@ import { BUILDS, type BuildBlock } from "./builds-copy";
 import IntakeHero from "../IntakeHero.astro";
 import ArchiveHero from "../ArchiveHero.astro";
 import SignalCard from "../signal/SignalCard.astro";
-import { SPEC, type SpecRow } from "./depth-copy";
-// the hood's steps in two columns with their own spines (a CSS column break
-// would leave the first column's line running past its last step)
-const halves = (rows: SpecRow[]): SpecRow[][] => {
-  const cut = Math.ceil(rows.length / 2);
-  return [rows.slice(0, cut), rows.slice(cut)];
+import { SPEC } from "./depth-copy";
+// THE SKIM (2026-10-15): the three beats per build (skim-copy.ts), the hood as
+// a picture (Schematic.astro) and THE READOUT under it: real counts from the
+// systems' own stores, a dated snapshot in src/lib/systems-ledger.json (the
+// judge-ledger rule: re-query to refresh, never type a number by hand).
+import Schematic from "./Schematic.astro";
+import { SKIM, type Count } from "./skim-copy";
+import LEDGER from "../../lib/systems-ledger.json";
+const fmt = (n: number) => n.toLocaleString("en-US");
+const asDate = (iso: string) => new Date(iso + "T12:00:00Z").toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" });
+const READOUT: Record<"archive" | "watch" | "studio", Count[] | undefined> = {
+  archive: [
+    { n: fmt(LEDGER.archive.recordings_mine), w: "recordings of mine" },
+    { n: fmt(LEDGER.archive.hours_mine), w: "hours" },
+    { n: fmt(LEDGER.archive.transcribed), w: "transcribed" },
+    { n: fmt(LEDGER.archive.waveforms), w: "waveforms drawn" },
+    { n: fmt(LEDGER.archive.tempo_found), w: "with a tempo found" },
+    { n: fmt(LEDGER.archive.duplicates_folded), w: "duplicates folded" },
+    { n: asDate(LEDGER.archive.oldest), w: "the oldest" },
+  ],
+  watch: [
+    { n: fmt(LEDGER.intake.memos), w: "memos" },
+    { n: fmt(LEDGER.intake.minutes), w: "minutes spoken" },
+    { n: fmt(LEDGER.intake.tickets), w: "tickets" },
+    { n: fmt(LEDGER.intake.calendar_events_written), w: "calendar events it wrote by itself" },
+    { n: asDate(LEDGER.intake.first), w: "the first memo" },
+  ],
+  // nothing is mined for the studio yet: no readout prints (never an invented number)
+  studio: undefined,
 };
+const SOURCE = `counted in the system's own database, ${asDate(LEDGER.snapshot)}`;
 import { WATCH_COPY, ARCHIVE_COPY, STUDIO_COPY } from "./objects-copy";
 import SiteFloor from "./SiteFloor.astro";
 // THE SHEET (2026-10-13): the anatomy the builds share (src/styles/sheet.css).
@@ -386,27 +410,24 @@ const columns = (blocks: BuildBlock[]): StoryBlock[][] =>
         <div class="wk-story" data-story>
           <p class="wk-lede">{ARCHIVE.headline}</p>
           <div class="wk-story-clip" id="story-archive" inert>
-            <div class="wk-story-body sheet-cols">
-              {columns(ARCHIVE.blocks).map((col) => (
-                <div class="sheet-col">
-                  {col.map((blk) =>
-                    blk.type === "p" ? <p class:list={["wk-p", "sheet-p", { hinge: blk.hinge }]} set:html={blk.html} /> : <ul class="wk-list">{blk.items.map((it) => <li set:html={it} />)}</ul>
-                  )}
-                </div>
-              ))}
-            </div>
+            {/* THE SKIM (2026-10-15): three beats quoted from the locked script, then under the hood as a
+                picture, then the whole story behind its own label (skim-copy.ts, Schematic.astro) */}
+            <ol class="sheet-beats">
+              {SKIM.archive.beats.map((b, j) => <li class:list={["sheet-beat", { turn: j === 1 }]} set:html={b.html} />)}
+            </ol>
             <div class="sheet-sec">
               <p class="sheet-t">{SPEC.archive.title}</p>
-              <div class="sheet-cols">
-                {halves(SPEC.archive.rows).map((col) => (
-                  <ol class="sheet-steps">
-                    {col.map((r) => (
-                      <li class="sheet-step">
-                        <div class="sheet-step-head"><span class="sheet-step-k">{r.k}</span><span class="sheet-step-tool">{r.tool}</span></div>
-                        <p class="sheet-step-p" set:html={r.html} />
-                      </li>
-                    ))}
-                  </ol>
+              <Schematic id="skm-archive" rows={SPEC.archive.rows} readout={READOUT.archive} source={READOUT.archive ? SOURCE : undefined} />
+            </div>
+            <div class="sheet-sec">
+              <button class="sheet-whole-btn" type="button" aria-expanded="false" aria-controls="whole-archive" data-whole>the whole story <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M5 8l5 5 5-5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+              <div class="wk-story-body sheet-cols sheet-whole-body" id="whole-archive" hidden>
+                {columns(ARCHIVE.blocks).map((col) => (
+                  <div class="sheet-col">
+                    {col.map((blk) =>
+                      blk.type === "p" ? <p class:list={["wk-p", "sheet-p", { hinge: blk.hinge }]} set:html={blk.html} /> : <ul class="wk-list">{blk.items.map((it) => <li set:html={it} />)}</ul>
+                    )}
+                  </div>
                 ))}
               </div>
             </div>
@@ -429,27 +450,24 @@ const columns = (blocks: BuildBlock[]): StoryBlock[][] =>
         <div class="wk-story" data-story>
           <p class="wk-lede">{WATCH.headline}</p>
           <div class="wk-story-clip" id="story-watch" inert>
-            <div class="wk-story-body sheet-cols">
-              {columns(WATCH.blocks).map((col) => (
-                <div class="sheet-col">
-                  {col.map((blk) =>
-                    blk.type === "p" ? <p class:list={["wk-p", "sheet-p", { hinge: blk.hinge }]} set:html={blk.html} /> : <ul class="wk-list">{blk.items.map((it) => <li set:html={it} />)}</ul>
-                  )}
-                </div>
-              ))}
-            </div>
+            {/* THE SKIM (2026-10-15): three beats quoted from the locked script, then under the hood as a
+                picture, then the whole story behind its own label (skim-copy.ts, Schematic.astro) */}
+            <ol class="sheet-beats">
+              {SKIM.watch.beats.map((b, j) => <li class:list={["sheet-beat", { turn: j === 1 }]} set:html={b.html} />)}
+            </ol>
             <div class="sheet-sec">
               <p class="sheet-t">{SPEC.watch.title}</p>
-              <div class="sheet-cols">
-                {halves(SPEC.watch.rows).map((col) => (
-                  <ol class="sheet-steps">
-                    {col.map((r) => (
-                      <li class="sheet-step">
-                        <div class="sheet-step-head"><span class="sheet-step-k">{r.k}</span><span class="sheet-step-tool">{r.tool}</span></div>
-                        <p class="sheet-step-p" set:html={r.html} />
-                      </li>
-                    ))}
-                  </ol>
+              <Schematic id="skm-watch" rows={SPEC.watch.rows} readout={READOUT.watch} source={READOUT.watch ? SOURCE : undefined} />
+            </div>
+            <div class="sheet-sec">
+              <button class="sheet-whole-btn" type="button" aria-expanded="false" aria-controls="whole-watch" data-whole>the whole story <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M5 8l5 5 5-5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+              <div class="wk-story-body sheet-cols sheet-whole-body" id="whole-watch" hidden>
+                {columns(WATCH.blocks).map((col) => (
+                  <div class="sheet-col">
+                    {col.map((blk) =>
+                      blk.type === "p" ? <p class:list={["wk-p", "sheet-p", { hinge: blk.hinge }]} set:html={blk.html} /> : <ul class="wk-list">{blk.items.map((it) => <li set:html={it} />)}</ul>
+                    )}
+                  </div>
                 ))}
               </div>
             </div>
@@ -575,27 +593,24 @@ const columns = (blocks: BuildBlock[]): StoryBlock[][] =>
       <div class="wk-story" data-story>
         <p class="wk-lede">{STUDIO.headline}</p>
         <div class="wk-story-clip" id="story-studio" inert>
-          <div class="wk-story-body sheet-cols">
-            {columns(STUDIO.blocks).map((col) => (
-              <div class="sheet-col">
-                {col.map((blk) =>
-                  blk.type === "p" ? <p class:list={["wk-p", "sheet-p", { hinge: blk.hinge }]} set:html={blk.html} /> : <ul class="wk-list">{blk.items.map((it) => <li set:html={it} />)}</ul>
-                )}
-              </div>
-            ))}
-          </div>
+          {/* THE SKIM (2026-10-15): three beats quoted from the locked script, then under the hood as a
+              picture, then the whole story behind its own label (skim-copy.ts, Schematic.astro) */}
+          <ol class="sheet-beats">
+            {SKIM.studio.beats.map((b, j) => <li class:list={["sheet-beat", { turn: j === 1 }]} set:html={b.html} />)}
+          </ol>
           <div class="sheet-sec">
             <p class="sheet-t">{SPEC.studio.title}</p>
-            <div class="sheet-cols">
-              {halves(SPEC.studio.rows).map((col) => (
-                <ol class="sheet-steps">
-                  {col.map((r) => (
-                    <li class="sheet-step">
-                      <div class="sheet-step-head"><span class="sheet-step-k">{r.k}</span><span class="sheet-step-tool">{r.tool}</span></div>
-                      <p class="sheet-step-p" set:html={r.html} />
-                    </li>
-                  ))}
-                </ol>
+            <Schematic id="skm-studio" rows={SPEC.studio.rows} readout={READOUT.studio} source={READOUT.studio ? SOURCE : undefined} />
+          </div>
+          <div class="sheet-sec">
+            <button class="sheet-whole-btn" type="button" aria-expanded="false" aria-controls="whole-studio" data-whole>the whole story <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M5 8l5 5 5-5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+            <div class="wk-story-body sheet-cols sheet-whole-body" id="whole-studio" hidden>
+              {columns(STUDIO.blocks).map((col) => (
+                <div class="sheet-col">
+                  {col.map((blk) =>
+                    blk.type === "p" ? <p class:list={["wk-p", "sheet-p", { hinge: blk.hinge }]} set:html={blk.html} /> : <ul class="wk-list">{blk.items.map((it) => <li set:html={it} />)}</ul>
+                  )}
+                </div>
               ))}
             </div>
           </div>
@@ -4679,5 +4694,17 @@ const columns = (blocks: BuildBlock[]): StoryBlock[][] =>
       if (card.getBoundingClientRect().top < 0) card.scrollIntoView({ block: "start", behavior: reduce.matches ? "auto" : "smooth" });
     };
     btn.addEventListener("click", () => { if (isOpen()) close(); else open(); });
+  });
+  // THE WHOLE STORY (2026-10-15): the locked script behind its own label at
+  // the end of the fold; its handle only shows and hides it (the clip is
+  // height: auto while open, so the sheet simply grows)
+  document.querySelectorAll<HTMLButtonElement>("[data-whole]").forEach((btn) => {
+    const body = document.getElementById(btn.getAttribute("aria-controls") || "");
+    if (!body) return;
+    btn.addEventListener("click", () => {
+      const show = body.hidden;
+      body.hidden = !show;
+      btn.setAttribute("aria-expanded", show ? "true" : "false");
+    });
   });
 </script>

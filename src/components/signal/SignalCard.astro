@@ -21,17 +21,26 @@
  * (Round three's "head" / "tail" halves, two sheets around the device, are retired with it.)
  */
 import "../../styles/sheet.css";
-import { CARD, type CardRow } from "./signal-card-copy.ts";
+import { CARD } from "./signal-card-copy.ts";
 import HowToPlay from "./HowToPlay.astro";
 
 interface Props { part?: "all" | "around" }
 const { part = "all" } = Astro.props;
 const around = part === "around";
 
-const halves = (rows: ReadonlyArray<CardRow>): CardRow[][] => {
-  const cut = Math.ceil(rows.length / 2);
-  return [rows.slice(0, cut), rows.slice(cut)];
-};
+// THE SKIM (2026-10-15): under the hood is a picture (../studio/Schematic.astro) and under it THE READOUT, real
+// counts of the engine's shipped files (src/lib/systems-ledger.json, a dated snapshot; re-count to refresh)
+import Schematic from "../studio/Schematic.astro";
+import type { Count } from "../studio/skim-copy";
+import LEDGER from "../../lib/systems-ledger.json";
+const READOUT: Count[] = [
+  { n: String(LEDGER.signal.voices), w: "voices" },
+  { n: String(LEDGER.signal.zones), w: "sampled notes" },
+  { n: String(LEDGER.signal.kit_oneshots), w: "drum one-shots" },
+  { n: String(LEDGER.signal.impulse_responses), w: "impulse responses" },
+  { n: `${LEDGER.signal.lookahead_ms} ms`, w: "lookahead" },
+  { n: `${LEDGER.signal.take_seconds / 60} min`, w: "of the take kept" },
+];
 const cols = (ps: ReadonlyArray<string>): string[][] => {
   const cut = Math.ceil(ps.length / 2);
   return [ps.slice(0, cut), ps.slice(cut)];
@@ -56,18 +65,8 @@ const cols = (ps: ReadonlyArray<string>): string[][] => {
 
   <div class="sheet-sec">
     <p class="sheet-t">{CARD.hoodTitle}</p>
-    <div class="sheet-cols">
-      {halves(CARD.rows).map((col) => (
-        <ol class="sheet-steps">
-          {col.map((r) => (
-            <li class="sheet-step">
-              <div class="sheet-step-head"><span class="sheet-step-k">{r.k}</span><span class="sheet-step-tool">{r.tool}</span></div>
-              <p class="sheet-step-p" set:html={r.html} />
-            </li>
-          ))}
-        </ol>
-      ))}
-    </div>
+    {/* THE SKIM (2026-10-15): the engine as one picture, the lit stage's sentence under it, the readout beneath */}
+    <Schematic id={`skm-signal-${part}`} rows={CARD.rows} readout={READOUT} source="counted in the engine's shipped files" />
   </div>
 
   <div class="sheet-sec">
