@@ -21,7 +21,9 @@ export const WATCH_COPY = {
   // 2026-10-06 (Jon): the Harbor example was dropped — less charm, and its
   // calendar ticket contradicted the system (an actionable thing goes straight
   // to the calendar, no card); his own memo stays, typed at the faster pace.
-  caption: "A real memo, 3:52 long, spoken into the watch. The program I built turned it into seven tickets; two are shown.",
+  // 2026-10-15 (THE SKIM, round two): the watch replays THE WEDDING MEMO (src/data/intake-run.json; the Cinder
+  // brain dump is kept beside it): one sentence on the couch, five things done on the calendar. DRAFT.
+  caption: "One memo, 0:31, spoken into the watch from the couch. Five things happened on the calendar; two are shown.",
 };
 
 // LIVE (Stream A, 2026-10-05): the words the watch's live mode prints — the

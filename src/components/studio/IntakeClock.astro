@@ -1,0 +1,81 @@
+---
+/**
+ * IntakeClock — under the hood for Intake as ONE LINE OF TIME (2026-10-15, the skim's round two). The build is about
+ * time (Siri runs on its clock; Intake runs on yours), so its schematic is a clock: the memo's trip from the wrist to
+ * the calendar drawn as segments on one axis, each segment's name and its honest length. The wait for the Mac to pick
+ * the memo up is the long segment, drawn broken (not to scale) and labelled "up to 15 min": the sheet never claims the
+ * 39 seconds as wrist-to-calendar. The numbers are the demo run of 2026-10-15 (DEMO-cancel.md: parse 10 s, calendar
+ * 29 s, five tickets) and the ingest daemon's interval. A picture, not a control. Theme-aware: currentColor is the
+ * sheet's ink, the accent is the sheet's.
+ */
+interface Props { class?: string }
+const { class: cls } = Astro.props;
+
+// the segments: [name, length, kind]; kind "wait" is drawn broken
+const SEGS: Array<{ name: string; len: string; kind?: "wait" }> = [
+  { name: "the wrist", len: "0:31" },
+  { name: "the Mac picks it up", len: "up to 15 min", kind: "wait" },
+  { name: "heard", len: "10 s" },
+  { name: "decided", len: "five things" },
+  { name: "written", len: "29 s" },
+];
+// x positions in a 960-wide viewBox: the wait takes the widest span, the rest share the remainder
+const W = 960, Y = 44, X0 = 24, X1 = W - 24;
+const widths = [160, 300, 130, 150, 172];
+const xs: number[] = [];
+let x = X0;
+for (const w of widths) { xs.push(x); x += w; }
+---
+
+<svg class:list={["ick", cls]} viewBox={`0 0 ${W} 92`} role="img" aria-label="The memo's trip: a button on the wrist, up to fifteen minutes until the Mac picks it up, ten seconds to hear it, a decision, twenty-nine seconds to write five things to the calendar">
+  {/* the axis */}
+  {SEGS.map((s, i) => {
+    const a = xs[i], b = i < SEGS.length - 1 ? xs[i + 1] : X1;
+    return s.kind === "wait"
+      ? <g>
+          <line x1={a} y1={Y} x2={a + (b - a) * 0.42} y2={Y} class="ax" />
+          <path d={`M${a + (b - a) * 0.42} ${Y} l7 -7 l7 14 l7 -14 l7 14 l7 -7`} class="ax" fill="none" />
+          <line x1={a + (b - a) * 0.42 + 35} y1={Y} x2={b} y2={Y} class="ax" />
+        </g>
+      : <line x1={a} y1={Y} x2={b} y2={Y} class="ax" />;
+  })}
+  {/* the knots: one per segment start, the last on the far end */}
+  {[...xs, X1].map((kx, i) => (
+    <circle cx={kx} cy={Y} r={i === 0 || i === xs.length ? 6 : 4.5} class:list={["knot", { end: i === 0 || i === xs.length }]} />
+  ))}
+  {/* the names above, the lengths below, each at its segment's start */}
+  {SEGS.map((s, i) => (
+    <g>
+      <text x={xs[i]} y={Y - 18} class="name">{s.name}</text>
+      {s.len && <text x={xs[i]} y={Y + 30} class="len">{s.len}</text>}
+    </g>
+  ))}
+  <text x={X1} y={Y - 18} class="name end" text-anchor="end">done</text>
+</svg>
+{/* a narrow sheet: the same trip as a column (the drawing's words would shrink past reading) */}
+<ol class="ick-list">
+  {SEGS.map((s) => (
+    <li><span class="d" aria-hidden="true"></span><span class="n">{s.name}</span>{s.len && <span class="l">{s.len}</span>}</li>
+  ))}
+  <li class="end"><span class="d" aria-hidden="true"></span><span class="n">done</span></li>
+</ol>
+
+<style>
+  .ick { display: block; width: 100%; height: auto; overflow: visible; color: var(--sheet-ink); }
+  .ax { stroke: color-mix(in oklab, currentColor 32%, transparent); stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round; }
+  .knot { fill: var(--sheet-card, #fff); stroke: currentColor; stroke-width: 1.5; }
+  .knot.end { fill: var(--sheet-acc, currentColor); stroke: var(--sheet-acc, currentColor); }
+  .name { font: 500 12px/1 var(--sheet-mono); letter-spacing: 0.06em; fill: currentColor; }
+  .len { font: 500 13px/1 var(--sheet-mono); letter-spacing: 0.04em; fill: color-mix(in oklab, var(--sheet-acc, currentColor) 72%, currentColor); }
+  .ick-list { display: none; list-style: none; margin: 0; padding: 0; color: var(--sheet-ink); }
+  .ick-list li { display: flex; align-items: center; gap: 12px; padding: 0 0 16px; }
+  .ick-list li:last-child { padding-bottom: 0; }
+  .ick-list .d { flex: none; width: 8px; height: 8px; border-radius: 50%; background: var(--sheet-card, #fff); border: 1.5px solid currentColor; box-sizing: border-box; }
+  .ick-list li:first-child .d, .ick-list li.end .d { background: var(--sheet-acc, currentColor); border-color: var(--sheet-acc, currentColor); }
+  .ick-list .n { font: 500 0.8125rem/1.2 var(--sheet-mono); letter-spacing: 0.06em; }
+  .ick-list .l { margin-left: auto; font: 500 0.8125rem/1.2 var(--sheet-mono); letter-spacing: 0.04em; color: color-mix(in oklab, var(--sheet-acc, currentColor) 72%, currentColor); white-space: nowrap; }
+  @container sheet (max-width: 619px) {
+    .ick { display: none; }
+    .ick-list { display: block; }
+  }
+</style>

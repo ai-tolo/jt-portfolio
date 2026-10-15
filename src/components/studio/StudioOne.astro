@@ -31,6 +31,9 @@ import { SPEC } from "./depth-copy";
 // judge-ledger rule: re-query to refresh, never type a number by hand).
 import Schematic from "./Schematic.astro";
 import { SKIM, type Count } from "./skim-copy";
+import IntakeClock from "./IntakeClock.astro";
+// the sentence the watch replays, printed once in the fold (src/data/intake-run.json)
+import WATCH_RUN from "../../data/intake-run.json";
 import LEDGER from "../../lib/systems-ledger.json";
 const fmt = (n: number) => n.toLocaleString("en-US");
 const asDate = (iso: string) => new Date(iso + "T12:00:00Z").toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" });
@@ -450,14 +453,31 @@ const columns = (blocks: BuildBlock[]): StoryBlock[][] =>
         <div class="wk-story" data-story>
           <p class="wk-lede">{WATCH.headline}</p>
           <div class="wk-story-clip" id="story-watch" inert>
-            {/* THE SKIM (2026-10-15): three beats quoted from the locked script, then under the hood as a
-                picture, then the whole story behind its own label (skim-copy.ts, Schematic.astro) */}
-            <ol class="sheet-beats">
-              {SKIM.watch.beats.map((b, j) => <li class:list={["sheet-beat", { turn: j === 1 }]} set:html={b.html} />)}
-            </ol>
+            {/* THE WEDDING (2026-10-15, the skim's round two; Jon's interview: Siri makes you say the thought on
+                its clock, Intake has no clock). The fold is one argument: THE SENTENCE, said once → THE SAME
+                SENTENCE TO TWO MACHINES, both real (Jon's Siri screenshot of 2026-10-15 beside his calendar before
+                and after Intake ran the memo the same day) → under the hood as ONE LINE OF TIME (IntakeClock) and
+                the one rule that makes a deleting memo safe → the whole story behind its own label. */}
+            <p class="wk-said">
+              <span class="wk-said-q" aria-hidden="true">“</span>{WATCH_RUN.transcript}<span class="wk-said-q" aria-hidden="true">”</span>
+            </p>
+            <div class="vs">
+              <figure class="vs-side">
+                <figcaption class="sheet-t">said to Siri</figcaption>
+                <img class="vs-img vs-siri" src="/intake/siri-wedding.webp" width="883" height="394" alt="Siri's reply, on an iPhone: There's nothing called “no longer going to the wedding” on your calendar." loading="lazy" decoding="async" />
+              </figure>
+              <figure class="vs-side">
+                <figcaption class="sheet-t">said to the watch</figcaption>
+                <img class="vs-img vs-cal" src="/intake/cal-before.webp" width="923" height="470" alt="The calendar before: Jay and Anisa's wedding filling Friday March 5 through Sunday March 7, 2027." loading="lazy" decoding="async" />
+                <p class="vs-note vs-arrow" aria-hidden="true">↓</p>
+                <img class="vs-img vs-cal" src="/intake/cal-after.webp" width="923" height="640" alt="The calendar after: the wedding gone; Dinner Friday at 6 PM, Yoga Saturday at 9 AM, Sam's birthday Saturday at 8 PM, a thrift run Sunday at 1 PM." loading="lazy" decoding="async" />
+                <p class="vs-note">The wedding left. Four things arrived. Nothing else was touched.</p>
+              </figure>
+            </div>
             <div class="sheet-sec">
               <p class="sheet-t">{SPEC.watch.title}</p>
-              <Schematic id="skm-watch" rows={SPEC.watch.rows} readout={READOUT.watch} source={READOUT.watch ? SOURCE : undefined} />
+              <IntakeClock />
+              <p class="wk-rule">It takes an event off the calendar only when exactly one matches what you said, and it keeps a copy first. Two matches, or none, and it waits in the queue for you.</p>
             </div>
             <div class="sheet-sec">
               <button class="sheet-whole-btn" type="button" aria-expanded="false" aria-controls="whole-watch" data-whole>the whole story <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M5 8l5 5 5-5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
@@ -1952,6 +1972,65 @@ const columns = (blocks: BuildBlock[]): StoryBlock[][] =>
     letter-spacing: 0.12em;
     color: var(--mx-dim);
     transform: translateY(-1px);
+  }
+  /* ── THE WEDDING FOLD (2026-10-15): the sentence once, then the same sentence to two machines. The sentence is set
+     in the hook's face a step smaller, centred, with its quote marks hung; the two sides are figures on the sheet,
+     label above, the phone crops with a hairline and the sheet's corner radius, a one-line note beneath in the mono
+     caption face. Side by side on a wide sheet, stacked under 820. */
+  .wk-said {
+    position: relative;
+    max-width: 44ch;
+    margin: 28px auto 36px;
+    text-align: center;
+    font-family: var(--wk-display);
+    font-size: 1.25rem;
+    font-weight: 400;
+    line-height: 1.35;
+    letter-spacing: -0.005em;
+    text-wrap: pretty;
+    color: var(--mx-ink);
+    transition: color 560ms ease;
+  }
+  .wk-said-q { color: var(--sheet-acc); font-weight: 500; }
+  .vs { display: grid; grid-template-columns: minmax(0, 1fr); gap: 36px 48px; margin: 0 0 8px; }
+  .vs-side { margin: 0; min-width: 0; }
+  .vs-side .sheet-t { margin-bottom: 14px; }
+  .vs-img {
+    display: block;
+    width: 100%;
+    height: auto;
+    border: 1px solid color-mix(in oklab, var(--mx-ink) 14%, transparent);
+    border-radius: 14px;
+    background: #fff;
+    transition: border-color 560ms ease;
+  }
+  .vs-siri { border-radius: 22px; }
+  .vs-note {
+    margin: 12px 0 0;
+    font-family: var(--wk-mono);
+    font-size: 0.75rem;
+    font-weight: 500;
+    letter-spacing: 0.04em;
+    line-height: 1.5;
+    color: var(--mx-dim);
+    transition: color 560ms ease;
+  }
+  .vs-arrow { text-align: center; margin: 8px 0; font-size: 1rem; color: var(--mx-dim); }
+  .wk-rule {
+    max-width: 62ch;
+    margin: 28px auto 0;
+    text-align: center;
+    font-size: 0.9375rem;
+    line-height: 1.6;
+    text-wrap: pretty;
+    color: var(--mx-ink);
+    transition: color 560ms ease;
+  }
+  @container (min-width: 820px) {
+    .wk-said { font-size: 1.5rem; margin: 36px auto 44px; }
+    .vs { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+    .vs-cal { max-width: 420px; }
+    .wk-rule { font-size: 1rem; }
   }
   /* the handle: the card's whole lower edge; the chevron breathes while the
      story is folded (the touch signal's vocabulary) and turns when it opens */
