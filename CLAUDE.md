@@ -421,6 +421,10 @@ session must follow.
   "music" not "audio": "audio" collided with AudioDex and the role line).
   Rows 44px with five EQUAL 30px gaps, NO divider since round seven (Jon:
   "distracting … let them figure it out"), the lit pill 11px radius; the
+  JT MARK at the rail's head since 2026-10-15 (`.rail-jt`, absolute at
+  top 22 so the column and the comet's knots never move: the favicon's
+  letterforms in the rail's ink, gradient on hover, href "/" — the same
+  object AwayRail wears); the
   column is centred above the RÉSUMÉ PILL and the night switch; 148px rail
   since round eight (Jon: "scale down 5–10%"; 160 in rounds six–seven), its
   paper a step LIGHTER than the ground (#fbfaf7 day / #161b24 night) with a
@@ -646,11 +650,16 @@ session must follow.
   chips/glyphs "no longer feel fitting"): the JT mark (the favicon's
   letterforms in the rail's ink, gradient on hover) on TOP as the way
   home, then the ROOM'S PLACES as plain words in the homepage rail's
-  exact row (134×44, flush right, lit ink pill on the current page):
-  résumé · chs · crediverso · raylu (one `current` prop lights it; the
-  list is case-links.ts + the résumé), the switch at the foot. NO ember
-  button on away pages (home's pill exists as the recruiter's shortcut
-  TO the résumé). The-console is UNROUTED (Momence pattern: page live,
+  exact row (134×44, flush right): résumé ALONE, then a 60px beat, then
+  the three studies as ONE block at 14px gaps (Jon, 2026-10-15: the
+  distance says the résumé's real estate; the studies "all visible in
+  one view" read as one unit). One `current` prop lights the row: the
+  studies as the ink pill, RÉSUMÉ IN THE EMBER (Jon: "match the color
+  from the homepage for continuity" — `.aw-res`, both temperatures).
+  The list is case-links.ts + the résumé. The switch at the foot; NO
+  ember button on away pages (home's pill exists as the recruiter's
+  shortcut TO the résumé). No comet on the away rail (offered, Jon
+  passed: "idk if we need the comet"); the studies keep CSProgress. The-console is UNROUTED (Momence pattern: page live,
   reached only from the sheet's evidence line; a dedicated Signal Studio
   study is the planned replacement). Phone bar: JT · résumé ember pill
   (lit ring on /resume) · moon — its dedicated refinement round is still

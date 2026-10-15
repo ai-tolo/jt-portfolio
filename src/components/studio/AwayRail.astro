@@ -32,11 +32,13 @@ interface Props {
 }
 const { current } = Astro.props;
 
-// the room's places, in the résumé's order: the sheet, then the studies
-const PLACES = [
-  { slug: "resume", word: "résumé", href: "/resume" },
-  ...CASE_LINKS.map(({ slug }) => ({ slug, word: slug, href: `/case-studies/${slug}` })),
-];
+// the room's places, in the résumé's order: the sheet ALONE, then the
+// three studies as ONE block (Jon, 2026-10-15: "résumé on its own …
+// this communicates the real estate the résumé has on the page"; "the
+// three case studies are conceptualized as one block … they're all
+// visible in one view")
+const SHEET = [{ slug: "resume", word: "résumé", href: "/resume" }];
+const STUDIES = CASE_LINKS.map(({ slug }) => ({ slug, word: slug, href: `/case-studies/${slug}` }));
 ---
 
 <nav class="awayrail" aria-label="Site">
@@ -57,16 +59,25 @@ const PLACES = [
     </svg>
   </a>
   {/* the room's places — the homepage rail's exact row (134×44, the word
-      flush right), the current page lit as an ink pill */}
-  <ul class="aw-col" role="list">
-    {PLACES.map((p) => (
-      <li>
-        <a class="aw-item" href={p.href} aria-current={current === p.slug ? "page" : undefined}>
-          <span class="aw-word">{p.word}</span>
-        </a>
-      </li>
+      flush right), the current page lit as an ink pill; résumé stands
+      alone, the studies clump as one block */}
+  <div class="aw-col">
+    {[SHEET, STUDIES].map((block) => (
+      <ul class="aw-list" role="list">
+        {block.map((p) => (
+          <li>
+            <a
+              class:list={["aw-item", { "aw-res": p.slug === "resume" }]}
+              href={p.href}
+              aria-current={current === p.slug ? "page" : undefined}
+            >
+              <span class="aw-word">{p.word}</span>
+            </a>
+          </li>
+        ))}
+      </ul>
     ))}
-  </ul>
+  </div>
   {/* phone bar only: the résumé shortcut in the home bar's ember pill */}
   <a class="aw-cv" href="/resume" aria-current={current === "resume" ? "page" : undefined}
     >résumé<span class="aw-cv-glyph" aria-hidden="true">↗</span></a>
@@ -211,8 +222,17 @@ const PLACES = [
   /* ── the words (the homepage rail's row, value for value) ─────────── */
   .aw-col {
     flex-direction: column;
-    gap: 30px;
+    /* the gap between the BLOCKS: résumé alone above, the studies below
+       (Jon, 2026-10-15: the distance says the résumé's real estate) */
+    gap: 60px;
     width: 134px;
+  }
+  .aw-list {
+    display: flex;
+    flex-direction: column;
+    /* inside a block the rows clump: the three studies read as ONE unit
+       (home's column breathes at 30) */
+    gap: 14px;
     margin: 0;
     padding: 0;
     list-style: none;
@@ -272,6 +292,15 @@ const PLACES = [
   :global(html[data-night]) .aw-item[aria-current="page"] {
     background: #e8ecf4;
     color: #101216;
+  }
+  /* résumé's highlight is the homepage's ember (Jon, 2026-10-15: "the
+     highlight color of resume … should match the color from the homepage
+     for continuity"): the lit row wears the rail pill's clothes, both
+     temperatures; the studies keep the ink pill */
+  .aw-res[aria-current="page"],
+  :global(html[data-night]) .aw-res[aria-current="page"] {
+    background: var(--ember);
+    color: #fff;
   }
   :global(html[data-night]) .aw-item:focus-visible,
   :global(html[data-night]) .aw-jt:focus-visible {
