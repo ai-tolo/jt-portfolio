@@ -13,3 +13,6 @@ imported or in the sitemap; the old URLs redirect (astro.config.mjs).
   (./signal-drumkit) does not resolve from here: it is a record, not a part
 
 The site is the homepage, the résumé, and the case studies under it.
+- ArchiveHero.astro, archive-run.json — the one-phone AudioDex run (the chorus, then the Thanksgiving
+  dinner); retired 2026-10-15 for AudioDexDoor.astro (two phones, one word). Its import of
+  ../data/archive-run.json no longer resolves from here: a record, not a part

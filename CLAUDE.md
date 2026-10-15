@@ -364,6 +364,23 @@ session must follow.
   class `home`, the AudioDex tile pressed) and the library opens as an
   app scaling out of the tile; the moment view lists what each tool
   assigned (`moment.assigned`); `src` null so play stays dimmed.
+  SUPERSEDED 2026-10-15 (round two, Jon: "a side by side, more like
+  Crediverso … as few texts as possible"): AudioDex's object is
+  `AudioDexDoor.astro` + `src/data/audiodex-scene.json` (ArchiveHero and
+  archive-run.json are in junkyard/; IntakeHero's "change both or neither"
+  twins — the replay pill, the foot, touch-breathe — now live in
+  AudioDexDoor). TWO PHONES, ONE WORD: Voice Memos (the files as numbers)
+  beside AudioDex (the same files named); a press on either types
+  `thanksgiving` into both; Voice Memos answers No Results, AudioDex finds
+  the memo and the song it became, opens the memo and it PLAYS: the REAL
+  first 18 s of the Thanksgiving A Capella tape (Jon's pick; the word is
+  never said in it), cut to `public/archive/thanksgiving.m4a` (existsSync
+  slot: gone = the key drawn, dimmed, inert), its Whisper lines lighting as
+  said. Its last row links down to the music room and the host loads that
+  tape (`[data-tape-jump]` → land the room, settle, `car:show`). No caption,
+  no rail; the fold is the hook → ONE STRIP (heard · measured · named ·
+  drawn · linked, a big artifact under each word) → the floor line → the
+  whole story.
   UNDER THE HOOD: a `.wk-spec` ledger card under each story card, rows
   from `src/components/studio/depth-copy.ts` (Jon-editable; the tools
   and stages of the real M1 systems, never his content).

@@ -69,38 +69,10 @@ export const ARCHIVE_COPY = {
   // "Every recording I've made, read and named by what's inside it, and
   // searchable the way photos are.")
   dek: "An app that reads every recording I've made, names each one by what's inside it, and makes them searchable the way photos are.",
-  // the mono line under the module. 2026-09-30 (Jon): the run is ART, an
-  // example anyone gets, not a row from his library. 2026-10-15: THE
-  // THANKSGIVING SCENE (src/data/archive-run.json). DRAFT, his to edit.
-  caption: "One word typed into the app I built: every Thanksgiving it had already named, then the twelve seconds inside one.",
-  // ── THE FOLD (2026-10-15, the Intake sheet's anatomy): the hook (locked, builds-copy.ts) → `said`, Jon's own line
-  // → `why`, the one explaining line → under the hood as ONE RECORDING, BEFORE AND AFTER → `rule` → the whole
-  // story. ⚠️ DRAFT words, every one Jon's to rewrite. The recording is invented (no real names, no real file).
-  said: "I start a voice memo and I'm back at Thanksgiving dinner. The nieces and nephews are five years younger.",
-  why: "A voice memo is the only candid camera. Nothing ever let you find what you caught.",
+  // 2026-10-15, round two (Jon: "as few texts as possible"): no caption under the object (the two phones say it)
+  // and no line in his voice yet (the first draft read creepy; his words come from the next interview). The fold
+  // is the hook, the hood strip, this one line, the whole story. ⚠️ DRAFT, his to rewrite.
   rule: "Every recording I own lands here first. Intake and the Studio read from this.",
-  hood: {
-    // the left side: the row the phone keeps (the stock Voice Memos row)
-    before: { label: "what the phone saved", name: "New Recording 47", date: "Nov 25", len: "14:02", note: "A number, a date, a length." },
-    // the right side: the same file as AudioDex's row; `k` = the stage that wrote it, printed in the sheet's accent
-    after: {
-      label: "what AudioDex wrote",
-      heard: { at: "9:31", line: "…and the dog. happy thanksgiving. can we eat now?" },
-      title: "Thanksgiving, the kids say grace",
-      tags: ["dinner", "grace", "laughing"],
-      people: "the kids",
-      mood: "giddy",
-      room: "the dining room",
-      len: "14:02",
-      // a dinner has no tempo and no key: these stay blank on purpose
-      bpm: "",
-      key: "",
-      found: ["thanksgiving", "grace", "the kids"],
-    },
-    // the smaller row under it: a song gets the blanks filled
-    song: { title: "porch guitar, the good chorus", len: "6:12", bpm: "92 bpm", key: "D minor" },
-    songNote: "A dinner has no tempo. A song gets one.",
-  },
 };
 
 // SIGNAL STUDIO (2026-10-13): the fourth sheet, its own room (#studio) after

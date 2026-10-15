@@ -22,7 +22,7 @@ import Transport from "../Transport.astro";
 import Carousel from "../Carousel.astro";
 import { BUILDS, type BuildBlock } from "./builds-copy";
 import IntakeHero from "../IntakeHero.astro";
-import ArchiveHero from "../ArchiveHero.astro";
+import AudioDexDoor from "../AudioDexDoor.astro";
 import SignalCard from "../signal/SignalCard.astro";
 import { SPEC } from "./depth-copy";
 // THE SKIM (2026-10-15): the three beats per build (skim-copy.ts), the hood as
@@ -34,8 +34,8 @@ import { SKIM, type Count } from "./skim-copy";
 import IntakeClock from "./IntakeClock.astro";
 // the sentence the watch replays, printed once in the fold (src/data/intake-run.json)
 import WATCH_RUN from "../../data/intake-run.json";
-// the dinner the phone finds (src/data/archive-run.json): its waveform is drawn again in the AudioDex fold
-import ARCHIVE_RUN from "../../data/archive-run.json";
+// the memo the two phones search for (src/data/audiodex-scene.json): its hood draws the same file
+import ADX from "../../data/audiodex-scene.json";
 import LEDGER from "../../lib/systems-ledger.json";
 const fmt = (n: number) => n.toLocaleString("en-US");
 const asDate = (iso: string) => new Date(iso + "T12:00:00Z").toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" });
@@ -51,16 +51,10 @@ const READOUT: Record<"watch" | "studio", Count[] | undefined> = {
   studio: undefined,
 };
 const SOURCE = `counted in the system's own database, ${asDate(LEDGER.snapshot)}`;
-// AUDIODEX'S HOOD (2026-10-15): the one recording's waveform, the bars the phone draws, the kept twelve seconds lit
-const adWave = (() => {
-  const { peaks, window: [a, b], trim: [t0, t1] } = ARCHIVE_RUN.moment;
-  return peaks.map((p, i) => {
-    const t = a + ((i + 0.5) / peaks.length) * (b - a);
-    const h = Math.max(4, Math.min(96, p * 96));
-    return { x: i * 4, y: 50 - h / 2, h, lit: t >= t0 && t <= t1 };
-  });
-})();
-const AD = ARCHIVE_COPY.hood;
+// AUDIODEX'S HOOD (2026-10-15, round two): five things the system wrote about the one memo, each a picture or a
+// word big enough to read at a glance; the stage word above it is the only label
+const adxBars = ADX.moment.peaks.map((p, i) => ({ x: i * 4, h: Math.max(8, p * 96) }));
+const adxLine = ADX.moment.lines.find((l) => /flat/i.test(l.text))?.text ?? ADX.moment.lines[0].text;
 import { WATCH_COPY, ARCHIVE_COPY, STUDIO_COPY } from "./objects-copy";
 import SiteFloor from "./SiteFloor.astro";
 // THE SHEET (2026-10-13): the anatomy the builds share (src/styles/sheet.css).
@@ -410,81 +404,22 @@ const columns = (blocks: BuildBlock[]): StoryBlock[][] =>
           <h3 class="band-name" id="build-archive-t">{ARCHIVE_COPY.title}</h3>
           <p class="band-what">{ARCHIVE_COPY.dek}</p>
         </header>
-        <ArchiveHero story={false}>
-          <p slot="cap" class="wk-cap">{ARCHIVE_COPY.caption}</p>
-        </ArchiveHero>
+        {/* THE OBJECT (2026-10-15, round two): two phones, one word (AudioDexDoor.astro, audiodex-scene.json) */}
+        <AudioDexDoor />
         <div class="wk-story" data-story>
           <p class="wk-lede">{ARCHIVE.headline}</p>
           <div class="wk-story-clip" id="story-archive" inert>
-            {/* THE THANKSGIVING FOLD (2026-10-15, the Intake sheet's anatomy): Jon's own line → the one explaining
-                line → under the hood as ONE RECORDING, BEFORE AND AFTER (the stock row beside the row AudioDex wrote,
-                each stage's word in the accent pointing at what it wrote) → the floor line → the whole story.
-                Words: ARCHIVE_COPY in objects-copy.ts (DRAFT); the recording is invented, no real names. */}
-            <p class="wk-said">
-              <span class="wk-said-q" aria-hidden="true">“</span>{ARCHIVE_COPY.said}<span class="wk-said-q" aria-hidden="true">”</span>
-            </p>
-            <p class="ad-why">{ARCHIVE_COPY.why}</p>
-            <div class="sheet-sec">
-              <p class="sheet-t">under the hood</p>
-              <div class="ad">
-                <figure class="ad-side ad-before">
-                  <figcaption class="sheet-t">{AD.before.label}</figcaption>
-                  <div class="ad-card ad-stock">
-                    <span class="ad-stock-name">{AD.before.name}</span>
-                    <span class="ad-stock-meta"><span>{AD.before.date}</span><span>{AD.before.len}</span></span>
-                  </div>
-                  <p class="vs-note">{AD.before.note}</p>
-                </figure>
-                <p class="ad-arrow" aria-hidden="true"><span class="ad-arrow-r">→</span><span class="ad-arrow-d">↓</span></p>
-                <figure class="ad-side ad-after">
-                  <figcaption class="sheet-t">{AD.after.label}</figcaption>
-                  <dl class="ad-card ad-row">
-                    <div class="ad-f">
-                      <dt class="ad-k">heard</dt>
-                      <dd class="ad-v ad-heard"><span class="ad-at">{AD.after.heard.at}</span> “{AD.after.heard.line}”</dd>
-                    </div>
-                    <div class="ad-f">
-                      <dt class="ad-k">read</dt>
-                      <dd class="ad-v">
-                        <span class="ad-title">{AD.after.title}</span>
-                        <span class="ad-dots">{AD.after.tags.map((w) => <span>{w}</span>)}</span>
-                        <span class="ad-dots">{[AD.after.people, AD.after.mood, AD.after.room].map((w) => <span>{w}</span>)}</span>
-                      </dd>
-                    </div>
-                    <div class="ad-f">
-                      <dt class="ad-k">measured</dt>
-                      <dd class="ad-v ad-mono ad-dots">
-                        <span>{AD.after.len}</span>
-                        <span>bpm {AD.after.bpm || <i class="ad-blank" aria-label="blank"></i>}</span>
-                        <span>key {AD.after.key || <i class="ad-blank" aria-label="blank"></i>}</span>
-                      </dd>
-                    </div>
-                    <div class="ad-f ad-f-wave">
-                      <dt class="ad-k">drawn</dt>
-                      <dd class="ad-v">
-                        <svg class="ad-wave" viewBox={`0 0 ${adWave.length * 4} 100`} preserveAspectRatio="none" role="img" aria-label="The waveform, the twelve seconds of grace lit">
-                          {adWave.map((w) => <rect x={w.x} y={w.y} width="2.4" height={w.h} rx="1.2" class:list={{ lit: w.lit }} />)}
-                        </svg>
-                      </dd>
-                    </div>
-                    <div class="ad-f">
-                      <dt class="ad-k">found</dt>
-                      <dd class="ad-v ad-mono ad-dots ad-found">{AD.after.found.map((w) => <span>{w}</span>)}</dd>
-                    </div>
-                  </dl>
-                  <dl class="ad-card ad-row ad-song">
-                    <div class="ad-f ad-f-head">
-                      <dt class="sr-only">a song</dt>
-                      <dd class="ad-v"><span class="ad-title">{AD.song.title}</span><span class="ad-mono ad-len">{AD.song.len}</span></dd>
-                    </div>
-                    <div class="ad-f">
-                      <dt class="ad-k">measured</dt>
-                      <dd class="ad-v ad-mono ad-dots"><span>{AD.song.bpm}</span><span>{AD.song.key}</span></dd>
-                    </div>
-                  </dl>
-                  <p class="vs-note">{AD.songNote}</p>
-                </figure>
-              </div>
+            {/* THE FOLD (2026-10-15, round two; Jon: "as few texts as possible … they can infer from the image"): the
+                hook stays outside; inside, under the hood as ONE STRIP of what the system wrote about the memo the
+                phones found (a stage word over each), the floor line, then the whole story. No section titles. */}
+            <div class="adh-sec">
+              <ol class="adh" aria-label="Under the hood: what AudioDex wrote about the memo">
+                <li><span class="adh-k">heard</span><span class="adh-v adh-q">“{adxLine}”</span></li>
+                <li><span class="adh-k">measured</span><span class="adh-v adh-big">{ADX.moment.note}</span></li>
+                <li><span class="adh-k">named</span><span class="adh-v adh-big adh-word">Thanksgiving</span></li>
+                <li><span class="adh-k">drawn</span><span class="adh-v"><svg class="adh-wave" viewBox={`0 0 ${adxBars.length * 4} 100`} preserveAspectRatio="none" aria-hidden="true">{adxBars.map((w) => <rect x={w.x} y={50 - w.h / 2} width="2.6" height={w.h} rx="1.3" />)}</svg></span></li>
+                <li><span class="adh-k">linked</span><span class="adh-v"><img class="adh-tape" src={ADX.moment.cover} alt={`The tape it became: ${ADX.moment.tape}`} width="120" height="120" loading="lazy" decoding="async" /></span></li>
+              </ol>
               <p class="wk-rule">{ARCHIVE_COPY.rule}</p>
             </div>
             <div class="sheet-sec">
@@ -1818,7 +1753,6 @@ const columns = (blocks: BuildBlock[]): StoryBlock[][] =>
     --sp-12: 48px;
     /* the phone's width as the host sizes it (38cqw of the module, height-capped):
        the stage's cap AND the Archive title's right edge read the same number */
-    --wk-phone-w: min(38cqw, calc(63svh * 864 / 1760)); /* 76svh until 2026-10-07: smaller with the watch (Jon; 57 was "a bit too small") */
     max-width: none;
     /* the room is CENTRED in the column beside the rail — the same gutter both
        sides — so the modules' centre line (where both objects' dots stand,
@@ -1951,9 +1885,8 @@ const columns = (blocks: BuildBlock[]): StoryBlock[][] =>
   #build-watch .wk-cap { padding-left: 0; }
   /* at rest (and while a run plays) the builds' captions hold their place unseen, so nothing beneath moves when
      they arrive; the Studio sheet's caption is not a run's and always shows */
-  :global(.wk:has(.intake-hero:not(.s6), .archive-hero:not(.s6)) .wk-cap) { visibility: hidden; opacity: 0; }
+  :global(.wk:has(.intake-hero:not(.s6)) .wk-cap) { visibility: hidden; opacity: 0; }
   :global(.wk:has(.intake-hero.s6) .wk-cap) { --cap-signal: #34C759; animation: wk-cap-in 3.2s ease-out 0.3s both; }
-  :global(.wk:has(.archive-hero.s6) .wk-cap) { --cap-signal: #b9701a; animation: wk-cap-in 3.2s ease-out 1.5s both; }
   /* arrive (fade in over the first beat) in the signal's colour, hold it, settle to ink */
   @keyframes wk-cap-in {
     0% { opacity: 0; color: var(--cap-signal); }
@@ -1963,7 +1896,7 @@ const columns = (blocks: BuildBlock[]): StoryBlock[][] =>
   }
   @media (prefers-reduced-motion: reduce) {
     .wk-cap { transform: none; }
-    :global(.wk:has(.intake-hero.s6, .archive-hero.s6) .wk-cap) { animation-duration: 1.2s; animation-delay: 0.2s; }
+    :global(.wk:has(.intake-hero.s6) .wk-cap) { animation-duration: 1.2s; animation-delay: 0.2s; }
   }
   @media (prefers-reduced-motion: reduce) {
     .wk-cap {
@@ -2097,81 +2030,39 @@ const columns = (blocks: BuildBlock[]): StoryBlock[][] =>
     .vs-cal { max-width: 420px; }
     .wk-rule { font-size: 1rem; }
   }
-  /* ── THE THANKSGIVING FOLD (AudioDex, 2026-10-15): the line under Jon's line, then ONE RECORDING, BEFORE AND AFTER.
-     Paper stays paper: the two rows are hairline cards on the sheet, no fill. On the right each stage's word stands in
-     the sheet's accent in a left gutter, a hairline running from it to what that stage wrote (heard · read · measured ·
-     drawn · found); no icons, no chain. Side by side on a wide sheet with an arrow between, stacked under 820. */
-  .ad-why {
-    max-width: 52ch;
-    margin: -12px auto 40px;
-    text-align: center;
-    font-size: 1rem;
-    line-height: 1.6;
-    text-wrap: pretty;
-    color: var(--mx-dim);
-    transition: color 560ms ease;
+  /* ── AUDIODEX'S HOOD (2026-10-15, round two): one strip, five cells, each a stage word in the accent over the thing
+     that stage wrote, big enough to read without leaning in (a quote, a note, a word, a waveform, the tape). Paper
+     stays paper: hairlines between the cells, no fill. Five across on a wide sheet, then wrapping. */
+  .adh-sec { padding: 40px 0 8px; }
+  .adh {
+    list-style: none; margin: 0; padding: 0;
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    border-top: 1px solid color-mix(in oklab, var(--mx-ink) 12%, transparent);
+    border-bottom: 1px solid color-mix(in oklab, var(--mx-ink) 12%, transparent);
   }
-  .ad { display: grid; grid-template-columns: minmax(0, 1fr); gap: 20px; align-items: center; margin: 0 0 8px; }
-  .ad-side { margin: 0; min-width: 0; }
-  .ad-side .sheet-t { margin-bottom: 14px; }
-  .ad-card {
-    margin: 0;
-    border: 1px solid color-mix(in oklab, var(--mx-ink) 14%, transparent);
-    border-radius: 14px;
-    transition: border-color 560ms ease;
+  .adh > li {
+    display: flex; flex-direction: column; gap: 14px; justify-content: space-between;
+    min-height: 132px; padding: 18px 20px 20px;
+    border-left: 1px solid color-mix(in oklab, var(--mx-ink) 12%, transparent);
   }
-  .ad-stock { display: grid; gap: 6px; padding: 14px 18px; }
-  .ad-stock-name { font-weight: 600; font-size: 1rem; color: var(--mx-ink); }
-  .ad-stock-meta { display: flex; justify-content: space-between; font-size: 0.875rem; color: var(--mx-dim); font-variant-numeric: tabular-nums; }
-  .ad-arrow { margin: 0; text-align: center; font: 500 1rem/1 var(--wk-mono); color: var(--mx-dim); }
-  .ad-arrow-r { display: none; }
-  .ad-row { display: grid; gap: 14px; padding: 18px 18px 18px 0; }
-  .ad-f { display: grid; grid-template-columns: 124px minmax(0, 1fr); align-items: baseline; }
-  .ad-f-wave { align-items: center; }
-  /* the stage's word, and the hairline it points along */
-  .ad-k {
-    display: flex; align-items: center; gap: 8px;
-    padding: 0 10px 0 18px;
-    font: 600 0.6875rem/1.4 var(--wk-mono);
-    letter-spacing: 0.1em;
-    color: color-mix(in oklab, var(--sheet-acc) 80%, var(--mx-ink));
-    transform: translateY(-1px);
-  }
-  .ad-k::after { content: ""; flex: 1; min-width: 8px; height: 1px; background: color-mix(in oklab, var(--sheet-acc) 45%, transparent); }
-  .ad-v { display: grid; gap: 4px; min-width: 0; margin: 0; font-size: 0.9375rem; line-height: 1.45; color: var(--mx-ink); transition: color 560ms ease; }
-  .ad-title { font-weight: 600; font-size: 1rem; }
-  .ad-mono { font-family: var(--wk-mono); font-size: 0.8125rem; letter-spacing: 0.02em; font-variant-numeric: tabular-nums; }
-  .ad-dots { display: flex; flex-wrap: wrap; gap: 2px 10px; color: var(--mx-dim); }
-  .ad-dots > span + span::before { content: "·"; margin-right: 10px; color: var(--mx-dim); }
-  .ad-v.ad-dots { display: flex; }
-  .ad-heard { display: block; font-style: italic; }
-  .ad-at { font: 500 0.75rem/1 var(--wk-mono); font-style: normal; letter-spacing: 0.04em; color: var(--mx-dim); margin-right: 4px; }
-  /* bpm and key, blank on purpose: a dinner has neither */
-  .ad-blank { display: inline-block; width: 2.6em; height: 1px; margin-left: 4px; vertical-align: 0.2em; background: repeating-linear-gradient(90deg, var(--mx-dim) 0 3px, transparent 3px 6px); }
-  .ad-wave { display: block; width: 100%; height: 44px; color: color-mix(in oklab, var(--mx-ink) 30%, transparent); }
-  .ad-wave rect { fill: currentColor; }
-  .ad-wave rect.lit { fill: var(--sheet-acc); }
-  .ad-found { color: var(--mx-ink); }
-  .ad-song { margin-top: 12px; padding-block: 12px; gap: 8px; }
-  .ad-song .ad-f-head .ad-v { display: flex; justify-content: space-between; gap: 12px; padding-left: 18px; grid-column: 1 / -1; }
-  .ad-song .ad-title { font-size: 0.9375rem; }
-  .ad-song .ad-len { color: var(--mx-dim); }
-  .ad-song .ad-dots { color: var(--mx-ink); }
-  .ad + .wk-rule { margin-top: 36px; }
-  @container (min-width: 820px) {
-    .ad { grid-template-columns: minmax(0, 0.82fr) auto minmax(0, 1.18fr); gap: 28px; }
-    /* the two cards start on one line: the same file, before and after */
-    .ad-before, .ad-after { align-self: start; }
-    .ad-arrow { align-self: start; margin-top: 64px; font-size: 1.125rem; }
-    .ad-arrow-r { display: inline; }
-    .ad-arrow-d { display: none; }
-    .ad-why { font-size: 1.0625rem; margin-top: -20px; margin-bottom: 48px; }
-  }
-  @container (max-width: 459px) {
-    .ad-f { grid-template-columns: minmax(0, 1fr); gap: 4px; }
-    .ad-row { padding: 16px; }
-    .ad-k { padding: 0; }
-    .ad-song .ad-f-head .ad-v { padding-left: 0; }
+  .adh > li:first-child { border-left: 0; padding-left: 0; }
+  .adh-k { font: 600 0.8125rem/1 var(--wk-mono); letter-spacing: 0.06em; color: color-mix(in oklab, var(--sheet-acc) 80%, var(--mx-ink)); }
+  .adh-v { display: block; color: var(--mx-ink); transition: color 560ms ease; }
+  .adh-q { font-size: 1.0625rem; line-height: 1.35; text-wrap: balance; }
+  .adh-big { font: 500 2.75rem/1 var(--wk-display); letter-spacing: -0.02em; }
+  .adh-word { font-size: 1.75rem; line-height: 1.1; }
+  .adh-wave { display: block; width: 100%; height: 48px; color: var(--sheet-acc); }
+  .adh-wave rect { fill: currentColor; }
+  .adh-tape { display: block; width: 64px; height: 64px; border-radius: 10px; object-fit: cover; border: 1px solid color-mix(in oklab, var(--mx-ink) 14%, transparent); }
+  .adh + .wk-rule { margin-top: 36px; }
+  @container (max-width: 819px) {
+    .adh { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+    .adh > li { border-left: 0; padding-left: 0; border-top: 1px solid color-mix(in oklab, var(--mx-ink) 12%, transparent); min-height: 112px; }
+    .adh > li:nth-child(-n + 2) { border-top: 0; }
+    .adh > li:nth-child(even) { padding-left: 16px; border-left: 1px solid color-mix(in oklab, var(--mx-ink) 12%, transparent); }
+    .adh > li:last-child { grid-column: 1 / -1; }
+    .adh-big { font-size: 2.25rem; }
+    .adh-big.adh-word { font-size: 1.375rem; }
   }
   /* the handle: the card's whole lower edge; the chevron breathes while the
      story is folded (the touch signal's vocabulary) and turns when it opens */
@@ -2211,9 +2102,12 @@ const columns = (blocks: BuildBlock[]): StoryBlock[][] =>
      height under the lamp on laptop screens. The 820px collapse, the 70%
      watch and the 80% phone live in the modules (container queries) */
   .work :global(.obj-intake),
-  .work :global(.archive-hero) {
+  .work :global(.adx) {
     width: min(100%, 1080px);
   }
+  /* AudioDex's two phones (2026-10-15, round two): each the old phone's height cap less a step (two objects share
+     the screen now), never wider than a third of the sheet; stacked on a narrow sheet the module sizes them itself */
+  .work :global(.adx) { --adx-w: min(34cqw, calc(66svh * 864 / 1760)); }
   .work :global(.obj-intake .watch-col) {
     max-width: calc(68.4svh * 383 / 653); /* the VISIBLE watch's ratio (the PNG's frame is trimmed in the module); 0.9 × the phone's 76svh (Jon, 2026-09-22: ten percent smaller) */
   }
@@ -2244,29 +2138,6 @@ const columns = (blocks: BuildBlock[]): StoryBlock[][] =>
     .work :global(.obj-intake .screen .saved) { top: 61.2cqw; font-size: 9.2cqw; }
     .work :global(.obj-intake .screen .meta) { top: 75.4cqw; font-size: 5.8cqw; font-weight: 600; letter-spacing: 0.04em; color: #c4c0b8; }
     .work :global(.obj-intake .screen .livemark) { font-size: 4cqw; }
-  }
-  /* the phone's height cap is a DESK rule: scoped to the two-column module
-     (≥820px of module width), as the watch's 90% is. Unscoped, its 38cqw
-     term beat the module's own stacked 80cqw on phones (the phone shrank to
-     a third of the column; fixed 2026-09-22) */
-  @container hero (min-width: 820px) {
-    .work :global(.archive-hero .stage) {
-      max-width: var(--wk-phone-w);
-    }
-    /* the rail (with its caption) centred on the PHONE'S BODY (Jon,
-       2026-09-24) — the module did it only with a `head` slot, which the
-       sheets retired; the hint's height is the padding, so it centres on
-       the phone alone */
-    .work :global(.archive-hero.no-story .col) {
-      align-self: center;
-      padding-bottom: calc(16px + 0.6875rem * 1.5);
-    }
-    /* each object CENTRED in its own column (2026-10-10): the left axis was
-       the old top-left hook's; under a centred title the object balances
-       the run across the sheet's centre line */
-    .work :global(.archive-hero.no-story .stage) {
-      justify-self: center;
-    }
   }
   @media (max-width: 899px) {
     .work,
@@ -4001,7 +3872,7 @@ const columns = (blocks: BuildBlock[]): StoryBlock[][] =>
     // AudioDex since 2026-10-10): its scroll-margin-top is set live
     const frameWork = () => {
       const work = document.getElementById("work");
-      const obj = document.querySelector<HTMLElement>("#build-archive .phone");
+      const obj = document.querySelector<HTMLElement>("#build-archive .adx-pair");
       if (!work || !obj) return;
       const centre = obj.getBoundingClientRect().top - work.getBoundingClientRect().top + obj.offsetHeight / 2;
       work.style.scrollMarginTop = Math.max(0, Math.round(window.innerHeight / 2 - centre)) + "px";

@@ -17,3 +17,10 @@
 - THE SLOT: drop `public/archive/thanksgiving.m4a` (the twelve seconds themselves, not the 14-minute memo), rebuild. The play key goes live and plays the file start to end; no code change.
 - Open for Jon: every DRAFT line in ARCHIVE_COPY (said · why · rule · hood notes · caption); the music room's tape note says "a Thanksgiving dinner I couldn't attend", while the fold's line says he is back at the dinner.
 - QA: 1440×900 day + night and 375×812 touch, fold open + closed, captures in ~/Documents/studio-build/audiodex/ (probe: scratchpad qa/probe.mjs, serves dist/client on :4691).
+
+## Round two (2026-10-15, Jon: "a side by side, more like Crediverso … as few texts as possible")
+- The object is `src/components/AudioDexDoor.astro` + `src/data/audiodex-scene.json`: Voice Memos beside AudioDex, one press types `thanksgiving` into both; No Results on the left; on the right the memo and the song it became; the memo opens and PLAYS.
+- The memo is real: the first 18 s of `public/listen/thanksgiving-a-capella.mp3`, cut to `public/archive/thanksgiving.m4a` (ffmpeg, AAC 96k, 0.3 s fade). Whisper large-v3-turbo segments drive the lit lines; the sung note measures 215 Hz (A3, a little flat) against the family's "C-flat". "Uncle Johnny" is in the audio and printed nowhere.
+- The fold: the hook → one strip (heard · measured · named · drawn · linked) → the floor line → the whole story. No caption, no rail, no line in Jon's voice yet (the round-one line read creepy; his words come from the next interview).
+- Retired to junkyard/: ArchiveHero.astro, archive-run.json. IntakeHero's comments still name ArchiveHero as the twin (the Intake sheet was out of scope); the twins now live in AudioDexDoor.
+- Resume: Jon's line for `.wk-said` (if he wants one), then a real-phone check of the stacked layout (Voice Memos 62cqw above AudioDex 76cqw).
