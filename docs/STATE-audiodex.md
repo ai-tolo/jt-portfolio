@@ -35,3 +35,8 @@
 - The cassette is 44cqw of the phone (52 stacked) and stays inside the sheet at 1440, 1024 and 375; its words sit in two short lines beside the phone, one line when stacked.
 - The in-phone song row is gone: the cassette is the only way to the song.
 - A press starts the tape at 0:15 (`moment.tapeAt` in audiodex-scene.json): the memo's tail, the door, then the song.
+
+## Round five + where it stands (2026-10-15, end of session)
+- The Thanksgiving A Capella note (soundlab-manifest.json) now says what the song is made of: "…After the door slam, every sound is cut from that memo. The lead is my sister's one nasal note." DRAFT, Jon's to change.
+- NOT PUSHED. Jon: another chat handles the push. Heads-up for it: `skim` also carries pass one (beats + Schematic + readout) on the SIGNAL and Studio sheets, which Jon called filler; those two sheets were never redone. Decide before shipping whether to restore them to main's version.
+- AudioDex is done for this round: Jon's verdict "so much better and eloquent". Open, only if Jon asks: a line in his voice for the fold (`.wk-said`), the memo's printed date (Nov 24, 2022 is the manifest year's Thanksgiving, an assumption).
