@@ -52,3 +52,9 @@ Seven captures, one per pillar on `/case-studies/signal-studio`. Each frame on t
 1. Drop the seven files into `public/case-studies/signal-studio/`.
 2. `npm run build` (the frames pick up the files at build time).
 3. Look at the page: only the frames on screen play; under reduced motion they hold still with controls.
+
+## The drawings (round two, 2026-10-15)
+Two slots on the page take an asset Jon makes: `public/case-studies/signal-studio/<name>.svg` (or `.webp`), 3:2, shown `object-fit: contain` on the room's paper in both temperatures (keep the drawing's ink dark on transparent, or give it its own ground).
+- `bench.svg` — the lab bench: the same beakers and cutlery laid out every time; the chemicals are whatever you bring.
+- `everyway.svg` — every way I've recorded, drawn as one room: laptop alone, a band going analog, full analog with no DAW, vocals in the next room, drum machines real and digital, bass, keys.
+The ritual and the pipeline are drawn by the page itself (text); replace either with an asset later by giving it a slot the same way.

@@ -1,19 +1,16 @@
 ---
-// SIGNAL STUDIO — the flagship study, a PRODUCT PITCH in the WORK room's material (2026-10-15; replaces the-console,
-// which is unrouted). The reader is a cold design/engineering lead overhearing a genuine pitch: that overheard
-// conviction is the career evidence. The page says what the thing IS first, then the pillars (each a capture frame
-// beside its pitch), then the story card (why not Ableton, the feeling, where it came from, the elegance proofs, the
-// ecosystem) with UNDER THE HOOD inside it, verified against ~/sites/signal-studio read-only.
+// SIGNAL STUDIO — the flagship study, a PRODUCT PITCH in the WORK room's material (2026-10-15; replaces the-console).
+// Round two (Jon: "way too wordy … doesn't sound human or creative or funny"): the page is OBJECTS with his lines
+// beside them, nothing longer than a breath. Frames for the recordings he'll make, slots for the drawings he'll make,
+// and two diagrams the page draws itself (the ritual, the pipeline). The reader is a stranger overhearing a pitch.
 //
-// THE RULINGS (do not relitigate): the page is SILENT (muted captures only, no audio elements); the streaming service
-// is never named ("anything playing on the machine"); the study LEADS the studies block (case-links.ts).
+// THE RULINGS: silent (muted captures, no audio); the streaming service never named; the study leads the block.
 //
-// THE CAPTURES: each pillar names a file under public/case-studies/signal-studio/. The frame is an HONEST EMPTY
-// FRAME (a 1px outline, square, no fill, its caption centred in the label face) until the recording exists at build
-// time (fs.existsSync, the homepage #build-studio pattern); then it plays muted and looping, only while on screen
-// (the script below), paused with controls under reduced motion. Jon records them from docs/SHOTLIST-signal-studio.md.
+// THE SLOTS: a capture names `public/case-studies/signal-studio/<name>.webm` (+ `<name>.webp` poster); a drawing names
+// `<name>.svg` or `<name>.webp`. Each is an HONEST EMPTY FRAME (a 1px outline, the caption centred) until the file
+// exists at build time (fs.existsSync). Only on-screen videos play; reduced motion = paused with controls.
 //
-// Every Jon-voiced line is DRAFT for his pass (the anchor copy is his, from the challenge rounds, lightly trimmed).
+// Every line is DRAFT for Jon's pass. The quotes are his, from the challenge rounds.
 import fs from "node:fs";
 import path from "node:path";
 import Room from "../../components/case-study/room/Room.astro";
@@ -21,127 +18,74 @@ import RoomStory from "../../components/case-study/room/RoomStory.astro";
 
 export const prerender = true;
 
-const ACCENT = "#2a5bd7"; // the studio's accent (the homepage sheet's --sheet-acc for #build-studio)
+const ACCENT = "#2a5bd7";
+const dir = path.join(process.cwd(), "public", "case-studies", "signal-studio");
+const first = (names: string[]) => names.map((f) => (fs.existsSync(path.join(dir, f)) ? `/case-studies/signal-studio/${f}` : null)).find(Boolean) ?? null;
 
-const capDir = path.join(process.cwd(), "public", "case-studies", "signal-studio");
-const inPublic = (f: string) => (fs.existsSync(path.join(capDir, f)) ? `/case-studies/signal-studio/${f}` : null);
-
-// DRAFT (Jon edits) · THE PILLARS: the capture's name, what the frame will show (its caption), the pitch beside it
-type Pillar = { name: string; shot: string; h: string; p: string[] };
+// DRAFT (Jon edits) · THE PILLARS: a recording beside one line
+type Pillar = { name: string; shot: string; k: string; line: string };
 const PILLARS: Pillar[] = [
-  {
-    name: "chips",
-    shot: "a hardware synth played into the studio and landing on the keys as one voice",
-    h: "Any instrument becomes the instrument",
-    p: [
-      "Every sound I own goes through one framework. A hardware synth, a drum machine, a voice in the next room: the studio resamples it and hands it back as a voice on the same keys, with the same controls, that every other sound has.",
-      "Think of a lab bench. The beakers and the cutlery are laid out the same way every time; the chemicals are whatever you bring. The consistency of the tools is what produces a sound nobody else has. Anyone who resamples long enough walks away with a palette that is theirs alone.",
-    ],
-  },
-  {
-    name: "recording",
-    shot: "a take cut out of the rolling log after it was played, never armed first",
-    h: "It's always recording",
-    p: [
-      "Nothing played is ever lost. The studio keeps a rolling log of everything that comes out of it, and a take is cut out of that log after the fact. There is no arming, no red button, no moment where you decide to be serious.",
-      "It captures everything not for the sake of keeping everything, but for the sake of never having to think about recording at all. Zero cognitive load gets you straight to the fun, and straight to the fun means more music.",
-    ],
-  },
-  {
-    name: "radar",
-    shot: "the radar open: a microphone listening to the room, the chords, the scale and the tempo printing live",
-    h: "The radar",
-    p: [
-      "Live music theory, listening to the room. Open a microphone and the radar names the chords being played, the scale they belong to, and the tempo, so the studio can jam with whoever is playing out loud.",
-      "It takes care of the theory so I do not have to. The key lands on the keys, the drums land on the tempo, and I play.",
-    ],
-  },
-  {
-    name: "looping",
-    shot: "the last four bars grabbed on the bar line, auditioned, then minted as a loop in the jam",
-    h: "Looping",
-    p: [
-      "Grab the last four bars of whatever you just played, snapped to the bar, and it is a loop. The loop editor crops in regimented bars and still lets you drag freely: regimented and precise at once.",
-      "Cropping a loop in Ableton can take twenty minutes for no reason. Here it is the time it takes to press a key.",
-    ],
-  },
-  {
-    name: "grab",
-    shot: "a sound playing on the laptop cropped, repitched, run through the EQ and warped into the song's key",
-    h: "Grab anything, make it yours",
-    p: [
-      "Anything playing on the machine can be grabbed, cropped, repitched, EQ'd and warped into the key of the song. A friend's samples fold in the same way. Favorites stay.",
-      "What grows is a personal palette: an operating system where you get more and more sounds and one consistent way to operate all of them.",
-    ],
-  },
-  {
-    name: "catalog",
-    shot: "the library popup open inside the studio: a search, a result, a sound dropped straight onto a key",
-    h: "The catalog, absorbed",
-    p: [
-      "Five months ago the database was the flagship: every recording I had ever made, read by sound and filed. Now it is one streamlined popup inside the suite. Search, find, drop it on a key, keep playing.",
-    ],
-  },
-  {
-    name: "hands",
-    shot: "the same session played four ways: the laptop's keyboard, a MIDI keyboard, a hardware synth on the line input, a game controller",
-    h: "Laptop alone, MIDI, external gear, controller",
-    p: [
-      "The laptop alone is enough. Add a MIDI keyboard and it plays the same voices. Put a hardware synth on the line input and it records into the same take. Pick up a game controller and the sticks are hands on the knobs.",
-      "One consistent set of controls, however you arrive: drums, bass, keys, plus any other voice.",
-    ],
-  },
-].map((p) => ({ ...p, src: inPublic(`${p.name}.webm`), poster: inPublic(`${p.name}.webp`) }));
+  { name: "chips", shot: "a hardware synth ripped into the keys", k: "any instrument becomes the instrument", line: "Rip the synth. Now it's a chip, with the same keys and the same knobs as everything else." },
+  { name: "recording", shot: "a take cut out after it was played", k: "it's always recording", line: "There is no red button. Play, and decide later." },
+  { name: "radar", shot: "the radar naming the chords, the scale and the tempo", k: "the radar", line: "It listens to the room and does the music theory. You just play." },
+  { name: "looping", shot: "four bars grabbed, snapped, minted", k: "looping", line: "Cropping a loop in Ableton can take twenty minutes for no reason. Here it's one key." },
+  { name: "grab", shot: "a sound off the laptop, warped into the song's key", k: "grab anything, make it yours", line: "Anything playing on the machine: grab it, crop it, pull it into key. Yours now." },
+  { name: "catalog", shot: "the library popup, a sound dropped on a key", k: "the catalog, absorbed", line: "Five months ago the database was the whole flagship. Now it's a popup." },
+  { name: "hands", shot: "laptop keys, MIDI, a synth on the line in, a game controller", k: "laptop · MIDI · gear · controller", line: "The laptop alone is enough. The game controller is the fun part." },
+].map((p) => ({ ...p, src: first([`${p.name}.webm`]), poster: first([`${p.name}.webp`]) }));
 
-// DRAFT (Jon edits) · THE PITCH, the story card: plain first person, the conviction a stranger overhears
+// DRAFT (Jon edits) · THE DRAWINGS: slots for Jon's own assets, one line each
+const ART = [
+  { name: "bench", cap: "the lab bench: same beakers every time, your chemicals", k: "against flattening", line: "Same bench every time. Whatever you bring is the chemistry. Resample long enough and you walk away with a palette nobody else has." },
+  { name: "everyway", cap: "every way I've recorded, drawn as one room", k: "where it came from", line: "Laptop alone. A band going analog. Full analog, no DAW. Vocals in the next room. Drum machines, real and digital. All of it folded into one set of controls." },
+].map((a) => ({ ...a, src: first([`${a.name}.svg`, `${a.name}.webp`]) }));
+
+// the old ritual, in order (Jon: "a specific, intense, scientific environment")
+const RITUAL = ["outlets", "power switches", "the interface", "a software update", "arm the channels", "the one loose cable"];
+
+// DRAFT (Jon edits) · the card: three short blocks
 const BLOCKS = [
-  { h: "I didn't build this to replace Ableton", p: "I built it to get material to bring into Ableton. Ableton is unbeatable at automation and depth, and it is highly technical, like a microscope. A painter uses a single hair sometimes and a thick brush other times. Ableton is horrible for sketching, so the suite does the sketching: chips become sections, sections are basically stems, and then Ableton, where a project finally makes sense." },
-  { h: "The unfinished years were a saving problem", p: "MIDI chained to plugins I no longer had, new laptops, projects with holes in them, favorites that could never be iterated again. The fix was not discipline. It was a studio that never asks you to think about recording." },
-  { h: "The feeling", p: "The old ritual was outlets, power switches, the interface, a software update, arming channels, and the one loose cable. A specific, intense, scientific environment, amazing at certain things, but not for ideation. Now it is the laptop alone. Grab any audio freely, crop it instantly in regimented bars, it just works, and it takes care of the music theory." },
-  { h: "Where it came from", p: "I have recorded from every perspective: laptop-alone Ableton, a band going analog, fully analog with no DAW, hybrids, vocals in another room, real and digital drum machines, bass, keys. The suite compresses those lessons into one consistent set of controls for drums, bass and keys, plus any other voice. The ultimate dream of consistency, reliability and expandability." },
-  { h: "Elegance you can check", p: "Two main effects on the keys: a gate and a pitch bend. An EQ with an auto-filter built in. Every main effect is everywhere, with a status you can read at a glance, consistent across the board. Ableton has nothing like that." },
-  { h: "Against flattening", p: "Snapped to the bar but freely draggable. The same bench every time, whatever you bring to it. Consistency of tools is what produces a unique sound, because the person who resamples long enough ends up with a palette nobody else has." },
+  { h: "Not a replacement for Ableton", p: "Ableton is a microscope. Unbeatable at depth, horrible for sketching. I built this to have something worth putting under it." },
+  { h: "Elegance you can check", p: "Two main effects on the keys: a gate and a pitch bend. An EQ with the auto-filter built in. Every effect is everywhere, with a status you can read from across the room. Ableton has nothing like that." },
+  { h: "Why it captures everything", p: "Not to keep everything. So I never have to think about recording at all. Zero load, straight to the fun. More music." },
 ];
 
-// DRAFT (Jon edits) · UNDER THE HOOD: the honest ledger, every row read from ~/sites/signal-studio-page (branch `page`,
-// 8cf396c, 2026-10-15) and nothing invented. A row the source could not settle carries a ⚑ for Jon. The homepage
-// sheet's older rows that did NOT verify here (a keyframe every 1.5 s, 21 zones, six impulse responses) are left out.
+// DRAFT (Jon edits) · UNDER THE HOOD: the ledger, read from ~/sites/signal-studio-page (branch `page`, 8cf396c) and
+// nothing invented; a row the source could not settle carries a ⚑ for Jon.
 const HOOD = [
-  // ⚑ Jon: confirm the start month (the label says 2026)
-  { k: "role", tool: "solo", html: "Designer and builder, 2026 to now. I use it most days." },
-  { k: "stack", tool: "Vite + TypeScript", html: "A browser app with no framework: TypeScript on Vite, Web Audio with its processors on the audio thread, IndexedDB for everything saved. About 140,000 lines across 365 TypeScript files, with 200 test files beside them." },
-  { k: "record", tool: "take log", html: "The output is captured all the time. A take is cut out of the log after the fact, never armed in advance; a long one splits every 600 seconds." },
-  { k: "radar", tool: "essentia.js", html: "A microphone opens into a worker running essentia.js: chroma into chord detection, a key extractor, and a rhythm extractor for the tempo. The settled key and tempo land on the instrument until my hand sets them." },
-  { k: "rip", tool: "MIDI + checks", html: "A hardware synth is played note by note over MIDI in a chosen semitone step and recorded at the studio's 48 kHz. Every note is checked for pitch and kept or retried, and a rip that lost too much is refused whole. A loop finder keeps the longest clean loop under 3.5 seconds in each zone." },
-  { k: "chips", tool: "IndexedDB", html: "A chip is a cropped sound with its own room, saved to the chips folder in the page's own database and scoped to the project it was made in." },
-  { k: "warp", tool: "worklet", html: "A chip more than one percent off the song's tempo follows the BPM in key through a warp processor; inside that, it drifts free." },
-  { k: "effects", tool: "7 worklets", html: "Saturation, modulation, a voice gate, a micro pitch shift, a feedback-delay-network reverb, the warp, and unity, all on the audio thread. The room reverb is a convolver with four engraved sizes, small to vast, resolved once per context." },
-  { k: "loop", tool: "the carve", html: "The waveform sits under the chord chart. A drag snaps both edges to the record's own grid, so a loop is whole bars from a downbeat; the bench then slides its position freely. From the controller, one button grabs the last four whole bars and another mints them onto the shelf on the next bar line." },
-  { k: "hands", tool: "Web MIDI + WebHID", html: "The computer keyboard, a MIDI keyboard through Web MIDI, and a DualSense through WebHID with the Gamepad API as the fallback: the sticks turn the focused tower's EQ and its spaces, the shoulders step its voices." },
-  // ⚑ Jon: confirm what the library's bench does today (audition + crop) and whether a found sound drops straight onto a key
-  { k: "catalog", tool: "the library", html: "The catalog is a view inside the suite: a sidebar of the material and a popup bench to audition and crop it." },
-  // ⚑ Jon: confirm the one-click send to Ableton is live on the current setup (it goes through the console)
-  { k: "export", tool: "24-bit stems", html: "A take renders offline to 24-bit WAV stems with a sidecar file and a README, zipped. One click sends the set on to Ableton." },
+  { k: "stack", tool: "Vite + TypeScript", html: "A browser app, no framework. Web Audio on the audio thread, IndexedDB for everything saved. 365 files, 200 of tests beside them." },
+  { k: "record", tool: "take log", html: "The output is captured all the time; a take is cut out after the fact, never armed. Long ones split every 600 seconds." },
+  { k: "radar", tool: "essentia.js", html: "A microphone into a worker: chroma into chord detection, a key extractor, a rhythm extractor for the tempo." },
+  { k: "rip", tool: "MIDI + checks", html: "A synth played note by note over MIDI at 48 kHz. Every note is checked for pitch or retried; a loop finder keeps the longest clean loop under 3.5 s." },
+  { k: "effects", tool: "7 worklets", html: "Saturation, modulation, a voice gate, a micro shift, a feedback-delay-network reverb, the warp, unity. The room reverb is a convolver with four sizes." },
+  { k: "loop", tool: "the carve", html: "The waveform under the chord chart; a drag snaps both edges to the record's own grid; the controller grabs the last four bars." },
+  { k: "hands", tool: "Web MIDI + WebHID", html: "The keyboard, a MIDI keyboard, and a DualSense over WebHID: the sticks are hands on the focused tower's knobs." },
+  // ⚑ Jon: confirm the one-click send to Ableton is live on the current setup
+  { k: "export", tool: "24-bit stems", html: "A take renders offline to 24-bit WAV stems, zipped. One click sends them on to Ableton." },
 ];
 ---
 
 <Room
   title="Signal Studio — Jonathan Tollefson"
-  description="Signal Studio is the music-making suite I built around my browser instrument: it is always recording, it turns any sound into a playable voice, it listens to the room and handles the theory, and it hands Ableton material that already makes sense. Built to be the ultimate scribe for musical ideas."
+  description="Signal Studio is the music suite I built around my browser instrument. It is always recording, it turns any sound into a chip, it listens to the room and does the theory, and it hands Ableton something worth opening."
   label="signal studio · 2026 – now"
-  hook="Signal Studio is the music-making suite I built to be the ultimate scribe for musical ideas."
+  hook="The ultimate scribe for musical ideas."
   cls="sg-cs"
 >
-  {/* DRAFT (Jon edits): the hook above, the second sentence and the creed below */}
-  <p class="sg-claim">It lives in my laptop, it is always recording, and any sound that reaches it becomes a playable voice. It is the system around the <a href="/signal">instrument</a>, and it exists so that the DAW gets a reason to open.</p>
-  <ul class="sg-creed" aria-label="the philosophy">
-    <li><b>recording</b><span>never think about it</span></li>
-    <li><b>ritual</b><span>zero prerequisite</span></li>
-    <li><b>theory</b><span>handled</span></li>
-    <li><b>controls</b><span>one consistent way to operate every sound</span></li>
-  </ul>
+  {/* DRAFT (Jon edits): the line under the hook */}
+  <p class="sg-claim">A studio that's always recording, so I never have to think about recording. The <a href="/signal">instrument</a> is one piece. This is the rest.</p>
 
-  {/* THE PILLARS: a capture frame beside its pitch. The frame is honest while the recording is missing. */}
+  {/* THE RITUAL: the old way, struck through, then the new way. The page draws this one itself. */}
+  <figure class="sg-ritual" aria-label="the old ritual, then the new one">
+    <ol class="sg-ritual-old">
+      {RITUAL.map((r) => <li>{r}</li>)}
+    </ol>
+    <p class="sg-ritual-new"><b>laptop.</b> <span>play.</span></p>
+    {/* DRAFT (Jon edits) */}
+    <figcaption class="sg-cap">The old setup was amazing at certain things. Ideation wasn't one of them.</figcaption>
+  </figure>
+
+  {/* THE PILLARS: a recording beside one line */}
   <div class="sg-pillars">
     {PILLARS.map((pl) => (
       <section class="sg-pillar" id={`pillar-${pl.name}`} aria-labelledby={`pillar-${pl.name}-h`}>
@@ -153,14 +97,40 @@ const HOOD = [
               <p class="sg-pending">{pl.shot}</p>
             )}
           </div>
-          {/* the placard exists once the recording is in: the shot's caption moves out of the frame to under it.
-              While pending the frame itself carries the caption and the heading beside it names the pillar, so a
-              placard would only repeat the heading (QA 2026-10-15: it did, word for word, stacked on phones). */}
           {pl.src && <figcaption class="sg-placard">{pl.shot}</figcaption>}
         </figure>
         <div class="sg-pitch">
-          <h2 class="sg-h" id={`pillar-${pl.name}-h`}>{pl.h}</h2>
-          {pl.p.map((t) => <p class="sg-p">{t}</p>)}
+          <p class="sg-k" id={`pillar-${pl.name}-h`}>{pl.k}</p>
+          <p class="sg-line">{pl.line}</p>
+        </div>
+      </section>
+    ))}
+  </div>
+
+  {/* THE PIPELINE: chips → sections → stems → Ableton. The page draws this one itself. */}
+  <figure class="sg-pipe" aria-label="the pipeline">
+    <ol class="sg-pipe-row">
+      <li>chips</li><li class="sg-arrow" aria-hidden="true">→</li>
+      <li>sections</li><li class="sg-arrow" aria-hidden="true">→</li>
+      <li>stems</li><li class="sg-arrow" aria-hidden="true">→</li>
+      <li class="sg-pipe-end">boom, Ableton</li>
+    </ol>
+    {/* DRAFT (Jon edits) */}
+    <figcaption class="sg-cap">Sections are basically stems. Open the DAW and a project already makes sense.</figcaption>
+  </figure>
+
+  {/* THE DRAWINGS: Jon's assets, honest slots until they land */}
+  <div class="sg-pillars sg-arts">
+    {ART.map((a) => (
+      <section class="sg-pillar sg-art" id={`art-${a.name}`} aria-labelledby={`art-${a.name}-h`}>
+        <figure class="sg-fig" data-pending={a.src ? undefined : ""}>
+          <div class="sg-frame sg-frame-art">
+            {a.src ? <img class="sg-img" src={a.src} alt={a.cap} loading="lazy" /> : <p class="sg-pending">{a.cap}</p>}
+          </div>
+        </figure>
+        <div class="sg-pitch">
+          <p class="sg-k" id={`art-${a.name}-h`}>{a.k}</p>
+          <p class="sg-line">{a.line}</p>
         </div>
       </section>
     ))}
@@ -170,21 +140,13 @@ const HOOD = [
 </Room>
 
 <script>
-  // THE CAPTURES play only while on screen (seven muted loops decoding at once would be waste), and under reduced
-  // motion nothing plays by itself: the frames hold still with controls. Nothing to do while every frame is pending.
+  // on-screen captures play; off-screen pause; reduced motion holds still with controls
   {
     const vids = Array.from(document.querySelectorAll<HTMLVideoElement>(".sg-video"));
     if (vids.length) {
-      const still = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-      if (still) vids.forEach((v) => { v.pause(); v.controls = true; });
+      if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) vids.forEach((v) => { v.pause(); v.controls = true; });
       else {
-        const io = new IntersectionObserver((entries) => {
-          entries.forEach((e) => {
-            const v = e.target as HTMLVideoElement;
-            if (e.isIntersecting) void v.play().catch(() => {});
-            else v.pause();
-          });
-        }, { threshold: 0.25 });
+        const io = new IntersectionObserver((es) => es.forEach((e) => { const v = e.target as HTMLVideoElement; if (e.isIntersecting) void v.play().catch(() => {}); else v.pause(); }), { threshold: 0.25 });
         vids.forEach((v) => io.observe(v));
       }
     }
@@ -192,62 +154,49 @@ const HOOD = [
 </script>
 
 <style is:global>
-  /* ── the claim under the hook: the second sentence on the measure, then the creed (the-console's list recipe) ── */
+  /* ── the claim ── */
   .sg-cs .rm-head { margin-bottom: var(--sp-4); }
-  .sg-cs .rm-hook { max-width: 26ch; }
-  .sg-cs .sg-claim { max-width: var(--rm-measure); margin: 0 0 var(--sp-6); font: 400 1.0625rem/1.6 var(--rm-sans); color: var(--rm-ink); text-wrap: pretty; }
-  .sg-creed { list-style: none; margin: 0 0 var(--sp-12); padding: 0; display: flex; flex-wrap: wrap; gap: 8px 32px; max-width: 48rem; }
-  .sg-creed li { display: flex; gap: 10px; align-items: baseline; font: 400 0.9375rem/1.5 var(--rm-sans); color: var(--rm-dim); }
-  .sg-creed b { font: 500 0.6875rem/1.6 var(--rm-mono); letter-spacing: 0.12em; text-transform: lowercase; color: var(--rm-ink); }
+  .sg-cs .rm-hook { max-width: 18ch; font-size: 2.75rem; }
+  @media (max-width: 720px) { .sg-cs .rm-hook { font-size: 2.125rem; } }
+  /* three classes deep on every <p>: Room's `.room-cs .cs-main :where(p)` reset (two classes) otherwise wins */
+  .room-cs .sg-cs .sg-claim { max-width: var(--rm-measure); margin: 0 0 var(--sp-12); font: 400 1.125rem/1.55 var(--rm-sans); color: var(--rm-ink); text-wrap: pretty; }
 
-  /* ── the pillars: a 12% hairline above each, the frame beside its pitch on desks, stacked on phones ── */
+  /* ── the ritual: six steps struck through, then two words ── */
+  .sg-ritual { margin: 0 0 var(--sp-12); padding: var(--sp-8) 0; border-top: 1px solid color-mix(in oklab, var(--rm-ink) 12%, transparent); border-bottom: 1px solid color-mix(in oklab, var(--rm-ink) 12%, transparent); }
+  .sg-ritual-old { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 8px 28px; counter-reset: step; }
+  .sg-ritual-old li { font: 500 1.125rem/1.4 var(--rm-display); color: var(--rm-dim); text-decoration: line-through; text-decoration-thickness: 1.5px; text-decoration-color: color-mix(in oklab, var(--rm-ink) 55%, transparent); }
+  .sg-ritual-old li::before { counter-increment: step; content: counter(step, decimal-leading-zero); display: inline-block; margin-right: 8px; font: 500 0.6875rem/1 var(--rm-mono); letter-spacing: 0.12em; color: var(--rm-dim); }
+  .sg-cs .sg-ritual .sg-ritual-new { margin: var(--sp-6) 0 0; font: 500 2.25rem/1.1 var(--rm-display); letter-spacing: -0.015em; color: var(--rm-ink); }
+  .sg-ritual-new span { color: var(--rm-dim); }
+  .sg-cap { margin: var(--sp-6) 0 0; max-width: var(--rm-measure); font: 600 0.75rem/1.5 var(--rm-mono); letter-spacing: 0.04em; color: var(--rm-ink); }
+
+  /* ── the pillars: a frame beside one line ── */
   .sg-pillars { display: flex; flex-direction: column; }
-  .sg-pillar {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr);
-    gap: var(--sp-6) var(--sp-12);
-    align-items: start;
-    padding: var(--sp-8) 0 var(--sp-12);
-    border-top: 1px solid color-mix(in oklab, var(--rm-ink) 12%, transparent);
-    transition: border-color 560ms ease;
-  }
+  .sg-pillar { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--sp-6) var(--sp-12); align-items: start; padding: var(--sp-8) 0 var(--sp-12); border-top: 1px solid color-mix(in oklab, var(--rm-ink) 12%, transparent); }
+  .sg-pillars:not(.sg-arts) .sg-pillar:first-child { border-top: 0; padding-top: 0; }
   @media (min-width: 900px) {
     .sg-pillar { grid-template-columns: minmax(0, 7fr) minmax(0, 5fr); padding-top: var(--sp-12); }
+    .sg-pillars:not(.sg-arts) .sg-pillar:first-child { padding-top: 0; }
   }
-  /* the figure: the 16:9 frame, then the placard 14px under it (the homepage's .st-slot) */
   .sg-fig { display: flex; flex-direction: column; align-items: center; gap: 14px; margin: 0; min-width: 0; }
-  .sg-frame {
-    box-sizing: border-box;
-    width: 100%;
-    aspect-ratio: 16 / 9;
-    overflow: hidden;
-    display: grid;
-    place-items: center;
-  }
-  .sg-video { grid-area: 1 / 1; display: block; width: 100%; height: 100%; object-fit: cover; }
-  /* THE PENDING FRAME: a hairline in the room's dim ink at 18 %, square, no fill, no shadow, the shot's caption centred
-     inside it. Nothing that pretends to be a frame: no UI, no gradient, no play glyph. */
+  .sg-frame { box-sizing: border-box; width: 100%; aspect-ratio: 16 / 9; overflow: hidden; display: grid; place-items: center; }
+  .sg-frame-art { aspect-ratio: 3 / 2; }
+  .sg-video, .sg-img { grid-area: 1 / 1; display: block; width: 100%; height: 100%; object-fit: cover; }
+  .sg-img { object-fit: contain; }
+  /* THE PENDING FRAME: a hairline at 18 %, square, no fill, the caption centred. Nothing that pretends to be a frame. */
   .sg-fig[data-pending] .sg-frame { border: 1px solid color-mix(in oklab, var(--rm-dim) 18%, transparent); transition: border-color 560ms ease; }
-  .sg-pending {
-    grid-area: 1 / 1;
-    max-width: 34ch;
-    margin: 0;
-    padding: 0 24px;
-    text-align: center;
-    font: 500 0.6875rem/1.5 var(--rm-mono);
-    letter-spacing: 0.12em;
-    text-transform: lowercase;
-    color: var(--rm-dim);
-    text-wrap: balance;
-  }
+  .sg-cs .sg-fig .sg-pending { grid-area: 1 / 1; max-width: 34ch; margin: 0; padding: 0 24px; text-align: center; font: 500 0.6875rem/1.5 var(--rm-mono); letter-spacing: 0.12em; text-transform: lowercase; color: var(--rm-dim); text-wrap: balance; }
   .sg-placard { max-width: 44ch; margin: 0; font: 500 0.6875rem/1.5 var(--rm-mono); letter-spacing: 0.06em; text-align: center; color: var(--rm-dim); text-wrap: balance; }
-  /* the pitch: a moment heading in the display face, the read on the measure */
+  /* the pitch: a mono kicker, then the line in the display face */
   .sg-pitch { min-width: 0; }
-  .sg-h { margin: 0 0 var(--sp-3); font: 500 1.375rem/1.2 var(--rm-display); letter-spacing: -0.01em; color: var(--rm-ink); text-wrap: balance; }
-  .sg-cs .sg-p { margin: 0 0 var(--sp-4); max-width: var(--rm-measure); font: 400 1rem/1.6 var(--rm-sans); text-wrap: pretty; }
-  .sg-cs .sg-p:last-child { margin-bottom: 0; }
-  @media (min-width: 900px) {
-    /* beside the frame the heading sits on the frame's top edge */
-    .sg-h { margin-top: -0.2em; }
-  }
+  .sg-cs .sg-pitch .sg-k { margin: 0 0 var(--sp-3); font: 500 0.6875rem/1.5 var(--rm-mono); letter-spacing: 0.12em; text-transform: lowercase; color: var(--rm-dim); }
+  .sg-cs .sg-pitch .sg-line { margin: 0; max-width: 22ch; font: 500 1.5rem/1.3 var(--rm-display); letter-spacing: -0.01em; color: var(--rm-ink); text-wrap: pretty; }
+  @media (max-width: 720px) { .sg-cs .sg-pitch .sg-line { font-size: 1.3125rem; max-width: none; } }
+
+  /* ── the pipeline: four boxes on one line, arrows between, the last one lit ── */
+  .sg-pipe { margin: 0 0 var(--sp-12); padding: var(--sp-8) 0 0; border-top: 1px solid color-mix(in oklab, var(--rm-ink) 12%, transparent); }
+  .sg-pipe-row { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; align-items: center; gap: 12px; }
+  .sg-pipe-row li { padding: 12px 18px; border: 1px solid color-mix(in oklab, var(--rm-ink) 40%, transparent); font: 500 1.125rem/1 var(--rm-display); color: var(--rm-ink); white-space: nowrap; transition: border-color 560ms ease, color 560ms ease, background 560ms ease; }
+  .sg-pipe-row .sg-arrow { padding: 0; border: 0; font: 500 1rem/1 var(--rm-mono); color: var(--rm-dim); }
+  .sg-pipe-row .sg-pipe-end { background: var(--rm-ink); color: var(--rm-paper); border-color: var(--rm-ink); }
 </style>
