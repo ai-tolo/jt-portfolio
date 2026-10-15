@@ -108,7 +108,7 @@ export const STUDIO_COPY: {
   title: string;
   kind: string;
   dek: string;
-  surface: { alt: string; caption: string; targets: SurfaceLine[] };
+  surface: { alt: string; targets: SurfaceLine[] };
   said: string;
   keep: string;
   captures: StudioCapture[];
@@ -116,25 +116,27 @@ export const STUDIO_COPY: {
   title: "Signal Studio",
   // the one mono word in the sheet's top-right corner (.sheet-kind)
   kind: "suite",
-  // the band's line (DRAFT, 2026-10-15; was "A studio that lives in my laptop: always recording, played from a game controller.")
-  dek: "SIGNAL on steroids: the whole studio, in the laptop, for making the idea exist.",
+  // the band's line (DRAFT, 2026-10-15, round two; Jon kept "SIGNAL on steroids" and cut the rest: "a weird sentence
+  // that doesn't make a lot of sense" to an outside reader. Was "…: the whole studio, in the laptop, for making the
+  // idea exist.")
+  dek: "SIGNAL on steroids: a whole studio that opens like a notebook and goes where I go.",
   surface: {
     alt: "The Signal Studio at rest: three engines side by side with their effects, the chord rack, the keyboard with its letter keys, and the chips well beneath.",
-    // the mono caption under the still
-    caption: "The real thing, at rest. Press a part.",
-    // the six lines, one per ring, in the order they are pressed through
+    // (the caption "The real thing, at rest. Press a part." left 2026-10-15 round two: Jon, "I don't like … that text at
+    // all"; the parts list beside the still says what is pressable)
+    // the six lines, one per part, in the order they are listed; `label` is the part's name in the list
     targets: [
-      { id: "engines", label: "The three engines", fit: true,
+      { id: "engines", label: "the three engines", fit: true,
         line: "Three engines that resample anything. The shorthand is drums, keys and bass, because that's a keyboard player's whole band." },
-      { id: "effects", label: "The effects, on the surface",
+      { id: "effects", label: "the effects",
         line: "Every engine's effects are on the surface at once. I can see which one has the delay and which has the sidechain without opening anything. Ableton makes you expand a rack and pop a window for that." },
-      { id: "take", label: "The take",
+      { id: "take", label: "the take",
         line: "It was already listening. There's no record button to forget. A take is cut out afterwards." },
-      { id: "chips", label: "The chips",
+      { id: "chips", label: "the chips",
         line: "Any sound on the laptop, cropped in two moves, becomes a key: re-pitched, re-timed, remixed." },
-      { id: "radar", label: "The radar's readout",
+      { id: "radar", label: "the radar",
         line: "Built in New York, jamming with a friend who won't stay in one key. One click and the room's chord, scale and tempo are on the screen. Join without interrupting him." },
-      { id: "hands", label: "The hands",
+      { id: "hands", label: "the hands",
         line: "A laptop, a MIDI keyboard, a travel keyboard, a PlayStation controller: writing utensils. The same moves on every one, every time." },
     ],
   },

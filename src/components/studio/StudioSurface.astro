@@ -1,31 +1,34 @@
 ---
 /**
- * StudioSurface — THE OBJECT IS THE SURFACE (2026-10-15, the Studio sheet's round two). One faithful still of the
- * real Studio at rest (public/builds/studio/surface.webp: localhost:4460's signal view, woken by one click, nothing
- * playing, 1440×900 at 2×, cropped to the column right of the sidebar), and over it SIX PRESS TARGETS at most: hairline
- * rings in the sheet's accent at the real elements' positions, measured from their DOM rects at capture time and
- * stored as percentages in studio-surface.json (never eyeballed). A press lights one ring and prints ONE LINE in a
- * slot under the still that is reserved to the tallest line (visibility, not display: a press never moves the page).
- * The first target is lit on load; no hovers, no labels on the still, no numbers.
+ * StudioSurface — THE OBJECT IS THE SURFACE (2026-10-15, the Studio sheet's round two; round three the same day).
+ * One faithful still of the real Studio at rest (public/builds/studio/surface.webp: localhost:4460's signal view,
+ * woken by one click, nothing playing, 1440×900 at 2×, cropped to the column right of the sidebar) beside THE PARTS
+ * LIST: six named rows. A press on a row lights that part's ring on the still (a hairline rectangle in the sheet's
+ * accent at the element's measured place, studio-surface.json, never eyeballed) and prints the part's one line right
+ * under the row; the other rows close. The first part is lit on load; nothing lights itself. The list is shorter than
+ * the still on a desk, so a line printing never moves the page; on a phone the list stands under the picture and the
+ * lit row's line takes its place as an accordion row does (the sheet grows, the picture above it never moves).
  *
- * PHONES: the still scales to the sheet, and under ~700px of stage its words fall under 8px, so the surface becomes
- * a CROPPED STILL PER TARGET (`data-crop`): the same image laid out at no less than 0.7 of its capture size (a target
- * marked `fit` is shown whole instead: the three engines), the lit target centred in a 4:3 window, clamped to the
- * picture's edges; a press glides the crop and swaps the line. The rings ride inside the scaled layer, so they stay
- * true at every size; cropped, every tap on the picture steps to the next target (the ones outside the window too).
+ * Round three (Jon): the rings alone did not say what was pressable, and the line under a 966px still was below the
+ * fold; the caption "press a part" was not the answer. So the module is a LIST beside a PICTURE: the rows look like
+ * the controls they are, the ring on the picture answers the row, and the line prints where the eye already is.
  *
- * Words: the lines are the host's (objects-copy.ts STUDIO_COPY.surface, DRAFT, Jon's). Styles here; the caption is
- * the host's `.wk-cap` in the default slot.
+ * PHONES: the still scales to the sheet, and under ~700px of stage its words fall under 8px, so the picture becomes a
+ * CROPPED STILL PER PART (`data-crop`): the same image laid out at no less than 0.7 of its capture size (a part marked
+ * `fit` shows whole: the three engines), the lit part centred in a 4:3 window, clamped to the picture's edges; a press
+ * on a row glides the crop; a tap on the picture steps to the next part.
+ *
+ * Words: the lines and the row names are the host's (objects-copy.ts STUDIO_COPY.surface, DRAFT, Jon's).
  */
 export interface SurfaceTarget {
   id: string;
-  /** the ring's accessible name */
+  /** the row's name in the list (and the ring's accessible name) */
   label: string;
-  /** the one line a press prints */
+  /** the one line a press prints under the row */
   line: string;
-  /** where the phone crop centres inside the target, 0..1 of its width and height (default the middle) */
+  /** where the phone crop centres inside the part, 0..1 of its width and height (default the middle) */
   focus?: [number, number];
-  /** the phone crop shows this target whole, at the fit scale, words or no words (the three engines) */
+  /** the phone crop shows this part whole, at the fit scale, words or no words (the three engines) */
   fit?: boolean;
 }
 interface Props {
@@ -47,37 +50,53 @@ const shown = targets.map((t) => {
 });
 ---
 
-<figure class="ss" data-surface style={`--ss-fw:${frame.w};--ss-fh:${frame.h}`}>
+<div class="ss" data-surface style={`--ss-fw:${frame.w};--ss-fh:${frame.h}`}>
   <div class="ss-stage" data-ss-stage>
     <div class="ss-layer" data-ss-layer>
       <img class="ss-img" src={src} width={width} height={height} alt={alt} loading="lazy" decoding="async" />
       {shown.map((t, i) => (
-        <button
+        <span
           class="ss-ring"
-          type="button"
           data-ss-target={t.id}
           data-fx={t.focus?.[0] ?? 0.5}
           data-fy={t.focus?.[1] ?? 0.5}
           data-fit={t.fit ? "" : undefined}
-          aria-pressed={i === 0 ? "true" : "false"}
-          aria-label={t.label}
+          data-on={i === 0 ? "" : undefined}
+          aria-hidden="true"
           style={`--tx:${t.r.x}%;--ty:${t.r.y}%;--tw:${t.r.w}%;--th:${t.r.h}%`}
         />
       ))}
     </div>
   </div>
-  <div class="ss-lines" aria-live="polite">
+  {/* THE PARTS LIST: one row per part, a button; the lit row carries the line */}
+  <ol class="ss-list" aria-label="The parts of the studio">
     {shown.map((t, i) => (
-      <p class="ss-line" data-ss-line={t.id} data-on={i === 0 ? "" : undefined}>{t.line}</p>
+      <li class="ss-part" data-ss-part={t.id} data-on={i === 0 ? "" : undefined}>
+        <button class="ss-row" type="button" aria-expanded={i === 0 ? "true" : "false"} aria-controls={`ss-line-${t.id}`}>
+          <span class="ss-mark" aria-hidden="true"></span>
+          <span class="ss-name">{t.label}</span>
+        </button>
+        <p class="ss-line" id={`ss-line-${t.id}`} hidden={i !== 0}>{t.line}</p>
+      </li>
     ))}
-  </div>
-  <slot />
-</figure>
+  </ol>
+</div>
 
 <style>
+  /* THE MODULE: the picture and the list. Stacked on a narrow sheet; side by side from 820px of sheet, the list a
+     fixed column at the right so the picture takes the rest and the whole module stands in one screen at 1440×900 */
   .ss {
-    margin: 0;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 28px;
     width: 100%;
+    align-items: start;
+  }
+  @container sheet (min-width: 820px) {
+    .ss {
+      grid-template-columns: minmax(0, 1fr) 272px;
+      gap: 36px;
+    }
   }
   /* THE STAGE: the still's own shape, a hairline and the sheet's inner corner around it; the still is dark on
      purpose (the real thing), the paper around it stays paper */
@@ -104,8 +123,8 @@ const shown = targets.map((t) => {
     user-select: none;
     -webkit-user-drag: none;
   }
-  /* THE RINGS: one hairline rectangle per target at its measured place, the sheet's accent; at rest a quiet ring,
-     lit a full one with a one-pixel halo. No hover state: a press is the only change. */
+  /* THE RINGS: one hairline rectangle per part at its measured place, the sheet's accent; only the lit part's ring
+     shows (the list names the rest), with a one-pixel halo */
   .ss-ring {
     position: absolute;
     left: var(--tx);
@@ -113,51 +132,81 @@ const shown = targets.map((t) => {
     width: var(--tw);
     height: var(--th);
     box-sizing: border-box;
+    border: 1px solid var(--sheet-acc);
+    border-radius: 6px;
+    box-shadow: 0 0 0 1.5px color-mix(in oklab, var(--sheet-acc) 55%, transparent), inset 0 0 0 1px color-mix(in oklab, var(--sheet-acc) 45%, transparent);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 220ms ease;
+  }
+  .ss-ring[data-on] {
+    opacity: 1;
+  }
+  /* THE LIST: rows the height of the rail's (44), a hairline between them, the part's name in the label face; the
+     lit row's mark fills and its name takes the ink; the line prints under the name in the body face */
+  .ss-list {
+    list-style: none;
     margin: 0;
     padding: 0;
-    border: 1px solid color-mix(in oklab, var(--sheet-acc) 42%, transparent);
-    border-radius: 6px;
+    border-top: 1px solid color-mix(in oklab, var(--sheet-ink) 12%, transparent);
+    transition: border-color 560ms ease;
+  }
+  .ss-part {
+    border-bottom: 1px solid color-mix(in oklab, var(--sheet-ink) 12%, transparent);
+    transition: border-color 560ms ease;
+  }
+  .ss-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    width: 100%;
+    min-height: 44px;
+    margin: 0;
+    padding: 0 2px;
+    border: 0;
     background: transparent;
+    text-align: left;
     cursor: pointer;
     appearance: none;
-    transition: border-color 220ms ease, box-shadow 220ms ease;
+    color: var(--sheet-dim);
+    transition: color 220ms ease;
   }
-  .ss-ring[aria-pressed="true"] {
+  .ss-row:hover { color: var(--sheet-ink); }
+  .ss-row:focus-visible { outline: 2px solid var(--sheet-ink); outline-offset: 2px; border-radius: 6px; }
+  .ss-part[data-on] .ss-row { color: var(--sheet-ink); cursor: default; }
+  /* the mark: a small ring, the picture's ring in miniature; filled a step toward the accent when lit */
+  .ss-mark {
+    flex: none;
+    width: 14px;
+    height: 10px;
+    box-sizing: border-box;
+    border: 1px solid color-mix(in oklab, var(--sheet-acc) 70%, transparent);
+    border-radius: 3px;
+    transition: background-color 220ms ease, border-color 220ms ease;
+  }
+  .ss-part[data-on] .ss-mark {
     border-color: var(--sheet-acc);
-    box-shadow: 0 0 0 1.5px color-mix(in oklab, var(--sheet-acc) 55%, transparent), inset 0 0 0 1px color-mix(in oklab, var(--sheet-acc) 45%, transparent);
+    background: color-mix(in oklab, var(--sheet-acc) 28%, transparent);
   }
-  .ss-ring:focus-visible {
-    outline: 2px solid #fff;
-    outline-offset: 2px;
-  }
-  /* THE LINE: every target's line stacked in one cell so the slot is as tall as the tallest; only the lit one shows */
-  .ss-lines {
-    display: grid;
-    margin: 22px auto 0;
-    max-width: 54ch;
+  .ss-name {
+    font: 500 0.8125rem/1.2 var(--sheet-mono);
+    letter-spacing: 0.06em;
+    text-transform: lowercase;
   }
   .ss-line {
-    grid-area: 1 / 1;
     margin: 0;
-    visibility: hidden;
-    text-align: center;
-    font: 400 1.0625rem/1.5 var(--sheet-sans);
+    padding: 2px 2px 18px 28px; /* on the name's axis (the mark's 14 + the 12 gap + the row's 2) */
+    font: 400 1rem/1.5 var(--sheet-sans);
     text-wrap: pretty;
     color: var(--sheet-ink);
     transition: color 560ms ease;
   }
-  .ss-line[data-on] {
-    visibility: visible;
-  }
-  @container sheet (min-width: 820px) {
-    .ss-line { font-size: 1.125rem; }
-    .ss-lines { margin-top: 26px; }
-  }
+  .ss-line[hidden] { display: none; }
   /* THE CROP (phones): a 4:3 window; the layer is laid out at the still's own scale (the script writes its size and
-     its offset) and glides between targets */
+     its offset) and glides between parts; a tap on the window steps to the next part */
   .ss[data-crop] .ss-stage {
     aspect-ratio: 4 / 3;
-    cursor: pointer; /* a tap on the crop steps to the next target */
+    cursor: pointer;
   }
   .ss[data-crop] .ss-layer {
     inset: auto;
@@ -174,34 +223,35 @@ const shown = targets.map((t) => {
 </style>
 
 <script>
-  // ONE SURFACE, SIX PRESSES. The lit target is the one with aria-pressed; its line is the one with data-on. Nothing
-  // lights itself after load; nothing hovers. Below ~700px of stage the surface crops: the layer is sized to the
-  // still at max(0.8, the fit) of its capture scale and slid so the lit target's focus sits in the window's centre,
-  // clamped to the picture.
+  // ONE SURFACE, SIX PARTS. The lit part is the row with data-on; its ring is the one with data-on; its line is the
+  // one not hidden. Nothing lights itself after load. Below ~700px of stage the picture crops: the layer is sized to
+  // the still at max(0.7, the fit) of its capture scale (the fit alone for a `fit` part) and slid so the lit part's
+  // focus sits in the window's centre, clamped to the picture; a tap on the window steps to the next part.
   const CROP_BELOW = 700; // stage px: under this the still's words would print under 8px
   const MIN_SCALE = 0.7; // of the capture's CSS pixels (the words' floor; the glass numerals stay readable)
   document.querySelectorAll<HTMLElement>("[data-surface]").forEach((fig) => {
     const stage = fig.querySelector<HTMLElement>("[data-ss-stage]");
     const layer = fig.querySelector<HTMLElement>("[data-ss-layer]");
     if (!stage || !layer) return;
-    const rings = Array.from(fig.querySelectorAll<HTMLButtonElement>(".ss-ring"));
-    const lines = Array.from(fig.querySelectorAll<HTMLElement>(".ss-line"));
+    const rings = Array.from(fig.querySelectorAll<HTMLElement>(".ss-ring"));
+    const parts = Array.from(fig.querySelectorAll<HTMLElement>(".ss-part"));
     const FW = Number(getComputedStyle(fig).getPropertyValue("--ss-fw")) || 1168;
     const FH = Number(getComputedStyle(fig).getPropertyValue("--ss-fh")) || 900;
-    let lit = rings.find((r) => r.getAttribute("aria-pressed") === "true") ?? rings[0];
+    let lit = rings.find((r) => r.hasAttribute("data-on")) ?? rings[0];
     const crop = () => {
       const sw = stage.clientWidth;
       const sh = stage.clientHeight;
-      const on = sw > 0 && sw < CROP_BELOW;
+      // stacked (the list under the picture: one grid column) and narrow: a side-by-side desk never crops
+      const stacked = getComputedStyle(fig).gridTemplateColumns.trim().split(/\s+/).length === 1;
+      const on = stacked && sw > 0 && sw < CROP_BELOW;
       fig.toggleAttribute("data-crop", on);
       if (!on) { layer.style.width = ""; layer.style.height = ""; layer.style.transform = ""; return; }
       const tx = (parseFloat(lit.style.getPropertyValue("--tx")) / 100) * FW;
-      const ty = (parseFloat(lit.style.getPropertyValue("--ty")) / 100) * FW * (FH / FW);
+      const ty = (parseFloat(lit.style.getPropertyValue("--ty")) / 100) * FH;
       const tw = (parseFloat(lit.style.getPropertyValue("--tw")) / 100) * FW;
       const th = (parseFloat(lit.style.getPropertyValue("--th")) / 100) * FH;
       const fx = Number(lit.dataset.fx ?? 0.5);
       const fy = Number(lit.dataset.fy ?? 0.5);
-      // the scale: fit the target with a little air, never under the words' floor, never over the still's own pixels
       const fit = Math.min(sw / (tw * 1.06), sh / (th * 1.06));
       const s = lit.hasAttribute("data-fit") ? fit : Math.min(1.25, Math.max(MIN_SCALE, fit));
       const W = FW * s;
@@ -214,17 +264,27 @@ const shown = targets.map((t) => {
       layer.style.height = `${H}px`;
       layer.style.transform = `translate(${Math.round(x)}px, ${Math.round(y)}px)`;
     };
-    const light = (ring: HTMLButtonElement) => {
+    const light = (id: string) => {
+      const ring = rings.find((r) => r.dataset.ssTarget === id);
+      if (!ring) return;
       lit = ring;
-      rings.forEach((r) => r.setAttribute("aria-pressed", r === ring ? "true" : "false"));
-      lines.forEach((l) => l.toggleAttribute("data-on", l.dataset.ssLine === ring.dataset.ssTarget));
+      rings.forEach((r) => r.toggleAttribute("data-on", r === ring));
+      parts.forEach((p) => {
+        const on = p.dataset.ssPart === id;
+        p.toggleAttribute("data-on", on);
+        p.querySelector<HTMLButtonElement>(".ss-row")?.setAttribute("aria-expanded", on ? "true" : "false");
+        const line = p.querySelector<HTMLElement>(".ss-line");
+        if (line) line.hidden = !on;
+      });
       crop();
     };
-    const next = () => light(rings[(rings.indexOf(lit) + 1) % rings.length]);
-    // cropped, the lit target fills the window and the others stand outside it (a top-bar target sits at the
-    // window's top edge, the clamp holding the picture): EVERY tap on the crop, rings included, steps to the next
-    rings.forEach((r) => r.addEventListener("click", (e) => { e.stopPropagation(); if (fig.hasAttribute("data-crop")) next(); else light(r); }));
-    stage.addEventListener("click", () => { if (fig.hasAttribute("data-crop")) next(); });
+    parts.forEach((p) => p.querySelector(".ss-row")?.addEventListener("click", () => light(p.dataset.ssPart!)));
+    // cropped, the lit part fills the window: a tap on the picture steps to the next part
+    stage.addEventListener("click", () => {
+      if (!fig.hasAttribute("data-crop")) return;
+      const i = rings.indexOf(lit);
+      light(rings[(i + 1) % rings.length].dataset.ssTarget!);
+    });
     crop();
     new ResizeObserver(crop).observe(stage);
   });

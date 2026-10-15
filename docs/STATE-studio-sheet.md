@@ -20,15 +20,20 @@
 - QA on the built site (dist/client on a scratch :4693): 1440×900 day + night and 375×812 touch, six presses (the sheet's top never moved, the line slot held 81px / 153px), fold open + closed, scrollWidth == viewport, 0 errors, the rail lit on studio. Captures in ~/Documents/studio-build/studio-sheet/.
 - Out of this sheet, unchanged: sheet.css still carries `.sheet-beats` (no sheet uses it now); READOUT.watch + SOURCE + the ledger import in StudioOne are unused since the Intake sheet's round (the watch's hood is IntakeClock).
 
+## Round three (2026-10-15, Jon: the rings alone said nothing about what was pressable, the line hid below the fold, the caption had to go; the dek after "SIGNAL on steroids" read as a weird sentence; SIGNAL's title looked like another font)
+- THE MODULE: the still at the left, THE PARTS LIST at the right (272px from 820px of sheet; stacked beneath on phones): six rows in the label face with a small ring mark; a press lights the row, its ring on the still, and prints its line under the row (an accordion; the list stays shorter than the still on a desk, so the page never moves). Only the lit ring shows. No caption. Phones: a row press glides the crop; a tap on the picture steps.
+- The dek: "SIGNAL on steroids: a whole studio that opens like a notebook and goes where I go." (DRAFT)
+- SIGNAL's `.sc-title` (SignalCard.astro) now wears the band-name face to the letter: Outfit 500 3.25rem/1.05 at −0.02em (2.5rem under 900); it was 2.125rem at 0.06em.
+
 ## DRAFT lines (Jon's to rewrite; all in objects-copy.ts STUDIO_COPY)
-- dek: "SIGNAL on steroids: the whole studio, in the laptop, for making the idea exist."
+- dek: "SIGNAL on steroids: a whole studio that opens like a notebook and goes where I go." (round two's "…: the whole studio, in the laptop, for making the idea exist." was cut)
 - engines: "Three engines that resample anything. The shorthand is drums, keys and bass, because that's a keyboard player's whole band."
 - effects: "Every engine's effects are on the surface at once. I can see which one has the delay and which has the sidechain without opening anything. Ableton makes you expand a rack and pop a window for that."
 - take: "It was already listening. There's no record button to forget. A take is cut out afterwards."
 - chips: "Any sound on the laptop, cropped in two moves, becomes a key: re-pitched, re-timed, remixed."
 - radar: "Built in New York, jamming with a friend who won't stay in one key. One click and the room's chord, scale and tempo are on the screen. Join without interrupting him."
 - hands: "A laptop, a MIDI keyboard, a travel keyboard, a PlayStation controller: writing utensils. The same moves on every one, every time."
-- caption: "The real thing, at rest. Press a part."
+- row names: the three engines · the effects · the take · the chips · the radar · the hands
 - said: "Ableton is for producing ideas that already happened. This is for making the idea exist."
 - keep: "Make ten thousand songs. Keep ten."
 - frame 1: "$3,000 of instruments in the bedroom. A laptop on the plane." → "Every synth I own, sampled into keys once. The room travels."
