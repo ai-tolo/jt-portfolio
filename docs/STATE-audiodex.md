@@ -30,3 +30,8 @@
 - The answers hold 3 s (was 1.5); each result carries its date on its own line, a step bigger, with bigger titles and icons.
 - THE TAPE: the music room's own mini cassette (StudioOne passes it into AudioDexDoor's `tape` slot) slides out from behind the AudioDex phone once the memo is open (under it when stacked, into a reserved slot); it breathes with the touch signal; a press pauses the memo, lands the music room, loads Thanksgiving A Capella and presses its play switch. The in-phone row now just says "song · 1:06".
 - Assumption to confirm: the memo's date prints as Nov 24, 2022 (Thanksgiving of the manifest's year).
+
+## Round four (2026-10-15, Jon: the tape smaller and on the white, one way to the song, start it late)
+- The cassette is 44cqw of the phone (52 stacked) and stays inside the sheet at 1440, 1024 and 375; its words sit in two short lines beside the phone, one line when stacked.
+- The in-phone song row is gone: the cassette is the only way to the song.
+- A press starts the tape at 0:15 (`moment.tapeAt` in audiodex-scene.json): the memo's tail, the door, then the song.

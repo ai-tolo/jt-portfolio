@@ -412,14 +412,14 @@ const columns = (blocks: BuildBlock[]): StoryBlock[][] =>
               song's label, comes out of the AudioDex phone once the memo is open; a press carries you down to the deck
               with that tape loaded and playing (the wallet script, [data-tape-jump] + data-tape-play) */}
           {adxTape && (
-            <button class="adx-tape" type="button" slot="tape" data-tape-jump={adxTape.t.title} data-tape-play
+            <button class="adx-tape" type="button" slot="tape" data-tape-jump={adxTape.t.title} data-tape-play data-tape-at={ADX.moment.tapeAt}
               aria-label={`Hear what it became: ${adxTape.t.title}, in the music room`}
               style={`--mini-tint:${adxTape.fill.day};--mini-tint-night:${adxTape.fill.night}`}>
               <span class="mini" aria-hidden="true">
                 <span class="mini-label">{adxTape.t.cover && <img src={adxTape.t.cover} alt="" loading="lazy" decoding="async" />}</span>
                 <img class="mini-shell" src="/studio/tape-shell-800.webp" width="1600" height="979" alt="" loading="lazy" decoding="async" />
               </span>
-              <span class="adx-tape-w" aria-hidden="true">hear what it became <span class="adx-tape-arrow">↓</span></span>
+              <span class="adx-tape-w" aria-hidden="true"><span>hear what</span> <span>it became <span class="adx-tape-arrow">↓</span></span></span>
             </button>
           )}
         </AudioDexDoor>
@@ -2098,10 +2098,14 @@ const columns = (blocks: BuildBlock[]): StoryBlock[][] =>
   .adx-tape:focus-visible .mini { outline: 2px solid var(--mx-ink); outline-offset: 3px; }
   /* beside the phone the words hang from the tape's right edge, clear of the phone; under it (stacked) centred */
   .adx-tape { justify-items: end; }
-  .adx-tape-w { margin-right: -18px; font: 600 0.75rem/1.2 var(--wk-mono); letter-spacing: 0.04em; white-space: nowrap; transition: color 560ms ease; }
+  /* beside the phone: two short lines under the tape's visible half, so no word hides behind the phone */
+  .adx-tape-w { margin-right: -6px; text-align: right; font: 600 0.75rem/1.35 var(--wk-mono); letter-spacing: 0.04em; white-space: nowrap; transition: color 560ms ease; }
+  .adx-tape-w > span { display: block; }
+  @container adx (min-width: 620px) and (max-width: 860px) { .adx-tape-w { font-size: 0.625rem; margin-right: -2px; } }
   @container adx (max-width: 619px) {
     .adx-tape { justify-items: center; }
-    .adx-tape-w { margin-right: 0; font-size: 0.8125rem; letter-spacing: 0.06em; }
+    .adx-tape-w { margin-right: 0; text-align: center; font-size: 0.8125rem; letter-spacing: 0.06em; }
+    .adx-tape-w > span { display: inline; }
   }
   .adx-tape-arrow { display: inline-block; animation: adx-bob 2.2s ease-in-out infinite; }
   @keyframes adx-bob { 0%, 100% { transform: none; } 50% { transform: translateY(3px); } }
@@ -4615,8 +4619,16 @@ const columns = (blocks: BuildBlock[]): StoryBlock[][] =>
           if (k + 1 !== active) auCar?.dispatchEvent(new CustomEvent("car:show", { detail: { index: k + 1 } }));
           // "hear what it became": the press asked to hear it, so the tape plays once it is in the deck (the
           // tape is the play switch; a browser that refuses leaves it loaded and waiting)
+          // it starts at data-tape-at (Jon: the tail of the memo just heard, then the door, then the song); a tape
+          // with no metadata yet takes the time as its start position, and gets it again once it knows its length
           if (a.hasAttribute("data-tape-play")) window.setTimeout(() => {
             const tape = auSlides[k + 1]?.querySelector<HTMLButtonElement>("[data-cs-tape]");
+            const media = auSlides[k + 1]?.querySelector<HTMLAudioElement>("[data-tp-audio]");
+            const at = Number(a.dataset.tapeAt) || 0;
+            if (media && at) {
+              try { media.currentTime = at; } catch {}
+              media.addEventListener("loadedmetadata", () => { if (media.currentTime < at - 1) media.currentTime = at; }, { once: true });
+            }
             if (tape && !auSlides[k + 1].hasAttribute("data-playing")) tape.click();
           }, reduce ? 0 : 520);
         };

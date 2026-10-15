@@ -8,7 +8,7 @@
  * Voice Memos answers "No Results" (the word is never said in the memo and the file is a number), AudioDex finds the
  * memo and the song it became, a fingertip opens the memo, and it plays: the REAL memo (the first 18 s of the
  * Thanksgiving A Capella tape, Jon's family singing him a note), its words lighting as they are said. The last row
- * is the song, a real link down to the music room, where the host loads that tape (StudioOne, [data-tape-jump]).
+ * the song comes out of the phone as the host's cassette (slot "tape"): its press lands the music room and plays it.
  *
  * The words live in src/data/audiodex-scene.json. The phones' own UI carries the labels (their large titles are the
  * app names); no captions, no rail. THE SLOT: `moment.clip` plays only when the file exists at build time
@@ -33,7 +33,6 @@ const lit = (s: string): [string, string, string] => {
 const bars = moment.peaks.map((p, i) => ({ x: i * 4, h: Math.max(6, p * 96) }));
 const waveW = moment.peaks.length * 4;
 const memo = results.find((r) => r.kind === 'memo');
-const song = results.find((r) => r.kind === 'song');
 ---
 
 <section class="adx" data-adx data-strokes={JSON.stringify(keystrokes)} data-query={query} data-secs={moment.seconds}>
@@ -121,13 +120,6 @@ const song = results.find((r) => r.kind === 'song');
             </button>
             <span class="m-clock mono" aria-hidden="true"><span data-clock>0:00</span> / {moment.len}</span>
           </div>
-          {song && (
-            <a class="m-tape" href="#soundlab" data-tape-jump={moment.tape}>
-              <img src={moment.cover} alt="" width="60" height="60" loading="lazy" decoding="async" />
-              <span class="m-tape-t">{moment.tape}</span>
-              <span class="m-tape-s">song · {moment.tapeLen}</span>
-            </a>
-          )}
         </div>
       </div>
       <img class="body" src="/archive/phone-blank.png" alt="" width="864" height="1760" decoding="async" loading="lazy" draggable="false" />
@@ -290,29 +282,19 @@ const song = results.find((r) => r.kind === 'song');
   .play:focus-visible { outline: 0.6cqw solid var(--sacc); outline-offset: 0.6cqw; }
   .play[aria-disabled='true'] { opacity: 0.32; cursor: default; }
   .m-clock { font-size: 3.6cqw; color: var(--sdim); }
-  .m-tape {
-    display: grid; grid-template-columns: 12cqw minmax(0, 1fr); column-gap: 3cqw; row-gap: 0.4cqw; align-items: center;
-    margin-top: auto; margin-bottom: 9cqw; padding: 2.6cqw; border-radius: 3cqw;
-    background: var(--sfield); color: var(--sfg); text-decoration: none;
-  }
-  .m-tape img { grid-row: span 2; width: 12cqw; height: 12cqw; border-radius: 1.6cqw; object-fit: cover; }
-  .m-tape-t { font-weight: 600; }
-  .m-tape-s { font-size: 3.6cqw; color: var(--sacc); }
-  .m-tape:hover { background: #2a2a2d; }
-  .m-tape:focus-visible { outline: 0.6cqw solid var(--sacc); outline-offset: 0.4cqw; }
 
   /* ── THE TAPE: what the memo became, coming out of the phone. Tucked behind its right edge at rest, it slides out
      (and tips) once the memo is open; on a narrow sheet it drops out of the phone's foot instead, into a reserved
      slot, so nothing below moves. The host draws the tape itself (StudioOne, slot "tape"). */
   .tape-slot {
-    position: absolute; z-index: 0; left: 62%; top: 58%; width: 56cqw;
+    position: absolute; z-index: 0; left: 62%; top: 58%; width: 44cqw; /* small enough to stay on the sheet's white (Jon) */
     transform: translateX(-30%); opacity: 0; pointer-events: none;
     transition: transform 0.7s cubic-bezier(0.2, 0.9, 0.25, 1.1), opacity 0.3s;
   }
-  .s4 .tape-slot { transform: translateX(60%) rotate(-5deg); opacity: 1; pointer-events: auto; transition-delay: 0.9s, 0.9s; }
+  .s4 .tape-slot { transform: translateX(52%) rotate(-5deg); opacity: 1; pointer-events: auto; transition-delay: 0.9s, 0.9s; }
   @container adx (max-width: 619px) {
-    .adx-dex { margin-bottom: 47cqw; }
-    .tape-slot { left: 50%; top: auto; bottom: 0; width: 60cqw; transform: translate(-50%, -10%); }
+    .adx-dex { margin-bottom: 42cqw; }
+    .tape-slot { left: 50%; top: auto; bottom: 0; width: 52cqw; transform: translate(-50%, -10%); }
     .s4 .tape-slot { transform: translate(-50%, 100%) rotate(-3deg); }
   }
 
