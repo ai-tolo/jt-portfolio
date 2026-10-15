@@ -32,10 +32,9 @@ const { title, description, ogImage = "/og-tape.png", material = "cs" } = Astro.
 // Same source of truth as Layout.astro: astro.config `site` (the www host —
 // the apex 308-redirects to it, so canonical/og URLs must not name the apex).
 const siteOrigin = Astro.site?.origin ?? "https://www.uxjon.com";
-// The five case studies are read from the résumé, so their rail puts the
-// back arrow on résumé and a house chip under it (Jon, 2026-09-09).
-// /catalog and /judge share this layout and keep the default rail.
-const railBack = Astro.url.pathname.startsWith("/case-studies/") ? "resume" : "home";
+// The rail lights the row of the study you are on (the room model,
+// 2026-10-15); a page not in the column (momence, the-console) lights none.
+const railCurrent = Astro.url.pathname.match(/^\/case-studies\/([^/]+)/)?.[1];
 ---
 
 <!doctype html>
@@ -67,9 +66,10 @@ const railBack = Astro.url.pathname.startsWith("/case-studies/") ? "resume" : "h
     )}
   </head>
   <body class:list={["cs-body", { "room-cs": material === "room" }]}>
-    {/* The site's nav column (home + résumé + night switch), themed by the
-        sitewide axis, with the comet trail riding its right edge. */}
-    <AwayRail back={railBack} />
+    {/* The site's nav column (the JT mark home, the room's places with
+        this study lit, the night switch), themed by the sitewide axis,
+        with the comet trail riding its right edge. */}
+    <AwayRail current={railCurrent} />
     <CSProgress />
     <Cursor />
 

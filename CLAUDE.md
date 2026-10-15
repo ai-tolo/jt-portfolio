@@ -425,7 +425,7 @@ session must follow.
   since round eight (Jon: "scale down 5–10%"; 160 in rounds six–seven), its
   paper a step LIGHTER than the ground (#fbfaf7 day / #161b24 night) with a
   firmer edge (26% / 22%) so it reads as the page's outline; `--railw`
-  follows (the AwayRail on the other pages is still 110; to keep the sheets at
+  follows (tokens.css --railw is 148 sitewide since 2026-10-15; to keep the sheets at
   1080 and the device fit identical the sheets' minimum gutter is 20px and
   `.sig-desktop`'s side padding is `clamp(8px, calc(6vw - 72px), 24px)`).
   RÉSUMÉ IS A BUTTON AT THE RAIL'S FOOT (round six, Jon: a floating corner
@@ -641,13 +641,22 @@ session must follow.
   is inverted with its hues turned back (invert .93 + hue-rotate 180°).
 - The homepage has NO corner since 2026-10-13 round six (résumé = the rail's
   foot pill, the phone bar's pill, and the end room's title). The "back to selected work" end-line is retired from
-  every case study (dead link); the rail carries every exit. AwayRail
-  order on case studies: the house chip on TOP, 🡐 résumé MID-RAIL (auto
-  margins split the column), the switch at the foot; phone bar ⌂ · 🡐
-  résumé · moon. /resume uses the SAME house chip on top (`home="house"`)
-  and nothing else above the switch. The homepage rail's items read word
-  THEN glyph, flush right inside one 94px block, so the glyphs stand in a
-  single column (Jon, 2026-09-21).
+  every case study (dead link); the rail carries every exit. AwayRail is
+  ONE INSTRUMENT with the homepage rail since 2026-10-15 (Jon: the
+  chips/glyphs "no longer feel fitting"): the JT mark (the favicon's
+  letterforms in the rail's ink, gradient on hover) on TOP as the way
+  home, then the ROOM'S PLACES as plain words in the homepage rail's
+  exact row (134×44, flush right, lit ink pill on the current page):
+  résumé · chs · crediverso · raylu (one `current` prop lights it; the
+  list is case-links.ts + the résumé), the switch at the foot. NO ember
+  button on away pages (home's pill exists as the recruiter's shortcut
+  TO the résumé). The-console is UNROUTED (Momence pattern: page live,
+  reached only from the sheet's evidence line; a dedicated Signal Studio
+  study is the planned replacement). Phone bar: JT · résumé ember pill
+  (lit ring on /resume) · moon — its dedicated refinement round is still
+  owed. In AwayRail the breakpoint blocks come FIRST, so display and
+  auto-margins live in rules AFTER the base resets (three cascade bugs
+  shipped the other way, 2026-10-15).
 
 
 ## Build + deploy facts (2026-09-09 QA pass, shipped 0e66b18)
@@ -672,9 +681,10 @@ session must follow.
   stay in sync); its first settle seats the mini and opens the strip, which
   folds back after 2.4s under 1160px and stays open above. The audio
   Carousel is `keys={false}`: no arrows, no swipe, never steals ←/→.
-- THE STACK (/resume, same branch): the sheet is the top page of four
+- THE STACK (/resume, same branch): the sheet is the top page of the pile
   (`.r-stack`, screen-only, each 4px narrower and 5px lower, painted top
-  sheet highest; flat and square since 2026-10-06, no shadow); four wordless paper
+  sheet highest; flat and square since 2026-10-06, no shadow; three sheets
+  beneath since the-console left the nav 2026-10-15); wordless paper
   tabs (`.r-stack-tab`, same-page links to `#study-<slug>`) stand 12px
   above the top edge; they rise once per load (`data-riffle`). Blank-tape
   hover lifts the mini 8px with a ground shadow over 220ms. Phones snap a flick past the paper onto the
