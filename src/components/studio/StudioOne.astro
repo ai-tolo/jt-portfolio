@@ -610,8 +610,10 @@ const columns = (blocks: BuildBlock[]): StoryBlock[][] =>
         <p class="band-what">{STUDIO_COPY.dek}</p>
       </header>
       <StudioMoments moments={STUDIO_COPY.moments} frames={MOMENT_FRAMES} />
-      <div class="st-obj">
-        <Carousel count={captures.length} label="Signal Studio, three recordings" accent="var(--sheet-acc)" mode="dissolve" dots loop titles={captures.map((c) => c.problem)}>
+      {/* THE CIRCUMSTANCES (round five, 2026-10-15; Jon: two kinds of arrows and bubbles on one sheet confused the
+          cycling): no chassis, no cycling. The three frames stand in ONE ROW, each with its problem, its answer and
+          its play key; stacked under 820px of sheet. */}
+      <div class="st-row" data-circumstances>
           {captures.map((c) => (
             <figure class="st-slot" data-pending={c.src ? undefined : ""}>
               <div class="st-frame">
@@ -630,7 +632,6 @@ const columns = (blocks: BuildBlock[]): StoryBlock[][] =>
               </figcaption>
             </figure>
           ))}
-        </Carousel>
       </div>
       <div class="wk-story" data-story>
         <p class="wk-lede">{STUDIO.headline}</p>
@@ -2394,6 +2395,27 @@ const columns = (blocks: BuildBlock[]): StoryBlock[][] =>
   @container (min-width: 820px) {
     .st-problem { font-size: 1.375rem; }
     .st-answer { font-size: 1rem; }
+  }
+  /* THE ROW (round five): three frames across on a wide sheet, 24px apart, 56px under the moments (the band→object
+     beat); one column under 820px of sheet. Each frame is its column's width; the key and the placard scale down a
+     step for the smaller frame. */
+  .st-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 36px 24px;
+    margin: 56px auto 0;
+  }
+  .st-row .st-frame { width: 100%; }
+  .st-row .st-play { width: 48px; height: 48px; }
+  .st-row .st-play svg { width: 22px; height: 22px; }
+  .st-row .st-placard { max-width: none; margin-top: 2px; gap: 6px; }
+  @container (min-width: 820px) {
+    .st-row { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    .st-row .st-problem { font-size: 1.0625rem; }
+    .st-row .st-answer { font-size: 0.875rem; }
+  }
+  @media (max-width: 899px) {
+    .st-row { margin-top: 40px; }
   }
   /* THE FOLD'S SECOND LINE: under the said line, the sheet's accent, tight to it */
   .st-keep {
@@ -4868,12 +4890,11 @@ const columns = (blocks: BuildBlock[]): StoryBlock[][] =>
 <script>
   // THE CIRCUMSTANCES (2026-10-15): the Studio sheet's three frames play WITH
   // SOUND, on a press only (the key on the frame; pressed again it pauses),
-  // one at a time (a start stops the others; a turn of the chassis stops
-  // them all) and never off-screen (the frame leaving the viewport pauses
-  // it). Nothing autoplays, nothing is muted by default. Nothing to do while
-  // every slot is the honest empty frame.
+  // one at a time (a start stops the others) and never off-screen (the row
+  // leaving the viewport pauses them). Nothing autoplays, nothing is muted
+  // by default. Nothing to do while every slot is the honest empty frame.
   {
-    const car = document.querySelector<HTMLElement>("#build-studio [data-carousel]");
+    const car = document.querySelector<HTMLElement>("#build-studio [data-circumstances]");
     const slots = car ? Array.from(car.querySelectorAll<HTMLElement>(".st-slot")) : [];
     const live = slots.map((s) => ({ s, v: s.querySelector<HTMLVideoElement>(".st-video"), k: s.querySelector<HTMLButtonElement>(".st-play") })).filter((x) => x.v && x.k) as { s: HTMLElement; v: HTMLVideoElement; k: HTMLButtonElement }[];
     if (car && live.length) {
@@ -4890,7 +4911,6 @@ const columns = (blocks: BuildBlock[]): StoryBlock[][] =>
           else v.pause();
         });
       });
-      car.addEventListener("car:change", () => stopAll());
       const scroller = document.querySelector("main");
       new IntersectionObserver((es) => es.forEach((e) => { if (!e.isIntersecting) stopAll(); }), { root: scroller && getComputedStyle(scroller).overflowY === "auto" ? scroller : null, threshold: 0.2 }).observe(car);
     }

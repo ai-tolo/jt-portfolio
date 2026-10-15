@@ -31,6 +31,10 @@
 - The surface still, its rects and StudioSurface.astro are gone (git history has them). StudioOne's chassis rules (.st-obj · .st-slot · .st-frame) are :global now so the child component can stand on them.
 - Known: the take frame is two-thirds dark floor (the jam page is empty at rest); a tighter composition needs a real record on the bench.
 
+## Round five (2026-10-15, Jon: "so much better"; the look room's keycaps on the moments plus the dots under the circumstances made two kinds of arrows and bubbles, "those don't have to stay")
+- ONE WAY TO CYCLE: the moments' Carousel is `keys={false}` with its nav hidden; the tabs are the only control (← → walk them while a tab has focus). The frame is the content less 58px a side on desks (foot at 892 of 900 at 1440).
+- THE CIRCUMSTANCES no longer cycle: `.st-row`, three frames across (one column under 820px of sheet), each with its problem, its answer and its play key; no keys, no dots. The sound script binds `[data-circumstances]`.
+
 ## DRAFT lines (Jon's to rewrite; all in objects-copy.ts STUDIO_COPY)
 - dek: "SIGNAL on steroids: a whole studio that opens like a notebook and goes where I go." (round two's "…: the whole studio, in the laptop, for making the idea exist." was cut)
 - engines: "Three engines that resample anything. The shorthand is drums, keys and bass, because that's a keyboard player's whole band."

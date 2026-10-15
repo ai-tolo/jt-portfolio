@@ -9,10 +9,12 @@
  * (public/builds/studio/moment-<id>.webp; scratchpad cap/moments.mjs + take.mjs made them: the states that the app
  * does not reach in a fresh profile are set in its own DOM with its own classes before the shot.)
  *
- * THE CHROME says what is pressable: a row of six TABS in the rail's own idiom (the label face, the lit one an ink
- * pill), the lit moment's LINE under them in a slot reserved to the tallest, then THE FRAME on the look room's chassis
- * (the house Carousel in dissolve, its two keycaps outside the frame on desks, swipe on phones). A tab press shows its
- * moment; a key or a swipe steps and lights the tab. The first moment shows on load; nothing moves the page.
+ * THE CHROME says what is pressable, and there is ONE way to cycle (round five, Jon: the look room's keycaps here and
+ * the dots under the circumstances made two kinds of arrows and "bubbles" on one sheet): a row of six TABS in the
+ * rail's own idiom (the label face, the lit one an ink pill; ← → move between them when one has focus, the tablist
+ * way), the lit moment's LINE under them in a slot reserved to the tallest, then THE FRAME (the house Carousel in
+ * dissolve for the crossfade alone: no keycaps, no dots, no swipe, `keys={false}` so it never takes the page's
+ * arrows). A tab press shows its moment. The first moment shows on load; nothing moves the page.
  *
  * Words: the names and the lines are the host's (objects-copy.ts STUDIO_COPY.moments, DRAFT, Jon's).
  */
@@ -47,7 +49,7 @@ const shown = moments.map((m) => {
     {shown.map((m, i) => <p class="sm-line" data-on={i === 0 ? "" : undefined}>{m.line}</p>)}
   </div>
   <div class="st-obj sm-obj">
-    <Carousel count={shown.length} label="Six moments of the studio" accent="var(--sheet-acc)" mode="dissolve" loop titles={shown.map((m) => m.label)}>
+    <Carousel count={shown.length} label="Six moments of the studio" accent="var(--sheet-acc)" mode="dissolve" loop keys={false} titles={shown.map((m) => m.label)}>
       {shown.map((m) => (
         <figure class="st-slot">
           <div class="st-frame">
@@ -118,12 +120,17 @@ const shown = moments.map((m) => {
     .sm-line { font-size: 1.25rem; }
     .sm-lines { margin-top: 20px; max-width: 58ch; }
   }
-  /* THE FRAME: the host's .st-obj chassis (the keys, the 16:9 frame), seated 28px under the line; no dots here (the
-     tabs are the dots), so no room reserved above the frame */
+  /* THE FRAME: the host's .st-obj chassis for the 16:9 frame alone, seated 22px under the line; no keycaps, no dots
+     (the tabs are both), so no room is kept for them: the frame is the content less 58px a side on desks, which
+     keeps the whole module in one screen at 1440×900 */
   .sm-obj {
     margin-top: 22px !important;
     padding-top: 0 !important;
   }
+  @media (min-width: 900px) {
+    .sm-obj { --st-fw: calc(100cqw - 116px) !important; }
+  }
+  .sm :global(.car-nav) { display: none; }
   .sm-img {
     display: block;
     width: 100%;
@@ -144,7 +151,18 @@ const shown = moments.map((m) => {
       tabs.forEach((t, k) => { t.setAttribute("aria-selected", k === i ? "true" : "false"); t.tabIndex = k === i ? 0 : -1; });
       lines.forEach((l, k) => l.toggleAttribute("data-on", k === i));
     };
-    tabs.forEach((t, i) => t.addEventListener("click", () => car.dispatchEvent(new CustomEvent("car:show", { detail: { index: i } }))));
+    const show = (i: number) => car.dispatchEvent(new CustomEvent("car:show", { detail: { index: ((i % tabs.length) + tabs.length) % tabs.length } }));
+    tabs.forEach((t, i) => t.addEventListener("click", () => show(i)));
+    // the tablist's own arrows: ← → walk the tabs while one has focus, and the focus walks with them
+    box.querySelector(".sm-tabs")?.addEventListener("keydown", (e) => {
+      const k = (e as KeyboardEvent).key;
+      if (k !== "ArrowLeft" && k !== "ArrowRight") return;
+      e.preventDefault();
+      const cur = tabs.findIndex((t) => t.getAttribute("aria-selected") === "true");
+      const next = ((cur + (k === "ArrowRight" ? 1 : -1)) % tabs.length + tabs.length) % tabs.length;
+      show(next);
+      tabs[next].focus();
+    });
     car.addEventListener("car:change", (e) => light(Number((e as CustomEvent).detail?.index ?? 0)));
   });
 </script>
