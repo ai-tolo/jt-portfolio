@@ -25,6 +25,12 @@
 - The dek: "SIGNAL on steroids: a whole studio that opens like a notebook and goes where I go." (DRAFT)
 - SIGNAL's `.sc-title` (SignalCard.astro) now wears the band-name face to the letter: Outfit 500 3.25rem/1.05 at −0.02em (2.5rem under 900); it was 2.125rem at 0.06em.
 
+## Round four (2026-10-15, Jon: the side-by-side "too small", still no idea what's clickable, "effects" has to show the three instruments at once; "a thesis-driven project … let's go")
+- THE OBJECT IS SIX MOMENTS (src/components/studio/StudioMoments.astro): a row of six tabs in the rail's idiom (the lit one an ink pill) → the lit moment's line (the hook's face a step smaller, a slot reserved to the tallest) → a 16:9 frame on the look room's chassis (keys on desks, swipe on phones) showing a crop of the real Studio already in the state that makes the point, everything else dimmed, the subject edged in the accent. The whole module stands in one screen at 1440×900 (the frame's foot at 858).
+- THE FRAMES: public/builds/studio/moment-{engines,effects,take,chips,radar,hands}.webp. Made by docs/studio-moments-capture.mjs + docs/studio-moments-take.mjs (copies of the scratch scripts; run from anywhere with node, :4460 up, headless + muted). States set in the app's own DOM before each shot: the bass named 303; three chips (RHODES · VOICE · RADIO) in the well with the well's own chip markup; the glass set to 94 BPM / Cm in the radar's ink (data-src / data-who = radar); on the jam tab a drawn record with a four-bar take between the bench's own handles. The engines, effects and hands frames are the untouched surface, cropped and dimmed.
+- The surface still, its rects and StudioSurface.astro are gone (git history has them). StudioOne's chassis rules (.st-obj · .st-slot · .st-frame) are :global now so the child component can stand on them.
+- Known: the take frame is two-thirds dark floor (the jam page is empty at rest); a tighter composition needs a real record on the bench.
+
 ## DRAFT lines (Jon's to rewrite; all in objects-copy.ts STUDIO_COPY)
 - dek: "SIGNAL on steroids: a whole studio that opens like a notebook and goes where I go." (round two's "…: the whole studio, in the laptop, for making the idea exist." was cut)
 - engines: "Three engines that resample anything. The shorthand is drums, keys and bass, because that's a keyboard player's whole band."
@@ -33,7 +39,8 @@
 - chips: "Any sound on the laptop, cropped in two moves, becomes a key: re-pitched, re-timed, remixed."
 - radar: "Built in New York, jamming with a friend who won't stay in one key. One click and the room's chord, scale and tempo are on the screen. Join without interrupting him."
 - hands: "A laptop, a MIDI keyboard, a travel keyboard, a PlayStation controller: writing utensils. The same moves on every one, every time."
-- row names: the three engines · the effects · the take · the chips · the radar · the hands
+- tab words: the engines · the effects · the take · the chips · the radar · the hands
+- the frames' alt texts (mine)
 - said: "Ableton is for producing ideas that already happened. This is for making the idea exist."
 - keep: "Make ten thousand songs. Keep ten."
 - frame 1: "$3,000 of instruments in the bedroom. A laptop on the plane." → "Every synth I own, sampled into keys once. The room travels."

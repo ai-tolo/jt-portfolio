@@ -1,0 +1,150 @@
+---
+/**
+ * StudioMoments — SIX MOMENTS OF THE REAL STUDIO (2026-10-15, the Studio sheet's round four; Jon: the still beside a
+ * list was "too small", the rings said nothing about what was pressable, and one picture can only show one state).
+ * Each moment is a 16:9 crop of the real Studio (localhost:4460, headless and muted at 2×) already in the state that
+ * makes the point, with everything but the subject dimmed and the subject edged in the sheet's accent:
+ * the three engines · the three towers' effects lit at once · a take cut out of the record on the jam page ·
+ * three chips in the well · the room's key and tempo on the glass in the radar's ink · the keybed with its letters.
+ * (public/builds/studio/moment-<id>.webp; scratchpad cap/moments.mjs + take.mjs made them: the states that the app
+ * does not reach in a fresh profile are set in its own DOM with its own classes before the shot.)
+ *
+ * THE CHROME says what is pressable: a row of six TABS in the rail's own idiom (the label face, the lit one an ink
+ * pill), the lit moment's LINE under them in a slot reserved to the tallest, then THE FRAME on the look room's chassis
+ * (the house Carousel in dissolve, its two keycaps outside the frame on desks, swipe on phones). A tab press shows its
+ * moment; a key or a swipe steps and lights the tab. The first moment shows on load; nothing moves the page.
+ *
+ * Words: the names and the lines are the host's (objects-copy.ts STUDIO_COPY.moments, DRAFT, Jon's).
+ */
+import Carousel from "../Carousel.astro";
+export interface Moment {
+  id: string;
+  /** the tab's word */
+  label: string;
+  /** the one line printed while the moment shows */
+  line: string;
+}
+interface Props {
+  moments: Moment[];
+  /** the frames' files by id (public/builds/studio/moment-<id>.webp), with their intrinsic pixels */
+  frames: Record<string, { src: string; width: number; height: number; alt: string }>;
+}
+const { moments, frames } = Astro.props;
+const shown = moments.map((m) => {
+  const f = frames[m.id];
+  if (!f) throw new Error(`StudioMoments: no frame for "${m.id}"`);
+  return { ...m, f };
+});
+---
+
+<div class="sm" data-moments>
+  <div class="sm-tabs" role="tablist" aria-label="Six parts of the studio">
+    {shown.map((m, i) => (
+      <button class="sm-tab" type="button" role="tab" data-sm-tab={String(i)} aria-selected={i === 0 ? "true" : "false"} tabindex={i === 0 ? 0 : -1}>{m.label}</button>
+    ))}
+  </div>
+  <div class="sm-lines" aria-live="polite">
+    {shown.map((m, i) => <p class="sm-line" data-on={i === 0 ? "" : undefined}>{m.line}</p>)}
+  </div>
+  <div class="st-obj sm-obj">
+    <Carousel count={shown.length} label="Six moments of the studio" accent="var(--sheet-acc)" mode="dissolve" loop titles={shown.map((m) => m.label)}>
+      {shown.map((m) => (
+        <figure class="st-slot">
+          <div class="st-frame">
+            <img class="sm-img" src={m.f.src} width={m.f.width} height={m.f.height} alt={m.f.alt} loading="lazy" decoding="async" />
+          </div>
+        </figure>
+      ))}
+    </Carousel>
+  </div>
+</div>
+
+<style>
+  .sm {
+    width: 100%;
+  }
+  /* THE TABS: the rail's rows in miniature — the label face, 34px pills, the lit one ink on paper; centred, and
+     wrapping to two rows on a narrow sheet */
+  .sm-tabs {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 6px 4px;
+    margin: 0 auto;
+  }
+  .sm-tab {
+    margin: 0;
+    padding: 0 14px;
+    height: 34px;
+    border: 0;
+    border-radius: 11px;
+    background: transparent;
+    font: 600 0.8125rem/34px var(--sheet-mono);
+    letter-spacing: 0.06em;
+    text-transform: lowercase;
+    white-space: nowrap;
+    color: var(--sheet-dim);
+    cursor: pointer;
+    appearance: none;
+    transition: color 220ms ease, background-color 220ms ease;
+  }
+  .sm-tab:hover { color: var(--sheet-ink); background: color-mix(in oklab, var(--sheet-ink) 7%, transparent); }
+  .sm-tab:focus-visible { outline: 2px solid var(--sheet-ink); outline-offset: 2px; }
+  .sm-tab[aria-selected="true"] {
+    color: var(--sheet-card);
+    background: var(--sheet-ink);
+    cursor: default;
+  }
+  /* THE LINE: the six stacked in one cell so the slot is as tall as the tallest; the lit one shows. The hook's face a
+     step smaller, centred, so the point reads before the picture */
+  .sm-lines {
+    display: grid;
+    max-width: 50ch;
+    margin: 18px auto 0;
+  }
+  .sm-line {
+    grid-area: 1 / 1;
+    margin: 0;
+    visibility: hidden;
+    text-align: center;
+    font: 500 1.125rem/1.3 var(--sheet-display);
+    letter-spacing: -0.01em;
+    text-wrap: balance;
+    color: var(--sheet-ink);
+    transition: color 560ms ease;
+  }
+  .sm-line[data-on] { visibility: visible; }
+  @container sheet (min-width: 820px) {
+    .sm-line { font-size: 1.25rem; }
+    .sm-lines { margin-top: 20px; max-width: 58ch; }
+  }
+  /* THE FRAME: the host's .st-obj chassis (the keys, the 16:9 frame), seated 28px under the line; no dots here (the
+     tabs are the dots), so no room reserved above the frame */
+  .sm-obj {
+    margin-top: 22px !important;
+    padding-top: 0 !important;
+  }
+  .sm-img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+</style>
+
+<script>
+  // THE TABS AND THE CHASSIS ARE ONE: a tab press asks the carousel for its moment (car:show); the carousel's own
+  // change (a key, a swipe, the tab) lights the tab and the line. Nothing moves by itself.
+  document.querySelectorAll<HTMLElement>("[data-moments]").forEach((box) => {
+    const car = box.querySelector<HTMLElement>("[data-carousel]");
+    const tabs = Array.from(box.querySelectorAll<HTMLButtonElement>(".sm-tab"));
+    const lines = Array.from(box.querySelectorAll<HTMLElement>(".sm-line"));
+    if (!car) return;
+    const light = (i: number) => {
+      tabs.forEach((t, k) => { t.setAttribute("aria-selected", k === i ? "true" : "false"); t.tabIndex = k === i ? 0 : -1; });
+      lines.forEach((l, k) => l.toggleAttribute("data-on", k === i));
+    };
+    tabs.forEach((t, i) => t.addEventListener("click", () => car.dispatchEvent(new CustomEvent("car:show", { detail: { index: i } }))));
+    car.addEventListener("car:change", (e) => light(Number((e as CustomEvent).detail?.index ?? 0)));
+  });
+</script>

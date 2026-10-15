@@ -84,12 +84,12 @@ export const ARCHIVE_COPY = {
 // his voice (written 2026-10-15); Jon owns every word, edit freely. Spotify is
 // never named on this sheet.
 //
-// THE OBJECT IS THE SURFACE: one still of the real Studio at rest
-// (public/builds/studio/surface.webp) with six press targets over it
-// (StudioSurface.astro; the rings' places are measured, studio-surface.json).
-// A press prints the target's `line` under the still. The `id`s name the
-// measured rects; `label` is the ring's accessible name.
-export type SurfaceLine = { id: string; label: string; line: string; focus?: [number, number]; fit?: boolean };
+// THE OBJECT IS SIX MOMENTS (2026-10-15, round four): six 16:9 crops of the
+// real Studio, each already in the state that makes its point, the rest
+// dimmed (StudioMoments.astro; public/builds/studio/moment-<id>.webp). The
+// `label` is the tab's word, the `line` prints while the moment shows, the
+// `alt` describes the frame.
+export type Moment = { id: string; label: string; line: string; alt: string };
 // THE CIRCUMSTANCES: three capture frames, each titled by the PROBLEM with one
 // line of answer. `src` names the file under public/ without its extension:
 // the host keeps the first of .mp4 / .webm that exists at build time, so
@@ -108,7 +108,7 @@ export const STUDIO_COPY: {
   title: string;
   kind: string;
   dek: string;
-  surface: { alt: string; targets: SurfaceLine[] };
+  moments: Moment[];
   said: string;
   keep: string;
   captures: StudioCapture[];
@@ -120,26 +120,20 @@ export const STUDIO_COPY: {
   // that doesn't make a lot of sense" to an outside reader. Was "…: the whole studio, in the laptop, for making the
   // idea exist.")
   dek: "SIGNAL on steroids: a whole studio that opens like a notebook and goes where I go.",
-  surface: {
-    alt: "The Signal Studio at rest: three engines side by side with their effects, the chord rack, the keyboard with its letter keys, and the chips well beneath.",
-    // (the caption "The real thing, at rest. Press a part." left 2026-10-15 round two: Jon, "I don't like … that text at
-    // all"; the parts list beside the still says what is pressable)
-    // the six lines, one per part, in the order they are listed; `label` is the part's name in the list
-    targets: [
-      { id: "engines", label: "the three engines", fit: true,
-        line: "Three engines that resample anything. The shorthand is drums, keys and bass, because that's a keyboard player's whole band." },
-      { id: "effects", label: "the effects",
-        line: "Every engine's effects are on the surface at once. I can see which one has the delay and which has the sidechain without opening anything. Ableton makes you expand a rack and pop a window for that." },
-      { id: "take", label: "the take",
-        line: "It was already listening. There's no record button to forget. A take is cut out afterwards." },
-      { id: "chips", label: "the chips",
-        line: "Any sound on the laptop, cropped in two moves, becomes a key: re-pitched, re-timed, remixed." },
-      { id: "radar", label: "the radar",
-        line: "Built in New York, jamming with a friend who won't stay in one key. One click and the room's chord, scale and tempo are on the screen. Join without interrupting him." },
-      { id: "hands", label: "the hands",
-        line: "A laptop, a MIDI keyboard, a travel keyboard, a PlayStation controller: writing utensils. The same moves on every one, every time." },
-    ],
-  },
+  moments: [
+    { id: "engines", label: "the engines", alt: "The three engines side by side: HOUSE on the drums, SYNTH on the keys, 303 on the bass, each with its own filter, pattern and effects.",
+      line: "Three engines that resample anything. The shorthand is drums, keys and bass, because that's a keyboard player's whole band." },
+    { id: "effects", label: "the effects", alt: "The same three towers with everything dimmed except each engine's effects: drive, mod, delay and reverb on the drums, the keys and the bass at once.",
+      line: "Every engine's effects are on the surface at once. I can see which one has the delay and which has the sidechain without opening anything. Ableton makes you expand a rack and pop a window for that." },
+    { id: "take", label: "the take", alt: "The jam page's record: a waveform of everything played, with four bars selected between two handles.",
+      line: "It was already listening. There's no record button to forget. A take is cut out afterwards." },
+    { id: "chips", label: "the chips", alt: "The well under the keyboard holding three chips, RHODES, VOICE and RADIO, each with its waveform and its length in bars.",
+      line: "Any sound on the laptop, cropped in two moves, becomes a key: re-pitched, re-timed, remixed." },
+    { id: "radar", label: "the radar", alt: "The glass at the top reading 94 BPM and the key C minor, both in the radar's coral ink.",
+      line: "Built in New York, jamming with a friend who won't stay in one key. One click and the room's chord, scale and tempo are on the screen. Join without interrupting him." },
+    { id: "hands", label: "the hands", alt: "The keyboard at the foot of the studio with the laptop's letter keys printed on the keys from A to L.",
+      line: "A laptop, a MIDI keyboard, a travel keyboard, a PlayStation controller: writing utensils. The same moves on every one, every time." },
+  ],
   // THE FOLD, under the locked hook: the line in his voice (.wk-said) and the one line beneath it
   said: "Ableton is for producing ideas that already happened. This is for making the idea exist.",
   keep: "Make ten thousand songs. Keep ten.",

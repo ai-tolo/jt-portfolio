@@ -31,11 +31,15 @@ import { SPEC } from "./depth-copy";
 // beats and the Schematic left the Studio sheet 2026-10-15 (its surface is it);
 // SIGNAL's card still draws the Schematic itself.
 import type { Count } from "./skim-copy";
-// THE SURFACE (2026-10-15): the Studio sheet's object, one still of the real
-// thing with six press targets (StudioSurface.astro; the rects measured at
-// capture time in studio-surface.json, the lines in objects-copy.ts)
-import StudioSurface from "./StudioSurface.astro";
-import SURFACE from "./studio-surface.json";
+// SIX MOMENTS (2026-10-15, round four): the Studio sheet's object, six crops
+// of the real thing each in the state that makes its point (StudioMoments.astro;
+// the words in objects-copy.ts). The frames' pixels are the capture's (2× of
+// a 1106×622 or 760×428 CSS crop; scratchpad cap/moments.mjs + take.mjs).
+import StudioMoments from "./StudioMoments.astro";
+const MOMENT_FRAMES = Object.fromEntries(STUDIO_COPY.moments.map((m) => {
+  const wide = ["engines", "effects", "hands", "take"].includes(m.id);
+  return [m.id, { src: `/builds/studio/moment-${m.id}.webp`, width: wide ? 2212 : 1520, height: wide ? 1244 : 856, alt: m.alt }];
+}));
 import IntakeClock from "./IntakeClock.astro";
 // the sentence the watch replays, printed once in the fold (src/data/intake-run.json)
 import WATCH_RUN from "../../data/intake-run.json";
@@ -587,10 +591,10 @@ const columns = (blocks: BuildBlock[]): StoryBlock[][] =>
   {/* ── SIGNAL STUDIO (2026-10-13; THE SURFACE, 2026-10-15): the fourth build,
       the whole studio SIGNAL is the web-sized part of. One sheet in its own
       room, after the play room and before illustrations, the house anatomy:
-      the kind word → the band → THE OBJECT IS THE SURFACE (one still of the
-      real Studio at rest beside THE PARTS LIST: six named rows, a press
-      lights the part's ring on the still and prints its line under the
-      row; the first lit on load; nothing moves the page) → THE CIRCUMSTANCES (three capture frames on the look
+      the kind word → the band → THE OBJECT IS SIX MOMENTS (six tabs, the
+      lit moment's line, then a 16:9 crop of the real Studio already in the
+      state that makes the point, the rest dimmed, on the look room's
+      chassis; the first on load; nothing moves the page) → THE CIRCUMSTANCES (three capture frames on the look
       room's chassis, each titled by the problem with one line of answer;
       WITH SOUND, a drawn play key, plays on a press only, one at a time,
       stops off-screen; the honest empty frame with its key dimmed and inert
@@ -605,8 +609,7 @@ const columns = (blocks: BuildBlock[]): StoryBlock[][] =>
         <h2 class="band-name" id="build-studio-t">{STUDIO_COPY.title}</h2>
         <p class="band-what">{STUDIO_COPY.dek}</p>
       </header>
-      <StudioSurface src="/builds/studio/surface.webp" width={2336} height={1800} alt={STUDIO_COPY.surface.alt}
-        frame={{ w: SURFACE.w, h: SURFACE.h }} rects={SURFACE.targets} targets={STUDIO_COPY.surface.targets} />
+      <StudioMoments moments={STUDIO_COPY.moments} frames={MOMENT_FRAMES} />
       <div class="st-obj">
         <Carousel count={captures.length} label="Signal Studio, three recordings" accent="var(--sheet-acc)" mode="dissolve" dots loop titles={captures.map((c) => c.problem)}>
           {captures.map((c) => (
@@ -2215,6 +2218,8 @@ const columns = (blocks: BuildBlock[]): StoryBlock[][] =>
      Its hue: a deeper sapphire than SIGNAL's #4fd1ff, the same family, one
      step toward ink, so the instrument and the studio read as kin and apart */
   #build-studio { --sheet-acc: #2a5bd7; }
+  /* (the chassis rules below are :global since round four, 2026-10-15: StudioMoments.astro stands its six frames on
+     the same .st-obj / .st-slot / .st-frame chassis, and a scoped rule never reaches a child component's elements) */
   /* THE OBJECT on THE LOOK ROOM'S CHASSIS (Jon, round three, 2026-10-13:
      "the tiny carousel buttons aren't sufficient … adopt the arrow key
      buttons from the Illustrations UI"): one 16:9 frame with the look
@@ -2222,7 +2227,7 @@ const columns = (blocks: BuildBlock[]): StoryBlock[][] =>
      8px above it, the placard 14px under it. .st-obj is a container so the
      keys stand on the frame's own geometry in pure CSS (the look room
      measures a picture of unknown shape; this frame's shape is fixed). */
-  .st-obj {
+  :global(.st-obj) {
     container: st / inline-size;
     width: 100%;
     margin: 56px auto 0; /* the surface's caption → the frames (the band→object beat) */
@@ -2260,7 +2265,7 @@ const columns = (blocks: BuildBlock[]): StoryBlock[][] =>
     --st-fw: 100cqw;
   }
   /* night: the look room's carbon recipe over the night card */
-  :global(html[data-night]) .st-obj {
+  :global(html[data-night] .st-obj) {
     --kc-face-hi: color-mix(in srgb, var(--kc-ink) 15%, var(--sheet-card));
     --kc-face: color-mix(in srgb, var(--kc-ink) 10%, var(--sheet-card));
     --kc-face-hover-hi: color-mix(in srgb, var(--kc-ink) 22%, var(--sheet-card));
@@ -2275,25 +2280,25 @@ const columns = (blocks: BuildBlock[]): StoryBlock[][] =>
     --kc-ghost: color-mix(in srgb, var(--kc-ink) 30%, transparent);
   }
   @media (min-width: 900px) {
-    .st-obj {
+    :global(.st-obj) {
       --st-fw: calc(100cqw - 2 * var(--st-room));
     }
   }
   @media (max-width: 899px) {
-    .st-obj { margin-top: 40px; }
+    :global(.st-obj) { margin-top: 40px; }
   }
   .studio :global(.car) {
     position: relative;
   }
   /* the slide: the frame, then the placard 14px under it (the look room's .lk) */
-  .st-slot {
+  :global(.st-slot) {
     display: flex;
     flex-direction: column;
     align-items: center;
     gap: 14px;
     margin: 0;
   }
-  .st-frame {
+  :global(.st-frame) {
     box-sizing: border-box;
     width: var(--st-fw);
     aspect-ratio: 16 / 9;
@@ -2310,7 +2315,7 @@ const columns = (blocks: BuildBlock[]): StoryBlock[][] =>
     background: #0b0c10;
   }
   /* a frame with its file: the sheet's inner corner, a hairline; the key sits on the picture */
-  .st-slot:not([data-pending]) .st-frame {
+  :global(.st-slot:not([data-pending]) .st-frame) {
     border-radius: 14px;
     border: 1px solid color-mix(in oklab, var(--sheet-ink) 14%, transparent);
     background: #0b0c10;
@@ -2351,7 +2356,7 @@ const columns = (blocks: BuildBlock[]): StoryBlock[][] =>
   }
   .st-slot[data-pending] .st-play svg { opacity: 0.8; }
   @media (pointer: coarse) {
-    .st-frame {
+    :global(.st-frame) {
       touch-action: pan-y; /* a sideways drag is the chassis's swipe */
     }
   }
