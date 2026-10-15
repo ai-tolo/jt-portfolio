@@ -157,6 +157,8 @@ const tapeTint = (t: Track, i: number): { day: string; night: string } => {
   return { day: `oklch(0.76 0.145 ${hue})`, night: `oklch(0.66 0.13 ${hue})` };
 };
 const tapes = tracks.map((t, i) => ({ t, fill: tapeTint(t, i) }));
+// the tape the AudioDex memo became (audiodex-scene.json names it by its manifest title)
+const adxTape = tapes.find(({ t }) => t.title === ADX.moment.tape);
 
 interface Illo { src: string; alt: string; title?: string; year?: number; medium?: string; note?: string; }
 const illos: Illo[] = (illustrations as any).items ?? [];
@@ -405,7 +407,22 @@ const columns = (blocks: BuildBlock[]): StoryBlock[][] =>
           <p class="band-what">{ARCHIVE_COPY.dek}</p>
         </header>
         {/* THE OBJECT (2026-10-15, round two): two phones, one word (AudioDexDoor.astro, audiodex-scene.json) */}
-        <AudioDexDoor />
+        <AudioDexDoor>
+          {/* THE TAPE (2026-10-15, Jon: the memo "led to an actual track"): the music room's own cassette, wearing the
+              song's label, comes out of the AudioDex phone once the memo is open; a press carries you down to the deck
+              with that tape loaded and playing (the wallet script, [data-tape-jump] + data-tape-play) */}
+          {adxTape && (
+            <button class="adx-tape" type="button" slot="tape" data-tape-jump={adxTape.t.title} data-tape-play
+              aria-label={`Hear what it became: ${adxTape.t.title}, in the music room`}
+              style={`--mini-tint:${adxTape.fill.day};--mini-tint-night:${adxTape.fill.night}`}>
+              <span class="mini" aria-hidden="true">
+                <span class="mini-label">{adxTape.t.cover && <img src={adxTape.t.cover} alt="" loading="lazy" decoding="async" />}</span>
+                <img class="mini-shell" src="/studio/tape-shell-800.webp" width="1600" height="979" alt="" loading="lazy" decoding="async" />
+              </span>
+              <span class="adx-tape-w" aria-hidden="true">hear what it became <span class="adx-tape-arrow">↓</span></span>
+            </button>
+          )}
+        </AudioDexDoor>
         <div class="wk-story" data-story>
           <p class="wk-lede">{ARCHIVE.headline}</p>
           <div class="wk-story-clip" id="story-archive" inert>
@@ -2055,6 +2072,43 @@ const columns = (blocks: BuildBlock[]): StoryBlock[][] =>
   .adh-wave rect { fill: currentColor; }
   .adh-tape { display: block; width: 64px; height: 64px; border-radius: 10px; object-fit: cover; border: 1px solid color-mix(in oklab, var(--mx-ink) 14%, transparent); }
   .adh + .wk-rule { margin-top: 36px; }
+  /* THE TAPE out of the AudioDex phone: the wallet's mini at the slot's width, the touch signal's breath around it
+     (the site's "press me": the phones' rim, the same keyframe), and one line in the hint face under it */
+  .adx-tape {
+    --mini-w: 100%;
+    display: grid; justify-items: center; gap: 10px; width: 100%;
+    margin: 0; padding: 0; border: 0; background: none; cursor: pointer;
+    color: color-mix(in oklab, var(--sheet-acc) 85%, var(--mx-ink));
+    -webkit-tap-highlight-color: transparent;
+  }
+  .adx-tape .mini {
+    box-shadow: 0 10px 22px rgba(20, 16, 10, 0.28), 0 2px 5px rgba(20, 16, 10, 0.2);
+    transition: transform 220ms ease, box-shadow 220ms ease;
+  }
+  .adx-tape .mini::after {
+    content: ""; position: absolute; inset: 0; border-radius: inherit; padding: 2px; pointer-events: none;
+    background: linear-gradient(135deg, #47b6ff, #8a5cf6);
+    -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); -webkit-mask-composite: xor;
+    mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); mask-composite: exclude;
+    animation: touch-breathe 2s ease-in-out infinite;
+  }
+  .adx-tape:hover .mini { transform: translateY(-4px); box-shadow: 0 16px 28px rgba(20, 16, 10, 0.3), 0 3px 6px rgba(20, 16, 10, 0.2); }
+  .adx-tape:hover .mini::after { animation: none; opacity: 1; }
+  .adx-tape:focus-visible { outline: none; }
+  .adx-tape:focus-visible .mini { outline: 2px solid var(--mx-ink); outline-offset: 3px; }
+  /* beside the phone the words hang from the tape's right edge, clear of the phone; under it (stacked) centred */
+  .adx-tape { justify-items: end; }
+  .adx-tape-w { margin-right: -18px; font: 600 0.75rem/1.2 var(--wk-mono); letter-spacing: 0.04em; white-space: nowrap; transition: color 560ms ease; }
+  @container adx (max-width: 619px) {
+    .adx-tape { justify-items: center; }
+    .adx-tape-w { margin-right: 0; font-size: 0.8125rem; letter-spacing: 0.06em; }
+  }
+  .adx-tape-arrow { display: inline-block; animation: adx-bob 2.2s ease-in-out infinite; }
+  @keyframes adx-bob { 0%, 100% { transform: none; } 50% { transform: translateY(3px); } }
+  @media (prefers-reduced-motion: reduce) {
+    .adx-tape .mini::after { animation: none; opacity: 0.75; }
+    .adx-tape-arrow { animation: none; }
+  }
   @container (max-width: 819px) {
     .adh { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
     .adh > li { border-left: 0; padding-left: 0; border-top: 1px solid color-mix(in oklab, var(--mx-ink) 12%, transparent); min-height: 112px; }
@@ -4559,7 +4613,14 @@ const columns = (blocks: BuildBlock[]): StoryBlock[][] =>
             return void requestAnimationFrame(settle);
           }
           if (k + 1 !== active) auCar?.dispatchEvent(new CustomEvent("car:show", { detail: { index: k + 1 } }));
+          // "hear what it became": the press asked to hear it, so the tape plays once it is in the deck (the
+          // tape is the play switch; a browser that refuses leaves it loaded and waiting)
+          if (a.hasAttribute("data-tape-play")) window.setTimeout(() => {
+            const tape = auSlides[k + 1]?.querySelector<HTMLButtonElement>("[data-cs-tape]");
+            if (tape && !auSlides[k + 1].hasAttribute("data-playing")) tape.click();
+          }, reduce ? 0 : 520);
         };
+        document.querySelectorAll<HTMLAudioElement>("[data-adx] audio").forEach((m) => m.pause());
         requestAnimationFrame(settle);
       });
     });

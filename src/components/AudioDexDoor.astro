@@ -61,6 +61,8 @@ const song = results.find((r) => r.kind === 'song');
 
     {/* AUDIODEX: the same files, named by what is inside them */}
     <div class="adx-phone adx-dex">
+      {/* THE TAPE (2026-10-15): the host's cassette, tucked behind the phone, slides out once the memo is open */}
+      {Astro.slots.has('tape') && <div class="tape-slot" data-tape-slot inert><slot name="tape" /></div>}
       <i class="shadow" aria-hidden="true"></i>
       <div class="screen">
         <div class="face face-lib" aria-hidden="true">
@@ -81,7 +83,8 @@ const song = results.find((r) => r.kind === 'song');
                     ? <img class="hit-ico" src={r.cover} alt="" width="60" height="60" loading="lazy" decoding="async" />
                     : <i class="hit-ico hit-wave"><svg viewBox="0 0 24 24"><path d="M4 11v2M8 8v8M12 5v14M16 9v6M20 11v2" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" fill="none"/></svg></i>}
                   <span class="hit-t">{a}{b && <mark>{b}</mark>}{c}</span>
-                  <span class="hit-m mono">{r.meta}</span>
+                  <span class="hit-d">{r.date}</span>
+                  <span class="hit-m">{r.meta}</span>
                 </li>
               );
             })}
@@ -100,9 +103,12 @@ const song = results.find((r) => r.kind === 'song');
           <svg class="m-wave" viewBox={`0 0 ${waveW} 100`} preserveAspectRatio="none" aria-hidden="true">
             {bars.map((b, i) => <rect x={b.x} y={50 - b.h / 2} width="2.6" height={b.h} rx="1.3" style={`--i:${i}`} data-bar />)}
           </svg>
-          <ol class="m-lines" aria-hidden="true">
-            {moment.lines.map((l) => <li data-t0={l.t0} data-t1={l.t1}>{l.text}</li>)}
-          </ol>
+          {/* every line Whisper heard, as a lyric view: a window that follows the line being said */}
+          <div class="m-lyr" aria-hidden="true">
+            <ol class="m-lines" data-lines>
+              {moment.lines.map((l) => <li data-t0={l.t0} data-t1={l.t1}>{l.text}</li>)}
+            </ol>
+          </div>
           <div class="m-play">
             <button
               class="play" type="button" data-play
@@ -119,7 +125,7 @@ const song = results.find((r) => r.kind === 'song');
             <a class="m-tape" href="#soundlab" data-tape-jump={moment.tape}>
               <img src={moment.cover} alt="" width="60" height="60" loading="lazy" decoding="async" />
               <span class="m-tape-t">{moment.tape}</span>
-              <span class="m-tape-s">hear what it became <span aria-hidden="true">↓</span></span>
+              <span class="m-tape-s">song · {moment.tapeLen}</span>
             </a>
           )}
         </div>
@@ -234,16 +240,18 @@ const song = results.find((r) => r.kind === 'song');
   /* AudioDex's answer: the memo, then the song it became */
   .hits { position: absolute; left: 5.4cqw; right: 5.4cqw; top: 42cqw; list-style: none; margin: 0; padding: 0; }
   .hit {
-    position: relative; display: grid; grid-template-columns: 12cqw minmax(0, 1fr); column-gap: 3cqw; row-gap: 0.6cqw;
-    align-items: center; padding: 2.8cqw 0; border-bottom: 1px solid var(--sline);
+    position: relative; display: grid; grid-template-columns: 15cqw minmax(0, 1fr); column-gap: 3.4cqw; row-gap: 0.8cqw;
+    align-items: center; padding: 3.6cqw 0; border-bottom: 1px solid var(--sline);
     opacity: 0; transform: translateY(2cqw);
   }
   .s2 .hit { opacity: 1; transform: none; transition: opacity 0.35s calc(0.1s + var(--i) * 120ms), transform 0.5s cubic-bezier(0.2, 0.8, 0.2, 1) calc(0.1s + var(--i) * 120ms); }
-  .hit-ico { grid-row: span 2; width: 12cqw; height: 12cqw; border-radius: 2.4cqw; object-fit: cover; display: block; }
+  .hit-ico { grid-row: span 3; align-self: start; width: 15cqw; height: 15cqw; border-radius: 2.8cqw; object-fit: cover; display: block; }
   .hit-wave { display: grid; place-items: center; background: color-mix(in oklab, var(--sacc) 22%, #000); color: var(--sacc); }
   .hit-wave svg { width: 62%; height: 62%; }
-  .hit-t { font-weight: 600; line-height: 1.2; }
-  .hit-m { font-size: 3.4cqw; color: var(--sdim); }
+  .hit-t { font-size: 4.8cqw; font-weight: 600; line-height: 1.2; }
+  /* the date reads first after the title (Jon: "the dates should be more noticeable") */
+  .hit-d { font-size: 4.3cqw; font-weight: 600; color: var(--sfg); font-variant-numeric: tabular-nums; }
+  .hit-m { font-size: 3.6cqw; color: var(--sdim); }
   mark { background: transparent; color: var(--sacc); }
   /* the fingertip on the memo, then it opens */
   .hit-memo::after { content: ''; position: absolute; left: 40%; top: 50%; width: 9cqw; height: 9cqw; margin: -4.5cqw 0 0 -4.5cqw; border-radius: 50%; background: rgba(255, 255, 255, 0.6); opacity: 0; pointer-events: none; }
@@ -260,13 +268,17 @@ const song = results.find((r) => r.kind === 'song');
   .m-title { margin: 0; font-size: 6.6cqw; font-weight: 700; letter-spacing: -0.015em; line-height: 1.15; }
   .m-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 1cqw 2.2cqw; margin: 0; font-size: 3.7cqw; color: var(--sdim); }
   .m-note { padding: 0.6cqw 1.8cqw; border-radius: 999px; background: color-mix(in oklab, var(--sacc) 22%, #000); color: var(--sacc); font-size: 3.4cqw; font-weight: 600; }
-  .m-wave { display: block; width: 100%; height: 30cqw; margin: 4cqw 0 3cqw; }
+  .m-wave { display: block; width: 100%; height: 24cqw; margin: 3cqw 0 2cqw; }
   .m-wave rect { fill: #4a4a4e; transition: fill 0.2s; }
   .m-wave rect.on { fill: var(--sacc); }
-  .m-lines { list-style: none; margin: 0; padding: 0; display: grid; gap: 1.6cqw; font-size: 5.2cqw; line-height: 1.3; color: #8e8e93; }
+  .m-lyr {
+    position: relative; height: 46cqw; overflow: hidden;
+    -webkit-mask: linear-gradient(#000 0 78%, transparent); mask: linear-gradient(#000 0 78%, transparent);
+  }
+  .m-lines { list-style: none; margin: 0; padding: 0; display: grid; gap: 2.2cqw; font-size: 5.4cqw; font-weight: 600; line-height: 1.25; color: #5a5a5f; transition: transform 0.5s cubic-bezier(0.2, 0.8, 0.2, 1); }
   .m-lines li { transition: color 0.25s; }
   .m-lines li.on { color: var(--sfg); }
-  .m-play { display: flex; align-items: center; gap: 3.4cqw; margin-top: 5cqw; }
+  .m-play { display: flex; align-items: center; gap: 3.4cqw; margin-top: 1cqw; }
   .play {
     display: grid; place-items: center; width: 15cqw; height: 15cqw; padding: 0; border: 0; border-radius: 50%;
     background: var(--sfg); color: #000; cursor: pointer;
@@ -288,6 +300,21 @@ const song = results.find((r) => r.kind === 'song');
   .m-tape-s { font-size: 3.6cqw; color: var(--sacc); }
   .m-tape:hover { background: #2a2a2d; }
   .m-tape:focus-visible { outline: 0.6cqw solid var(--sacc); outline-offset: 0.4cqw; }
+
+  /* ── THE TAPE: what the memo became, coming out of the phone. Tucked behind its right edge at rest, it slides out
+     (and tips) once the memo is open; on a narrow sheet it drops out of the phone's foot instead, into a reserved
+     slot, so nothing below moves. The host draws the tape itself (StudioOne, slot "tape"). */
+  .tape-slot {
+    position: absolute; z-index: 0; left: 62%; top: 58%; width: 56cqw;
+    transform: translateX(-30%); opacity: 0; pointer-events: none;
+    transition: transform 0.7s cubic-bezier(0.2, 0.9, 0.25, 1.1), opacity 0.3s;
+  }
+  .s4 .tape-slot { transform: translateX(60%) rotate(-5deg); opacity: 1; pointer-events: auto; transition-delay: 0.9s, 0.9s; }
+  @container adx (max-width: 619px) {
+    .adx-dex { margin-bottom: 47cqw; }
+    .tape-slot { left: 50%; top: auto; bottom: 0; width: 60cqw; transform: translate(-50%, -10%); }
+    .s4 .tape-slot { transform: translate(-50%, 100%) rotate(-3deg); }
+  }
 
   /* ── the foot: the hint at rest, Replay once the memo is open; one slot, so nothing below moves */
   .foot { display: grid; min-height: 30px; margin-top: 16px; align-items: start; justify-items: center; }
@@ -316,6 +343,7 @@ const song = results.find((r) => r.kind === 'song');
     .s4 .face-memo { opacity: 1; }
     .s4 .face-lib { transform: none; }
     .s3 .hit-memo::after { animation: none; }
+    .tape-slot, .s4 .tape-slot { transition: opacity 0.2s; }
     .s1:not(.s2) .caret { animation: none; }
   }
 </style>
@@ -338,6 +366,8 @@ const song = results.find((r) => r.kind === 'song');
     const audio = root.querySelector('audio');
     const bars = Array.from(root.querySelectorAll('[data-bar]'));
     const lines = Array.from(root.querySelectorAll('[data-t0]'));
+    const list = root.querySelector('[data-lines]');
+    let shown = -1;
     const clock = root.querySelector('[data-clock]');
     const secs = Number(root.dataset.secs) || 18;
     const query = root.dataset.query || '';
@@ -349,14 +379,23 @@ const song = results.find((r) => r.kind === 'song');
     const later = (ms, fn) => timers.push(window.setTimeout(fn, ms));
     const say = (msg) => { if (status) { status.textContent = ''; later(30, () => { status.textContent = msg; }); } };
     const setQ = (t) => qs.forEach((q) => { q.textContent = t; });
-    const live = (on) => { if (memo) memo.inert = !on; };
+    const tapeSlot = root.querySelector('[data-tape-slot]');
+    const live = (on) => { if (memo) memo.inert = !on; if (tapeSlot && !on) tapeSlot.inert = true; };
     const fmt = (t) => `${Math.floor(t / 60)}:${String(Math.floor(t % 60)).padStart(2, '0')}`;
 
     // the memo playing: the bars fill in the accent as it plays, the line being said lights
     const paint = (t) => {
       const n = Math.round((t / secs) * bars.length);
       bars.forEach((b, i) => b.classList.toggle('on', i < n));
-      lines.forEach((l) => l.classList.toggle('on', t >= Number(l.dataset.t0) && t < Number(l.dataset.t1) + 0.4));
+      let at = -1;
+      lines.forEach((l, i) => { const on = t >= Number(l.dataset.t0) && t < Number(l.dataset.t1) + 0.4; l.classList.toggle('on', on); if (on) at = i; });
+      // the window follows: the line being said stands second from the top (the first at rest)
+      if (list && at !== -1 && at !== shown) {
+        shown = at;
+        const prev = lines[Math.max(0, at - 1)];
+        list.style.transform = at > 0 ? `translateY(${-prev.offsetTop}px)` : '';
+      }
+      if (list && t === 0) { shown = -1; list.style.transform = ''; }
       if (clock) clock.textContent = fmt(t);
     };
     const stop = () => {
@@ -372,6 +411,7 @@ const song = results.find((r) => r.kind === 'song');
       });
       audio.addEventListener('timeupdate', () => paint(audio.currentTime));
       audio.addEventListener('ended', () => { stop(); paint(secs); });
+      audio.addEventListener('pause', () => play.classList.remove('is-playing')); // paused from outside (the tape jump)
     }
 
     const reset = () => {
@@ -400,10 +440,10 @@ const song = results.find((r) => r.kind === 'song');
       }
       t += reduce.matches ? 300 : 450;
       later(t, () => { setQ(query); root.classList.add('s2'); say('Voice Memos: no results. AudioDex: the memo, and the song it became.'); });
-      t += reduce.matches ? 900 : 1500;
+      t += reduce.matches ? 1200 : 3000; // the answers held long enough to read both phones (Jon: "a bit longer")
       later(t, () => root.classList.add('s3'));
       t += reduce.matches ? 200 : 650;
-      later(t, () => { root.classList.add('s4'); live(true); say('The memo is open.'); });
+      later(t, () => { root.classList.add('s4'); live(true); if (tapeSlot) tapeSlot.inert = false; say('The memo is open. It became a song: the tape beside the phone plays it.'); });
       t += reduce.matches ? 200 : 700;
       later(t, () => { root.classList.add('done'); running = false; });
     };

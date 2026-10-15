@@ -24,3 +24,9 @@
 - The fold: the hook → one strip (heard · measured · named · drawn · linked) → the floor line → the whole story. No caption, no rail, no line in Jon's voice yet (the round-one line read creepy; his words come from the next interview).
 - Retired to junkyard/: ArchiveHero.astro, archive-run.json. IntakeHero's comments still name ArchiveHero as the twin (the Intake sheet was out of scope); the twins now live in AudioDexDoor.
 - Resume: Jon's line for `.wk-said` (if he wants one), then a real-phone check of the stacked layout (Voice Memos 62cqw above AudioDex 76cqw).
+
+## Round three (2026-10-15, Jon: the full transcript, a longer hold, bigger dates, a link that excites)
+- The memo shows every line Whisper heard (8, "♪" for the sung note, "Hi Uncle Jonny." in Jon's spelling) as a lyric view that follows the playback.
+- The answers hold 3 s (was 1.5); each result carries its date on its own line, a step bigger, with bigger titles and icons.
+- THE TAPE: the music room's own mini cassette (StudioOne passes it into AudioDexDoor's `tape` slot) slides out from behind the AudioDex phone once the memo is open (under it when stacked, into a reserved slot); it breathes with the touch signal; a press pauses the memo, lands the music room, loads Thanksgiving A Capella and presses its play switch. The in-phone row now just says "song · 1:06".
+- Assumption to confirm: the memo's date prints as Nov 24, 2022 (Thanksgiving of the manifest's year).
