@@ -1,0 +1,19 @@
+# STATE: the AudioDex sheet, one scene (branch `skim`, 2026-10-15)
+
+## Plan
+1. archive-run.json: the word `thanksgiving` (one slip), three dinners by year (2021 · 2019 · 2017), each row = title, year, length, mood, "the kids", the room; the moment = 9:31–9:43 inside 14:02, a kid's grace lit on "thanksgiving".
+2. ArchiveHero: results rows print what AudioDex wrote; the moment drops the counts, tags, tool list and tool chips; keeps scope, waveform, lit line, Kept, play.
+3. The play key is a media slot: `public/archive/thanksgiving.m4a` checked with fs.existsSync at build; absent = drawn, dimmed, inert; present = plays the file.
+4. Under the moment: `this dinner became a tape ↓` (a real link to #soundlab, `data-tape-jump` = the tape's manifest title).
+5. Host script: land #soundlab, wait for the scroll to settle, then `car:show` the Thanksgiving tape (sleeve index + 1).
+6. The fold: hook → `.wk-said` (Jon's line, DRAFT) → the one explaining line → under the hood → `.wk-rule` → the whole story.
+7. Under the hood = ONE RECORDING, BEFORE AND AFTER: the stock row beside AudioDex's row, labelled heard · read · measured · drawn · found in the accent; a small song row shows bpm + key.
+8. Delete SPEC.archive, SKIM.archive, READOUT.archive and the Schematic glyphs only archive drew; keep everything watch/studio/signal still use.
+9. Gate: the build exit code; then dist/client on a scratch port, 1440×900 day + night, 375×812 touch, fold open and closed.
+10. One commit on `skim`.
+
+## Resume here (round one shipped as one commit on `skim`, 2026-10-15)
+- Done: steps 1–10. The scene lives in src/data/archive-run.json (phone) and ARCHIVE_COPY in objects-copy.ts (fold words, all DRAFT); the hood markup + `.ad-*` CSS sit in StudioOne's #build-archive block; the tape jump is in StudioOne's wallet script ("THE TAPE JUMP").
+- THE SLOT: drop `public/archive/thanksgiving.m4a` (the twelve seconds themselves, not the 14-minute memo), rebuild. The play key goes live and plays the file start to end; no code change.
+- Open for Jon: every DRAFT line in ARCHIVE_COPY (said · why · rule · hood notes · caption); the music room's tape note says "a Thanksgiving dinner I couldn't attend", while the fold's line says he is back at the dinner.
+- QA: 1440×900 day + night and 375×812 touch, fold open + closed, captures in ~/Documents/studio-build/audiodex/ (probe: scratchpad qa/probe.mjs, serves dist/client on :4691).

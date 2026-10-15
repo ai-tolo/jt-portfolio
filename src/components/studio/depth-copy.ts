@@ -6,7 +6,8 @@
 export type SpecRow = { k: string; tool: string; html: string; glyph?: string };
 export type Spec = { title: string; rows: SpecRow[] };
 
-export const SPEC: Record<"watch" | "archive" | "studio", Spec> = {
+// AudioDex's rows were retired 2026-10-15: its hood is ONE RECORDING, BEFORE AND AFTER (StudioOne, ARCHIVE_COPY.hood)
+export const SPEC: Record<"watch" | "studio", Spec> = {
   watch: {
     title: "under the hood",
     rows: [
@@ -17,19 +18,6 @@ export const SPEC: Record<"watch" | "archive" | "studio", Spec> = {
       { k: "execute", glyph: "bolt", tool: "applet", html: "Calendar events and reminders are written by a small signed applet with its own permissions; every action is idempotent by hash, retried, and receipted." },
       { k: "store", glyph: "db", tool: "SQLite", html: "Memos, tickets, and full-text search over both, in one file that stays on my own computers." },
       { k: "surface", glyph: "phone", tool: "web app", html: "A queue of open tickets and a day-grouped log on the phone; a ticket can be saved, snoozed, or turned into a paste-ready prompt." },
-    ],
-  },
-  archive: {
-    title: "under the hood",
-    rows: [
-      { k: "capture", glyph: "hash", tool: "content hash", html: "Voice memos, phone videos, sessions, old drives: every recording lands in one library by content hash, so the same file on three devices is one row." },
-      { k: "transcribe", glyph: "text", tool: "Whisper", html: "Every recording becomes text, on-device (large-v3-turbo, through MLX)." },
-      { k: "read", glyph: "sparkle", tool: "Claude", html: "A title, a one-line summary, the mood, tags, who and what gets named; a second pass hunts Whisper's hallucinations before they can become titles." },
-      { k: "analyze", glyph: "pulse", tool: "librosa", html: "Tempo by beat tracking, key from a chroma profile, how much is silence, how much changes; each number is written onto the file's row." },
-      { k: "draw", glyph: "wave", tool: "ffmpeg", html: "A waveform for every file, so a recording can be seen before it is played." },
-      { k: "store", glyph: "db", tool: "SQLite", html: "One file with three tiers (fresh, library, archive); a nightly eight-stage sweep is idempotent and says so when it fails." },
-      { k: "search", glyph: "search", tool: "one query", html: "Across titles, summaries and transcripts: a word lands on recordings, then on the seconds inside one." },
-      { k: "reach", glyph: "globe", tool: "Tailscale", html: "The phone opens it over a private network from anywhere; a kept moment can be trimmed or shared." },
     ],
   },
   // SIGNAL STUDIO (2026-10-13): DRAFT, from the signal-map notes; tools

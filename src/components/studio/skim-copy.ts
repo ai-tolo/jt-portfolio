@@ -14,14 +14,8 @@ export type Beat = { html: string; from: string };
 export type Count = { n: string; w: string };
 export type Skim = { beats: [Beat, Beat, Beat] };
 
-export const SKIM: Record<"archive" | "watch" | "studio", Skim> = {
-  archive: {
-    beats: [
-      { html: "Recordings get a date, a duration, and a name like New Recording 47.", from: "archive ¶2" },
-      { html: "So I built the library I kept expecting someone to sell me.", from: "archive ¶3" },
-      { html: "The quote, the laugh, the idea from three summers ago: seconds away.", from: "archive ¶4" },
-    ],
-  },
+// AudioDex's beats were retired 2026-10-15 (its fold is the Thanksgiving scene, objects-copy.ts ARCHIVE_COPY)
+export const SKIM: Record<"watch" | "studio", Skim> = {
   watch: {
     beats: [
       { html: "By the time I'd typed it, I had a note <em>about</em> an idea.", from: "watch, the hinge line" },

@@ -34,19 +34,12 @@ import { SKIM, type Count } from "./skim-copy";
 import IntakeClock from "./IntakeClock.astro";
 // the sentence the watch replays, printed once in the fold (src/data/intake-run.json)
 import WATCH_RUN from "../../data/intake-run.json";
+// the dinner the phone finds (src/data/archive-run.json): its waveform is drawn again in the AudioDex fold
+import ARCHIVE_RUN from "../../data/archive-run.json";
 import LEDGER from "../../lib/systems-ledger.json";
 const fmt = (n: number) => n.toLocaleString("en-US");
 const asDate = (iso: string) => new Date(iso + "T12:00:00Z").toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" });
-const READOUT: Record<"archive" | "watch" | "studio", Count[] | undefined> = {
-  archive: [
-    { n: fmt(LEDGER.archive.recordings_mine), w: "recordings of mine" },
-    { n: fmt(LEDGER.archive.hours_mine), w: "hours" },
-    { n: fmt(LEDGER.archive.transcribed), w: "transcribed" },
-    { n: fmt(LEDGER.archive.waveforms), w: "waveforms drawn" },
-    { n: fmt(LEDGER.archive.tempo_found), w: "with a tempo found" },
-    { n: fmt(LEDGER.archive.duplicates_folded), w: "duplicates folded" },
-    { n: asDate(LEDGER.archive.oldest), w: "the oldest" },
-  ],
+const READOUT: Record<"watch" | "studio", Count[] | undefined> = {
   watch: [
     { n: fmt(LEDGER.intake.memos), w: "memos" },
     { n: fmt(LEDGER.intake.minutes), w: "minutes spoken" },
@@ -58,6 +51,16 @@ const READOUT: Record<"archive" | "watch" | "studio", Count[] | undefined> = {
   studio: undefined,
 };
 const SOURCE = `counted in the system's own database, ${asDate(LEDGER.snapshot)}`;
+// AUDIODEX'S HOOD (2026-10-15): the one recording's waveform, the bars the phone draws, the kept twelve seconds lit
+const adWave = (() => {
+  const { peaks, window: [a, b], trim: [t0, t1] } = ARCHIVE_RUN.moment;
+  return peaks.map((p, i) => {
+    const t = a + ((i + 0.5) / peaks.length) * (b - a);
+    const h = Math.max(4, Math.min(96, p * 96));
+    return { x: i * 4, y: 50 - h / 2, h, lit: t >= t0 && t <= t1 };
+  });
+})();
+const AD = ARCHIVE_COPY.hood;
 import { WATCH_COPY, ARCHIVE_COPY, STUDIO_COPY } from "./objects-copy";
 import SiteFloor from "./SiteFloor.astro";
 // THE SHEET (2026-10-13): the anatomy the builds share (src/styles/sheet.css).
@@ -413,14 +416,76 @@ const columns = (blocks: BuildBlock[]): StoryBlock[][] =>
         <div class="wk-story" data-story>
           <p class="wk-lede">{ARCHIVE.headline}</p>
           <div class="wk-story-clip" id="story-archive" inert>
-            {/* THE SKIM (2026-10-15): three beats quoted from the locked script, then under the hood as a
-                picture, then the whole story behind its own label (skim-copy.ts, Schematic.astro) */}
-            <ol class="sheet-beats">
-              {SKIM.archive.beats.map((b, j) => <li class:list={["sheet-beat", { turn: j === 1 }]} set:html={b.html} />)}
-            </ol>
+            {/* THE THANKSGIVING FOLD (2026-10-15, the Intake sheet's anatomy): Jon's own line → the one explaining
+                line → under the hood as ONE RECORDING, BEFORE AND AFTER (the stock row beside the row AudioDex wrote,
+                each stage's word in the accent pointing at what it wrote) → the floor line → the whole story.
+                Words: ARCHIVE_COPY in objects-copy.ts (DRAFT); the recording is invented, no real names. */}
+            <p class="wk-said">
+              <span class="wk-said-q" aria-hidden="true">“</span>{ARCHIVE_COPY.said}<span class="wk-said-q" aria-hidden="true">”</span>
+            </p>
+            <p class="ad-why">{ARCHIVE_COPY.why}</p>
             <div class="sheet-sec">
-              <p class="sheet-t">{SPEC.archive.title}</p>
-              <Schematic id="skm-archive" rows={SPEC.archive.rows} readout={READOUT.archive} source={READOUT.archive ? SOURCE : undefined} />
+              <p class="sheet-t">under the hood</p>
+              <div class="ad">
+                <figure class="ad-side ad-before">
+                  <figcaption class="sheet-t">{AD.before.label}</figcaption>
+                  <div class="ad-card ad-stock">
+                    <span class="ad-stock-name">{AD.before.name}</span>
+                    <span class="ad-stock-meta"><span>{AD.before.date}</span><span>{AD.before.len}</span></span>
+                  </div>
+                  <p class="vs-note">{AD.before.note}</p>
+                </figure>
+                <p class="ad-arrow" aria-hidden="true"><span class="ad-arrow-r">→</span><span class="ad-arrow-d">↓</span></p>
+                <figure class="ad-side ad-after">
+                  <figcaption class="sheet-t">{AD.after.label}</figcaption>
+                  <dl class="ad-card ad-row">
+                    <div class="ad-f">
+                      <dt class="ad-k">heard</dt>
+                      <dd class="ad-v ad-heard"><span class="ad-at">{AD.after.heard.at}</span> “{AD.after.heard.line}”</dd>
+                    </div>
+                    <div class="ad-f">
+                      <dt class="ad-k">read</dt>
+                      <dd class="ad-v">
+                        <span class="ad-title">{AD.after.title}</span>
+                        <span class="ad-dots">{AD.after.tags.map((w) => <span>{w}</span>)}</span>
+                        <span class="ad-dots">{[AD.after.people, AD.after.mood, AD.after.room].map((w) => <span>{w}</span>)}</span>
+                      </dd>
+                    </div>
+                    <div class="ad-f">
+                      <dt class="ad-k">measured</dt>
+                      <dd class="ad-v ad-mono ad-dots">
+                        <span>{AD.after.len}</span>
+                        <span>bpm {AD.after.bpm || <i class="ad-blank" aria-label="blank"></i>}</span>
+                        <span>key {AD.after.key || <i class="ad-blank" aria-label="blank"></i>}</span>
+                      </dd>
+                    </div>
+                    <div class="ad-f ad-f-wave">
+                      <dt class="ad-k">drawn</dt>
+                      <dd class="ad-v">
+                        <svg class="ad-wave" viewBox={`0 0 ${adWave.length * 4} 100`} preserveAspectRatio="none" role="img" aria-label="The waveform, the twelve seconds of grace lit">
+                          {adWave.map((w) => <rect x={w.x} y={w.y} width="2.4" height={w.h} rx="1.2" class:list={{ lit: w.lit }} />)}
+                        </svg>
+                      </dd>
+                    </div>
+                    <div class="ad-f">
+                      <dt class="ad-k">found</dt>
+                      <dd class="ad-v ad-mono ad-dots ad-found">{AD.after.found.map((w) => <span>{w}</span>)}</dd>
+                    </div>
+                  </dl>
+                  <dl class="ad-card ad-row ad-song">
+                    <div class="ad-f ad-f-head">
+                      <dt class="sr-only">a song</dt>
+                      <dd class="ad-v"><span class="ad-title">{AD.song.title}</span><span class="ad-mono ad-len">{AD.song.len}</span></dd>
+                    </div>
+                    <div class="ad-f">
+                      <dt class="ad-k">measured</dt>
+                      <dd class="ad-v ad-mono ad-dots"><span>{AD.song.bpm}</span><span>{AD.song.key}</span></dd>
+                    </div>
+                  </dl>
+                  <p class="vs-note">{AD.songNote}</p>
+                </figure>
+              </div>
+              <p class="wk-rule">{ARCHIVE_COPY.rule}</p>
             </div>
             <div class="sheet-sec">
               <button class="sheet-whole-btn" type="button" aria-expanded="false" aria-controls="whole-archive" data-whole>the whole story <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M5 8l5 5 5-5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
@@ -2031,6 +2096,82 @@ const columns = (blocks: BuildBlock[]): StoryBlock[][] =>
     .vs { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
     .vs-cal { max-width: 420px; }
     .wk-rule { font-size: 1rem; }
+  }
+  /* ── THE THANKSGIVING FOLD (AudioDex, 2026-10-15): the line under Jon's line, then ONE RECORDING, BEFORE AND AFTER.
+     Paper stays paper: the two rows are hairline cards on the sheet, no fill. On the right each stage's word stands in
+     the sheet's accent in a left gutter, a hairline running from it to what that stage wrote (heard · read · measured ·
+     drawn · found); no icons, no chain. Side by side on a wide sheet with an arrow between, stacked under 820. */
+  .ad-why {
+    max-width: 52ch;
+    margin: -12px auto 40px;
+    text-align: center;
+    font-size: 1rem;
+    line-height: 1.6;
+    text-wrap: pretty;
+    color: var(--mx-dim);
+    transition: color 560ms ease;
+  }
+  .ad { display: grid; grid-template-columns: minmax(0, 1fr); gap: 20px; align-items: center; margin: 0 0 8px; }
+  .ad-side { margin: 0; min-width: 0; }
+  .ad-side .sheet-t { margin-bottom: 14px; }
+  .ad-card {
+    margin: 0;
+    border: 1px solid color-mix(in oklab, var(--mx-ink) 14%, transparent);
+    border-radius: 14px;
+    transition: border-color 560ms ease;
+  }
+  .ad-stock { display: grid; gap: 6px; padding: 14px 18px; }
+  .ad-stock-name { font-weight: 600; font-size: 1rem; color: var(--mx-ink); }
+  .ad-stock-meta { display: flex; justify-content: space-between; font-size: 0.875rem; color: var(--mx-dim); font-variant-numeric: tabular-nums; }
+  .ad-arrow { margin: 0; text-align: center; font: 500 1rem/1 var(--wk-mono); color: var(--mx-dim); }
+  .ad-arrow-r { display: none; }
+  .ad-row { display: grid; gap: 14px; padding: 18px 18px 18px 0; }
+  .ad-f { display: grid; grid-template-columns: 124px minmax(0, 1fr); align-items: baseline; }
+  .ad-f-wave { align-items: center; }
+  /* the stage's word, and the hairline it points along */
+  .ad-k {
+    display: flex; align-items: center; gap: 8px;
+    padding: 0 10px 0 18px;
+    font: 600 0.6875rem/1.4 var(--wk-mono);
+    letter-spacing: 0.1em;
+    color: color-mix(in oklab, var(--sheet-acc) 80%, var(--mx-ink));
+    transform: translateY(-1px);
+  }
+  .ad-k::after { content: ""; flex: 1; min-width: 8px; height: 1px; background: color-mix(in oklab, var(--sheet-acc) 45%, transparent); }
+  .ad-v { display: grid; gap: 4px; min-width: 0; margin: 0; font-size: 0.9375rem; line-height: 1.45; color: var(--mx-ink); transition: color 560ms ease; }
+  .ad-title { font-weight: 600; font-size: 1rem; }
+  .ad-mono { font-family: var(--wk-mono); font-size: 0.8125rem; letter-spacing: 0.02em; font-variant-numeric: tabular-nums; }
+  .ad-dots { display: flex; flex-wrap: wrap; gap: 2px 10px; color: var(--mx-dim); }
+  .ad-dots > span + span::before { content: "·"; margin-right: 10px; color: var(--mx-dim); }
+  .ad-v.ad-dots { display: flex; }
+  .ad-heard { display: block; font-style: italic; }
+  .ad-at { font: 500 0.75rem/1 var(--wk-mono); font-style: normal; letter-spacing: 0.04em; color: var(--mx-dim); margin-right: 4px; }
+  /* bpm and key, blank on purpose: a dinner has neither */
+  .ad-blank { display: inline-block; width: 2.6em; height: 1px; margin-left: 4px; vertical-align: 0.2em; background: repeating-linear-gradient(90deg, var(--mx-dim) 0 3px, transparent 3px 6px); }
+  .ad-wave { display: block; width: 100%; height: 44px; color: color-mix(in oklab, var(--mx-ink) 30%, transparent); }
+  .ad-wave rect { fill: currentColor; }
+  .ad-wave rect.lit { fill: var(--sheet-acc); }
+  .ad-found { color: var(--mx-ink); }
+  .ad-song { margin-top: 12px; padding-block: 12px; gap: 8px; }
+  .ad-song .ad-f-head .ad-v { display: flex; justify-content: space-between; gap: 12px; padding-left: 18px; grid-column: 1 / -1; }
+  .ad-song .ad-title { font-size: 0.9375rem; }
+  .ad-song .ad-len { color: var(--mx-dim); }
+  .ad-song .ad-dots { color: var(--mx-ink); }
+  .ad + .wk-rule { margin-top: 36px; }
+  @container (min-width: 820px) {
+    .ad { grid-template-columns: minmax(0, 0.82fr) auto minmax(0, 1.18fr); gap: 28px; }
+    /* the two cards start on one line: the same file, before and after */
+    .ad-before, .ad-after { align-self: start; }
+    .ad-arrow { align-self: start; margin-top: 64px; font-size: 1.125rem; }
+    .ad-arrow-r { display: inline; }
+    .ad-arrow-d { display: none; }
+    .ad-why { font-size: 1.0625rem; margin-top: -20px; margin-bottom: 48px; }
+  }
+  @container (max-width: 459px) {
+    .ad-f { grid-template-columns: minmax(0, 1fr); gap: 4px; }
+    .ad-row { padding: 16px; }
+    .ad-k { padding: 0; }
+    .ad-song .ad-f-head .ad-v { padding-left: 0; }
   }
   /* the handle: the card's whole lower edge; the chevron breathes while the
      story is folded (the touch signal's vocabulary) and turns when it opens */
@@ -4515,6 +4656,42 @@ const columns = (blocks: BuildBlock[]): StoryBlock[][] =>
         leave: () => { if (peeking) { closeAll(); endPeek(); } },
       });
     }
+    // THE TAPE JUMP (2026-10-15): the AudioDex phone's moment ends on "this dinner became a tape ↓"
+    // ([data-tape-jump] = the tape's manifest title). A press lands the music room first (its own scroller:
+    // main on phones, the document on desks), waits for the scroll to come to rest, then loads that tape into
+    // the deck the way a sleeve does (car:show k + 1; slide 0 is the empty deck). The wallet never peeks after.
+    document.querySelectorAll<HTMLAnchorElement>("[data-tape-jump]").forEach((a) => {
+      a.addEventListener("click", (e) => {
+        const k = (wallets[0]?.options ?? []).findIndex((o) => o.textContent?.trim() === a.dataset.tapeJump);
+        if (k < 0) return; // no such tape in the wallet: the plain anchor still lands the room
+        e.preventDefault();
+        markShown(WL_KEY);
+        closeAll();
+        // the deck framed with air above its placard (the loaded deck stands ~90px taller than the blank one)
+        const phone = window.matchMedia("(max-width: 899px)").matches;
+        const sc = (phone ? document.querySelector<HTMLElement>("main") : null) ?? (document.scrollingElement as HTMLElement);
+        const r = auRoom.getBoundingClientRect();
+        const air = phone ? 24 : Math.max(24, Math.round((window.innerHeight - r.height - 90) / 2));
+        sc.scrollTo({ top: r.top + sc.scrollTop - air, behavior: reduce ? "auto" : "smooth" });
+        // at rest = the room's top unmoved for 8 frames; images loading on the way can leave it short, so one
+        // more scroll closes the gap before the tape is picked
+        let last = NaN, still = 0, fixes = 0;
+        let t0 = performance.now();
+        const settle = () => {
+          const top = Math.round(auRoom.getBoundingClientRect().top);
+          still = top === last ? still + 1 : 0;
+          last = top;
+          if (still < 8 && performance.now() - t0 < 3000) return void requestAnimationFrame(settle);
+          if (Math.abs(top - air) > 4 && fixes++ < 2) {
+            sc.scrollBy({ top: top - air, behavior: reduce ? "auto" : "smooth" });
+            still = 0; last = NaN; t0 = performance.now();
+            return void requestAnimationFrame(settle);
+          }
+          if (k + 1 !== active) auCar?.dispatchEvent(new CustomEvent("car:show", { detail: { index: k + 1 } }));
+        };
+        requestAnimationFrame(settle);
+      });
+    });
     auCar?.addEventListener("car:change", (e) => {
       active = Number((e as CustomEvent).detail?.index ?? 0);
       closeAll();
