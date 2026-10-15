@@ -24,13 +24,6 @@ import { BUILDS, type BuildBlock } from "./builds-copy";
 import IntakeHero from "../IntakeHero.astro";
 import AudioDexDoor from "../AudioDexDoor.astro";
 import SignalCard from "../signal/SignalCard.astro";
-import { SPEC } from "./depth-copy";
-// THE SKIM (2026-10-15): THE READOUT's unit (skim-copy.ts): real counts from
-// the systems' own stores, a dated snapshot in src/lib/systems-ledger.json (the
-// judge-ledger rule: re-query to refresh, never type a number by hand). The
-// beats and the Schematic left the Studio sheet 2026-10-15 (its surface is it);
-// SIGNAL's card still draws the Schematic itself.
-import type { Count } from "./skim-copy";
 // SIX MOMENTS (2026-10-15, round four): the Studio sheet's object, six crops
 // of the real thing each in the state that makes its point (StudioMoments.astro;
 // the words in objects-copy.ts). The frames' pixels are the capture's (2× of
@@ -45,19 +38,6 @@ import IntakeClock from "./IntakeClock.astro";
 import WATCH_RUN from "../../data/intake-run.json";
 // the memo the two phones search for (src/data/audiodex-scene.json): its hood draws the same file
 import ADX from "../../data/audiodex-scene.json";
-import LEDGER from "../../lib/systems-ledger.json";
-const fmt = (n: number) => n.toLocaleString("en-US");
-const asDate = (iso: string) => new Date(iso + "T12:00:00Z").toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" });
-const READOUT: Record<"watch", Count[] | undefined> = {
-  watch: [
-    { n: fmt(LEDGER.intake.memos), w: "memos" },
-    { n: fmt(LEDGER.intake.minutes), w: "minutes spoken" },
-    { n: fmt(LEDGER.intake.tickets), w: "tickets" },
-    { n: fmt(LEDGER.intake.calendar_events_written), w: "calendar events it wrote by itself" },
-    { n: asDate(LEDGER.intake.first), w: "the first memo" },
-  ],
-};
-const SOURCE = `counted in the system's own database, ${asDate(LEDGER.snapshot)}`;
 // AUDIODEX'S HOOD (2026-10-15, round two): five things the system wrote about the one memo, each a picture or a
 // word big enough to read at a glance; the stage word above it is the only label
 const adxBars = ADX.moment.peaks.map((p, i) => ({ x: i * 4, h: Math.max(8, p * 96) }));
@@ -68,9 +48,7 @@ import SiteFloor from "./SiteFloor.astro";
 // Round two (Jon): no numbers on the sheets; the kind word stands over each name.
 import "../../styles/sheet.css";
 
-// The one-liner. Jon rewrites this string at will (his voice: plain,
-// human-centered function; explicitly NOT music-dramatic).
-const ONE_LINER = "I design tools around how people actually use them.";
+// the hero liner ("I design tools around how people actually use them.") was DROPPED 2026-10-15 (Jon: "never really liked it")
 
 const pub = (f: string) => path.join(process.cwd(), "public", "studio", f);
 const exists = (f: string) => fs.existsSync(pub(f));
@@ -216,8 +194,8 @@ const NAV: NavBlock[] = (
     {
       key: "builds",
       entries: [
-        { id: "build-archive", room: "work", word: "audiodex" },
         { id: "build-watch", room: "work", word: "intake" },
+        { id: "build-archive", room: "work", word: "audiodex" },
         { id: "play", room: "play", word: "signal" },
         { id: "build-studio", room: "studio", word: "studio" },
       ],
@@ -283,7 +261,6 @@ const columns = (blocks: BuildBlock[]): StoryBlock[][] =>
         )}
         <p class="role-line">design engineer · audio &amp; real-time web</p>
       </div>
-      <p class="liner">{ONE_LINER}</p>
     </header>
 
     {/* the cue (2026-10-13): one word at the hero's foot, so the page says
@@ -408,64 +385,7 @@ const columns = (blocks: BuildBlock[]): StoryBlock[][] =>
           then the fold — the hook opens the story, the story and under the
           hood unfold inside the same sheet. AudioDex first: it answers the
           "audio" in the role line. */}
-      <article class="wk sheet" id="build-archive" aria-labelledby="build-archive-t">
-        <header class="band">
-          <p class="sheet-kind">{ARCHIVE_COPY.kind}</p>
-          <h3 class="band-name" id="build-archive-t">{ARCHIVE_COPY.title}</h3>
-          <p class="band-what">{ARCHIVE_COPY.dek}</p>
-        </header>
-        {/* THE OBJECT (2026-10-15, round two): two phones, one word (AudioDexDoor.astro, audiodex-scene.json) */}
-        <AudioDexDoor>
-          {/* THE TAPE (2026-10-15, Jon: the memo "led to an actual track"): the music room's own cassette, wearing the
-              song's label, comes out of the AudioDex phone once the memo is open; a press carries you down to the deck
-              with that tape loaded and playing (the wallet script, [data-tape-jump] + data-tape-play) */}
-          {adxTape && (
-            <button class="adx-tape" type="button" slot="tape" data-tape-jump={adxTape.t.title} data-tape-play data-tape-at={ADX.moment.tapeAt}
-              aria-label={`Hear what it became: ${adxTape.t.title}, in the music room`}
-              style={`--mini-tint:${adxTape.fill.day};--mini-tint-night:${adxTape.fill.night}`}>
-              <span class="mini" aria-hidden="true">
-                <span class="mini-label">{adxTape.t.cover && <img src={adxTape.t.cover} alt="" loading="lazy" decoding="async" />}</span>
-                <img class="mini-shell" src="/studio/tape-shell-800.webp" width="1600" height="979" alt="" loading="lazy" decoding="async" />
-              </span>
-              <span class="adx-tape-w" aria-hidden="true"><span>hear what</span> <span>it became <span class="adx-tape-arrow">↓</span></span></span>
-            </button>
-          )}
-        </AudioDexDoor>
-        <div class="wk-story" data-story>
-          <p class="wk-lede">{ARCHIVE.headline}</p>
-          <div class="wk-story-clip" id="story-archive" inert>
-            {/* THE FOLD (2026-10-15, round two; Jon: "as few texts as possible … they can infer from the image"): the
-                hook stays outside; inside, under the hood as ONE STRIP of what the system wrote about the memo the
-                phones found (a stage word over each), the floor line, then the whole story. No section titles. */}
-            <div class="adh-sec">
-              <ol class="adh" aria-label="Under the hood: what AudioDex wrote about the memo">
-                <li><span class="adh-k">heard</span><span class="adh-v adh-q">“{adxLine}”</span></li>
-                <li><span class="adh-k">measured</span><span class="adh-v adh-big">{ADX.moment.note}</span></li>
-                <li><span class="adh-k">named</span><span class="adh-v adh-big adh-word">Thanksgiving</span></li>
-                <li><span class="adh-k">drawn</span><span class="adh-v"><svg class="adh-wave" viewBox={`0 0 ${adxBars.length * 4} 100`} preserveAspectRatio="none" aria-hidden="true">{adxBars.map((w) => <rect x={w.x} y={50 - w.h / 2} width="2.6" height={w.h} rx="1.3" />)}</svg></span></li>
-                <li><span class="adh-k">linked</span><span class="adh-v"><img class="adh-tape" src={ADX.moment.cover} alt={`The tape it became: ${ADX.moment.tape}`} width="120" height="120" loading="lazy" decoding="async" /></span></li>
-              </ol>
-              <p class="wk-rule">{ARCHIVE_COPY.rule}</p>
-            </div>
-            <div class="sheet-sec">
-              <button class="sheet-whole-btn" type="button" aria-expanded="false" aria-controls="whole-archive" data-whole>the whole story <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M5 8l5 5 5-5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
-              <div class="wk-story-body sheet-cols sheet-whole-body" id="whole-archive" hidden>
-                {columns(ARCHIVE.blocks).map((col) => (
-                  <div class="sheet-col">
-                    {col.map((blk) =>
-                      blk.type === "p" ? <p class:list={["wk-p", "sheet-p", { hinge: blk.hinge }]} set:html={blk.html} /> : <ul class="wk-list">{blk.items.map((it) => <li set:html={it} />)}</ul>
-                    )}
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-          <button class="wk-more" type="button" aria-expanded="false" aria-controls="story-archive" aria-label="Read the whole story">
-            <svg class="wk-chev" viewBox="0 0 20 20" aria-hidden="true"><path d="M5 8l5 5 5-5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
-          </button>
-        </div>
-      </article>
-      {/* object two: INTAKE (Jon's Claude Design module, 2026-09-18) */}
+      {/* INTAKE FIRST (Jon, 2026-10-15: "a better hook, more entertaining"; Siri is the laugh): the watch (Jon's Claude Design module, 2026-09-18) */}
       <article class="wk sheet" id="build-watch" aria-labelledby="build-watch-t">
         <header class="band">
           <p class="sheet-kind">{WATCH_COPY.kind}</p>
@@ -500,7 +420,7 @@ const columns = (blocks: BuildBlock[]): StoryBlock[][] =>
               </figure>
             </div>
             <div class="sheet-sec">
-              <p class="sheet-t">{SPEC.watch.title}</p>
+              <p class="sheet-t">under the hood</p>
               <IntakeClock />
               <p class="wk-rule">It takes an event off the calendar only when exactly one matches what you said, and it keeps a copy first. Two matches, or none, and it waits in the queue for you.</p>
             </div>
@@ -518,6 +438,68 @@ const columns = (blocks: BuildBlock[]): StoryBlock[][] =>
             </div>
           </div>
           <button class="wk-more" type="button" aria-expanded="false" aria-controls="story-watch" aria-label="Read the whole story">
+            <svg class="wk-chev" viewBox="0 0 20 20" aria-hidden="true"><path d="M5 8l5 5 5-5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </button>
+        </div>
+      </article>
+      {/* AUDIODEX SECOND (2026-10-15): the floor Intake stands on */}
+      <article class="wk sheet" id="build-archive" aria-labelledby="build-archive-t">
+        <header class="band">
+          <p class="sheet-kind">{ARCHIVE_COPY.kind}</p>
+          <h3 class="band-name" id="build-archive-t">{ARCHIVE_COPY.title}</h3>
+          <p class="band-what">{ARCHIVE_COPY.dek}</p>
+        </header>
+        {/* THE OBJECT (2026-10-15, round two): two phones, one word (AudioDexDoor.astro, audiodex-scene.json) */}
+        <AudioDexDoor>
+          {/* THE TAPE (2026-10-15, Jon: the memo "led to an actual track"): the music room's own cassette, wearing the
+              song's label, comes out of the AudioDex phone once the memo is open; a press carries you down to the deck
+              with that tape loaded and playing (the wallet script, [data-tape-jump] + data-tape-play) */}
+          {adxTape && (
+            <button class="adx-tape" type="button" slot="tape" data-tape-jump={adxTape.t.title} data-tape-play data-tape-at={ADX.moment.tapeAt}
+              aria-label={`Hear what it became: ${adxTape.t.title}, in the music room`}
+              style={`--mini-tint:${adxTape.fill.day};--mini-tint-night:${adxTape.fill.night}`}>
+              <span class="mini" aria-hidden="true">
+                <span class="mini-label">{adxTape.t.cover && <img src={adxTape.t.cover} alt="" loading="lazy" decoding="async" />}</span>
+                <img class="mini-shell" src="/studio/tape-shell-800.webp" width="1600" height="979" alt="" loading="lazy" decoding="async" />
+              </span>
+              <span class="adx-tape-w" aria-hidden="true"><span>hear what</span> <span>it became <span class="adx-tape-arrow">↓</span></span></span>
+            </button>
+          )}
+        </AudioDexDoor>
+        <div class="wk-story" data-story>
+          <p class="wk-lede">{ARCHIVE.headline}</p>
+          <div class="wk-story-clip" id="story-archive" inert>
+            {/* THE FOLD (2026-10-15, round two; Jon: "as few texts as possible … they can infer from the image"): the
+                hook stays outside; inside, under the hood as ONE STRIP of what the system wrote about the memo the
+                phones found (a stage word over each), the floor line, then the whole story. No section titles. */}
+            {/* THE LINE (2026-10-15, Jon's words from the interview; the "creepy" hater answered without arguing
+                norms): a camera takes you out of the moment, a voice memo doesn't */}
+            <p class="wk-said"><span class="wk-said-q" aria-hidden="true">“</span>{ARCHIVE_COPY.said}<span class="wk-said-q" aria-hidden="true">”</span></p>
+            <div class="adh-sec">
+              <ol class="adh" aria-label="Under the hood: what AudioDex wrote about the memo">
+                <li><span class="adh-k">heard</span><span class="adh-v adh-q">“{adxLine}”</span></li>
+                <li><span class="adh-k">measured</span><span class="adh-v adh-big">{ADX.moment.note}</span></li>
+                <li><span class="adh-k">named</span><span class="adh-v adh-big adh-word">Thanksgiving</span></li>
+                <li><span class="adh-k">drawn</span><span class="adh-v"><svg class="adh-wave" viewBox={`0 0 ${adxBars.length * 4} 100`} preserveAspectRatio="none" aria-hidden="true">{adxBars.map((w) => <rect x={w.x} y={50 - w.h / 2} width="2.6" height={w.h} rx="1.3" />)}</svg></span></li>
+                <li><span class="adh-k">linked</span><span class="adh-v"><img class="adh-tape" src={ADX.moment.cover} alt={`The tape it became: ${ADX.moment.tape}`} width="120" height="120" loading="lazy" decoding="async" /></span></li>
+              </ol>
+              <p class="wk-rule">{ARCHIVE_COPY.rule}</p>
+            </div>
+            <div class="sheet-sec">
+              <button class="sheet-whole-btn" type="button" aria-expanded="false" aria-controls="whole-archive" data-whole>the whole story <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M5 8l5 5 5-5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+              <div class="wk-story-body sheet-cols sheet-whole-body" id="whole-archive" hidden>
+                {columns(ARCHIVE.blocks).map((col, ci) => (
+                  <div class="sheet-col">
+                    {ci === 0 && <p class="sheet-p wk-whole-lead">{ARCHIVE_COPY.whole}</p>}
+                    {col.map((blk) =>
+                      blk.type === "p" ? <p class:list={["wk-p", "sheet-p", { hinge: blk.hinge }]} set:html={blk.html} /> : <ul class="wk-list">{blk.items.map((it) => <li set:html={it} />)}</ul>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+          <button class="wk-more" type="button" aria-expanded="false" aria-controls="story-archive" aria-label="Read the whole story">
             <svg class="wk-chev" viewBox="0 0 20 20" aria-hidden="true"><path d="M5 8l5 5 5-5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
           </button>
         </div>
@@ -963,14 +945,6 @@ const columns = (blocks: BuildBlock[]): StoryBlock[][] =>
   :global(html[data-night]) .role-line {
     color: #7d8798;
   }
-  .liner {
-    margin: 26px 0 0 auto;
-    font-size: clamp(0.95rem, 1.4vw, 1.05rem);
-    color: var(--dim);
-    max-width: 34ch;
-    line-height: 1.5;
-    text-align: right;
-  }
   /* the cue: one quiet word at the hero's foot, its words 44px above the
      bottom edge (the 12px padding is its hit area; round four, 2026-10-13,
      Jon: "a bit bigger, maybe slightly higher": 0.6875rem → 0.8125rem, the
@@ -1344,9 +1318,6 @@ const columns = (blocks: BuildBlock[]): StoryBlock[][] =>
   :global(html[data-night]) .etch-text {
     color: #e8ecf4;
   }
-  :global(html[data-night]) .liner {
-    color: #7d8798;
-  }
   :global(html[data-night]) .lk-title {
     color: #cfd6e2;
   }
@@ -1711,10 +1682,6 @@ const columns = (blocks: BuildBlock[]): StoryBlock[][] =>
     .role-line {
       text-wrap: balance;
     }
-    .liner {
-      margin-left: 0;
-      text-align: left;
-    }
   }
 
   /* ── ROOMS: every room is CONTENT-SIZED (Jon, 2026-10-13: "The spacing
@@ -2034,6 +2001,7 @@ const columns = (blocks: BuildBlock[]): StoryBlock[][] =>
     transition: color 560ms ease;
   }
   .vs-arrow { text-align: center; margin: 8px 0; font-size: 1rem; color: var(--mx-dim); }
+  .wk-whole-lead { font-weight: 600; }
   .wk-rule {
     max-width: 62ch;
     margin: 28px auto 0;

@@ -319,30 +319,33 @@ session must follow.
   `SPEC.studio` in depth-copy.ts (DRAFT; every unverified row carries a
   `// ⚑ Jon:` comment). Spotify is deliberately NOT named anywhere on the
   sheet (capturing a streaming service's audio breaks its terms).
-  THE SKIM (2026-10-15, branch `skim`, Jon: "the current scripting feels
-  too long to hold anyone's interest … the technical under the hood area
-  feels tiny, wordy, no images or actual understanding … everyone has
-  tiktok brains"): an OPEN fold reads beats → picture → whole story. (1)
-  THREE BEATS (`.sheet-beats`, skim-copy.ts): before · the turn · after,
-  each a sentence QUOTED VERBATIM from the locked script (never rewritten,
-  only chosen; the choice is Jon's to swap), the hook's face a step smaller,
-  centred, the turn in the sheet's accent (the hinge-line convention). (2)
-  UNDER THE HOOD IS A PICTURE (`src/components/studio/Schematic.astro`,
-  `.skm-*` in sheet.css): the hood's rows drawn as a signal chain — a line
-  glyph in a hairline well per stage (the `glyph` field on each row names
-  a drawing in the component), the stage word and tool beneath, one line
-  through the wells; ONE stage lit at a time (the first by default, a press
-  moves it, ← → walk it, nothing lights itself) and only the lit stage's
-  sentence prints under the chain; on a sheet under 620px it is a column
-  with its spine and the lit sentence prints under its node. (3) THE
-  READOUT under the picture: real counts from the systems' own stores in
-  `src/lib/systems-ledger.json` (a dated snapshot, the judge-ledger rule:
-  re-query to refresh, never type a number; a build with nothing mined,
-  the studio, prints no readout). (4) THE WHOLE STORY: the locked
-  paragraphs behind their own label-button at the fold's end
-  (`[data-whole]`, hidden until pressed). SIGNAL's card wears the same
-  schematic + readout in its under-the-hood section (its story stays,
-  always open). The `.sheet-step*` ledger styles are retired.
+  THE SKIM (2026-10-15, the round that began with Jon: "the current scripting
+  feels too long to hold anyone's interest … the under the hood area feels
+  tiny, wordy, no images or actual understanding … everyone has tiktok
+  brains"; a first pass of three beats + a drawn icon chain + a counts
+  readout was rejected as "AI slop" and is retired). THE LAWS: the modules
+  are A MOVIE: manufacture the most dramatic version (real DNA is enough;
+  never ask whether a scene is real); every word and mark must be helpful
+  or enjoyable; a number earns its place only when it settles a doubt the
+  reader has at that moment; nothing in an open fold may move the page
+  (a pressed line prints in a slot reserved to the tallest). THE ORDER:
+  Intake → AudioDex → SIGNAL → Studio (Jon: "a better hook"; AudioDex is
+  the floor Intake stands on, the Studio is SIGNAL on steroids;
+  `build-order.ts` + the rail's NAV). THE HERO LINER IS GONE. Each sheet's
+  open fold is its own scene and ends on THE WHOLE STORY (the locked
+  script behind its own label-button, `[data-whole]`): INTAKE = the
+  sentence once (`.wk-said`) → the same sentence to two machines (Jon's
+  Siri screenshot beside his calendar before and after, `.vs`) → under the
+  hood as one line of time (`IntakeClock.astro`) → the one-match rule;
+  AUDIODEX = Jon's line → the hood as one strip of what the system wrote
+  about the memo the phones found (`.adh`) → the floor line; the STUDIO
+  = six moments of the real thing (`StudioMoments.astro`, tabs) → the
+  notebook line → the circumstances in a row (problem → answer → a play
+  key with sound, honest frames until the files land); SIGNAL's card =
+  the receipt and the dare ("Your first song is in your downloads." leads)
+  → how to play → one engineering sentence → where it came from. Every
+  DRAFT line lives in objects-copy.ts / signal-card-copy.ts, Jon's to
+  rewrite; the hoods never print his real rows.
 - WORK is OBJECTS (2026-09-18; the ledger/matrix is DEAD): the room holds
   Jon's Claude Design modules, one per build, framed by words — the locked
   headline from builds-copy.ts above (the DRAFT dek under it was removed

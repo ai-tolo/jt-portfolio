@@ -72,7 +72,12 @@ export const ARCHIVE_COPY = {
   // 2026-10-15, round two (Jon: "as few texts as possible"): no caption under the object (the two phones say it)
   // and no line in his voice yet (the first draft read creepy; his words come from the next interview). The fold
   // is the hook, the hood strip, this one line, the whole story. ⚠️ DRAFT, his to rewrite.
-  rule: "Every recording I own lands here first. Intake and the Studio read from this.",
+  // 2026-10-15, the interview: Jon's words. The line under the hook answers "recording your family is the creepy
+  // part" without arguing norms; the second opens the whole story. DRAFT, his to rewrite.
+  said: "A camera takes you out of the moment. A voice memo doesn't.",
+  whole: "When someone's gone, their voice is a different thing than their photo.",
+  // the floor line, with its product half (Jon: songs, drafts, files that live on no service, one place on my phone)
+  rule: "Every recording I own lands here first: songs, drafts, memos, the files no service holds. Intake and the Studio read from this.",
 };
 
 // SIGNAL STUDIO (2026-10-13; THE SURFACE, 2026-10-15): the fourth sheet, its
