@@ -263,13 +263,29 @@ session must follow.
   listen stay untouched (Jon: "i didn't ask that music / drawings get titles
   or changed"; "i don't like the signal heading at all"). Each build is ONE
   SHEET (`.wk` = the old story card's white/hairline/28px): band → object +
-  run + caption → the fold (hairline → the locked hook `.wk-lede`, ALWAYS
-  VISIBLE, outside the clip (Jon, 2026-10-13: "the subtitle visible, with
-  the arrow allowing the expansion") → the chevron `.wk-more` at the
-  sheet's lower edge; the story columns and under the hood sit in
-  `.wk-story-clip` at height 0 and `inert` until the chevron opens them,
-  no faded peek, nothing opens them by itself; the comet re-measures on
-  the body's height change, so the fold never misaligns the bead). One sheet rhythm: pad 56 (`--sheet-pad`, 20 under 900) ·
+  run + caption → the fold (hairline → the locked hook `.wk-lede` AND its
+  said line `.wk-said`, BOTH ALWAYS VISIBLE, outside the clip (Jon,
+  2026-10-13: "the subtitle visible, with the arrow allowing the
+  expansion"; 2026-10-19: "the previews don't make a lot of sense … part
+  of a quote, but then not the subtext": the headline and the line that
+  answers it, one two-line thought, the said line 12 over the handle) →
+  the chevron `.wk-more` at the sheet's lower edge; everything after the
+  said line sits in `.wk-story-clip` at height 0 and `inert` until the
+  chevron opens it, no faded peek, nothing opens it by itself. ONE CLICK
+  (2026-10-19, Jon: "if they are going to be expandable, it should just be
+  one click"): the chevron opens the WHOLE fold, the evidence and the
+  locked paragraphs together, and closes it all; the label-button
+  `[data-whole]` and its hidden body are retired. ONE FOLD ANATOMY on all
+  three sheets: hook → said → [the evidence] → the floor line `.wk-rule`
+  (0.9375rem / 1rem wide, centred, 62ch, ink) → the whole story (a
+  `.sheet-sec` hairline, a plain `.sheet-t` label "the whole story", the
+  columns). The gaps are ONE set of numbers, set at the shared rules in
+  StudioOne and never per sheet: said → the clip's first block 36 (44 on
+  a wide sheet: 12 + the first block's 24 / 32), every hairline inside the
+  fold 24 / 32 under the block above it, evidence → the floor line 36,
+  label → columns 24 (the 2026-10-19 audit: every computed style equal
+  across the three at 1440 and 375, day and night). The comet re-measures
+  on the body's height change, so the fold never misaligns the bead). One sheet rhythm: pad 56 (`--sheet-pad`, 20 under 900) ·
   name→line 14 · band→object 56 · object→fold 56 · fold top 48; sheets
   `--room-gap` apart (round three: ONE GAP for the whole homepage, see
   ROOMS). AudioDex comes FIRST (the first rail mark names the object
@@ -333,15 +349,20 @@ session must follow.
   the floor Intake stands on, the Studio is SIGNAL on steroids;
   `build-order.ts` + the rail's NAV). THE HERO LINER IS GONE. Each sheet's
   open fold is its own scene and ends on THE WHOLE STORY (the locked
-  script behind its own label-button, `[data-whole]`): INTAKE = the
-  sentence once (`.wk-said`) → the same sentence to two machines (Jon's
+  script under a plain label, opened by the same one click since
+  2026-10-19): INTAKE = the
+  sentence once (`.wk-said`, the preview's second line) → the same sentence to two machines (Jon's
   Siri screenshot beside his calendar before and after, `.vs`) → under the
   hood as one line of time (`IntakeClock.astro`) → the one-match rule;
   AUDIODEX = Jon's line → the hood as one strip of what the system wrote
   about the memo the phones found (`.adh`) → the floor line; the STUDIO
   = six moments of the real thing (`StudioMoments.astro`, tabs) → the
   notebook line → the circumstances in a row (problem → answer → a play
-  key with sound, honest frames until the files land); SIGNAL's card =
+  key with sound, honest frames until the files land), its fold Jon's
+  line → "Make ten thousand songs. Keep ten." as the house `.wk-rule`
+  (Jon, 2026-10-19: "that text margin … looks different than everything
+  else"; `.st-keep`, its accent and its negative margin are deleted) →
+  the whole story; SIGNAL's card =
   the receipt and the dare ("Your first song is in your downloads." leads)
   → how to play → one engineering sentence → where it came from. Every
   DRAFT line lives in objects-copy.ts / signal-card-copy.ts, Jon's to
@@ -438,7 +459,21 @@ session must follow.
   fades in at s6 + 2.6s; "change both or neither"); the live control is ONE
   pill on the watch FACE at its foot, `Try it with your voice` (floored at
   12px, the mic glyph hidden under a 190px screen), hidden at rest; the
-  row's `.hint-talk` survives only as the "nothing heard" retry. THE HINTS
+  row's `.hint-talk` survives only as the "nothing heard" retry. "YOU'RE
+  WATCHING" (2026-10-19, Jon: some visitors thought they had to click
+  along; "a super minimalistic progress bar … you're watching something
+  play out"; he judges whether it distracts): ONE hairline `.runline` in
+  the same `.foot` slot on the watch AND the phones, an EXACT COPY of its
+  CSS in both files (change both or neither): the hint at rest, from the
+  press until the run lands the line, then Replay on its own delay. 1.5px,
+  96 wide on desks / 72 on phones, the track the sheet ink at 14 %, the
+  fill the hint's own recipe growing left → right LINEARLY over the run's
+  planned length from the script's own numbers (the watch t3 + 1150 =
+  6186 ms, the phones the accumulated t = 7210 ms); in 200ms on the press
+  (`[data-running]` on the module), out 400 at the landing; `hero:finish`
+  jumps it to full and fades it; Replay restarts it; never in the watch's
+  live mode, never under reduced motion (none at all). Not a control:
+  `aria-hidden`, no pointer, no label. THE HINTS
   (`tap the list` · `tap to stop`) stand in each build's accent (`--sheet-acc`
   mixed toward the sheet ink until ≥4.5:1, day and night) at 600. The phone types at 180ms a letter
   (`--char` + `CHAR_MS`, was 300) with its stage waits trimmed to match
