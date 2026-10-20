@@ -121,23 +121,25 @@ export const STUDIO_COPY: {
   title: "Signal Studio",
   // the one mono word in the sheet's top-right corner (.sheet-kind)
   kind: "suite",
-  // the band's line (DRAFT, 2026-10-15, round two; Jon kept "SIGNAL on steroids" and cut the rest: "a weird sentence
-  // that doesn't make a lot of sense" to an outside reader. Was "…: the whole studio, in the laptop, for making the
-  // idea exist.")
-  dek: "SIGNAL on steroids: a whole studio that opens like a notebook and goes where I go.",
+  // the band's line (DRAFT; 2026-10-15 Jon kept "SIGNAL on steroids" and cut the rest as "a weird sentence". 2026-10-19,
+  // the co-partner interview: the rest is his own line from that night, "I'm one click away from sounds being made and
+  // recorded". Every moment line below is from the same interview; the spine is
+  // ~/signal-studio-ideation/positioning-2026-10-19.md. Jon: the landing sheet is the priority, "a higher probability
+  // of being seen" than the study.)
+  dek: "SIGNAL on steroids: one click away from sounds being made and recorded.",
   moments: [
     { id: "engines", label: "the engines", alt: "The three engines side by side: HOUSE on the drums, SYNTH on the keys, 303 on the bass, each with its own filter, pattern and effects.",
-      line: "Three engines that resample anything. The shorthand is drums, keys and bass, because that's a keyboard player's whole band." },
+      line: "Drums, keys, bass. My synth through the drum engine, my bass through the synth engine: the ultimate consolidation." },
     { id: "effects", label: "the effects", alt: "The same three towers with everything dimmed except each engine's effects: drive, mod, delay and reverb on the drums, the keys and the bass at once.",
-      line: "Every engine's effects are on the surface at once. I can see which one has the delay and which has the sidechain without opening anything. Ableton makes you expand a rack and pop a window for that." },
+      line: "Every effect on every instrument, on one page, and one click changes all of them. Ableton makes you click a row, expand the rack and open a window." },
     { id: "take", label: "the take", alt: "The jam page's record: a waveform of everything played, with four bars selected between two handles.",
-      line: "It was already listening. There's no record button to forget. A take is cut out afterwards." },
+      line: "It was already listening. How much would you pay for every session you thought was recording and wasn't?" },
     { id: "chips", label: "the chips", alt: "The well under the keyboard holding three chips, RHODES, VOICE and RADIO, each with its waveform and its length in bars.",
-      line: "Any sound on the laptop, cropped in two moves, becomes a key: re-pitched, re-timed, remixed." },
+      line: "Anything you're listening to: one click and it's a chip, on the bars, in its spot. Grab it, loop it, compartmentalize it." },
     { id: "radar", label: "the radar", alt: "The glass at the top reading 94 BPM and the key C minor, both in the radar's coral ink.",
-      line: "Built in New York, jamming with a friend who won't stay in one key. One click and the room's chord, scale and tempo are on the screen. Join without interrupting him." },
+      line: "Ableton doesn't even care about key. The radar hears the room and names the chord, the scale, the tempo, so I can join the friend who won't stay in one key." },
     { id: "hands", label: "the hands", alt: "The keyboard at the foot of the studio with the laptop's letter keys printed on the keys from A to L.",
-      line: "A laptop, a MIDI keyboard, a travel keyboard, a PlayStation controller: writing utensils. The same moves on every one, every time." },
+      line: "Anything that can send MIDI immediately works. The controller is a luxury: my main things at my fingertips, eyes out the window." },
   ],
   // THE FOLD, under the locked hook: the line in his voice (.wk-said) and the one line beneath it
   said: "Ableton is for producing ideas that already happened. This is for making the idea exist.",
@@ -145,6 +147,6 @@ export const STUDIO_COPY: {
   captures: [
     { src: "/builds/studio/plane", problem: "$3,000 of instruments in the bedroom. A laptop on the plane.", answer: "Every synth I own, sampled into keys once. The room travels." },
     { src: "/builds/studio/pianist", problem: "Your friend won't stay in one key.", answer: "The radar names the chord, the scale and the tempo. Play along, no math." },
-    { src: "/builds/studio/window", problem: "The laptop's in the other room and you're looking out the window.", answer: "The controller sits on the keyboard: voices, drums in, drums out." },
+    { src: "/builds/studio/window", problem: "The laptop's in the other room and you're looking out the window.", answer: "The controller: voices, drums in, drums out, the EQ under a thumb. Eyes stay on the window." },
   ],
 };
