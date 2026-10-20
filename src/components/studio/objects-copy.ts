@@ -15,7 +15,10 @@ export const WATCH_COPY = {
   // already calls it "the program I built"
   kind: "program",
   // one line under the locked headline: what the object is, in his voice
-  dek: "I talk to my watch. It comes back as a calendar event, an organized idea, or a prompt for Claude.",
+  // 2026-10-19 (THE SORT, Jon: "the pitch now is a bit wider … it utilizes the two things I already use, voice memos
+  // and iMessage, and puts it into pocketed pieces of information"): DRAFT in his words, his to rewrite. Was "I talk to
+  // my watch. It comes back as a calendar event, an organized idea, or a prompt for Claude."
+  dek: "No new app. A voice memo or a text to myself, sorted into pockets.",
   // the mono line under the module, true to the run it replays (capture 31
   // in intake.db: 3:52, seven tickets; the module shows the first two).
   // 2026-10-06 (Jon): the Harbor example was dropped — less charm, and its

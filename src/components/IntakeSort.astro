@@ -1,0 +1,431 @@
+---
+// src/components/IntakeSort.astro
+// THE SORT (2026-10-19, Jon: "a vertical two-column thing of the input and the output. The right side is the unified
+// system; the left side is the context and the circumstance of the intake"): the Intake sheet's object. Seven things
+// that came in (a text, a screenshot, a photo, a listing and a thought, three recordings) on the LEFT; where each
+// landed on the RIGHT (a day on the calendar, a week rearranged, a card in the Stream, or nothing). One press runs the
+// whole factory, row by row; every landed row stays landed. It is an EXHIBIT, not a record: the words and the scenes
+// live in src/data/intake-sort.json (DRAFT, Jon's to rewrite); rows 2, 3 and 4 are his real captures.
+//
+// Usage:   <IntakeSort />   (inside a .sheet: it reads --sheet-ink / --sheet-acc / --sheet-sans … from the host)
+// Needs:   public/intake/sort/{poster,save-the-date,listing}.webp
+//          (loaded eagerly, 77 KB together: a lazy image under the run's opacity-0 slot never started loading in Chrome)
+//
+// NOTHING MAY MOVE THE PAGE: every input and every landing is in the layout from the first paint (unseen until its
+// turn), so the sheet's height never changes while the factory runs. NO TOGGLE (the brief's call on Jon's "switch to
+// actual UI view"): the right column IS the places things landed, and rows 4 and 7 are the Stream's own cards.
+import sort from '../data/intake-sort.json';
+import run from '../data/intake-run.json';
+
+type Bar = { x: number; y: number; h: number; hot: boolean };
+// the waveform: the adh-wave drawing language (2.6-wide rounded bars on a 4-unit pitch, a 100-tall box), heights
+// from a small seeded walk so a row draws the same every build; `hot` marks the stretch that mattered
+const wave = (seed: string, n: number, hot?: number[]): Bar[] => {
+  let s = 0;
+  for (const c of seed) s = (s * 31 + c.charCodeAt(0)) >>> 0;
+  const rnd = () => { s = (s * 1664525 + 1013904223) >>> 0; return s / 4294967296; };
+  let v = 0.5;
+  return Array.from({ length: n }, (_, i) => {
+    v = Math.min(1, Math.max(0.12, v + (rnd() - 0.5) * 0.55));
+    const edge = Math.min(1, (i + 1) / 4, (n - i) / 4);   // the strip's two ends taper
+    const h = Math.round(Math.max(10, v * 92 * edge));
+    const f = i / n;
+    return { x: i * 4, y: 50 - h / 2, h, hot: !!hot && f >= hot[0] && f <= hot[1] };
+  });
+};
+const rows = sort.rows.map((r: any) => ({
+  ...r,
+  bars: r.input.type === 'voice' ? wave(r.id, r.input.bars, r.input.hot) : [],
+  said: r.input.said === 'run' ? run.transcript : r.input.said,
+}));
+const CHECK = '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2.5 8.5l3.5 3.5 7.5-8.5"/></svg>';
+---
+<section class="isort" data-isort aria-label="Intake: seven things that came in, and where each one landed">
+  <script type="application/json" data-isort-say set:html={JSON.stringify({ start: sort.sayStart, all: sort.sayAll })}></script>
+  <div class="is-heads" aria-hidden="true">
+    <p class="is-head">{sort.heads.left}</p>
+    <p class="is-head">{sort.heads.right}</p>
+  </div>
+  <ol class="is-rows">
+    {rows.map((r: any, i: number) => (
+      <li class="is-row" data-row={i} data-hold={r.hold ?? ''} data-say={r.say} data-type={r.landing.type}>
+        {/* LEFT: the circumstance — one sentence in the display face, then what was sent, as it was sent */}
+        <div class="is-in">
+          <p class="is-line">{r.line}</p>
+          <div class="is-input" aria-hidden="true">
+            {(r.input.type === 'image' || r.input.type === 'image+text') && (
+              <img class:list={['is-img', `is-img-${r.id}`]} src={r.input.src} width={r.input.w} height={r.input.h} alt="" decoding="async" />
+            )}
+            {(r.input.type === 'text' || r.input.type === 'image+text') && (
+              <p class="is-bubble">{r.input.text}</p>
+            )}
+            {r.input.type === 'voice' && (
+              <div class:list={['is-voice', r.input.tone && `is-${r.input.tone}`, r.input.hot && 'is-hasHot']}>
+                <svg class="is-wrist" viewBox="0 0 14 20" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M4.5 1h5l.5 3.2M4.5 19h5l.5-3.2M4.5 1L4 4.2M4.5 19L4 15.8" stroke-linecap="round" /><rect x="2" y="4.2" width="10" height="11.6" rx="3" /></svg>
+                <svg class="is-wave" viewBox={`0 0 ${r.bars.length * 4} 100`} preserveAspectRatio="none" aria-hidden="true">
+                  {r.bars.map((b: Bar) => <rect class:list={{ hot: b.hot }} x={b.x} y={b.y} width="2.6" height={b.h} rx="1.3" />)}
+                </svg>
+                <span class="is-len">{r.input.len}</span>
+              </div>
+            )}
+            {r.said && <p class="is-said">“{r.said}”</p>}
+          </div>
+          {r.input.alt && <span class="sr">{r.input.alt}</span>}
+        </div>
+        {/* RIGHT: where it landed, drawn in the vocabulary the sheet already has (the iOS month cell, the Stream's card) */}
+        <div class="is-out" aria-hidden="true">
+          {r.landing.type === 'day' && (
+            <div class="is-day" data-cal={r.landing.cal}>
+              <div class="is-cell">
+                <span class="is-mon">{r.landing.mon}</span>
+                <span class="is-dow">{r.landing.dow}</span>
+                <span class="is-num">{r.landing.day}</span>
+                <span class="is-bar"><b>{r.landing.title}</b><i>{r.landing.time}</i></span>
+              </div>
+              <p class="is-rcpt"><span class="is-check" set:html={CHECK} />{r.landing.receipt}</p>
+            </div>
+          )}
+          {r.landing.type === 'week' && (
+            <div class="is-week" data-cal="intake">
+              <span class="is-mon">Mar 2027</span>
+              <div class="is-wgrid">
+                {r.landing.days.map((d: any, k: number) => (
+                  <span class="is-wday" style={`grid-column:${k + 1}`}><span class="is-dow">{d.dow}</span><span class="is-num">{d.day}</span></span>
+                ))}
+                <span class="is-bar is-long"><b>{r.landing.leaving}</b></span>
+                {r.landing.arriving.map((a: any, k: number) => {
+                  const row = r.landing.arriving.slice(0, k).filter((b: any) => b.day === a.day).length;
+                  return <span class="is-bar is-arr" style={`grid-column:${a.day + 1};grid-row:${2 + row};--k:${k}`}><b>{a.title}</b><i>{a.time}</i></span>;
+                })}
+              </div>
+              <p class="is-rcpt"><span class="is-check" set:html={CHECK} />{r.landing.receipt}</p>
+            </div>
+          )}
+          {r.landing.type === 'card' && (
+            <article class:list={['is-card', `is-${r.landing.state}`]} style={`--src:${r.landing.src}`} data-kind={r.landing.kind}>
+              <div class="is-thead">
+                <span class="is-age">{r.landing.age}</span>
+                {r.landing.phone && <svg class="is-ph" viewBox="0 0 14 20" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><rect x="1.5" y="1" width="11" height="18" rx="2.5" /><path d="M5.5 16h3" /></svg>}
+                <span class="is-chip">{r.landing.kind}</span>
+                <svg class="is-x" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" /></svg>
+              </div>
+              <h4 class="is-ct">{r.landing.title}</h4>
+              <p class="is-cm">{r.landing.meta}</p>
+              <div class="is-tiles">
+                <span class="is-tile is-claude">Claude <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2l2.2 6.6L21 11l-6.8 2.4L12 20l-2.2-6.6L3 11l6.8-2.4z" /></svg></span>
+                <span class="is-tile">Zzzz</span>
+              </div>
+            </article>
+          )}
+          {r.landing.type === 'nothing' && <p class="is-nothing">{r.landing.text}</p>}
+        </div>
+      </li>
+    ))}
+  </ol>
+  {/* the press: anywhere on the object at rest (the whole factory from one tap); gone while it runs and after */}
+  <button class="is-tap" type="button" data-isort-tap aria-label="Sort them: seven things that came in, one at a time, and where each landed"></button>
+  {/* the foot = the modules' (IntakeHero, AudioDexDoor): the hint at rest, the runline while it runs, Replay after;
+      one slot, so nothing below moves */}
+  <div class="foot">
+    <p class="hint" aria-hidden="true">{sort.hint}</p>
+    <span class="runline" aria-hidden="true" data-runline><i></i></span>
+    <button type="button" class="replay" data-replay aria-label="Replay the sort">
+      <svg viewBox="0 0 20 20" class="ico" aria-hidden="true"><path d="M4 10a6 6 0 1 0 1.8-4.3" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M4 3v3.5h3.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      Replay
+    </button>
+  </div>
+  <p class="sr" role="status" aria-live="polite" data-status></p>
+</section>
+
+<style>
+  .isort {
+    --ink: var(--sheet-ink, #141210);
+    --is-dim: color-mix(in oklab, var(--ink) 58%, transparent);
+    --is-rest: color-mix(in oklab, var(--ink) 34%, transparent);
+    --is-line: color-mix(in oklab, var(--ink) 12%, transparent);
+    --is-edge: color-mix(in oklab, var(--ink) 16%, transparent);
+    --acc: var(--sheet-acc, #ff6b4a);
+    --sans: var(--sheet-sans, 'Instrument Sans', 'Helvetica Neue', Arial, sans-serif);
+    --mono: var(--sheet-mono, 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace);
+    --display: var(--sheet-display, 'Outfit', var(--sans));
+    /* the iMessage sent blue (iOS's light / dark) */
+    --bubble: #007aff;
+    /* the two calendars' bars, as the iOS month draws them (cal-before / cal-after): the Intake calendar's red, the
+       Idea calendar's yellow; the only fills on the object */
+    --cal-intake-bg: #ffd1da; --cal-intake-ink: #8a1631; --cal-intake-time: #c22a4d;
+    --cal-idea-bg: #fde6b4; --cal-idea-ink: #6e4600; --cal-idea-time: #a26a08;
+    /* the Stream's receipt green (intake_web.py's RECEIPT_COLOR) */
+    --rcpt: #79a465;
+    /* the replay pill = the modules' (IntakeHero's --rp-*, AudioDexDoor's --ink / --ground): change all or none */
+    --rp-ink: #141210; --rp-ground: #e9e8e5;
+    /* the hint: the watch's rule (#ff6b4a toward the sheet ink until 4.5:1 on white; alone at night) */
+    --hint-mix: 74%;
+    position: relative;
+    container: isort / inline-size;
+    width: 100%;
+    color: var(--ink);
+    font-family: var(--sans);
+  }
+  :global(html[data-night]) .isort {
+    --bubble: #0a84ff;
+    --cal-intake-bg: color-mix(in oklab, #ff375f 30%, #1c1c1f); --cal-intake-ink: #ffc2cf; --cal-intake-time: #ff8fa6;
+    --cal-idea-bg: color-mix(in oklab, #ffcc00 24%, #1c1c1f); --cal-idea-ink: #ffe3a3; --cal-idea-time: #f2bd52;
+    --rp-ink: #e8ecf4; --rp-ground: #0b0e14;
+    --hint-mix: 100%;
+  }
+  .sr { position: absolute; width: 1px; height: 1px; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
+  /* ── the ledger: two heads, then seven rows on hairlines. On a wide sheet the two columns MIRROR on the sheet's
+     centre line (the axis the run's dots and the band stand on): what happened flush right against it, where it
+     landed flush left from it; one 6cqw gutter, so the line between them is 50cqw */
+  .is-heads, .is-row { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); column-gap: 6cqw; }
+  .is-heads { padding-bottom: 14px; }
+  .is-head { margin: 0; font: 500 0.6875rem/1 var(--mono); letter-spacing: 0.12em; text-transform: lowercase; color: var(--is-dim); transition: color 560ms ease; }
+  .is-head:first-child { text-align: right; }
+  .is-rows { margin: 0; padding: 0; list-style: none; }
+  .is-row { padding: 24px 0; border-top: 1px solid var(--is-line); transition: border-color 560ms ease; }
+  .is-in { display: flex; flex-direction: column; align-items: flex-end; gap: 12px; min-width: 0; text-align: right; }
+  /* the landing stands level with what was sent (under the line, not beside it) */
+  .is-out { min-width: 0; padding-top: calc(1.125rem * 1.35 + 12px); }
+  /* one sentence in the display face: dim at rest (row one's in ink: the scene the press starts on), ink once its turn comes */
+  .is-line {
+    margin: 0; max-width: 34ch;
+    font: 500 1.125rem/1.35 var(--display); letter-spacing: -0.005em; text-wrap: balance;
+    color: var(--is-rest); transition: color 400ms ease;
+  }
+  .is-row:first-child .is-line, .is-row.lit .is-line { color: var(--ink); }
+  .is-input { display: flex; flex-direction: column; align-items: flex-end; gap: 8px; width: 100%; }
+
+  /* ── what was sent: the real files (hairline, 14 radius), the sent bubble, the wrist's waveform ── */
+  .is-img { display: block; max-width: 100%; height: auto; border: 1px solid var(--is-edge); border-radius: 14px; box-sizing: border-box; }
+  .is-img-poster { width: auto; height: 220px; }
+  .is-img-fridge { width: min(100%, 290px); }
+  .is-img-listing { width: min(100%, 440px); }
+  .is-bubble {
+    margin: 0; max-width: min(100%, 30ch); padding: 7px 12px; box-sizing: border-box;
+    border-radius: 18px 18px 5px 18px; background: var(--bubble); color: #fff;
+    font: 400 13px/1.38 var(--sans); text-align: left;
+  }
+  .is-voice { display: flex; align-items: center; gap: 10px; width: min(100%, 340px); color: var(--acc); }
+  .is-wrist { flex: none; width: 11px; height: 16px; color: var(--is-dim); }
+  .is-wave { flex: 1; min-width: 0; height: 30px; }
+  .is-wave rect { fill: currentColor; }
+  /* the concert: nothing in it was for the system, the strip stays quiet; the party: one stretch mattered */
+  .is-quiet .is-wave rect, .is-hasHot .is-wave rect:not(.hot) { fill: color-mix(in oklab, currentColor 34%, transparent); }
+  .is-len { flex: none; font: 500 0.75rem/1 var(--mono); letter-spacing: 0.04em; font-variant-numeric: tabular-nums; color: var(--is-dim); }
+  .is-said { margin: 0; max-width: 340px; font: 400 13px/1.5 var(--sans); text-align: left; color: var(--is-dim); text-wrap: pretty; }
+
+  /* ── where it landed ── */
+  /* a day: the iOS month's cell (the week rule, the weekday, the numeral, the event's bar), then the Stream's
+     receipt (the green check, the compact line) */
+  .is-day, .is-week { display: flex; flex-direction: column; align-items: flex-start; gap: 10px; }
+  .is-cell { display: grid; width: 168px; }
+  .is-mon { font: 600 0.75rem/1 var(--sans); letter-spacing: 0.02em; color: var(--acc); }
+  /* the month in red over the week's rule, as the iOS month heads its grid */
+  .is-cell .is-mon { margin: 0 0 8px; padding-bottom: 8px; border-bottom: 1px solid var(--is-edge); }
+  .is-dow { font: 600 0.6875rem/1 var(--sans); letter-spacing: 0.04em; text-transform: uppercase; color: var(--is-dim); }
+  .is-num { margin: 4px 0 8px; font: 700 1.75rem/1 var(--sans); letter-spacing: -0.01em; font-variant-numeric: tabular-nums; color: var(--ink); }
+  .is-bar {
+    display: flex; flex-direction: column; gap: 3px; min-width: 0; padding: 6px 8px 7px; box-sizing: border-box;
+    border-radius: 7px; background: var(--cal-intake-bg); color: var(--cal-intake-ink);
+  }
+  [data-cal="idea"] .is-bar { background: var(--cal-idea-bg); color: var(--cal-idea-ink); }
+  .is-bar b { font: 700 13px/1.25 var(--sans); }
+  .is-bar i { font: 500 12px/1.2 var(--sans); font-style: normal; color: var(--cal-intake-time); }
+  [data-cal="idea"] .is-bar i { color: var(--cal-idea-time); }
+  .is-rcpt { display: flex; align-items: center; gap: 6px; margin: 0; font: 400 12.5px/1.4 var(--sans); color: var(--is-dim); }
+  .is-check { display: inline-flex; width: 13px; height: 13px; color: var(--rcpt); }
+  .is-check :global(svg) { width: 100%; height: 100%; }
+  /* the week: three days, the long bar that was there, the four that came */
+  .is-week { width: min(100%, 420px); }
+  .is-wgrid {
+    display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); grid-template-rows: auto auto auto;
+    gap: 6px; width: 100%; padding-top: 8px; border-top: 1px solid var(--is-edge);
+  }
+  .is-wday { grid-row: 1; display: flex; flex-direction: column; }
+  .is-wday .is-num { margin-bottom: 2px; }
+  .is-long { grid-column: 1 / -1; grid-row: 2; z-index: 1; justify-content: center; }
+  /* a Stream card, as intake_web.py draws it: the source's spine, the head (age, the phone, the kind's chip, the X
+     that is its only close), the title, the compact line, the two tiles (Claude, Zzzz); paper on paper */
+  .is-card {
+    width: min(100%, 380px); box-sizing: border-box; padding: 12px 14px 12px;
+    border: 1px solid var(--is-edge); border-left: 3px solid var(--src); border-radius: 12px;
+    display: flex; flex-direction: column; gap: 6px;
+  }
+  .is-card[data-kind="idea"] { --chip: #8fbf6f; }
+  .is-thead { display: flex; align-items: center; gap: 8px; font: 400 11.5px/1 var(--sans); color: var(--is-dim); }
+  .is-ph { width: 10px; height: 13px; }
+  .is-chip {
+    padding: 2px 7px; border: 1px solid color-mix(in oklab, var(--chip) 55%, transparent); border-radius: 5px;
+    font: 600 10px/1.2 var(--sans); letter-spacing: 0.07em; text-transform: uppercase;
+    color: color-mix(in oklab, var(--chip) 62%, var(--ink));
+  }
+  :global(html[data-night]) .is-chip { color: var(--chip); }
+  .is-x { width: 14px; height: 14px; margin-left: auto; }
+  .is-ct { margin: 2px 0 0; font: 650 15.5px/1.3 var(--sans); color: var(--ink); text-wrap: pretty; }
+  .is-cm { margin: 0; font: 400 12.5px/1.4 var(--sans); color: var(--is-dim); }
+  .is-tiles { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin-top: 6px; }
+  .is-tile {
+    display: flex; align-items: center; justify-content: center; gap: 6px; height: 36px;
+    border: 1px solid var(--is-edge); border-radius: 9px; font: 500 13px/1 var(--sans); color: var(--ink);
+  }
+  .is-tile svg { width: 12px; height: 12px; opacity: 0.8; }
+  .is-claude { color: color-mix(in oklab, #e0a35b 70%, var(--ink)); border-color: color-mix(in oklab, #e0a35b 45%, transparent); }
+  :global(html[data-night]) .is-claude { color: #e0a35b; }
+  /* nothing: the slot stays empty but for one line in the label face */
+  .is-nothing { margin: 0; font: 500 0.6875rem/1.5 var(--mono); letter-spacing: 0.12em; text-transform: lowercase; color: var(--is-dim); }
+
+  /* ── THE RUN: every part is laid out from the first paint and unseen until its turn (opacity, clip), so nothing
+     moves; .lit = the row's turn (what was sent arrives), .landed = where it went ── */
+  .is-input, .is-out > * { opacity: 0; }
+  .is-row.lit .is-input { opacity: 1; transition: opacity 300ms ease; }
+  .is-row.lit .is-img { animation: is-settle 500ms cubic-bezier(.2, .8, .2, 1) both; }
+  .is-row.lit .is-bubble { animation: is-slide 500ms cubic-bezier(.2, .8, .2, 1) both; }
+  .is-row.lit .is-img + .is-bubble { animation-delay: 220ms; }
+  .is-row.lit .is-wave { animation: is-draw 500ms ease-out both; }
+  .is-row.lit .is-said { animation: is-fade 400ms ease-out 200ms both; }
+  .is-row.landed .is-out > * { opacity: 1; transition: opacity 260ms ease; }
+  /* a day: the bar draws into the cell, the receipt after */
+  .is-row.landed .is-day .is-bar { animation: is-draw 520ms cubic-bezier(.3, .7, .2, 1) 120ms both; }
+  .is-row.landed .is-rcpt { animation: is-fade 400ms ease-out 560ms both; }
+  /* the week: the wedding leaves (struck, then gone), the four arrive one after another */
+  .is-row.landed .is-long { animation: is-leave 700ms ease-in 420ms both; }
+  .is-long b { background: linear-gradient(currentColor, currentColor) 0 55% / 0 1.5px no-repeat; }
+  .is-row.landed .is-long b { animation: is-strike 360ms ease-out 260ms both; }
+  .is-row.landed .is-arr { animation: is-draw 460ms cubic-bezier(.3, .7, .2, 1) calc(900ms + var(--k) * 160ms) both; }
+  .is-row.landed .is-week .is-rcpt { animation-delay: 1600ms; }
+  /* a card drops in, as the watch's deck */
+  .is-row.landed .is-card { animation: is-drop 550ms cubic-bezier(.2, .8, .2, 1) both; }
+  /* nothing: the line arrives slowly, and that is all */
+  .is-row.landed .is-nothing { animation: is-fade 900ms ease-out 200ms both; }
+  @keyframes is-settle { from { opacity: 0; transform: translateY(8px) scale(0.985); } to { opacity: 1; transform: none; } }
+  @keyframes is-slide { from { opacity: 0; transform: translateX(14px); } to { opacity: 1; transform: none; } }
+  @keyframes is-draw { from { clip-path: inset(0 100% 0 0 round 7px); } to { clip-path: inset(0 0 0 0 round 7px); } }
+  @keyframes is-fade { from { opacity: 0; } to { opacity: 1; } }
+  @keyframes is-leave { 0% { opacity: 1; } 100% { opacity: 0; } }
+  @keyframes is-strike { to { background-size: 100% 1.5px; } }
+  @keyframes is-drop { 0% { opacity: 0; transform: translateY(-20px); } 70% { transform: translateY(3px); } 100% { opacity: 1; transform: none; } }
+  .is-row.landed .is-long { pointer-events: none; }
+
+  /* the press: the whole object at rest; gone from the first tap (Replay takes over at the end) */
+  .is-tap { position: absolute; inset: 0; z-index: 2; margin: 0; padding: 0; border: 0; border-radius: 14px; background: transparent; cursor: pointer; }
+  .is-tap:focus-visible { outline: 2px solid var(--acc); outline-offset: 6px; }
+  .isort[data-state] .is-tap { display: none; }
+
+  /* ── the foot: the modules' (IntakeHero, AudioDexDoor); one slot ── */
+  .foot { display: grid; min-height: 30px; margin-top: 8px; padding-top: 24px; border-top: 1px solid var(--is-line); align-items: start; justify-items: center; }
+  .foot > * { grid-area: 1 / 1; }
+  .hint {
+    margin: 0; text-align: center; font: 600 0.6875rem/1.5 var(--mono); letter-spacing: 0.12em;
+    color: color-mix(in oklab, var(--acc) var(--hint-mix), var(--ink));
+    transition: opacity 0.3s, color 560ms ease;
+  }
+  .isort[data-state] .hint { opacity: 0; }
+  /* THE REPLAY: the modules' pill (IntakeHero's / AudioDexDoor's .replay); change all or none */
+  .replay {
+    display: inline-flex; align-items: center; gap: 6px; padding: 8px 14px; border: 0; border-radius: 999px;
+    background: var(--rp-ink); color: var(--rp-ground); font: 500 0.72rem/1 var(--mono); letter-spacing: 0.04em;
+    cursor: pointer; opacity: 0; pointer-events: none; transition: opacity 0.4s, background 120ms, color 560ms ease;
+  }
+  .replay .ico { width: 1.1em; height: 1.1em; }
+  .replay:hover { background: color-mix(in oklab, var(--rp-ink) 82%, var(--rp-ground)); }
+  .replay:focus-visible { outline: 2px solid var(--rp-ink); outline-offset: 2px; }
+  .isort[data-state="done"] .replay { opacity: 1; pointer-events: auto; transition: opacity 0.6s 0.8s, background 120ms, color 560ms ease; }
+  /* "YOU'RE WATCHING" (2026-10-19, Jon: "a super minimalistic progress bar … a casual visual communication that hey,
+     you're witnessing something … you don't have to click anything"): one hairline in the foot's slot from the press
+     until the run lands, so nothing below moves; the hint's own colour fills it left to right, linearly, over the run's
+     planned length (the script's own numbers). In 200 on the press, out 400 at the landing, the Replay on its own delay
+     after. Not a control: aria-hidden, no pointer, no label. Reduced motion: none (the run lands at once). EXACT COPY in
+     IntakeHero.astro, AudioDexDoor.astro and IntakeSort.astro: change all or none */
+  .runline {
+    grid-area: 1 / 1; align-self: center; width: 96px; height: 1.5px;
+    background: color-mix(in oklab, var(--sheet-ink) 14%, transparent);
+    opacity: 0; pointer-events: none; transition: opacity 400ms ease;
+  }
+  .runline > i {
+    display: block; height: 100%; transform: scaleX(0); transform-origin: left;
+    background: color-mix(in oklab, var(--sheet-acc) var(--hint-mix), var(--sheet-ink));
+  }
+  [data-running] .runline { opacity: 1; transition-duration: 200ms; }
+  @media (max-width: 899px) { .runline { width: 72px; } }
+  @media (prefers-reduced-motion: reduce) { .runline { display: none; } }
+
+  /* ── a narrow sheet (the module under 820): each row stacks, the circumstance then the landing, on the same
+     hairlines; one left axis (the sent bubble keeps the right, as a phone draws it) ── */
+  @container isort (width < 820px) {
+    .is-heads { display: none; }
+    .is-row { grid-template-columns: minmax(0, 1fr); row-gap: 16px; padding: 20px 0; }
+    .is-row:first-child { border-top: 0; padding-top: 0; }
+    .is-in, .is-input { align-items: flex-start; text-align: left; }
+    .is-input { width: 100%; }
+    .is-bubble { align-self: flex-end; }
+    .is-out { padding-top: 0; }
+    .is-line { font-size: 1rem; }
+    .is-img-poster { height: 200px; }
+    .is-voice { width: 100%; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .isort *, .isort *::before, .isort *::after { animation-duration: 0.01s !important; animation-delay: 0s !important; transition-duration: 0.01s !important; }
+  }
+</style>
+
+<script>
+  // THE RUN (2026-10-19): one press runs the factory. Row by row: what was sent arrives (≈ 500 ms), IN_TO_LAND later
+  // where it went lands, then the row's hold to read it (1,600 ms; the nothing row's 2,600 from the data), then the
+  // next row. Every landed row stays landed. After the finale, Replay in the foot; the runline fills over the run's
+  // planned length the whole time. Reduced motion: every row lands at once. One live region says each landing.
+  const LEAD = 250, IN_TO_LAND = 600, HOLD = 1600;
+  const fillLine = (fill, ms) => {
+    if (!fill) return;
+    fill.style.transition = 'none';
+    fill.style.transform = ms ? 'scaleX(0)' : 'scaleX(1)';
+    if (!ms) return;
+    void fill.offsetWidth;
+    fill.style.transition = `transform ${ms}ms linear`;
+    fill.style.transform = 'scaleX(1)';
+  };
+  function init(root) {
+    if (root.dataset.ready) return;
+    root.dataset.ready = '1';
+    const rows = Array.from(root.querySelectorAll('.is-row'));
+    const status = root.querySelector('[data-status]');
+    const fill = root.querySelector('[data-runline] > i');
+    const SAY = JSON.parse(root.querySelector('script[data-isort-say]').textContent);
+    const reduce = window.matchMedia('(prefers-reduced-motion: reduce)');
+    let timers = [];
+    const later = (ms, fn) => timers.push(window.setTimeout(fn, ms));
+    const say = (msg) => { if (!status) return; status.textContent = ''; later(30, () => { status.textContent = msg; }); };
+    const reset = () => {
+      timers.forEach(clearTimeout); timers = [];
+      rows.forEach((r) => r.classList.remove('lit', 'landed'));
+      root.removeAttribute('data-running'); delete root.dataset.state;
+      void root.offsetWidth;   // the animations restart on a replay
+    };
+    const done = () => { root.dataset.state = 'done'; root.removeAttribute('data-running'); };
+    const run = () => {
+      reset();
+      root.dataset.state = 'running';
+      if (reduce.matches) {
+        rows.forEach((r) => r.classList.add('lit', 'landed'));
+        done(); say(SAY.all);
+        return;
+      }
+      say(SAY.start);
+      let t = LEAD;
+      rows.forEach((r, i) => {
+        later(t, () => r.classList.add('lit'));
+        later(t + IN_TO_LAND, () => { r.classList.add('landed'); say(r.dataset.say); });
+        t += IN_TO_LAND;
+        if (i < rows.length - 1) t += Number(r.dataset.hold) || HOLD;
+      });
+      later(t, done);
+      root.setAttribute('data-running', ''); fillLine(fill, t);
+    };
+    root.querySelector('[data-isort-tap]').addEventListener('click', run);
+    root.querySelector('[data-replay]').addEventListener('click', run);
+  }
+  const all = () => document.querySelectorAll('[data-isort]').forEach(init);
+  all();
+  document.addEventListener('astro:page-load', all);
+</script>
