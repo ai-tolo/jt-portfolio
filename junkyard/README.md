@@ -16,3 +16,7 @@ The site is the homepage, the résumé, and the case studies under it.
 - ArchiveHero.astro, archive-run.json — the one-phone AudioDex run (the chorus, then the Thanksgiving
   dinner); retired 2026-10-15 for AudioDexDoor.astro (two phones, one word). Its import of
   ../data/archive-run.json no longer resolves from here: a record, not a part
+- IntakeSort.astro, intake-sort.json — THE SORT (2026-10-19): seven circumstances and where each landed, run as one
+  factory from a press; retired the same night for IntakeBoard.astro (Jon: "a good first swing … it's weird that I
+  have to click to get these to show up"). Its three images moved to public/intake/board/; its imports no longer
+  resolve from here: a record, not a part

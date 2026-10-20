@@ -18,7 +18,9 @@ export const WATCH_COPY = {
   // 2026-10-19 (THE SORT, Jon: "the pitch now is a bit wider … it utilizes the two things I already use, voice memos
   // and iMessage, and puts it into pocketed pieces of information"): DRAFT in his words, his to rewrite. Was "I talk to
   // my watch. It comes back as a calendar event, an organized idea, or a prompt for Claude."
-  dek: "No new app. A voice memo or a text to myself, sorted into pockets.",
+  // 2026-10-19, late (THE BOARD, Jon: "pockets should say tickets … a lot of your text feels stifled, long-winded,
+  // literal"): DRAFT, his to rewrite; was "No new app. A voice memo or a text to myself, sorted into pockets."
+  dek: "Memos and texts in. Tickets out.",
   // 2026-10-19 (THE SORT round: the watch is live only, the wedding moved into the sort's sixth row): the caption
   // under the watch says what the live mode does, in LIVE_COPY's words ("a preview. nothing was added."). DRAFT, his
   // to rewrite. The history of the replay's caption, kept for the record:

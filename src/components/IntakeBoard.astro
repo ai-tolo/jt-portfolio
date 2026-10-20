@@ -1,0 +1,417 @@
+---
+// src/components/IntakeBoard.astro
+// THE BOARD (2026-10-19, late; Jon, after THE SORT: "it's weird that I have to click to get these to show up … all you
+// see is one thing at a time: it shows the circumstance, then input, output"; "if we're gonna do it departure-board
+// style, it needs to be … well executed enough that it's clearly doing that"): the Intake sheet's object. Four scenes,
+// one at a time, turning by themselves like a departures board: the LINE as split-flap cells, then a two-up, what he
+// sent on the left, the Intake card it became on the right (a month cell beside the two dated ones).
+//
+// Usage:   <IntakeBoard />   (inside a .sheet: it reads --sheet-ink / --sheet-acc / --sheet-sans … from the host)
+// Data:    src/data/intake-board.json (every line a DRAFT, Jon's to rewrite); images in public/intake/board/
+//
+// THE LAW AMENDMENT (2026-10-19): a signboard may turn by itself; a run, a machine at work, starts only on a press.
+// The board turns only while at least half of it is on screen, holds under a pointer, a finger or focus, steps on a
+// swipe, ← → or a mark. Reduced motion: it never turns by itself and the line swaps without the flip. Its height is
+// the tallest scene's from the first paint (the scenes share one grid cell), so the sheet never changes height.
+import board from '../data/intake-board.json';
+
+// the line's cells: words wrapped into rows of `cols`, each row padded to `cols`, every scene padded to the same rows
+const WIDE = 30, NARROW = 16;
+const wrap = (line: string, cols: number) => {
+  const rows: string[] = [];
+  let cur = '';
+  for (const w of line.toUpperCase().split(' ')) {
+    if (!cur) cur = w;
+    else if ((cur + ' ' + w).length <= cols) cur += ' ' + w;
+    else { rows.push(cur); cur = w; }
+  }
+  if (cur) rows.push(cur);
+  return rows;
+};
+const layout = (cols: number) => {
+  const all = board.scenes.map((s) => wrap(s.line, cols));
+  const n = Math.max(...all.map((r) => r.length));
+  return { cols, rows: n, lines: all.map((r) => Array.from({ length: n }, (_, i) => (r[i] ?? '').padEnd(cols, ' ')).join('')) };
+};
+const L = { wide: layout(WIDE), narrow: layout(NARROW) };
+
+type Bar = { x: number; y: number; h: number };
+// the wrist's waveform: the adh-wave drawing language (2.6-wide rounded bars on a 4-unit pitch, a 100-tall box)
+const wave = (seed: string, n: number): Bar[] => {
+  let s = 0;
+  for (const c of seed) s = (s * 31 + c.charCodeAt(0)) >>> 0;
+  const rnd = () => { s = (s * 1664525 + 1013904223) >>> 0; return s / 4294967296; };
+  let v = 0.55;
+  return Array.from({ length: n }, (_, i) => {
+    v = Math.min(1, Math.max(0.15, v + (rnd() - 0.5) * 0.6));
+    const edge = Math.min(1, (i + 1) / 3, (n - i) / 3);
+    const h = Math.round(Math.max(12, v * 94 * edge));
+    return { x: i * 4, y: 50 - h / 2, h };
+  });
+};
+const scenes = board.scenes.map((s: any) => ({ ...s, bars: s.sent.type === 'voice' ? wave(s.id, s.sent.bars) : [] }));
+const cell = (ch: string) => (ch === ' ' ? ' ' : ch);
+const CHECK = '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2.5 8.5l3.5 3.5 7.5-8.5"/></svg>';
+---
+<section class="iboard" data-iboard aria-roledescription="carousel" aria-label="Intake: four things I sent myself, and what each became">
+  <script type="application/json" data-iboard-layout set:html={JSON.stringify({ wide: L.wide.lines, narrow: L.narrow.lines })}></script>
+  {/* THE LINE, split-flap: one cell per character, a hairline seam across each cell's middle; two layouts (30 cells on
+      one row on a wide sheet, 16 a row on a narrow one), the container query shows one, the script turns both */}
+  {(['wide', 'narrow'] as const).map((k) => (
+    <div class:list={['ib-flap', `ib-${k}`]} aria-hidden="true" data-flap={k}>
+      {Array.from({ length: L[k].rows }, (_, r) => (
+        <div class="ib-row">
+          {Array.from(L[k].lines[0].slice(r * L[k].cols, (r + 1) * L[k].cols)).map((ch) => <span class="ib-cell"><span>{cell(ch)}</span></span>)}
+        </div>
+      ))}
+    </div>
+  ))}
+  {/* THE TWO-UP: what he sent (flush right against the sheet's centre line) · what it became (flush left from it);
+      the four scenes stacked in one grid cell, the shown one opaque, the rest inert */}
+  <div class="ib-stage">
+    {scenes.map((s: any, k: number) => (
+      <div class="ib-scene" data-scene={k} data-on={k === 0 ? '' : undefined} inert={k !== 0} aria-label={`${k + 1} of ${scenes.length}: ${s.line}`} role="group" aria-roledescription="scene">
+        <div class="ib-sent">
+          {(s.sent.type === 'image' || s.sent.type === 'image+text') && (
+            <span class:list={['ib-shot', `ib-shot-${s.id}`]}><img src={s.sent.src} width={s.sent.w} height={s.sent.h} alt={s.sent.alt} decoding="async" /></span>
+          )}
+          {s.sent.type === 'image+text' && <p class="ib-bubble">{s.sent.text}</p>}
+          {s.sent.type === 'voice' && (
+            <div class="ib-wrist">
+              <div class="ib-voice" aria-hidden="true">
+                <svg class="ib-watch" viewBox="0 0 14 20" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4.5 1h5l.5 3.2M4.5 19h5l.5-3.2M4.5 1L4 4.2M4.5 19L4 15.8" stroke-linecap="round" /><rect x="2" y="4.2" width="10" height="11.6" rx="3" /></svg>
+                <svg class="ib-wave" viewBox={`0 0 ${s.bars.length * 4} 100`} preserveAspectRatio="none">{s.bars.map((b: Bar) => <rect x={b.x} y={b.y} width="2.6" height={b.h} rx="1.3" />)}</svg>
+                <span class="ib-len">{s.sent.len}</span>
+              </div>
+              <p class="ib-heard">“{s.sent.heard}”</p>
+            </div>
+          )}
+        </div>
+        <div class="ib-became">
+          {/* the Intake card as the Stream draws it (intake_web.py): the source's spine; age · phone · the check or the
+              kind's chip · the X; the title; the receipt's line, the link's line or the card's meta; the two tiles */}
+          <article class:list={['ib-card', `is-${s.card.state}`, { 'has-cell': s.cell }]} style={`--src:${s.card.src}`}>
+            <div class="ib-thead">
+              <span class:list={['ib-age', { old: s.card.old }]}>{s.card.age}</span>
+              {s.card.phone && <svg class="ib-ph" viewBox="0 0 14 20" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><rect x="1.5" y="1" width="11" height="18" rx="2.5" /><path d="M5.5 16h3" /></svg>}
+              {s.card.state === 'receipt' ? <span class="ib-check" set:html={CHECK} /> : <span class="ib-chip">{s.card.kind}</span>}
+              <svg class="ib-x" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" /></svg>
+            </div>
+            <h4 class="ib-ct">{s.card.title}</h4>
+            {s.card.line && <p class="ib-cm">{s.card.line}</p>}
+            {s.card.thumb && (
+              <div class="ib-mrow">
+                <img class="ib-thumb" src={s.card.thumb} width="44" height="44" alt="" decoding="async" />
+                <p class="ib-cm ib-link"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 14a4.5 4.5 0 0 0 6.4 0l3.2-3.2a4.5 4.5 0 0 0-6.4-6.4L12 5.6" /><path d="M14 10a4.5 4.5 0 0 0-6.4 0l-3.2 3.2a4.5 4.5 0 0 0 6.4 6.4l1.2-1.2" /></svg>{s.card.domain}</p>
+              </div>
+            )}
+            {s.card.meta && <p class="ib-cm">{s.card.meta}</p>}
+            <div class="ib-tiles" aria-hidden="true">
+              <span class="ib-tile">Claude <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.2 6.6L21 11l-6.8 2.4L12 20l-2.2-6.6L3 11l6.8-2.4z" /></svg></span>
+              <span class="ib-tile">Zzzz</span>
+            </div>
+          </article>
+          {s.cell && (
+            <div class="ib-cal" data-cal={s.cell.cal} aria-hidden="true">
+              <span class="ib-mon">{s.cell.mon}</span>
+              <span class="ib-dow">{s.cell.dow}</span>
+              <span class="ib-num">{s.cell.day}</span>
+              <span class="ib-bar"><b>{s.cell.title}</b><i>{s.cell.time}</i></span>
+            </div>
+          )}
+        </div>
+      </div>
+    ))}
+  </div>
+  {/* the four marks (the look room's carousel dots, at 8px): the scene shown, a press jumps */}
+  <div class="ib-marks" role="tablist" aria-label="Scenes">
+    {scenes.map((s: any, k: number) => (
+      <button class="ib-mark" type="button" role="tab" data-mark={k} data-on={k === 0 ? '' : undefined}
+        aria-selected={k === 0 ? 'true' : 'false'} tabindex={k === 0 ? '0' : '-1'} aria-label={s.line}></button>
+    ))}
+  </div>
+  <p class="sr" role="status" aria-live="polite" data-status data-says={JSON.stringify(scenes.map((s: any) => s.say))}></p>
+</section>
+
+<style>
+  .iboard {
+    --ink: var(--sheet-ink, #141210);
+    --ib-dim: color-mix(in oklab, var(--ink) 58%, transparent);
+    --ib-line: color-mix(in oklab, var(--ink) 14%, transparent);
+    --ib-seam: color-mix(in oklab, var(--ink) 10%, transparent);
+    --ib-edge: color-mix(in oklab, var(--ink) 16%, transparent);
+    --sans: var(--sheet-sans, 'Instrument Sans', 'Helvetica Neue', Arial, sans-serif);
+    --mono: var(--sheet-mono, 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace);
+    --display: var(--sheet-display, 'Outfit', var(--sans));
+    /* the iMessage sent blue (iOS's light / dark) */
+    --bubble: #007aff;
+    /* the two calendars' bars, as the iOS month draws them (cal-before / cal-after): the only fills on the object */
+    --cal-intake-bg: #ffd1da; --cal-intake-ink: #8a1631; --cal-intake-time: #c22a4d;
+    --cal-idea-bg: #fde6b4; --cal-idea-ink: #6e4600; --cal-idea-time: #a26a08;
+    /* the Stream's receipt green (intake_web.py's RECEIPT_COLOR) and its lamp, the colour an aged card's days wear */
+    --rcpt: #79a465; --lamp: #c4472f;
+    position: relative;
+    container: iboard / inline-size;
+    width: 100%;
+    color: var(--ink);
+    font-family: var(--sans);
+    touch-action: pan-y;
+  }
+  :global(html[data-night]) .iboard {
+    --bubble: #0a84ff;
+    --cal-intake-bg: color-mix(in oklab, #ff375f 30%, #1c1c1f); --cal-intake-ink: #ffc2cf; --cal-intake-time: #ff8fa6;
+    --cal-idea-bg: color-mix(in oklab, #ffcc00 24%, #1c1c1f); --cal-idea-ink: #ffe3a3; --cal-idea-time: #f2bd52;
+    --lamp: #ff7a5c;
+  }
+  .sr { position: absolute; width: 1px; height: 1px; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
+  /* ── THE LINE: split-flap cells, ink on paper; a cell is its glyph's box on a hairline, the seam across its middle;
+     no fill, no glow. Sized from the board's own width so the row always fits ── */
+  .ib-flap { display: grid; justify-content: center; row-gap: 5px; }
+  .ib-narrow { display: none; }
+  .ib-row { display: flex; gap: 3px; }
+  .ib-wide { --fs: min(24px, calc((100cqw - 29 * 3px) / 30 / 0.84)); }
+  .ib-narrow { --fs: min(22px, calc((100cqw - 15 * 3px) / 16 / 0.84)); }
+  .ib-cell {
+    position: relative; display: grid; place-items: center; overflow: hidden;
+    width: calc(var(--fs) * 0.84); height: calc(var(--fs) * 1.5); box-sizing: border-box;
+    border: 1px solid var(--ib-line); border-radius: 3px;
+    font: 600 var(--fs)/1 var(--mono); text-transform: uppercase; color: var(--ink);
+    perspective: 200px;
+    transition: border-color 560ms ease, color 560ms ease;
+  }
+  .ib-cell::after { content: ""; position: absolute; left: 0; right: 0; top: 50%; height: 1px; background: var(--ib-seam); }
+  .ib-cell > span { display: block; transform-origin: 50% 50%; }
+  /* one flap falling: two identical keyframes so a class swap restarts it without a reflow */
+  .ib-cell.fa > span { animation: ib-flap-a 110ms ease-out; }
+  .ib-cell.fb > span { animation: ib-flap-b 110ms ease-out; }
+  @keyframes ib-flap-a { from { transform: rotateX(78deg); opacity: 0.35; } to { transform: none; opacity: 1; } }
+  @keyframes ib-flap-b { from { transform: rotateX(78deg); opacity: 0.35; } to { transform: none; opacity: 1; } }
+
+  /* ── THE TWO-UP: the four scenes share one grid cell (the tallest reserves the height); each MIRRORS on the sheet's
+     centre line, what he sent flush right against it, what it became flush left from it, a 6cqw gutter; a scene
+     stands centred in the reserved height. The shown one crossfades in over 350 ms ── */
+  .ib-stage { display: grid; margin-top: 40px; }
+  .ib-scene {
+    grid-area: 1 / 1; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); column-gap: 6cqw; align-items: center;
+    opacity: 0; visibility: hidden; transition: opacity 350ms ease, visibility 0s linear 350ms;
+  }
+  .ib-scene[data-on] { opacity: 1; visibility: visible; transition: opacity 350ms ease; }
+  .ib-sent { display: flex; flex-direction: column; align-items: flex-end; gap: 8px; min-width: 0; }
+  .ib-became { display: flex; align-items: flex-start; gap: 16px; min-width: 0; }
+
+  /* what he sent: the thread with himself. A sent image wears the sent blue as its frame (the bubble's tail corner);
+     a typed thought is the bubble itself */
+  .ib-shot { display: block; max-width: 100%; padding: 3px; box-sizing: border-box; border-radius: 20px 20px 6px 20px; background: var(--bubble); }
+  .ib-shot img { display: block; max-width: 100%; height: auto; border-radius: 17px 17px 4px 17px; }
+  /* the frame carries the width (a percentage on the image inside a shrink-to-fit frame left a blue band) */
+  .ib-shot-maybe img { width: auto; height: 330px; }
+  .ib-shot-paper { width: min(100%, 400px); }
+  .ib-shot-find { width: min(100%, 420px); border-radius: 20px; }
+  .ib-shot-paper img, .ib-shot-find img { width: 100%; }
+  .ib-shot-find img { border-radius: 17px; }
+  .ib-bubble {
+    margin: 0; max-width: min(100%, 32ch); padding: 8px 13px; box-sizing: border-box;
+    border-radius: 18px 18px 5px 18px; background: var(--bubble); color: #fff;
+    font: 400 14px/1.38 var(--sans); text-align: left;
+  }
+  /* a voice memo: the wrist, a short strip, its length; the words as heard under it */
+  .ib-wrist { display: flex; flex-direction: column; align-items: flex-end; gap: 12px; width: min(100%, 300px); }
+  .ib-voice { display: flex; align-items: center; gap: 12px; width: 100%; color: var(--sheet-acc, #ff6b4a); }
+  .ib-watch { flex: none; width: 13px; height: 19px; color: var(--ib-dim); }
+  .ib-wave { flex: 1; min-width: 0; height: 44px; }
+  .ib-wave rect { fill: currentColor; }
+  .ib-len { flex: none; font: 500 0.875rem/1 var(--mono); font-variant-numeric: tabular-nums; color: var(--ib-dim); }
+  .ib-heard { margin: 0; font: 500 1.25rem/1.3 var(--display); color: var(--ink); text-align: right; transition: color 560ms ease; }
+
+  /* what it became: the Stream's card on paper (its 3px source spine, the hairline, 12 radius) */
+  .ib-card {
+    width: min(100%, 340px); box-sizing: border-box; padding: 12px 14px;
+    border: 1px solid var(--ib-edge); border-left: 3px solid var(--src); border-radius: 12px;
+    display: flex; flex-direction: column; gap: 6px;
+  }
+  .ib-card.has-cell { width: min(100%, 272px); flex: 0 1 272px; }
+  .ib-thead { display: flex; align-items: center; gap: 8px; font: 400 11.5px/1 var(--sans); color: var(--ib-dim); }
+  .ib-age.old { color: var(--lamp); font-weight: 600; }
+  .ib-ph { width: 10px; height: 13px; }
+  .ib-check { display: inline-flex; width: 14px; height: 14px; color: var(--rcpt); }
+  .ib-check :global(svg) { width: 100%; height: 100%; }
+  .ib-chip {
+    --chip: #8fbf6f;
+    padding: 2px 7px; border: 1px solid color-mix(in oklab, var(--chip) 55%, transparent); border-radius: 5px;
+    font: 600 10px/1.2 var(--sans); letter-spacing: 0.07em; text-transform: uppercase;
+    color: color-mix(in oklab, var(--chip) 62%, var(--ink));
+  }
+  :global(html[data-night]) .ib-chip { color: var(--chip); }
+  .ib-x { width: 14px; height: 14px; margin-left: auto; }
+  .ib-ct { margin: 2px 0 0; font: 650 15.5px/1.3 var(--sans); color: var(--ink); text-wrap: pretty; }
+  .ib-cm { margin: 0; font: 400 12.5px/1.4 var(--sans); color: var(--ib-dim); }
+  .ib-mrow { display: flex; align-items: center; gap: 10px; }
+  .ib-thumb { flex: none; width: 44px; height: 44px; border-radius: 7px; object-fit: cover; object-position: 20% 50%; border: 1px solid var(--ib-edge); box-sizing: border-box; }
+  .ib-link { display: flex; align-items: center; gap: 6px; min-width: 0; }
+  .ib-link svg { flex: none; width: 13px; height: 13px; }
+  /* the two tiles, quiet (the open state is the point; Jon left it to the brief) */
+  .ib-tiles { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin-top: 6px; }
+  .ib-tile {
+    display: flex; align-items: center; justify-content: center; gap: 6px; height: 36px;
+    border: 1px solid var(--ib-edge); border-radius: 9px; font: 500 13px/1 var(--sans); color: var(--ib-dim);
+  }
+  .ib-tile svg { width: 12px; height: 12px; }
+  /* the month cell: the month in red over the week's rule, the weekday, the numeral, the event's bar */
+  .ib-cal { display: grid; flex: 0 0 148px; width: 148px; }
+  .ib-mon { margin: 0 0 8px; padding-bottom: 8px; border-bottom: 1px solid var(--ib-edge); font: 600 0.75rem/1 var(--sans); letter-spacing: 0.02em; color: var(--sheet-acc, #ff6b4a); }
+  .ib-dow { font: 600 0.6875rem/1 var(--sans); letter-spacing: 0.04em; text-transform: uppercase; color: var(--ib-dim); }
+  .ib-num { margin: 4px 0 8px; font: 700 1.75rem/1 var(--sans); letter-spacing: -0.01em; font-variant-numeric: tabular-nums; color: var(--ink); }
+  .ib-bar { display: flex; flex-direction: column; gap: 3px; padding: 6px 8px 7px; border-radius: 7px; background: var(--cal-intake-bg); color: var(--cal-intake-ink); }
+  [data-cal="idea"] .ib-bar { background: var(--cal-idea-bg); color: var(--cal-idea-ink); }
+  .ib-bar b { font: 700 13px/1.25 var(--sans); }
+  .ib-bar i { font: 500 12px/1.2 var(--sans); font-style: normal; color: var(--cal-intake-time); }
+  [data-cal="idea"] .ib-bar i { color: var(--cal-idea-time); }
+
+  /* ── the four marks: the look room's carousel dots (Carousel.astro's .car-dot) at 8px, a 24px hit box ── */
+  .ib-marks { display: flex; justify-content: center; gap: 6px; margin-top: 32px; }
+  .ib-mark { width: 24px; height: 24px; padding: 0; margin: 0; border: 0; background: none; display: grid; place-items: center; cursor: pointer; color: var(--ink); border-radius: 50%; }
+  .ib-mark::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: currentColor; opacity: 0.28; transition: opacity 160ms ease, transform 160ms ease; }
+  .ib-mark:hover::before { opacity: 0.6; }
+  .ib-mark[data-on]::before { opacity: 1; transform: scale(1.25); }
+  .ib-mark:focus-visible { outline: 2px solid currentColor; outline-offset: 1px; }
+
+  /* ── a narrow board (under 700): the 16-cell line on its rows; each scene stacks, what he sent then what it became,
+     on one left axis (the sent things keep the right, as a thread draws them) ── */
+  @container iboard (width < 700px) {
+    .ib-wide { display: none; }
+    .ib-narrow { display: grid; }
+    .ib-stage { margin-top: 28px; }
+    .ib-scene { grid-template-columns: minmax(0, 1fr); row-gap: 20px; align-items: start; align-content: center; }
+    .ib-became { flex-wrap: wrap; }
+    .ib-card, .ib-card.has-cell { width: 100%; flex: 1 1 100%; }
+    .ib-shot-maybe img { height: 240px; }
+    .ib-wrist { width: 100%; }
+    /* the month cell on one row under the card (the month over the rule, then the day and its bar side by side) */
+    .ib-cal { flex: 1 1 100%; width: 100%; grid-template-columns: auto minmax(0, 1fr); column-gap: 14px; align-items: center; }
+    .ib-mon { grid-column: 1 / -1; }
+    .ib-dow { grid-column: 1; grid-row: 2; }
+    .ib-num { grid-column: 1; grid-row: 3; margin-bottom: 0; }
+    .ib-bar { grid-column: 2; grid-row: 2 / 4; }
+    .ib-marks { margin-top: 24px; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .ib-scene, .ib-scene[data-on] { transition: none; }
+    .ib-cell.fa > span, .ib-cell.fb > span { animation: none; }
+    .ib-mark::before { transition: none; }
+  }
+</style>
+
+<script>
+  // THE TURN (2026-10-19): a scene holds HOLD ms on screen, then the board turns: every cell whose glyph changes flips
+  // through 4 to 6 others over FLIP ms, starting STAGGER ms after its left neighbour; PANEL_AT ms after the flip
+  // begins the two-up crossfades (350 ms, CSS). The clock runs only while half the board is on screen, the page is
+  // visible and nothing holds it (a pointer over it, a finger on it, focus in it). Reduced motion: no clock, no flip.
+  const HOLD = 8000, FLIP = 600, STAGGER = 25, PANEL_AT = 300, TICK = 100;
+  const GLYPHS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+  const reduceQ = window.matchMedia('(prefers-reduced-motion: reduce)');
+  const pick = () => GLYPHS[Math.floor(Math.random() * GLYPHS.length)];
+  const show = (ch) => (ch === ' ' ? ' ' : ch);
+
+  function init(root) {
+    if (root.dataset.ready) return;
+    root.dataset.ready = '1';
+    const LAYOUT = JSON.parse(root.querySelector('script[data-iboard-layout]').textContent);
+    const flaps = Array.from(root.querySelectorAll('[data-flap]')).map((el) => ({ el, key: el.dataset.flap, cells: Array.from(el.querySelectorAll('.ib-cell')) }));
+    const scenes = Array.from(root.querySelectorAll('.ib-scene'));
+    const marks = Array.from(root.querySelectorAll('[data-mark]'));
+    const status = root.querySelector('[data-status]');
+    const SAYS = JSON.parse(status.dataset.says || '[]');
+    const n = scenes.length;
+    let at = 0, acc = 0, visible = false, hover = false, touch = false, focus = false, raf = 0, panelT = 0;
+
+    // one flip: a schedule per cell, played by one rAF loop; a glyph change restarts its flap by swapping two classes
+    const flip = (from, to) => {
+      cancelAnimationFrame(raf);
+      const plans = flaps.map(({ key, cells }) => cells.map((c, i) => {
+        const a = LAYOUT[key][from][i], b = LAYOUT[key][to][i];
+        const span = c.firstElementChild;
+        if (reduceQ.matches || a === b) { span.textContent = show(b); return null; }
+        const k = 4 + Math.floor(Math.random() * 3);
+        const t0 = i * STAGGER;
+        const steps = Array.from({ length: k }, (_, j) => ({ t: t0 + ((j + 1) * FLIP) / (k + 1), ch: pick() }));
+        steps.push({ t: t0 + FLIP, ch: b });
+        return { c, span, steps, j: 0 };
+      }).filter(Boolean));
+      if (reduceQ.matches) return;
+      const start = performance.now();
+      const frame = (now) => {
+        const e = now - start;
+        let busy = false;
+        plans.forEach((cells) => cells.forEach((p) => {
+          let moved = false;
+          while (p.j < p.steps.length && p.steps[p.j].t <= e) { p.span.textContent = show(p.steps[p.j].ch); p.j++; moved = true; }
+          if (moved) { const fa = p.c.classList.contains('fa'); p.c.classList.toggle('fa', !fa); p.c.classList.toggle('fb', fa); }
+          if (p.j < p.steps.length) busy = true;
+        }));
+        if (busy) raf = requestAnimationFrame(frame);
+      };
+      raf = requestAnimationFrame(frame);
+    };
+    const go = (k) => {
+      k = ((k % n) + n) % n;
+      if (k === at) return;
+      const from = at;
+      at = k; acc = 0;
+      flip(from, k);
+      clearTimeout(panelT);
+      const swap = () => {
+        scenes.forEach((s, i) => { s.toggleAttribute('data-on', i === k); s.inert = i !== k; });
+      };
+      if (reduceQ.matches) swap(); else panelT = setTimeout(swap, PANEL_AT);
+      marks.forEach((m, i) => {
+        m.toggleAttribute('data-on', i === k);
+        m.setAttribute('aria-selected', i === k ? 'true' : 'false');
+        m.tabIndex = i === k ? 0 : -1;
+      });
+      if (status) { status.textContent = ''; setTimeout(() => { status.textContent = SAYS[k] || ''; }, 30); }
+    };
+
+    // the clock: only on screen (half the board), page visible, nothing holding it, motion allowed
+    let last = performance.now();
+    setInterval(() => {
+      const now = performance.now(), dt = now - last; last = now;
+      if (!visible || hover || touch || focus || document.hidden || reduceQ.matches) return;
+      acc += Math.min(dt, TICK * 3);
+      if (acc >= HOLD) go(at + 1);
+    }, TICK);
+    new IntersectionObserver((es) => es.forEach((e) => { visible = e.intersectionRatio >= 0.5; }), { threshold: [0, 0.5, 1] }).observe(root);
+
+    // the holds: a pointer over it, a finger on it, focus in it
+    root.addEventListener('pointerenter', (e) => { if (e.pointerType === 'mouse') hover = true; });
+    root.addEventListener('pointerleave', (e) => { if (e.pointerType === 'mouse') hover = false; });
+    root.addEventListener('focusin', (e) => { focus = e.target.matches(':focus-visible'); });   // keyboard focus holds; a click does not
+    root.addEventListener('focusout', (e) => { if (!root.contains(e.relatedTarget)) focus = false; });
+    // a swipe steps it (a finger holds it while it is down)
+    let x0 = null, y0 = 0;
+    root.addEventListener('pointerdown', (e) => { if (e.pointerType === 'mouse') return; touch = true; x0 = e.clientX; y0 = e.clientY; });
+    const up = (e) => {
+      if (e.pointerType === 'mouse') return;
+      touch = false;
+      if (x0 === null) return;
+      const dx = e.clientX - x0, dy = e.clientY - y0;
+      x0 = null;
+      if (Math.abs(dx) > 40 && Math.abs(dx) > Math.abs(dy) * 1.2) go(at + (dx < 0 ? 1 : -1));
+    };
+    root.addEventListener('pointerup', up);
+    root.addEventListener('pointercancel', (e) => { touch = false; x0 = null; });
+    // ← → step it while focus is inside (never the page's arrows); a mark jumps
+    root.addEventListener('keydown', (e) => {
+      if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') {
+        e.preventDefault();
+        go(at + (e.key === 'ArrowRight' ? 1 : -1));
+        marks[at].focus();
+      }
+    });
+    marks.forEach((m, i) => m.addEventListener('click', () => go(i)));
+  }
+  const all = () => document.querySelectorAll('[data-iboard]').forEach(init);
+  all();
+  document.addEventListener('astro:page-load', all);
+</script>
