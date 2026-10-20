@@ -20,3 +20,7 @@ The site is the homepage, the résumé, and the case studies under it.
   factory from a press; retired the same night for IntakeBoard.astro (Jon: "a good first swing … it's weird that I
   have to click to get these to show up"). Its three images moved to public/intake/board/; its imports no longer
   resolve from here: a record, not a part
+- IntakeBoard.astro, intake-board.json — THE BOARD (2026-10-19, late): four scenes turning by themselves like a departures
+  board, the thread panel left and the Intake card right; retired 2026-10-20 for IntakeThread.astro, THE SEND (Jon: "it's
+  too many things at once. there needs to be a before and after … you're just patchworking at this point"). Its images
+  stay in public/intake/board/ (the send uses two of them); its imports no longer resolve from here: a record, not a part

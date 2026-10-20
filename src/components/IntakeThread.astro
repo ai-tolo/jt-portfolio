@@ -1,0 +1,452 @@
+---
+// src/components/IntakeThread.astro
+// THE SEND (2026-10-20, fresh eyes; Jon, after the sort, the board and the flip: "you're just patchworking at this
+// point … there needs to be a before and after"; the argument: "the two things I already use, voice memos and
+// iMessage … it transforms anything I send it in an iMessage into tickets"): the Intake sheet's top object. ONE lived
+// moment: a paper save-the-date on the fridge, photographed, about to be texted to himself. TWO PHONES (the AudioDex
+// shape, the sheet that works): Messages, the thread with himself, the photo waiting in the composer; Calendar,
+// October, nothing on it. The visitor's press IS the send: the photo rises into the thread, Delivered, a beat while the
+// photo is read, then the calendar pages ten months forward and Saturday the 28th takes the wedding. Nothing else on
+// his end. The watch under it is the memo half of the same argument (IntakeHero, live only).
+//
+// Usage:   <IntakeThread />   (inside a .sheet: it reads --sheet-ink / --sheet-acc / --sheet-sans … from the host)
+// Data:    src/data/intake-thread.json (every line a DRAFT, Jon's to rewrite); images in public/intake/board/
+// Needs:   public/archive/phone-blank.png (AudioDexDoor's body)
+//
+// NOTHING PRESSES ITSELF: the run starts only from a press. NOTHING MOVES THE PAGE: the phones hold one height from
+// the first paint (an aspect ratio), the foot is one slot (hint · runline · Replay). NO CAPTIONS, NO LABELS: the two
+// apps carry their own names. On a narrow sheet the two phones share ONE spot: Messages at rest, the Calendar
+// crossfading over it as it lands (one component, one script, two layouts). Reduced motion: rest → landed in one step.
+import data from '../data/intake-thread.json';
+
+const { thread, calendar, say, hint } = data;
+
+// THE MONTHS: every page from today's month to the landing's, each a 6-row Sunday-start grid (one height, so the
+// pages stack and slide); iOS draws only the month's own days
+const [ty, tm, td] = calendar.today.split('-').map(Number);
+const [ly, lm, ld] = calendar.landing.date.split('-').map(Number);
+const NAMES = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+type Page = { y: number; m: number; name: string; cells: (number | null)[]; current: boolean };
+const pages: Page[] = [];
+for (let y = ty, m = tm; y < ly || (y === ly && m <= lm); m === 12 ? (y++, m = 1) : m++) {
+  const first = new Date(Date.UTC(y, m - 1, 1)).getUTCDay();
+  const days = new Date(Date.UTC(y, m, 0)).getUTCDate();
+  const cells: (number | null)[] = Array.from({ length: 42 }, (_, i) => (i >= first && i - first < days ? i - first + 1 : null));
+  pages.push({ y, m, name: NAMES[m - 1], cells, current: y === ty && m === tm });
+}
+const LAST = pages.length - 1;
+const DOW = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
+---
+<section class="ith" data-ith data-pages={LAST} data-say-sent={say.sent} data-say-landed={say.landed} aria-label="Intake: a photo texted to yourself lands on the calendar">
+  <div class="ith-pair">
+    {/* MESSAGES: the thread with himself. Above the fold of the screen the older things he sent himself (a screenshot
+        cut by the top edge, his own line, Delivered); the photo waits in the composer with the send arrow lit */}
+    <div class="ith-phone ith-msg" data-msg>
+      <i class="shadow" aria-hidden="true"></i>
+      <div class="screen" aria-hidden="true">
+        <div class="face">
+          <div class="nav">
+            <svg class="chev" viewBox="0 0 12 20"><path d="M10 2L2 10l8 8" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            <span class="who"><span class="av">{thread.initial}</span><span class="nm">{thread.name} <svg viewBox="0 0 8 12"><path d="M2 2l4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></span></span>
+            <svg class="vid" viewBox="0 0 24 16"><rect x="1" y="2" width="15" height="12" rx="3" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M16 7l6-3v8l-6-3z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg>
+          </div>
+          <div class="thread">
+            <ol class="msgs" data-msgs>
+              <li class="bbl bbl-img bbl-old"><img src={thread.oldest.src} width={thread.oldest.w} height={thread.oldest.h} alt="" decoding="async" /></li>
+              <li class="bbl bbl-img"><img src={thread.older.src} width={thread.older.w} height={thread.older.h} alt="" decoding="async" /></li>
+              <li class="bbl bbl-txt">{thread.older.text}<span class="deliv deliv-rest">Delivered</span></li>
+              <li class="bbl bbl-img bbl-photo" data-photo><img src={thread.photo.src} width={thread.photo.w} height={thread.photo.h} alt="" decoding="async" /><span class="deliv deliv-photo">Delivered</span></li>
+            </ol>
+          </div>
+          <div class="composer">
+            <span class="plus"><svg viewBox="0 0 12 12"><path d="M6 1.5v9M1.5 6h9" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></span>
+            <div class="field">
+              <img class="thumb" src={thread.photo.src} width={thread.photo.w} height={thread.photo.h} alt="" decoding="async" />
+              <span class="ph">iMessage</span>
+              <span class="send"><svg viewBox="0 0 12 12"><path d="M6 10V2M2.5 5.5L6 2l3.5 3.5" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+              <span class="mic"><svg viewBox="0 0 16 16"><path d="M3 7v2M6 4v8M8 2v12M10 5v6M13 7v2" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg></span>
+            </div>
+          </div>
+        </div>
+      </div>
+      <img class="body" src="/archive/phone-blank.png" alt="" width="864" height="1760" decoding="async" loading="lazy" draggable="false" />
+      <button class="tap" type="button" data-ith-tap aria-label={`Send the photo to yourself: ${thread.photo.alt}`}></button>
+    </div>
+
+    {/* CALENDAR: the month, nothing on it; after the send it pages forward to the landing's month and the day takes
+        the event (the Intake calendar's bar, as the iOS month draws it: cal-before / cal-after) */}
+    <div class="ith-phone ith-cal" data-cal style={`--page:0`}>
+      <i class="shadow" aria-hidden="true"></i>
+      <div class="screen" aria-hidden="true">
+        <div class="face">
+          <div class="nav">
+            <span class="year"><svg class="chev" viewBox="0 0 12 20"><path d="M10 2L2 10l8 8" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg><span data-year>{ty}</span></span>
+            <span class="tools">
+              <svg viewBox="0 0 18 14"><path d="M1 2h16M1 7h16M1 12h16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+              <svg viewBox="0 0 18 18"><circle cx="7.5" cy="7.5" r="5.5" fill="none" stroke="currentColor" stroke-width="1.9"/><path d="M12 12l4.5 4.5" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/></svg>
+              <svg viewBox="0 0 14 14"><path d="M7 1.5v11M1.5 7h11" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/></svg>
+            </span>
+          </div>
+          <div class="dow">{DOW.map((d) => <span>{d}</span>)}</div>
+          <div class="pages">
+            <div class="reel" data-reel>
+              {pages.map((p, k) => (
+                <div class:list={['month', { current: p.current }]} data-month={k}>
+                  <p class="mname">{p.name}</p>
+                  <div class="grid">
+                    {p.cells.map((d, i) => {
+                      const today = p.current && d === td;
+                      const land = p.y === ly && p.m === lm && d === ld;
+                      return (
+                        <span class:list={['cell', { today, land }]}>
+                          {d !== null && <b class="num">{d}</b>}
+                          {land && (
+                            <span class="ev" data-cal={calendar.landing.cal}><b>{calendar.landing.title}</b><i>{calendar.landing.time}</i></span>
+                          )}
+                        </span>
+                      );
+                    })}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+          <div class="bar"><span>Today</span><span>Calendars</span><span>Inbox</span></div>
+        </div>
+      </div>
+      <img class="body" src="/archive/phone-blank.png" alt="" width="864" height="1760" decoding="async" loading="lazy" draggable="false" />
+    </div>
+  </div>
+
+  <div class="foot">
+    <p class="hint" aria-hidden="true">{hint}</p>
+    {/* "you're watching" (2026-10-19): the press → the landing, in the hint's place */}
+    <span class="runline" aria-hidden="true" data-runline><i></i></span>
+    <button type="button" class="replay" data-replay aria-label="Replay the send">
+      <svg viewBox="0 0 20 20" class="ico" aria-hidden="true"><path d="M4 10a6 6 0 1 0 1.8-4.3" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M4 3v3.5h3.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      Replay
+    </button>
+  </div>
+  <p class="sr" role="status" aria-live="polite" data-status></p>
+</section>
+
+<style>
+  .ith {
+    --ink: var(--sheet-ink, #141210);
+    --ground: #e9e8e5;
+    --ring-a: #47B6FF; --ring-b: #8A5CF6; /* the touch signal: the watch's ring's pair (AudioDexDoor's) */
+    --hint-mix: 74%; /* #ff6b4a mixed toward the sheet ink until 4.5:1 (IntakeHero's rule) */
+    --sans: -apple-system, 'Instrument Sans', 'Helvetica Neue', system-ui, sans-serif;
+    --mono: var(--sheet-mono, 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace);
+    /* the phones' own light mode: the screens are objects, the sheet is paper */
+    --sbg: #fff; --sfg: #000; --sdim: #8e8e93; --sline: #e5e5ea; --sfield: #fff; --sfield-line: #c7c7cc; --sgrey: #e9e9eb;
+    --blue: #007aff; --red: #ff3b30;
+    /* the two calendars' bars, as the iOS month draws them (cal-before / cal-after) */
+    --cal-intake-bg: #ffd1da; --cal-intake-ink: #8a1631; --cal-intake-time: #c22a4d;
+    --cal-idea-bg: #fde6b4; --cal-idea-ink: #6e4600; --cal-idea-time: #a26a08;
+    container: ith / inline-size;
+    width: 100%;
+    color: var(--ink);
+    font-family: var(--sans);
+  }
+  :global(html[data-night]) .ith {
+    --ground: #0b0e14; --hint-mix: 100%;
+    --sbg: #000; --sfg: #fff; --sdim: #8e8e93; --sline: #2c2c2e; --sfield: #000; --sfield-line: #3a3a3c; --sgrey: #26252a;
+    --blue: #0a84ff; --red: #ff453a;
+    --cal-intake-bg: color-mix(in oklab, #ff375f 30%, #1c1c1f); --cal-intake-ink: #ffc2cf; --cal-intake-time: #ff8fa6;
+    --cal-idea-bg: color-mix(in oklab, #ffcc00 24%, #1c1c1f); --cal-idea-ink: #ffe3a3; --cal-idea-time: #f2bd52;
+  }
+  .sr { position: absolute; width: 1px; height: 1px; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+  .ico { width: 1em; height: 1em; flex: none; }
+
+  /* ── the pair: two equal phones, one gutter, centred (AudioDexDoor's grid, the host's cap --ith-w) */
+  .ith-pair {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, var(--ith-w, 34cqw)));
+    justify-content: center;
+    column-gap: var(--ith-gap, 10cqw);
+  }
+  /* ── a phone (the photographed body, the screen drawn under its cut-out: AudioDexDoor's numbers) */
+  .ith-phone {
+    position: relative;
+    aspect-ratio: 864 / 1760;
+    container: phone / inline-size;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .shadow { position: absolute; inset: 0.6% 1.2%; border-radius: 16.2% / 7.95%; box-shadow: 0 2.2cqw 5cqw rgba(20, 16, 10, 0.26), 0 0.6cqw 1.4cqw rgba(20, 16, 10, 0.16); }
+  :global(html[data-night]) .ith .shadow { box-shadow: 0 2.6cqw 6cqw rgba(0, 0, 0, 0.7), 0 0.6cqw 1.4cqw rgba(0, 0, 0, 0.5); }
+  .screen {
+    position: absolute; z-index: 1; left: 4.745%; top: 1.875%; width: 90.51%; height: 96.25%;
+    border-radius: 13.8% / 6.38%; background: var(--sbg); color: var(--sfg); overflow: hidden;
+    -webkit-font-smoothing: antialiased;
+  }
+  .body { position: absolute; inset: 0; z-index: 2; width: 100%; height: 100%; pointer-events: none; user-select: none; }
+  .tap {
+    position: absolute; z-index: 3; left: 4.745%; top: 1.875%; width: 90.51%; height: 96.25%;
+    margin: 0; padding: 0; border: 0; background: transparent; border-radius: 13.8% / 6.38%; cursor: pointer;
+  }
+  .tap:focus-visible { outline: 0.7cqw solid var(--blue); outline-offset: -0.7cqw; }
+  /* THE TOUCH SIGNAL (one vocabulary with the watch and the AudioDex phones): the rim and its inward light breathe
+     until a press */
+  .tap::before, .tap::after { content: ''; position: absolute; inset: 0; border-radius: inherit; pointer-events: none; animation: touch-breathe 2s ease-in-out infinite; transition: opacity 0.35s; }
+  .tap::after {
+    box-sizing: border-box; padding: 0.7cqw; background: linear-gradient(135deg, var(--ring-a), var(--ring-b));
+    -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); -webkit-mask-composite: xor;
+    mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); mask-composite: exclude;
+  }
+  .tap::before { box-shadow: inset 2.5cqw 2.5cqw 6cqw color-mix(in oklab, var(--ring-a) 55%, transparent), inset -2.5cqw -2.5cqw 6cqw color-mix(in oklab, var(--ring-b) 55%, transparent); }
+  .ith-pair:has(.tap:hover) .tap::before, .ith-pair:has(.tap:hover) .tap::after { animation: none; opacity: 1; }
+  /* an EXACT COPY of the watch's keyframe (IntakeHero.astro, AudioDexDoor.astro): change both or neither */
+  @keyframes touch-breathe { 0%, 100% { opacity: 0.45; } 50% { opacity: 1; } }
+  .s1 .tap { visibility: hidden; pointer-events: none; }
+
+  /* ── the faces (the phone's cqw; the screen is 90.51 of them wide, ≈ 196 tall) */
+  .face { position: absolute; inset: 0; display: flex; flex-direction: column; font-size: 4cqw; line-height: 1.25; }
+
+  /* MESSAGES: the nav with the contact (his own circle), the thread bottom-anchored above the composer */
+  .ith-msg .nav {
+    position: relative; z-index: 2; display: flex; align-items: flex-end; justify-content: center;
+    height: 30cqw; padding: 0 4cqw 1.6cqw; box-sizing: border-box; background: var(--sbg); border-bottom: 1px solid var(--sline);
+  }
+  .ith-msg .chev { position: absolute; left: 5cqw; bottom: 8cqw; width: 2.8cqw; height: 4.6cqw; color: var(--blue); }
+  .ith-msg .vid { position: absolute; right: 5cqw; bottom: 8.4cqw; width: 6cqw; height: 4cqw; color: var(--blue); }
+  .who { display: flex; flex-direction: column; align-items: center; gap: 1cqw; }
+  .av { display: grid; place-items: center; width: 11cqw; height: 11cqw; border-radius: 50%; background: linear-gradient(#a6abb8, #868b97); color: #fff; font-size: 5cqw; font-weight: 500; }
+  .nm { display: inline-flex; align-items: center; gap: 0.6cqw; font-size: 2.8cqw; color: var(--sfg); }
+  .nm svg { width: 1.6cqw; height: 2.4cqw; color: var(--sdim); }
+  .thread {
+    position: absolute; left: 0; right: 0; top: 30cqw; bottom: var(--comp, 33cqw);
+    overflow: hidden; display: flex; flex-direction: column; justify-content: flex-end;
+    transition: bottom 420ms cubic-bezier(0.2, 0.8, 0.2, 1);
+  }
+  /* at rest the list is shifted down by the photo's block (--shift, measured by the script), so the photo waits
+     under the composer; the send slides the list up as the photo rises */
+  .msgs {
+    list-style: none; margin: 0; padding: 0 4cqw 6cqw; display: flex; flex-direction: column; align-items: flex-end; gap: 0.8cqw;
+    transform: translateY(var(--shift, 0px)); transition: transform 420ms cubic-bezier(0.2, 0.8, 0.2, 1);
+  }
+  .s1 .msgs { transform: none; }
+  .bbl { position: relative; max-width: 74%; box-sizing: border-box; }
+  .bbl-txt { padding: 2cqw 3.4cqw; border-radius: 4.6cqw 4.6cqw 1.2cqw 4.6cqw; background: var(--blue); color: #fff; font-size: 3.9cqw; line-height: 1.3; }
+  .bbl-img { width: 64cqw; max-width: 64cqw; padding: 0.9cqw; border-radius: 4.6cqw 4.6cqw 1.2cqw 4.6cqw; background: var(--blue); }
+  .bbl-img img { display: block; width: 100%; height: auto; border-radius: 3.8cqw 3.8cqw 0.6cqw 3.8cqw; }
+  .bbl-old { margin-bottom: 2cqw; }
+  .bbl-photo { margin-top: 0.9cqw; opacity: 0; transform: scale(0.42); transform-origin: 100% 100%; transition: opacity 320ms ease, transform 420ms cubic-bezier(0.2, 0.8, 0.2, 1); }
+  .s1 .bbl-photo { opacity: 1; transform: none; }
+  /* Delivered under the last sent thing: takes no room (absolute), moves to the photo once it lands */
+  .deliv { position: absolute; right: 0.6cqw; top: 100%; margin-top: 1cqw; font-size: 2.8cqw; font-weight: 600; color: var(--sdim); white-space: nowrap; transition: opacity 200ms; }
+  .deliv-photo { opacity: 0; }
+  .s1 .deliv-rest { opacity: 0; }
+  .s2 .deliv-photo { opacity: 1; }
+  /* the composer: the + at left, the field holding the photo and the lit send arrow; after the send an empty field */
+  .composer { position: absolute; z-index: 2; left: 0; right: 0; bottom: 0; display: flex; align-items: flex-end; gap: 2.4cqw; padding: 2cqw 3.6cqw 8cqw; background: var(--sbg); }
+  .plus { display: grid; place-items: center; flex: none; width: 8.4cqw; height: 8.4cqw; border-radius: 50%; background: var(--sgrey); color: var(--sdim); }
+  .plus svg { width: 3.4cqw; height: 3.4cqw; }
+  .field {
+    position: relative; flex: 1; min-height: 8.4cqw; box-sizing: border-box; padding: 1.4cqw 9.5cqw 1.4cqw 3.2cqw;
+    border: 1px solid var(--sfield-line); border-radius: 4.5cqw; background: var(--sfield);
+    display: flex; align-items: center;
+  }
+  .thumb { display: block; width: 24cqw; height: auto; border-radius: 2.6cqw; transition: opacity 180ms ease, transform 260ms ease; }
+  .s1 .thumb { opacity: 0; transform: scale(0.6); position: absolute; }
+  .ph { display: none; font-size: 3.9cqw; color: var(--sdim); }
+  .s1 .ph { display: block; }
+  .send, .mic { position: absolute; right: 0.9cqw; bottom: 0.7cqw; display: grid; place-items: center; width: 6.8cqw; height: 6.8cqw; border-radius: 50%; transition: opacity 200ms; }
+  .send { background: var(--blue); color: #fff; }
+  .send svg { width: 3.4cqw; height: 3.4cqw; }
+  .mic { color: var(--sdim); opacity: 0; }
+  .mic svg { width: 4cqw; height: 4cqw; }
+  .s1 .send { opacity: 0; }
+  .s1 .mic { opacity: 1; }
+  .s1 .ith-msg { --comp: 18.8cqw; }
+
+  /* CALENDAR: the nav (‹ the year, the tools), the weekday row, the pages (one month visible, the reel slides), the
+     toolbar. The month's name sits on its page so it slides with it; the current month's is red */
+  .ith-cal .nav { display: flex; align-items: center; justify-content: space-between; height: 20cqw; padding: 9cqw 4.4cqw 0; box-sizing: border-box; color: var(--red); }
+  .year { display: inline-flex; align-items: center; gap: 1.2cqw; font-size: 4cqw; }
+  .ith-cal .chev { width: 2.4cqw; height: 4cqw; }
+  .tools { display: inline-flex; gap: 5cqw; }
+  .tools svg { width: 4.4cqw; height: 4.4cqw; }
+  .dow { display: grid; grid-template-columns: repeat(7, 1fr); padding: 0 1.6cqw; text-align: center; font-size: 2.9cqw; font-weight: 600; color: var(--sdim); border-bottom: 1px solid var(--sline); }
+  .dow span { padding: 1.6cqw 0 1.2cqw; }
+  .pages { flex: 1; min-height: 0; overflow: hidden; }
+  .reel { height: 100%; transform: translateY(calc(var(--page, 0) * -100%)); transition: transform 90ms linear; }
+  .month { height: 100%; box-sizing: border-box; display: flex; flex-direction: column; }
+  .mname { margin: 0; padding: 2.4cqw 2.6cqw 1cqw; font-size: 6.2cqw; font-weight: 700; letter-spacing: -0.01em; color: var(--sfg); }
+  .month.current .mname { color: var(--red); }
+  .grid { flex: 1; min-height: 0; display: grid; grid-template-columns: repeat(7, 1fr); grid-template-rows: repeat(6, 1fr); padding: 0 1.6cqw; }
+  .cell { position: relative; display: flex; flex-direction: column; align-items: center; gap: 1.2cqw; padding-top: 1.4cqw; border-top: 1px solid var(--sline); }
+  .cell:nth-child(-n + 7) { border-top: 0; }
+  .num { display: grid; place-items: center; width: 7cqw; height: 7cqw; border-radius: 50%; font-size: 3.8cqw; font-weight: 600; font-variant-numeric: tabular-nums; }
+  .cell.today .num { background: var(--red); color: #fff; }
+  /* the event's bar in its cell (the Intake calendar's red; the Idea calendar's yellow): lands scaling in */
+  .ev {
+    display: flex; flex-direction: column; gap: 0.6cqw; width: calc(100% - 0.8cqw); box-sizing: border-box; padding: 1.2cqw 1.2cqw 1.3cqw;
+    border-radius: 1.6cqw; background: var(--cal-intake-bg); color: var(--cal-intake-ink); text-align: left;
+    opacity: 0; transform: scale(0.55); transform-origin: 50% 0; transition: opacity 180ms ease, transform 260ms cubic-bezier(0.2, 0.9, 0.25, 1.15);
+  }
+  .ev[data-cal='idea'] { background: var(--cal-idea-bg); color: var(--cal-idea-ink); }
+  .ev b { font-size: 3.2cqw; font-weight: 700; line-height: 1.18; }
+  .ev i { font-size: 2.9cqw; font-style: normal; font-weight: 500; color: var(--cal-intake-time); }
+  .ev[data-cal='idea'] i { color: var(--cal-idea-time); }
+  .s5 .ev { opacity: 1; transform: none; }
+  .bar { display: flex; justify-content: space-between; padding: 2.6cqw 5cqw 8cqw; border-top: 1px solid var(--sline); font-size: 3.6cqw; color: var(--red); }
+
+  /* ── a narrow sheet: the two phones share ONE spot (Messages at rest; the Calendar crossfades over it as the
+     photo is read, the bodies identical, so only the screen changes) */
+  @container ith (max-width: 619px) {
+    .ith-pair { grid-template-columns: minmax(0, 76cqw); }
+    .ith-phone { grid-area: 1 / 1; transition: opacity 400ms ease; }
+    .ith-cal { opacity: 0; pointer-events: none; }
+    .s3 .ith-cal { opacity: 1; }
+    .s3 .ith-msg { opacity: 0; }
+  }
+
+  /* ── the foot: the hint at rest, Replay once it has landed; one slot, so nothing below moves (AudioDexDoor's) */
+  .foot { display: grid; min-height: 30px; margin-top: 16px; align-items: start; justify-items: center; }
+  .foot > * { grid-area: 1 / 1; }
+  .hint {
+    margin: 0; text-align: center; font: 600 0.6875rem/1.5 var(--mono); letter-spacing: 0.12em;
+    color: color-mix(in oklab, var(--sheet-acc, #ff6b4a) var(--hint-mix), var(--sheet-ink, var(--ink)));
+    transition: opacity 0.3s, color 560ms ease;
+  }
+  .s1 .hint { opacity: 0; }
+  /* THE REPLAY: the AudioDex foot carries the same pill (AudioDexDoor's .replay); change both or neither */
+  .replay {
+    display: inline-flex; align-items: center; gap: 6px; padding: 8px 14px; border: 0; border-radius: 999px;
+    background: var(--ink); color: var(--ground); font: 500 0.72rem/1 var(--mono); letter-spacing: 0.04em;
+    cursor: pointer; opacity: 0; pointer-events: none; transition: opacity 0.4s, background 120ms, color 560ms ease;
+  }
+  .replay .ico { width: 1.1em; height: 1.1em; }
+  .replay:hover { background: color-mix(in oklab, var(--ink) 82%, var(--ground)); }
+  .replay:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+  .done .replay { opacity: 1; pointer-events: auto; transition: opacity 0.6s 0.8s, background 120ms, color 560ms ease; }
+  /* "YOU'RE WATCHING" (2026-10-19, Jon: "a super minimalistic progress bar … a casual visual communication that hey,
+     you're witnessing something … you don't have to click anything"): one hairline in the foot's slot from the press
+     until the run lands, so nothing below moves; the hint's own colour fills it left to right, linearly, over the run's
+     planned length (the script's own numbers). In 200 on the press, out 400 at the landing, the Replay on its own delay
+     after. Not a control: aria-hidden, no pointer, no label. Reduced motion: none (the run lands at once). EXACT COPY in
+     IntakeHero.astro and AudioDexDoor.astro: change both or neither */
+  .runline {
+    grid-area: 1 / 1; align-self: center; width: 96px; height: 1.5px;
+    background: color-mix(in oklab, var(--sheet-ink) 14%, transparent);
+    opacity: 0; pointer-events: none; transition: opacity 400ms ease;
+  }
+  .runline > i {
+    display: block; height: 100%; transform: scaleX(0); transform-origin: left;
+    background: color-mix(in oklab, var(--sheet-acc) var(--hint-mix), var(--sheet-ink));
+  }
+  [data-running] .runline { opacity: 1; transition-duration: 200ms; }
+  @media (max-width: 899px) { .runline { width: 72px; } }
+  @media (prefers-reduced-motion: reduce) { .runline { display: none; } }
+
+  @media (prefers-reduced-motion: reduce) {
+    .tap::before, .tap::after { animation: none; opacity: 0.75; }
+    .thread, .msgs, .bbl-photo, .thumb, .reel, .ev, .ith-phone { transition: none; }
+  }
+</style>
+
+<script>
+  /* Drives every [data-ith]. Plain JS. One press sends the photo; nothing starts by itself. */
+  const STAGES = ['s1', 's2', 's3', 's4', 's5', 'done'];
+  const PAGE_MS = 90; // one month of the calendar's reel
+  // the line's fill: from empty to full, linearly, over the run's planned ms (or at once to full, ms 0)
+  const fillLine = (fill, ms) => {
+    if (!fill) return;
+    fill.style.transition = 'none';
+    fill.style.transform = ms ? 'scaleX(0)' : 'scaleX(1)';
+    if (!ms) return;
+    void fill.offsetWidth;
+    fill.style.transition = `transform ${ms}ms linear`;
+    fill.style.transform = 'scaleX(1)';
+  };
+
+  function init(root) {
+    if (root.dataset.ready) return;
+    root.dataset.ready = '1';
+    const tap = root.querySelector('[data-ith-tap]');
+    const replay = root.querySelector('[data-replay]');
+    const status = root.querySelector('[data-status]');
+    const msg = root.querySelector('[data-msg]');
+    const msgs = root.querySelector('[data-msgs]');
+    const photo = root.querySelector('[data-photo]');
+    const cal = root.querySelector('[data-cal]');
+    const reel = root.querySelector('[data-reel]');
+    const yearEl = root.querySelector('[data-year]');
+    const months = Array.from(root.querySelectorAll('[data-month]'));
+    const last = Number(root.dataset.pages) || 0;
+    const runFill = root.querySelector('[data-runline] > i');
+    const reduce = window.matchMedia('(prefers-reduced-motion: reduce)');
+    let timers = [];
+    let running = false;
+    const later = (ms, fn) => timers.push(window.setTimeout(fn, ms));
+    const say = (m) => { if (status) { status.textContent = ''; later(30, () => { status.textContent = m; }); } };
+
+    // the photo's block (its bubble and the gap above it) is the list's rest shift, in px: measured, so the photo
+    // waits exactly under the composer at every phone width
+    const measure = () => {
+      if (!msg || !photo) return;
+      const gap = parseFloat(getComputedStyle(photo).marginTop) || 0;
+      const row = parseFloat(getComputedStyle(msgs).rowGap) || 0;
+      msg.style.setProperty('--shift', `${photo.offsetHeight + gap + row}px`);
+    };
+    measure();
+    new ResizeObserver(measure).observe(msg);
+    if (document.fonts && document.fonts.ready) document.fonts.ready.then(measure);
+
+    const page = (k) => { if (cal) cal.style.setProperty('--page', String(k)); };
+
+    const reset = () => {
+      timers.forEach(clearTimeout); timers = [];
+      root.classList.remove(...STAGES);
+      root.removeAttribute('data-running');
+      if (reel) reel.style.transition = reduce.matches ? 'none' : '';
+      page(0);
+      if (yearEl) yearEl.textContent = yearEl.dataset.y0 || yearEl.textContent;
+    };
+    const run = () => {
+      if (running) return;
+      running = true;
+      reset();
+      const R = reduce.matches;
+      let t = 0;
+      // the send: the photo rises into the thread, the composer empties
+      root.classList.add('s1');
+      say(root.dataset.saySent || '');
+      t += R ? 0 : 520;
+      later(t, () => root.classList.add('s2'));           // Delivered
+      t += R ? 0 : 380;
+      later(t, () => root.classList.add('s3'));           // (narrow: the Calendar comes over Messages)
+      t += R ? 0 : 300;
+      // the reel: one month every PAGE_MS, the year following; at once under reduced motion
+      if (R) { later(t, () => { page(last); if (yearEl) yearEl.textContent = yearEl.dataset.y1 || yearEl.textContent; }); }
+      else {
+        for (let k = 1; k <= last; k++) {
+          const at = t + k * PAGE_MS;
+          later(at, () => { page(k); if (yearEl && k === Number(yearEl.dataset.flip)) yearEl.textContent = yearEl.dataset.y1 || ''; });
+        }
+        t += last * PAGE_MS;
+        root.classList.add('s4');
+      }
+      t += R ? 0 : 200;
+      later(t, () => { root.classList.add('s5'); say(root.dataset.sayLanded || ''); });   // the day takes the event
+      t += R ? 0 : 700;
+      later(t, () => { root.classList.add('done'); root.removeAttribute('data-running'); running = false; });
+      // the line: the press → done (the accumulated t), never under reduced motion
+      if (!R) { root.setAttribute('data-running', ''); fillLine(runFill, t); }
+    };
+    // the year's two values: the first page's and the last page's, and the page where it flips (January)
+    if (yearEl && months.length) {
+      const y0 = yearEl.textContent.trim();
+      yearEl.dataset.y0 = y0;
+      const jan = months.findIndex((m) => /^January$/.test(m.querySelector('.mname').textContent.trim()));
+      yearEl.dataset.flip = String(jan > 0 ? jan : -1);
+      yearEl.dataset.y1 = jan > 0 ? String(Number(y0) + 1) : y0;
+    }
+    if (tap) tap.addEventListener('click', run);
+    if (replay) replay.addEventListener('click', () => { running = false; run(); });
+  }
+  const all = () => document.querySelectorAll('[data-ith]').forEach(init);
+  all();
+  document.addEventListener('astro:page-load', all);
+</script>
