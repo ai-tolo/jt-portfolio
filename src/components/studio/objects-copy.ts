@@ -31,39 +31,35 @@ export const WATCH_COPY = {
   // to the calendar, no card); his own memo stays, typed at the faster pace.
   // 2026-10-15 (THE SKIM, round two): the watch replays THE WEDDING MEMO (src/data/intake-run.json; the Cinder
   // brain dump is kept beside it): one sentence on the couch, five things done on the calendar. DRAFT.
-  caption: "Say your own things to do. They come back as tickets. A preview: nothing is added anywhere.",
-  // (was "One memo, 0:31, spoken into the watch from the couch. Five things happened on the calendar; two are shown.")
+  // 2026-10-19, late (the record button; Jon: "every line short, benefit-led"): DRAFT, his to rewrite. Was "Say your
+  // own things to do. They come back as tickets. A preview: nothing is added anywhere."
+  caption: "Say a few things you have to do. Tickets come out. Nothing is added anywhere.",
 };
 
 // LIVE (Stream A, 2026-10-05): the words the watch's live mode prints — the
 // control, the one privacy fact beside it, the states a stranger can land in,
 // the face's own words. ⚠️ DRAFT: Jon owns every word here; edit freely.
-// `{dur}` and `{n}` in `caption` are filled by the module (the memo's length;
-// "2 tickets" / "1 ticket" / "nothing to file").
 export const LIVE_COPY = {
-  // 2026-10-13 (Jon: "'talk' feels too generic"): the control says what it
-  // does. Round four, the same day (Jon: "one replay, one talk"): `talk` is
-  // the ONE live pill on the watch's screen (cqw-sized, floored at 12px, one
-  // line); since 2026-10-19 (live only) it is there AT REST. `talkLabel` is
-  // its accessible name. (`talkHint`, the row's "nothing heard" retry, and
-  // `replay` left with the art run, 2026-10-19)
-  talk: "Try it with your voice",
-  talkLabel: "Try it with your own voice: say your own things to do and watch them become tickets",
+  // 2026-10-19, late (THE RECORD BUTTON, Jon: "why does it say try it with
+  // your voice? … why isn't it just a big record button?"): the pill and its
+  // words (`talk`, `talkLabel`) are gone with the face's `listening` mark,
+  // `heard`, `kept`, `source` and the result's `caption`. The ring's
+  // accessible name, the face's two words and the typed face's word are new,
+  // DRAFTs, his to rewrite
+  recLabel: "Record: say a few things you have to do",
+  saved: "saved",
+  nothing: "nothing to file",
+  typeIt: "type it",
   // the foot under the watch at rest: the live hint. DRAFT (2026-10-19), his
   // to rewrite; was "tap to stop" (the art run's)
-  hintRest: "say a few things you have to do",
-  listening: "listening",
+  hintRest: "say a few things you have to do.",
   privacy: "your voice goes to your browser's speech service, the words to Claude. this site keeps nothing.",
   asking: "allow the microphone, then talk.",
   noSpeech: "this browser has no speech service. type it, then tap stop.",
   denied: "the microphone was declined. type it, then tap stop.",
   empty: "nothing heard. try once more.",
-  heard: "Heard",
-  kept: "nothing kept",
-  source: "your memo",
   local: "without Claude",
   preview: "a preview. nothing was added.",
-  caption: "Your memo, {dur} long. {n}.",
 };
 
 export const ARCHIVE_COPY = {

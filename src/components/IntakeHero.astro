@@ -1,18 +1,20 @@
 ---
 // src/components/IntakeHero.astro
-// The Intake watch, LIVE ONLY (2026-10-19, THE SORT round; Jon: "at the very bottom, the watch set up exclusively to
-// be the talk-to feature … if that's the coolest thing, we might as well capitalize on it"): a stranger talks, tickets
-// come out. At rest the face holds the talk control, the wave quiet; the art run (the wedding memo typed, its verdict,
-// its tickets, the deck, Replay) has left: the sort above owns the wedding as its sixth row. The run column stays for
-// the live result; the wedding's two cards stay in its markup only to size the column's reserve (never shown).
+// THE WATCH IS A RECORD BUTTON (2026-10-19, late; Jon: "why isn't it just a big record button? A red record button is
+// Voice Memos: duh, that's what the watch is doing. It's exemplifying the voice memo workflow, spoken word to
+// organized output"; "the vertical lines with the dots next to the watch don't make sense, and a replay button for the
+// module above doesn't make sense"). One idea, spoken word → tickets: at rest the face is INTAKE and ONE RED RECORD
+// RING. Press: the disc becomes the stop square, the time counts up, the wave moves, the words print at the face's
+// foot. Press again: "saved", the runline under the watch while the words are parsed, then the tickets slide out
+// BESIDE the watch (under it on a narrow sheet) as Intake cards in the Stream's anatomy. Two seconds later the face is
+// the ring again; the cards stay until the next press. Nothing actionable: "nothing to file" for two seconds, no card.
+// The run column, its nodes and spine, the fly, the talk pill, Replay and the stages s1–s6 are deleted.
 //
-// Usage:   <IntakeHero />            (follows the site theme)
-//          <IntakeHero theme="dark" /> (force a mode; default 'auto' = html.dark / [data-theme] / prefers-color-scheme)
+// Usage:   <IntakeHero />            (follows the site theme; the host may slot a caption: <p slot="cap">)
+//          <IntakeHero theme="dark" /> (force a mode; default 'auto' = html.dark / [data-theme] / html[data-night])
 // Needs:   public/intake/watch-blank.png
-//          fonts loaded once in the base layout:
-//          <link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;500&family=Outfit:wght@300;400;500&display=swap" rel="stylesheet">
-import run from '../data/intake-run.json';
-// LIVE (Stream A, 2026-10-05): the live control's own words, Jon's to edit
+// LIVE: the speech is the browser's own service; the triage is /api/intake (Claude) with src/lib/intake-local.ts
+// behind it, which says so with a chip. Nothing is stored anywhere. A browser without speech types instead.
 import { LIVE_COPY } from './studio/objects-copy';
 
 interface Props {
@@ -21,334 +23,190 @@ interface Props {
 }
 const { theme = 'auto', class: cls = '' } = Astro.props;
 const liveJson = JSON.stringify(LIVE_COPY);
-// the host may seat the room's words in the module's own columns (2026-09-24):
-// a `head` slot above the watch (left axis), a `cap` slot at the run's foot
-const hasHead = Astro.slots.has('head');
 const hasCap = Astro.slots.has('cap');
+// the face's wave: 27 bars, the old face's heights and phases (kept: the watch's own drawing)
+const BARS = [2.53, 4.43, 6.96, 11.39, 16.46, 22.15, 27.85, 32.91, 30.38, 22.78, 18.35, 25.32, 35.44, 29.11, 20.89, 13.92, 18.99, 26.58, 31.65, 24.05, 15.82, 10.76, 7.59, 5.06, 3.16, 2.53, 1.9];
+const MIX = [16, 22, 28, 35, 42, 48, 54, 61, 68, 74, 80, 87, 94, 100, 94, 87, 80, 74, 68, 61, 54, 48, 42, 35, 28, 22, 16];
 ---
-<section class={`intake-hero${theme !== 'auto' ? ' ' + theme : ''}${cls ? ' ' + cls : ''}${hasHead ? ' has-head' : ''}`} data-intake-hero aria-label="Intake: say your own things to do and watch them become tickets">
+<section class={`intake-hero${theme !== 'auto' ? ' ' + theme : ''}${cls ? ' ' + cls : ''}`} data-intake-hero data-state="rest" aria-label="Intake: say a few things you have to do and watch them become tickets">
   <script type="application/json" data-intake-live set:html={liveJson}></script>
   <div class="grid">
-    {hasHead && <div class="hook"><slot name="head" /></div>}
     <div class="watch-col">
-      <figure class="watch" aria-hidden="true">
+      <figure class="watch">
         <div class="screen">
-          <div class="face face-rec">
-            <div class="brand">INTAKE</div>
-            <div class="livemark"><i></i>{LIVE_COPY.listening}</div>
-            <div class="wave">
-          <i style="height:2.53cqw;--m:16%;animation-duration:1.98s;animation-delay:0.00s"></i>
-          <i style="height:4.43cqw;--m:22%;animation-duration:2.30s;animation-delay:-0.40s"></i>
-          <i style="height:6.96cqw;--m:28%;animation-duration:2.63s;animation-delay:-0.79s"></i>
-          <i style="height:11.39cqw;--m:35%;animation-duration:2.14s;animation-delay:-1.19s"></i>
-          <i style="height:16.46cqw;--m:42%;animation-duration:2.47s;animation-delay:-1.58s"></i>
-          <i style="height:22.15cqw;--m:48%;animation-duration:1.98s;animation-delay:-1.98s"></i>
-          <i style="height:27.85cqw;--m:54%;animation-duration:2.30s;animation-delay:-0.20s"></i>
-          <i style="height:32.91cqw;--m:61%;animation-duration:2.63s;animation-delay:-0.59s"></i>
-          <i style="height:30.38cqw;--m:68%;animation-duration:2.14s;animation-delay:-0.99s"></i>
-          <i style="height:22.78cqw;--m:74%;animation-duration:2.47s;animation-delay:-1.39s"></i>
-          <i style="height:18.35cqw;--m:80%;animation-duration:1.98s;animation-delay:-1.78s"></i>
-          <i style="height:25.32cqw;--m:87%;animation-duration:2.30s;animation-delay:0.00s"></i>
-          <i style="height:35.44cqw;--m:94%;animation-duration:2.63s;animation-delay:-0.40s"></i>
-          <i style="height:29.11cqw;--m:100%;animation-duration:2.14s;animation-delay:-0.79s"></i>
-          <i style="height:20.89cqw;--m:94%;animation-duration:2.47s;animation-delay:-1.19s"></i>
-          <i style="height:13.92cqw;--m:87%;animation-duration:1.98s;animation-delay:-1.58s"></i>
-          <i style="height:18.99cqw;--m:80%;animation-duration:2.30s;animation-delay:-1.98s"></i>
-          <i style="height:26.58cqw;--m:74%;animation-duration:2.63s;animation-delay:-0.20s"></i>
-          <i style="height:31.65cqw;--m:68%;animation-duration:2.14s;animation-delay:-0.59s"></i>
-          <i style="height:24.05cqw;--m:61%;animation-duration:2.47s;animation-delay:-0.99s"></i>
-          <i style="height:15.82cqw;--m:54%;animation-duration:1.98s;animation-delay:-1.39s"></i>
-          <i style="height:10.76cqw;--m:48%;animation-duration:2.30s;animation-delay:-1.78s"></i>
-          <i style="height:7.59cqw;--m:42%;animation-duration:2.63s;animation-delay:0.00s"></i>
-          <i style="height:5.06cqw;--m:35%;animation-duration:2.14s;animation-delay:-0.40s"></i>
-          <i style="height:3.16cqw;--m:28%;animation-duration:2.47s;animation-delay:-0.79s"></i>
-          <i style="height:2.53cqw;--m:22%;animation-duration:1.98s;animation-delay:-1.19s"></i>
-          <i style="height:1.90cqw;--m:16%;animation-duration:2.30s;animation-delay:-1.58s"></i>
-            </div>
-            {/* at rest: the 1:30 a stranger gets (the live mode counts it down) */}
-            <div class="time">1:30</div>
-            <button type="button" class="stop" aria-label="Stop and turn what you said into tickets"><span></span></button>
+          <div class="brand" aria-hidden="true">INTAKE</div>
+          <div class="clock" aria-hidden="true" data-clock>0:00</div>
+          <div class="wave" aria-hidden="true">
+            {BARS.map((h, i) => <i style={`height:${(h * 0.62).toFixed(2)}cqw;--m:${MIX[i]}%;animation-duration:${(1.98 + (i % 5) * 0.16).toFixed(2)}s;animation-delay:-${((i * 0.395) % 2).toFixed(2)}s`}></i>)}
           </div>
-          <div class="face face-saved">
-            <div class="brand">INTAKE</div>
-            <div class="flat"></div>
-            <div class="check"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"></path></svg></div>
-            <div class="saved">Saved</div>
-            <div class="meta">{LIVE_COPY.source}</div>
-          </div>
-          {/* the face's ONE pill (Jon, round four, 2026-10-13: "have the talk button on the watch's screen"): the live
-              control, on the face FROM THE START since 2026-10-19 (live only), and again once a result has landed */}
-          <div class="pills">
-            <button type="button" class="talk" data-talk aria-label={LIVE_COPY.talkLabel}>
-              <svg viewBox="0 0 20 20" class="ico" aria-hidden="true"><rect x="7" y="2.5" width="6" height="10" rx="3" fill="none" stroke="currentColor" stroke-width="2"/><path d="M4.5 9.5a5.5 5.5 0 0 0 11 0M10 15v2.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
-              {LIVE_COPY.talk}
-            </button>
+          {/* THE RING: a thin light ring, a red disc inside (Voice Memos' record); the disc becomes the stop square */}
+          <button type="button" class="rec" data-rec aria-label={LIVE_COPY.recLabel}><span class="rec-mark"></span></button>
+          <p class="said" aria-hidden="true"><span class="typed"></span><span class="interim"></span></p>
+          {/* the face's word: "saved" with its check, or "nothing to file" */}
+          <div class="note" aria-hidden="true">
+            <span class="check"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"></path></svg></span>
+            <span class="note-w" data-note>{LIVE_COPY.saved}</span>
           </div>
         </div>
         <img src="/intake/watch-blank.png" alt="" width="521" height="781" loading="lazy" decoding="async" />
       </figure>
-      {/* the foot under the watch = the phone's (round four, 2026-10-13): ONE slot, so nothing below moves. Since
-          2026-10-19 (live only) it holds the live hint at rest, the live notices while it listens, and the runline
-          while the words are being parsed; no Replay (there is nothing to replay), no retry button (the face's pill
-          is always there at rest) */}
+      {/* the foot under the watch: the hint (rest, the microphone's states, the privacy line while it listens) and,
+          in its place while the words are parsed, the runline; one slot, so nothing below moves */}
       <div class="foot">
-        <div class="hint">
-          <span class="hint-w" data-hint>{LIVE_COPY.hintRest}</span>
-        </div>
-        {/* "you're watching" (2026-10-19): the stop → the parse's answer, in the hint's place */}
+        <p class="hint" data-hint>{LIVE_COPY.hintRest}</p>
         <span class="runline" aria-hidden="true" data-runline><i></i></span>
       </div>
-      {hasCap && <div class="cap"><slot name="cap" /></div>}
+      {/* under the foot: the caption, and the typed fallback's field in the same cell (it holds the taller's height) */}
+      <div class="under">
+        <textarea class="typein" rows="3" maxlength="1500" spellcheck="false" aria-label="Type what you would have said"></textarea>
+        {hasCap && <div class="cap"><slot name="cap" /></div>}
+      </div>
     </div>
-    <div class="run">
-      <div class="row">
-        <i class="node node-transcript"></i>
-        <div class="body">
-          <div class="label">transcript</div>
-          <div class="stream"><div class="typedwrap"><span class="typed"></span><span class="interim"></span><span class="caret"></span></div><textarea class="typein" rows="5" maxlength="1500" spellcheck="false" aria-label="Type what you would have said"></textarea></div>
-        </div>
-      </div>
-      <div class="row">
-        <i class="node node-verdict"></i>
-        <div class="body">
-          <div class="label">verdict</div>
-          <div class="verdict">
-            {['execute', 'surface', 'store'].map((v) => (
-              <span data-on={(run.verdicts ?? [run.verdict]).includes(v) ? '' : undefined}>{v}</span>
-            ))}
-          </div>
-        </div>
-      </div>
-      <div class="row">
-        <i class="node node-ticket"></i>
-        <div class="body">
-          <div class="label">ticket</div>
-          <div class="tickets">
-            {run.tickets.map((t) => (
-              <div class="stub"><span class="p">{'{ '}</span><span class="k">kind</span><span class="p">: </span><span class="v">"{t.kind}"</span><span class="p">, </span><span class="k">items</span><span class="p">: </span><span class="v">{t.items.length}</span><span class="p">, </span><span class="k">title</span><span class="p">: </span><span class="v">"{t.title}"</span><span class="p">{' }'}</span></div>
-            ))}
-            {run.stored && (
-              <div class="stub stored"><span class="p">{'{ '}</span><span class="k">store</span><span class="p">: </span><span class="v">"{run.stored}"</span><span class="p">{' }'}</span></div>
-            )}
-          </div>
-        </div>
-      </div>
-      <div class="row">
-        <i class="node node-deck"></i>
-        <div class="body">
-          <div class="label">deck</div>
-          <div class="deck">
-            {run.tickets.map((t) => (
-              <article class:list={["card", { exec: "execute" in t && t.execute }]}>
-                <div class="card-top">
-                  <span class="when">{('when' in t && t.when) || run.when || 'today'}</span>
-                  <span class="chip">{t.kind.toUpperCase()}</span>
-                  <span class="card-x" aria-hidden="true"><svg width="12" height="12" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><path d="M3 3l8 8M11 3l-8 8"></path></svg></span>
-                </div>
-                <h3 class="card-title">{t.title}</h3>
-                <ul class="card-items">{t.items.map((it) => <li>{it}</li>)}</ul>
-                <div class="card-actions">
-                  <button type="button" class="act primary">Claude <svg width="11" height="11" viewBox="0 0 12 12" aria-hidden="true"><path d="M6 0.5 L7.3 4.7 L11.5 6 L7.3 7.3 L6 11.5 L4.7 7.3 L0.5 6 L4.7 4.7 Z" fill="currentColor"></path></svg></button>
-                  <button type="button" class="act">Zzzz</button>
-                  <button type="button" class="act">Add to…</button>
-                </div>
-                <div class="card-src">{"execute" in t && t.execute ? "done by itself · " : "source memo · "}{run.memo.id}</div>
-              </article>
-            ))}
-          </div>
-        </div>
+    {/* THE TICKETS: beside the watch on a wide sheet, under it on a narrow one */}
+    <div class="out" data-out>
+      <div class="deck" data-deck></div>
+      <div class="out-foot">
+        <p class="out-line">{LIVE_COPY.preview}</p>
+        <p class="out-line">{LIVE_COPY.privacy}</p>
       </div>
     </div>
   </div>
-    <div class="sr" role="status" aria-live="polite"></div>
+  <div class="sr" role="status" aria-live="polite"></div>
 </section>
 
 <style>
 .intake-hero {
-  /* shared */
-  --accent: #FF6B4A; --glow: #FFB454; --purple: #B4A0F5;
-  /* the stop button's ring: intense bright blue to purple (Jon, 2026-09-22) */
-  --ring-a: #47B6FF; --ring-b: #8A5CF6;
+  --accent: #FF6B4A; --glow: #FFB454;
+  --rec: #FF3B30; /* Voice Memos' red */
   --sans: 'Instrument Sans', 'Helvetica Neue', Arial, sans-serif;
   --mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
-  /* light mode (default) */
-  --ink: #1A1917; --ink-2: #2A2926; --grey: #6B6963; --dim: #9A9891; --line: #D2D0CA;
-  --amber: #FF9F1C; --pink: #F0568F; --rail: #8B72E8;
-  /* the tickets sit paper on paper (Jon, 2026-09-30: the white fill read as clickable); the fill went to the write-up's card */
-  --card: transparent; --card-line: color-mix(in oklab, var(--ink) 18%, transparent); --btn: transparent; --btn-line: color-mix(in oklab, var(--ink) 22%, transparent);
-  --glow-card: rgba(139, 114, 232, 0.28);
+  --ink: var(--sheet-ink, #1A1917); --dim: color-mix(in oklab, var(--ink) 58%, transparent);
+  --edge: color-mix(in oklab, var(--ink) 16%, transparent);
+  /* the Stream's receipt green (intake_web.py), as the board's cards wear it */
+  --rcpt: #79a465;
   /* the hint in the sheet's accent, mixed toward the sheet's ink only as far as 4.5:1 on the white sheet needs
      (#ff6b4a alone is 2.8:1 there; at 74 % it is 4.8:1); at night the accent stands alone (6.0:1 on #1c1c1f) */
   --hint-mix: 74%;
+  position: relative;
+  container-type: inline-size;
+  container-name: hero;
+  color: var(--ink);
+  font-family: var(--sans);
 }
 .intake-hero.dark,
 :root.dark .intake-hero, :root[data-theme="dark"] .intake-hero, :root[data-mode="dark"] .intake-hero,
 :root[data-night] .intake-hero {
-  --ink: #F2F0EA; --ink-2: #E4E2DC; --grey: #8C8A84; --dim: #5A5955; --line: #26262A;
-  --amber: #FF9F1C; --pink: #F0568F; --rail: #B4A0F5;
-  --card: transparent; --card-line: color-mix(in oklab, var(--ink) 20%, transparent); --btn: transparent; --btn-line: color-mix(in oklab, var(--ink) 24%, transparent);
-  --glow-card: rgba(180, 160, 245, 0.35);
   --hint-mix: 100%;
 }
-/* (the OS prefers-color-scheme rule is dropped on uxjon.com: the site is day
-   until its own switch, html[data-night], which is wired above) */
-.intake-hero {
-  position: relative;
-  /* the module is its own query container: the object is sized in cqw of
-     the module's width, never in fixed pixels (presentation pass, 2026-09-21) */
-  container-type: inline-size;
-  container-name: hero;
-  padding: 0;
-  background: transparent;
-  color: var(--ink);
-  font-family: 'Outfit', 'Avenir Next', 'Segoe UI', sans-serif;
-  overflow: hidden;
-}
-/* the same grid as the Archive: the object column (44cqw) on the left axis,
-   the run on the right axis, one 6cqw gutter between; 48px rows when stacked */
+/* the watch on the left axis (44cqw), the tickets beside it, one 6cqw gutter; one column under 820px */
 .intake-hero .grid {
   display: grid;
   grid-template-columns: minmax(0, 44cqw) minmax(0, 1fr);
-  /* the gutter less half a node: the node's CENTRE lands on 50cqw, the
-     module's centre line, where the Archive's dots land too (Jon, 2026-09-22) */
-  column-gap: calc(6cqw - 5px);
-  row-gap: 48px;
-  align-items: start;
+  column-gap: 6cqw;
+  align-items: stretch;
 }
-/* the room's words seated in the module (Jon's mockup, 2026-09-24): the hook
-   above the watch on the left axis, the run beside BOTH from the top — its
-   first node level with the hook's first line — and the caption at the run's
-   foot. One arrangement with the Archive. */
-.intake-hero.has-head .grid {
-  grid-template-rows: auto 1fr;
-  grid-template-areas: 'hook run' 'watch run';
-  row-gap: 44px; /* the title → the watch (Jon, 2026-09-24: more air) */
-}
-.intake-hero .hook { grid-area: hook; min-width: 0; }
-.intake-hero.has-head .watch-col { grid-area: watch; }
-.intake-hero.has-head .run { grid-area: run; }
-.intake-hero .cap { min-width: 0; } /* under the watch, past its hint (Jon, 2026-09-24: under the run it left the screen) */
 @container hero (width < 820px) {
-  .intake-hero.has-head .grid { grid-template-rows: auto; grid-template-areas: 'hook' 'watch' 'run'; row-gap: 48px; }
-  .intake-hero .hook { margin-bottom: -4px; }
-}
-/* one column under 820px of module width: the watch fills ~70% of it, centred */
-@container hero (width < 820px) {
-  .intake-hero .grid { grid-template-columns: minmax(0, 1fr); }
+  .intake-hero .grid { grid-template-columns: minmax(0, 1fr); row-gap: 28px; }
   .intake-hero .watch-col { width: 70cqw; margin-inline: auto; }
 }
 
-/* ---- watch ---- */
-.intake-hero .watch-col { display: flex; flex-direction: column; gap: 16px; }
-/* the blank watch PNG (521 × 781) carries transparent margins around the band —
-   70 left, 68 right, 67 top, 61 bottom — so the VISIBLE watch is 383 × 653. The
-   figure keeps the PNG's frame (the screen is placed in cqw of it) but is scaled
-   and pulled by those ratios so the visible watch fills the column and sits on
-   the module's rhythm and left axis exactly as the phone does. Percent margins
-   resolve against the column's width, hence the /383. The figure itself takes
-   no pointer events (its transparent frame overhangs the run); the stop does. */
+/* ---- the watch ---- */
+.intake-hero .watch-col { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+/* the blank watch PNG (521 × 781) carries transparent margins around the band (70 left, 68 right, 67 top, 61
+   bottom): the figure keeps the PNG's frame but is scaled and pulled by those ratios so the VISIBLE watch (383 × 653)
+   fills the column. Percent margins resolve against the column's width, hence the /383. The figure takes no pointer
+   events (its frame overhangs); the ring does */
 .intake-hero .watch {
-  position: relative;
-  width: calc(100% * 521 / 383);
-  aspect-ratio: 521 / 781;
+  position: relative; width: calc(100% * 521 / 383); aspect-ratio: 521 / 781;
   margin: calc(-100% * 67 / 383) 0 calc(-100% * 61 / 383) calc(-100% * 70 / 383);
-  container-type: inline-size;
-  pointer-events: none;
+  container-type: inline-size; pointer-events: none;
 }
 .intake-hero .watch > img { position: absolute; inset: 0; width: 100%; height: 100%; z-index: 2; pointer-events: none; user-select: none; }
+/* the screen is its own query container: the face is drawn in its cqw (100 wide, ≈ 115 tall) */
 .intake-hero .screen {
   position: absolute; left: 20.35cqw; top: 40.88cqw; width: 60.65cqw; height: 69.87cqw;
   border-radius: 11.13cqw; overflow: hidden; z-index: 1; container-type: inline-size;
-  background: radial-gradient(ellipse 70% 42% at 50% 38%, color-mix(in oklab, var(--accent) 12%, transparent), transparent 70%), #000;
+  background: radial-gradient(ellipse 70% 42% at 50% 46%, color-mix(in oklab, var(--rec) 10%, transparent), transparent 70%), #000;
 }
-.intake-hero .face { position: absolute; inset: 0; }
-.intake-hero .face-saved { display: none; }
-.intake-hero.s1 .face-rec { display: none; }
-.intake-hero.s1 .face-saved { display: block; }
-.intake-hero .brand { position: absolute; left: 0; top: 6.96cqw; width: 100%; text-align: center; font-size: 3.48cqw; font-weight: 500; letter-spacing: 0.24em; color: var(--accent); }
-.intake-hero .wave { position: absolute; left: 7.91cqw; top: 24.68cqw; width: 84.18cqw; height: 39.24cqw; display: flex; align-items: center; justify-content: center; gap: 1.27cqw; }
-.intake-hero .wave i { display: block; width: 1.90cqw; border-radius: 0.95cqw; background: color-mix(in oklab, var(--accent) var(--m), var(--glow)); transform-origin: 50% 50%; animation: ih-bar 2s ease-in-out infinite; }
-.intake-hero .time { position: absolute; left: 0; top: 67.72cqw; width: 100%; text-align: center; font-size: 8.86cqw; font-weight: 300; letter-spacing: 0.02em; line-height: 1; font-variant-numeric: tabular-nums; color: #F2F0EA; }
-/* the whole face is the button (Jon, 2026-09-21: the ring alone felt
-   ambiguous; the Archive's tap covers its screen the same way). The ring is
-   drawn by ::before where the stop sat, and breathes a halo while recording
-   (motion-gated below); the inner square stays where it was. */
-.intake-hero .stop {
-  position: absolute; inset: 0; box-sizing: border-box; padding: 0; margin: 0;
-  border: 0; border-radius: 11.13cqw; background: transparent; cursor: pointer;
-  pointer-events: auto;
+.intake-hero .brand { position: absolute; left: 0; top: 7cqw; width: 100%; text-align: center; font: 500 max(9px, 4.6cqw)/1 var(--sans); letter-spacing: 0.24em; color: var(--accent); }
+/* the clock and the wave stand above the ring only while a session runs */
+.intake-hero .clock { position: absolute; left: 0; top: 15cqw; width: 100%; text-align: center; font: 300 max(14px, 10cqw)/1 var(--sans); font-variant-numeric: tabular-nums; color: #F2F0EA; opacity: 0; transition: opacity .3s; }
+.intake-hero .wave { position: absolute; left: 8cqw; top: 29cqw; width: 84cqw; height: 16cqw; display: flex; align-items: center; justify-content: center; gap: 1.27cqw; opacity: 0; transform: scaleY(var(--amp, 0.35)); transition: opacity .3s, transform .35s ease; }
+.intake-hero .wave i { display: block; width: 1.9cqw; border-radius: 0.95cqw; background: color-mix(in oklab, var(--accent) var(--m), var(--glow)); animation: ih-bar 2s ease-in-out infinite; }
+/* THE RING (Voice Memos' record): a thin light ring, a gap, the red disc. At rest it is the face (56 % of the
+   screen's width, centred below INTAKE); while a session runs it steps down and smaller under the clock and the
+   wave, and the disc becomes the stop square. Its red light breathes at rest on the touch signal's keyframe
+   (touch-breathe, an EXACT COPY of AudioDexDoor's: change both or neither): full and still under the pointer,
+   still at 0.75 under reduced motion */
+.intake-hero .rec {
+  position: absolute; left: 22cqw; top: 36cqw; width: 56cqw; height: 56cqw;
+  box-sizing: border-box; margin: 0; padding: 0; border: 0; border-radius: 50%;
+  background: transparent; box-shadow: inset 0 0 0 0.9cqw #E9E7E2;
+  cursor: pointer; pointer-events: auto; z-index: 3;
+  transition: left .36s cubic-bezier(.3, .7, .2, 1), top .36s cubic-bezier(.3, .7, .2, 1), width .36s cubic-bezier(.3, .7, .2, 1), height .36s cubic-bezier(.3, .7, .2, 1), opacity .25s;
 }
-/* THE TOUCH SIGNAL — one vocabulary with the Archive's phone (2026-09-22):
-   ::after is the ring itself (the blue→purple gradient under a ring-shaped
-   mask) and ::before its light, blue from the top-left, purple from the
-   bottom-right — the gradient's direction, thrown onto the face (the phone's
-   rim throws the same light inward onto its screen). Both breathe together:
-   2s ease-in-out, 0.45↔1; full and still under the pointer; out once the run
-   starts; still at 0.75 under reduced motion. The keyframe is an EXACT COPY of
-   the phone's (touch-breathe in ArchiveHero.astro): change both or neither. */
-.intake-hero .stop::before, .intake-hero .stop::after {
-  content: ""; position: absolute; left: 39.87cqw; top: 87.97cqw; width: 20.25cqw; height: 20.25cqw; box-sizing: border-box;
-  border-radius: 50%; pointer-events: none;
-  animation: touch-breathe 2s ease-in-out infinite;
-  transition: opacity .35s;
+.intake-hero .rec::before {
+  content: ""; position: absolute; inset: -2cqw; border-radius: 50%; pointer-events: none;
+  box-shadow: 0 0 7cqw color-mix(in oklab, var(--rec) 55%, transparent);
+  animation: touch-breathe 2s ease-in-out infinite; transition: opacity .3s;
 }
-.intake-hero .stop::after {
-  padding: 0.79cqw;
-  background: linear-gradient(135deg, var(--ring-a), var(--ring-b));
-  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
-  -webkit-mask-composite: xor;
-  mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
-  mask-composite: exclude;
+.intake-hero .rec:hover::before { animation: none; opacity: 1; }
+.intake-hero .rec:focus-visible { outline: 2px solid #F2F0EA; outline-offset: 3px; }
+.intake-hero .rec-mark {
+  position: absolute; inset: 11%; border-radius: 50%; background: var(--rec);
+  transition: inset .3s cubic-bezier(.3, .7, .2, 1), border-radius .3s cubic-bezier(.3, .7, .2, 1), transform .12s;
 }
-.intake-hero .stop::before {
-  box-shadow: -1.4cqw -1.4cqw 4cqw color-mix(in oklab, var(--ring-a) 55%, transparent),
-              1.4cqw 1.4cqw 4cqw color-mix(in oklab, var(--ring-b) 55%, transparent);
+.intake-hero .rec:active .rec-mark { transform: scale(0.94); }
+.intake-hero:is([data-state="asking"], [data-state="listening"], [data-state="typing"]) .rec { left: 33cqw; top: 50cqw; width: 34cqw; height: 34cqw; }
+.intake-hero:is([data-state="asking"], [data-state="listening"], [data-state="typing"]) .rec::before { animation: none; opacity: 0; }
+.intake-hero:is([data-state="asking"], [data-state="listening"], [data-state="typing"]) .rec-mark { inset: 31%; border-radius: 14%; }
+.intake-hero:is([data-state="asking"], [data-state="listening"], [data-state="typing"]) :is(.clock, .wave) { opacity: 1; }
+.intake-hero[data-state="asking"] .rec-mark { background: #5A5955; }
+.intake-hero:is([data-state="asking"], [data-state="typing"]) .wave { transform: scaleY(0.25); }
+/* the heard words at the face's foot, the newest line kept */
+.intake-hero .said {
+  position: absolute; left: 9cqw; right: 9cqw; top: 88cqw; bottom: 6cqw; margin: 0;
+  display: flex; flex-direction: column; justify-content: flex-end; overflow: hidden;
+  font: 400 max(10px, 4.4cqw)/1.3 var(--sans); text-align: center; color: #C4C0B8;
+  -webkit-mask-image: linear-gradient(to bottom, transparent, #000 45%); mask-image: linear-gradient(to bottom, transparent, #000 45%);
+  opacity: 0; transition: opacity .3s;
 }
-.intake-hero .stop:hover::before, .intake-hero .stop:hover::after { animation: none; opacity: 1; }
-.intake-hero.s1 .stop::before, .intake-hero.s1 .stop::after { animation: none; opacity: 0; }
-.intake-hero .stop:focus-visible { outline: 2px solid #F2F0EA; outline-offset: -3px; }
-.intake-hero .stop span { position: absolute; left: 45.88cqw; top: 93.98cqw; display: block; width: 8.23cqw; height: 8.23cqw; border-radius: 2.22cqw; background: var(--accent); transition: transform 120ms ease-out; }
-/* LIVE ONLY (2026-10-19): at rest there is nothing to stop, so the stop (its square and its ring) stands only while
-   it listens or takes typing; the face's pill is the control at rest, the wave quiet and still under it */
-.intake-hero:not(.live) .stop { display: none; }
-.intake-hero:not(.live) .wave { transform: scaleY(0.25); }
-.intake-hero:not(.live) .wave i { animation-play-state: paused; }
-.intake-hero .flat { position: absolute; left: 7.91cqw; top: 43.99cqw; width: 84.18cqw; height: 0.63cqw; border-radius: 1px; background: color-mix(in oklab, var(--accent) 40%, transparent); animation: ih-in .5s ease-out both; clip-path: inset(0 0 0 0); transition: clip-path 1.6s cubic-bezier(.6, 0, .2, 1) 1.4s, background .5s; }
-/* THE COMMIT (Jon, 2026-09-24): once the last card has landed the face turns
-   green and its line retracts inward; the room's caption reads the same beat */
-.intake-hero.s6 .check { border-color: color-mix(in oklab, #34C759 72%, transparent); color: #34C759; }
-.intake-hero.s6 .flat { background: color-mix(in oklab, #34C759 55%, transparent); clip-path: inset(0 50% 0 50%); }
-/* the computer making the cards: the deck's node breathes until they land */
-.intake-hero.s4:not(.s5) .node-deck { opacity: 1; transform: none; animation: ih-breathe 1.1s ease-in-out infinite; }
-@keyframes ih-breathe { 0%, 100% { opacity: .18; } 50% { opacity: .9; } }
-.intake-hero .check { position: absolute; left: 39.87cqw; top: 34.18cqw; width: 20.25cqw; height: 20.25cqw; box-sizing: border-box; border-radius: 50%; border: 0.79cqw solid color-mix(in oklab, var(--glow) 55%, transparent); background: #000; color: var(--glow); transition: border-color .5s, color .5s; display: flex; align-items: center; justify-content: center; animation: ih-pop .5s ease-out .15s both; }
-.intake-hero .check svg { width: 8.86cqw; height: 8.86cqw; }
-.intake-hero .saved { position: absolute; left: 0; top: 63.29cqw; width: 100%; text-align: center; font-size: 7.59cqw; font-weight: 400; letter-spacing: 0.01em; line-height: 1; color: #F2F0EA; animation: ih-in .5s ease-out .3s both; }
-.intake-hero .meta { position: absolute; left: 0; top: 75.32cqw; width: 100%; text-align: center; font-family: var(--mono); font-size: 3.48cqw; letter-spacing: 0.08em; color: #8C8A84; animation: ih-in .5s ease-out .4s both; }
-/* THE FOOT under the watch = the phone's (AudioDexDoor's .foot; round four, 2026-10-13): one slot, so nothing below
-   moves; 16px under the visible watch (the column's gap), as the phone's. Since 2026-10-19 the live hint, the live
-   notices and the parse's runline; no Replay */
-.intake-hero .foot { display: grid; min-height: 30px; align-items: start; justify-items: center; }
+.intake-hero .said .interim { color: #8C8A84; }
+.intake-hero:is([data-state="listening"], [data-state="typing"]) .said { opacity: 1; }
+.intake-hero[data-state="typing"] .said { -webkit-mask-image: none; mask-image: none; justify-content: center; color: #8C8A84; }
+/* the face's word: "saved" (the check, green), "nothing to file" (no check) */
+.intake-hero .note { position: absolute; inset: 0; opacity: 0; transition: opacity .25s; }
+.intake-hero .check {
+  position: absolute; left: 37.5cqw; top: 30cqw; width: 25cqw; height: 25cqw; box-sizing: border-box; border-radius: 50%;
+  border: 0.95cqw solid color-mix(in oklab, #34C759 72%, transparent); color: #34C759;
+  display: flex; align-items: center; justify-content: center;
+}
+.intake-hero .check svg { width: 11cqw; height: 11cqw; }
+.intake-hero .note-w { position: absolute; left: 0; top: 64cqw; width: 100%; text-align: center; font: 400 max(13px, 8.6cqw)/1.1 var(--sans); color: #F2F0EA; }
+.intake-hero:is([data-state="saved"], [data-state="nothing"]) .note { opacity: 1; }
+.intake-hero:is([data-state="saved"], [data-state="nothing"]) .rec { opacity: 0; pointer-events: none; }
+.intake-hero[data-state="nothing"] .check { display: none; }
+.intake-hero[data-state="nothing"] .note-w { top: 50cqw; color: #C4C0B8; }
+
+/* ---- the foot: the hint, or the runline while the words are parsed (one slot) ---- */
+/* reserved to three lines of the hint: the typed, declined and privacy lines run that long beside a desk's narrow
+   watch, and a shorter rest hint must not let them push the fold (a typed run moved it 16px) */
+.intake-hero .foot { display: grid; min-height: calc(0.6875rem * 1.5 * 3); align-items: start; justify-items: center; }
 .intake-hero .foot > * { grid-area: 1 / 1; }
-/* the slot may run wider than the watch (its column is capped narrow on desks), centred on it: bounded by the module
-   (stacked) or by the object's own column (desks); live mode keeps its own measure */
-.intake-hero:not(.live) .foot { align-self: center; width: max-content; max-width: 100cqw; box-sizing: border-box; }
-@container hero (min-width: 820px) {
-  .intake-hero:not(.live) .foot { max-width: 44cqw; }
+.intake-hero .hint {
+  margin: 0; max-width: 36ch; text-align: center; text-wrap: balance;
+  font: 600 0.6875rem/1.5 var(--mono); letter-spacing: 0.12em;
+  color: color-mix(in oklab, var(--sheet-acc, var(--accent)) var(--hint-mix), var(--sheet-ink, var(--ink)));
+  transition: opacity .3s, color 560ms ease;
 }
-/* the hint: the phone's face, size and tracking; its words at rest (the live hint, or "nothing heard") stand out in
-   the sheet's accent at 600 (Jon, round four: "bolder or a more unique/noticeable colour"), read from the host's
-   --sheet-acc (the module's --accent off the sheet); live mode's notices keep the quiet ink */
-.intake-hero .hint { display: flex; align-items: flex-start; justify-content: center; flex-wrap: wrap; gap: 6px 12px; text-align: center; font: 500 0.6875rem/1.5 var(--mono); letter-spacing: 0.12em; color: color-mix(in oklab, var(--ink) 55%, transparent); }
-.intake-hero:not(.live) .hint-w { font-weight: 600; color: color-mix(in oklab, var(--sheet-acc, var(--accent)) var(--hint-mix), var(--sheet-ink, var(--ink))); transition: color 560ms ease; }
-.intake-hero.s1 .hint { visibility: hidden; }
+.intake-hero[data-running] .hint { opacity: 0; }
 /* "YOU'RE WATCHING" (2026-10-19, Jon: "a super minimalistic progress bar … a casual visual communication that hey,
    you're witnessing something … you don't have to click anything"): one hairline in the foot's slot from the press
    until the run lands, so nothing below moves; the hint's own colour fills it left to right, linearly, over the run's
    planned length (the script's own numbers). In 200 on the press, out 400 at the landing, the Replay on its own delay
    after. Not a control: aria-hidden, no pointer, no label. Reduced motion: none (the run lands at once). EXACT COPY in
-   IntakeHero.astro and AudioDexDoor.astro: change both or neither. (The watch, live only since
-   2026-10-19, runs it from the stop until the parse answers: an eased fill toward 90 %, full when the answer lands) */
+   IntakeHero.astro and AudioDexDoor.astro: change both or neither. (The watch runs it from the stop until the parse
+   answers: an eased fill toward 90 %, full when the answer lands) */
 .runline {
   grid-area: 1 / 1; align-self: center; width: 96px; height: 1.5px;
   background: color-mix(in oklab, var(--sheet-ink) 14%, transparent);
@@ -362,174 +220,126 @@ const hasCap = Astro.slots.has('cap');
 @media (max-width: 899px) { .runline { width: 72px; } }
 @media (prefers-reduced-motion: reduce) { .runline { display: none; } }
 
-/* ---- run column ---- */
-.intake-hero .run { position: relative; display: flex; flex-direction: column; gap: 24px; padding-top: 8px; box-sizing: border-box; }
-/* beside the watch the run holds its FINAL height from the start (Jon,
-   2026-09-22: the tickets and the deck must not move the words under the
-   module — "have that text appear where it currently lands at the end"):
-   the script measures the run at stage six and writes --run-final */
-/* 2026-10-19 (live only): stacked too. The column at rest already holds the unseen cards' height, so the reserve adds
-   no ground there; without it a live result with fewer cards pulled the fold 222px up on a phone */
-.intake-hero .run { min-height: var(--run-final); }
-.intake-hero.measuring, .intake-hero.measuring * { transition: none !important; animation: none !important; }
-/* a row = a 10px node on the line at the left, its text 32px in (the Archive's rail draws the same) */
-.intake-hero .row { position: relative; padding-left: 32px; }
-.intake-hero .row::before { content: ""; position: absolute; left: 4.5px; top: 16px; bottom: -24px; width: 1px; background: var(--line); transform-origin: top; transition: transform .55s ease-out; }
-.intake-hero .row:last-of-type::before { bottom: 0; background: linear-gradient(to bottom, var(--line), transparent); }
-.intake-hero .node { position: absolute; left: 0; top: 3px; width: 10px; height: 10px; border-radius: 50%; background: var(--line); transition: background .4s, opacity .3s, transform .35s cubic-bezier(.2, .9, .3, 1.4); }
-/* THE DOTS' SEQUENCE (Jon, 2026-09-24, one choreography with the Archive's
-   rail): at rest the grey layout stands where the run will end; the press
-   clears it; then each node pops in its turn and draws the line to the next */
-.intake-hero.s1 .node { opacity: 0; transform: scale(.5); }
-.intake-hero.s1 .row::before { transform: scaleY(0); transition: none; }
-.intake-hero.s2 .node-transcript, .intake-hero.s3 .node-verdict, .intake-hero.s4 .node-ticket, .intake-hero.s5 .node-deck { opacity: 1; transform: none; }
-.intake-hero.s2 .run > .row:nth-of-type(1)::before, .intake-hero.s3 .run > .row:nth-of-type(2)::before,
-.intake-hero.s4 .run > .row:nth-of-type(3)::before, .intake-hero.s5 .run > .row:nth-of-type(4)::before { transform: none; transition: transform .55s ease-out .2s; }
-.intake-hero .body { min-width: 0; display: flex; flex-direction: column; gap: 8px; }
-.intake-hero .label { font: 500 0.6875rem/1.5 var(--mono); letter-spacing: 0.12em; color: var(--dim); }
-/* at rest the run shows only its nodes (Jon, 2026-09-22): a row's words arrive with its node */
-.intake-hero .row .label, .intake-hero .verdict { opacity: 0; transition: opacity .4s; }
-.intake-hero.s2 .run > .row:nth-of-type(1) .label,
-.intake-hero.s3 .run > .row:nth-of-type(2) .label, .intake-hero.s3 .verdict,
-.intake-hero.s4 .run > .row:nth-of-type(3) .label,
-.intake-hero.s5 .run > .row:nth-of-type(4) .label { opacity: 1; }
+/* ---- under the foot: the caption and the typed field share one cell (it holds the taller's height, so the field's
+   arrival moves nothing) ---- */
+.intake-hero .under { display: grid; }
+.intake-hero .under > * { grid-area: 1 / 1; min-width: 0; }
+.intake-hero .typein {
+  visibility: hidden; width: 100%; box-sizing: border-box; margin: 0; padding: 8px 10px; resize: none;
+  border: 1px solid var(--edge); border-radius: 10px; background: transparent; color: var(--ink);
+  font: 400 13px/1.55 var(--mono); outline: none;
+}
+.intake-hero .typein:focus { border-color: var(--accent); }
+.intake-hero[data-state="typing"] .typein { visibility: visible; }
+.intake-hero[data-state="typing"] .cap { visibility: hidden; }
 
-.intake-hero .stream { display: flex; visibility: hidden; height: 156px; overflow: hidden; flex-direction: column; justify-content: flex-end; font-family: var(--mono); font-size: 13px; line-height: 1.65; color: var(--ink-2); transition: opacity .6s; -webkit-mask-image: linear-gradient(to bottom, transparent, #000 36px); mask-image: linear-gradient(to bottom, transparent, #000 36px); }
-.intake-hero.s2 .stream { visibility: visible; animation: ih-in .4s ease-out both; }
-.intake-hero.s2 .node-transcript { background: var(--accent); }
-.intake-hero.s3 .stream { opacity: .45; }
-.intake-hero .caret { display: inline-block; width: 8px; height: 14px; margin-left: 4px; vertical-align: -2px; background: var(--accent); animation: ih-blink 1s steps(1) infinite; }
-.intake-hero .caret[hidden] { display: none; }
-
-.intake-hero .verdict { display: flex; gap: 18px; font-family: var(--mono); font-size: 13px; letter-spacing: 0.12em; line-height: 24px; color: var(--dim); }
-.intake-hero .verdict span { transition: color .4s; }
-.intake-hero.s3 .verdict span[data-on] { color: var(--amber); }
-.intake-hero.s3 .node-verdict { background: var(--amber); }
-
-.intake-hero .tickets { display: flex; visibility: hidden; flex-direction: column; font-family: var(--mono); font-size: 12px; line-height: 1.7; }
-.intake-hero.s4 .tickets { visibility: visible; animation: ih-in .45s ease-out both; }
-.intake-hero.s4 .node-ticket { background: var(--pink); }
-.intake-hero .stub { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.intake-hero .stub.stored { opacity: .55; }
-.intake-hero .k { color: var(--amber); } .intake-hero .p { color: var(--dim); } .intake-hero .v { color: var(--ink-2); }
-
-.intake-hero .deck { display: flex; visibility: hidden; flex-direction: column; gap: 10px; }
-.intake-hero.s5 .deck { visibility: visible; }
-.intake-hero.s5 .node-deck { background: var(--rail); }
+/* ---- THE TICKETS: beside the watch (a wide sheet: the column is the watch's height, the cards centred in it and
+   capped to what fits, the rest counted), under it on a narrow sheet ---- */
+.intake-hero .out { display: flex; flex-direction: column; justify-content: center; gap: 14px; min-width: 0; overflow: hidden; }
+.intake-hero .deck { display: flex; flex-direction: column; gap: 10px; }
+.intake-hero .out-foot { display: none; flex-direction: column; gap: 6px; }
+.intake-hero[data-cards] .out-foot { display: flex; }
+.intake-hero .out-line { margin: 0; max-width: 46ch; font: 500 0.6875rem/1.5 var(--mono); letter-spacing: 0.04em; color: var(--dim); }
+.intake-hero .out-line:first-child { color: var(--ink); }
+@container hero (width < 820px) {
+  .intake-hero .out { overflow: visible; }
+}
+/* a card, as the Stream draws it (intake_web.py, the board's twin): the source spine, age · the check or the kind's
+   chip · the X, the title, its lines, the two tiles quiet */
 .intake-hero .card {
-  position: relative; background: var(--card); border: 1px solid var(--card-line); border-left: 3px solid var(--rail); border-radius: 16px;
-  padding: 16px 18px 14px; box-sizing: border-box; font-family: var(--sans); display: flex; flex-direction: column; gap: 10px; margin: 0;
-  box-shadow: none; /* no lift: a ticket on paper, not a button (2026-09-30) */
+  width: min(100%, 360px); box-sizing: border-box; padding: 12px 14px;
+  border: 1px solid var(--edge); border-left: 3px solid var(--src, #79a9d6); border-radius: 12px;
+  display: flex; flex-direction: column; gap: 6px;
+  animation: ih-slide .5s cubic-bezier(.2, .8, .2, 1) both; animation-delay: calc(var(--k, 0) * 120ms);
 }
-.intake-hero.s5 .card { animation: ih-drop .55s cubic-bezier(.2, .8, .2, 1) both; }
-.intake-hero.s5 .card:nth-child(2) { animation-delay: .35s; }
-.intake-hero .card-top { display: flex; align-items: center; gap: 10px; }
-.intake-hero .when { font-size: 11px; color: var(--grey); }
-.intake-hero .chip { font-family: var(--mono); font-size: 9px; font-weight: 600; letter-spacing: 0.14em; color: var(--accent); border: 1px solid color-mix(in oklab, var(--accent) 55%, transparent); border-radius: 4px; padding: 3px 6px; }
-.intake-hero .card-x { margin-left: auto; width: 24px; height: 24px; border: 0; background: transparent; color: var(--grey); display: flex; align-items: center; justify-content: center; padding: 0; }
-.intake-hero .card-title { margin: 0; font-size: 15px; font-weight: 600; line-height: 1.3; color: var(--ink); }
-.intake-hero .card-items { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 4px; }
-.intake-hero .card-items li { display: flex; gap: 8px; font-size: 12.5px; line-height: 1.45; color: var(--grey); }
-.intake-hero .card-items li::before { content: "–"; color: var(--dim); }
-.intake-hero .card-actions { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin-top: 2px; }
-.intake-hero .act { height: 32px; border: 1px solid var(--btn-line); border-radius: 8px; background: var(--btn); color: var(--ink); font-family: inherit; font-size: 11.5px; font-weight: 500; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px; }
-.intake-hero .act.primary { color: var(--accent); font-weight: 600; border-color: color-mix(in oklab, var(--accent) 55%, transparent); }
-.intake-hero .card-src { font-size: 11px; color: var(--dim); }
-
-/* the face's ONE pill at the foot of the screen: the live control, at rest (2026-10-19, live only) and once a result
-   has landed (round four, 2026-10-13). The screen is the query container, so its cqw match the phone's */
-.intake-hero .pills { display: none; position: absolute; left: 0; right: 0; bottom: 6.5cqw; z-index: 3; justify-content: center; gap: 2cqw; pointer-events: none; }
-.intake-hero .talk { display: inline-flex; align-items: center; gap: 1.4cqw; padding: 2.4cqw 4.6cqw; border: 0; border-radius: 999px; background: #ECE9E2; color: #1A1917; font: 500 3.5cqw/1 var(--sans); cursor: pointer; pointer-events: auto; } /* the page's paper on the screen (Jon, 2026-09-24): plainly not the device's own UI */
-.intake-hero .talk .ico { width: 1.1em; height: 1.1em; }
-.intake-hero .talk:hover { background: #DDD9CF; }
-.intake-hero .talk:focus-visible { outline: 2px solid #F2F0EA; outline-offset: 2px; }
-/* its size: the module's 3.5cqw stacked and the host's desk 4.3cqw, never under the face's control floor (12px
-   rendered), on one line. (This rule outranks the host's 4.3cqw so the floor holds; on a narrow screen the
-   microphone glyph steps aside before anything wraps) */
-.intake-hero .screen .pills > .talk { font-size: max(12px, 3.5cqw); white-space: nowrap; }
-@container hero (min-width: 820px) {
-  .intake-hero .screen .pills > .talk { font-size: max(12px, 4.3cqw); }
+.intake-hero .card[hidden] { display: none; }
+.intake-hero .c-head { display: flex; align-items: center; gap: 8px; font: 400 11.5px/1 var(--sans); color: var(--dim); }
+.intake-hero .c-check { display: inline-flex; width: 14px; height: 14px; color: var(--rcpt); }
+.intake-hero .c-check svg { width: 100%; height: 100%; }
+.intake-hero .c-chip {
+  padding: 2px 7px; border: 1px solid color-mix(in oklab, var(--chip, #8fbf6f) 55%, transparent); border-radius: 5px;
+  font: 600 10px/1.2 var(--sans); letter-spacing: 0.07em; text-transform: uppercase;
+  color: color-mix(in oklab, var(--chip, #8fbf6f) 62%, var(--ink));
 }
-@container (width < 190px) {
-  .intake-hero .screen .pills > .talk .ico { display: none; }
-}
-.intake-hero:not(.live) .pills, .intake-hero.s6 .pills { display: flex; }
-/* at rest the face-rec is showing (s1 is off): the pill sits where the stop's square would */
-.intake-hero.s6 .pills > button { animation: ih-in .4s ease-out .5s both; }
+:root[data-night] .intake-hero .c-chip { color: var(--chip, #8fbf6f); }
+.intake-hero .c-chip.lp { --chip: #8C8A84; border-style: dashed; }
+.intake-hero .c-x { width: 14px; height: 14px; margin-left: auto; }
+.intake-hero .c-title { margin: 2px 0 0; font: 650 15.5px/1.3 var(--sans); color: var(--ink); text-wrap: pretty; }
+.intake-hero .c-line { margin: 0; font: 400 12.5px/1.4 var(--sans); color: var(--dim); }
+.intake-hero .c-tiles { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin-top: 6px; }
+.intake-hero .c-tile { display: flex; align-items: center; justify-content: center; gap: 6px; height: 34px; border: 1px solid var(--edge); border-radius: 9px; font: 500 13px/1 var(--sans); color: var(--dim); }
+.intake-hero .c-tile svg { width: 12px; height: 12px; }
+.intake-hero .more { margin: 0; font: 500 0.6875rem/1.5 var(--mono); letter-spacing: 0.04em; color: var(--dim); }
 .intake-hero .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 
-/* ---- LIVE (Stream A, 2026-10-05; the watch's one job since 2026-10-19): the stage on the stranger's own words. The
-   talk control (the one pill at the screen's foot, at rest and after a result) opens the microphone on
-   their click only — never on load, scroll or hover. While it listens the face counts down from 1:30 and the
-   transcript row prints what the browser's own speech service hears; a tap on stop runs the stage on those words:
-   heard → parsing → the verdict → the tickets → the cards, and the face ends on "nothing kept". A browser with no
-   speech service (Firefox), or a declined microphone, types instead: the transcript box is the input. ---- */
-/* (the row's "nothing heard" retry, .hint-talk, is gone since 2026-10-19: the face's pill stands at rest, so "nothing
-   heard" is a word in the hint and the pill beside it on the face) */
-.intake-hero.live .hint { visibility: visible; max-width: 36ch; margin-inline: auto; }
-.intake-hero.live.s1 .hint { visibility: hidden; }
-.intake-hero .livemark { display: none; position: absolute; left: 0; top: 14.5cqw; width: 100%; justify-content: center; align-items: center; gap: 1.8cqw; font-family: var(--mono); font-size: 3.2cqw; letter-spacing: 0.14em; color: #8C8A84; }
-.intake-hero .livemark i { width: 2.2cqw; height: 2.2cqw; border-radius: 50%; background: #FF3B30; animation: ih-blink 1.2s steps(1) infinite; }
-.intake-hero.live .livemark { display: flex; }
-.intake-hero.live.asking .livemark i { background: #5A5955; animation: none; }
-.intake-hero.live .time { color: var(--accent); }
-.intake-hero.live .wave { transform: scaleY(var(--amp, 0.4)); transition: transform .35s ease; }
-.intake-hero.live.asking .wave, .intake-hero.live.typing .wave { transform: scaleY(0.25); }
-/* while it listens the transcript row is awake: the module's own s2, set by the live script from the press */
-.intake-hero .interim { color: var(--grey); }
-/* typed: the transcript box is the input */
-.intake-hero .typein { display: none; width: 100%; height: 100%; box-sizing: border-box; margin: 0; padding: 8px 10px; resize: none; border: 1px solid var(--card-line); border-radius: 10px; background: transparent; color: var(--ink-2); font: inherit; line-height: 1.65; outline: none; }
-.intake-hero .typein:focus { border-color: var(--accent); }
-.intake-hero.typing .stream { visibility: visible; -webkit-mask-image: none; mask-image: none; justify-content: stretch; }
-.intake-hero.typing .typedwrap { display: none; }
-.intake-hero.typing .typein { display: block; }
-/* parsing: the verdict's node breathes until the fate comes back */
-.intake-hero.parsing .run > .row:nth-of-type(2) .label { opacity: 1; }
-.intake-hero.parsing .node-verdict { opacity: 1; transform: none; background: var(--amber); animation: ih-breathe 1.1s ease-in-out infinite; }
-.intake-hero.parsing .run > .row:nth-of-type(2)::before { transform: none; transition: transform .55s ease-out .2s; }
-/* provenance: a local parse says so on the stub and on the card (the real Intake's chip for its Ollama fallback) */
-.intake-hero .lp { font-family: var(--mono); font-size: 9px; font-weight: 600; letter-spacing: 0.14em; text-transform: uppercase; color: var(--grey); border: 1px dashed color-mix(in oklab, var(--grey) 70%, transparent); border-radius: 4px; padding: 3px 6px; white-space: nowrap; }
-.intake-hero .stub .lp { margin-left: 8px; padding: 1px 5px; vertical-align: middle; }
-.intake-hero .card.exec { border-left-color: var(--amber); }
-.intake-hero .card.exec .chip:not(.lp) { color: var(--amber); border-color: color-mix(in oklab, var(--amber) 55%, transparent); }
-/* a longer live run may need more room than the art run reserved: the run grows ONCE, before the cards drop, and glides */
-@container hero (min-width: 820px) {
-  .intake-hero .run { transition: min-height .55s ease; }
-}
-
 @keyframes ih-bar { 0%, 100% { transform: scaleY(.5); } 50% { transform: scaleY(1); } }
-@keyframes ih-blink { 0%, 49% { opacity: 1; } 50%, 100% { opacity: 0; } }
-@keyframes ih-in { 0% { opacity: 0; transform: translateY(10px); } 100% { opacity: 1; transform: translateY(0); } }
-@keyframes ih-drop { 0% { opacity: 0; transform: translateY(-28px); } 70% { transform: translateY(4px); } 100% { opacity: 1; transform: translateY(0); } }
-@keyframes ih-pop { 0% { transform: scale(.6); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
-/* the touch signal's breath — an EXACT COPY of the phone's (ArchiveHero.astro) */
+/* the cards slide out of the watch's side (a wide sheet) or drop under it (a narrow one) */
+@keyframes ih-slide { 0% { opacity: 0; transform: translateX(-18px); } 100% { opacity: 1; transform: none; } }
+@keyframes ih-drop { 0% { opacity: 0; transform: translateY(-12px); } 100% { opacity: 1; transform: none; } }
+@container hero (width < 820px) {
+  .intake-hero .card { animation-name: ih-drop; }
+}
+/* the touch signal's breath — an EXACT COPY of the phone's (AudioDexDoor.astro): change both or neither */
 @keyframes touch-breathe { 0%, 100% { opacity: 0.45; } 50% { opacity: 1; } }
 @media (prefers-reduced-motion: reduce) {
-  .intake-hero .wave i, .intake-hero .caret, .intake-hero.s4:not(.s5) .node-deck { animation: none; }
-  .intake-hero .stop::before, .intake-hero .stop::after { animation: none; opacity: 0.75; }
-  .intake-hero .card, .intake-hero .stream, .intake-hero .tickets, .intake-hero .pills > button, .intake-hero .flat, .intake-hero .check, .intake-hero .saved, .intake-hero .meta { animation-duration: .01s !important; animation-delay: 0s !important; }
+  .intake-hero .wave i { animation: none; }
+  .intake-hero .rec::before { animation: none; opacity: 0.75; }
+  .intake-hero .card { animation: none; }
+  .intake-hero .rec, .intake-hero .rec-mark, .intake-hero .note, .intake-hero .clock, .intake-hero .wave, .intake-hero .said { transition: none; }
 }
 </style>
 
 <script>
 import { localParse } from '../lib/intake-local.ts';
+// THE STATES (2026-10-19, late): rest (the ring) → asking (the browser asks for the microphone) → listening (the stop
+// square, the clock counting up, the wave, the words at the foot) | typing (no speech service, or declined: "type it",
+// the field under the watch) → saved (the check; the runline while the words are parsed) → the cards slide out, and
+// SAVED_MS later the face is the ring again | nothing (no ticket: "nothing to file" for NOTE_MS, no card). An empty
+// session goes back to rest with "nothing heard". The next press clears the cards.
+const SAVED_MS = 2000, NOTE_MS = 2000, MAX_S = 90, MAX_CHARS = 1500, SETTLE_MS = 1500;
+const KIND = { event: ['calendar', '#d9a845', 'Calendar'], reminder: ['reminder', '#d9a845', 'Reminders'], task: ['task', '#e0a35b', ''], idea: ['idea', '#8fbf6f', ''] };
+const SRC = ['#79a9d6', '#bc91d8', '#7fbb93', '#d4a667', '#d78394'];
+const CHECK = '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2.5 8.5l3.5 3.5 7.5-8.5"/></svg>';
+const X = '<svg class="c-x" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>';
+const TILES = '<div class="c-tiles" aria-hidden="true"><span class="c-tile">Claude <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.2 6.6L21 11l-6.8 2.4L12 20l-2.2-6.6L3 11l6.8-2.4z"/></svg></span><span class="c-tile">Zzzz</span></div>';
+const esc = (x) => String(x).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+const fmt = (sec) => { const t = Math.max(0, Math.floor(sec)); return Math.floor(t / 60) + ':' + String(t % 60).padStart(2, '0'); };
+
 document.querySelectorAll('[data-intake-hero]').forEach((hero) => {
+  const LIVE = JSON.parse(hero.querySelector('script[data-intake-live]').textContent);
   const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition || null;
+  const cid = Array.from(hero.attributes).map((a) => a.name).find((n) => n.startsWith('data-astro-cid-'));
+  const scope = (root) => { if (!cid) return; root.querySelectorAll('*').forEach((el) => el.setAttribute(cid, '')); };
+  const recBtn = hero.querySelector('[data-rec]');
+  const clockEl = hero.querySelector('[data-clock]');
+  const noteEl = hero.querySelector('[data-note]');
   const typed = hero.querySelector('.typed');
-  const caret = hero.querySelector('.caret');
+  const interimEl = hero.querySelector('.interim');
+  const hintEl = hero.querySelector('[data-hint]');
+  const typein = hero.querySelector('.typein');
+  const out = hero.querySelector('[data-out]');
+  const deck = hero.querySelector('[data-deck]');
   const status = hero.querySelector('.sr');
-  const stopBtn = hero.querySelector('.stop');
   const runFill = hero.querySelector('[data-runline] > i');
-  const stage = (n) => { for (let i = 1; i <= 6; i++) hero.classList.toggle('s' + i, i <= n); };
-  // LIVE ONLY (2026-10-19): the art run (play, Replay, the pour, the fly, hero:finish) is deleted; reset is the clean
-  // stage the live mode starts from
-  function reset() {
-    stage(0); typed.textContent = ''; caret.hidden = false; status.textContent = '';
-    hero.removeAttribute('data-running');
-  }
-  // the runline while the words are parsed (2026-10-19, the brief: "so the stranger knows it is working"): the wait is
-  // unknown (the function answers in a second or two, the timeout is ten), so it eases toward 90 % and goes full when
-  // the answer lands; never under reduced motion
+  const restHint = hintEl.textContent;
+
+  let mode = 'rest';
+  let rec = null, prior = '', session = '', interim = '', t0 = 0, tick = 0, settleT = 0, backT = 0, stopping = false, lastLen = 0, lastAt = 0, forceDown = false;
+  const set = (m) => { mode = m; hero.dataset.state = m === 'transcribing' || m === 'parsing' ? 'saved' : m; };
+  const hint = (t) => { hintEl.textContent = t; };
+  const say = (t) => { status.textContent = t; };
+  const text = () => (prior + ' ' + session + ' ' + interim).replace(/\s+/g, ' ').trim().slice(0, MAX_CHARS);
+  const amp = () => { hero.style.setProperty('--amp', mode === 'listening' && performance.now() - lastAt < 900 ? '1' : '0.35'); };
+  const paint = () => {
+    const f = (prior + ' ' + session).replace(/\s+/g, ' ').trim();
+    typed.textContent = f + (f && interim ? ' ' : '');
+    interimEl.textContent = interim;
+    const len = text().length;
+    if (len !== lastLen) { lastAt = performance.now(); lastLen = len; }
+    amp();
+  };
+  // the runline: from the stop until the parse answers (the wait is unknown: it eases toward 90 %, full on the answer)
   const waitLine = () => {
     if (reduce || !runFill) return;
     hero.setAttribute('data-running', '');
@@ -542,110 +352,26 @@ document.querySelectorAll('[data-intake-hero]').forEach((hero) => {
     runFill.style.transition = 'transform 200ms ease-out'; runFill.style.transform = 'scaleX(1)';
     hero.removeAttribute('data-running');
   };
-  stopBtn.addEventListener('click', () => { if (live.active()) live.finish('stop'); });
-  hero.addEventListener('hero:reset', () => { live.leave(); reset(); });
+  const clearCards = () => { deck.innerHTML = ''; hero.removeAttribute('data-cards'); };
+  const stopAll = () => {
+    clearInterval(tick); clearTimeout(settleT); clearTimeout(backT);
+    if (rec) { try { rec.onend = null; rec.onresult = null; rec.onerror = null; rec.abort(); } catch (_) { /* */ } rec = null; }
+    stopping = false;
+  };
+  const toRest = (h) => {
+    stopAll(); endLine();
+    set('rest'); hint(h || restHint);
+    hero.style.removeProperty('--amp');
+    typed.textContent = ''; interimEl.textContent = ''; typein.value = '';
+  };
 
-  // the run's final height, measured with every stage on and no motion, so
-  // the column can reserve it beside the watch (see --run-final in the styles);
-  // re-measured when fonts land and when the module's width changes
-  const runEl = hero.querySelector('.run');
-  const capBox = hero.querySelector('.cap');
-  const reserve = () => {
-    const had = Array.from(hero.classList).filter((c) => /^s[1-6]$/.test(c));
-    const prev = parseFloat(runEl.style.getPropertyValue('--run-final')) || 0;
-    hero.classList.add('measuring', 's1', 's2', 's3', 's4', 's5', 's6');
-    runEl.style.removeProperty('--run-final');
-    const h = runEl.getBoundingClientRect().height;
-    hero.classList.remove('s1', 's2', 's3', 's4', 's5', 's6');
-    had.forEach((c) => hero.classList.add(c));
-    void runEl.offsetHeight; // settle the stage styles before motion returns
-    hero.classList.remove('measuring');
-    // a 2 px dead band (2026-10-07): the host draws the run scaled, so a sub-pixel re-measure must never resize the
-    // hero, re-fire the observer and walk the page a pixel at a time; within the band the old reserve holds
-    const next = Math.ceil(h);
-    runEl.style.setProperty('--run-final', (prev && Math.abs(next - prev) <= 2 ? prev : next) + 'px');
-    // the caption under the watch keeps the rest caption's height when a result's shorter line replaces it
-    // (2026-10-19: on a phone its three lines became two and the fold rose 16px)
-    if (capBox && !hero.classList.contains('live')) { capBox.style.minHeight = ''; capBox.style.minHeight = capBox.offsetHeight + 'px'; }
-  };
-  reserve();
-  if (document.fonts && document.fonts.ready) document.fonts.ready.then(reserve);
-  let rt = 0;
-  new ResizeObserver(() => { clearTimeout(rt); rt = setTimeout(reserve, 80); }).observe(hero);
-
-  // ── LIVE (Stream A, 2026-10-05): the same stage, the stranger's own words. Nothing opens until they press talk.
-  // Speech → text is the browser's own service (SpeechRecognition; interim results so the transcript types as they
-  // talk); the triage is the site's one function (/api/intake, Claude) with the local rule-based parse behind it, which
-  // says so with a chip. Nothing is stored anywhere: the words live in this closure and leave with the page. ──
-  const LIVE = JSON.parse(hero.querySelector('script[data-intake-live]').textContent);
-  const MAX_CHARS = 1500, MAX_S = 90;
-  const SRC = window.SpeechRecognition || window.webkitSpeechRecognition || null;
-  const cid = Array.from(hero.attributes).map((a) => a.name).find((n) => n.startsWith('data-astro-cid-'));
-  const scope = (root) => { if (!cid) return; root.querySelectorAll('*').forEach((el) => el.setAttribute(cid, '')); };
-  const esc = (x) => String(x).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
-  const timeEl = hero.querySelector('.face-rec .time');
-  const savedEl = hero.querySelector('.face-saved .saved');
-  const metaEl = hero.querySelector('.face-saved .meta');
-  const hintEl = hero.querySelector('[data-hint]');
-  const interimEl = hero.querySelector('.interim');
-  const typein = hero.querySelector('.typein');
-  const ticketsEl = hero.querySelector('.tickets');
-  const deckEl = hero.querySelector('.deck');
-  const verdictEl = hero.querySelector('.verdict');
-  const capEl = hero.querySelector('.cap .wk-cap');
-  // the face and the column at rest (2026-10-19: no art run any more; `tickets` / `deck` are the wedding's two cards,
-  // kept unseen only as the reserve's measure)
-  const art = { time: timeEl.textContent, saved: savedEl.textContent, meta: metaEl.textContent, hint: hintEl.textContent, tickets: ticketsEl.innerHTML, deck: deckEl.innerHTML, verdict: verdictEl.innerHTML, cap: capEl ? capEl.textContent : '', reserve: '' };
-  const X = '<span class="card-x" aria-hidden="true"><svg width="12" height="12" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><path d="M3 3l8 8M11 3l-8 8"></path></svg></span>';
-  const ACTS = '<div class="card-actions"><button type="button" class="act primary">Claude <svg width="11" height="11" viewBox="0 0 12 12" aria-hidden="true"><path d="M6 0.5 L7.3 4.7 L11.5 6 L7.3 7.3 L6 11.5 L4.7 7.3 L0.5 6 L4.7 4.7 Z" fill="currentColor"></path></svg></button><button type="button" class="act">Zzzz</button><button type="button" class="act">Add to…</button></div>';
-  const fmt = (sec) => { const t = Math.max(0, Math.round(sec)); return Math.floor(t / 60) + ':' + String(t % 60).padStart(2, '0'); };
-  let mode = 'idle';   // idle · asking · listening · typing · transcribing · parsing · landing · done
-  let rec = null, prior = '', session = '', interim = '', t0 = 0, tick = 0, settleT = 0, stopping = false, lastLen = 0, lastAt = 0, dur = 0, forceDown = false, liveTimers = [];
-  const lat = (ms, fn) => liveTimers.push(setTimeout(fn, reduce ? Math.round(ms * 0.15) : ms));
-  const setMode = (m) => { mode = m; hero.dataset.live = m; };
-  const hint = (t) => { hintEl.textContent = t; };
-  const text = () => (prior + ' ' + session + ' ' + interim).replace(/\s+/g, ' ').trim().slice(0, MAX_CHARS);
-  const paint = () => {
-    const f = (prior + ' ' + session).replace(/\s+/g, ' ').trim();
-    typed.textContent = f + (f && interim ? ' ' : '');
-    interimEl.textContent = interim;
-    const len = text().length;
-    if (len !== lastLen) { lastAt = performance.now(); lastLen = len; }
-    amp();
-  };
-  const amp = () => { hero.style.setProperty('--amp', mode === 'listening' && performance.now() - lastAt < 900 ? '1' : '0.4'); };
-  const enter = () => {   // the stage is theirs: whatever was on it clears
-    if (mode === 'idle' && !hero.classList.contains('live')) art.reserve = runEl.style.getPropertyValue('--run-final');   // the floor the words beneath were laid on
-    leave(); reset();
-    hero.classList.add('live', 's2');   // s2 wakes the transcript row
-    prior = session = interim = ''; stopping = false; lastLen = 0; lastAt = 0; dur = 0;
-    typed.textContent = ''; interimEl.textContent = ''; caret.hidden = false;
-    savedEl.textContent = LIVE.heard;
-    status.textContent = '';
-  };
-  const listening = () => {
-    setMode('listening'); hero.classList.remove('asking'); hint(LIVE.privacy);
-    caret.hidden = false;
-    t0 = performance.now();
-    clearInterval(tick);
-    tick = setInterval(() => { const left = MAX_S - (performance.now() - t0) / 1000; timeEl.textContent = fmt(left); amp(); if (left <= 0) finish('time'); }, 200);
-    status.textContent = 'Listening.';
-  };
-  const toTyped = (why) => {
-    if (rec) { try { rec.onend = null; rec.abort(); } catch (_) { /* */ } rec = null; }
-    clearInterval(tick);
-    setMode('typing'); hero.classList.remove('asking'); hero.classList.add('typing'); hint(why);
-    t0 = performance.now();
-    timeEl.textContent = '0:00';
-    tick = setInterval(() => { timeEl.textContent = fmt((performance.now() - t0) / 1000); }, 500);
-    typein.value = '';
-    typein.focus();
-  };
-  const start = () => {   // their click is the one opener
-    enter();
-    if (!SRC) { toTyped(LIVE.noSpeech); return; }
-    setMode('asking'); hero.classList.add('asking'); hint(LIVE.asking); timeEl.textContent = fmt(MAX_S);
-    rec = new SRC();
+  const start = () => {   // the press is the one opener: never on load, scroll or hover
+    stopAll(); clearCards(); endLine();
+    prior = session = interim = ''; lastLen = 0; lastAt = 0;
+    typed.textContent = ''; interimEl.textContent = ''; clockEl.textContent = '0:00';
+    if (!SR) { toTyped(LIVE.noSpeech); return; }
+    set('asking'); hint(LIVE.asking);
+    rec = new SR();
     rec.continuous = true; rec.interimResults = true; rec.maxAlternatives = 1;
     rec.lang = document.documentElement.lang || navigator.language || 'en-US';
     rec.onstart = () => { if (mode === 'asking') listening(); };
@@ -656,7 +382,7 @@ document.querySelectorAll('[data-intake-hero]').forEach((hero) => {
       session = f.trim(); interim = i.trim();
       if (mode === 'asking') listening();
       paint();
-      if (text().length >= MAX_CHARS) finish('cap');
+      if (text().length >= MAX_CHARS) finish();
     };
     rec.onerror = (e) => {
       const err = e && e.error;
@@ -668,46 +394,49 @@ document.querySelectorAll('[data-intake-hero]').forEach((hero) => {
       if (stopping) { settle(); return; }
       if (mode === 'listening' || mode === 'asking') {   // a session ends on silence: carry its words, keep listening
         prior = (prior + ' ' + session).trim(); session = ''; interim = '';
-        try { rec.start(); } catch (_) { settleT = setTimeout(() => { try { rec.start(); } catch (__) { /* */ } }, 300); }
+        try { rec.start(); } catch (_) { settleT = setTimeout(() => { try { rec && rec.start(); } catch (__) { /* */ } }, 300); }
       }
     };
     try { rec.start(); } catch (_) { toTyped(LIVE.noSpeech); }
   };
-  const finish = (why) => {
+  const listening = () => {
+    set('listening'); hint(LIVE.privacy);
+    t0 = performance.now();
+    clearInterval(tick);
+    tick = setInterval(() => { const s = (performance.now() - t0) / 1000; clockEl.textContent = fmt(s); amp(); if (s >= MAX_S) finish(); }, 200);
+    say('Listening.');
+  };
+  const toTyped = (why) => {
+    if (rec) { try { rec.onend = null; rec.abort(); } catch (_) { /* */ } rec = null; }
+    clearInterval(tick);
+    set('typing'); hint(why);
+    typed.textContent = LIVE.typeIt; interimEl.textContent = '';
+    t0 = performance.now(); clockEl.textContent = '0:00';
+    tick = setInterval(() => { clockEl.textContent = fmt((performance.now() - t0) / 1000); }, 500);
+    typein.value = '';
+    typein.focus({ preventScroll: true });
+  };
+  const finish = () => {
     if (mode !== 'listening' && mode !== 'asking' && mode !== 'typing') return;
     clearInterval(tick);
-    dur = Math.max(1, (performance.now() - t0) / 1000);
-    if (mode === 'typing') { prior = typein.value.trim(); session = interim = ''; typein.blur(); hero.classList.remove('typing'); }
+    if (mode === 'typing') { prior = typein.value.trim(); session = interim = ''; typein.blur(); typein.value = ''; }
     stopping = true;
-    setMode('transcribing');
-    hero.classList.remove('asking');
-    stage(2);   // the face: heard; the transcript row stays
-    metaEl.textContent = LIVE.source + ' · ' + fmt(dur);
-    paint();
-    waitLine();   // from the stop until the parse answers
-    if (rec) { try { rec.stop(); } catch (_) { settle(); return; } settleT = setTimeout(settle, 1500); }   // the last finals land in onend
+    set('transcribing'); noteEl.textContent = LIVE.saved;
+    waitLine();
+    say(LIVE.saved + '.');
+    if (rec) { try { rec.stop(); } catch (_) { settle(); return; } settleT = setTimeout(settle, SETTLE_MS); }   // the last finals land in onend
     else settle();
   };
   const settle = () => {
     if (mode !== 'transcribing') return;
     clearTimeout(settleT);
     if (rec) { try { rec.onend = null; rec.onresult = null; rec.onerror = null; } catch (_) { /* */ } rec = null; }
-    prior = text(); session = interim = ''; paint(); caret.hidden = true;
-    if (!prior) { empty(); return; }
+    prior = text(); session = interim = '';
+    if (!prior) { toRest(LIVE.empty); say(LIVE.empty); return; }
     parse(prior);
   };
-  const empty = () => {
-    stopping = false;
-    stage(0); setMode('idle');
-    hero.classList.remove('live', 'asking', 'typing');
-    hero.classList.add('unheard');
-    endLine();
-    timeEl.textContent = art.time; savedEl.textContent = art.saved; metaEl.textContent = art.meta;
-    hint(LIVE.empty); status.textContent = LIVE.empty;
-  };
   const parse = async (src) => {
-    setMode('parsing'); hero.classList.add('parsing');
-    status.textContent = 'Heard. Parsing.';
+    set('parsing');
     let result = null;
     const ac = new AbortController();
     const tt = setTimeout(() => ac.abort(), 10000);
@@ -719,87 +448,76 @@ document.querySelectorAll('[data-intake-hero]').forEach((hero) => {
     } catch (_) { /* the local parse */ }
     clearTimeout(tt);
     if (mode !== 'parsing') return;   // left meanwhile
-    if (!result) result = localParse(src);
-    land(result);
+    land(result || localParse(src));
+  };
+  // a ticket as the Stream draws it: an executed one is a receipt (the check, where it went and when), the rest wait
+  // on a person (the kind's chip, its points); a local parse wears its chip
+  const card = (t, k, local) => {
+    const [label, chip, dest] = KIND[t.kind] || [t.kind, '#9ca294', ''];
+    const head = t.execute
+      ? '<span class="c-check">' + CHECK + '</span>'
+      : '<span class="c-chip" style="--chip:' + chip + '">' + esc(label) + '</span>';
+    const lp = local ? '<span class="c-chip lp">' + esc(LIVE.local) + '</span>' : '';
+    const lines = t.execute
+      ? '<p class="c-line">' + esc([dest || label, t.when].filter(Boolean).join(' · ')) + '</p>'
+      : (t.items || []).filter((i) => i.trim().toLowerCase() !== String(t.title).trim().toLowerCase()).slice(0, 2).map((i) => '<p class="c-line">' + esc(i) + '</p>').join('');   // a point that only repeats the title is dropped
+    return '<article class="card" style="--k:' + k + ';--src:' + SRC[k % SRC.length] + '"><div class="c-head"><span>now</span>' + head + lp + X + '</div><h4 class="c-title">' + esc(t.title) + '</h4>' + lines + TILES + '</article>';
   };
   const land = (r) => {
-    hero.classList.remove('parsing');
     endLine();
-    verdictEl.querySelectorAll('span').forEach((sp) => { if (r.verdicts.includes(sp.textContent.trim())) sp.setAttribute('data-on', ''); else sp.removeAttribute('data-on'); });
-    const local = r.source === 'local';
-    const lp = local ? '<span class="lp">' + esc(LIVE.local) + '</span>' : '';
-    ticketsEl.innerHTML = r.tickets.map((t) => '<div class="stub"><span class="p">{ </span><span class="k">kind</span><span class="p">: </span><span class="v">"' + esc(t.kind) + '"</span><span class="p">, </span><span class="k">items</span><span class="p">: </span><span class="v">' + t.items.length + '</span><span class="p">, </span><span class="k">title</span><span class="p">: </span><span class="v">"' + esc(t.title) + '"</span><span class="p"> }</span>' + lp + '</div>').join('')
-      + (r.stored ? '<div class="stub stored"><span class="p">{ </span><span class="k">store</span><span class="p">: </span><span class="v">"' + esc(r.stored) + '"</span><span class="p"> }</span>' + lp + '</div>' : '');
-    deckEl.innerHTML = r.tickets.map((t) => '<article class="card' + (t.execute ? ' exec' : '') + '"><div class="card-top"><span class="when">' + esc(t.when || 'today') + '</span><span class="chip">' + esc(String(t.kind).toUpperCase()) + '</span>' + (local ? '<span class="chip lp">' + esc(LIVE.local) + '</span>' : '') + X + '</div><h3 class="card-title">' + esc(t.title) + '</h3><ul class="card-items">' + t.items.map((i) => '<li>' + esc(i) + '</li>').join('') + '</ul>' + ACTS + '<div class="card-src">' + esc(t.execute ? LIVE.preview : LIVE.source + ' · ' + LIVE.kept) + '</div></article>').join('');
-    scope(ticketsEl); scope(deckEl);
-    reseat();
     const n = r.tickets.length;
-    const nWord = n === 0 ? 'Nothing to file' : 'It became ' + (n === 1 ? '1 ticket' : n + ' tickets');
-    setMode('landing');
-    lat(0, () => { stage(3); status.textContent = 'Verdict: ' + r.verdicts.join(' and ') + '.'; });
-    lat(900, () => stage(4));
-    lat(2700, () => { stage(5); status.textContent = nWord + '. ' + LIVE.kept + '.'; });
-    lat(3850, () => {
-      stage(6); setMode('done');
-      metaEl.textContent = fmt(dur) + ' · ' + LIVE.kept;
-      if (capEl) capEl.textContent = LIVE.caption.replace('{dur}', fmt(dur)).replace('{n}', nWord);
-    });
+    if (!n) {   // the third fate: nothing actionable
+      set('nothing'); noteEl.textContent = LIVE.nothing; say(LIVE.nothing + '.');
+      backT = setTimeout(() => toRest(), NOTE_MS);
+      return;
+    }
+    const local = r.source === 'local';
+    deck.innerHTML = r.tickets.map((t, k) => card(t, k, local)).join('');
+    scope(deck);
+    hero.setAttribute('data-cards', '');
+    fit();
+    say((n === 1 ? '1 ticket' : n + ' tickets') + '. ' + LIVE.preview);
+    backT = setTimeout(() => toRest(), SAVED_MS);
   };
-  const reseat = () => {   // the reserve may GROW once for a longer run, before anything drops, and glides; it never shrinks below the art run's
-    const before = runEl.style.getPropertyValue('--run-final');
-    reserve();
-    let after = runEl.style.getPropertyValue('--run-final');
-    if (art.reserve && parseFloat(after) < parseFloat(art.reserve)) { after = art.reserve; runEl.style.setProperty('--run-final', after); }
-    if (before && after && after !== before) { runEl.style.setProperty('--run-final', before); void runEl.offsetHeight; runEl.style.setProperty('--run-final', after); }
+  // beside the watch the column is the watch's height: the cards that fit stand, the rest are counted
+  const fit = () => {
+    const cards = Array.from(deck.querySelectorAll('.card'));
+    const old = deck.querySelector('.more'); if (old) old.remove();
+    cards.forEach((c) => { c.hidden = false; });
+    if (getComputedStyle(out).overflow !== 'hidden') return;
+    let hidden = 0;
+    for (let i = cards.length - 1; i > 0 && out.scrollHeight > out.clientHeight + 1; i--) { cards[i].hidden = true; hidden++; }
+    if (hidden) { const p = document.createElement('p'); p.className = 'more'; p.textContent = '+ ' + hidden + ' more'; deck.appendChild(p); scope(deck); }
   };
-  const leave = () => {   // back to rest: its words, its (unseen) cards, its reserve
-    liveTimers.forEach(clearTimeout); liveTimers = [];
-    clearInterval(tick); clearTimeout(settleT);
-    if (rec) { try { rec.onend = null; rec.abort(); } catch (_) { /* */ } rec = null; }
-    stopping = false;
-    const was = mode !== 'idle' || hero.classList.contains('live');
-    hero.classList.remove('live', 'asking', 'typing', 'parsing', 'unheard');
-    delete hero.dataset.live; mode = 'idle';
-    hero.style.removeProperty('--amp');
-    hint(art.hint);   // an empty session leaves its word in the hint: rest takes its own back
-    endLine();
-    if (!was) return;
-    timeEl.textContent = art.time; savedEl.textContent = art.saved; metaEl.textContent = art.meta;
-    ticketsEl.innerHTML = art.tickets; deckEl.innerHTML = art.deck; verdictEl.innerHTML = art.verdict;
-    if (capEl) capEl.textContent = art.cap;
-    typed.textContent = ''; interimEl.textContent = ''; typein.value = '';
-    reseat();
-  };
-  const live = {
-    active: () => mode === 'asking' || mode === 'listening' || mode === 'typing',
-    on: () => mode !== 'idle',
-    finish, leave,
-  };
-  hero.querySelectorAll('[data-talk]').forEach((b) => b.addEventListener('click', start));
-  typein.addEventListener('keydown', (e) => { if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') { e.preventDefault(); finish('stop'); } });
+  new ResizeObserver(() => { if (hero.hasAttribute('data-cards')) fit(); }).observe(out);
+
+  recBtn.addEventListener('click', () => {
+    if (mode === 'rest' || mode === 'nothing') start();
+    else if (mode === 'listening' || mode === 'asking' || mode === 'typing') finish();
+  });
+  typein.addEventListener('keydown', (e) => { if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') { e.preventDefault(); finish(); } });
+  hero.addEventListener('hero:reset', () => { toRest(); clearCards(); });
 
   // ── the dev switch (?state=…; ships disabled: this block is dropped from the production bundle) ──
   if (import.meta.env.DEV) {
     const SAMPLE = "I need to call the plumber about the kitchen tap, it's dripping again. Remind me Friday morning to pick up the dry cleaning. And what if we painted the hallway, like a warm grey, I keep thinking about it.";
-    const asIf = (left, t) => { enter(); listening(); clearInterval(tick); prior = t; paint(); timeEl.textContent = fmt(left); t0 = performance.now() - (MAX_S - left) * 1000; };
+    const asIf = (t) => { stopAll(); clearCards(); set('listening'); prior = t; session = interim = ''; paint(); t0 = performance.now() - 12000; clockEl.textContent = '0:12'; };
     const show = (name) => {
       forceDown = false;
-      leave(); reset();
       switch (name) {
-        case 'asking': enter(); setMode('asking'); hero.classList.add('asking'); hint(LIVE.asking); timeEl.textContent = fmt(MAX_S); break;
-        case 'denied': enter(); toTyped(LIVE.denied); break;
-        case 'unsupported': case 'typed': enter(); toTyped(LIVE.noSpeech); break;
-        case 'listening': asIf(72, "I need to call the plumber about the kitchen tap, it's dripping"); interim = 'again'; lastAt = performance.now() + 1e9; paint(); break;
-        case 'transcribing': asIf(60, SAMPLE); dur = 30; stopping = true; setMode('transcribing'); stage(2); metaEl.textContent = LIVE.source + ' · ' + fmt(dur); break;
-        case 'parsing': asIf(60, SAMPLE); dur = 30; stage(2); metaEl.textContent = LIVE.source + ' · 0:30'; caret.hidden = true; setMode('parsing'); hero.classList.add('parsing'); break;
-        case 'result': asIf(60, SAMPLE); finish('stop'); break;
-        case 'local': case 'down': forceDown = true; asIf(60, SAMPLE); finish('stop'); break;
-        case 'empty': asIf(80, ''); finish('stop'); break;
-        case 'toolong': asIf(0, (SAMPLE + ' ').repeat(8).slice(0, MAX_CHARS)); break;
-        default: break;
+        case 'asking': stopAll(); clearCards(); set('asking'); hint(LIVE.asking); break;
+        case 'denied': stopAll(); clearCards(); toTyped(LIVE.denied); break;
+        case 'unsupported': case 'typed': stopAll(); clearCards(); toTyped(LIVE.noSpeech); break;
+        case 'listening': asIf("I need to call the plumber about the kitchen tap, it's dripping"); interim = 'again'; lastAt = performance.now() + 1e9; paint(); break;
+        case 'parsing': asIf(SAMPLE); set('parsing'); waitLine(); break;
+        case 'result': asIf(SAMPLE); finish(); break;
+        case 'local': case 'down': forceDown = true; asIf(SAMPLE); finish(); break;
+        case 'nothing': asIf('this is just a test, ignore this'); finish(); break;
+        case 'empty': asIf(''); finish(); break;
+        default: toRest(); clearCards(); break;
       }
     };
-    window.__intakeLive = { show, run: (t) => { asIf(78, t); finish('stop'); }, down: (v) => { forceDown = !!v; }, mode: () => mode, text };
+    window.__intakeLive = { show, run: (t) => { asIf(t); finish(); }, down: (v) => { forceDown = !!v; }, mode: () => mode, text };
     const want = new URLSearchParams(location.search).get('state');
     if (want) setTimeout(() => show(want), 400);
   }
