@@ -98,6 +98,8 @@ const hasCap = Astro.slots.has('cap');
             {LIVE_COPY.talkHint}
           </button>
         </div>
+        {/* "you're watching" (2026-10-19): the press → the landing, in the hint's place */}
+        <span class="runline" aria-hidden="true" data-runline><i></i></span>
         <button type="button" class="replay" data-replay aria-label="Replay the run">
           <svg viewBox="0 0 20 20" class="ico" aria-hidden="true"><path d="M4 10a6 6 0 1 0 1.8-4.3" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M4 3v3.5h3.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
           {LIVE_COPY.replay}
@@ -362,6 +364,24 @@ const hasCap = Astro.slots.has('cap');
 .intake-hero .replay:hover { background: color-mix(in oklab, var(--rp-ink) 82%, var(--rp-ground)); }
 .intake-hero .replay:focus-visible { outline: 2px solid var(--rp-ink); outline-offset: 2px; }
 .intake-hero.s6 .replay { opacity: 1; pointer-events: auto; transition: opacity 0.6s 2.6s, background 120ms, color 560ms ease; }
+/* "YOU'RE WATCHING" (2026-10-19, Jon: "a super minimalistic progress bar … a casual visual communication that hey,
+   you're witnessing something … you don't have to click anything"): one hairline in the foot's slot from the press
+   until the run lands, so nothing below moves; the hint's own colour fills it left to right, linearly, over the run's
+   planned length (the script's own numbers). In 200 on the press, out 400 at the landing, the Replay on its own delay
+   after. Not a control: aria-hidden, no pointer, no label. Reduced motion: none (the run lands at once). EXACT COPY in
+   IntakeHero.astro and AudioDexDoor.astro: change both or neither */
+.runline {
+  grid-area: 1 / 1; align-self: center; width: 96px; height: 1.5px;
+  background: color-mix(in oklab, var(--sheet-ink) 14%, transparent);
+  opacity: 0; pointer-events: none; transition: opacity 400ms ease;
+}
+.runline > i {
+  display: block; height: 100%; transform: scaleX(0); transform-origin: left;
+  background: color-mix(in oklab, var(--sheet-acc) var(--hint-mix), var(--sheet-ink));
+}
+[data-running] .runline { opacity: 1; transition-duration: 200ms; }
+@media (max-width: 899px) { .runline { width: 72px; } }
+@media (prefers-reduced-motion: reduce) { .runline { display: none; } }
 .intake-hero .fly { display: none; position: absolute; width: 12px; height: 12px; border-radius: 50%; background: var(--accent); box-shadow: 0 0 18px var(--accent); z-index: 3; pointer-events: none; }
 .intake-hero.s1:not(.s3) .fly { display: block; animation: ih-fly 1s cubic-bezier(.4, 0, .2, 1) both; }
 
@@ -528,6 +548,16 @@ const hasCap = Astro.slots.has('cap');
 
 <script>
 import { localParse } from '../lib/intake-local.ts';
+// the line's fill: from empty to full, linearly, over the run's planned ms (or at once to full, ms 0)
+const fillLine = (fill, ms) => {
+  if (!fill) return;
+  fill.style.transition = 'none';
+  fill.style.transform = ms ? 'scaleX(0)' : 'scaleX(1)';
+  if (!ms) return;
+  void fill.offsetWidth;
+  fill.style.transition = `transform ${ms}ms linear`;
+  fill.style.transform = 'scaleX(1)';
+};
 document.querySelectorAll('[data-intake-hero]').forEach((hero) => {
   const run = JSON.parse(hero.querySelector('script[data-intake-run]').textContent);
   const words = run.transcript.trim().split(/\s+/);
@@ -541,6 +571,7 @@ document.querySelectorAll('[data-intake-hero]').forEach((hero) => {
   const status = hero.querySelector('.sr');
   const stopBtn = hero.querySelector('.stop');
   const fly = hero.querySelector('.fly');
+  const runFill = hero.querySelector('[data-runline] > i');
   let timers = [];
   const at = (ms, fn) => timers.push(setTimeout(fn, reduce ? Math.round(ms * 0.15) : ms));
   const stage = (n) => { for (let i = 1; i <= 6; i++) hero.classList.toggle('s' + i, i <= n); };
@@ -581,11 +612,14 @@ document.querySelectorAll('[data-intake-hero]').forEach((hero) => {
     at(t2, () => stage(4));
     const t3 = t2 + 1800;
     at(t3, () => { stage(5); status.textContent = run.tickets.length + ' tickets in the deck.'; });
-    at(t3 + 1150, () => stage(6));
+    at(t3 + 1150, () => { stage(6); hero.removeAttribute('data-running'); });
+    // the line: the press → the landing (t3 + 1150), never under reduced motion, never in live mode (live never plays)
+    if (!reduce) { hero.setAttribute('data-running', ''); fillLine(runFill, t3 + 1150); }
   }
   function reset() {
     timers.forEach(clearTimeout); timers = [];
     stage(0); typed.textContent = ''; caret.hidden = false; status.textContent = '';
+    hero.removeAttribute('data-running');
   }
   stopBtn.addEventListener('click', () => { if (live.active()) live.finish('stop'); else play(); });
   hero.querySelector('[data-replay]').addEventListener('click', () => { live.leave(); reset(); });
@@ -597,6 +631,7 @@ document.querySelectorAll('[data-intake-hero]').forEach((hero) => {
     if (!hero.classList.contains('s1') || hero.classList.contains('s6')) return;
     timers.forEach(clearTimeout); timers = [];
     typed.textContent = words.join(' '); caret.hidden = true;
+    fillLine(runFill, 0); hero.removeAttribute('data-running');   // the line jumps to full and fades
     stage(6); status.textContent = run.tickets.length + ' tickets in the deck.';
   });
   hero.addEventListener('hero:reset', () => { live.leave(); reset(); });

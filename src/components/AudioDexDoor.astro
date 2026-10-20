@@ -129,6 +129,8 @@ const memo = results.find((r) => r.kind === 'memo');
 
   <div class="foot">
     <p class="hint" aria-hidden="true">tap to search</p>
+    {/* "you're watching" (2026-10-19): the press → the memo open, in the hint's place */}
+    <span class="runline" aria-hidden="true" data-runline><i></i></span>
     <button type="button" class="replay" data-replay aria-label="Replay the search">
       <svg viewBox="0 0 20 20" class="ico" aria-hidden="true"><path d="M4 10a6 6 0 1 0 1.8-4.3" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M4 3v3.5h3.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
       Replay
@@ -317,6 +319,24 @@ const memo = results.find((r) => r.kind === 'memo');
   .replay:hover { background: color-mix(in oklab, var(--ink) 82%, var(--ground)); }
   .replay:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
   .done .replay { opacity: 1; pointer-events: auto; transition: opacity 0.6s 0.8s, background 120ms, color 560ms ease; }
+  /* "YOU'RE WATCHING" (2026-10-19, Jon: "a super minimalistic progress bar … a casual visual communication that hey,
+     you're witnessing something … you don't have to click anything"): one hairline in the foot's slot from the press
+     until the run lands, so nothing below moves; the hint's own colour fills it left to right, linearly, over the run's
+     planned length (the script's own numbers). In 200 on the press, out 400 at the landing, the Replay on its own delay
+     after. Not a control: aria-hidden, no pointer, no label. Reduced motion: none (the run lands at once). EXACT COPY in
+     IntakeHero.astro and AudioDexDoor.astro: change both or neither */
+  .runline {
+    grid-area: 1 / 1; align-self: center; width: 96px; height: 1.5px;
+    background: color-mix(in oklab, var(--sheet-ink) 14%, transparent);
+    opacity: 0; pointer-events: none; transition: opacity 400ms ease;
+  }
+  .runline > i {
+    display: block; height: 100%; transform: scaleX(0); transform-origin: left;
+    background: color-mix(in oklab, var(--sheet-acc) var(--hint-mix), var(--sheet-ink));
+  }
+  [data-running] .runline { opacity: 1; transition-duration: 200ms; }
+  @media (max-width: 899px) { .runline { width: 72px; } }
+  @media (prefers-reduced-motion: reduce) { .runline { display: none; } }
 
   @media (prefers-reduced-motion: reduce) {
     .tap::before, .tap::after { animation: none; opacity: 0.75; }
@@ -335,6 +355,16 @@ const memo = results.find((r) => r.kind === 'memo');
   const CHAR_MS = 150; // a letter (the watch's phone typed at 180; this run is snappier)
   const BS_MS = 110; // a backspace
   const STAGES = ['s1', 's2', 's3', 's4', 'done'];
+  // the line's fill: from empty to full, linearly, over the run's planned ms (or at once to full, ms 0)
+  const fillLine = (fill, ms) => {
+    if (!fill) return;
+    fill.style.transition = 'none';
+    fill.style.transform = ms ? 'scaleX(0)' : 'scaleX(1)';
+    if (!ms) return;
+    void fill.offsetWidth;
+    fill.style.transition = `transform ${ms}ms linear`;
+    fill.style.transform = 'scaleX(1)';
+  };
 
   function init(root) {
     if (root.dataset.ready) return;
@@ -362,6 +392,7 @@ const memo = results.find((r) => r.kind === 'memo');
     const say = (msg) => { if (status) { status.textContent = ''; later(30, () => { status.textContent = msg; }); } };
     const setQ = (t) => qs.forEach((q) => { q.textContent = t; });
     const tapeSlot = root.querySelector('[data-tape-slot]');
+    const runFill = root.querySelector('[data-runline] > i');
     const live = (on) => { if (memo) memo.inert = !on; if (tapeSlot && !on) tapeSlot.inert = true; };
     const fmt = (t) => `${Math.floor(t / 60)}:${String(Math.floor(t % 60)).padStart(2, '0')}`;
 
@@ -402,6 +433,7 @@ const memo = results.find((r) => r.kind === 'memo');
       if (audio) { try { audio.currentTime = 0; } catch (e) {} }
       paint(0);
       root.classList.remove(...STAGES);
+      root.removeAttribute('data-running');
       setQ('');
       live(false);
     };
@@ -427,7 +459,9 @@ const memo = results.find((r) => r.kind === 'memo');
       t += reduce.matches ? 200 : 650;
       later(t, () => { root.classList.add('s4'); live(true); if (tapeSlot) tapeSlot.inert = false; say('The memo is open. It became a song: the tape beside the phone plays it.'); });
       t += reduce.matches ? 200 : 700;
-      later(t, () => { root.classList.add('done'); running = false; });
+      later(t, () => { root.classList.add('done'); root.removeAttribute('data-running'); running = false; });
+      // the line: the press → done (the accumulated t), never under reduced motion
+      if (!reduce.matches) { root.setAttribute('data-running', ''); fillLine(runFill, t); }
     };
     taps.forEach((b) => b.addEventListener('click', run));
     if (replay) replay.addEventListener('click', () => { running = false; run(); });
