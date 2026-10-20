@@ -367,48 +367,55 @@ session must follow.
   → how to play → one engineering sentence → where it came from. Every
   DRAFT line lives in objects-copy.ts / signal-card-copy.ts, Jon's to
   rewrite; the hoods never print his real rows.
-- THE BOARD + THE RECORD BUTTON (2026-10-19, late, branch `board`; Jon,
-  after THE SORT: "a good first swing … it's weird that I have to click to
-  get these to show up … all you see is one thing at a time: it shows the
-  circumstance, then input, output"; "goal-oriented, not patchwork"; "every
-  line short, concrete, benefit-led"). The Intake sheet reads kind
-  `program` → band ("Intake" + the DRAFT dek "Memos and texts in. Tickets
-  out.") → THE BOARD → THE WATCH → the fold exactly as `fold` left it.
-  THE SORT is RETIRED to junkyard/ (IntakeSort.astro, intake-sort.json);
-  its three images live in `public/intake/board/`.
-  THE BOARD = `IntakeBoard.astro` + `src/data/intake-board.json` (every
-  line DRAFT; scenes 1 to 3 are captures 50, 49, 53 of the M1's intake.db;
-  Theo & June and Lena are invented): ONE SCENE AT A TIME, four scenes
-  (the maybe: the Thundercat screenshot → a receipt card "Idea · Oct 27" +
-  October's cell, the 27th in the Idea yellow · the paper: the save-the-
-  date → "Intake · Aug 28, 2027" + August 2027's cell in the Intake red ·
-  the find: the listing + his sentence in a sent bubble → an OPEN idea card
-  with its thumbnail and domain line, no cell · the sticky note: the wrist,
-  "0:04", "Lena wants red boots." → an open card "open since Mar 14" whose
-  age, 219d, wears the Stream's lamp). Each scene = THE LINE in split-flap
-  cells (JetBrains Mono 600 uppercase, one cell per character, a hairline
-  box with a seam across its middle, ink on paper; 30 cells on one row on a
-  wide board, 16 a row on two rows under 700px) over a two-up MIRRORED on
-  the sheet's centre line (what he sent flush right, a sent image wearing
-  the iMessage blue as its frame; what it became flush left: the Stream's
-  card anatomy from intake_web.py, the two tiles quiet, the month cell
-  beside the dated ones). THE FLIP: every cell whose glyph changes runs 4
-  to 6 random glyphs over 600 ms, starting 25 ms after its left neighbour
-  (the last of 30 settles at ≈ 1,325 ms), one rAF loop, each change a
-  110 ms rotateX flap (two identical keyframes swapped, no reflow); the
-  two-up crossfades 350 ms starting 300 ms in. THE TURN: 8,000 ms a scene,
-  a 32 s cycle, the clock counting only while ≥ 50 % of the board is on
-  screen (IntersectionObserver), the page visible and nothing holding it:
-  a mouse over it, a finger on it, keyboard focus in it (a click's focus
-  does not hold); a swipe (> 40px, mostly horizontal), ← → while focus is
-  inside (never the page's arrows) or one of the four 8px marks (the look
-  room's car-dot vocabulary) steps it; no Replay, no play key. Reduced
-  motion: no clock, no flip (the line swaps), the marks step. The four
-  scenes share ONE grid cell, so the height is the tallest's from the first
-  paint (1440: the sheet 2004px through every sample of a full cycle;
-  375 likewise). One polite live region says each scene's `say`. Images
-  load eagerly (a lazy image under an opacity-0 slot never started
-  loading in Chrome).
+- THE SEND + THE RECORD BUTTON (2026-10-20, branch `intake-fresh`, fresh
+  eyes after THE SORT, THE BOARD and THE FLIP; Jon, 2026-10-19: "the pitch
+  now is a bit wider … it utilizes the two things I already use, voice
+  memos and iMessage, and puts it into pocketed pieces of information";
+  on the board: "it's too many things at once. there needs to be a before
+  and after"; "you're just patchworking at this point, look at the
+  situation with fresh eyes"). The Intake sheet reads kind `program` →
+  band ("Intake" + the DRAFT dek "Texts and memos in. Tickets out.") →
+  THE SEND → THE WATCH → the fold exactly as `fold` left it. THE SORT and
+  THE BOARD are RETIRED to junkyard/ (IntakeSort.astro, intake-sort.json,
+  IntakeBoard.astro, intake-board.json); their images live in
+  `public/intake/board/`. What the three shared: they ITEMIZED (a list of
+  examples); a stranger reads a list. The send is ONE lived moment with a
+  before and an after. The storyboard is `docs/STORYBOARD-intake.md`.
+  THE SEND = `IntakeThread.astro` + `src/data/intake-thread.json` (every
+  line DRAFT; the photo is capture 49 of the M1's intake.db, the older
+  line in the thread capture 53's, his own; Theo & June are invented):
+  TWO PHONES, the AudioDex shape (the photographed body, the screen under
+  its cut-out, `--ith-w: min(34cqw, 66svh · 864/1760)` from the host,
+  10cqw gutter; the screens in the apps' LIGHT mode by day, dark under
+  `html[data-night]`, no captions, no labels, the apps carry their names).
+  LEFT, Messages, the thread with himself (the J circle, "Jon ›"): the
+  older things he sent himself bottom-anchored above the composer (a
+  concert email screenshot at the top edge, a Marketplace screenshot, his
+  own line, Delivered), and in the composer the save-the-date photo with
+  the send arrow lit; the touch rim breathes on this phone (AudioDexDoor's
+  `.tap`, change both or neither); the foot says `tap send`. RIGHT,
+  Calendar, the month of `calendar.today` (pinned 2026-10-20: an exhibit,
+  never the clock), today ringed, nothing on it; every month from today's
+  to the landing's is a 6-row Sunday-start grid on one reel
+  (`--page` slides it, 90 ms a month), the month's name on its page (the
+  current month's red), the year in the nav following. THE PRESS IS THE
+  SEND (0 ms: the runline fills linearly over the run's 3,000 ms): the
+  list slides up as the photo rises out of the composer into the thread
+  (420 ms, the list's rest shift is the photo's block, measured in px by
+  the script); Delivered moves under the photo at 520; a hold while the
+  photo is read; from 1,200 the reel pages October → August 2027; at 2,300
+  Saturday the 28th takes the bar "Theo & June's wedding · all day" in the
+  Intake calendar's red (the board's `--cal-intake-*`); done at 3,000, the
+  state holds, Replay fades in (the house pill, 0.8 s). NARROW SHEETS
+  (< 620 of the module): the two phones share ONE grid cell, Messages at
+  rest, the Calendar crossfading over it from 900 ms (the bodies identical,
+  only the screen changes). Reduced motion: no runline, no reel, no rise;
+  rest → landed in one step. One sheet height from the first paint (1440:
+  2022px through every sample of a run; 375: 1798). One polite live region
+  says `say.sent` then `say.landed`. The images load eagerly (a lazy image
+  under an opacity-0 slot never started loading in Chrome). Probe: the
+  scratch send-qa.mjs pattern (headless, muted; captures in
+  `~/Documents/studio-build/send/`).
   THE LAW AMENDMENT (2026-10-19, late): A SIGNBOARD MAY TURN BY ITSELF; A
   RUN, A MACHINE AT WORK, STARTS ONLY ON A PRESS. "Nothing presses itself"
   still governs the watch, the phones and the Studio's captures.
@@ -447,7 +454,7 @@ session must follow.
   `src/components/studio/objects-copy.ts` (Jon-editable), the locked
   paragraphs beneath. At rest each module shows only its title, its greyed
   nodes and the object: a node's words arrive with its stage (2026-09-22). (SUPERSEDED 2026-10-19 for
-  Intake: its object is THE BOARD, the record-button watch beneath it; see THE BOARD above.) Object one = the Intake
+  Intake: its object is THE SEND, the record-button watch beneath it; see THE SEND above.) Object one = the Intake
   hero (`IntakeHero.astro` + `src/data/intake-run.json`; its memo cue
   "Cinder 32" is Intake's real alias for capture 31, length 3:52, seven
   tickets of which the module shows two). It is Jon's REAL memo BY CHOICE
@@ -528,7 +535,7 @@ session must follow.
   .wk-cap` keeps its space) and fade in with the colour flash when the run
   lands (`wk-cap-in`); the watch's stands at rest again since 2026-10-19
   (live only: it says what the live mode does). THE WATCH AT REST (round four, Jon: "2× replay and talk buttons";
-  SUPERSEDED 2026-10-19, late: the record button, no pill, no Replay, see THE BOARD):
+  SUPERSEDED 2026-10-19, late: the record button, no pill, no Replay, see THE SEND):
   the foot under the watch is the PHONE's slot (`.foot`, one grid cell):
   `tap to stop` at rest, then after the run ONE `Replay` pill identical to
   ArchiveHero's (`.replay`, ink pill, 0.72rem mono, 16px under the object,
@@ -558,7 +565,7 @@ session must follow.
   (`--run-final`, measured by IntakeHero's script under a motion-free
   `measuring` class, re-measured on fonts/resize) so the words under the
   module never move while it runs; stacked, no reservation (the watch's
-  run column is gone since 2026-10-19, late: see THE BOARD). The rail's
+  run column is gone since 2026-10-19, late: see THE SEND). The rail's
   comet re-measures its knots on any body height change (ResizeObserver).
   The instrument's intro line (`.sgm-intro`) is hidden from the host. The
   watch PNG's transparent frame (70/68/67/61 px of 521×781) is trimmed in
@@ -665,7 +672,7 @@ session must follow.
   face; since round five its ARROW (`.cue-arrow`) is 1.55em, 700, and bobs
   4px on a 2.2s ease (still under reduced motion); the word does not move. NOTHING PRESSES ITSELF (Jon: "I'd rather they have to be
   clicked"; amended 2026-10-19, late: a signboard may turn by itself, a run,
-  a machine at work, starts only on a press; see THE BOARD): the watch and the phone run only from a visitor's press, the
+  a machine at work, starts only on a press; see THE SEND): the watch and the phone run only from a visitor's press, the
   page never scrolls by itself after a run starts, and a run never opens
   a sheet's fold (the self-run, the phone-row trigger, the follow/glide and
   the run-opens-the-story code are deleted; `firstSettle` survives for the
