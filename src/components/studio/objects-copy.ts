@@ -19,6 +19,9 @@ export const WATCH_COPY = {
   // and iMessage, and puts it into pocketed pieces of information"): DRAFT in his words, his to rewrite. Was "I talk to
   // my watch. It comes back as a calendar event, an organized idea, or a prompt for Claude."
   dek: "No new app. A voice memo or a text to myself, sorted into pockets.",
+  // 2026-10-19 (THE SORT round: the watch is live only, the wedding moved into the sort's sixth row): the caption
+  // under the watch says what the live mode does, in LIVE_COPY's words ("a preview. nothing was added."). DRAFT, his
+  // to rewrite. The history of the replay's caption, kept for the record:
   // the mono line under the module, true to the run it replays (capture 31
   // in intake.db: 3:52, seven tickets; the module shows the first two).
   // 2026-10-06 (Jon): the Harbor example was dropped — less charm, and its
@@ -26,7 +29,8 @@ export const WATCH_COPY = {
   // to the calendar, no card); his own memo stays, typed at the faster pace.
   // 2026-10-15 (THE SKIM, round two): the watch replays THE WEDDING MEMO (src/data/intake-run.json; the Cinder
   // brain dump is kept beside it): one sentence on the couch, five things done on the calendar. DRAFT.
-  caption: "One memo, 0:31, spoken into the watch from the couch. Five things happened on the calendar; two are shown.",
+  caption: "Say your own things to do. They come back as tickets. A preview: nothing is added anywhere.",
+  // (was "One memo, 0:31, spoken into the watch from the couch. Five things happened on the calendar; two are shown.")
 };
 
 // LIVE (Stream A, 2026-10-05): the words the watch's live mode prints — the
@@ -37,17 +41,15 @@ export const WATCH_COPY = {
 export const LIVE_COPY = {
   // 2026-10-13 (Jon: "'talk' feels too generic"): the control says what it
   // does. Round four, the same day (Jon: "one replay, one talk"): `talk` is
-  // the ONE live pill, on the watch's screen once the run has landed (cqw-
-  // sized, floored at 12px, one line); `talkHint` is only the "nothing
-  // heard" retry in the row under the watch; `talkLabel` is both buttons'
-  // accessible name
+  // the ONE live pill on the watch's screen (cqw-sized, floored at 12px, one
+  // line); since 2026-10-19 (live only) it is there AT REST. `talkLabel` is
+  // its accessible name. (`talkHint`, the row's "nothing heard" retry, and
+  // `replay` left with the art run, 2026-10-19)
   talk: "Try it with your voice",
-  talkHint: "try it with your voice",
   talkLabel: "Try it with your own voice: say your own things to do and watch them become tickets",
-  // the foot under the watch: the hint at rest; the replay pill (the phone's,
-  // word for word) once the run has landed
-  hintRest: "tap to stop",
-  replay: "Replay",
+  // the foot under the watch at rest: the live hint. DRAFT (2026-10-19), his
+  // to rewrite; was "tap to stop" (the art run's)
+  hintRest: "say a few things you have to do",
   listening: "listening",
   privacy: "your voice goes to your browser's speech service, the words to Claude. this site keeps nothing.",
   asking: "allow the microphone, then talk.",
