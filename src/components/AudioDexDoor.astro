@@ -1,0 +1,438 @@
+---
+/**
+ * AudioDexDoor — the AudioDex sheet's object (2026-10-15, round two; Jon: "a side by side, more like Crediverso",
+ * "as few texts as possible … experiential unless words are required").
+ *
+ * TWO PHONES, ONE WORD. Left: Voice Memos, the same recordings as "New Recording 118, 117 …". Right: AudioDex, the
+ * same files named by what is inside them. A press on either phone types `thanksgiving` into BOTH searches at once:
+ * Voice Memos answers "No Results" (the word is never said in the memo and the file is a number), AudioDex finds the
+ * memo and the song it became, a fingertip opens the memo, and it plays: the REAL memo (the first 18 s of the
+ * Thanksgiving A Capella tape, Jon's family singing him a note), its words lighting as they are said. The last row
+ * the song comes out of the phone as the host's cassette (slot "tape"): its press lands the music room and plays it.
+ *
+ * The words live in src/data/audiodex-scene.json. The phones' own UI carries the labels (their large titles are the
+ * app names); no captions, no rail. THE SLOT: `moment.clip` plays only when the file exists at build time
+ * (public/archive/thanksgiving.m4a); without it the key is drawn, dimmed and inert.
+ *
+ * Stages on the root, cumulative: s1 searching (typing) · s2 the answers · s3 the fingertip · s4 the memo · done.
+ * NOTHING PRESSES ITSELF: the run starts only from a press; the host never fires it.
+ */
+import fs from 'node:fs';
+import path from 'node:path';
+import scene from '../data/audiodex-scene.json';
+
+const { query, keystrokes, rows, results, moment } = scene;
+const clip: string | null =
+  moment.clip && fs.existsSync(path.join(process.cwd(), 'public', moment.clip.replace(/^\//, ''))) ? moment.clip : null;
+
+/** split a title around the query (case-insensitive) so the word can be lit */
+const lit = (s: string): [string, string, string] => {
+  const i = s.toLowerCase().indexOf(query.toLowerCase());
+  return i < 0 ? [s, '', ''] : [s.slice(0, i), s.slice(i, i + query.length), s.slice(i + query.length)];
+};
+const bars = moment.peaks.map((p, i) => ({ x: i * 4, h: Math.max(6, p * 96) }));
+const waveW = moment.peaks.length * 4;
+const memo = results.find((r) => r.kind === 'memo');
+---
+
+<section class="adx" data-adx data-strokes={JSON.stringify(keystrokes)} data-query={query} data-secs={moment.seconds}>
+  <div class="adx-pair">
+    {/* VOICE MEMOS: the files as the phone names them */}
+    <div class="adx-phone adx-vm">
+      <i class="shadow" aria-hidden="true"></i>
+      <div class="screen" aria-hidden="true">
+        <div class="face">
+          <div class="top"><span class="vm-edit">Edit</span></div>
+          <p class="big">Voice Memos</p>
+          <div class="field"><svg viewBox="0 0 20 20" class="ico"><circle cx="8.5" cy="8.5" r="5.5" fill="none" stroke="currentColor" stroke-width="2"/><path d="M13 13l4.5 4.5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg><span class="q" data-q></span><span class="caret"></span><span class="ph">Search</span></div>
+          <ul class="list">
+            {rows.map((r) => (
+              <li class="row"><span class="name">{r.stock}</span><span class="meta"><span>{r.date}</span><span class="mono">{r.len}</span></span></li>
+            ))}
+          </ul>
+          <div class="none"><p class="none-t">No Results</p><p class="none-s">for “{query}”</p></div>
+          <div class="vm-bar"><span class="vm-rec"></span></div>
+        </div>
+      </div>
+      <img class="body" src="/archive/phone-blank.png" alt="" width="864" height="1760" decoding="async" loading="lazy" draggable="false" />
+      <button class="tap" type="button" data-adx-tap tabindex="-1" aria-hidden="true"></button>
+    </div>
+
+    {/* AUDIODEX: the same files, named by what is inside them */}
+    <div class="adx-phone adx-dex">
+      {/* THE TAPE (2026-10-15): the host's cassette, tucked behind the phone, slides out once the memo is open */}
+      {Astro.slots.has('tape') && <div class="tape-slot" data-tape-slot inert><slot name="tape" /></div>}
+      <i class="shadow" aria-hidden="true"></i>
+      <div class="screen">
+        <div class="face face-lib" aria-hidden="true">
+          <div class="top"></div>
+          <p class="big">AudioDex</p>
+          <div class="field"><svg viewBox="0 0 20 20" class="ico"><circle cx="8.5" cy="8.5" r="5.5" fill="none" stroke="currentColor" stroke-width="2"/><path d="M13 13l4.5 4.5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg><span class="q" data-q></span><span class="caret"></span><span class="ph">Search everything</span></div>
+          <ul class="list">
+            {rows.map((r) => (
+              <li class="row"><span class="name">{r.name}</span><span class="meta"><span>{r.date}</span><span class="mono">{r.len}</span></span></li>
+            ))}
+          </ul>
+          <ul class="hits">
+            {results.map((r, i) => {
+              const [a, b, c] = lit(r.title);
+              return (
+                <li class:list={['hit', `hit-${r.kind}`]} style={`--i:${i}`}>
+                  {r.kind === 'song' && r.cover
+                    ? <img class="hit-ico" src={r.cover} alt="" width="60" height="60" loading="lazy" decoding="async" />
+                    : <i class="hit-ico hit-wave"><svg viewBox="0 0 24 24"><path d="M4 11v2M8 8v8M12 5v14M16 9v6M20 11v2" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" fill="none"/></svg></i>}
+                  <span class="hit-t">{a}{b && <mark>{b}</mark>}{c}</span>
+                  <span class="hit-d">{r.date}</span>
+                  <span class="hit-m">{r.meta}</span>
+                </li>
+              );
+            })}
+          </ul>
+        </div>
+
+        {/* THE MEMO: pushed in like an iOS detail view; its controls are live only once it is on screen */}
+        <div class="face face-memo" data-memo inert>
+          <div class="back" aria-hidden="true">‹ Search</div>
+          <p class="m-title" aria-hidden="true">{moment.title}</p>
+          <p class="m-meta" aria-hidden="true">
+            <span>{moment.date}</span><span class="mono">{moment.len}</span>
+            {moment.tags.map((t) => <span>{t}</span>)}
+            <b class="m-note mono">{moment.note}</b>
+          </p>
+          <svg class="m-wave" viewBox={`0 0 ${waveW} 100`} preserveAspectRatio="none" aria-hidden="true">
+            {bars.map((b, i) => <rect x={b.x} y={50 - b.h / 2} width="2.6" height={b.h} rx="1.3" style={`--i:${i}`} data-bar />)}
+          </svg>
+          {/* every line Whisper heard, as a lyric view: a window that follows the line being said */}
+          <div class="m-lyr" aria-hidden="true">
+            <ol class="m-lines" data-lines>
+              {moment.lines.map((l) => <li data-t0={l.t0} data-t1={l.t1}>{l.text}</li>)}
+            </ol>
+          </div>
+          <div class="m-play">
+            <button
+              class="play" type="button" data-play
+              aria-label={clip ? `Play the memo: ${moment.lines.map((l) => l.text).join(' ')}` : 'The memo is not here yet'}
+              aria-disabled={clip ? undefined : 'true'}
+              tabindex={clip ? undefined : -1}
+            >
+              <svg viewBox="0 0 20 20" class="i-play"><path d="M6 3.5v13l10-6.5z" fill="currentColor"/></svg>
+              <svg viewBox="0 0 20 20" class="i-pause"><path d="M5 4h3.5v12H5zM11.5 4H15v12h-3.5z" fill="currentColor"/></svg>
+            </button>
+            <span class="m-clock mono" aria-hidden="true"><span data-clock>0:00</span> / {moment.len}</span>
+          </div>
+        </div>
+      </div>
+      <img class="body" src="/archive/phone-blank.png" alt="" width="864" height="1760" decoding="async" loading="lazy" draggable="false" />
+      <button class="tap" type="button" data-adx-tap aria-label={`Search both phones for “${query}”`}></button>
+    </div>
+  </div>
+
+  <div class="foot">
+    <p class="hint" aria-hidden="true">tap to search</p>
+    <button type="button" class="replay" data-replay aria-label="Replay the search">
+      <svg viewBox="0 0 20 20" class="ico" aria-hidden="true"><path d="M4 10a6 6 0 1 0 1.8-4.3" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M4 3v3.5h3.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      Replay
+    </button>
+  </div>
+  {clip && <audio preload="none" src={clip}></audio>}
+  <p class="sr" role="status" aria-live="polite" data-status></p>
+</section>
+
+<style>
+  .adx {
+    --ink: #141210;
+    --ground: #e9e8e5;
+    --ring-a: #47B6FF; --ring-b: #8A5CF6; /* the touch signal: the watch's ring's pair */
+    --sfg: #f5f5f7; --sdim: #98989e; --sline: rgba(255, 255, 255, 0.14); --sfield: #1c1c1e; --sacc: #f2b25b; --rec: #ff453a;
+    --hint-mix: 88%; /* #b9701a mixed toward the sheet ink until 4.5:1 (ArchiveHero's rule) */
+    --sans: 'Instrument Sans', system-ui, sans-serif;
+    --mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+    container: adx / inline-size;
+    width: 100%;
+    color: var(--ink);
+    font-family: var(--sans);
+  }
+  :global(html[data-night]) .adx { --ink: #e8ecf4; --ground: #0b0e14; --hint-mix: 92%; }
+  .mono { font-family: var(--mono); font-variant-numeric: tabular-nums; }
+  .sr { position: absolute; width: 1px; height: 1px; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+  .ico { width: 1em; height: 1em; flex: none; }
+
+  /* ── the pair: two equal phones, one gutter, centred; stacked on a narrow sheet */
+  .adx-pair {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, var(--adx-w, 34cqw)));
+    justify-content: center;
+    column-gap: var(--adx-gap, 10cqw);
+  }
+  /* stacked on a narrow sheet: Voice Memos a step smaller (it only has to say No Results), AudioDex full */
+  @container adx (max-width: 619px) {
+    .adx-pair { grid-template-columns: minmax(0, 76cqw); row-gap: 28px; }
+    .adx-vm { width: 62cqw; justify-self: center; }
+  }
+
+  /* ── a phone (the photographed body, the screen drawn under its cut-out) */
+  .adx-phone {
+    position: relative;
+    aspect-ratio: 864 / 1760;
+    container: phone / inline-size;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .shadow { position: absolute; inset: 0.6% 1.2%; border-radius: 16.2% / 7.95%; box-shadow: 0 2.2cqw 5cqw rgba(20, 16, 10, 0.26), 0 0.6cqw 1.4cqw rgba(20, 16, 10, 0.16); }
+  :global(html[data-night]) .adx .shadow { box-shadow: 0 2.6cqw 6cqw rgba(0, 0, 0, 0.7), 0 0.6cqw 1.4cqw rgba(0, 0, 0, 0.5); }
+  .screen {
+    position: absolute; z-index: 1; left: 4.745%; top: 1.875%; width: 90.51%; height: 96.25%;
+    border-radius: 13.8% / 6.38%; background: #000; color: var(--sfg); overflow: hidden;
+    -webkit-font-smoothing: antialiased;
+  }
+  .body { position: absolute; inset: 0; z-index: 2; width: 100%; height: 100%; pointer-events: none; user-select: none; }
+  .tap {
+    position: absolute; z-index: 3; left: 4.745%; top: 1.875%; width: 90.51%; height: 96.25%;
+    margin: 0; padding: 0; border: 0; background: transparent; border-radius: 13.8% / 6.38%; cursor: pointer;
+  }
+  .tap:focus-visible { outline: 0.7cqw solid var(--sacc); outline-offset: -0.7cqw; }
+  /* THE TOUCH SIGNAL (one vocabulary with the watch): the rim and its inward light breathe until a press */
+  .tap::before, .tap::after { content: ''; position: absolute; inset: 0; border-radius: inherit; pointer-events: none; animation: touch-breathe 2s ease-in-out infinite; transition: opacity 0.35s; }
+  .tap::after {
+    box-sizing: border-box; padding: 0.7cqw; background: linear-gradient(135deg, var(--ring-a), var(--ring-b));
+    -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); -webkit-mask-composite: xor;
+    mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); mask-composite: exclude;
+  }
+  .tap::before { box-shadow: inset 2.5cqw 2.5cqw 6cqw color-mix(in oklab, var(--ring-a) 55%, transparent), inset -2.5cqw -2.5cqw 6cqw color-mix(in oklab, var(--ring-b) 55%, transparent); }
+  .adx-pair:has(.tap:hover) .tap::before, .adx-pair:has(.tap:hover) .tap::after { animation: none; opacity: 1; }
+  /* an EXACT COPY of the watch's keyframe (IntakeHero.astro): change both or neither */
+  @keyframes touch-breathe { 0%, 100% { opacity: 0.45; } 50% { opacity: 1; } }
+  .s1 .tap { visibility: hidden; pointer-events: none; }
+
+  /* ── the faces: iOS large title, a search field, a list */
+  .face { position: absolute; inset: 0; display: flex; flex-direction: column; padding: 13cqw 5.4cqw 0; font-size: 4.3cqw; line-height: 1.25; }
+  .top { display: flex; justify-content: flex-end; min-height: 4.9cqw; margin-bottom: 1.2cqw; }
+  .vm-edit { color: var(--rec); }
+  .big { margin: 0 0 3cqw; font-size: 7.6cqw; font-weight: 700; letter-spacing: -0.02em; line-height: 1.1; }
+  .adx-dex .big { color: var(--sacc); }
+  .field { display: flex; align-items: center; gap: 1.6cqw; min-height: 8.4cqw; padding: 1.9cqw 2.6cqw; border-radius: 2.4cqw; background: var(--sfield); color: var(--sdim); margin-bottom: 1.6cqw; }
+  .q { color: var(--sfg); white-space: pre; }
+  .caret { display: none; width: 0.11em; height: 1.05em; margin-left: -1cqw; background: var(--sacc); }
+  .s1:not(.s2) .caret { display: block; animation: blink 1s steps(1, end) infinite; }
+  .s1 .ph { display: none; }
+  @keyframes blink { 50% { opacity: 0; } }
+  .list { list-style: none; margin: 0; padding: 0; transition: opacity 0.3s; }
+  .row { display: grid; gap: 0.9cqw; padding: 2.9cqw 0; border-bottom: 1px solid var(--sline); }
+  .name { font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .meta { display: flex; justify-content: space-between; font-size: 3.6cqw; color: var(--sdim); }
+  .s2 .list { opacity: 0; }
+  .vm-bar { margin: auto -5.4cqw 0; padding: 3.2cqw 0 6.5cqw; background: var(--sfield); display: flex; justify-content: center; }
+  .vm-rec { width: 13cqw; height: 13cqw; border-radius: 50%; background: var(--rec); box-shadow: 0 0 0 1cqw var(--sfield), 0 0 0 1.6cqw #f5f5f7; }
+
+  /* Voice Memos' answer */
+  .none { position: absolute; left: 0; right: 0; top: 64cqw; text-align: center; opacity: 0; transition: opacity 0.35s; }
+  .none-t { margin: 0 0 1.4cqw; font-size: 6cqw; font-weight: 700; }
+  .none-s { margin: 0; font-size: 3.6cqw; color: var(--sdim); }
+  .s2 .none { opacity: 1; transition-delay: 0.15s; }
+
+  /* AudioDex's answer: the memo, then the song it became */
+  .hits { position: absolute; left: 5.4cqw; right: 5.4cqw; top: 42cqw; list-style: none; margin: 0; padding: 0; }
+  .hit {
+    position: relative; display: grid; grid-template-columns: 15cqw minmax(0, 1fr); column-gap: 3.4cqw; row-gap: 0.8cqw;
+    align-items: center; padding: 3.6cqw 0; border-bottom: 1px solid var(--sline);
+    opacity: 0; transform: translateY(2cqw);
+  }
+  .s2 .hit { opacity: 1; transform: none; transition: opacity 0.35s calc(0.1s + var(--i) * 120ms), transform 0.5s cubic-bezier(0.2, 0.8, 0.2, 1) calc(0.1s + var(--i) * 120ms); }
+  .hit-ico { grid-row: span 3; align-self: start; width: 15cqw; height: 15cqw; border-radius: 2.8cqw; object-fit: cover; display: block; }
+  .hit-wave { display: grid; place-items: center; background: color-mix(in oklab, var(--sacc) 22%, #000); color: var(--sacc); }
+  .hit-wave svg { width: 62%; height: 62%; }
+  .hit-t { font-size: 4.8cqw; font-weight: 600; line-height: 1.2; }
+  /* the date reads first after the title (Jon: "the dates should be more noticeable") */
+  .hit-d { font-size: 4.3cqw; font-weight: 600; color: var(--sfg); font-variant-numeric: tabular-nums; }
+  .hit-m { font-size: 3.6cqw; color: var(--sdim); }
+  mark { background: transparent; color: var(--sacc); }
+  /* the fingertip on the memo, then it opens */
+  .hit-memo::after { content: ''; position: absolute; left: 40%; top: 50%; width: 9cqw; height: 9cqw; margin: -4.5cqw 0 0 -4.5cqw; border-radius: 50%; background: rgba(255, 255, 255, 0.6); opacity: 0; pointer-events: none; }
+  .s3 .hit-memo::after { animation: touch 0.75s ease both; }
+  .s3 .hit-memo { background: rgba(255, 255, 255, 0.07); border-radius: 2cqw; }
+  @keyframes touch { 0% { opacity: 0; transform: scale(0.5); } 35% { opacity: 0.75; transform: scale(1); } 100% { opacity: 0; transform: scale(1.25); } }
+
+  /* ── THE MEMO: an iOS push from the right */
+  .face-lib { transition: transform 0.5s cubic-bezier(0.2, 0.8, 0.2, 1), opacity 0.5s; }
+  .s4 .face-lib { transform: translateX(-28%); opacity: 0; }
+  .face-memo { gap: 2.6cqw; background: #000; transform: translateX(100%); transition: transform 0.5s cubic-bezier(0.2, 0.8, 0.2, 1); }
+  .s4 .face-memo { transform: none; }
+  .back { color: var(--sacc); min-height: 4.9cqw; margin-bottom: 1.4cqw; }
+  .m-title { margin: 0; font-size: 6.6cqw; font-weight: 700; letter-spacing: -0.015em; line-height: 1.15; }
+  .m-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 1cqw 2.2cqw; margin: 0; font-size: 3.7cqw; color: var(--sdim); }
+  .m-note { padding: 0.6cqw 1.8cqw; border-radius: 999px; background: color-mix(in oklab, var(--sacc) 22%, #000); color: var(--sacc); font-size: 3.4cqw; font-weight: 600; }
+  .m-wave { display: block; width: 100%; height: 24cqw; margin: 3cqw 0 2cqw; }
+  .m-wave rect { fill: #4a4a4e; transition: fill 0.2s; }
+  .m-wave rect.on { fill: var(--sacc); }
+  .m-lyr {
+    position: relative; height: 46cqw; overflow: hidden;
+    -webkit-mask: linear-gradient(#000 0 78%, transparent); mask: linear-gradient(#000 0 78%, transparent);
+  }
+  .m-lines { list-style: none; margin: 0; padding: 0; display: grid; gap: 2.2cqw; font-size: 5.4cqw; font-weight: 600; line-height: 1.25; color: #5a5a5f; transition: transform 0.5s cubic-bezier(0.2, 0.8, 0.2, 1); }
+  .m-lines li { transition: color 0.25s; }
+  .m-lines li.on { color: var(--sfg); }
+  .m-play { display: flex; align-items: center; gap: 3.4cqw; margin-top: 1cqw; }
+  .play {
+    display: grid; place-items: center; width: 15cqw; height: 15cqw; padding: 0; border: 0; border-radius: 50%;
+    background: var(--sfg); color: #000; cursor: pointer;
+  }
+  .play svg { width: 46%; height: 46%; }
+  .play .i-play { margin-left: 8%; }
+  .play .i-pause, .play.is-playing .i-play { display: none; }
+  .play.is-playing .i-pause { display: block; }
+  .play:focus-visible { outline: 0.6cqw solid var(--sacc); outline-offset: 0.6cqw; }
+  .play[aria-disabled='true'] { opacity: 0.32; cursor: default; }
+  .m-clock { font-size: 3.6cqw; color: var(--sdim); }
+
+  /* ── THE TAPE: what the memo became, coming out of the phone. Tucked behind its right edge at rest, it slides out
+     (and tips) once the memo is open; on a narrow sheet it drops out of the phone's foot instead, into a reserved
+     slot, so nothing below moves. The host draws the tape itself (StudioOne, slot "tape"). */
+  .tape-slot {
+    position: absolute; z-index: 0; left: 62%; top: 58%; width: 44cqw; /* small enough to stay on the sheet's white (Jon) */
+    transform: translateX(-30%); opacity: 0; pointer-events: none;
+    transition: transform 0.7s cubic-bezier(0.2, 0.9, 0.25, 1.1), opacity 0.3s;
+  }
+  .s4 .tape-slot { transform: translateX(52%) rotate(-5deg); opacity: 1; pointer-events: auto; transition-delay: 0.9s, 0.9s; }
+  @container adx (max-width: 619px) {
+    .adx-dex { margin-bottom: 42cqw; }
+    .tape-slot { left: 50%; top: auto; bottom: 0; width: 52cqw; transform: translate(-50%, -10%); }
+    .s4 .tape-slot { transform: translate(-50%, 100%) rotate(-3deg); }
+  }
+
+  /* ── the foot: the hint at rest, Replay once the memo is open; one slot, so nothing below moves */
+  .foot { display: grid; min-height: 30px; margin-top: 16px; align-items: start; justify-items: center; }
+  .foot > * { grid-area: 1 / 1; }
+  .hint {
+    margin: 0; text-align: center; font: 600 0.6875rem/1.5 var(--mono); letter-spacing: 0.12em;
+    color: color-mix(in oklab, var(--sheet-acc, #b9701a) var(--hint-mix), var(--sheet-ink, var(--ink)));
+    transition: opacity 0.3s, color 560ms ease;
+  }
+  .s1 .hint { opacity: 0; }
+  /* THE REPLAY: the watch's foot carries the same pill (IntakeHero's .replay); change both or neither */
+  .replay {
+    display: inline-flex; align-items: center; gap: 6px; padding: 8px 14px; border: 0; border-radius: 999px;
+    background: var(--ink); color: var(--ground); font: 500 0.72rem/1 var(--mono); letter-spacing: 0.04em;
+    cursor: pointer; opacity: 0; pointer-events: none; transition: opacity 0.4s, background 120ms, color 560ms ease;
+  }
+  .replay .ico { width: 1.1em; height: 1.1em; }
+  .replay:hover { background: color-mix(in oklab, var(--ink) 82%, var(--ground)); }
+  .replay:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+  .done .replay { opacity: 1; pointer-events: auto; transition: opacity 0.6s 0.8s, background 120ms, color 560ms ease; }
+
+  @media (prefers-reduced-motion: reduce) {
+    .tap::before, .tap::after { animation: none; opacity: 0.75; }
+    .face-lib, .face-memo, .hit, .s2 .hit { transition: opacity 0.2s; transform: none; }
+    .face-memo { opacity: 0; }
+    .s4 .face-memo { opacity: 1; }
+    .s4 .face-lib { transform: none; }
+    .s3 .hit-memo::after { animation: none; }
+    .tape-slot, .s4 .tape-slot { transition: opacity 0.2s; }
+    .s1:not(.s2) .caret { animation: none; }
+  }
+</style>
+
+<script>
+  /* Drives every [data-adx]. Plain JS. One press types the word into both phones; nothing starts by itself. */
+  const CHAR_MS = 150; // a letter (the watch's phone typed at 180; this run is snappier)
+  const BS_MS = 110; // a backspace
+  const STAGES = ['s1', 's2', 's3', 's4', 'done'];
+
+  function init(root) {
+    if (root.dataset.ready) return;
+    root.dataset.ready = '1';
+    const taps = Array.from(root.querySelectorAll('[data-adx-tap]'));
+    const replay = root.querySelector('[data-replay]');
+    const status = root.querySelector('[data-status]');
+    const qs = Array.from(root.querySelectorAll('[data-q]'));
+    const memo = root.querySelector('[data-memo]');
+    const play = root.querySelector('[data-play]');
+    const audio = root.querySelector('audio');
+    const bars = Array.from(root.querySelectorAll('[data-bar]'));
+    const lines = Array.from(root.querySelectorAll('[data-t0]'));
+    const list = root.querySelector('[data-lines]');
+    let shown = -1;
+    const clock = root.querySelector('[data-clock]');
+    const secs = Number(root.dataset.secs) || 18;
+    const query = root.dataset.query || '';
+    let strokes = [];
+    try { strokes = JSON.parse(root.dataset.strokes || '[]'); } catch (e) { strokes = Array.from(query); }
+    const reduce = window.matchMedia('(prefers-reduced-motion: reduce)');
+    let timers = [];
+    let running = false;
+    const later = (ms, fn) => timers.push(window.setTimeout(fn, ms));
+    const say = (msg) => { if (status) { status.textContent = ''; later(30, () => { status.textContent = msg; }); } };
+    const setQ = (t) => qs.forEach((q) => { q.textContent = t; });
+    const tapeSlot = root.querySelector('[data-tape-slot]');
+    const live = (on) => { if (memo) memo.inert = !on; if (tapeSlot && !on) tapeSlot.inert = true; };
+    const fmt = (t) => `${Math.floor(t / 60)}:${String(Math.floor(t % 60)).padStart(2, '0')}`;
+
+    // the memo playing: the bars fill in the accent as it plays, the line being said lights
+    const paint = (t) => {
+      const n = Math.round((t / secs) * bars.length);
+      bars.forEach((b, i) => b.classList.toggle('on', i < n));
+      let at = -1;
+      lines.forEach((l, i) => { const on = t >= Number(l.dataset.t0) && t < Number(l.dataset.t1) + 0.4; l.classList.toggle('on', on); if (on) at = i; });
+      // the window follows: the line being said stands second from the top (the first at rest)
+      if (list && at !== -1 && at !== shown) {
+        shown = at;
+        const prev = lines[Math.max(0, at - 1)];
+        list.style.transform = at > 0 ? `translateY(${-prev.offsetTop}px)` : '';
+      }
+      if (list && t === 0) { shown = -1; list.style.transform = ''; }
+      if (clock) clock.textContent = fmt(t);
+    };
+    const stop = () => {
+      if (!audio || !play) return;
+      audio.pause();
+      play.classList.remove('is-playing');
+    };
+    if (audio && play && play.getAttribute('aria-disabled') !== 'true') {
+      play.addEventListener('click', () => {
+        if (!audio.paused) { stop(); return; }
+        if (audio.ended || audio.currentTime >= secs - 0.05) audio.currentTime = 0;
+        audio.play().then(() => play.classList.add('is-playing')).catch(() => {});
+      });
+      audio.addEventListener('timeupdate', () => paint(audio.currentTime));
+      audio.addEventListener('ended', () => { stop(); paint(secs); });
+      audio.addEventListener('pause', () => play.classList.remove('is-playing')); // paused from outside (the tape jump)
+    }
+
+    const reset = () => {
+      timers.forEach(clearTimeout); timers = [];
+      stop();
+      if (audio) { try { audio.currentTime = 0; } catch (e) {} }
+      paint(0);
+      root.classList.remove(...STAGES);
+      setQ('');
+      live(false);
+    };
+    const run = () => {
+      if (running) return;
+      running = true;
+      reset();
+      root.classList.add('s1');
+      say(`Searching both phones for “${query}”.`);
+      let t = reduce.matches ? 0 : 350;
+      if (reduce.matches) setQ(query);
+      else {
+        let text = '';
+        strokes.forEach((k) => {
+          later(t, () => { text = k === '⌫' ? text.slice(0, -1) : text + k; setQ(text); });
+          t += k === '⌫' ? BS_MS : CHAR_MS;
+        });
+      }
+      t += reduce.matches ? 300 : 450;
+      later(t, () => { setQ(query); root.classList.add('s2'); say('Voice Memos: no results. AudioDex: the memo, and the song it became.'); });
+      t += reduce.matches ? 1200 : 3000; // the answers held long enough to read both phones (Jon: "a bit longer")
+      later(t, () => root.classList.add('s3'));
+      t += reduce.matches ? 200 : 650;
+      later(t, () => { root.classList.add('s4'); live(true); if (tapeSlot) tapeSlot.inert = false; say('The memo is open. It became a song: the tape beside the phone plays it.'); });
+      t += reduce.matches ? 200 : 700;
+      later(t, () => { root.classList.add('done'); running = false; });
+    };
+    taps.forEach((b) => b.addEventListener('click', run));
+    if (replay) replay.addEventListener('click', () => { running = false; run(); });
+  }
+  const all = () => document.querySelectorAll('[data-adx]').forEach(init);
+  all();
+  document.addEventListener('astro:page-load', all);
+</script>

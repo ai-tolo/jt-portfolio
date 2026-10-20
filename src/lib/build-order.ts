@@ -3,7 +3,8 @@
 // is the page's: AudioDex, then Intake (the work room), then SIGNAL (the play room), then Signal Studio (its own
 // room, #studio, after the play room). The rail names the builds in words only (round two, 2026-10-13: no
 // numerals there). Adding, removing or reordering a build is an edit here and nowhere else; never type "03" in markup.
-export const BUILD_ORDER = ["audiodex", "intake", "signal", "studio"] as const;
+// 2026-10-15 (Jon): Intake first ("a better hook"), then AudioDex, the floor it stands on
+export const BUILD_ORDER = ["intake", "audiodex", "signal", "studio"] as const;
 export type BuildId = (typeof BUILD_ORDER)[number];
 
 const two = (n: number): string => String(n).padStart(2, "0");

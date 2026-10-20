@@ -22,36 +22,46 @@ import Transport from "../Transport.astro";
 import Carousel from "../Carousel.astro";
 import { BUILDS, type BuildBlock } from "./builds-copy";
 import IntakeHero from "../IntakeHero.astro";
-import ArchiveHero from "../ArchiveHero.astro";
+import AudioDexDoor from "../AudioDexDoor.astro";
 import SignalCard from "../signal/SignalCard.astro";
-import { SPEC, type SpecRow } from "./depth-copy";
-// the hood's steps in two columns with their own spines (a CSS column break
-// would leave the first column's line running past its last step)
-const halves = (rows: SpecRow[]): SpecRow[][] => {
-  const cut = Math.ceil(rows.length / 2);
-  return [rows.slice(0, cut), rows.slice(cut)];
-};
+// SIX MOMENTS (2026-10-15, round four): the Studio sheet's object, six crops
+// of the real thing each in the state that makes its point (StudioMoments.astro;
+// the words in objects-copy.ts). The frames' pixels are the capture's (2× of
+// a 1106×622 or 760×428 CSS crop; scratchpad cap/moments.mjs + take.mjs).
+import StudioMoments from "./StudioMoments.astro";
+const MOMENT_FRAMES = Object.fromEntries(STUDIO_COPY.moments.map((m) => {
+  const wide = ["engines", "effects", "hands", "take"].includes(m.id);
+  return [m.id, { src: `/builds/studio/moment-${m.id}.webp`, width: wide ? 2212 : 1520, height: wide ? 1244 : 856, alt: m.alt }];
+}));
+import IntakeClock from "./IntakeClock.astro";
+// the sentence the watch replays, printed once in the fold (src/data/intake-run.json)
+import WATCH_RUN from "../../data/intake-run.json";
+// the memo the two phones search for (src/data/audiodex-scene.json): its hood draws the same file
+import ADX from "../../data/audiodex-scene.json";
+// AUDIODEX'S HOOD (2026-10-15, round two): five things the system wrote about the one memo, each a picture or a
+// word big enough to read at a glance; the stage word above it is the only label
+const adxBars = ADX.moment.peaks.map((p, i) => ({ x: i * 4, h: Math.max(8, p * 96) }));
+const adxLine = ADX.moment.lines.find((l) => /flat/i.test(l.text))?.text ?? ADX.moment.lines[0].text;
 import { WATCH_COPY, ARCHIVE_COPY, STUDIO_COPY } from "./objects-copy";
 import SiteFloor from "./SiteFloor.astro";
 // THE SHEET (2026-10-13): the anatomy the builds share (src/styles/sheet.css).
 // Round two (Jon): no numbers on the sheets; the kind word stands over each name.
 import "../../styles/sheet.css";
 
-// The one-liner. Jon rewrites this string at will (his voice: plain,
-// human-centered function; explicitly NOT music-dramatic).
-const ONE_LINER = "I design tools around how people actually use them.";
+// the hero liner ("I design tools around how people actually use them.") was DROPPED 2026-10-15 (Jon: "never really liked it")
 
 const pub = (f: string) => path.join(process.cwd(), "public", "studio", f);
 const exists = (f: string) => fs.existsSync(pub(f));
 const etchAsset = ["etch.svg", "etch.webp", "etch.png"].filter(exists).map((f) => `/studio/${f}`)[0];
-// SIGNAL STUDIO's captures (2026-10-13): a capture's `src` (and `poster`) in
-// objects-copy.ts names a file under public/; it is kept only when that file
-// is there at build time, so a slot whose recording has not landed renders
-// the honest pending frame, never a broken video. Dropping the file in and
-// rebuilding is the whole upload.
+// SIGNAL STUDIO's captures (2026-10-13; the circumstances, 2026-10-15): a
+// capture's `src` in objects-copy.ts names a file under public/ without its
+// extension; the first of .mp4 / .webm that is there at build time is kept, so
+// a slot whose recording has not landed renders the honest empty frame, never
+// a broken video. Dropping the file in and rebuilding is the whole upload.
 const inPublic = (url?: string | null) =>
   url && fs.existsSync(path.join(process.cwd(), "public", url.replace(/^\//, ""))) ? url : null;
-const captures = STUDIO_COPY.captures.map((c) => ({ ...c, src: inPublic(c.src), poster: inPublic(c.poster) }));
+const CAPTURE_EXT = [".mp4", ".webm"];
+const captures = STUDIO_COPY.captures.map((c) => ({ ...c, src: CAPTURE_EXT.map((e) => inPublic(c.src + e)).find(Boolean) ?? null }));
 
 interface Track { src: string | null; title: string; note?: string; year?: number; duration?: string; peaks?: string | null; cover?: string | null; tint?: string | null; }
 const tracks: Track[] = ((soundlab as any).tracks ?? []).filter((t: Track) => t.src);
@@ -133,6 +143,8 @@ const tapeTint = (t: Track, i: number): { day: string; night: string } => {
   return { day: `oklch(0.76 0.145 ${hue})`, night: `oklch(0.66 0.13 ${hue})` };
 };
 const tapes = tracks.map((t, i) => ({ t, fill: tapeTint(t, i) }));
+// the tape the AudioDex memo became (audiodex-scene.json names it by its manifest title)
+const adxTape = tapes.find(({ t }) => t.title === ADX.moment.tape);
 
 interface Illo { src: string; alt: string; title?: string; year?: number; medium?: string; note?: string; }
 const illos: Illo[] = (illustrations as any).items ?? [];
@@ -182,8 +194,8 @@ const NAV: NavBlock[] = (
     {
       key: "builds",
       entries: [
-        { id: "build-archive", room: "work", word: "audiodex" },
         { id: "build-watch", room: "work", word: "intake" },
+        { id: "build-archive", room: "work", word: "audiodex" },
         { id: "play", room: "play", word: "signal" },
         { id: "build-studio", room: "studio", word: "studio" },
       ],
@@ -249,13 +261,12 @@ const columns = (blocks: BuildBlock[]): StoryBlock[][] =>
         )}
         <p class="role-line">design engineer · audio &amp; real-time web</p>
       </div>
-      <p class="liner">{ONE_LINER}</p>
     </header>
 
     {/* the cue (2026-10-13): one word at the hero's foot, so the page says
         it goes on. No motion, no peek (Jon: "the down arrow with builds is
         enough by itself"). */}
-    <a class="cue" href="#work"><span class="cue-arrow" aria-hidden="true">↓</span> builds</a>
+    <a class="cue" href="#work"><span class="cue-arrow" aria-hidden="true">↓</span> builds <span class="cue-arrow" aria-hidden="true">↓</span></a>
   </section>
 
   {/* ── THE SIDEBAR — persistent left column, nav only (Jon, 2026-08-16:
@@ -374,49 +385,7 @@ const columns = (blocks: BuildBlock[]): StoryBlock[][] =>
           then the fold — the hook opens the story, the story and under the
           hood unfold inside the same sheet. AudioDex first: it answers the
           "audio" in the role line. */}
-      <article class="wk sheet" id="build-archive" aria-labelledby="build-archive-t">
-        <header class="band">
-          <p class="sheet-kind">{ARCHIVE_COPY.kind}</p>
-          <h3 class="band-name" id="build-archive-t">{ARCHIVE_COPY.title}</h3>
-          <p class="band-what">{ARCHIVE_COPY.dek}</p>
-        </header>
-        <ArchiveHero story={false}>
-          <p slot="cap" class="wk-cap">{ARCHIVE_COPY.caption}</p>
-        </ArchiveHero>
-        <div class="wk-story" data-story>
-          <p class="wk-lede">{ARCHIVE.headline}</p>
-          <div class="wk-story-clip" id="story-archive" inert>
-            <div class="wk-story-body sheet-cols">
-              {columns(ARCHIVE.blocks).map((col) => (
-                <div class="sheet-col">
-                  {col.map((blk) =>
-                    blk.type === "p" ? <p class:list={["wk-p", "sheet-p", { hinge: blk.hinge }]} set:html={blk.html} /> : <ul class="wk-list">{blk.items.map((it) => <li set:html={it} />)}</ul>
-                  )}
-                </div>
-              ))}
-            </div>
-            <div class="sheet-sec">
-              <p class="sheet-t">{SPEC.archive.title}</p>
-              <div class="sheet-cols">
-                {halves(SPEC.archive.rows).map((col) => (
-                  <ol class="sheet-steps">
-                    {col.map((r) => (
-                      <li class="sheet-step">
-                        <div class="sheet-step-head"><span class="sheet-step-k">{r.k}</span><span class="sheet-step-tool">{r.tool}</span></div>
-                        <p class="sheet-step-p" set:html={r.html} />
-                      </li>
-                    ))}
-                  </ol>
-                ))}
-              </div>
-            </div>
-          </div>
-          <button class="wk-more" type="button" aria-expanded="false" aria-controls="story-archive" aria-label="Read the whole story">
-            <svg class="wk-chev" viewBox="0 0 20 20" aria-hidden="true"><path d="M5 8l5 5 5-5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
-          </button>
-        </div>
-      </article>
-      {/* object two: INTAKE (Jon's Claude Design module, 2026-09-18) */}
+      {/* INTAKE FIRST (Jon, 2026-10-15: "a better hook, more entertaining"; Siri is the laugh): the watch (Jon's Claude Design module, 2026-09-18) */}
       <article class="wk sheet" id="build-watch" aria-labelledby="build-watch-t">
         <header class="band">
           <p class="sheet-kind">{WATCH_COPY.kind}</p>
@@ -429,32 +398,108 @@ const columns = (blocks: BuildBlock[]): StoryBlock[][] =>
         <div class="wk-story" data-story>
           <p class="wk-lede">{WATCH.headline}</p>
           <div class="wk-story-clip" id="story-watch" inert>
-            <div class="wk-story-body sheet-cols">
-              {columns(WATCH.blocks).map((col) => (
-                <div class="sheet-col">
-                  {col.map((blk) =>
-                    blk.type === "p" ? <p class:list={["wk-p", "sheet-p", { hinge: blk.hinge }]} set:html={blk.html} /> : <ul class="wk-list">{blk.items.map((it) => <li set:html={it} />)}</ul>
-                  )}
-                </div>
-              ))}
+            {/* THE WEDDING (2026-10-15, the skim's round two; Jon's interview: Siri makes you say the thought on
+                its clock, Intake has no clock). The fold is one argument: THE SENTENCE, said once → THE SAME
+                SENTENCE TO TWO MACHINES, both real (Jon's Siri screenshot of 2026-10-15 beside his calendar before
+                and after Intake ran the memo the same day) → under the hood as ONE LINE OF TIME (IntakeClock) and
+                the one rule that makes a deleting memo safe → the whole story behind its own label. */}
+            <p class="wk-said">
+              <span class="wk-said-q" aria-hidden="true">“</span>{WATCH_RUN.transcript}<span class="wk-said-q" aria-hidden="true">”</span>
+            </p>
+            <div class="vs">
+              <figure class="vs-side">
+                <figcaption class="sheet-t">said to Siri</figcaption>
+                <img class="vs-img vs-siri" src="/intake/siri-wedding.webp" width="883" height="394" alt="Siri's reply, on an iPhone: There's nothing called “no longer going to the wedding” on your calendar." loading="lazy" decoding="async" />
+              </figure>
+              <figure class="vs-side">
+                <figcaption class="sheet-t">said to the watch</figcaption>
+                <img class="vs-img vs-cal" src="/intake/cal-before.webp" width="923" height="470" alt="The calendar before: Jay and Anisa's wedding filling Friday March 5 through Sunday March 7, 2027." loading="lazy" decoding="async" />
+                <p class="vs-note vs-arrow" aria-hidden="true">↓</p>
+                <img class="vs-img vs-cal" src="/intake/cal-after.webp" width="923" height="640" alt="The calendar after: the wedding gone; Dinner Friday at 6 PM, Yoga Saturday at 9 AM, Sam's birthday Saturday at 8 PM, a thrift run Sunday at 1 PM." loading="lazy" decoding="async" />
+                <p class="vs-note">The wedding left. Four things arrived. Nothing else was touched.</p>
+              </figure>
             </div>
             <div class="sheet-sec">
-              <p class="sheet-t">{SPEC.watch.title}</p>
-              <div class="sheet-cols">
-                {halves(SPEC.watch.rows).map((col) => (
-                  <ol class="sheet-steps">
-                    {col.map((r) => (
-                      <li class="sheet-step">
-                        <div class="sheet-step-head"><span class="sheet-step-k">{r.k}</span><span class="sheet-step-tool">{r.tool}</span></div>
-                        <p class="sheet-step-p" set:html={r.html} />
-                      </li>
-                    ))}
-                  </ol>
+              <p class="sheet-t">under the hood</p>
+              <IntakeClock />
+              <p class="wk-rule">It takes an event off the calendar only when exactly one matches what you said, and it keeps a copy first. Two matches, or none, and it waits in the queue for you.</p>
+            </div>
+            <div class="sheet-sec">
+              <button class="sheet-whole-btn" type="button" aria-expanded="false" aria-controls="whole-watch" data-whole>the whole story <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M5 8l5 5 5-5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+              <div class="wk-story-body sheet-cols sheet-whole-body" id="whole-watch" hidden>
+                {columns(WATCH.blocks).map((col) => (
+                  <div class="sheet-col">
+                    {col.map((blk) =>
+                      blk.type === "p" ? <p class:list={["wk-p", "sheet-p", { hinge: blk.hinge }]} set:html={blk.html} /> : <ul class="wk-list">{blk.items.map((it) => <li set:html={it} />)}</ul>
+                    )}
+                  </div>
                 ))}
               </div>
             </div>
           </div>
           <button class="wk-more" type="button" aria-expanded="false" aria-controls="story-watch" aria-label="Read the whole story">
+            <svg class="wk-chev" viewBox="0 0 20 20" aria-hidden="true"><path d="M5 8l5 5 5-5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </button>
+        </div>
+      </article>
+      {/* AUDIODEX SECOND (2026-10-15): the floor Intake stands on */}
+      <article class="wk sheet" id="build-archive" aria-labelledby="build-archive-t">
+        <header class="band">
+          <p class="sheet-kind">{ARCHIVE_COPY.kind}</p>
+          <h3 class="band-name" id="build-archive-t">{ARCHIVE_COPY.title}</h3>
+          <p class="band-what">{ARCHIVE_COPY.dek}</p>
+        </header>
+        {/* THE OBJECT (2026-10-15, round two): two phones, one word (AudioDexDoor.astro, audiodex-scene.json) */}
+        <AudioDexDoor>
+          {/* THE TAPE (2026-10-15, Jon: the memo "led to an actual track"): the music room's own cassette, wearing the
+              song's label, comes out of the AudioDex phone once the memo is open; a press carries you down to the deck
+              with that tape loaded and playing (the wallet script, [data-tape-jump] + data-tape-play) */}
+          {adxTape && (
+            <button class="adx-tape" type="button" slot="tape" data-tape-jump={adxTape.t.title} data-tape-play data-tape-at={ADX.moment.tapeAt}
+              aria-label={`Hear what it became: ${adxTape.t.title}, in the music room`}
+              style={`--mini-tint:${adxTape.fill.day};--mini-tint-night:${adxTape.fill.night}`}>
+              <span class="mini" aria-hidden="true">
+                <span class="mini-label">{adxTape.t.cover && <img src={adxTape.t.cover} alt="" loading="lazy" decoding="async" />}</span>
+                <img class="mini-shell" src="/studio/tape-shell-800.webp" width="1600" height="979" alt="" loading="lazy" decoding="async" />
+              </span>
+              <span class="adx-tape-w" aria-hidden="true"><span>hear what</span> <span>it became <span class="adx-tape-arrow">↓</span></span></span>
+            </button>
+          )}
+        </AudioDexDoor>
+        <div class="wk-story" data-story>
+          <p class="wk-lede">{ARCHIVE.headline}</p>
+          <div class="wk-story-clip" id="story-archive" inert>
+            {/* THE FOLD (2026-10-15, round two; Jon: "as few texts as possible … they can infer from the image"): the
+                hook stays outside; inside, under the hood as ONE STRIP of what the system wrote about the memo the
+                phones found (a stage word over each), the floor line, then the whole story. No section titles. */}
+            {/* THE LINE (2026-10-15, Jon's words from the interview; the "creepy" hater answered without arguing
+                norms): a camera takes you out of the moment, a voice memo doesn't */}
+            <p class="wk-said"><span class="wk-said-q" aria-hidden="true">“</span>{ARCHIVE_COPY.said}<span class="wk-said-q" aria-hidden="true">”</span></p>
+            <div class="adh-sec">
+              <ol class="adh" aria-label="Under the hood: what AudioDex wrote about the memo">
+                <li><span class="adh-k">heard</span><span class="adh-v adh-q">“{adxLine}”</span></li>
+                <li><span class="adh-k">measured</span><span class="adh-v adh-big">{ADX.moment.note}</span></li>
+                <li><span class="adh-k">named</span><span class="adh-v adh-big adh-word">Thanksgiving</span></li>
+                <li><span class="adh-k">drawn</span><span class="adh-v"><svg class="adh-wave" viewBox={`0 0 ${adxBars.length * 4} 100`} preserveAspectRatio="none" aria-hidden="true">{adxBars.map((w) => <rect x={w.x} y={50 - w.h / 2} width="2.6" height={w.h} rx="1.3" />)}</svg></span></li>
+                <li><span class="adh-k">linked</span><span class="adh-v"><img class="adh-tape" src={ADX.moment.cover} alt={`The tape it became: ${ADX.moment.tape}`} width="120" height="120" loading="lazy" decoding="async" /></span></li>
+              </ol>
+              <p class="wk-rule">{ARCHIVE_COPY.rule}</p>
+            </div>
+            <div class="sheet-sec">
+              <button class="sheet-whole-btn" type="button" aria-expanded="false" aria-controls="whole-archive" data-whole>the whole story <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M5 8l5 5 5-5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+              <div class="wk-story-body sheet-cols sheet-whole-body" id="whole-archive" hidden>
+                {columns(ARCHIVE.blocks).map((col, ci) => (
+                  <div class="sheet-col">
+                    {ci === 0 && <p class="sheet-p wk-whole-lead">{ARCHIVE_COPY.whole}</p>}
+                    {col.map((blk) =>
+                      blk.type === "p" ? <p class:list={["wk-p", "sheet-p", { hinge: blk.hinge }]} set:html={blk.html} /> : <ul class="wk-list">{blk.items.map((it) => <li set:html={it} />)}</ul>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+          <button class="wk-more" type="button" aria-expanded="false" aria-controls="story-archive" aria-label="Read the whole story">
             <svg class="wk-chev" viewBox="0 0 20 20" aria-hidden="true"><path d="M5 8l5 5 5-5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
           </button>
         </div>
@@ -525,23 +570,20 @@ const columns = (blocks: BuildBlock[]): StoryBlock[][] =>
         can play; the exhibit itself is in junkyard/ */}
   </section>
 
-  {/* ── SIGNAL STUDIO (2026-10-13): the fourth build, the whole studio SIGNAL
-      is the web-sized part of. One sheet in its own room, after the play room
-      and before illustrations, the same anatomy as the work room's two: the
-      kind word → the band → THE OBJECT → the mono caption → the fold (the hook
-      always read, the story and under the hood folded behind the handle; the
-      fold script binds every [data-story] itself). THE OBJECT is three screen
-      recordings in one 16:9 frame on THE LOOK ROOM'S CHASSIS (Jon, round
-      three: "the tiny carousel buttons aren't sufficient … adopt the arrow
-      key buttons from the Illustrations UI"): the house Carousel in dissolve,
-      looping, its two keycaps standing outside the frame, the dots above it,
-      the capture's title as the placard under it; ←/→ and swipes step it
-      (keys on, the look room's routing). Until Jon drops the files in
-      (objects-copy.ts STUDIO_COPY.captures; the frontmatter keeps a src only
-      when its file exists), each slide is an HONEST PENDING SLOT: a hairline
-      frame with its caption inside it (left out where the caption only
-      repeats the placard), nothing that pretends to be a frame. Shown on
-      phones too (captures, not the instrument). Words: DRAFT. */}
+  {/* ── SIGNAL STUDIO (2026-10-13; THE SURFACE, 2026-10-15): the fourth build,
+      the whole studio SIGNAL is the web-sized part of. One sheet in its own
+      room, after the play room and before illustrations, the house anatomy:
+      the kind word → the band → THE OBJECT IS SIX MOMENTS (six tabs, the
+      lit moment's line, then a 16:9 crop of the real Studio already in the
+      state that makes the point, the rest dimmed, on the look room's
+      chassis; the first on load; nothing moves the page) → THE CIRCUMSTANCES (three capture frames on the look
+      room's chassis, each titled by the problem with one line of answer;
+      WITH SOUND, a drawn play key, plays on a press only, one at a time,
+      stops off-screen; the honest empty frame with its key dimmed and inert
+      until the file exists at build time) → the fold (the locked hook, the
+      line in Jon's voice, one line under it, the whole story behind its
+      label). NO under-the-hood section: the surface is it. Shown on phones
+      too (the still crops to the lit target there). Words: DRAFT, Jon's. */}
   {SHOW.has("studio") && <section class="studio room" id="studio" aria-labelledby="build-studio-t">
     <article class="wk sheet" id="build-studio" aria-labelledby="build-studio-t">
       <header class="band">
@@ -549,53 +591,48 @@ const columns = (blocks: BuildBlock[]): StoryBlock[][] =>
         <h2 class="band-name" id="build-studio-t">{STUDIO_COPY.title}</h2>
         <p class="band-what">{STUDIO_COPY.dek}</p>
       </header>
-      <div class="st-obj">
-        <Carousel count={captures.length} label="Signal Studio, screen recordings" accent="var(--sheet-acc)" mode="dissolve" dots loop titles={captures.map((c) => c.title)}>
+      <StudioMoments moments={STUDIO_COPY.moments} frames={MOMENT_FRAMES} />
+      {/* THE CIRCUMSTANCES (round five, 2026-10-15; Jon: two kinds of arrows and bubbles on one sheet confused the
+          cycling): no chassis, no cycling. The three frames stand in ONE ROW, each with its problem, its answer and
+          its play key; stacked under 820px of sheet. */}
+      <div class="st-row" data-circumstances>
           {captures.map((c) => (
             <figure class="st-slot" data-pending={c.src ? undefined : ""}>
               <div class="st-frame">
-                {c.src ? (
-                  <video class="st-video" src={c.src} poster={c.poster ?? undefined} muted playsinline loop preload="metadata" autoplay aria-label={c.caption} />
-                ) : c.caption !== c.title && (
-                  <p class="st-cap">{c.caption}</p>
-                )}
+                {c.src && <video class="st-video" src={c.src} playsinline preload="metadata" aria-label={`${c.problem} ${c.answer}`} />}
+                {/* THE PLAY KEY: drawn on every frame; live only once the file is in (AudioDex's rule: gone = the key
+                    drawn, dimmed, inert). A press plays with sound; pressed again it pauses. */}
+                <button class="st-play" type="button" aria-pressed="false" disabled={!c.src}
+                  aria-label={c.src ? `Play, with sound: ${c.problem}` : `Not recorded yet: ${c.problem}`}>
+                  <svg viewBox="0 0 24 24" aria-hidden="true"><path class="st-play-go" d="M8.5 5.5v13l10-6.5z"/><path class="st-play-stop" d="M7.5 6h3.4v12H7.5zM13.1 6h3.4v12h-3.4z"/></svg>
+                </button>
               </div>
-              {/* the placard (the look room's: the title carries the weight, a
-                  quiet line under it): the capture's title; its caption joins
-                  as the second line once the recording is in the frame */}
+              {/* the placard: the PROBLEM carries the weight, the one line of answer under it */}
               <figcaption class="st-placard">
-                <span class="st-title">{c.title}</span>
-                {c.src && <span class="st-meta">{c.caption}</span>}
+                <span class="st-problem">{c.problem}</span>
+                <span class="st-answer">{c.answer}</span>
               </figcaption>
             </figure>
           ))}
-        </Carousel>
-        <p class="wk-cap">{STUDIO_COPY.caption}</p>
       </div>
       <div class="wk-story" data-story>
         <p class="wk-lede">{STUDIO.headline}</p>
         <div class="wk-story-clip" id="story-studio" inert>
-          <div class="wk-story-body sheet-cols">
-            {columns(STUDIO.blocks).map((col) => (
-              <div class="sheet-col">
-                {col.map((blk) =>
-                  blk.type === "p" ? <p class:list={["wk-p", "sheet-p", { hinge: blk.hinge }]} set:html={blk.html} /> : <ul class="wk-list">{blk.items.map((it) => <li set:html={it} />)}</ul>
-                )}
-              </div>
-            ))}
-          </div>
+          {/* THE FOLD (2026-10-15): the line in Jon's voice, the one line under it, then the whole story behind its
+              own label. Nothing else: no beats, no hood (the surface above is the hood). */}
+          <p class="wk-said">
+            <span class="wk-said-q" aria-hidden="true">“</span>{STUDIO_COPY.said}<span class="wk-said-q" aria-hidden="true">”</span>
+          </p>
+          <p class="st-keep">{STUDIO_COPY.keep}</p>
           <div class="sheet-sec">
-            <p class="sheet-t">{SPEC.studio.title}</p>
-            <div class="sheet-cols">
-              {halves(SPEC.studio.rows).map((col) => (
-                <ol class="sheet-steps">
-                  {col.map((r) => (
-                    <li class="sheet-step">
-                      <div class="sheet-step-head"><span class="sheet-step-k">{r.k}</span><span class="sheet-step-tool">{r.tool}</span></div>
-                      <p class="sheet-step-p" set:html={r.html} />
-                    </li>
-                  ))}
-                </ol>
+            <button class="sheet-whole-btn" type="button" aria-expanded="false" aria-controls="whole-studio" data-whole>the whole story <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M5 8l5 5 5-5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+            <div class="wk-story-body sheet-cols sheet-whole-body" id="whole-studio" hidden>
+              {columns(STUDIO.blocks).map((col) => (
+                <div class="sheet-col">
+                  {col.map((blk) =>
+                    blk.type === "p" ? <p class:list={["wk-p", "sheet-p", { hinge: blk.hinge }]} set:html={blk.html} /> : <ul class="wk-list">{blk.items.map((it) => <li set:html={it} />)}</ul>
+                  )}
+                </div>
               ))}
             </div>
           </div>
@@ -879,11 +916,15 @@ const columns = (blocks: BuildBlock[]): StoryBlock[][] =>
     padding: 24px;
     position: relative;
   }
+  /* THE NAME IS CENTRED (2026-10-15, Jon: "centered intuitively with the builds arrow, i.e. the centre of the page
+     excluding the side nav"): the hero's column is the page right of the rail, the cue hangs on its centre line,
+     and the name now stands on the same line, wide and alone; the role line leaves the name and sits just above
+     the cue, a shade bolder */
   .hero-name {
-    width: min(720px, 88%);
+    width: 100%;
   }
   .etch-slot {
-    text-align: left;
+    text-align: center;
   }
   .etch-text {
     margin: 0;
@@ -893,28 +934,30 @@ const columns = (blocks: BuildBlock[]): StoryBlock[][] =>
     letter-spacing: 0.12em;
     text-transform: uppercase;
   }
+  /* THE NAME (2026-10-15): Jon's own hand, cut from a journal page he doodled (IMG_1476, the big one at the foot
+     of the page) as black ink on transparency; a high-res scan replaces the file later, same name. Wider than the
+     old script, so the clamp grew a step; the role line starts on the J's left edge. */
   .etch-img {
     display: block;
-    width: clamp(260px, 30vw, 420px);
+    width: clamp(320px, 46vw, 720px);
     height: auto;
+    margin: 0 auto;
   }
   .role-line {
-    margin: 12px 0 0 4px;
+    position: absolute;
+    left: 50%;
+    bottom: 96px; /* the cue's words end ~57px up; the line stands 40px above them */
+    transform: translateX(-50%);
+    margin: 0;
+    white-space: nowrap;
     font-family: "IBM Plex Mono", ui-monospace, monospace;
-    font-size: 0.74rem;
-    letter-spacing: 0.08em;
-    color: var(--dim);
+    font-size: 0.8125rem;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    color: color-mix(in oklab, var(--ink) 72%, var(--dim));
   }
   :global(html[data-night]) .role-line {
-    color: #7d8798;
-  }
-  .liner {
-    margin: 26px 0 0 auto;
-    font-size: clamp(0.95rem, 1.4vw, 1.05rem);
-    color: var(--dim);
-    max-width: 34ch;
-    line-height: 1.5;
-    text-align: right;
+    color: #aeb7c6;
   }
   /* the cue: one quiet word at the hero's foot, its words 44px above the
      bottom edge (the 12px padding is its hit area; round four, 2026-10-13,
@@ -940,22 +983,15 @@ const columns = (blocks: BuildBlock[]): StoryBlock[][] =>
   .cue:focus-visible {
     color: var(--ink);
   }
-  /* the arrow: larger, bolder, and it moves a little (Jon, round five) */
+  /* 2026-10-15 (Jon: "I dislike the moving arrow, and the lack of symmetry"): an arrow on EACH side of the word,
+     small and still */
   .cue-arrow {
     display: inline-block;
-    margin-right: 0.35em;
-    font-size: 1.55em;
-    font-weight: 700;
-    line-height: 0.8;
-    vertical-align: -0.12em;
-    animation: cue-bob 2.2s ease-in-out infinite;
-  }
-  @keyframes cue-bob {
-    0%, 100% { transform: translateY(0); }
-    50% { transform: translateY(4px); }
-  }
-  @media (prefers-reduced-motion: reduce) {
-    .cue-arrow { animation: none; }
+    margin: 0 0.45em;
+    font-size: 1em;
+    font-weight: 500;
+    line-height: 1;
+    vertical-align: 0;
   }
   :global(html[data-night]) .cue {
     color: #7d8798;
@@ -1288,9 +1324,6 @@ const columns = (blocks: BuildBlock[]): StoryBlock[][] =>
   }
   :global(html[data-night]) .etch-text {
     color: #e8ecf4;
-  }
-  :global(html[data-night]) .liner {
-    color: #7d8798;
   }
   :global(html[data-night]) .lk-title {
     color: #cfd6e2;
@@ -1653,12 +1686,14 @@ const columns = (blocks: BuildBlock[]): StoryBlock[][] =>
     .hero-name {
       width: 100%;
     }
+    /* the role line keeps its place above the cue, which stands above the bar; it may take two lines */
     .role-line {
+      bottom: calc(28px + var(--mbar-h) + env(safe-area-inset-bottom, 0px) + 60px);
+      width: calc(100% - 28px);
+      white-space: normal;
+      text-align: center;
       text-wrap: balance;
-    }
-    .liner {
-      margin-left: 0;
-      text-align: left;
+      line-height: 1.5;
     }
   }
 
@@ -1718,7 +1753,6 @@ const columns = (blocks: BuildBlock[]): StoryBlock[][] =>
     --sp-12: 48px;
     /* the phone's width as the host sizes it (38cqw of the module, height-capped):
        the stage's cap AND the Archive title's right edge read the same number */
-    --wk-phone-w: min(38cqw, calc(63svh * 864 / 1760)); /* 76svh until 2026-10-07: smaller with the watch (Jon; 57 was "a bit too small") */
     max-width: none;
     /* the room is CENTRED in the column beside the rail — the same gutter both
        sides — so the modules' centre line (where both objects' dots stand,
@@ -1851,9 +1885,8 @@ const columns = (blocks: BuildBlock[]): StoryBlock[][] =>
   #build-watch .wk-cap { padding-left: 0; }
   /* at rest (and while a run plays) the builds' captions hold their place unseen, so nothing beneath moves when
      they arrive; the Studio sheet's caption is not a run's and always shows */
-  :global(.wk:has(.intake-hero:not(.s6), .archive-hero:not(.s6)) .wk-cap) { visibility: hidden; opacity: 0; }
+  :global(.wk:has(.intake-hero:not(.s6)) .wk-cap) { visibility: hidden; opacity: 0; }
   :global(.wk:has(.intake-hero.s6) .wk-cap) { --cap-signal: #34C759; animation: wk-cap-in 3.2s ease-out 0.3s both; }
-  :global(.wk:has(.archive-hero.s6) .wk-cap) { --cap-signal: #b9701a; animation: wk-cap-in 3.2s ease-out 1.5s both; }
   /* arrive (fade in over the first beat) in the signal's colour, hold it, settle to ink */
   @keyframes wk-cap-in {
     0% { opacity: 0; color: var(--cap-signal); }
@@ -1863,7 +1896,7 @@ const columns = (blocks: BuildBlock[]): StoryBlock[][] =>
   }
   @media (prefers-reduced-motion: reduce) {
     .wk-cap { transform: none; }
-    :global(.wk:has(.intake-hero.s6, .archive-hero.s6) .wk-cap) { animation-duration: 1.2s; animation-delay: 0.2s; }
+    :global(.wk:has(.intake-hero.s6) .wk-cap) { animation-duration: 1.2s; animation-delay: 0.2s; }
   }
   @media (prefers-reduced-motion: reduce) {
     .wk-cap {
@@ -1938,6 +1971,141 @@ const columns = (blocks: BuildBlock[]): StoryBlock[][] =>
     color: var(--mx-dim);
     transform: translateY(-1px);
   }
+  /* ── THE WEDDING FOLD (2026-10-15): the sentence once, then the same sentence to two machines. The sentence is set
+     in the hook's face a step smaller, centred, with its quote marks hung; the two sides are figures on the sheet,
+     label above, the phone crops with a hairline and the sheet's corner radius, a one-line note beneath in the mono
+     caption face. Side by side on a wide sheet, stacked under 820. */
+  .wk-said {
+    position: relative;
+    max-width: 44ch;
+    margin: 28px auto 36px;
+    text-align: center;
+    font-family: var(--wk-display);
+    font-size: 1.25rem;
+    font-weight: 400;
+    line-height: 1.35;
+    letter-spacing: -0.005em;
+    text-wrap: pretty;
+    color: var(--mx-ink);
+    transition: color 560ms ease;
+  }
+  .wk-said-q { color: var(--sheet-acc); font-weight: 500; }
+  .vs { display: grid; grid-template-columns: minmax(0, 1fr); gap: 36px 48px; margin: 0 0 8px; }
+  .vs-side { margin: 0; min-width: 0; }
+  .vs-side .sheet-t { margin-bottom: 14px; }
+  .vs-img {
+    display: block;
+    width: 100%;
+    height: auto;
+    border: 1px solid color-mix(in oklab, var(--mx-ink) 14%, transparent);
+    border-radius: 14px;
+    background: #fff;
+    transition: border-color 560ms ease;
+  }
+  .vs-siri { border-radius: 22px; }
+  .vs-note {
+    margin: 12px 0 0;
+    font-family: var(--wk-mono);
+    font-size: 0.75rem;
+    font-weight: 500;
+    letter-spacing: 0.04em;
+    line-height: 1.5;
+    color: var(--mx-dim);
+    transition: color 560ms ease;
+  }
+  .vs-arrow { text-align: center; margin: 8px 0; font-size: 1rem; color: var(--mx-dim); }
+  .wk-whole-lead { font-weight: 600; }
+  .wk-rule {
+    max-width: 62ch;
+    margin: 28px auto 0;
+    text-align: center;
+    font-size: 0.9375rem;
+    line-height: 1.6;
+    text-wrap: pretty;
+    color: var(--mx-ink);
+    transition: color 560ms ease;
+  }
+  @container (min-width: 820px) {
+    .wk-said { font-size: 1.5rem; margin: 36px auto 44px; }
+    .vs { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+    .vs-cal { max-width: 420px; }
+    .wk-rule { font-size: 1rem; }
+  }
+  /* ── AUDIODEX'S HOOD (2026-10-15, round two): one strip, five cells, each a stage word in the accent over the thing
+     that stage wrote, big enough to read without leaning in (a quote, a note, a word, a waveform, the tape). Paper
+     stays paper: hairlines between the cells, no fill. Five across on a wide sheet, then wrapping. */
+  .adh-sec { padding: 40px 0 8px; }
+  .adh {
+    list-style: none; margin: 0; padding: 0;
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    border-top: 1px solid color-mix(in oklab, var(--mx-ink) 12%, transparent);
+    border-bottom: 1px solid color-mix(in oklab, var(--mx-ink) 12%, transparent);
+  }
+  .adh > li {
+    display: flex; flex-direction: column; gap: 14px; justify-content: space-between;
+    min-height: 132px; padding: 18px 20px 20px;
+    border-left: 1px solid color-mix(in oklab, var(--mx-ink) 12%, transparent);
+  }
+  .adh > li:first-child { border-left: 0; padding-left: 0; }
+  .adh-k { font: 600 0.8125rem/1 var(--wk-mono); letter-spacing: 0.06em; color: color-mix(in oklab, var(--sheet-acc) 80%, var(--mx-ink)); }
+  .adh-v { display: block; color: var(--mx-ink); transition: color 560ms ease; }
+  .adh-q { font-size: 1.0625rem; line-height: 1.35; text-wrap: balance; }
+  .adh-big { font: 500 2.75rem/1 var(--wk-display); letter-spacing: -0.02em; }
+  .adh-word { font-size: 1.75rem; line-height: 1.1; }
+  .adh-wave { display: block; width: 100%; height: 48px; color: var(--sheet-acc); }
+  .adh-wave rect { fill: currentColor; }
+  .adh-tape { display: block; width: 64px; height: 64px; border-radius: 10px; object-fit: cover; border: 1px solid color-mix(in oklab, var(--mx-ink) 14%, transparent); }
+  .adh + .wk-rule { margin-top: 36px; }
+  /* THE TAPE out of the AudioDex phone: the wallet's mini at the slot's width, the touch signal's breath around it
+     (the site's "press me": the phones' rim, the same keyframe), and one line in the hint face under it */
+  .adx-tape {
+    --mini-w: 100%;
+    display: grid; justify-items: center; gap: 10px; width: 100%;
+    margin: 0; padding: 0; border: 0; background: none; cursor: pointer;
+    color: color-mix(in oklab, var(--sheet-acc) 85%, var(--mx-ink));
+    -webkit-tap-highlight-color: transparent;
+  }
+  .adx-tape .mini {
+    box-shadow: 0 10px 22px rgba(20, 16, 10, 0.28), 0 2px 5px rgba(20, 16, 10, 0.2);
+    transition: transform 220ms ease, box-shadow 220ms ease;
+  }
+  .adx-tape .mini::after {
+    content: ""; position: absolute; inset: 0; border-radius: inherit; padding: 2px; pointer-events: none;
+    background: linear-gradient(135deg, #47b6ff, #8a5cf6);
+    -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); -webkit-mask-composite: xor;
+    mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); mask-composite: exclude;
+    animation: touch-breathe 2s ease-in-out infinite;
+  }
+  .adx-tape:hover .mini { transform: translateY(-4px); box-shadow: 0 16px 28px rgba(20, 16, 10, 0.3), 0 3px 6px rgba(20, 16, 10, 0.2); }
+  .adx-tape:hover .mini::after { animation: none; opacity: 1; }
+  .adx-tape:focus-visible { outline: none; }
+  .adx-tape:focus-visible .mini { outline: 2px solid var(--mx-ink); outline-offset: 3px; }
+  /* beside the phone the words hang from the tape's right edge, clear of the phone; under it (stacked) centred */
+  .adx-tape { justify-items: end; }
+  /* beside the phone: two short lines under the tape's visible half, so no word hides behind the phone */
+  .adx-tape-w { margin-right: -6px; text-align: right; font: 600 0.75rem/1.35 var(--wk-mono); letter-spacing: 0.04em; white-space: nowrap; transition: color 560ms ease; }
+  .adx-tape-w > span { display: block; }
+  @container adx (min-width: 620px) and (max-width: 860px) { .adx-tape-w { font-size: 0.625rem; margin-right: -2px; } }
+  @container adx (max-width: 619px) {
+    .adx-tape { justify-items: center; }
+    .adx-tape-w { margin-right: 0; text-align: center; font-size: 0.8125rem; letter-spacing: 0.06em; }
+    .adx-tape-w > span { display: inline; }
+  }
+  .adx-tape-arrow { display: inline-block; animation: adx-bob 2.2s ease-in-out infinite; }
+  @keyframes adx-bob { 0%, 100% { transform: none; } 50% { transform: translateY(3px); } }
+  @media (prefers-reduced-motion: reduce) {
+    .adx-tape .mini::after { animation: none; opacity: 0.75; }
+    .adx-tape-arrow { animation: none; }
+  }
+  @container (max-width: 819px) {
+    .adh { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+    .adh > li { border-left: 0; padding-left: 0; border-top: 1px solid color-mix(in oklab, var(--mx-ink) 12%, transparent); min-height: 112px; }
+    .adh > li:nth-child(-n + 2) { border-top: 0; }
+    .adh > li:nth-child(even) { padding-left: 16px; border-left: 1px solid color-mix(in oklab, var(--mx-ink) 12%, transparent); }
+    .adh > li:last-child { grid-column: 1 / -1; }
+    .adh-big { font-size: 2.25rem; }
+    .adh-big.adh-word { font-size: 1.375rem; }
+  }
   /* the handle: the card's whole lower edge; the chevron breathes while the
      story is folded (the touch signal's vocabulary) and turns when it opens */
   .wk-more {
@@ -1976,9 +2144,12 @@ const columns = (blocks: BuildBlock[]): StoryBlock[][] =>
      height under the lamp on laptop screens. The 820px collapse, the 70%
      watch and the 80% phone live in the modules (container queries) */
   .work :global(.obj-intake),
-  .work :global(.archive-hero) {
+  .work :global(.adx) {
     width: min(100%, 1080px);
   }
+  /* AudioDex's two phones (2026-10-15, round two): each the old phone's height cap less a step (two objects share
+     the screen now), never wider than a third of the sheet; stacked on a narrow sheet the module sizes them itself */
+  .work :global(.adx) { --adx-w: min(34cqw, calc(66svh * 864 / 1760)); }
   .work :global(.obj-intake .watch-col) {
     max-width: calc(68.4svh * 383 / 653); /* the VISIBLE watch's ratio (the PNG's frame is trimmed in the module); 0.9 × the phone's 76svh (Jon, 2026-09-22: ten percent smaller) */
   }
@@ -2010,29 +2181,6 @@ const columns = (blocks: BuildBlock[]): StoryBlock[][] =>
     .work :global(.obj-intake .screen .meta) { top: 75.4cqw; font-size: 5.8cqw; font-weight: 600; letter-spacing: 0.04em; color: #c4c0b8; }
     .work :global(.obj-intake .screen .livemark) { font-size: 4cqw; }
   }
-  /* the phone's height cap is a DESK rule: scoped to the two-column module
-     (≥820px of module width), as the watch's 90% is. Unscoped, its 38cqw
-     term beat the module's own stacked 80cqw on phones (the phone shrank to
-     a third of the column; fixed 2026-09-22) */
-  @container hero (min-width: 820px) {
-    .work :global(.archive-hero .stage) {
-      max-width: var(--wk-phone-w);
-    }
-    /* the rail (with its caption) centred on the PHONE'S BODY (Jon,
-       2026-09-24) — the module did it only with a `head` slot, which the
-       sheets retired; the hint's height is the padding, so it centres on
-       the phone alone */
-    .work :global(.archive-hero.no-story .col) {
-      align-self: center;
-      padding-bottom: calc(16px + 0.6875rem * 1.5);
-    }
-    /* each object CENTRED in its own column (2026-10-10): the left axis was
-       the old top-left hook's; under a centred title the object balances
-       the run across the sheet's centre line */
-    .work :global(.archive-hero.no-story .stage) {
-      justify-self: center;
-    }
-  }
   @media (max-width: 899px) {
     .work,
     .studio {
@@ -2052,6 +2200,8 @@ const columns = (blocks: BuildBlock[]): StoryBlock[][] =>
      Its hue: a deeper sapphire than SIGNAL's #4fd1ff, the same family, one
      step toward ink, so the instrument and the studio read as kin and apart */
   #build-studio { --sheet-acc: #2a5bd7; }
+  /* (the chassis rules below are :global since round four, 2026-10-15: StudioMoments.astro stands its six frames on
+     the same .st-obj / .st-slot / .st-frame chassis, and a scoped rule never reaches a child component's elements) */
   /* THE OBJECT on THE LOOK ROOM'S CHASSIS (Jon, round three, 2026-10-13:
      "the tiny carousel buttons aren't sufficient … adopt the arrow key
      buttons from the Illustrations UI"): one 16:9 frame with the look
@@ -2059,10 +2209,11 @@ const columns = (blocks: BuildBlock[]): StoryBlock[][] =>
      8px above it, the placard 14px under it. .st-obj is a container so the
      keys stand on the frame's own geometry in pure CSS (the look room
      measures a picture of unknown shape; this frame's shape is fixed). */
-  .st-obj {
+  :global(.st-obj) {
     container: st / inline-size;
     width: 100%;
-    margin: 0 auto;
+    margin: 56px auto 0; /* the surface's caption → the frames (the band→object beat) */
+    padding-top: 32px; /* the dots' 8 + 24 above the frame */
     /* the look room's key (.look-band's --kc-*), unchanged in size and
        travel; its faces are mixed over the SHEET's card instead of the
        room's ground, since this one stands on paper. A copy: change both
@@ -2096,7 +2247,7 @@ const columns = (blocks: BuildBlock[]): StoryBlock[][] =>
     --st-fw: 100cqw;
   }
   /* night: the look room's carbon recipe over the night card */
-  :global(html[data-night]) .st-obj {
+  :global(html[data-night] .st-obj) {
     --kc-face-hi: color-mix(in srgb, var(--kc-ink) 15%, var(--sheet-card));
     --kc-face: color-mix(in srgb, var(--kc-ink) 10%, var(--sheet-card));
     --kc-face-hover-hi: color-mix(in srgb, var(--kc-ink) 22%, var(--sheet-card));
@@ -2111,29 +2262,25 @@ const columns = (blocks: BuildBlock[]): StoryBlock[][] =>
     --kc-ghost: color-mix(in srgb, var(--kc-ink) 30%, transparent);
   }
   @media (min-width: 900px) {
-    .st-obj {
+    :global(.st-obj) {
       --st-fw: calc(100cqw - 2 * var(--st-room));
     }
   }
-  /* phones: the dots need the 8 + 24 above the frame that the band's 56
-     gives them on desks (the phone band keeps 20) */
   @media (max-width: 899px) {
-    .st-obj {
-      padding-top: 32px;
-    }
+    :global(.st-obj) { margin-top: 40px; }
   }
   .studio :global(.car) {
     position: relative;
   }
   /* the slide: the frame, then the placard 14px under it (the look room's .lk) */
-  .st-slot {
+  :global(.st-slot) {
     display: flex;
     flex-direction: column;
     align-items: center;
     gap: 14px;
     margin: 0;
   }
-  .st-frame {
+  :global(.st-frame) {
     box-sizing: border-box;
     width: var(--st-fw);
     aspect-ratio: 16 / 9;
@@ -2147,57 +2294,122 @@ const columns = (blocks: BuildBlock[]): StoryBlock[][] =>
     width: 100%;
     height: 100%;
     object-fit: cover;
+    background: #0b0c10;
   }
+  /* a frame with its file: the sheet's inner corner, a hairline; the key sits on the picture */
+  :global(.st-slot:not([data-pending]) .st-frame) {
+    border-radius: 14px;
+    border: 1px solid color-mix(in oklab, var(--sheet-ink) 14%, transparent);
+    background: #0b0c10;
+  }
+  /* THE PLAY KEY: a 64px ring on the frame's centre, the play mark inside; on the dark picture it is white, on the
+     honest empty frame it is the dim ink at a third, inert. Playing, the mark becomes the stop bars and the key
+     stands back (a press on it pauses). */
+  .st-play {
+    grid-area: 1 / 1;
+    z-index: 1;
+    width: 64px;
+    height: 64px;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    place-items: center;
+    border: 1.5px solid currentColor;
+    border-radius: 50%;
+    background: color-mix(in oklab, #0b0c10 55%, transparent);
+    color: #fff;
+    cursor: pointer;
+    appearance: none;
+    transition: opacity 260ms ease, color 560ms ease, transform 120ms ease;
+  }
+  .st-play svg { width: 28px; height: 28px; fill: currentColor; }
+  .st-play-stop { display: none; }
+  .st-play[aria-pressed="true"] { opacity: 0.45; }
+  .st-play[aria-pressed="true"]:hover,
+  .st-play[aria-pressed="true"]:focus-visible { opacity: 1; }
+  .st-play[aria-pressed="true"] .st-play-go { display: none; }
+  .st-play[aria-pressed="true"] .st-play-stop { display: block; }
+  .st-play:not(:disabled):active { transform: scale(0.96); }
+  .st-play:focus-visible { outline: 2px solid #fff; outline-offset: 3px; }
+  .st-slot[data-pending] .st-play {
+    color: color-mix(in oklab, var(--sheet-dim) 34%, transparent);
+    background: transparent;
+    cursor: default;
+  }
+  .st-slot[data-pending] .st-play svg { opacity: 0.8; }
   @media (pointer: coarse) {
-    .st-frame {
+    :global(.st-frame) {
       touch-action: pan-y; /* a sideways drag is the chassis's swipe */
     }
   }
-  /* THE PENDING SLOT (src null): a hairline in the sheet's dim ink at 18 %,
-     square, no fill, no shadow, the capture's caption centred inside it.
-     Nothing that pretends to be a frame: no UI, no gradient, no play glyph */
+  /* THE HONEST EMPTY FRAME (no file at build time): a hairline in the sheet's dim ink at 18 %, square, no fill, no
+     shadow, the drawn key dimmed and inert at its centre. Nothing that pretends to be a frame. */
   .st-slot[data-pending] .st-frame {
     border: 1px solid color-mix(in oklab, var(--sheet-dim) 18%, transparent);
     transition: border-color 560ms ease;
   }
-  .st-cap {
-    grid-area: 1 / 1;
-    max-width: 34ch;
-    margin: 0;
-    padding: 0 24px;
-    text-align: center;
-    font: 500 0.6875rem/1.5 var(--wk-mono);
-    letter-spacing: 0.12em;
-    text-transform: lowercase;
-    color: var(--sheet-dim);
-    text-wrap: balance;
-    transition: color 560ms ease;
-  }
-  /* THE PLACARD: the look room's (.lk-cap: the title carries the weight, a
-     quiet line beneath), in the room's mono (no fourth face on a sheet) */
+  /* THE PLACARD: the PROBLEM carries the weight (the hook's face, a step smaller), the one line of answer beneath
+     in the body face, dim */
   .st-placard {
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 3px;
-    max-width: var(--st-fw);
-    font-family: var(--wk-mono);
+    gap: 8px;
+    max-width: min(var(--st-fw), 40ch);
+    margin-top: 6px;
     text-align: center;
   }
-  .st-title {
-    font-size: 1.05rem;
-    font-weight: 500;
-    letter-spacing: 0.01em;
+  .st-problem {
+    font: 500 1.25rem/1.25 var(--wk-display);
+    letter-spacing: -0.01em;
     color: var(--sheet-ink);
-    transition: color 560ms ease;
-  }
-  .st-meta {
-    max-width: 44ch;
-    font-size: 0.66rem;
-    letter-spacing: 0.06em;
-    color: var(--sheet-dim);
     text-wrap: balance;
     transition: color 560ms ease;
+  }
+  .st-answer {
+    max-width: 48ch;
+    font: 400 0.9375rem/1.5 var(--sheet-sans);
+    color: var(--sheet-dim);
+    text-wrap: pretty;
+    transition: color 560ms ease;
+  }
+  @container (min-width: 820px) {
+    .st-problem { font-size: 1.375rem; }
+    .st-answer { font-size: 1rem; }
+  }
+  /* THE ROW (round five): three frames across on a wide sheet, 24px apart, 56px under the moments (the band→object
+     beat); one column under 820px of sheet. Each frame is its column's width; the key and the placard scale down a
+     step for the smaller frame. */
+  .st-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 36px 24px;
+    margin: 56px auto 0;
+  }
+  .st-row .st-frame { width: 100%; }
+  .st-row .st-play { width: 48px; height: 48px; }
+  .st-row .st-play svg { width: 22px; height: 22px; }
+  .st-row .st-placard { max-width: none; margin-top: 2px; gap: 6px; }
+  @container (min-width: 820px) {
+    .st-row { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    .st-row .st-problem { font-size: 1.0625rem; }
+    .st-row .st-answer { font-size: 0.875rem; }
+  }
+  @media (max-width: 899px) {
+    .st-row { margin-top: 40px; }
+  }
+  /* THE FOLD'S SECOND LINE: under the said line, the sheet's accent, tight to it */
+  .st-keep {
+    max-width: 44ch;
+    margin: -20px auto 8px;
+    text-align: center;
+    font: 500 1.125rem/1.3 var(--wk-display);
+    letter-spacing: -0.005em;
+    color: color-mix(in oklab, var(--sheet-acc) 72%, var(--mx-ink));
+    transition: color 560ms ease;
+  }
+  @container (min-width: 820px) {
+    .st-keep { margin-top: -24px; font-size: 1.25rem; }
   }
   /* the chassis's counter would say what the dots say */
   .studio :global(.car-counter) {
@@ -2354,13 +2566,7 @@ const columns = (blocks: BuildBlock[]): StoryBlock[][] =>
       transition: none;
     }
   }
-  /* the mono caption, centred under the placard on the band's axis */
-  #build-studio .wk-cap {
-    margin: 24px auto 0;
-    padding-left: 0;
-    text-align: center;
-    text-wrap: balance;
-  }
+
 
   /* (the writing tiles left with their section, 2026-08-31 — the
      /writing/<slug> pages keep their own styles) */
@@ -3766,7 +3972,7 @@ const columns = (blocks: BuildBlock[]): StoryBlock[][] =>
     // AudioDex since 2026-10-10): its scroll-margin-top is set live
     const frameWork = () => {
       const work = document.getElementById("work");
-      const obj = document.querySelector<HTMLElement>("#build-archive .phone");
+      const obj = document.querySelector<HTMLElement>("#build-archive .adx-pair");
       if (!work || !obj) return;
       const centre = obj.getBoundingClientRect().top - work.getBoundingClientRect().top + obj.offsetHeight / 2;
       work.style.scrollMarginTop = Math.max(0, Math.round(window.innerHeight / 2 - centre)) + "px";
@@ -4421,6 +4627,57 @@ const columns = (blocks: BuildBlock[]): StoryBlock[][] =>
         leave: () => { if (peeking) { closeAll(); endPeek(); } },
       });
     }
+    // THE TAPE JUMP (2026-10-15): the AudioDex phone's moment ends on "this dinner became a tape ↓"
+    // ([data-tape-jump] = the tape's manifest title). A press lands the music room first (its own scroller:
+    // main on phones, the document on desks), waits for the scroll to come to rest, then loads that tape into
+    // the deck the way a sleeve does (car:show k + 1; slide 0 is the empty deck). The wallet never peeks after.
+    document.querySelectorAll<HTMLAnchorElement>("[data-tape-jump]").forEach((a) => {
+      a.addEventListener("click", (e) => {
+        const k = (wallets[0]?.options ?? []).findIndex((o) => o.textContent?.trim() === a.dataset.tapeJump);
+        if (k < 0) return; // no such tape in the wallet: the plain anchor still lands the room
+        e.preventDefault();
+        markShown(WL_KEY);
+        closeAll();
+        // the deck framed with air above its placard (the loaded deck stands ~90px taller than the blank one)
+        const phone = window.matchMedia("(max-width: 899px)").matches;
+        const sc = (phone ? document.querySelector<HTMLElement>("main") : null) ?? (document.scrollingElement as HTMLElement);
+        const r = auRoom.getBoundingClientRect();
+        const air = phone ? 24 : Math.max(24, Math.round((window.innerHeight - r.height - 90) / 2));
+        sc.scrollTo({ top: r.top + sc.scrollTop - air, behavior: reduce ? "auto" : "smooth" });
+        // at rest = the room's top unmoved for 8 frames; images loading on the way can leave it short, so one
+        // more scroll closes the gap before the tape is picked
+        let last = NaN, still = 0, fixes = 0;
+        let t0 = performance.now();
+        const settle = () => {
+          const top = Math.round(auRoom.getBoundingClientRect().top);
+          still = top === last ? still + 1 : 0;
+          last = top;
+          if (still < 8 && performance.now() - t0 < 3000) return void requestAnimationFrame(settle);
+          if (Math.abs(top - air) > 4 && fixes++ < 2) {
+            sc.scrollBy({ top: top - air, behavior: reduce ? "auto" : "smooth" });
+            still = 0; last = NaN; t0 = performance.now();
+            return void requestAnimationFrame(settle);
+          }
+          if (k + 1 !== active) auCar?.dispatchEvent(new CustomEvent("car:show", { detail: { index: k + 1 } }));
+          // "hear what it became": the press asked to hear it, so the tape plays once it is in the deck (the
+          // tape is the play switch; a browser that refuses leaves it loaded and waiting)
+          // it starts at data-tape-at (Jon: the tail of the memo just heard, then the door, then the song); a tape
+          // with no metadata yet takes the time as its start position, and gets it again once it knows its length
+          if (a.hasAttribute("data-tape-play")) window.setTimeout(() => {
+            const tape = auSlides[k + 1]?.querySelector<HTMLButtonElement>("[data-cs-tape]");
+            const media = auSlides[k + 1]?.querySelector<HTMLAudioElement>("[data-tp-audio]");
+            const at = Number(a.dataset.tapeAt) || 0;
+            if (media && at) {
+              try { media.currentTime = at; } catch {}
+              media.addEventListener("loadedmetadata", () => { if (media.currentTime < at - 1) media.currentTime = at; }, { once: true });
+            }
+            if (tape && !auSlides[k + 1].hasAttribute("data-playing")) tape.click();
+          }, reduce ? 0 : 520);
+        };
+        document.querySelectorAll<HTMLAudioElement>("[data-adx] audio").forEach((m) => m.pause());
+        requestAnimationFrame(settle);
+      });
+    });
     auCar?.addEventListener("car:change", (e) => {
       active = Number((e as CustomEvent).detail?.index ?? 0);
       closeAll();
@@ -4612,28 +4869,31 @@ const columns = (blocks: BuildBlock[]): StoryBlock[][] =>
 </script>
 
 <script>
-  // SIGNAL STUDIO's captures (2026-10-13): once Jon's recordings are in, only
-  // the slide on show plays (the dissolve stacks all three in one place, so
-  // the hidden two would otherwise decode for nothing), and under reduced
-  // motion nothing plays by itself: the frames hold still with controls.
-  // Nothing to do while every slot is pending.
+  // THE CIRCUMSTANCES (2026-10-15): the Studio sheet's three frames play WITH
+  // SOUND, on a press only (the key on the frame; pressed again it pauses),
+  // one at a time (a start stops the others) and never off-screen (the row
+  // leaving the viewport pauses them). Nothing autoplays, nothing is muted
+  // by default. Nothing to do while every slot is the honest empty frame.
   {
-    const car = document.querySelector<HTMLElement>("#build-studio [data-carousel]");
-    const vids = car ? Array.from(car.querySelectorAll<HTMLVideoElement>(".st-video")) : [];
-    if (car && vids.length) {
-      const still = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-      const slides = Array.from(car.querySelectorAll<HTMLElement>("[data-car-track] > *"));
-      const sync = (i: number) => {
-        slides.forEach((s, k) => {
-          const v = s.querySelector<HTMLVideoElement>(".st-video");
-          if (!v) return;
-          if (still) { v.pause(); v.controls = true; return; }
-          if (k === i) void v.play().catch(() => {});
+    const car = document.querySelector<HTMLElement>("#build-studio [data-circumstances]");
+    const slots = car ? Array.from(car.querySelectorAll<HTMLElement>(".st-slot")) : [];
+    const live = slots.map((s) => ({ s, v: s.querySelector<HTMLVideoElement>(".st-video"), k: s.querySelector<HTMLButtonElement>(".st-play") })).filter((x) => x.v && x.k) as { s: HTMLElement; v: HTMLVideoElement; k: HTMLButtonElement }[];
+    if (car && live.length) {
+      const stopAll = (except?: HTMLVideoElement) => live.forEach(({ v }) => { if (v !== except && !v.paused) v.pause(); });
+      live.forEach(({ s, v, k }) => {
+        v.muted = false;
+        v.volume = 1;
+        const paint = () => { const on = !v.paused && !v.ended; k.setAttribute("aria-pressed", on ? "true" : "false"); s.toggleAttribute("data-playing", on); };
+        v.addEventListener("play", paint);
+        v.addEventListener("pause", paint);
+        v.addEventListener("ended", () => { v.currentTime = 0; paint(); });
+        k.addEventListener("click", () => {
+          if (v.paused || v.ended) { stopAll(v); void v.play().catch(() => {}); }
           else v.pause();
         });
-      };
-      sync(0);
-      car.addEventListener("car:change", (e) => sync(Number((e as CustomEvent).detail?.index ?? 0)));
+      });
+      const scroller = document.querySelector("main");
+      new IntersectionObserver((es) => es.forEach((e) => { if (!e.isIntersecting) stopAll(); }), { root: scroller && getComputedStyle(scroller).overflowY === "auto" ? scroller : null, threshold: 0.2 }).observe(car);
     }
   }
 </script>
@@ -4679,5 +4939,17 @@ const columns = (blocks: BuildBlock[]): StoryBlock[][] =>
       if (card.getBoundingClientRect().top < 0) card.scrollIntoView({ block: "start", behavior: reduce.matches ? "auto" : "smooth" });
     };
     btn.addEventListener("click", () => { if (isOpen()) close(); else open(); });
+  });
+  // THE WHOLE STORY (2026-10-15): the locked script behind its own label at
+  // the end of the fold; its handle only shows and hides it (the clip is
+  // height: auto while open, so the sheet simply grows)
+  document.querySelectorAll<HTMLButtonElement>("[data-whole]").forEach((btn) => {
+    const body = document.getElementById(btn.getAttribute("aria-controls") || "");
+    if (!body) return;
+    btn.addEventListener("click", () => {
+      const show = body.hidden;
+      body.hidden = !show;
+      btn.setAttribute("aria-expanded", show ? "true" : "false");
+    });
   });
 </script>

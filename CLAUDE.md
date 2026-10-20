@@ -319,6 +319,33 @@ session must follow.
   `SPEC.studio` in depth-copy.ts (DRAFT; every unverified row carries a
   `// ⚑ Jon:` comment). Spotify is deliberately NOT named anywhere on the
   sheet (capturing a streaming service's audio breaks its terms).
+  THE SKIM (2026-10-15, the round that began with Jon: "the current scripting
+  feels too long to hold anyone's interest … the under the hood area feels
+  tiny, wordy, no images or actual understanding … everyone has tiktok
+  brains"; a first pass of three beats + a drawn icon chain + a counts
+  readout was rejected as "AI slop" and is retired). THE LAWS: the modules
+  are A MOVIE: manufacture the most dramatic version (real DNA is enough;
+  never ask whether a scene is real); every word and mark must be helpful
+  or enjoyable; a number earns its place only when it settles a doubt the
+  reader has at that moment; nothing in an open fold may move the page
+  (a pressed line prints in a slot reserved to the tallest). THE ORDER:
+  Intake → AudioDex → SIGNAL → Studio (Jon: "a better hook"; AudioDex is
+  the floor Intake stands on, the Studio is SIGNAL on steroids;
+  `build-order.ts` + the rail's NAV). THE HERO LINER IS GONE. Each sheet's
+  open fold is its own scene and ends on THE WHOLE STORY (the locked
+  script behind its own label-button, `[data-whole]`): INTAKE = the
+  sentence once (`.wk-said`) → the same sentence to two machines (Jon's
+  Siri screenshot beside his calendar before and after, `.vs`) → under the
+  hood as one line of time (`IntakeClock.astro`) → the one-match rule;
+  AUDIODEX = Jon's line → the hood as one strip of what the system wrote
+  about the memo the phones found (`.adh`) → the floor line; the STUDIO
+  = six moments of the real thing (`StudioMoments.astro`, tabs) → the
+  notebook line → the circumstances in a row (problem → answer → a play
+  key with sound, honest frames until the files land); SIGNAL's card =
+  the receipt and the dare ("Your first song is in your downloads." leads)
+  → how to play → one engineering sentence → where it came from. Every
+  DRAFT line lives in objects-copy.ts / signal-card-copy.ts, Jon's to
+  rewrite; the hoods never print his real rows.
 - WORK is OBJECTS (2026-09-18; the ledger/matrix is DEAD): the room holds
   Jon's Claude Design modules, one per build, framed by words — the locked
   headline from builds-copy.ts above (the DRAFT dek under it was removed
@@ -340,6 +367,23 @@ session must follow.
   class `home`, the AudioDex tile pressed) and the library opens as an
   app scaling out of the tile; the moment view lists what each tool
   assigned (`moment.assigned`); `src` null so play stays dimmed.
+  SUPERSEDED 2026-10-15 (round two, Jon: "a side by side, more like
+  Crediverso … as few texts as possible"): AudioDex's object is
+  `AudioDexDoor.astro` + `src/data/audiodex-scene.json` (ArchiveHero and
+  archive-run.json are in junkyard/; IntakeHero's "change both or neither"
+  twins — the replay pill, the foot, touch-breathe — now live in
+  AudioDexDoor). TWO PHONES, ONE WORD: Voice Memos (the files as numbers)
+  beside AudioDex (the same files named); a press on either types
+  `thanksgiving` into both; Voice Memos answers No Results, AudioDex finds
+  the memo and the song it became, opens the memo and it PLAYS: the REAL
+  first 18 s of the Thanksgiving A Capella tape (Jon's pick; the word is
+  never said in it), cut to `public/archive/thanksgiving.m4a` (existsSync
+  slot: gone = the key drawn, dimmed, inert), its Whisper lines lighting as
+  said. Its last row links down to the music room and the host loads that
+  tape (`[data-tape-jump]` → land the room, settle, `car:show`). No caption,
+  no rail; the fold is the hook → ONE STRIP (heard · measured · named ·
+  drawn · linked, a big artifact under each word) → the floor line → the
+  whole story.
   UNDER THE HOOD: a `.wk-spec` ledger card under each story card, rows
   from `src/components/studio/depth-copy.ts` (Jon-editable; the tools
   and stages of the real M1 systems, never his content).

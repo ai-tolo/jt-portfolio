@@ -11,7 +11,6 @@
 // not be checked; the safety row left (autoplay is the browser's, and its phone half is never read here: the card is
 // desk-only). Visible words on the open card 435 → 312 (story 107 → 43 · how to play 33 → 52, its key letters counted;
 // 18 of them are label words · hood 222 → 181 · from 72 → 35).
-export type CardRow = { k: string; tool: string; html: string };
 
 export const CARD = {
   title: "SIGNAL",
@@ -19,23 +18,17 @@ export const CARD = {
   // the story's first sentence and the résumé ("browser instrument") already call it that
   kind: "instrument",
   // DRAFT — Jon rewrites. The closed card shows these two paragraphs: what it is, how to start, what it makes.
+  // THE RECEIPT, THEN THE DARE (2026-10-15, the interview; Jon chose the receipt to lead: "the more dramatic sell").
+  // DRAFT in his words, his to rewrite. The closed card shows these two paragraphs.
   story: [
-    "SIGNAL is an instrument that runs in this web page, played from your computer keyboard: drums, keys and bass. The red switch at its top right turns it on.",
-    "It records while you play. The export button saves the take as a WAV.",
+    "Your first song is in your downloads. Pick a key: you can't play a wrong note, and neither can the bass. Space brings the drums, B brings the bass, and it was recording the whole time.",
+    "Find the tempo and key of a song you love, set them, and play along with a band that follows you. The export button saves the take as a WAV. The full studio is one sheet down.",
   ],
-  // DRAFT — the one line a first-timer sees with their file (unmounted: nothing reads it yet)
-  first: "Your first song is in your downloads.",
   howTitle: "how to play",
   hoodTitle: "under the hood",
-  rows: [
-    { k: "output", tool: "one chain", html: "Everything leaves through a high-pass, soft saturation, a limiter and a clamp, so nothing clips." },
-    { k: "time", tool: "lookahead", html: "Drums and bass are booked 120 ms ahead on the audio clock, further in a hidden tab; the beat held for 20 seconds at a 4× CPU throttle without a dropout." },
-    { k: "voices", tool: "samples", html: "Each key plays the nearest recorded note, repitched, its loop seam crossfaded after decoding so the AAC does not click. The bass is a 303-style synth; the drums are six one-shots." },
-    { k: "effects", tool: "worklets", html: "Drive and modulation run on the audio thread, the drive oversampled 2× with antiderivative anti-aliasing; the reverb is a convolver with four impulse responses." },
-    { k: "stop", tool: "ramp", html: "Escape ramps every voice down and shuts the output: under −90 dBFS within 100 ms, open again for the next note." },
-    { k: "memory", tool: "IndexedDB", html: "Every setting is saved as you go and restored on reload, with the drums and bass off so nothing plays by itself." },
-    { k: "take", tool: "worklet", html: "The output's last five minutes are kept; export trims the silence at both ends and writes a 16-bit WAV." },
-  ] as CardRow[],
+  // UNDER THE HOOD is ONE SENTENCE for the skeptic (2026-10-15; the icon chain and the "4 voices" readout were slop).
+  // Engine facts from src/signal (time.ts, out.ts): keep it true.
+  hood: "Drums and bass are booked 120 ms ahead on the audio clock, and the beat held for 20 seconds at a 4× CPU throttle without a dropout. Everything leaves through a limiter, so nothing clips.",
   fromTitle: "where it came from",
   // DRAFT — Jon rewrites
   from: [

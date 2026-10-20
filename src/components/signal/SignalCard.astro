@@ -21,17 +21,13 @@
  * (Round three's "head" / "tail" halves, two sheets around the device, are retired with it.)
  */
 import "../../styles/sheet.css";
-import { CARD, type CardRow } from "./signal-card-copy.ts";
+import { CARD } from "./signal-card-copy.ts";
 import HowToPlay from "./HowToPlay.astro";
 
 interface Props { part?: "all" | "around" }
 const { part = "all" } = Astro.props;
 const around = part === "around";
 
-const halves = (rows: ReadonlyArray<CardRow>): CardRow[][] => {
-  const cut = Math.ceil(rows.length / 2);
-  return [rows.slice(0, cut), rows.slice(cut)];
-};
 const cols = (ps: ReadonlyArray<string>): string[][] => {
   const cut = Math.ceil(ps.length / 2);
   return [ps.slice(0, cut), ps.slice(cut)];
@@ -56,18 +52,8 @@ const cols = (ps: ReadonlyArray<string>): string[][] => {
 
   <div class="sheet-sec">
     <p class="sheet-t">{CARD.hoodTitle}</p>
-    <div class="sheet-cols">
-      {halves(CARD.rows).map((col) => (
-        <ol class="sheet-steps">
-          {col.map((r) => (
-            <li class="sheet-step">
-              <div class="sheet-step-head"><span class="sheet-step-k">{r.k}</span><span class="sheet-step-tool">{r.tool}</span></div>
-              <p class="sheet-step-p" set:html={r.html} />
-            </li>
-          ))}
-        </ol>
-      ))}
-    </div>
+    {/* ONE SENTENCE for the skeptic (2026-10-15): the engine fact that proves it is not a toy */}
+    <p class="sheet-p sc-hood">{CARD.hood}</p>
   </div>
 
   <div class="sheet-sec">
@@ -94,15 +80,21 @@ const cols = (ps: ReadonlyArray<string>): string[][] => {
   /* the "?" key's landing: the whole card from its top (/signal), or how to play's hairline + label (the homepage) */
   [data-write-up] { scroll-margin-top: 32px; }
   .sc[data-part="all"] { margin-top: 96px; } /* the whole card, 96 px under the device (/signal) */
+  /* the band-name's face, to the letter (Jon, 2026-10-15: SIGNAL read as a different font next to the other titles;
+     it was 2.125rem with 0.06em tracking): Outfit 500 3.25rem/1.05, −0.02em; 2.5rem under 900 */
   .sc-title {
     margin: 0 0 40px;
     text-align: center;
     font-family: var(--sheet-display);
-    font-size: 2.125rem;
+    font-size: 3.25rem;
     font-weight: 500;
-    line-height: 1.15;
-    letter-spacing: 0.06em;
+    line-height: 1.05;
+    letter-spacing: -0.02em;
   }
+  @media (max-width: 899px) {
+    .sc-title { font-size: 2.5rem; }
+  }
+  .sc-hood { max-width: 62ch; margin: 0; }
   .sc-story { margin-bottom: 32px; } /* the story → the first hairline, as the work sheets' story → their hood */
   .sc[data-part="around"] .sc-story { margin-bottom: 0; } /* the story ends on its last line: the device's stage
      carries the 56 beneath it and the 56 to how to play's hairline (StudioOne) */
