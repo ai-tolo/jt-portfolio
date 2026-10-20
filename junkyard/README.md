@@ -24,3 +24,8 @@ The site is the homepage, the résumé, and the case studies under it.
   board, the thread panel left and the Intake card right; retired 2026-10-20 for IntakeThread.astro, THE SEND (Jon: "it's
   too many things at once. there needs to be a before and after … you're just patchworking at this point"). Its images
   stay in public/intake/board/ (the send uses two of them); its imports no longer resolve from here: a record, not a part
+- IntakeThread.astro, intake-thread.json — THE SEND (2026-10-20): two phones, Messages with a save-the-date photo in
+  the composer beside Calendar; the press sent it and the day took the wedding ten months out; retired the same day
+  for IntakeStream.astro, WHAT INTAKE REPLACED (Jon: "it's imessage screenshots and calendar screenshots. where is
+  intake? it should be a different vision"). Its images stay in public/intake/board/ (the stream uses all three); its
+  imports no longer resolve from here: a record, not a part
