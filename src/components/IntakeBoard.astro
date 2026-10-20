@@ -71,21 +71,45 @@ const CHECK = '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke
   <div class="ib-stage">
     {scenes.map((s: any, k: number) => (
       <div class="ib-scene" data-scene={k} data-on={k === 0 ? '' : undefined} inert={k !== 0} aria-label={`${k + 1} of ${scenes.length}: ${s.line}`} role="group" aria-roledescription="scene">
+        {/* WHAT HE DID (round two, 2026-10-19, Jon: "there's no notion of … the fact that i just took a screenshot of my
+            gmail and texted it to myself"): the thread with himself as Messages draws it (the header, the sent bubble
+            holding the whole thing, Delivered), or, for a memo, the watch's own saved face; one label line under it */}
         <div class="ib-sent">
-          {(s.sent.type === 'image' || s.sent.type === 'image+text') && (
-            <span class:list={['ib-shot', `ib-shot-${s.id}`]}><img src={s.sent.src} width={s.sent.w} height={s.sent.h} alt={s.sent.alt} decoding="async" /></span>
-          )}
-          {s.sent.type === 'image+text' && <p class="ib-bubble">{s.sent.text}</p>}
-          {s.sent.type === 'voice' && (
+          {s.sent.type !== 'voice' ? (
+            <div class="ib-thread">
+              <div class="ib-th-head" aria-hidden="true"><span class="ib-th-av">J</span><span class="ib-th-name">Jon <svg viewBox="0 0 8 12" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M2 2l4 4-4 4" /></svg></span></div>
+              {s.sent.type === 'mail' && (
+                <span class="ib-shot ib-shot-mail" role="img" aria-label={s.sent.alt}>
+                  {/* the screenshot as the phone took it: the status bar and Gmail's message header (drawn: capture 50
+                      is a crop of the body), then the email itself */}
+                  <span class="ib-mail" aria-hidden="true">
+                    <span class="ib-sbar"><b>{s.sent.clock}</b><span class="ib-sicons"><svg viewBox="0 0 18 12" fill="currentColor"><rect x="0" y="8" width="3" height="4" rx="1" /><rect x="5" y="5.5" width="3" height="6.5" rx="1" /><rect x="10" y="3" width="3" height="9" rx="1" /><rect x="15" y="0" width="3" height="12" rx="1" /></svg><svg viewBox="0 0 16 12" fill="currentColor"><path d="M8 11.5 5.6 9a3.4 3.4 0 0 1 4.8 0L8 11.5ZM3.3 6.7a6.6 6.6 0 0 1 9.4 0l-1.5 1.5a4.5 4.5 0 0 0-6.4 0L3.3 6.7ZM1 4.4a9.9 9.9 0 0 1 14 0l-1.5 1.5a7.8 7.8 0 0 0-11 0L1 4.4Z" /></svg><svg viewBox="0 0 26 12" fill="none" stroke="currentColor"><rect x="0.5" y="0.5" width="22" height="11" rx="3" opacity=".45" /><rect x="2" y="2" width="15" height="8" rx="1.6" fill="currentColor" stroke="none" /><path d="M24.5 4v4" stroke-linecap="round" opacity=".45" /></svg></span></span>
+                    <span class="ib-gnav"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M11 6l-6 6 6 6" /></svg><span class="ib-gicons"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="4" width="18" height="5" rx="1" /><path d="M5 9v10h14V9M10 13h4" /></svg><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13" /></svg><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="5" width="18" height="14" rx="2" /><path d="M3 7l9 6 9-6" /></svg><svg viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="5" r="1.8" /><circle cx="12" cy="12" r="1.8" /><circle cx="12" cy="19" r="1.8" /></svg></span></span>
+                    <span class="ib-gsubj">{s.sent.subject} <i>Inbox</i></span>
+                    <span class="ib-gfrom"><i class="ib-gav">{s.sent.initial}</i><span class="ib-gwho"><span><b>{s.sent.from}</b> <small>{s.sent.time}</small></span><small>to me</small></span></span>
+                    <img src={s.sent.src} width={s.sent.w} height={s.sent.h} alt="" decoding="async" />
+                  </span>
+                </span>
+              )}
+              {(s.sent.type === 'image' || s.sent.type === 'image+text') && (
+                <span class:list={['ib-shot', `ib-shot-${s.id}`]}><img src={s.sent.src} width={s.sent.w} height={s.sent.h} alt={s.sent.alt} decoding="async" /></span>
+              )}
+              {s.sent.type === 'image+text' && <p class="ib-bubble">{s.sent.text}</p>}
+              <span class="ib-deliv" aria-hidden="true">Delivered</span>
+            </div>
+          ) : (
             <div class="ib-wrist">
-              <div class="ib-voice" aria-hidden="true">
-                <svg class="ib-watch" viewBox="0 0 14 20" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4.5 1h5l.5 3.2M4.5 19h5l.5-3.2M4.5 1L4 4.2M4.5 19L4 15.8" stroke-linecap="round" /><rect x="2" y="4.2" width="10" height="11.6" rx="3" /></svg>
-                <svg class="ib-wave" viewBox={`0 0 ${s.bars.length * 4} 100`} preserveAspectRatio="none">{s.bars.map((b: Bar) => <rect x={b.x} y={b.y} width="2.6" height={b.h} rx="1.3" />)}</svg>
-                <span class="ib-len">{s.sent.len}</span>
-              </div>
+              {/* the watch's own face, small and saved (IntakeHero's face: INTAKE, the green check, the word), so the
+                  record button below is already familiar */}
+              <figure class="ib-mini" aria-hidden="true">
+                <span class="ib-mini-screen"><span class="ib-mini-brand">INTAKE</span><span class="ib-mini-check"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5" /></svg></span><span class="ib-mini-w">saved</span><span class="ib-mini-len">{s.sent.len}</span></span>
+                <img src="/intake/watch-blank.png" alt="" width="521" height="781" decoding="async" />
+              </figure>
+              <svg class="ib-wave" viewBox={`0 0 ${s.bars.length * 4} 100`} preserveAspectRatio="none" aria-hidden="true">{s.bars.map((b: Bar) => <rect x={b.x} y={b.y} width="2.6" height={b.h} rx="1.3" />)}</svg>
               <p class="ib-heard">“{s.sent.heard}”</p>
             </div>
           )}
+          <p class="ib-label">{s.label}</p>
         </div>
         <div class="ib-became">
           {/* the Intake card as the Stream draws it (intake_web.py): the source's spine; age · phone · the check or the
@@ -200,28 +224,68 @@ const CHECK = '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke
   .ib-sent { display: flex; flex-direction: column; align-items: flex-end; gap: 8px; min-width: 0; }
   .ib-became { display: flex; align-items: flex-start; gap: 16px; min-width: 0; }
 
-  /* what he sent: the thread with himself. A sent image wears the sent blue as its frame (the bubble's tail corner);
-     a typed thought is the bubble itself */
+  /* what he sent: THE THREAD WITH MYSELF (round two), as the iPhone's Messages draws it. The header (the contact's
+     circle with his initial, his name), the sent blue bubble holding the whole thing (a sent image wears the blue as
+     its frame, the tail corner), "Delivered" under the last bubble; then one label line. The thread keeps the
+     phone's own greys in both temperatures */
+  .ib-thread { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; max-width: 100%; }
+  .ib-th-head { align-self: center; display: flex; flex-direction: column; align-items: center; gap: 5px; margin-bottom: 10px; }
+  .ib-th-av { display: grid; place-items: center; width: 40px; height: 40px; border-radius: 50%; background: linear-gradient(#a6abb8, #868b97); color: #fff; font: 500 18px/1 var(--sans); }
+  .ib-th-name { display: inline-flex; align-items: center; gap: 3px; font: 400 11px/1 var(--sans); color: var(--ink); }
+  .ib-th-name svg { width: 6px; height: 9px; color: var(--ib-dim); }
+  .ib-deliv { margin: 2px 4px 0 0; font: 600 11px/1.2 var(--sans); color: #8e8e93; }
   .ib-shot { display: block; max-width: 100%; padding: 3px; box-sizing: border-box; border-radius: 20px 20px 6px 20px; background: var(--bubble); }
   .ib-shot img { display: block; max-width: 100%; height: auto; border-radius: 17px 17px 4px 17px; }
   /* the frame carries the width (a percentage on the image inside a shrink-to-fit frame left a blue band) */
-  .ib-shot-maybe img { width: auto; height: 330px; }
-  .ib-shot-paper { width: min(100%, 400px); }
+  .ib-shot-paper { width: min(100%, 380px); }
   .ib-shot-find { width: min(100%, 420px); border-radius: 20px; }
   .ib-shot-paper img, .ib-shot-find img { width: 100%; }
   .ib-shot-find img { border-radius: 17px; }
+  /* scene 1: the email screenshot, whole: the phone's status bar and Gmail's dark message header over the email it
+     showed (the original's dark margins are Gmail's own ground) */
+  .ib-shot-mail { width: min(100%, 300px); }
+  .ib-mail { display: block; overflow: hidden; border-radius: 17px 17px 4px 17px; background: #1f1f1f; color: #e3e3e3; font-family: -apple-system, 'Helvetica Neue', var(--sans); }
+  .ib-sbar { display: flex; align-items: center; justify-content: space-between; padding: 9px 16px 5px 22px; font-size: 11px; }
+  .ib-sbar b { font-weight: 600; }
+  .ib-sicons { display: inline-flex; align-items: center; gap: 4px; }
+  .ib-sicons svg { height: 8px; width: auto; }
+  .ib-gnav { display: flex; align-items: center; justify-content: space-between; padding: 6px 12px; }
+  .ib-gnav svg { width: 15px; height: 15px; }
+  .ib-gicons { display: inline-flex; gap: 14px; color: #c4c7c5; }
+  .ib-gicons svg { width: 13px; height: 13px; }
+  .ib-gsubj { display: block; padding: 6px 14px 8px; font-size: 14px; line-height: 1.25; color: #e3e3e3; }
+  .ib-gsubj i { margin-left: 4px; padding: 1px 5px; border-radius: 4px; background: #444746; font: 400 9px/1.4 inherit; font-style: normal; color: #e3e3e3; vertical-align: 2px; }
+  .ib-gfrom { display: flex; align-items: center; gap: 8px; padding: 2px 14px 10px; }
+  .ib-gav { display: grid; place-items: center; flex: none; width: 24px; height: 24px; border-radius: 50%; background: #8e5b2e; font: 500 11px/1 inherit; font-style: normal; color: #fff; }
+  .ib-gwho { display: flex; flex-direction: column; gap: 2px; min-width: 0; font-size: 11px; line-height: 1.2; }
+  .ib-gwho b { font-weight: 600; }
+  .ib-gwho small { font-size: 10px; color: #a8aaa9; }
+  .ib-mail img { display: block; width: 100%; height: auto; }
   .ib-bubble {
-    margin: 0; max-width: min(100%, 32ch); padding: 8px 13px; box-sizing: border-box;
+    margin: 4px 0 0; max-width: min(100%, 32ch); padding: 8px 13px; box-sizing: border-box;
     border-radius: 18px 18px 5px 18px; background: var(--bubble); color: #fff;
     font: 400 14px/1.38 var(--sans); text-align: left;
   }
-  /* a voice memo: the wrist, a short strip, its length; the words as heard under it */
+  /* the label under the panel: the sheet's label face (.sheet-t), lowercase */
+  .ib-label { margin: 12px 0 0; font: 500 0.6875rem/1.4 var(--mono); letter-spacing: 0.12em; text-transform: lowercase; color: var(--ib-dim); text-align: right; transition: color 560ms ease; }
+  /* a memo: the watch's own face, small and saved (IntakeHero's .watch trim and .note, re-drawn at this size: change
+     both or neither), the strip, the words as heard */
   .ib-wrist { display: flex; flex-direction: column; align-items: flex-end; gap: 12px; width: min(100%, 300px); }
-  .ib-voice { display: flex; align-items: center; gap: 12px; width: 100%; color: var(--sheet-acc, #ff6b4a); }
-  .ib-watch { flex: none; width: 13px; height: 19px; color: var(--ib-dim); }
-  .ib-wave { flex: 1; min-width: 0; height: 44px; }
+  /* the figure is the VISIBLE watch (383 × 653 of the 521 × 781 PNG) and its own container: the PNG and the screen are
+     placed in its cqw (IntakeHero's screen is 20.35 / 40.88 / 60.65 / 69.87 % of the PNG's width, less the trim) */
+  .ib-mini { position: relative; align-self: flex-end; width: 140px; aspect-ratio: 383 / 653; margin: 0 6px 0 0; container-type: inline-size; }
+  .ib-mini img { position: absolute; left: -18.28cqw; top: -17.49cqw; width: 136.03cqw; max-width: none; height: auto; z-index: 2; pointer-events: none; } /* the site's img max-width would cap the PNG to the box */
+  .ib-mini-screen {
+    position: absolute; z-index: 1; container-type: inline-size; overflow: hidden; background: #000;
+    left: 9.41cqw; top: 38.11cqw; width: 82.5cqw; height: 95.05cqw; border-radius: 15.14cqw;
+  }
+  .ib-mini-brand { position: absolute; left: 0; top: 7cqw; width: 100%; text-align: center; font: 500 6cqw/1 var(--sans); letter-spacing: 0.24em; color: #FF6B4A; }
+  .ib-mini-check { position: absolute; left: 37.5cqw; top: 30cqw; width: 25cqw; height: 25cqw; box-sizing: border-box; border-radius: 50%; border: 1.2cqw solid color-mix(in oklab, #34C759 72%, transparent); color: #34C759; display: flex; align-items: center; justify-content: center; }
+  .ib-mini-check svg { width: 12cqw; height: 12cqw; }
+  .ib-mini-w { position: absolute; left: 0; top: 64cqw; width: 100%; text-align: center; font: 400 10cqw/1 var(--sans); color: #F2F0EA; }
+  .ib-mini-len { position: absolute; left: 0; top: 80cqw; width: 100%; text-align: center; font: 500 6.4cqw/1 var(--mono); font-variant-numeric: tabular-nums; color: #8C8A84; }
+  .ib-wrist .ib-wave { width: 100%; height: 40px; color: var(--sheet-acc, #ff6b4a); }
   .ib-wave rect { fill: currentColor; }
-  .ib-len { flex: none; font: 500 0.875rem/1 var(--mono); font-variant-numeric: tabular-nums; color: var(--ib-dim); }
   .ib-heard { margin: 0; font: 500 1.25rem/1.3 var(--display); color: var(--ink); text-align: right; transition: color 560ms ease; }
 
   /* what it became: the Stream's card on paper (its 3px source spine, the hairline, 12 radius) */
@@ -247,7 +311,7 @@ const CHECK = '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke
   .ib-ct { margin: 2px 0 0; font: 650 15.5px/1.3 var(--sans); color: var(--ink); text-wrap: pretty; }
   .ib-cm { margin: 0; font: 400 12.5px/1.4 var(--sans); color: var(--ib-dim); }
   .ib-mrow { display: flex; align-items: center; gap: 10px; }
-  .ib-thumb { flex: none; width: 44px; height: 44px; border-radius: 7px; object-fit: cover; object-position: 20% 50%; border: 1px solid var(--ib-edge); box-sizing: border-box; }
+  .ib-thumb { flex: none; width: 44px; height: 44px; border-radius: 7px; object-fit: cover; object-position: 18% 60%; border: 1px solid var(--ib-edge); box-sizing: border-box; }
   .ib-link { display: flex; align-items: center; gap: 6px; min-width: 0; }
   .ib-link svg { flex: none; width: 13px; height: 13px; }
   /* the two tiles, quiet (the open state is the point; Jon left it to the brief) */
@@ -285,7 +349,7 @@ const CHECK = '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke
     .ib-scene { grid-template-columns: minmax(0, 1fr); row-gap: 20px; align-items: start; align-content: center; }
     .ib-became { flex-wrap: wrap; }
     .ib-card, .ib-card.has-cell { width: 100%; flex: 1 1 100%; }
-    .ib-shot-maybe img { height: 240px; }
+    .ib-thread { width: 100%; }
     .ib-wrist { width: 100%; }
     /* the month cell on one row under the card (the month over the rule, then the day and its bar side by side) */
     .ib-cal { flex: 1 1 100%; width: 100%; grid-template-columns: auto minmax(0, 1fr); column-gap: 14px; align-items: center; }
