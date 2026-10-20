@@ -22,9 +22,9 @@ export const WATCH_COPY = {
   // literal"): DRAFT, his to rewrite; was "No new app. A voice memo or a text to myself, sorted into pockets."
   // 2026-10-20 (THE SEND: the sheet reads text first, memo second): DRAFT, his to rewrite; was "Memos and texts in.
   // Tickets out."
-  // 2026-10-20, later (WHAT INTAKE REPLACED, branch intake-v3; Jon: "all of my notifications are turned off"): the
-  // third beat is his own fact. DRAFT, his to rewrite; was "Texts and memos in. Tickets out."
-  dek: "Texts and memos in. Tickets out. Notifications off.",
+  // 2026-10-20, later (WHAT INTAKE REPLACED, branch intake-v3; Jon: "all of my notifications are turned off"): a third
+  // beat, "Notifications off.", was added and withdrawn in the pile round (the brief keeps the two-beat line). DRAFT.
+  dek: "Texts and memos in. Tickets out.",
   // 2026-10-19 (THE SORT round: the watch is live only, the wedding moved into the sort's sixth row): the caption
   // under the watch says what the live mode does, in LIVE_COPY's words ("a preview. nothing was added."). DRAFT, his
   // to rewrite. The history of the replay's caption, kept for the record:
