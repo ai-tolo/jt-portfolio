@@ -367,66 +367,78 @@ session must follow.
   → how to play → one engineering sentence → where it came from. Every
   DRAFT line lives in objects-copy.ts / signal-card-copy.ts, Jon's to
   rewrite; the hoods never print his real rows.
-- THE SORT + THE LIVE WATCH (2026-10-19, branch `sort`; Jon: "the pitch
-  now is a bit wider … speech is great for a lot of things, but so are
-  sending photos or screenshots or typing out text"; "it's not a record of
-  truth, it's an exhibit"): the Intake sheet reads kind `program` → band
-  ("Intake" + the DRAFT dek "No new app. A voice memo or a text to myself,
-  sorted into pockets.") → THE SORT → THE WATCH, live only → the fold
-  exactly as `fold` left it. THE SORT = `IntakeSort.astro` +
-  `src/data/intake-sort.json` (every line DRAFT; rows 2, 3, 4 are captures
-  50, 49, 53 of the M1's intake.db, their images ≤ 560px webp in
-  `public/intake/sort/`, the save-the-date's names blurred and the couple
-  invented; row 6 is intake-run.json's wedding). Two columns on a module
-  ≥ 820 MIRRORED on the sheet's centre line (what happened flush right
-  against it, where it landed flush left from it, a 6cqw gutter), heads
-  `what happened` · `where it landed`; seven rows on hairlines: a text → a
-  day cell (the Intake calendar's red) · a poster → Oct 27 (the Idea
-  yellow) · a save-the-date → Aug 28 2027 · a listing + a thought → a
-  Stream card ("yours") · 44 minutes of a concert → NOTHING ("nothing
-  filed. the recording kept.", the joke, a 2,600 ms hold, the right column
-  still) · the wedding memo → a week strip (the long bar struck and gone,
-  four arrive) · 92 minutes at a party → one open card (the finale). The
-  landings speak the sheet's vocabulary: the iOS month cell (the month in
-  red over the week's rule, weekday, numeral, the event's bar; the two
-  calendars' colours are the only fills, day and night) + the Stream's
-  receipt line with its green check (#79a465); cards are intake_web.py's
-  anatomy (the source's 3px spine; age · phone · kind chip · X; title; the
-  compact line; the two tiles Claude ✦ · Zzzz). Inputs: the iMessage sent
-  blue at 13px, the real files on the sheet hairline at 14px radius, voice
-  as an adh-wave strip in the accent with its length in mono and a wrist
-  glyph (the concert's bars quiet, one hot stretch in the party's). THE
-  RUN: nothing presses itself; at rest row one's line in ink, rows two to
-  seven dim, the right column empty, `tap to sort` (DRAFT) in the foot; one
-  press anywhere on the object (`.is-tap`, an overlay button, gone once
-  pressed) runs all seven: the row lights (its input in ≈ 500 ms), its
-  landing 600 ms later, a hold of 1,600 (the nothing row's 2,600 from the
-  data), the next; lead 250, total 15,050 ms; then Replay (the modules'
-  pill); the runline fills over the whole run (the THIRD module wearing
-  it); reduced motion = all seven land at once; one live region says each
-  landing. THE RESERVED-HEIGHT LAW ON THE OBJECT (THE SKIM's, extended):
-  every input and landing is laid out from the first paint and unseen
-  (opacity, clip) until its turn, so the sheet's height is the same at
-  every sample of the run (1440 day and night, 375). The three images load
-  EAGERLY (77 KB): lazy images under an opacity-0 slot never started
-  loading in Chrome. NO TOGGLE: Jon floated "switch to actual UI view" and
-  left the call; the call is no second mode, because the right column IS
-  the places things landed and rows 4 and 7 are the Stream's own cards.
-  Phones (module < 820): each row stacks, circumstance then landing, on the
-  left axis (the bubble keeps the right), the same run. THE WATCH, LIVE
-  ONLY (`IntakeHero.astro`; Jon: "the watch set up exclusively to be the
-  talk-to feature"): the art run (the typed wedding, its verdict, tickets,
-  deck, Replay, the fly, the pour, `hero:finish`) is deleted; at rest the
-  face holds the talk pill with the wave quiet (scaled 0.25, paused) and
-  no stop (the stop and its ring stand only while it listens or takes
-  typing); the foot holds the live hint (`say a few things you have to
-  do`, DRAFT) and the runline from the stop until the parse answers (an
-  eased fill toward 90 %, full on the answer); the `.hint-talk` retry and
-  `LIVE_COPY.replay` / `talkHint` are gone; the caption (WATCH_COPY.caption,
-  DRAFT) stands AT REST and hides only while a session runs; the wedding's
-  two cards stay in the markup ONLY as the run column's reserve measure,
-  and the column reserves stacked too (with the caption's rest height
-  kept), so a result never moves the fold. The live pipeline
+- THE BOARD + THE RECORD BUTTON (2026-10-19, late, branch `board`; Jon,
+  after THE SORT: "a good first swing … it's weird that I have to click to
+  get these to show up … all you see is one thing at a time: it shows the
+  circumstance, then input, output"; "goal-oriented, not patchwork"; "every
+  line short, concrete, benefit-led"). The Intake sheet reads kind
+  `program` → band ("Intake" + the DRAFT dek "Memos and texts in. Tickets
+  out.") → THE BOARD → THE WATCH → the fold exactly as `fold` left it.
+  THE SORT is RETIRED to junkyard/ (IntakeSort.astro, intake-sort.json);
+  its three images live in `public/intake/board/`.
+  THE BOARD = `IntakeBoard.astro` + `src/data/intake-board.json` (every
+  line DRAFT; scenes 1 to 3 are captures 50, 49, 53 of the M1's intake.db;
+  Theo & June and Lena are invented): ONE SCENE AT A TIME, four scenes
+  (the maybe: the Thundercat screenshot → a receipt card "Idea · Oct 27" +
+  October's cell, the 27th in the Idea yellow · the paper: the save-the-
+  date → "Intake · Aug 28, 2027" + August 2027's cell in the Intake red ·
+  the find: the listing + his sentence in a sent bubble → an OPEN idea card
+  with its thumbnail and domain line, no cell · the sticky note: the wrist,
+  "0:04", "Lena wants red boots." → an open card "open since Mar 14" whose
+  age, 219d, wears the Stream's lamp). Each scene = THE LINE in split-flap
+  cells (JetBrains Mono 600 uppercase, one cell per character, a hairline
+  box with a seam across its middle, ink on paper; 30 cells on one row on a
+  wide board, 16 a row on two rows under 700px) over a two-up MIRRORED on
+  the sheet's centre line (what he sent flush right, a sent image wearing
+  the iMessage blue as its frame; what it became flush left: the Stream's
+  card anatomy from intake_web.py, the two tiles quiet, the month cell
+  beside the dated ones). THE FLIP: every cell whose glyph changes runs 4
+  to 6 random glyphs over 600 ms, starting 25 ms after its left neighbour
+  (the last of 30 settles at ≈ 1,325 ms), one rAF loop, each change a
+  110 ms rotateX flap (two identical keyframes swapped, no reflow); the
+  two-up crossfades 350 ms starting 300 ms in. THE TURN: 8,000 ms a scene,
+  a 32 s cycle, the clock counting only while ≥ 50 % of the board is on
+  screen (IntersectionObserver), the page visible and nothing holding it:
+  a mouse over it, a finger on it, keyboard focus in it (a click's focus
+  does not hold); a swipe (> 40px, mostly horizontal), ← → while focus is
+  inside (never the page's arrows) or one of the four 8px marks (the look
+  room's car-dot vocabulary) steps it; no Replay, no play key. Reduced
+  motion: no clock, no flip (the line swaps), the marks step. The four
+  scenes share ONE grid cell, so the height is the tallest's from the first
+  paint (1440: the sheet 2004px through every sample of a full cycle;
+  375 likewise). One polite live region says each scene's `say`. Images
+  load eagerly (a lazy image under an opacity-0 slot never started
+  loading in Chrome).
+  THE LAW AMENDMENT (2026-10-19, late): A SIGNBOARD MAY TURN BY ITSELF; A
+  RUN, A MACHINE AT WORK, STARTS ONLY ON A PRESS. "Nothing presses itself"
+  still governs the watch, the phones and the Studio's captures.
+  THE WATCH IS A RECORD BUTTON (`IntakeHero.astro`, rewritten; Jon: "why
+  isn't it just a big record button? A red record button is Voice
+  Memos"): at rest the face is INTAKE and ONE RED RECORD RING (a thin light
+  ring, the #FF3B30 disc, 56 % of the screen, its red light on the
+  touch-breathe keyframe), nothing to read. Press (`data-state` asking →
+  listening): the ring steps down to 34 %, the disc becomes the stop
+  square, the clock counts up, the wave moves, the heard words print at the
+  face's foot; no speech service or a declined microphone = typing ("type
+  it" on the face, the field under the watch in the caption's cell, which
+  holds the taller's height). Press again: saved (the check, "saved"), the
+  runline from the stop until the parse answers (eased toward 90 %, full
+  on the answer); the tickets slide out BESIDE the watch (a wide sheet:
+  the column is the watch's height, the cards that fit stand, the rest are
+  "+ N more"; under it on a narrow sheet) as Stream cards, an executed one
+  a receipt with the green check and "Reminders · Friday morning", the
+  rest the kind's chip and their points (a point that repeats the title is
+  dropped), a local parse its "without Claude" chip; under them "a preview.
+  nothing was added." and the privacy line. SAVED_MS 2,000 later the face
+  is the ring again; the cards stay until the next press. No ticket:
+  "nothing to file" on the face for 2,000 ms, no card. Nothing heard: back
+  to the ring, the hint says so. DELETED: the run column, its nodes and
+  spine, the fly, the talk pill, Replay, the stages s1–s6, the result's
+  caption, the host's face overrides in StudioOne. The foot reserves three
+  lines of hint (the typed hint moved the fold 16px). On a desk nothing
+  below the watch moves through a typed run or a nothing run (day and
+  night); on a phone the cards land under the watch and push the fold down
+  (504px for three cards), nothing above them moves. The live pipeline
   (`api/intake.ts`, `intake-local.ts`, the schema) is untouched.
 - WORK is OBJECTS (2026-09-18; the ledger/matrix is DEAD): the room holds
   Jon's Claude Design modules, one per build, framed by words — the locked
@@ -435,7 +447,7 @@ session must follow.
   `src/components/studio/objects-copy.ts` (Jon-editable), the locked
   paragraphs beneath. At rest each module shows only its title, its greyed
   nodes and the object: a node's words arrive with its stage (2026-09-22). (SUPERSEDED 2026-10-19 for
-  Intake: its object is THE SORT, the watch live only beneath it; see THE SORT above.) Object one = the Intake
+  Intake: its object is THE BOARD, the record-button watch beneath it; see THE BOARD above.) Object one = the Intake
   hero (`IntakeHero.astro` + `src/data/intake-run.json`; its memo cue
   "Cinder 32" is Intake's real alias for capture 31, length 3:52, seven
   tickets of which the module shows two). It is Jon's REAL memo BY CHOICE
@@ -516,7 +528,7 @@ session must follow.
   .wk-cap` keeps its space) and fade in with the colour flash when the run
   lands (`wk-cap-in`); the watch's stands at rest again since 2026-10-19
   (live only: it says what the live mode does). THE WATCH AT REST (round four, Jon: "2× replay and talk buttons";
-  SUPERSEDED 2026-10-19, live only: no Replay, no `tap to stop`, the pill at rest, see THE SORT):
+  SUPERSEDED 2026-10-19, late: the record button, no pill, no Replay, see THE BOARD):
   the foot under the watch is the PHONE's slot (`.foot`, one grid cell):
   `tap to stop` at rest, then after the run ONE `Replay` pill identical to
   ArchiveHero's (`.replay`, ink pill, 0.72rem mono, 16px under the object,
@@ -528,8 +540,8 @@ session must follow.
   along; "a super minimalistic progress bar … you're watching something
   play out"; he judges whether it distracts): ONE hairline `.runline` in
   the same `.foot` slot on the watch AND the phones, an EXACT COPY of its
-  CSS in IntakeHero, AudioDexDoor and (since 2026-10-19) IntakeSort, change
-  all or none: the hint at rest, from the
+  CSS in IntakeHero and AudioDexDoor (the sort wore it for one round),
+  change both or neither: the hint at rest, from the
   press until the run lands the line, then Replay on its own delay. 1.5px,
   96 wide on desks / 72 on phones, the track the sheet ink at 14 %, the
   fill the hint's own recipe growing left → right LINEARLY over the run's
@@ -545,8 +557,8 @@ session must follow.
   (press → s6 ≈ 11.7s, was 17.3s). Beside the watch the run column RESERVES its stage-six height
   (`--run-final`, measured by IntakeHero's script under a motion-free
   `measuring` class, re-measured on fonts/resize) so the words under the
-  module never move while it runs; stacked, no reservation (the watch
-  reserves stacked too since 2026-10-19, live only). The rail's
+  module never move while it runs; stacked, no reservation (the watch's
+  run column is gone since 2026-10-19, late: see THE BOARD). The rail's
   comet re-measures its knots on any body height change (ResizeObserver).
   The instrument's intro line (`.sgm-intro`) is hidden from the host. The
   watch PNG's transparent frame (70/68/67/61 px of 521×781) is trimmed in
@@ -652,7 +664,8 @@ session must follow.
   above its foot on desks and 28px above the bar on phones, in the label
   face; since round five its ARROW (`.cue-arrow`) is 1.55em, 700, and bobs
   4px on a 2.2s ease (still under reduced motion); the word does not move. NOTHING PRESSES ITSELF (Jon: "I'd rather they have to be
-  clicked"): the watch and the phone run only from a visitor's press, the
+  clicked"; amended 2026-10-19, late: a signboard may turn by itself, a run,
+  a machine at work, starts only on a press; see THE BOARD): the watch and the phone run only from a visitor's press, the
   page never scrolls by itself after a run starts, and a run never opens
   a sheet's fold (the self-run, the phone-row trigger, the follow/glide and
   the run-opens-the-story code are deleted; `firstSettle` survives for the
@@ -872,9 +885,8 @@ session must follow.
   phones (the room's only control); the bar's words are 0.7rem. The run
   column does NOT reserve its final height stacked (the desk's `--run-final`
   is inside the ≥820 container query) — a reservation would be ~850px of
-  blank ground on a phone. (SUPERSEDED 2026-10-19 for the live-only watch:
-  the stacked column at rest already holds its unseen cards, so the reserve
-  adds no ground and a result no longer pulls the fold 222px up.)
+  blank ground on a phone. (The watch has no run column since 2026-10-19,
+  late; its cards land under it on a phone and push the fold down.)
 - Case-study images are WebP on the page; `ogImage=` stays on `cover.png`
   (share scrapers). Any new case-study art lands as webp.
 - Media seeking needs a Range-capable static server: python's
