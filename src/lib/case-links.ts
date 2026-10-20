@@ -24,7 +24,7 @@ export const CASE_LINKS: CaseLink[] = [
     name: "Signal Studio",
     word: "studio",
     // DRAFT (Jon edits)
-    lede: "The music suite around the instrument. Always recording, any sound becomes a chip, and the pitch for why I built it instead of opening Ableton.",
+    lede: "The studio around the instrument: always listening, anything you hear becomes a chip, and the jam version of Ableton that didn't exist.",
   },
   {
     slug: "chs",
