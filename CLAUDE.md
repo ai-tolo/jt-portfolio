@@ -367,92 +367,106 @@ session must follow.
   → how to play → one engineering sentence → where it came from. Every
   DRAFT line lives in objects-copy.ts / signal-card-copy.ts, Jon's to
   rewrite; the hoods never print his real rows.
-- THE PILE, SORTED BY HAND + THE RECORD BUTTON (2026-10-20, branch
-  `intake-v3`, the variations round after THE SEND; Jon on the send: "it's
-  imessage screenshots and calendar screenshots. where is intake? it should
-  be a different vision"; on the three variations: "I like three the most …
-  one-by-one instead of all at once, having the user click on certain
-  things … we're missing the beauty of the calendar: a horizontal calendar
-  beneath everything that also changes … implement how number two had the
-  audio playback, but the text should appear in sequence"; then "just build
-  it"). THE LAW: INTAKE IS THE HERO. The stranger must see Intake's own
-  interface, the product Jon built, as plainly as the AudioDex sheet shows
-  AudioDex beside Voice Memos; Apple's apps appear only as the familiar
-  thing Intake receives from or replaces, never as the object. Intake's
-  surface is the real app at /intake (intake_web.py: the STREAM, a feed of
-  cards on a dark ground, each with its source spine, age, the phone glyph,
-  the kind's chip or the receipt's green ✓ and compact line, the X, the
-  tiles Claude ✦ · Zzzz · Add to…; ROWS; LOG), drawn faithfully, full size
-  enough to read. The Intake sheet reads kind `program` → band ("Intake" +
-  the DRAFT dek "Texts and memos in. Tickets out.") → THE PILE → THE WATCH
-  → the fold exactly as `fold` left it. THE SORT, THE BOARD and THE SEND
-  are RETIRED to junkyard/ (IntakeSort, IntakeBoard, IntakeThread and their
-  json); their images live in `public/intake/board/`. The storyboard is
-  `docs/STORYBOARD-intake-v3.md` (round one, WHAT INTAKE REPLACED, is its
-  head; the pile is its beats).
-  THE PILE = `IntakePile.astro` + `src/data/intake-pile.json` (every line
-  DRAFT; the save-the-date capture 49, Theo & June invented; the
-  Marketplace line capture 53's; the Thundercat receipt real; the memo
-  capture 32 with the name swapped to Nico; "boots lena" and every junk
-  notification invented): TWO PHONES, the AudioDex shape (`--ip-w:
-  min(36cqw, 70svh · 864/1760)` from the host, 8cqw gutter: a step larger
-  than the AudioDex pair, "full size enough to read"). LEFT, the LOCK
-  SCREEN as it was (a drawn wallpaper, light by day, dark under
-  `html[data-night]`; the date, the thin clock, twelve notifications piled
-  past the bottom edge, drawn in iOS's grammar with drawn app icons, never
-  Apple's): FIVE are his and BREATHE (the touch rim + light on each `.ntf.mine`,
-  the house keyframe, change all or none), each a `<button>` press: Messages
-  · Jon · Photo (the save-the-date thumb) · Messages · Jon · Screenshot (the
-  concert email) · Messages · Jon · the Marketplace line · Intake · Memo
-  saved · 0:18 (the wrist glyph on the accent) · Messages · Jon · "boots
-  lena" (1:41 AM); seven are everyone's junk, flat and inert. RIGHT, INTAKE,
-  always on its own dark ground (`intake_web.py`'s :root), the status
-  strip, Intake · Stream · Rows · Log, the feed empty with the app's own
-  line "Stream clear. Talk to your wrist."; its SIX cards stand in the flow
-  at opacity 0 from the first paint (the list is reserved to its fullest
-  state), and a landing moves the card up to the landed group so the
-  Stream fills top down in press order. THE RIBBON under both phones, the
-  object's width (`.ribbon`, 84px fixed, `--vis` 9 / 7 under 820 of the
-  module): the month at the left edge in the label face (lowercase, the
-  year only when not today's), one `.rb-day` per day from 2026-10-01 to
-  2027-09-04 (the weekday letter over the mono numeral, the bar's row
-  reserved under it), today (2026-10-20, pinned: an exhibit) centred and
-  ringed; `--c` is the centred index, the track `translateX(calc((vis/2 −
-  0.5 − c) · 100cqw / vis))`, 700 ms eased, the month label following the
-  slide on rAF; a bar (`[data-bar]`, Intake red / Idea yellow from the
-  board's `--cal-*`, 11px mono, the time for timed items, capped at 2.2
-  cells with an ellipsis, the newest on top where two meet) lights 120 ms
-  before the slide ends. THE ONE ARC (a press; the runline fills in the foot
-  for the press's own length): the item lifts (scale 1.03, 160 ms), a clone
-  of it flies inside a `.flyer` wrap (a container the pile phone's width,
-  so the pill's cqw hold) on a WAAPI curve to the card's rect (500 ms, the
-  card `.in` at 72 %, the clone fading at the end), its slot in the pile
-  closes (320 ms, inline height → 0); a dated landing slides the ribbon
-  300 ms after. An item is 1,600 ms end to end. THE MEMO (the fifth): the
-  notification opens into `.mstrip` (300 ms): the wave in the sheet's accent
-  (the watch's bars), the clock 0:00 → 0:18 pacing to the play, the words
-  typed IN SEQUENCE one per 400 ms (20 words, 8.0 s; no block highlight);
-  then its two tickets fly from the strip 300 ms apart (the receipt "Call
-  Nico" · "Reminder · Sun 3 PM", the open "Make the résumé sticky on the
-  homepage") and the ribbon takes Sunday the 25th; ≈ 11.4 s end to end.
+- THE CATCH-ALL + THE RECORD BUTTON (2026-10-21, branch `intake-v4`, fresh
+  eyes after five attempts in two days; Jon on the pile, the fifth: "The
+  view of the calendar isn't good enough to be relevant. I don't know why
+  we need the phone to be on the right side as well. There's too many
+  other notifications with extra words that feel irrelevant and hard to
+  navigate through. And the subtext saying tap what's yours is stupid and
+  weird." then "I need fresh eyes to take all of this and take another
+  swing"). THE LAWS the five teach, all held at once: INTAKE IS THE HERO
+  (the stranger sees Intake's own interface, the product Jon built, never
+  Apple's apps as the object); Intake need not sit in a phone frame; ONE
+  LIVED MOMENT with a before and an after, moved by the visitor's presses
+  one at a time; ONLY WHAT MATTERS ON SCREEN (noise felt, never read; no
+  filler notifications with words); A CALENDAR ONLY AS A REAL, LEGIBLE
+  VIEW or not at all; NO INSTRUCTION TEXT, ever (the rims say what can be
+  pressed; "tap what's yours" is the line never to write again); keep the
+  memo whose words arrive in sequence; THE SIRI TEST. Intake's surface is
+  the real app at /intake (intake_web.py: the STREAM, a feed of cards on a
+  dark ground, each with its source spine, age, the phone glyph, the kind's
+  chip or the receipt's green ✓ and compact line, the X, the tiles Claude ✦
+  · Zzzz · Add to…; ROWS; LOG). The Intake sheet reads kind `program` →
+  band ("Intake" + the DRAFT dek "Texts and memos in. Tickets out.") → THE
+  CATCH-ALL → THE WATCH → the fold exactly as `fold` left it. THE SORT, THE
+  BOARD, THE SEND and THE PILE are RETIRED to junkyard/ (IntakeSort,
+  IntakeBoard, IntakeThread, IntakePile and their json); their images live
+  in `public/intake/board/`. The storyboard is `docs/STORYBOARD-intake-v4.md`.
+  THE CATCH-ALL = `IntakeCatchAll.astro` + `src/data/intake-catchall.json`
+  (every line DRAFT; the save-the-date capture 49, Theo & June invented;
+  the Marketplace line capture 53's; the Thundercat receipt real; the memo
+  capture 32 with the name swapped to Nico; "boots lena" invented): THREE
+  COLUMNS THE PHONE'S HEIGHT, all in one screen at 1440 × 900 (beneath, the
+  month's rows fell under the fold: the stranger never saw it turn):
+  `grid-template-columns: minmax(0, --ica-w) minmax(0, --ica-app)
+  minmax(0, 1fr)`, from the host `--ica-w: min(28cqw, 70svh · 864/1760)`,
+  `--ica-app: 300px` (the Stream's own width), `--ica-gap: 28px` (the
+  photographed body's buttons stand outside its column; 20 overlapped the
+  panel). LEFT, THE LOCK SCREEN as it was (a drawn wallpaper, light by day,
+  dark under `html[data-night]`; the date, the thin clock; drawn in iOS's
+  grammar with drawn app icons, never Apple's): FIVE pills and NOTHING
+  ELSE (his notifications are off; the noise is the five shapes in one
+  grey glass, nothing done), each BREATHING (the touch rim + light on every
+  `.ntf`, the house keyframe, change all or none) and each a `<button>`
+  press: Messages · Jon · Photo (the save-the-date thumb) · Messages · Jon ·
+  Screenshot (the concert email) · Messages · Jon · the Marketplace line ·
+  Intake · Memo saved · 0:18 (the wrist glyph on the accent) · Messages ·
+  Jon · "boots lena" (1:41 AM). MIDDLE, INTAKE AS ITSELF: a panel
+  (`.ica-app`, 16px radius, `intake_web.py`'s :root ground and line, its
+  own px type: no phone), the nav Intake · Stream · Rows · Log, the feed
+  empty with the app's own line "Stream clear. Talk to your wrist."; its
+  SIX cards stand in the flow at opacity 0 from the first paint (the list
+  is reserved to its fullest state, 580 of the feed's 570: the last card's
+  bottom margin clips), and a landing moves the card up to the landed group
+  so the Stream fills top down in press order. RIGHT, THE MONTH (`.cm`): his
+  calendar as the iPhone draws a month, a panel the phone's height: one
+  `.cm-page` per month a landing needs (today's first; `--p` on `[data-cal]`
+  slides the track 520 ms eased), each the month's name, the weekday
+  letters, a grid of whole weeks whose rows share the panel's height
+  (`grid-auto-rows: minmax(0, 1fr)`), the other months' days dim, today
+  (2026-10-20, pinned: an exhibit) white in the red ring; a bar
+  (`.cm-bar[data-bar]`, Intake red / Idea yellow from the board's
+  `--cal-*`, 10.5px, the title to three lines then an ellipsis, a word too
+  long for the cell ellipsized never broken, the time under it) lights 120
+  ms before the slide ends, or 200 ms after a landing on the month already
+  shown. THE PRESS (the runline fills in the foot for its own length): the
+  pill LIFTS (scale 1.03) and OPENS the way iOS opens a notification
+  (`[data-more]` to its scrollHeight, 320 ms: the photo, the screenshot,
+  the listing full width in the pill; the others step back to 0.3 under
+  `.busy`), HOLDS 600 ms so you see it, then a clone flies inside a
+  `.flyer` wrap (a container the phone's width, so the pill's cqw hold) on
+  a WAAPI curve to the card's rect (500 ms, shrinking into it, never
+  growing; the card `.in` at 72 %, the clone fading at the end), its slot
+  closes (320 ms, inline height → 0); a dated landing pages the month 300
+  ms after. The photo ≈ 2.3 s end to end; "boots lena" has nothing to open
+  (lift 160 → fly) ≈ 0.9 s. THE MEMO: the pill opens into `.mstrip` (300
+  ms): the wave in the sheet's accent (the watch's bars), the clock 0:00 →
+  0:18 pacing to the play, the words typed IN SEQUENCE one per 400 ms (20
+  words, 8.0 s); then its two tickets fly from the strip 300 ms apart (the
+  receipt "Call Nico" · "Reminder · Sun 3 PM", the open "Make the résumé
+  sticky on the homepage") and the month takes Sunday the 25th; ≈ 10.9 s.
   THE SLOT FOR SOUND: `public/intake/memo-nico.m4a` (existsSync at build
-  time, like the Studio captures): absent, typing only; present, an
-  `<audio>` plays on the press and the words pace to its length. Jon
-  records it. ANY ORDER; a press during a press is ignored; after the
-  fifth the junk fades (600 ms, `.quiet`), the lock screen is the clock
-  alone, Replay (the house pill) puts everything back in one step
+  time): absent, typing only; present, an `<audio>` plays on the press and
+  the words pace to its length. Jon records it. ANY ORDER; a press during
+  a press is ignored; after the fifth the lock screen is the date and the
+  clock alone, Replay (the house pill) puts everything back in one step
   (`.still` kills the transitions, the cards return to their resting
-  order). NARROW SHEETS (< 620 of the module): the two phones share ONE
-  cell, the lock screen at rest, Intake crossfading over it for a beat at
-  each landing (`.peek`, 400 over, 1,200 hold) and staying after the fifth.
-  Reduced motion: no arc, no slide, no typing; a press shows the card and
-  the bar at once. One sheet height through every press (1440: 2170px
-  across both orders; 375: 1910). One polite live region says each sort in
-  one sentence, then "Everything sorted. The phone is quiet." Probe: the
-  scratch pile-qa.mjs pattern (headless, muted, two orders; captures in
-  `~/Documents/studio-build/pile/`). Pane gotcha: a 1440 emulation
-  screenshots a ~0.78-scale crop, and a hidden pane throttles nested
-  timers, so timing is read from the headless probe.
+  order, the month to page 0). The foot is ONE SLOT, runline · Replay, NO
+  HINT. A MIDDLING SHEET (620–899 of the module, a 1024 desk): the phone
+  and Intake side by side, the month beneath at the sheet's width (58px
+  rows, one-line bars). NARROW (< 620): the lock screen 82cqw centred,
+  Intake under it at the sheet's width with its list in full, the month
+  under that (54px rows, the title alone, no time). Reduced motion: no
+  opening, no arc, no paging, no typing; a press shows the card and the
+  bar at once. One sheet height through every press (1440: 2049 across
+  both orders; 375: 2852). One polite live region says each press in one
+  sentence, then "Everything sorted. The phone is quiet." Probe: the
+  scratch catchall-qa.mjs pattern (headless, muted, 1440 day / night, 375
+  touch, two orders; captures in `~/Documents/studio-build/catchall/`).
+  Pane gotcha: a 1440 emulation screenshots a ~0.78-scale crop, and a
+  hidden pane throttles nested timers, so timing is read from the headless
+  probe; the dev server's toolbar answers 504 "Outdated Optimize Dep" after
+  a build in the same folder until the preview is restarted.
   THE LAW AMENDMENT (2026-10-19, late): A SIGNBOARD MAY TURN BY ITSELF; A
   RUN, A MACHINE AT WORK, STARTS ONLY ON A PRESS. "Nothing presses itself"
   still governs the watch, the phones and the Studio's captures.
