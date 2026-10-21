@@ -29,3 +29,9 @@ The site is the homepage, the résumé, and the case studies under it.
   for IntakeStream.astro, WHAT INTAKE REPLACED (Jon: "it's imessage screenshots and calendar screenshots. where is
   intake? it should be a different vision"). Its images stay in public/intake/board/ (the stream uses all three); its
   imports no longer resolve from here: a record, not a part
+- IntakePile.astro, intake-pile.json — THE PILE, SORTED BY HAND (2026-10-20, intake-v3 round two): the lock screen's
+  dozen notifications beside Intake in a second phone, five presses, a ribbon of days beneath, the memo typed as
+  spoken; retired 2026-10-21 for IntakeCatchAll.astro, THE CATCH-ALL (Jon: "the view of the calendar isn't good
+  enough to be relevant … why we need the phone on the right side as well … too many other notifications … tap
+  what's yours is stupid and weird"). Its images stay in public/intake/board/ (the catch-all uses all three); its
+  imports no longer resolve from here: a record, not a part
