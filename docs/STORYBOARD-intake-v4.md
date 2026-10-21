@@ -11,31 +11,33 @@ so many iOS-based things, in a sorted feed. All of my notifications are turned o
 
 The lived moment: you pick up your phone. Five things you sent yourself are waiting on the lock screen, in five
 shapes: a photo of a save-the-date, a screenshot of a concert email, a Marketplace link with a thought, a memo from
-your wrist, two words typed at 1:41 AM. Nothing else: his notifications are off. Beside the phone, INTAKE as itself,
-the web app, its Stream clear. Beneath both, his calendar, a real month, October 2026, today ringed. Each thing is one
+your wrist, two words typed at 1:41 AM. Nothing else: his notifications are off. Beside the phone, INTAKE,
+an empty outline of it (round two). Beside that, his calendar, a real month, October 2026, today ringed. Each thing is one
 press: it opens so you see what it is, then it goes into Intake and becomes its ticket; the dated ones also land on
 the calendar, which pages to the day. After the fifth the lock screen is the clock alone.
 
-Where is Intake: on screen from the first paint, at full size (the right column, the phone's height, no frame), at
-every landing, and the whole end state. Apple appears only as the lock screen the things arrive on, and the calendar
+Where is Intake: its outline on screen from the first paint (the middle column, the phone's silhouette as one
+hairline on the paper), its cards at every landing, and the whole end state. Round two (2026-10-21, Jon: "I don't
+know why it needs to look like a phone or why there needs to be header info there and the dark black background.
+What matters is showing the cards"): no app chrome, only the cards. Apple appears only as the lock screen the things arrive on, and the calendar
 they land in.
 
 ## The beats (what is on screen · what moves · how long)
 
 1. REST, left: THE LOCK SCREEN as it was. The date, the thin clock, FIVE pills in iOS's grammar: Messages · Jon · Photo (the save-the-date thumb) · Messages · Jon · Screenshot (the concert email) · Messages · Jon · "Saw this on Marketplace. Made me think about creative hardware controls for music." · Intake · Memo saved · 0:18 · from your wrist · Messages · Jon · boots lena (1:41 AM). No other notification. Each breathes (the touch rim, the house vocabulary). Still.
-2. REST, right: INTAKE, the real app as it is on his Mac mini: a dark panel the phone's height, Intake · Stream · Rows · Log, the feed empty with the app's own line, "Stream clear. Talk to your wrist." Its list already holds six cards' height, unseen. Still.
+2. REST, middle: INTAKE, ONE HAIRLINE in the phone's silhouette (the lock screen's twin: its width, its aspect, its corners), 1px, the sheet ink at 14 %, on the sheet's own paper. Nothing inside it: empty means empty. Its list already holds six cards' height, unseen. Still.
 3. REST, beneath both: THE MONTH, October 2026, drawn as the iPhone's Calendar draws a month (the weekday letters, the bold numerals, today in its red ring), the object's full width, nothing on it. The foot is empty. Still.
 4. A PRESS on the photo (the runline fills in the foot for the press's own length): the pill OPENS the way iOS opens a notification, the save-the-date full width inside it, the other pills dimmed (320 ms), and holds so you see it (600 ms).
-5. It GOES: a copy of the open pill flies one arc into the Stream (500 ms) and is the card as it lands: a RECEIPT, ✓ · Theo & June's wedding · Intake · Aug 28, 2027. The pill's slot closes (320 ms); the other pills come back.
+5. It GOES: a copy of the open pill flies one arc into the outline (500 ms) and is the card as it lands, at the top: a RECEIPT, the green ✓ and "Theo & June's wedding" on one line, "Intake · Aug 28, 2027" under it in the label face. A card is its title and its one line, nothing else (no X, no tiles, no spine, no age, no glyph); a hairline between cards. The pill's slot closes (320 ms); the other pills come back.
 6. 300 ms after the landing THE MONTH PAGES: August 2027 slides in (520 ms), and the 28th takes the red bar "Theo & June's wedding". The press is about 2.3 s end to end.
 7. The SCREENSHOT: opens (the concert email, whole) → flies → ✓ Thundercat, The Fillmore · Idea · Oct 27 → the month pages back to October 2026 and the 27th takes the yellow bar "Thundercat".
-8. The MARKETPLACE line: opens (the listing's picture under his words) → flies → an OPEN card: the idea chip, "Creative hardware controls for music (the RailDriver idea)", the listing's thumb, facebook.com, the tiles Claude ✦ · Zzzz · Add to…. The month holds.
-9. "boots lena": nothing to open; it lifts and flies → an open card "Red boots for Lena (Christmas)". The month holds. About 1 s.
-10. THE MEMO: the pill opens into its strip: the wave in the sheet's accent, the clock 0:00 → 0:18, and the words typed IN SEQUENCE as spoken, one every 400 ms: "Remind me on Sunday afternoon to call Nico. I need to make a résumé on the homepage. Sticky, so it floats." (20 words, 8 s; with public/intake/memo-nico.m4a in place it plays aloud and the words pace to it). Then its two tickets fly one at a time, 300 ms apart: ✓ Call Nico · Reminder · Sun 3 PM, then the open task "Make the résumé sticky on the homepage"; the month shows October and the 25th takes the red bar "Call Nico · 3 PM". About 11.5 s.
-11. ANY ORDER. A press during a press is ignored. After the FIFTH the lock screen is the date and the clock: the phone is quiet. Six cards in the Stream, three bars on the calendar. Replay (the house pill) fades in at the foot; it puts everything back in one step.
-12. NARROW SHEET (< 620 of the module): the lock screen smaller and centred, Intake under it at the sheet's width, the month under that (the bars' times drop). REDUCED MOTION: no opening, no arc, no paging, no typing; a press shows the card and the bar at once.
+8. The MARKETPLACE line: opens (the listing's picture under his words) → flies → an OPEN card: "Creative hardware controls for music (the RailDriver idea)" over "Idea · facebook.com", the listing's thumb at its right (the one card whose thing was an image and is not done). The month holds.
+9. "boots lena": nothing to open; it lifts and flies → an open card "Red boots for Lena (Christmas)" over "Idea · 1:41 AM". The month holds. About 1 s.
+10. THE MEMO: the pill opens into its strip: the wave in the sheet's accent, the clock 0:00 → 0:18, and the words typed IN SEQUENCE as spoken, one every 400 ms: "Remind me on Sunday afternoon to call Nico. I need to make a résumé on the homepage. Sticky, so it floats." (20 words, 8 s; with public/intake/memo-nico.m4a in place it plays aloud and the words pace to it). Then its two tickets fly one at a time, 300 ms apart: ✓ Call Nico · Reminder · Sun 3 PM, then the open card "Make the résumé sticky on the homepage" · Task · from the memo; the month shows October and the 25th takes the red bar "Call Nico · 3 PM". About 11.5 s.
+11. ANY ORDER. A press during a press is ignored. After the FIFTH the lock screen is the date and the clock: the phone is quiet. Six cards in the outline, three bars on the calendar. Replay (the house pill) fades in at the foot; it puts everything back in one step.
+12. NARROW SHEET (< 620 of the module): the lock screen smaller and centred, the outline its twin under it with the cards inside, the month under that (the bars' times drop). A middling sheet (620–899): the outline the phone's twin, centred beside it, the month beneath. REDUCED MOTION: no opening, no arc, no paging, no typing; a press shows the card and the bar at once.
 
-The sheet's height never changes: the phone is an aspect ratio, Intake's panel is the phone's height with its list
+The sheet's height never changes: the phone is an aspect ratio, Intake's outline is the same aspect ratio with its list
 reserved, the month is five rows at a fixed height, the foot is one slot (runline · Replay).
 
 ## The haters
@@ -58,13 +60,13 @@ The lock screen (src/data/intake-catchall.json; the clock, the date and the app 
 
 The memo (capture 32, the name swapped): `Remind me on Sunday afternoon to call Nico. I need to make a résumé on the homepage. Sticky, so it floats.`
 
-Intake (the chrome words `Intake` · `Stream` · `Rows` · `Log`, the empty line and the tiles are the app's own; every card's age reads `today`):
-- receipt: `Theo & June's wedding` · `Intake · Aug 28, 2027`
-- receipt: `Thundercat, The Fillmore` · `Idea · Oct 27`
-- open · idea: `Creative hardware controls for music (the RailDriver idea)` · the thumb · `facebook.com` · `Claude ✦` · `Zzzz` · `Add to…`
-- open · idea: `Red boots for Lena (Christmas)` · the tiles
-- receipt: `Call Nico` · `Reminder · Sun 3 PM`
-- open · task: `Make the résumé sticky on the homepage` · the tiles
+Intake (round two: no chrome words, no empty line, no tiles; a card is its title and its one line):
+- receipt: ✓ `Theo & June's wedding` · `Intake · Aug 28, 2027`
+- receipt: ✓ `Thundercat, The Fillmore` · `Idea · Oct 27`
+- open: `Creative hardware controls for music (the RailDriver idea)` · `Idea · facebook.com` · the listing's thumb
+- open: `Red boots for Lena (Christmas)` · `Idea · 1:41 AM`
+- receipt: ✓ `Call Nico` · `Reminder · Sun 3 PM`
+- open: `Make the résumé sticky on the homepage` · `Task · from the memo`
 
 The month: `October 2026` · `August 2027` · the weekday letters; the bars `Theo & June's wedding` (red, the Intake calendar) · `Thundercat` (yellow, the Idea calendar) · `Call Nico` · `3 PM` (red)
 
