@@ -398,9 +398,9 @@ session must follow.
   capture 32 with the name swapped to Nico; "boots lena" invented): THREE
   COLUMNS THE PHONE'S HEIGHT, all in one screen at 1440 × 900 (beneath, the
   month's rows fell under the fold: the stranger never saw it turn):
-  `grid-template-columns: minmax(0, --ica-w) minmax(0, --ica-app)
-  minmax(0, 1fr)`, from the host `--ica-w: min(28cqw, 70svh · 864/1760)`,
-  `--ica-app: 300px` (the Stream's own width), `--ica-gap: 28px` (the
+  `grid-template-columns: minmax(0, --pw) minmax(0, --pw)
+  minmax(0, 1fr)`, `--pw` from the host `--ica-w: min(32cqw, 70svh ·
+  864/1760)` (309 × 630 at 1440 × 900), `--ica-gap: 24px` (the
   photographed body's buttons stand outside its column; 20 overlapped the
   panel). LEFT, THE LOCK SCREEN as it was (a drawn wallpaper, light by day,
   dark under `html[data-night]`; the date, the thin clock; drawn in iOS's
@@ -411,14 +411,26 @@ session must follow.
   press: Messages · Jon · Photo (the save-the-date thumb) · Messages · Jon ·
   Screenshot (the concert email) · Messages · Jon · the Marketplace line ·
   Intake · Memo saved · 0:18 (the wrist glyph on the accent) · Messages ·
-  Jon · "boots lena" (1:41 AM). MIDDLE, INTAKE AS ITSELF: a panel
-  (`.ica-app`, 16px radius, `intake_web.py`'s :root ground and line, its
-  own px type: no phone), the nav Intake · Stream · Rows · Log, the feed
-  empty with the app's own line "Stream clear. Talk to your wrist."; its
-  SIX cards stand in the flow at opacity 0 from the first paint (the list
-  is reserved to its fullest state, 580 of the feed's 570: the last card's
-  bottom margin clips), and a landing moves the card up to the landed group
-  so the Stream fills top down in press order. RIGHT, THE MONTH (`.cm`): his
+  Jon · "boots lena" (1:41 AM). MIDDLE, INTAKE'S CARDS AND NOTHING ELSE
+  (round two, 2026-10-21, Jon: "I don't know why it needs to look like a
+  phone or why there needs to be header info there and the dark black
+  background. What matters is showing the cards"): `.ica-app` is the lock
+  screen's TWIN box (its width, aspect 864/1760, `align-self: start`), on
+  the sheet's own paper, holding ONE 1px hairline in the phone's
+  silhouette (`.sil`: the shadow's inset 0.6% 1.2% and corners 16.2% /
+  7.95%, the sheet ink at 14 %), empty at rest. No dark ground, no nav, no
+  status bar, no empty line. Inside the screen's rectangle, only THE CARDS
+  in the sheet's ink: a receipt = the ✓ (Intake's green #79a465) and the
+  title on one line (Instrument Sans 14/600), the compact line under it
+  (the mono label face 11px, dim, past the ✓); an open card = the title
+  over its one line (`what`: "Idea · facebook.com" · "Idea · 1:41 AM" ·
+  "Task · from the memo", DRAFT), the thumb (40px) only on the Marketplace
+  card; no X, tiles, spine, age, chip or glyph; a 14 % hairline between
+  cards. The SIX stand in the flow at opacity 0 from the first paint (the
+  list reserved: 456 of the feed's 606 at 1440), and a landing moves the
+  card up to the landed group so the list fills top down in press order.
+  A middling sheet centres the twin (`--pw` wide) beside the phone; a
+  narrow one stands it 82cqw under the lock screen. RIGHT, THE MONTH (`.cm`): his
   calendar as the iPhone draws a month, a panel the phone's height: one
   `.cm-page` per month a landing needs (today's first; `--p` on `[data-cal]`
   slides the track 520 ms eased), each the month's name, the weekday
@@ -453,13 +465,13 @@ session must follow.
   (`.still` kills the transitions, the cards return to their resting
   order, the month to page 0). The foot is ONE SLOT, runline · Replay, NO
   HINT. A MIDDLING SHEET (620–899 of the module, a 1024 desk): the phone
-  and Intake side by side, the month beneath at the sheet's width (58px
-  rows, one-line bars). NARROW (< 620): the lock screen 82cqw centred,
-  Intake under it at the sheet's width with its list in full, the month
-  under that (54px rows, the title alone, no time). Reduced motion: no
-  opening, no arc, no paging, no typing; a press shows the card and the
-  bar at once. One sheet height through every press (1440: 2049 across
-  both orders; 375: 2852). One polite live region says each press in one
+  and its twin outline side by side, the month beneath at the sheet's
+  width (58px rows, one-line bars). NARROW (< 620): the lock screen 82cqw
+  centred, the twin outline 82cqw under it with the cards inside, the
+  month under that (54px rows, the title alone, no time). Reduced motion:
+  no opening, no arc, no paging, no typing; a press shows the card and the
+  bar at once. One sheet height through every press (round two: 1440:
+  2058 across both orders; 375: 2735). One polite live region says each press in one
   sentence, then "Everything sorted. The phone is quiet." Probe: the
   scratch catchall-qa.mjs pattern (headless, muted, 1440 day / night, 375
   touch, two orders; captures in `~/Documents/studio-build/catchall/`).
