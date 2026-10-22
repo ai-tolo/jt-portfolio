@@ -395,12 +395,12 @@ session must follow.
   THE CATCH-ALL = `IntakeCatchAll.astro` + `src/data/intake-catchall.json`
   (every line DRAFT; the save-the-date capture 49, Theo & June invented;
   the Marketplace line capture 53's; the Thundercat receipt real; the memo
-  capture 32 with the name swapped to Nico; "boots lena" invented): THREE
+  capture 32 with the name swapped to Nico; "boots lena" invented): TWO
   COLUMNS THE PHONE'S HEIGHT, all in one screen at 1440 × 900 (beneath, the
   month's rows fell under the fold: the stranger never saw it turn):
-  `grid-template-columns: minmax(0, --pw) minmax(0, --pw)
-  minmax(0, 1fr)`, `--pw` from the host `--ica-w: min(32cqw, 70svh ·
-  864/1760)` (309 × 630 at 1440 × 900), `--ica-gap: 24px` (the
+  `grid-template-columns: minmax(0, --pw) minmax(0, 1fr)`, `--pw` from the
+  host `--ica-w: min(32cqw, 70svh · 864/1760)` (309 × 630 at 1440 × 900),
+  `--ph` = the phone's height written out, `--ica-gap: 24px` (the
   photographed body's buttons stand outside its column; 20 overlapped the
   panel). LEFT, THE LOCK SCREEN as it was (a drawn wallpaper, light by day,
   dark under `html[data-night]`; the date, the thin clock; drawn in iOS's
@@ -411,55 +411,58 @@ session must follow.
   press: Messages · Jon · Photo (the save-the-date thumb) · Messages · Jon ·
   Screenshot (the concert email) · Messages · Jon · the Marketplace line ·
   Intake · Memo saved · 0:18 (the wrist glyph on the accent) · Messages ·
-  Jon · "boots lena" (1:41 AM). MIDDLE, INTAKE'S CARDS AND NOTHING ELSE
-  (round two, 2026-10-21, Jon: "I don't know why it needs to look like a
-  phone or why there needs to be header info there and the dark black
-  background. What matters is showing the cards"): `.ica-app` is the lock
-  screen's TWIN box (its width, aspect 864/1760, `align-self: start`), on
-  the sheet's own paper, holding ONE 1px hairline in the phone's
-  silhouette (`.sil`: the shadow's inset 0.6% 1.2% and corners 16.2% /
-  7.95%, the sheet ink at 14 %), empty at rest. No dark ground, no nav, no
-  status bar, no empty line. Inside, only THE CARDS, and since ROUND THREE
-  (2026-10-22, Jon: round two's "look a bit unprofessional and lack
-  identity") each is THE REAL INTAKE CARD, intake_web.py's article.ticket
-  inside the outline, 14px in from its inner edge, 12 apart: the 3px LEFT
-  SPINE in the source's colour (`src` in the json: thread = the Messages
-  pill's green #34c759, wrist = the sheet's ember #ff6b4a; the watch's live
-  cards wear the wrist's too, `SRC` in IntakeHero: one hue per source for
-  the whole sheet), 12px radius, the 1px line, the META ROW on top (the
-  age as the lock screen showed it · the kind's chip, uppercase, EVENT ·
-  IDEA · TASK · REMINDER in the app's KIND_COLORS #d9a845 / #8fbf6f /
-  #e0a35b / #d9a845 · on a receipt the green ✓), the TITLE in the system
-  face (-apple-system, system-ui; 650, receipts 600), one line under it
-  (a receipt's "where · when" faint; an open card's `what` at the muted
-  ink, the 44px thumb right of the text on the Marketplace card only); no
-  X, tiles, verb buttons or header. THE PALETTE: by day the app's dark
-  palette translated to the paper (`--tk-*` on `.ica-app`: surface = the
-  sheet's white, line = the ink at 14 %, muted / faint = the ink at 66 /
-  58 %, the chips mixed 62 % toward the ink as the watch's are, 4.8:1 on
-  white, the ✓ #79a465); by night the app's own palette AS IS (#1c1f1b ·
-  #2e332c · #eaece5 · #9ca294 · #767c6f · #8fbf6f, the chips' colours
-  bare), so the column IS the app. THE SCALE: the app's px (16.5 titles,
-  14/16 padding) ran 727 in the 594 the box holds at 1440, so the card is
-  set in em on ONE size, `clamp(11px, 4.53cqw, 14px)` of the app box
-  (14 at 1440: titles 14 / receipts 13, lines 12 / 11.5, the row 10.5,
-  the chip 9.5, padding 10 14 9, gap 8; 11.3 at 375, the chip 7.7): 563 of
-  594 at 1440, 480 of 481 at 375. A receipt sits at .85. The SIX stand in the flow at opacity 0 from
-  the first paint (the list reserved), and a landing moves the card up to
-  the landed group so the list fills top down in press order.
-  A middling sheet centres the twin (`--pw` wide) beside the phone; a
-  narrow one stands it 82cqw under the lock screen. RIGHT, THE MONTH (`.cm`): his
-  calendar as the iPhone draws a month, a panel the phone's height: one
-  `.cm-page` per month a landing needs (today's first; `--p` on `[data-cal]`
-  slides the track 520 ms eased), each the month's name, the weekday
-  letters, a grid of whole weeks whose rows share the panel's height
-  (`grid-auto-rows: minmax(0, 1fr)`), the other months' days dim, today
-  (2026-10-20, pinned: an exhibit) white in the red ring; a bar
-  (`.cm-bar[data-bar]`, Intake red / Idea yellow from the board's
-  `--cal-*`, 10.5px, the title to three lines then an ellipsis, a word too
-  long for the cell ellipsized never broken, the time under it) lights 120
-  ms before the slide ends, or 200 ms after a landing on the month already
-  shown. THE PRESS (the runline fills in the foot for its own length): the
+  Jon · "boots lena" (1:41 AM). RIGHT, INTAKE, ONE COLUMN (round four,
+  2026-10-22, Jon: "the outline for the Intake cards is kind of weird, the
+  rounding is weird … the calendar and the Intake cards in the same
+  column, in two rows"; round two's phone-silhouette outline read as a
+  third phone and is gone): `.ica-intake`, a flex column `height: --ph`,
+  the width the two columns had, two frames in the calendar's outline
+  (`--cm-line` 1px, radius 16, `--cm-ground`), 16px apart. TOP, THE
+  CARDS' WINDOW `.ica-app`: `flex: none`, `height: calc(3 × 5.714em +
+  2 × 0.5714em + 2em + 2px)` = three one-line cards (284 at 1440),
+  reserved from the first paint; the feed inside is absolute, padded 1em,
+  `overflow: hidden`, its foot a mask fade (`calc(100% − 2.6em)` →
+  `calc(100% − 0.5em)`); a landing PREPENDS its card (the real Stream,
+  newest first) and the feed slides down by the card's height (WAAPI,
+  360 ms; the arc lands at the window's top); past the third the older
+  cards are under the fade. Four cards' height did not fit beside the
+  month (the month's rows need ~46px for a bar). Each card is THE REAL
+  INTAKE CARD (round three, 2026-10-22, Jon: round two's "look a bit
+  unprofessional and lack identity"), intake_web.py's article.ticket:
+  the 3px LEFT SPINE in the source's colour (`src` in the json: thread =
+  the Messages pill's green #34c759, wrist = the sheet's ember #ff6b4a;
+  the watch's live cards wear the wrist's too, `SRC` in IntakeHero: one
+  hue per source for the whole sheet), 12px radius, the 1px line, the META
+  ROW on top (the age as the lock screen showed it · the kind's chip,
+  uppercase, EVENT · IDEA · TASK · REMINDER in the app's KIND_COLORS
+  #d9a845 / #8fbf6f / #e0a35b / #d9a845 · on a receipt the green ✓), the
+  TITLE in the system face (-apple-system, system-ui; 650, receipts 600),
+  one line under it (a receipt's "where · when" faint; an open card's
+  `what` at the muted ink, the 44px thumb right of the text on the
+  Marketplace card only); no X, tiles, verb buttons or header. THE
+  PALETTE: by day the app's dark palette translated to the paper (`--tk-*`
+  on `.ica-app`: surface = the sheet's white, line = the ink at 14 %,
+  muted / faint = the ink at 66 / 58 %, the chips mixed 62 % toward the
+  ink as the watch's are, 4.8:1 on white, the ✓ #79a465); by night the
+  app's own palette AS IS (#1c1f1b · #2e332c · #eaece5 · #9ca294 ·
+  #767c6f · #8fbf6f, the chips' colours bare), so the column IS the app.
+  THE SCALE: the card is set in em on ONE size on `.ica-app`,
+  `clamp(11px, 4.53cqw, 14px)` (14 at 1440: titles 14 / receipts 13,
+  lines 12 / 11.5, the row 10.5, the chip 9.5, padding 10 14 9, gap 8;
+  12.5px on a middling sheet so the month keeps its rows; 13.8 at 375). A
+  receipt sits at .85. The SIX stand in the flow at opacity 0 from the
+  first paint. BOTTOM, THE MONTH (`.cm`, `flex: 1`): his calendar as the
+  iPhone draws a month, taking what the window leaves (rows ~49px at 1440,
+  `grid-auto-rows: minmax(0, 1fr)`): one `.cm-page` per month a landing
+  needs (today's first; `--p` on `[data-cal]` slides the track 520 ms
+  eased), each the month's name, the weekday letters, a grid of whole
+  weeks, the other months' days dim, today (2026-10-20, pinned: an
+  exhibit) white in the red ring; a bar (`.cm-bar[data-bar]`, Intake red /
+  Idea yellow from the board's `--cal-*`, 10.5px, top 28, the TITLE ALONE
+  on one line cut with an ellipsis at every width since round four: the
+  time `<i>` is in the markup and `display: none`) lights 120 ms before the
+  slide ends, or 200 ms after a landing on the month already
+  shown.THE PRESS (the runline fills in the foot for its own length): the
   pill LIFTS (scale 1.03) and OPENS the way iOS opens a notification
   (`[data-more]` to its scrollHeight, 320 ms: the photo, the screenshot,
   the listing full width in the pill; the others step back to 0.3 under
@@ -471,10 +474,12 @@ session must follow.
   ms after. The photo ≈ 2.3 s end to end; "boots lena" has nothing to open
   (lift 160 → fly) ≈ 0.9 s. THE MEMO: the pill opens into `.mstrip` (300
   ms): the wave in the sheet's accent (the watch's bars), the clock 0:00 →
-  0:18 pacing to the play, the words typed IN SEQUENCE one per 400 ms (20
-  words, 8.0 s); then its two tickets fly from the strip 300 ms apart (the
+  0:18 pacing to the play, the words typed IN SEQUENCE one per 140 ms (20
+  words, 2.8 s); then its two tickets fly from the strip 300 ms apart (the
   receipt "Call Nico" · "Reminder · Sun 3 PM", the open "Make the résumé
-  sticky on the homepage") and the month takes Sunday the 25th; ≈ 10.9 s.
+  sticky on the homepage") and the month takes Sunday the 25th; ≈ 5.4 s
+  (round four, Jon: 400 ms a word "still takes way too long": `data-pace`
+  140, the twenty words in 2.8 s, the clock 0:00 → 0:18 over the same).
   THE SLOT FOR SOUND: `public/intake/memo-nico.m4a` (existsSync at build
   time): absent, typing only; present, an `<audio>` plays on the press and
   the words pace to its length. Jon records it. ANY ORDER; a press during
@@ -483,13 +488,13 @@ session must follow.
   (`.still` kills the transitions, the cards return to their resting
   order, the month to page 0). The foot is ONE SLOT, runline · Replay, NO
   HINT. A MIDDLING SHEET (620–899 of the module, a 1024 desk): the phone
-  and its twin outline side by side, the month beneath at the sheet's
-  width (58px rows, one-line bars). NARROW (< 620): the lock screen 82cqw
-  centred, the twin outline 82cqw under it with the cards inside, the
-  month under that (54px rows, the title alone, no time). Reduced motion:
+  at 40cqw, Intake's column beside it as on a wide sheet (588 tall; the
+  cards at 12.5px, the rows 47). NARROW (< 620): the lock screen 82cqw
+  centred, the cards' window under it at the sheet's width, the month
+  under that at its own height (54px rows). Reduced motion:
   no opening, no arc, no paging, no typing; a press shows the card and the
-  bar at once. One sheet height through every press (round two: 1440:
-  2058 across both orders; 375: 2735). One polite live region says each press in one
+  bar at once. One sheet height through every press (round four: 1440:
+  2058; 375's main 9182 before and after). One polite live region says each press in one
   sentence, then "Everything sorted. The phone is quiet." Probe: the
   scratch catchall-qa.mjs pattern (headless, muted, 1440 day / night, 375
   touch, two orders; captures in `~/Documents/studio-build/catchall/`).
