@@ -419,16 +419,34 @@ session must follow.
   the sheet's own paper, holding ONE 1px hairline in the phone's
   silhouette (`.sil`: the shadow's inset 0.6% 1.2% and corners 16.2% /
   7.95%, the sheet ink at 14 %), empty at rest. No dark ground, no nav, no
-  status bar, no empty line. Inside the screen's rectangle, only THE CARDS
-  in the sheet's ink: a receipt = the ✓ (Intake's green #79a465) and the
-  title on one line (Instrument Sans 14/600), the compact line under it
-  (the mono label face 11px, dim, past the ✓); an open card = the title
-  over its one line (`what`: "Idea · facebook.com" · "Idea · 1:41 AM" ·
-  "Task · from the memo", DRAFT), the thumb (40px) only on the Marketplace
-  card; no X, tiles, spine, age, chip or glyph; a 14 % hairline between
-  cards. The SIX stand in the flow at opacity 0 from the first paint (the
-  list reserved: 456 of the feed's 606 at 1440), and a landing moves the
-  card up to the landed group so the list fills top down in press order.
+  status bar, no empty line. Inside, only THE CARDS, and since ROUND THREE
+  (2026-10-22, Jon: round two's "look a bit unprofessional and lack
+  identity") each is THE REAL INTAKE CARD, intake_web.py's article.ticket
+  inside the outline, 14px in from its inner edge, 12 apart: the 3px LEFT
+  SPINE in the source's colour (`src` in the json: thread = the Messages
+  pill's green #34c759, wrist = the sheet's ember #ff6b4a; the watch's live
+  cards wear the wrist's too, `SRC` in IntakeHero: one hue per source for
+  the whole sheet), 12px radius, the 1px line, the META ROW on top (the
+  age as the lock screen showed it · the kind's chip, uppercase, EVENT ·
+  IDEA · TASK · REMINDER in the app's KIND_COLORS #d9a845 / #8fbf6f /
+  #e0a35b / #d9a845 · on a receipt the green ✓), the TITLE in the system
+  face (-apple-system, system-ui; 650, receipts 600), one line under it
+  (a receipt's "where · when" faint; an open card's `what` at the muted
+  ink, the 44px thumb right of the text on the Marketplace card only); no
+  X, tiles, verb buttons or header. THE PALETTE: by day the app's dark
+  palette translated to the paper (`--tk-*` on `.ica-app`: surface = the
+  sheet's white, line = the ink at 14 %, muted / faint = the ink at 66 /
+  58 %, the chips mixed 62 % toward the ink as the watch's are, 4.8:1 on
+  white, the ✓ #79a465); by night the app's own palette AS IS (#1c1f1b ·
+  #2e332c · #eaece5 · #9ca294 · #767c6f · #8fbf6f, the chips' colours
+  bare), so the column IS the app. THE SCALE: the app's px (16.5 titles,
+  14/16 padding) ran 727 in the 594 the box holds at 1440, so the card is
+  set in em on ONE size, `clamp(11px, 4.53cqw, 14px)` of the app box
+  (14 at 1440: titles 14 / receipts 13, lines 12 / 11.5, the row 10.5,
+  the chip 9.5, padding 10 14 9, gap 8; 11.3 at 375, the chip 7.7): 563 of
+  594 at 1440, 480 of 481 at 375. A receipt sits at .85. The SIX stand in the flow at opacity 0 from
+  the first paint (the list reserved), and a landing moves the card up to
+  the landed group so the list fills top down in press order.
   A middling sheet centres the twin (`--pw` wide) beside the phone; a
   narrow one stands it 82cqw under the lock screen. RIGHT, THE MONTH (`.cm`): his
   calendar as the iPhone draws a month, a panel the phone's height: one
