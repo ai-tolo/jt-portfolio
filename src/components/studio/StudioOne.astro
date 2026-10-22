@@ -24,6 +24,7 @@ import { BUILDS, type BuildBlock } from "./builds-copy";
 import IntakeHero from "../IntakeHero.astro";
 // THE BOARD (2026-10-19, late): the Intake sheet's object, four scenes turning by themselves (the sort is in junkyard/)
 import IntakeCatchAll from "../IntakeCatchAll.astro";
+import IntakeProof from "../IntakeProof.astro";
 import AudioDexDoor from "../AudioDexDoor.astro";
 import SignalCard from "../signal/SignalCard.astro";
 // SIX MOMENTS (2026-10-15, round four): the Studio sheet's object, six crops
@@ -35,7 +36,7 @@ const MOMENT_FRAMES = Object.fromEntries(STUDIO_COPY.moments.map((m) => {
   const wide = ["engines", "effects", "hands", "take"].includes(m.id);
   return [m.id, { src: `/builds/studio/moment-${m.id}.webp`, width: wide ? 2212 : 1520, height: wide ? 1244 : 856, alt: m.alt }];
 }));
-// the sentence the watch replays, printed once in the fold (src/data/intake-run.json)
+// the sentence printed once in the fold, SHORT since round six (2026-10-22; src/data/intake-run.json → proof, DRAFT)
 import WATCH_RUN from "../../data/intake-run.json";
 // the memo the two phones search for (src/data/audiodex-scene.json): its hood draws the same file
 import ADX from "../../data/audiodex-scene.json";
@@ -414,27 +415,18 @@ const columns = (blocks: BuildBlock[]): StoryBlock[][] =>
           {/* THE CUT (round five, 2026-10-22, Jon: "'my best ideas never survived the walk to the computer', a ton
               of text underneath that … what's actually necessary here? … it's gotten too long-winded"): at rest the
               hook ALONE and the chevron (2026-10-19's second line, the wedding sentence, is inside the fold now: the
-              catch-all above gives the context it gave). Open: the sentence once → the same sentence to two
-              machines, both real (Jon's Siri screenshot of 2026-10-15 beside his calendar before and after Intake
-              ran the memo the same day), their two tiny labels and the one note → the whole story. Under the hood
-              (IntakeClock, now in junkyard/) and the one-match rule are CUT, not moved. */}
+              catch-all above gives the context it gave). Open: the sentence once → two answers → the whole story.
+              Under the hood (IntakeClock, now in junkyard/) and the one-match rule are CUT, not moved.
+              ROUND SIX (2026-10-22, Jon: "I only said it that way for the sake of testing Siri … 'said to Siri' is
+              an ugly screenshot … let's just design it"): the sentence SHORT with one mono fact under it, then TWO
+              DRAWN MODULES (IntakeProof.astro: Siri's reply on the paper · the week of March 5–7, 2027 that plays
+              on the fold's open), no screenshots, no note. */}
           <div class="wk-story-clip" id="story-watch" inert>
             <p class="wk-said">
-              <span class="wk-said-q" aria-hidden="true">“</span>{WATCH_RUN.transcript}<span class="wk-said-q" aria-hidden="true">”</span>
+              <span class="wk-said-q" aria-hidden="true">“</span>{WATCH_RUN.proof.said}<span class="wk-said-q" aria-hidden="true">”</span>
             </p>
-            <div class="vs">
-              <figure class="vs-side">
-                <figcaption class="sheet-t">said to Siri</figcaption>
-                <img class="vs-img vs-siri" src="/intake/siri-wedding.webp" width="883" height="394" alt="Siri's reply, on an iPhone: There's nothing called “no longer going to the wedding” on your calendar." loading="lazy" decoding="async" />
-              </figure>
-              <figure class="vs-side">
-                <figcaption class="sheet-t">said to the watch</figcaption>
-                <img class="vs-img vs-cal" src="/intake/cal-before.webp" width="923" height="470" alt="The calendar before: Jay and Anisa's wedding filling Friday March 5 through Sunday March 7, 2027." loading="lazy" decoding="async" />
-                <p class="vs-note vs-arrow" aria-hidden="true">↓</p>
-                <img class="vs-img vs-cal" src="/intake/cal-after.webp" width="923" height="640" alt="The calendar after: the wedding gone; Dinner Friday at 6 PM, Yoga Saturday at 9 AM, Sam's birthday Saturday at 8 PM, a thrift run Sunday at 1 PM." loading="lazy" decoding="async" />
-                <p class="vs-note">The wedding left. Four things arrived. Nothing else was touched.</p>
-              </figure>
-            </div>
+            <p class="wk-fact">{WATCH_RUN.proof.fact}</p>
+            <IntakeProof />
             <div class="sheet-sec">
               <p class="sheet-t">the whole story</p>
               <div class="wk-story-body sheet-cols">
@@ -2020,30 +2012,14 @@ const columns = (blocks: BuildBlock[]): StoryBlock[][] =>
     transition: color 560ms ease;
   }
   .wk-said-q { color: var(--sheet-acc); font-weight: 500; }
-  .vs { display: grid; grid-template-columns: minmax(0, 1fr); gap: 36px 48px; margin: 0; }
-  .vs-side { margin: 0; min-width: 0; }
-  .vs-side .sheet-t { margin-bottom: 14px; }
-  .vs-img {
-    display: block;
-    width: 100%;
-    height: auto;
-    border: 1px solid color-mix(in oklab, var(--mx-ink) 14%, transparent);
-    border-radius: 14px;
-    background: #fff;
-    transition: border-color 560ms ease;
+  /* round six (2026-10-22): the one mono fact under the sentence (`0:31 · from the wrist`), centred, then the two
+     drawn answers (IntakeProof) the clip's block distance below. The screenshot figures (.vs) are gone */
+  .wk-fact {
+    margin: 0 0 var(--sp-6); text-align: center;
+    font-family: var(--wk-mono); font-size: 0.75rem; font-weight: 500; letter-spacing: 0.04em; line-height: 1.5;
+    color: var(--mx-dim); transition: color 560ms ease;
   }
-  .vs-siri { border-radius: 22px; }
-  .vs-note {
-    margin: 12px 0 0;
-    font-family: var(--wk-mono);
-    font-size: 0.75rem;
-    font-weight: 500;
-    letter-spacing: 0.04em;
-    line-height: 1.5;
-    color: var(--mx-dim);
-    transition: color 560ms ease;
-  }
-  .vs-arrow { text-align: center; margin: 8px 0; font-size: 1rem; color: var(--mx-dim); }
+  #build-watch .wk-story-clip > .wk-said + .wk-fact { margin-top: calc(-1 * var(--sp-6) + 10px); } /* 10 under the sentence */
   .wk-whole-lead { font-weight: 600; }
   /* THE FLOOR LINE: the last line before the whole story on all three
      sheets (Intake's one-match rule, AudioDex's floor, the Studio's keep
@@ -2060,8 +2036,8 @@ const columns = (blocks: BuildBlock[]): StoryBlock[][] =>
   }
   @container (min-width: 820px) {
     .wk-said { font-size: 1.5rem; margin-top: 36px; }
-    .vs { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
-    .vs-cal { max-width: 420px; }
+    .wk-fact { margin-bottom: var(--sp-8); }
+    #build-watch .wk-story-clip > .wk-said + .wk-fact { margin-top: calc(-1 * var(--sp-8) + 10px); }
     .wk-rule { font-size: 1rem; }
   }
   /* ── AUDIODEX'S HOOD (2026-10-15, round two): one strip, five cells, each a stage word in the accent over the thing
