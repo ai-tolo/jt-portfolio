@@ -350,10 +350,19 @@ session must follow.
   `build-order.ts` + the rail's NAV). THE HERO LINER IS GONE. Each sheet's
   open fold is its own scene and ends on THE WHOLE STORY (the locked
   script under a plain label, opened by the same one click since
-  2026-10-19): INTAKE = the
-  sentence once (`.wk-said`, the preview's second line) → the same sentence to two machines (Jon's
-  Siri screenshot beside his calendar before and after, `.vs`) → under the
-  hood as one line of time (`IntakeClock.astro`) → the one-match rule;
+  2026-10-19): INTAKE = THE CUT (round five of the catch-all, 2026-10-22, Jon: "the
+  bottom section is still tons of words … what's actually necessary here?
+  … it's gotten too long-winded"): at rest the hook ALONE and the chevron
+  (the wedding sentence left the rest state: the catch-all gives its
+  context); open, the sentence once (`.wk-said`, the clip's first block,
+  Intake only) → the same sentence to two machines (Jon's Siri screenshot
+  beside his calendar before and after, `.vs`, their two tiny labels and
+  the one note) → the whole story; under the hood (`IntakeClock.astro`,
+  now in junkyard/) and the one-match rule are CUT, not moved. The words
+  at rest on the whole sheet: the kind word, the name, the dek (6),
+  `try it` (2), the hook (10). The same cut has not come to AudioDex (its
+  `.adh` strip and `.wk-rule`), the Studio (`StudioMoments`, its row, its
+  `.wk-rule`) or SIGNAL's card;
   AUDIODEX = Jon's line → the hood as one strip of what the system wrote
   about the memo the phones found (`.adh`) → the floor line; the STUDIO
   = six moments of the real thing (`StudioMoments.astro`, tabs) → the
@@ -528,7 +537,9 @@ session must follow.
   to the ring, the hint says so. DELETED: the run column, its nodes and
   spine, the fly, the talk pill, Replay, the stages s1–s6, the result's
   caption, the host's face overrides in StudioOne. The foot reserves three
-  lines of hint (the typed hint moved the fold 16px). On a desk nothing
+  lines of hint (the typed hint moved the fold 16px); the hint at rest is
+  `try it` since 2026-10-22 (THE CUT; was "say a few things you have to
+  do."), the watch's only line, no caption under it. On a desk nothing
   below the watch moves through a typed run or a nothing run (day and
   night); on a phone the cards land under the watch and push the fold down
   (504px for three cards), nothing above them moves. The live pipeline
@@ -619,8 +630,10 @@ session must follow.
   "A real memo…" not at default state; the phone's hidden too for
   consistency: `.wk:has(.intake-hero:not(.s6), .archive-hero:not(.s6))
   .wk-cap` keeps its space) and fade in with the colour flash when the run
-  lands (`wk-cap-in`); the watch's stands at rest again since 2026-10-19
-  (live only: it says what the live mode does). THE WATCH AT REST (round four, Jon: "2× replay and talk buttons";
+  lands (`wk-cap-in`); the watch's stood at rest again from 2026-10-19
+  (live only) and is DELETED since 2026-10-22 (THE CUT: `WATCH_COPY.caption`
+  and its slot are gone; the watch's one line at rest is `LIVE_COPY.hintRest`
+  = `try it`, DRAFT). THE WATCH AT REST (round four, Jon: "2× replay and talk buttons";
   SUPERSEDED 2026-10-19, late: the record button, no pill, no Replay, see THE SEND):
   the foot under the watch is the PHONE's slot (`.foot`, one grid cell):
   `tap to stop` at rest, then after the run ONE `Replay` pill identical to
