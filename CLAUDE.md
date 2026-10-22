@@ -275,8 +275,9 @@ session must follow.
   (2026-10-19, Jon: "if they are going to be expandable, it should just be
   one click"): the chevron opens the WHOLE fold, the evidence and the
   locked paragraphs together, and closes it all; the label-button
-  `[data-whole]` and its hidden body are retired. ONE FOLD ANATOMY on all
-  three sheets: hook → said → [the evidence] → the floor line `.wk-rule`
+  `[data-whole]` and its hidden body are retired. ONE FOLD ANATOMY on every
+  sheet that still folds (the Studio; Intake's is its own since THE SPINE;
+  AudioDex has NO fold since THE GROUND, 2026-10-22): hook → said → [the evidence] → the floor line `.wk-rule`
   (0.9375rem / 1rem wide, centred, 62ch, ink) → the whole story (a
   `.sheet-sec` hairline, a plain `.sheet-t` label "the whole story", the
   columns). The gaps are ONE set of numbers, set at the shared rules in
@@ -309,8 +310,8 @@ session must follow.
   mono word in each sheet's TOP-RIGHT corner (`.sheet-kind`, absolute,
   top 23px / right `--sheet-pad`, 15px on phones; `.sheet` is
   `position: relative`; the label face, dim):
-  `app` · `program` · `instrument` (above SignalCard's `.sc-title`) ·
-  `suite`; DRAFT `kind` fields in objects-copy.ts / signal-card-copy.ts,
+  `foundation` (AudioDex, since THE GROUND; was `app`) · `program` ·
+  `instrument` (above SignalCard's `.sc-title`) · `suite`; DRAFT `kind` fields in objects-copy.ts / signal-card-copy.ts,
   Jon's words. No numbers anywhere on the sheets (`build-order.ts` is the
   rail's ordered list only). SIGNAL still gets NO band.
   THE FOURTH SHEET, SIGNAL STUDIO (2026-10-13, Jon: "loop that in"): its
@@ -392,20 +393,45 @@ session must follow.
   (junkyard/IntakeSiri.astro); under the hood (`IntakeClock.astro`,
   junkyard/) and the one-match rule were cut in round five. The words at
   rest on the whole sheet: the kind word, the name, the dek (6), `try it`
-  (2), the hook (7). The same cut has not come to AudioDex (its `.adh`
-  strip and `.wk-rule`), the Studio (`StudioMoments`, its row, its
-  `.wk-rule`) or SIGNAL's card;
-  AUDIODEX = Jon's line → the hood as one strip of what the system wrote
-  about the memo the phones found (`.adh`) → the floor line; the STUDIO
+  (2), the hook (7). The same cut has not come to the Studio
+  (`StudioMoments`, its row, its `.wk-rule`);
+  AUDIODEX = THE GROUND (2026-10-22, Jon: "the heart of so many other
+  things I've built: the database is required and a prerequisite to have
+  something like Intake"): the SHORTEST sheet, NO FOLD: kind `foundation`
+  → band (AudioDex + the DRAFT dek "Every recording I own, transcribed by
+  Whisper, measured and named. Intake and the Studio stand on it.", Whisper
+  named once) → AudioDexDoor unchanged (the one beat: the ground knows what
+  a recording is, not what it's called) → ONE floor line `.adx-floor`
+  (.wk-rule's size, centred, object → it 56, the sheet's pad under it;
+  `#build-archive` pads its own bottom, having no handle): "Read by Intake
+  above and the Studio below." (DRAFT, `ARCHIVE_COPY.floor`), the two names
+  in-page links (#build-watch · #build-studio) in the label face, the amber
+  mixed 88 / 92 % toward the ink, a 1px underline, no arrows. The hook, the
+  said line, the `.adh` strip (markup and CSS DELETED) and the whole story
+  left; `ARCHIVE_COPY.said/whole/rule` stay commented as the record, the
+  locked paragraphs in builds-copy.ts for a case study. 1185 → 1014 tall
+  at 1440 (1591 → 1365 at 375); the STUDIO
   = six moments of the real thing (`StudioMoments.astro`, tabs) → the
   notebook line → the circumstances in a row (problem → answer → a play
   key with sound, honest frames until the files land), its fold Jon's
   line → "Make ten thousand songs. Keep ten." as the house `.wk-rule`
   (Jon, 2026-10-19: "that text margin … looks different than everything
   else"; `.st-keep`, its accent and its negative margin are deleted) →
-  the whole story; SIGNAL's card =
-  the receipt and the dare ("Your first song is in your downloads." leads)
-  → how to play → one engineering sentence → where it came from. Every
+  the whole story; SIGNAL's card = THE CUT (2026-10-22, Jon of the
+  receipt: "that's stupid that I would say that before they even touched
+  the instrument"): kind word · SIGNAL → the device → how to play → ONE
+  line, `.sc-line`: the dare "You can't play a wrong note." (DRAFT,
+  `CARD.dare`) at rest; THE RECEIPT "Your first song is in your
+  downloads." (`CARD.receipt`) replaces it in the SAME grid cell (nothing
+  moves) only once true: the instrument emits no event, so SignalCard's
+  script watches the static `[data-corner="export"]` for the cap
+  (`[data-ctl="export"]`) taking `.saved`, which export-view.ts sets in the
+  tick it hands the WAV to the browser; then `data-printed` on `.sc`, the
+  line `role="status"`, the sapphire mixed 56 % toward the ink by day
+  (5.1:1), bare at night; it stays for the visit. The story, under the
+  hood and where it came from left (strings commented in
+  signal-card-copy.ts; signal-copy.ts's unmounted BRIEF reads the dare).
+  1727 → 1348 tall at 1440. Every
   DRAFT line lives in objects-copy.ts / signal-card-copy.ts, Jon's to
   rewrite; the hoods never print his real rows.
 - THE CATCH-ALL + THE RECORD BUTTON (2026-10-21, branch `intake-v4`, fresh
@@ -612,9 +638,9 @@ session must follow.
   slot: gone = the key drawn, dimmed, inert), its Whisper lines lighting as
   said. Its last row links down to the music room and the host loads that
   tape (`[data-tape-jump]` → land the room, settle, `car:show`). No caption,
-  no rail; the fold is the hook → ONE STRIP (heard · measured · named ·
-  drawn · linked, a big artifact under each word) → the floor line → the
-  whole story.
+  no rail; the fold was the hook → ONE STRIP (heard · measured · named ·
+  drawn · linked) → the floor line → the whole story, all GONE since THE
+  GROUND (2026-10-22: no fold, one floor line; see THE SKIM).
   UNDER THE HOOD: a `.wk-spec` ledger card under each story card, rows
   from `src/components/studio/depth-copy.ts` (Jon-editable; the tools
   and stages of the real M1 systems, never his content).
@@ -874,9 +900,10 @@ session must follow.
   SIGNAL IS ONE SHEET (round four, Jon: "the white sheet goes underneath the
   instrument so it feels like one thing, expanded or not"): `SignalCard`'s
   `part="around"` renders ONE `.sheet` (1080 like the others): kind word ·
-  SIGNAL · the story → the device stage (`--sig-air` 56px above and below,
-  the sheet's own rhythm, not the room gap) → how to play (`[data-write-up]`,
-  scroll-margin 32) · under the hood · where it came from. The powered
+  SIGNAL → the device stage (`--sig-air` 56px above and below, the sheet's
+  own rhythm, not the room gap; the title's own margin is 0 there since
+  THE CUT, 2026-10-22) → how to play (`[data-write-up]`, scroll-margin 32)
+  → the dare / the receipt (see THE SKIM). The powered
   device OVERHANGS the sheet's sides (72px each at 1440; Jon: "I'm fine with
   it jumping off the screen"; everything up to `.live-signal` is `overflow:
   visible`, `.sgm` is `width: max-content`, the document never widens). If
