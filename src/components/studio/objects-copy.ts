@@ -37,7 +37,9 @@ export const WATCH_COPY = {
   // brain dump is kept beside it): one sentence on the couch, five things done on the calendar. DRAFT.
   // 2026-10-19, late (the record button; Jon: "every line short, benefit-led"): DRAFT, his to rewrite. Was "Say your
   // own things to do. They come back as tickets. A preview: nothing is added anywhere."
-  caption: "Say a few things you have to do. Tickets come out. Nothing is added anywhere.",
+  // 2026-10-22 (THE CUT, round five of the catch-all; Jon: "the watch has redundant things … 'say a few things you
+  // have to do' and then another text underneath"): the caption is DELETED; the watch's one line at rest is
+  // LIVE_COPY.hintRest. Was "Say a few things you have to do. Tickets come out. Nothing is added anywhere."
 };
 
 // LIVE (Stream A, 2026-10-05): the words the watch's live mode prints — the
@@ -54,9 +56,10 @@ export const LIVE_COPY = {
   saved: "saved",
   nothing: "nothing to file",
   typeIt: "type it",
-  // the foot under the watch at rest: the live hint. DRAFT (2026-10-19), his
-  // to rewrite; was "tap to stop" (the art run's)
-  hintRest: "say a few things you have to do.",
+  // the foot under the watch at rest: the live hint, the watch's ONE line. DRAFT (2026-10-19), his to rewrite; was
+  // "tap to stop" (the art run's). 2026-10-22 (THE CUT; Jon: "it should feel more lightweight, like 'try it
+  // yourself'"): `try it`; was "say a few things you have to do."
+  hintRest: "try it",
   privacy: "your voice goes to your browser's speech service, the words to Claude. this site keeps nothing.",
   asking: "allow the microphone, then talk.",
   noSpeech: "this browser has no speech service. type it, then tap stop.",

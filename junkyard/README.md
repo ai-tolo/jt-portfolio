@@ -35,3 +35,7 @@ The site is the homepage, the résumé, and the case studies under it.
   enough to be relevant … why we need the phone on the right side as well … too many other notifications … tap
   what's yours is stupid and weird"). Its images stay in public/intake/board/ (the catch-all uses all three); its
   imports no longer resolve from here: a record, not a part
+- IntakeClock.astro — UNDER THE HOOD AS ONE LINE OF TIME (2026-10-15, the skim): the Intake fold's timeline of the
+  wedding memo; retired 2026-10-22 (THE CUT, round five of the catch-all; Jon: "under the hood, the whole timeline,
+  the whole story: what's actually necessary here?"). Cut with the one-match rule paragraph, not moved; its import
+  no longer resolves from here: a record, not a part
