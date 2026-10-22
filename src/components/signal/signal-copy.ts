@@ -40,5 +40,6 @@ export const LEGEND: readonly LegendItem[] = [
 /** The brief's handle (lowercase chrome). */
 export const BRIEF_SUMMARY = "about this instrument";
 
-/** The brief (unmounted): the card's story, so the two can never disagree. */
-export const BRIEF: readonly string[] = CARD.story;
+/** The brief (unmounted): the card's words, so the two can never disagree. Since THE CUT (2026-10-22) the card's
+ *  story is gone; its one line at rest is the dare. */
+export const BRIEF: readonly string[] = [CARD.dare];

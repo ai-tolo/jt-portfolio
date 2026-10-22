@@ -19,6 +19,13 @@
  * [data-write-up], is the HOW TO PLAY section there (its hairline and label in view at the top); on "all" (the
  * default: the whole card, 96 px beneath the device, as /signal mounts it) it is still the whole card.
  * (Round three's "head" / "tail" halves, two sheets around the device, are retired with it.)
+ * THE CUT (2026-10-22, Jon: "Claude built that, and that's stupid that I would say that ['Your first song is in your
+ * downloads'] before they even touched the instrument"): the card at rest is the kind word, the title, (the device),
+ * HOW TO PLAY and ONE line under it, the dare. The story, under the hood and where it came from leave (their strings
+ * stay commented in signal-card-copy.ts). THE RECEIPT comes back the moment it is true: the instrument emits no event,
+ * but its export cap takes `.saved` in the same tick it hands the WAV to the browser (export-view.ts `land()`); the
+ * card watches the export corner for that class and prints the receipt IN THE DARE'S SLOT (one grid cell, so nothing
+ * moves), in the card's accent, for the rest of the visit. The instrument itself is untouched.
  */
 import "../../styles/sheet.css";
 import { CARD } from "./signal-card-copy.ts";
@@ -28,20 +35,11 @@ interface Props { part?: "all" | "around" }
 const { part = "all" } = Astro.props;
 const around = part === "around";
 
-const cols = (ps: ReadonlyArray<string>): string[][] => {
-  const cut = Math.ceil(ps.length / 2);
-  return [ps.slice(0, cut), ps.slice(cut)];
-};
 ---
 
 <div class="sc sheet" data-signal-card data-part={part} data-write-up={around ? undefined : ""}>
   <p class="sheet-kind">{CARD.kind}</p>
   <h4 class="sc-title">{CARD.title}</h4>
-  <div class="sc-story sheet-cols">
-    {cols(CARD.story).map((col) => (
-      <div class="sheet-col">{col.map((p) => <p class="sheet-p" set:html={p} />)}</div>
-    ))}
-  </div>
 
   {around && <slot />}
 
@@ -50,21 +48,31 @@ const cols = (ps: ReadonlyArray<string>): string[][] => {
     <HowToPlay />
   </div>
 
-  <div class="sheet-sec">
-    <p class="sheet-t">{CARD.hoodTitle}</p>
-    {/* ONE SENTENCE for the skeptic (2026-10-15): the engine fact that proves it is not a toy */}
-    <p class="sheet-p sc-hood">{CARD.hood}</p>
-  </div>
-
-  <div class="sheet-sec">
-    <p class="sheet-t">{CARD.fromTitle}</p>
-    <div class="sheet-cols">
-      {cols(CARD.from).map((col) => (
-        <div class="sheet-col">{col.map((p) => <p class="sheet-p" set:html={p} />)}</div>
-      ))}
-    </div>
+  {/* THE CUT (2026-10-22): one slot under how to play. At rest the dare; once a song is printed, the receipt in its
+      place (the script below fills it, so a screen reader hears it then) */}
+  <div class="sc-line">
+    <p class="sc-dare">{CARD.dare}</p>
+    <p class="sc-receipt" role="status" data-line={CARD.receipt}></p>
   </div>
 </div>
+
+<script>
+  // THE RECEIPT (2026-10-22): the export cap ([data-ctl="export"] in the [data-corner="export"] corner) takes `.saved`
+  // the moment the WAV is handed to the browser; until then the receipt would be a lie. Watch the corner (static in
+  // Signal.astro; the cap mounts into it once the take is ready), print once, stop watching.
+  const corner = document.querySelector<HTMLElement>('[data-corner="export"]');
+  const card = document.querySelector<HTMLElement>("[data-signal-card]");
+  const line = card?.querySelector<HTMLElement>(".sc-receipt");
+  if (corner && card && line) {
+    const mo = new MutationObserver(() => {
+      if (!corner.querySelector('[data-ctl="export"].saved')) return;
+      mo.disconnect();
+      line.textContent = line.dataset.line ?? "";
+      card.setAttribute("data-printed", "");
+    });
+    mo.observe(corner, { subtree: true, childList: true, attributes: true, attributeFilter: ["class"] });
+  }
+</script>
 
 <style>
   /* the card's own; the sheet (material, inks, night, the kind word, sections, steps) is src/styles/sheet.css */
@@ -94,8 +102,39 @@ const cols = (ps: ReadonlyArray<string>): string[][] => {
   @media (max-width: 899px) {
     .sc-title { font-size: 2.5rem; }
   }
-  .sc-hood { max-width: 62ch; margin: 0; }
-  .sc-story { margin-bottom: 32px; } /* the story → the first hairline, as the work sheets' story → their hood */
-  .sc[data-part="around"] .sc-story { margin-bottom: 0; } /* the story ends on its last line: the device's stage
-     carries the 56 beneath it and the 56 to how to play's hairline (StudioOne) */
+  /* THE CUT (2026-10-22): the title → the device is the device stage's own 56 (StudioOne), as band → object on the
+     work sheets; on /signal the title → how to play's hairline keeps the 40 */
+  .sc[data-part="around"] .sc-title { margin-bottom: 0; }
+  /* THE LINE: the dare and the receipt in ONE grid cell (the work sheets' foot: one slot, so nothing below moves),
+     set as the house floor line (.wk-rule: centred, 1rem/1.6, 62ch); the diagram → it 56 (how to play's 32 + 24),
+     the card's pad beneath */
+  .sc-line {
+    display: grid;
+    margin: 24px auto 0;
+    max-width: 62ch;
+    text-align: center;
+  }
+  .sc-line > p {
+    grid-area: 1 / 1;
+    margin: 0;
+    font-size: 1rem;
+    line-height: 1.6;
+    text-wrap: balance;
+    transition: opacity 0.4s ease;
+  }
+  .sc-dare { color: var(--sheet-ink); }
+  /* the receipt: the card's sapphire mixed toward the ink until 4.5:1 on the paper by day (the hints' recipe), bare
+     at night, where the sapphire is already light on dark */
+  .sc-receipt {
+    --rc-mix: 56%;
+    font-weight: 600;
+    color: color-mix(in oklab, var(--sheet-acc) var(--rc-mix), var(--sheet-ink));
+    opacity: 0;
+  }
+  :global(html[data-night]) .sc-receipt { --rc-mix: 100%; }
+  .sc[data-printed] .sc-dare { opacity: 0; }
+  .sc[data-printed] .sc-receipt { opacity: 1; }
+  @media (prefers-reduced-motion: reduce) {
+    .sc-line > p { transition: none; }
+  }
 </style>

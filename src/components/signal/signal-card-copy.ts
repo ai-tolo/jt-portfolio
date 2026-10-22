@@ -17,22 +17,27 @@ export const CARD = {
   // DRAFT (2026-10-13), Jon owns the word: the build's kind, the one mono word over the card's title (the eyebrow);
   // the story's first sentence and the résumé ("browser instrument") already call it that
   kind: "instrument",
-  // DRAFT — Jon rewrites. The closed card shows these two paragraphs: what it is, how to start, what it makes.
-  // THE RECEIPT, THEN THE DARE (2026-10-15, the interview; Jon chose the receipt to lead: "the more dramatic sell").
-  // DRAFT in his words, his to rewrite. The closed card shows these two paragraphs.
-  story: [
-    "Your first song is in your downloads. Pick a key: you can't play a wrong note, and neither can the bass. Space brings the drums, B brings the bass, and it was recording the whole time.",
-    "Find the tempo and key of a song you love, set them, and play along with a band that follows you. The export button saves the take as a WAV. The full studio is one sheet down.",
-  ],
+  // THE CUT (2026-10-22, Jon: "Claude built that, and that's stupid that I would say that before they even touched the
+  // instrument"): at rest the card is how to play and ONE line, the dare. DRAFT in his voice, cut to one sentence from
+  // his longer dare; his to extend.
+  dare: "You can't play a wrong note.",
+  // THE RECEIPT returns only when it is true: printed in the dare's slot the moment the export cap hands a WAV to the
+  // browser (SignalCard's script). DRAFT, his words from the 2026-10-15 interview.
+  receipt: "Your first song is in your downloads.",
   howTitle: "how to play",
-  hoodTitle: "under the hood",
-  // UNDER THE HOOD is ONE SENTENCE for the skeptic (2026-10-15; the icon chain and the "4 voices" readout were slop).
-  // Engine facts from src/signal (time.ts, out.ts): keep it true.
-  hood: "Drums and bass are booked 120 ms ahead on the audio clock, and the beat held for 20 seconds at a 4× CPU throttle without a dropout. Everything leaves through a limiter, so nothing clips.",
-  fromTitle: "where it came from",
-  // DRAFT — Jon rewrites
-  from: [
-    "Its engine comes from a larger instrument I built to make music at home.",
-    "The keys play recordings of my own synths, sampled every three semitones with a tool I wrote.",
-  ],
+  // THE RECORD (2026-10-22): no longer rendered; THE CUT took the story, under the hood and where it came from off the
+  // card. Kept as written.
+  // THE RECEIPT, THEN THE DARE (2026-10-15, the interview; Jon chose the receipt to lead: "the more dramatic sell").
+  // story: [
+  //   "Your first song is in your downloads. Pick a key: you can't play a wrong note, and neither can the bass. Space brings the drums, B brings the bass, and it was recording the whole time.",
+  //   "Find the tempo and key of a song you love, set them, and play along with a band that follows you. The export button saves the take as a WAV. The full studio is one sheet down.",
+  // ],
+  // hoodTitle: "under the hood",
+  // UNDER THE HOOD was ONE SENTENCE for the skeptic (2026-10-15). Engine facts from src/signal (time.ts, out.ts).
+  // hood: "Drums and bass are booked 120 ms ahead on the audio clock, and the beat held for 20 seconds at a 4× CPU throttle without a dropout. Everything leaves through a limiter, so nothing clips.",
+  // fromTitle: "where it came from",
+  // from: [
+  //   "Its engine comes from a larger instrument I built to make music at home.",
+  //   "The keys play recordings of my own synths, sampled every three semitones with a tool I wrote.",
+  // ],
 };
