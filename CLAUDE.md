@@ -350,33 +350,50 @@ session must follow.
   `build-order.ts` + the rail's NAV). THE HERO LINER IS GONE. Each sheet's
   open fold is its own scene and ends on THE WHOLE STORY (the locked
   script under a plain label, opened by the same one click since
-  2026-10-19): INTAKE = THE CUT (round five of the catch-all, 2026-10-22, Jon: "the
-  bottom section is still tons of words … what's actually necessary here?
-  … it's gotten too long-winded"): at rest the hook ALONE and the chevron
-  (the wedding sentence left the rest state: the catch-all gives its
-  context); open, the sentence once (`.wk-said`, the clip's first block,
-  Intake only; SHORT since round six, 2026-10-22, Jon: "I only said it that
-  way for the sake of testing Siri": `proof.said` in intake-run.json,
-  DRAFT, the real transcript kept beside it) with one mono fact under it
-  (`.wk-fact`, `0:31 · from the wrist`) → TWO DRAWN ANSWERS
-  (`IntakeProof.astro`, Jon: "an ugly screenshot … let's just design it";
-  the `.vs` screenshot figures, their captions, the arrow and the note
-  are gone, the webp files stay): `Siri` = the orb and the real reply on
-  the paper, no frame; `Intake` = Fri · Sat · Sun of March 2027 in the
-  catch-all's calendar grammar (the letters, the numerals, the bars in the
-  Intake red, `--bar-*` day and night); the pair 640 wide, side by side
-  ≥ 820 of the sheet, stacked under, one shared height (the week's
-  min-height 150, two bars on Saturday); WHEN THE FOLD OPENS the week
-  plays (a MutationObserver on `.wk-story[data-open]`, the fold's own
-  mechanics untouched): the wedding bar across the three days leaves
-  (opacity + 6px lift, 400 ms), a 600 ms hold, then the four bars arrive
-  220 ms apart (delays 1000 / 1220 / 1440 / 1660 ms, the month's pop);
-  closing resets it (`.still`, no transition); reduced motion = the after
-  state at once → the whole story; under the hood (`IntakeClock.astro`,
-  now in junkyard/) and the one-match rule are CUT, not moved. The words
-  at rest on the whole sheet: the kind word, the name, the dek (6),
-  `try it` (2), the hook (10). The same cut has not come to AudioDex (its
-  `.adh` strip and `.wk-rule`), the Studio (`StudioMoments`, its row, its
+  2026-10-19): INTAKE = THE SPINE (round seven of the catch-all, 2026-10-22; Jon's
+  thesis: "a catch-all system that doesn't care about the location or
+  medium of how the information is getting into the system"; of the
+  locked headline: "I don't think it's my best idea that my calendar
+  changed"): the sheet's three jobs are the catch-all (any way in), the
+  watch (right now, you: `try it`) and the fold (WHAT COMES OUT: one
+  breath, five changes, against what that would have cost by hand). THE
+  HOOK at rest is the sheet's own, `WATCH_COPY.hook` in objects-copy.ts
+  (`It doesn't care how it got in.`, DRAFT), printed in `.wk-lede` instead
+  of the locked headline, which stays in builds-copy.ts for the case study
+  (the other sheets keep their locked headlines). At rest the hook ALONE
+  and the chevron (THE CUT, round five, Jon: "the bottom section is still
+  tons of words … what's actually necessary here?"). OPEN, in order: the
+  sentence once (`.wk-said`, the clip's first block, Intake only; SHORT
+  since round six, `proof.said` in intake-run.json, DRAFT, the real
+  transcript kept beside it) → TWO DRAWN MODULES (`IntakeProof.astro`,
+  the pair 640 wide, side by side ≥ 820 of the sheet, stacked under, one
+  shared height; no screenshots, the `.vs` figures and their webp files'
+  use are gone): `by hand` = what the sentence costs in the Calendar app,
+  a PILE of four New Event sheets in iOS's grammar on the paper in the
+  sheet's DIM ink (`.form`, 208 wide, 9.5px, each `--k` × 12px down and
+  right, the last on top: Cancel · New Event · Add, Title, Location,
+  All-day with its toggle, Starts, Ends, Repeat Never, Alert None, the
+  four titles and the real times, the Ends an hour after, DRAFT) and the
+  Delete Event confirmation for the wedding over the pile's lower right
+  (`.confirm`: iOS's action sheet, `Delete Event` in #ff3b30, the one
+  colour on the pile, Cancel; no name line, so the top form's Starts and
+  Ends read), static, the pile's box 224 tall;
+  `Intake` = Fri · Sat · Sun of March 2027 in the catch-all's calendar
+  grammar (the letters, the numerals, the bars in the Intake red,
+  `--bar-*` day and night, the week's min-height 150); WHEN THE FOLD
+  OPENS the week plays (a MutationObserver on `.wk-story[data-open]`, the
+  fold's own mechanics untouched): the wedding bar across the three days
+  leaves (opacity + 6px lift, 400 ms), a 600 ms hold, then the four bars
+  arrive 220 ms apart (delays 1000 / 1220 / 1440 / 1660 ms, the month's
+  pop); closing resets it (`.still`); reduced motion = the after state at
+  once → NOTHING ELSE: the whole-story section left this sheet in round
+  seven (the locked paragraphs stay in builds-copy.ts, untouched), as did
+  the `0:31 · from the wrist` fact and round six's Siri module
+  (junkyard/IntakeSiri.astro); under the hood (`IntakeClock.astro`,
+  junkyard/) and the one-match rule were cut in round five. The words at
+  rest on the whole sheet: the kind word, the name, the dek (6), `try it`
+  (2), the hook (7). The same cut has not come to AudioDex (its `.adh`
+  strip and `.wk-rule`), the Studio (`StudioMoments`, its row, its
   `.wk-rule`) or SIGNAL's card;
   AUDIODEX = Jon's line → the hood as one strip of what the system wrote
   about the memo the phones found (`.adh`) → the floor line; the STUDIO
