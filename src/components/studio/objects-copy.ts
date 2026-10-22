@@ -77,22 +77,23 @@ export const LIVE_COPY = {
 export const ARCHIVE_COPY = {
   // one word, A and D capitalised: a riff on Pokédex
   title: "AudioDex",
-  // DRAFT (2026-10-13), Jon owns the word: the build's kind, the one mono
-  // word over its name (the sheet's eyebrow); the band's line already calls it an app
-  kind: "app",
-  // the band's line: what it is, first (DRAFT 2026-10-10, Jon edits; was
-  // "Every recording I've made, read and named by what's inside it, and
-  // searchable the way photos are.")
-  dek: "An app that reads every recording I've made, names each one by what's inside it, and makes them searchable the way photos are.",
-  // 2026-10-15, round two (Jon: "as few texts as possible"): no caption under the object (the two phones say it)
-  // and no line in his voice yet (the first draft read creepy; his words come from the next interview). The fold
-  // is the hook, the hood strip, this one line, the whole story. ⚠️ DRAFT, his to rewrite.
-  // 2026-10-15, the interview: Jon's words. The line under the hook answers "recording your family is the creepy
-  // part" without arguing norms; the second opens the whole story. DRAFT, his to rewrite.
-  said: "A camera takes you out of the moment. A voice memo doesn't.",
-  whole: "When someone's gone, their voice is a different thing than their photo.",
-  // the floor line, with its product half (Jon: songs, drafts, files that live on no service, one place on my phone)
-  rule: "Every recording I own lands here first: songs, drafts, memos, the files no service holds. Intake and the Studio read from this.",
+  // DRAFT (2026-10-13), Jon owns the word: the build's kind, the one mono word over its name (the sheet's eyebrow).
+  // THE GROUND (2026-10-22): `foundation` (was "app"): the database Intake and the Studio stand on
+  kind: "foundation",
+  // the band's line: what it is, first. THE GROUND (2026-10-22): two short sentences, Whisper named once. DRAFT, Jon
+  // edits; was "An app that reads every recording I've made, names each one by what's inside it, and makes them
+  // searchable the way photos are." (and before that "Every recording I've made, read and named by what's inside it,
+  // and searchable the way photos are.")
+  dek: "Every recording I own, transcribed by Whisper, measured and named. Intake and the Studio stand on it.",
+  // THE FLOOR LINE (2026-10-22, THE GROUND): the sheet's last line, the two names in-page links to the sheets that
+  // read it (#build-watch above, #build-studio below). DRAFT, his to rewrite: "Read by Intake above and the Studio below."
+  floor: { lead: "Read by ", up: "Intake", mid: " above and ", down: "the Studio", tail: " below." },
+  // THE RECORD (2026-10-22): the sheet has no fold since THE GROUND, so these are no longer rendered. Kept as written:
+  // 2026-10-15, the interview: Jon's words. The line under the hook answered "recording your family is the creepy
+  // part" without arguing norms; the second opened the whole story; the third was the floor line under the hood strip.
+  // said: "A camera takes you out of the moment. A voice memo doesn't.",
+  // whole: "When someone's gone, their voice is a different thing than their photo.",
+  // rule: "Every recording I own lands here first: songs, drafts, memos, the files no service holds. Intake and the Studio read from this.",
 };
 
 // SIGNAL STUDIO (2026-10-13; THE SURFACE, 2026-10-15): the fourth sheet, its
