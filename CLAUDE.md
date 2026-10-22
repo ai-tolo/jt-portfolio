@@ -355,9 +355,24 @@ session must follow.
   … it's gotten too long-winded"): at rest the hook ALONE and the chevron
   (the wedding sentence left the rest state: the catch-all gives its
   context); open, the sentence once (`.wk-said`, the clip's first block,
-  Intake only) → the same sentence to two machines (Jon's Siri screenshot
-  beside his calendar before and after, `.vs`, their two tiny labels and
-  the one note) → the whole story; under the hood (`IntakeClock.astro`,
+  Intake only; SHORT since round six, 2026-10-22, Jon: "I only said it that
+  way for the sake of testing Siri": `proof.said` in intake-run.json,
+  DRAFT, the real transcript kept beside it) with one mono fact under it
+  (`.wk-fact`, `0:31 · from the wrist`) → TWO DRAWN ANSWERS
+  (`IntakeProof.astro`, Jon: "an ugly screenshot … let's just design it";
+  the `.vs` screenshot figures, their captions, the arrow and the note
+  are gone, the webp files stay): `Siri` = the orb and the real reply on
+  the paper, no frame; `Intake` = Fri · Sat · Sun of March 2027 in the
+  catch-all's calendar grammar (the letters, the numerals, the bars in the
+  Intake red, `--bar-*` day and night); the pair 640 wide, side by side
+  ≥ 820 of the sheet, stacked under, one shared height (the week's
+  min-height 150, two bars on Saturday); WHEN THE FOLD OPENS the week
+  plays (a MutationObserver on `.wk-story[data-open]`, the fold's own
+  mechanics untouched): the wedding bar across the three days leaves
+  (opacity + 6px lift, 400 ms), a 600 ms hold, then the four bars arrive
+  220 ms apart (delays 1000 / 1220 / 1440 / 1660 ms, the month's pop);
+  closing resets it (`.still`, no transition); reduced motion = the after
+  state at once → the whole story; under the hood (`IntakeClock.astro`,
   now in junkyard/) and the one-match rule are CUT, not moved. The words
   at rest on the whole sheet: the kind word, the name, the dek (6),
   `try it` (2), the hook (10). The same cut has not come to AudioDex (its
