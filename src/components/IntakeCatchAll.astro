@@ -23,7 +23,9 @@
 // Data:    src/data/intake-catchall.json (every line a DRAFT, Jon's to rewrite); images in public/intake/board/
 // Needs:   public/archive/phone-blank.png (AudioDexDoor's body)
 // Slot:    public/intake/memo-nico.m4a (existsSync at build time, like the Studio captures): present, the memo plays
-//          WITH sound and the words pace to its length; absent, the words type at 400 ms each, no sound.
+//          WITH sound and the words pace to its length; absent, the words type at 140 ms each, no sound (round four,
+//          2026-10-22, Jon: the transcription "still takes way too long"; 400 ms was 8 s, 140 is 2.8, the strip's clock
+//          0:00 → 0:18 over the same pour).
 //
 // INTAKE IS THE HERO: its outline on screen from the first paint, its cards at every landing and the whole end state.
 // NOTHING PRESSES ITSELF: every motion follows a press. NOTHING MOVES THE PAGE: the phone (an aspect ratio), the panel
@@ -87,7 +89,7 @@ const ROWS = Math.max(...pages.map((p) => p.rows));
 const pageOf = (id: string) => months.indexOf(ymOf(cal.lands[id as keyof typeof cal.lands].date));
 const landPages = JSON.stringify(Object.fromEntries(lands.map((l) => [l.id, pageOf(l.id)])));
 ---
-<section class="ica" data-ica data-mine={lock.items.length} data-pages={landPages} data-say-done={say.done} data-pace="400" data-seconds={memo.seconds} aria-label="Intake: five things sent to yourself, filed one at a time into one feed and the calendar">
+<section class="ica" data-ica data-mine={lock.items.length} data-pages={landPages} data-say-done={say.done} data-pace="140" data-seconds={memo.seconds} aria-label="Intake: five things sent to yourself, filed one at a time into one feed and the calendar">
   {clip && <audio data-clip preload="metadata" src={clip}></audio>}
   <div class="ica-top">
     {/* THE LOCK SCREEN: the date over the clock, the five things under them (newest first, as iOS stacks them), each a
@@ -635,7 +637,7 @@ const landPages = JSON.stringify(Object.fromEntries(lands.map((l) => [l.id, page
       const land = li.dataset.land;
       const R = reduce.matches;
       const secs = Number(root.dataset.seconds) || 18;
-      let pace = Number(root.dataset.pace) || 400;
+      let pace = Number(root.dataset.pace) || 140; // round four: 140 a word (was 400)
       let playMs = words.length * pace;
       if (audio && audio.duration && isFinite(audio.duration)) { playMs = audio.duration * 1000; pace = playMs / words.length; }
       const total = R ? 0 : STRIP + playMs + 200 + LIFT + FLY + TICKET_GAP + FLY + calMs(land);
