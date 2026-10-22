@@ -39,3 +39,7 @@ The site is the homepage, the résumé, and the case studies under it.
   wedding memo; retired 2026-10-22 (THE CUT, round five of the catch-all; Jon: "under the hood, the whole timeline,
   the whole story: what's actually necessary here?"). Cut with the one-match rule paragraph, not moved; its import
   no longer resolves from here: a record, not a part
+- IntakeSiri.astro — THE SIRI MODULE (2026-10-22, round six of the catch-all): the orb and Siri's real reply to the
+  wedding sentence, drawn on the paper; retired the same day in round seven (THE SPINE; Jon's thesis: "a catch-all
+  system that doesn't care about the location or medium of how the information is getting into the system"): the
+  fold's second answer is BY HAND, the pile of New Event sheets, beside Intake's week. A record, not a part

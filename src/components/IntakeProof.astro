@@ -1,29 +1,54 @@
 ---
 // src/components/IntakeProof.astro
 // THE PROOF, DESIGNED (round six of the catch-all, 2026-10-22; Jon: "'said to Siri' is an ugly screenshot, then
-// 'said to the watch' and two calendars. We know what's going on, but the average user couldn't glance at this and
-// understand the big picture. Let's just design it. We don't need the screenshot; we can make our own modules").
-// TWO ANSWERS to the one sentence, side by side on a wide sheet (stacked under 820), each a module WE draw, one word
-// over each in the label face: SIRI = the orb and the real reply on the paper, no phone, no frame (the joke: Siri
-// heard a name); INTAKE = the week of March 5–7, 2027 in the catch-all's calendar vocabulary (the weekday letters,
-// the bold numerals, bars in the Intake red). WHEN THE FOLD OPENS (the click is the press, the law's one press): the
-// wedding bar across the three days leaves (fades and lifts, 400 ms), a 600 ms hold, then four bars arrive one at a
-// time 220 ms apart. Closing the fold resets it; reduced motion shows the after state. Both modules share one height.
-// Paper stays paper: the sheet's inks, the Intake red for the bars, no fill beyond them.
+// 'said to the watch' and two calendars … let's just design it. We don't need the screenshot; we can make our own
+// modules"). ROUND SEVEN (2026-10-22, THE SPINE; Jon's thesis: "a catch-all system that doesn't care about the
+// location or medium of how the information is getting into the system"; "I don't think it's my best idea that my
+// calendar changed"): the fold proves WHAT COMES OUT, one breath, five changes, against what that would have cost
+// BY HAND. TWO MODULES side by side on a wide sheet (stacked under 820), each drawn by us, one word over each in the
+// label face: BY HAND = what the sentence costs in the Calendar app, a pile of four New Event sheets in iOS's grammar
+// on the paper, set in the sheet's DIM ink so it reads as tedium, not as content (Title · All-day · Starts · Ends ·
+// Repeat · Alert, the real times), and on top the Delete Event confirmation for the wedding, its red the only colour;
+// static. INTAKE = the week of March 5–7, 2027 in the catch-all's calendar vocabulary (the weekday letters, the bold
+// numerals, bars in the Intake red). WHEN THE FOLD OPENS (the click is the press): the wedding bar across the three
+// days leaves (fades and lifts, 400 ms), a 600 ms hold, then four bars arrive one at a time 220 ms apart. Closing
+// the fold resets it; reduced motion shows the after state. Both modules share one height. The Siri module of round
+// six is in junkyard/IntakeSiri.astro. Paper stays paper: hairlines and dim ink, the delete row's red, the bars' red.
 //
 // Usage:   <IntakeProof />   inside the Intake fold's clip (StudioOne), after the sentence
 // Data:    src/data/intake-run.json → proof (every line DRAFT, Jon's to rewrite)
 // Plays:   a MutationObserver on the closest .wk-story's data-open: the fold's own mechanics are untouched
 import run from '../data/intake-run.json';
 
-const { siri, week } = run.proof;
+const { week, byHand } = run.proof;
 ---
-<div class="pf" data-proof aria-label="Two answers to the sentence: Siri's, and Intake's calendar">
+<div class="pf" data-proof aria-label="What the sentence costs by hand, beside what Intake did with it">
   <div class="pf-side">
-    <p class="sheet-t">Siri</p>
-    <div class="siri">
-      <span class="orb" aria-hidden="true"></span>
-      <p class="siri-t">{siri}</p>
+    <p class="sheet-t">by hand</p>
+    {/* THE PILE: four New Event sheets, each offset like a dropped form, the last on top; the delete confirmation
+        over the pile's foot. Small enough that the pile is one shape; legible enough that a reader who leans in
+        sees the fields. Static */}
+    <div class="pile" aria-hidden="true">
+      {byHand.events.map((e, k) => (
+        <div class="form" style={`--k:${k}`}>
+          <div class="f-head"><span>{byHand.ui.cancel}</span><b>{byHand.ui.title}</b><span>{byHand.ui.add}</span></div>
+          <div class="f-group">
+            <div class="f-row f-title"><b>{e.title}</b></div>
+            <div class="f-row f-dim"><span>{byHand.ui.location}</span></div>
+          </div>
+          <div class="f-group">
+            <div class="f-row"><span>{byHand.ui.allDay}</span><i class="f-toggle"></i></div>
+            <div class="f-row"><span>{byHand.ui.starts}</span><em>{e.date} <b>{e.start}</b></em></div>
+            <div class="f-row"><span>{byHand.ui.ends}</span><em>{e.date} <b>{e.end}</b></em></div>
+            <div class="f-row"><span>{byHand.ui.repeat}</span><em>{byHand.ui.never}</em></div>
+            <div class="f-row"><span>{byHand.ui.alert}</span><em>{byHand.ui.none}</em></div>
+          </div>
+        </div>
+      ))}
+      <div class="confirm">
+        <p class="c-del">{byHand.ui.deleteEvent}</p>
+        <p class="c-cancel">{byHand.ui.cancel}</p>
+      </div>
     </div>
   </div>
   <div class="pf-side">
@@ -52,7 +77,10 @@ const { siri, week } = run.proof;
   .pf {
     /* the bars' colours = the catch-all's Intake calendar (IntakeCatchAll's --cal-intake-*), day and night */
     --bar-bg: #ffd1da; --bar-ink: #8a1631; --bar-time: #c22a4d;
-    --line: color-mix(in oklab, var(--mx-ink, var(--sheet-ink)) 12%, transparent);
+    --red: #ff3b30; /* iOS's destructive red: the Delete Event row, the one colour on the pile */
+    --ink: var(--mx-ink, var(--sheet-ink)); --dim: var(--mx-dim, var(--sheet-dim));
+    --line: color-mix(in oklab, var(--ink) 12%, transparent);
+    --paper: var(--sheet-card, #fff);
     display: grid;
     grid-template-columns: minmax(0, 1fr);
     gap: 36px 40px;
@@ -60,36 +88,53 @@ const { siri, week } = run.proof;
     margin: 0 auto;
     align-items: stretch;
   }
-  :global(html[data-night]) .pf { --bar-bg: color-mix(in oklab, #ff375f 30%, #1c1c1f); --bar-ink: #ffc2cf; --bar-time: #ff8fa6; }
+  :global(html[data-night]) .pf { --bar-bg: color-mix(in oklab, #ff375f 30%, #1c1c1f); --bar-ink: #ffc2cf; --bar-time: #ff8fa6; --paper: #1c1c1f; }
   .pf-side { min-width: 0; display: flex; flex-direction: column; }
   .pf-side > .sheet-t { margin: 0 0 14px; }
 
-  /* ── SIRI: the orb, then the reply, iOS's grammar on the paper (the system face), nothing else */
-  .siri { flex: 1; display: flex; flex-direction: column; align-items: flex-start; gap: 14px; padding-top: 2px; }
-  .orb {
-    width: 30px; height: 30px; border-radius: 50%; flex: none;
-    background:
-      radial-gradient(circle at 36% 34%, rgba(255, 255, 255, 0.95) 0, rgba(255, 255, 255, 0.55) 22%, rgba(255, 255, 255, 0) 52%),
-      conic-gradient(from 210deg, #ff5fa2, #8a5cf6 30%, #47b6ff 55%, #5ee6c6 72%, #ff8a5b 88%, #ff5fa2);
-    box-shadow: 0 0 0 1px color-mix(in oklab, #8a5cf6 22%, transparent), 0 4px 14px color-mix(in oklab, #47b6ff 28%, transparent);
+  /* ── BY HAND: the pile. Each form a hairline sheet on the paper in iOS's grammar at a small size (the header row,
+     the title group, the five rows), the whole in the DIM ink; the forms step 12px down and right (--k), the last
+     on top; the delete confirmation (iOS's action sheet: the red Delete Event row, Cancel; no name line, so the top
+     form's Starts and Ends stay readable: it covers Repeat and Alert, the grey rows) over the pile's lower right.
+     The pile's box is the reserve (one height with the week): 3 × 12 of offset under a 177-tall form (213), the
+     confirmation overhanging 10 below the box (224) */
+  .pile { position: relative; flex: 1; min-height: 224px; font-family: -apple-system, system-ui, 'Instrument Sans', 'Helvetica Neue', sans-serif; color: var(--dim); font-size: 9.5px; line-height: 1.3; }
+  .form {
+    position: absolute; left: calc(var(--k) * 12px); top: calc(var(--k) * 12px); width: 208px; box-sizing: border-box;
+    border: 1px solid var(--line); border-radius: 9px; background: var(--paper);
+    padding: 6px 8px 7px;
+    transition: background 560ms ease, border-color 560ms ease;
   }
-  .siri-t {
-    margin: 0; max-width: 30ch;
-    font: 500 1.0625rem/1.4 -apple-system, system-ui, 'Instrument Sans', 'Helvetica Neue', sans-serif;
-    letter-spacing: -0.005em; text-wrap: pretty;
-    color: var(--mx-ink, var(--sheet-ink));
-    transition: color 560ms ease;
+  .f-head { display: flex; justify-content: space-between; align-items: center; padding: 0 0 6px; }
+  .f-head b { font-weight: 600; color: var(--dim); }
+  .f-group { border: 1px solid var(--line); border-radius: 6px; overflow: hidden; }
+  .f-group + .f-group { margin-top: 6px; }
+  .f-row { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 3px 7px; min-height: 15px; }
+  .f-row + .f-row { border-top: 1px solid var(--line); }
+  .f-title b { font-weight: 600; }
+  .f-dim span { color: color-mix(in oklab, var(--dim) 55%, transparent); }
+  .f-row em { font-style: normal; white-space: nowrap; }
+  .f-row em b { font-weight: 500; }
+  .f-toggle { display: inline-block; width: 22px; height: 12px; border-radius: 6px; border: 1px solid var(--line); position: relative; flex: none; }
+  .f-toggle::after { content: ''; position: absolute; top: 1px; left: 1px; width: 8px; height: 8px; border-radius: 50%; border: 1px solid var(--line); box-sizing: border-box; }
+  .confirm {
+    position: absolute; right: -6px; bottom: -10px; width: 150px; box-sizing: border-box;
+    border: 1px solid var(--line); border-radius: 10px; background: var(--paper); text-align: center; overflow: hidden;
+    transition: background 560ms ease, border-color 560ms ease;
   }
+  .confirm p { margin: 0; padding: 6px 8px; }
+  .c-del { font-size: 10.5px; font-weight: 600; color: var(--red); border-bottom: 1px solid var(--line); }
+  .c-cancel { font-size: 10.5px; font-weight: 500; }
 
   /* ── INTAKE: the week, three day columns in the month's grammar (IntakeCatchAll's .cm-*): the letters over a
      hairline, the numerals, the bars under them; one height, reserved to its fullest state (two bars on Saturday) */
   .wk7 { flex: 1; display: flex; flex-direction: column; min-height: 150px; font-family: -apple-system, 'Instrument Sans', 'Helvetica Neue', system-ui, sans-serif; }
   .wk7-head { display: grid; grid-template-columns: repeat(3, 1fr); padding: 0 0 5px; border-bottom: 1px solid var(--line); }
-  .wk7-head span { text-align: center; font-size: 11px; font-weight: 600; color: var(--mx-dim, var(--sheet-dim)); }
+  .wk7-head span { text-align: center; font-size: 11px; font-weight: 600; color: var(--dim); }
   .wk7-grid { position: relative; flex: 1; display: grid; grid-template-columns: repeat(3, 1fr); }
   .wk7-day { position: relative; display: flex; flex-direction: column; align-items: center; padding-top: 4px; min-width: 0; }
   .wk7-day + .wk7-day { border-left: 1px solid var(--line); }
-  .wk7-n { display: grid; place-items: center; width: 24px; height: 24px; font-size: 15px; font-weight: 600; font-variant-numeric: tabular-nums; letter-spacing: -0.02em; color: var(--mx-ink, var(--sheet-ink)); transition: color 560ms ease; }
+  .wk7-n { display: grid; place-items: center; width: 24px; height: 24px; font-size: 15px; font-weight: 600; font-variant-numeric: tabular-nums; letter-spacing: -0.02em; color: var(--ink); transition: color 560ms ease; }
   .wk7-bars { width: 100%; display: flex; flex-direction: column; gap: 3px; padding: 6px 2px 0; box-sizing: border-box; }
   .bar {
     box-sizing: border-box; padding: 3px 5px; border-radius: 4px; min-width: 0;

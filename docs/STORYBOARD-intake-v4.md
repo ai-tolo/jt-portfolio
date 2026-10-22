@@ -40,6 +40,24 @@ they land in.
 The sheet's height never changes: the phone is an aspect ratio, Intake's column is the phone's height (the window a
 fixed reserve, the month the rest), the foot is one slot (runline · Replay).
 
+## The fold under the watch (round seven, 2026-10-22: THE SPINE)
+
+Jon's thesis: "a catch-all system that doesn't care about the location or medium of how the information is getting
+into the system"; of the old hook: "I don't think it's my best idea that my calendar changed." The sheet's three jobs:
+the catch-all proves any way in; the watch proves right now, you (`try it`); the fold proves WHAT COMES OUT, one breath,
+five changes, against what that would have cost by hand.
+
+- AT REST: the hook alone, `It doesn't care how it got in.` (DRAFT, WATCH_COPY.hook in objects-copy.ts; the locked
+  headline stays in builds-copy.ts for the case study), and the chevron.
+- OPEN, in order: THE SENTENCE once, short (DRAFT, intake-run.json → proof.said), the accent quote marks; then TWO
+  MODULES side by side (stacked under 820), one word over each in the label face: BY HAND = what the sentence costs in
+  the Calendar app, a pile of four New Event sheets in iOS's grammar in the sheet's dim ink (Title · Location · All-day ·
+  Starts · Ends · Repeat · Alert, the four titles and the real times), the Delete Event confirmation for the wedding on
+  top, its red the only colour, static; INTAKE = Fri 5 · Sat 6 · Sun 7 of March 2027 in the catch-all's calendar
+  vocabulary; the click that opens the fold is the press: the wedding bar leaves (400 ms), a 600 ms hold, then Dinner
+  6 PM, Yoga 9 AM, Sam's party 8 PM, Thrift run 1 PM arrive 220 ms apart; closing resets it; reduced motion shows the
+  after state. Nothing else: no Siri (junkyard/IntakeSiri.astro), no fact line, no whole story on this sheet.
+
 ## The haters
 
 - "Five presses? Nobody clicks five times." → One press already shows the whole idea in two seconds: the thing opens, goes in, comes out a ticket, and the calendar turns to the day. The rims say what is left; the memo is the one worth waiting for.
