@@ -44,6 +44,12 @@ const ICON: Record<string, string> = {
   intake: '<rect x="7" y="2.5" width="10" height="19" rx="3.2" fill="none" stroke="#fff" stroke-width="1.8"/><rect x="9.2" y="7.2" width="5.6" height="9.6" rx="1.4" fill="#fff"/>',
 };
 const TINT: Record<string, string> = { messages: '#34c759', intake: '#ff6b4a' };
+// THE REAL CARD (round three, 2026-10-22, Jon: round two's cards "look a bit unprofessional and lack identity"): the
+// Stream's own card inside the outline. The 3px spine is the source's colour: on this sheet the two sources are the
+// two pills' icons, the thread with himself (the Messages pill's green) and the wrist (the sheet's ember, the memo
+// pill's); the chips are the app's own kinds in its own colours (KIND_COLORS in intake_web.py)
+const SPINE: Record<string, string> = { thread: '#34c759', wrist: '#ff6b4a' };
+const KIND: Record<string, string> = { event: '#d9a845', reminder: '#d9a845', task: '#e0a35b', idea: '#8fbf6f' };
 const CHECK = '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2.5 8.5l3.5 3.5 7.5-8.5"/></svg>';
 const WORDS = memo.words.split(' ');
 // the memo's wave: the watch's own bars (IntakeHero), half of them
@@ -129,20 +135,29 @@ const landPages = JSON.stringify(Object.fromEntries(lands.map((l) => [l.id, page
 
     {/* INTAKE'S CARDS (round two, 2026-10-21, Jon: "Maybe just the outline of a phone, literally a thin border, and
         then just focus on the parts of UI they need to see"): the phone's silhouette as one hairline on the paper,
-        empty at rest; inside, only the cards: a receipt is the ✓ and its title over the compact line, an open card its
-        title over its one line (the thumb only where the thing was an image). The six stand in the flow unseen (the
-        list is reserved to its fullest state); a landing shows the next one, moved up to the landed group so the list
-        fills top down */}
+        empty at rest; inside, only the cards. ROUND THREE (2026-10-22, Jon: "the center Intake cards look a bit
+        unprofessional and lack identity"): each is THE REAL INTAKE CARD as the Stream draws it (article.ticket in
+        intake_web.py): the source's spine, the meta row (the age · the kind's chip · a receipt's ✓), the title, one
+        line (a receipt's "where · when" in the faint ink; an open card's details, the 44px thumb only where the thing
+        was an image). The six stand in the flow unseen (the list is reserved to its fullest state); a landing shows
+        the next one, moved up to the landed group so the list fills top down */}
     <div class="ica-app" data-app aria-hidden="true">
       <i class="sil"></i>
       <div class="feed" data-feed>
         {feed.cards.map((c) => (
-          <article class:list={['tk', c.state]} data-card={c.id}>
-            <div class="tmain">
-              <h3 class="tt">{c.state === 'receipt' && <span class="rc" set:html={CHECK} />}{c.title}</h3>
-              <p class="what">{c.what}</p>
+          <article class:list={['tk', c.state]} data-card={c.id} style={`--src:${SPINE[c.src] || 'var(--tk-line)'}`}>
+            <div class="thead">
+              <span class="age">{c.age}</span>
+              <span class="chip" style={`--chip:${KIND[c.kind] || '#9ca294'}`}>{c.kind}</span>
+              {c.state === 'receipt' && <span class="rc" set:html={CHECK} />}
             </div>
-            {c.thumb && <img class="mthumb" src={c.thumb} alt="" width="88" height="88" decoding="async" />}
+            <div class="trow">
+              <div class="tmain">
+                <h3 class="tt">{c.title}</h3>
+                <p class="what">{c.what}</p>
+              </div>
+              {c.thumb && <img class="mthumb" src={c.thumb} alt="" width="88" height="88" decoding="async" />}
+            </div>
           </article>
         ))}
       </div>
@@ -340,19 +355,53 @@ const landPages = JSON.stringify(Object.fromEntries(lands.map((l) => [l.id, page
     color: var(--ink);
   }
   .sil { position: absolute; inset: 0.6% 1.2%; border-radius: 16.2% / 7.95%; border: 1px solid color-mix(in oklab, var(--ink) 14%, transparent); pointer-events: none; }
-  .feed { position: absolute; left: 4.745%; top: 1.875%; width: 90.51%; height: 96.25%; box-sizing: border-box; padding: 10cqw 7cqw 6cqw; overflow: hidden; }
-  /* a card: the title (Instrument Sans) over its one line (the label face, dim); a receipt's ✓ in Intake's green
-     before its title; the thumb at the right where the thing was an image. Unseen until it lands */
-  .tk { display: flex; align-items: center; gap: 10px; padding: 11px 0; opacity: 0; }
-  .tk + .tk { border-top: 1px solid color-mix(in oklab, var(--ink) 14%, transparent); }
+  /* THE REAL CARD (round three, 2026-10-22): intake_web.py's article.ticket, its dark palette translated to the
+     sheet's paper by day (surface = the sheet's white, line = the 14 % hairline, ink = the sheet's ink, muted / faint
+     = the ink at 66 / 58 %, the chips' colours mixed 62 % toward the ink as the watch's are: 4.8:1 on white, the
+     receipt's ✓ the green the watch wears); by NIGHT the app's own palette as is, so the column IS the app. The type
+     is the system face: the column is the app, not the sheet's prose */
+  .ica-app {
+    --tk-surface: var(--sheet-card, #fff); --tk-line: color-mix(in oklab, var(--ink) 14%, transparent); --tk-ink: var(--ink);
+    --tk-muted: color-mix(in oklab, var(--ink) 66%, transparent); --tk-faint: color-mix(in oklab, var(--ink) 58%, transparent);
+    --tk-ok: var(--rcpt); --tk-chip-mix: 62%; --tk-chip-edge: 55%;
+    --tk-sans: -apple-system, system-ui, 'Instrument Sans', 'Helvetica Neue', sans-serif;
+  }
+  :global(html[data-night]) .ica .ica-app {
+    --tk-surface: #1c1f1b; --tk-line: #2e332c; --tk-ink: #eaece5; --tk-muted: #9ca294; --tk-faint: #767c6f; --tk-ok: #8fbf6f;
+    --tk-chip-mix: 100%; --tk-chip-edge: 34%; /* the app's chip: the colour itself, its border at #…55 */
+  }
+  /* THE SCALE: the app's card is drawn for a 390px screen; the outline is 309 wide at 1440 × 900 (250 at 375),
+     and six cards at the app's own px (16.5 titles, 14/16 padding) ran 727px in the 594 the box holds. So the card
+     is set in em on ONE size, 14px on the wide sheet, following the outline's width below it (4.53cqw of the app
+     box, floored at 11px; 11.3 at 375): the same card, the box's scale; six fit at every width (563 of 594 at 1440,
+     480 of 481 at 375) and the list never clips */
+  .feed {
+    position: absolute; inset: calc(0.6% + 1em) calc(1.2% + 1em); display: flex; flex-direction: column; gap: 0.5714em; overflow: hidden;
+    font: 400 clamp(11px, 4.53cqw, 14px)/1.3 var(--tk-sans); -webkit-font-smoothing: antialiased; color: var(--tk-ink);
+  }
+  /* a card: the spine, the line, the radius, the meta row, the title, one line (the app's proportions at the scale) */
+  .tk {
+    box-sizing: border-box; padding: 0.7143em 1em 0.6429em; border: 1px solid var(--tk-line); border-left: 3px solid var(--src, var(--tk-line));
+    border-radius: 0.857em; background: var(--tk-surface); opacity: 0;
+  }
+  .tk.receipt { padding-bottom: 0.7143em; }
   .tk.in { opacity: 1; transition: opacity 220ms ease; }
-  .tmain { flex: 1; min-width: 0; }
-  .tt { margin: 0; font: 600 14px/1.3 'Instrument Sans', -apple-system, 'Helvetica Neue', system-ui, sans-serif; letter-spacing: -0.005em; color: var(--ink); text-wrap: pretty; }
-  .rc { display: inline-block; width: 13px; height: 13px; margin-right: 6px; vertical-align: -1px; color: var(--rcpt); }
+  .tk.receipt.in { opacity: 0.85; } /* a done thing sits back (the app's .receipt) */
+  .thead { display: flex; align-items: center; gap: 0.5714em; font-size: 0.75em; line-height: 1.3; color: var(--tk-faint); }
+  .chip {
+    padding: 0.1em 0.7em; border: 1px solid color-mix(in oklab, var(--chip, #9ca294) var(--tk-chip-edge), transparent); border-radius: 5px;
+    font-size: 0.9048em; font-weight: 600; line-height: 1.5; letter-spacing: 0.07em; text-transform: uppercase; /* 9.5 of the row's 10.5 at the wide sheet */
+    color: color-mix(in oklab, var(--chip, #9ca294) var(--tk-chip-mix), var(--tk-ink));
+  }
+  .rc { display: inline-flex; flex: none; width: 1.333em; height: 1.333em; color: var(--tk-ok); } /* 14 at the wide sheet */
   .rc :global(svg) { display: block; width: 100%; height: 100%; }
-  .what { margin: 3px 0 0; font: 500 11px/1.35 var(--mono); letter-spacing: 0.02em; color: var(--dim); }
-  .receipt .what { padding-left: 19px; } /* under the title, past the ✓ */
-  .mthumb { flex: none; width: 40px; height: 40px; border-radius: 6px; object-fit: cover; object-position: 18% 60%; }
+  .trow { display: flex; align-items: flex-start; gap: 0.857em; }
+  .tmain { flex: 1; min-width: 0; }
+  .tt { margin: 0.4286em 0 0.2143em; font-size: 1em; font-weight: 650; line-height: 1.3; letter-spacing: -0.005em; color: var(--tk-ink); text-wrap: pretty; }
+  .receipt .tt { margin: 0.3846em 0 0.1538em; font-size: 0.9286em; font-weight: 600; }
+  .what { margin: 0; font-size: 0.857em; line-height: 1.45; color: var(--tk-muted); }
+  .receipt .what { margin: 0.1739em 0 0; font-size: 0.8214em; color: var(--tk-faint); }
+  .mthumb { flex: none; width: 3.143em; height: 3.143em; margin-top: 0.5em; border-radius: 6px; object-fit: cover; object-position: 18% 60%; }
 
   /* ── THE MONTH: the iPhone's Calendar grammar at the object's width. The weekday letters stand still over a window;
      the pages (one per month) ride a track that slides to --p. Each page: the month's name, then the grid (whole weeks,
