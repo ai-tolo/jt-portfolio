@@ -33,6 +33,9 @@ import WATCH_RUN from "../../data/intake-run.json";
 import ADX from "../../data/audiodex-scene.json";
 import { WATCH_COPY, ARCHIVE_COPY, STUDIO_COPY } from "./objects-copy";
 import SiteFloor from "./SiteFloor.astro";
+// THE GLOSS (2026-10-23): the niche words on the sheets carry their own line (src/lib/gloss.ts)
+import Glossed from "../Glossed.astro";
+import type { GlossWord } from "../../lib/gloss";
 // THE SHEET (2026-10-13): the anatomy the builds share (src/styles/sheet.css).
 // Round two (Jon): no numbers on the sheets; the kind word stands over each name.
 import "../../styles/sheet.css";
@@ -52,9 +55,17 @@ const inPublic = (url?: string | null) =>
 const FLIP = inPublic("/builds/studio/flip.mp4");
 // THE HIGHLIGHTS' FRAMES (2026-10-23): five of the six moment crops (the engines' is unused: SIGNAL's job), their
 // pixels the capture's (2× of a 1106×622 or 760×428 CSS crop)
+// THE GLOSS on the rows (2026-10-23): the words each row marks, named here so a rewrite that drops one fails the
+// build. The hands row's "take" is the verb ("take it anywhere"), not the take, so it stays plain
+const HL_GLOSS: Record<string, { line?: GlossWord[]; caption?: GlossWord[] }> = {
+  hands: { caption: ["MIDI"] },
+  chips: { line: ["chip"] },
+  effects: { line: ["Ableton"] },
+  take: { line: ["stems"] },
+};
 const HIGHLIGHTS = STUDIO_COPY.highlights.map((h) => {
   const wide = ["effects", "hands", "take"].includes(h.frame);
-  return { ...h, src: `/builds/studio/moment-${h.frame}.webp`, width: wide ? 2212 : 1520, height: wide ? 1244 : 856 };
+  return { ...h, src: `/builds/studio/moment-${h.frame}.webp`, width: wide ? 2212 : 1520, height: wide ? 1244 : 856, gloss: HL_GLOSS[h.frame] ?? {} };
 });
 
 interface Track { src: string | null; title: string; note?: string; year?: number; duration?: string; peaks?: string | null; cover?: string | null; tint?: string | null; }
@@ -543,7 +554,7 @@ const STUDIO = BUILDS.find((b) => b.id === "studio")!;
       <header class="band">
         <p class="sheet-kind">{STUDIO_COPY.kind}</p>
         <h2 class="band-name" id="build-studio-t">{STUDIO_COPY.title}</h2>
-        <p class="band-what">{STUDIO_COPY.dek}</p>
+        <p class="band-what"><Glossed text={STUDIO_COPY.dek} mark={["Ableton"]} /></p>
       </header>
       {/* THE CLIP: undated, no caption, no placard; the frame's shape is fixed, so a press never moves the page */}
       <figure class="st-slot st-clip" data-flip data-pending={FLIP ? undefined : ""}>
@@ -564,9 +575,9 @@ const STUDIO = BUILDS.find((b) => b.id === "studio")!;
               <div class="st-hl-frame">
                 <img src={h.src} width={h.width} height={h.height} alt={h.alt} loading="lazy" decoding="async" />
               </div>
-              {h.caption && <figcaption class="st-hl-cap">{h.caption}</figcaption>}
+              {h.caption && <figcaption class="st-hl-cap"><Glossed text={h.caption} mark={h.gloss.caption ?? []} /></figcaption>}
             </figure>
-            <p class="st-hl-line">{h.line}</p>
+            <p class="st-hl-line"><Glossed text={h.line} mark={h.gloss.line ?? []} /></p>
           </li>
         ))}
       </ul>

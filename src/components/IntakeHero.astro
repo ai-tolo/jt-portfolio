@@ -16,6 +16,8 @@
 // LIVE: the speech is the browser's own service; the triage is /api/intake (Claude) with src/lib/intake-local.ts
 // behind it, which says so with a chip. Nothing is stored anywhere. A browser without speech types instead.
 import { LIVE_COPY } from './studio/objects-copy';
+// THE GLOSS (2026-10-23): "Claude" in the watch's live lines carries its own line
+import Glossed from './Glossed.astro';
 
 interface Props {
   theme?: 'light' | 'dark' | 'auto';
@@ -67,7 +69,7 @@ const MIX = [16, 22, 28, 35, 42, 48, 54, 61, 68, 74, 80, 87, 94, 100, 94, 87, 80
       <div class="deck" data-deck></div>
       <div class="out-foot">
         <p class="out-line">{LIVE_COPY.preview}</p>
-        <p class="out-line">{LIVE_COPY.privacy}</p>
+        <p class="out-line"><Glossed text={LIVE_COPY.privacy} mark={['Claude']} /></p>
       </div>
     </div>
   </div>
@@ -294,6 +296,9 @@ const MIX = [16, 22, 28, 35, 42, 48, 54, 61, 68, 74, 80, 87, 94, 100, 94, 87, 80
 
 <script>
 import { localParse } from '../lib/intake-local.ts';
+// THE GLOSS (2026-10-23): the live lines this script writes mark "Claude" too (the same button, the same behavior)
+import { glossButton } from '../lib/gloss';
+import '../lib/gloss-client';
 // THE STATES (2026-10-19, late): rest (the ring) → asking (the browser asks for the microphone) → listening (the stop
 // square, the clock counting up, the wave, the words at the foot) | typing (no speech service, or declined: "type it",
 // the field under the watch) → saved (the check; the runline while the words are parsed) → the cards slide out, and
@@ -306,6 +311,7 @@ const CHECK = '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke
 const X = '<svg class="c-x" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>';
 const TILES = '<div class="c-tiles" aria-hidden="true"><span class="c-tile">Claude <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.2 6.6L21 11l-6.8 2.4L12 20l-2.2-6.6L3 11l6.8-2.4z"/></svg></span><span class="c-tile">Zzzz</span></div>';
 const esc = (x) => String(x).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+const glossed = (t) => esc(t).replace(/\bClaude\b/, glossButton('Claude'));
 const fmt = (sec) => { const t = Math.max(0, Math.floor(sec)); return Math.floor(t / 60) + ':' + String(t % 60).padStart(2, '0'); };
 
 document.querySelectorAll('[data-intake-hero]').forEach((hero) => {
@@ -331,6 +337,7 @@ document.querySelectorAll('[data-intake-hero]').forEach((hero) => {
   let rec = null, prior = '', session = '', interim = '', t0 = 0, tick = 0, settleT = 0, backT = 0, stopping = false, lastLen = 0, lastAt = 0, forceDown = false;
   const set = (m) => { mode = m; hero.dataset.state = m === 'transcribing' || m === 'parsing' ? 'saved' : m; };
   const hint = (t) => { hintEl.textContent = t; };
+  const hintGlossed = (t) => { hintEl.innerHTML = glossed(t); };
   const say = (t) => { status.textContent = t; };
   const text = () => (prior + ' ' + session + ' ' + interim).replace(/\s+/g, ' ').trim().slice(0, MAX_CHARS);
   const amp = () => { hero.style.setProperty('--amp', mode === 'listening' && performance.now() - lastAt < 900 ? '1' : '0.35'); };
@@ -403,7 +410,7 @@ document.querySelectorAll('[data-intake-hero]').forEach((hero) => {
     try { rec.start(); } catch (_) { toTyped(LIVE.noSpeech); }
   };
   const listening = () => {
-    set('listening'); hint(LIVE.privacy);
+    set('listening'); hintGlossed(LIVE.privacy);
     t0 = performance.now();
     clearInterval(tick);
     tick = setInterval(() => { const s = (performance.now() - t0) / 1000; clockEl.textContent = fmt(s); amp(); if (s >= MAX_S) finish(); }, 200);
@@ -460,7 +467,7 @@ document.querySelectorAll('[data-intake-hero]').forEach((hero) => {
     const head = t.execute
       ? '<span class="c-check">' + CHECK + '</span>'
       : '<span class="c-chip" style="--chip:' + chip + '">' + esc(label) + '</span>';
-    const lp = local ? '<span class="c-chip lp">' + esc(LIVE.local) + '</span>' : '';
+    const lp = local ? '<span class="c-chip lp">' + glossed(LIVE.local) + '</span>' : '';
     const lines = t.execute
       ? '<p class="c-line">' + esc([dest || label, t.when].filter(Boolean).join(' · ')) + '</p>'
       : (t.items || []).filter((i) => i.trim().toLowerCase() !== String(t.title).trim().toLowerCase()).slice(0, 2).map((i) => '<p class="c-line">' + esc(i) + '</p>').join('');   // a point that only repeats the title is dropped
