@@ -1130,17 +1130,24 @@ session must follow.
   home, then the ROOM'S ONE PLACE as a plain word in the homepage rail's
   exact row (134×44, flush right): résumé ALONE (the studies' block and
   its 60px beat left on 2026-10-23 with THE STUDIES STEP BACK; AwayRail
-  no longer reads case-links.ts). The `current` prop lights it IN THE
-  EMBER on /resume (Jon: "match the color from the homepage for
-  continuity" — `.aw-res`, both temperatures); a study opened directly
-  passes its slug and lights nothing. The switch at the foot; NO
+  no longer reads case-links.ts) on a study opened directly and on 404,
+  unlit. ON /RESUME ITSELF (2026-10-23, Jon: "the red pill 'résumé'
+  shouldn't be in the sidebar on the résumé page, it's redundant now …
+  have an arrow icon underneath the JT logo"): NO résumé row and NO ember
+  pill; under the mark ONE arrow row, `a.aw-home` (`←`, the words' 134×44
+  row centered under the mark, IBM Plex Mono 1.25rem/600 in the rail's ink
+  #26241f / night #b4bdcb, `href="/"`, aria-label "Home", its hover the
+  mark's gradient through the glyph), then nothing until the switch (the
+  foot's `margin-top: auto` follows the arrow); `onResume` in AwayRail
+  (`current === "resume"`) decides it. The switch at the foot; NO
   ember button on away pages (home's pill exists as the recruiter's
   shortcut TO the résumé). No comet on the away rail (offered, Jon
   passed: "idk if we need the comet"); the studies keep CSProgress. The-console is UNROUTED (Momence pattern: page live,
   reached only from the sheet's evidence line; a dedicated Signal Studio
-  study is the planned replacement). Phone bar: JT · résumé ember pill
-  (lit ring on /resume) · moon — its dedicated refinement round is still
-  owed. In AwayRail the breakpoint blocks come FIRST, so display and
+  study is the planned replacement). Phone bar: JT · résumé ember pill ·
+  moon, and on /resume JT · the arrow (44 × 44) · moon (the pill and its
+  lit ring left that page 2026-10-23) — its dedicated refinement round is
+  still owed. In AwayRail the breakpoint blocks come FIRST, so display and
   auto-margins live in rules AFTER the base resets (three cascade bugs
   shipped the other way, 2026-10-15).
 
