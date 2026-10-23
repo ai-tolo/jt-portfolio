@@ -44,9 +44,10 @@
 //   mastering line had made the agent the blind judge; the record has it
 //   render and Jon vote, so it now reads "which I judge blind". AudioDex is
 //   framed as the pipeline's work ("transcribes, fingerprints…"), the
-//   shipped sheet's verbs. ONE wrinkle left for Jon: "But I use them every
-//   day" is his homepage line about the four; the mastering agent in the
-//   same block last took a blind vote on 2026-08-16.
+//   shipped sheet's verbs. The fact check noted that "But I use them every
+//   day" (his homepage line about the four) sits over a block that includes
+//   the mastering agent, whose last blind vote was 2026-08-16; Jon ruled
+//   2026-10-23: "Keep the line and the mastering agent as they are."
 // ════════════════════════════════════════════════════════════════════════
 //
 // The reader (Jon, 2026-09-21): a design or engineering lead at an AI, audio,
