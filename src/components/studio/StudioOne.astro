@@ -4159,21 +4159,25 @@ const columns = (blocks: BuildBlock[]): StoryBlock[][] =>
       const st = sgm.getAttribute("data-state");
       return st === "boot" || st === "on" || st === "live";
     };
-    // "Scrolled away" = the play room has all but left the viewport. The
-    // room is the one sheet: the instrument AND its write-up on it (Jon,
-    // 2026-10-07: reading the how-to keeps it on; the write-up is part of
-    // SIGNAL). The room is taller than the screen, so the measure is how much
-    // of the SCREEN it fills: under 35 % (adjacent sections keep a sliver
-    // visible, so 0 would never fire). Fine thresholds: the room's own ratio
-    // moves slowly when it is this tall.
+    // "Scrolled away" = SIGNAL's WHOLE SHEET has left the viewport. THE LAW LOOSENED (2026-10-22, Jon: "the music
+    // should stop when a user leaves the viewport of the instrument, I still think that's true, but given we have
+    // directions beneath it, loosen it so they can see the directions and not have to restart it"; the outside read
+    // scrolled to how to play and the instrument went dark under the 35 %-of-the-screen rule of 2026-10-07): the
+    // measure is the sheet's own (.sc: the device AND how to play) intersection ratio; under 0.08 for 160 ms it
+    // powers down (a bounce at the edge never fires), anywhere inside the sheet it never does.
+    const sheet = host.querySelector<HTMLElement>("[data-signal-card]") ?? host;
     const steps = Array.from({ length: 101 }, (_, i) => i / 100);
+    let ratio = 1;
+    let away: ReturnType<typeof setTimeout> | null = null;
     new IntersectionObserver(([e]) => {
-      const vh = e.rootBounds?.height ?? window.innerHeight;
-      const shown = e.intersectionRect.height / Math.max(1, Math.min(e.boundingClientRect.height, vh));
-      if (shown < 0.35 && powered()) {
-        document.getElementById("pwr")?.click(); // the machine's own powerdown path
-      }
-    }, { threshold: steps }).observe(host);
+      ratio = e.intersectionRatio;
+      if (ratio >= 0.08) { if (away) { clearTimeout(away); away = null; } return; }
+      if (away || !powered()) return;
+      away = setTimeout(() => {
+        away = null;
+        if (ratio < 0.08 && powered()) document.getElementById("pwr")?.click(); // the machine's own powerdown path
+      }, 160);
+    }, { threshold: steps }).observe(sheet);
   }
 
   // ── the instrument's FIT zoom (styled from outside the sacred file; R3,
