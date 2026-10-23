@@ -148,10 +148,11 @@ session must follow.
   appear on the résumé; the naming law below is for the site's surfaces,
   not the sheet. The reader is a cold design/engineering lead who will not
   click: every bullet stands without the site.
-- Org names do NOT link (2026-09-21). The case studies sit in a screen-only
-  row under the sheet (`.r-studies` in resume/index.astro: the flagship plus
-  the three canon ledes from case-links.ts). The one bare URL line under the
-  mastering agent is the sheet's only link.
+- Org names do NOT link (2026-09-21). The one bare URL line under the
+  mastering agent (uxjon.com/case-studies/the-console) is the sheet's only
+  link and the ONLY link to a study left anywhere on the site. The
+  screen-only studies row under the sheet (`.r-studies`) is GONE since
+  2026-10-23 (THE STUDIES STEP BACK, see THE SITE IS THREE THINGS).
 - Contact: phone is print-only (its separator hides with it); no LinkedIn on
   the sheet (the actions row and the floor carry the icon). The proof marks
   key on `data-pr-org` strings + bullet indexes in `MARKS`; re-check them
@@ -1103,14 +1104,13 @@ session must follow.
   ONE INSTRUMENT with the homepage rail since 2026-10-15 (Jon: the
   chips/glyphs "no longer feel fitting"): the JT mark (the favicon's
   letterforms in the rail's ink, gradient on hover) on TOP as the way
-  home, then the ROOM'S PLACES as plain words in the homepage rail's
-  exact row (134×44, flush right): résumé ALONE, then a 60px beat, then
-  the three studies as ONE block at 14px gaps (Jon, 2026-10-15: the
-  distance says the résumé's real estate; the studies "all visible in
-  one view" read as one unit). One `current` prop lights the row: the
-  studies as the ink pill, RÉSUMÉ IN THE EMBER (Jon: "match the color
-  from the homepage for continuity" — `.aw-res`, both temperatures).
-  The list is case-links.ts + the résumé. The switch at the foot; NO
+  home, then the ROOM'S ONE PLACE as a plain word in the homepage rail's
+  exact row (134×44, flush right): résumé ALONE (the studies' block and
+  its 60px beat left on 2026-10-23 with THE STUDIES STEP BACK; AwayRail
+  no longer reads case-links.ts). The `current` prop lights it IN THE
+  EMBER on /resume (Jon: "match the color from the homepage for
+  continuity" — `.aw-res`, both temperatures); a study opened directly
+  passes its slug and lights nothing. The switch at the foot; NO
   ember button on away pages (home's pill exists as the recruiter's
   shortcut TO the résumé). No comet on the away rail (offered, Jon
   passed: "idk if we need the comet"); the studies keep CSProgress. The-console is UNROUTED (Momence pattern: page live,
@@ -1126,7 +1126,8 @@ session must follow.
 - `site` is `https://www.uxjon.com` (the apex 308-redirects to www). Every
   canonical / og:url / og:image / sitemap entry derives from `Astro.site`;
   never hardcode the apex (CSLayout used to; it is fixed).
-- `@astrojs/sitemap` runs on build (excludes the off-shelf momence page);
+- `@astrojs/sitemap` runs on build (excludes every `/case-studies/` page
+  since 2026-10-23; momence alone before that): `/`, `/resume`, `/signal`;
   `robots.txt` carries the Sitemap line.
 - FIRST SETTLE (branch `discover`, 2026-09-23, Jon: "guarantee it's seen
   by a speedrunner"): when an object settles in view (≥60% visible, scroll
@@ -1144,16 +1145,24 @@ session must follow.
   stay in sync); its first settle seats the mini and opens the strip, which
   folds back after 2.4s under 1160px and stays open above. The audio
   Carousel is `keys={false}`: no arrows, no swipe, never steals ←/→.
-- THE STACK (/resume, same branch): the sheet is the top page of the pile
-  (`.r-stack`, screen-only, each 4px narrower and 5px lower, painted top
-  sheet highest; flat and square since 2026-10-06, no shadow; three sheets
-  beneath since the-console left the nav 2026-10-15); wordless paper
-  tabs (`.r-stack-tab`, same-page links to `#study-<slug>`) stand 12px
-  above the top edge; they rise once per load (`data-riffle`). Blank-tape
-  hover lifts the mini 8px with a ground shadow over 220ms. Phones snap a flick past the paper onto the
-  studies. Print hides both (verified 1 page).
+- THE STACK (/resume) is GONE since 2026-10-23 (THE STUDIES STEP BACK):
+  the under-sheets (`.r-stack`), the wordless study tabs (`.r-stack-tab`),
+  the `data-riffle` rise, the phones' snap onto the studies and their CSS
+  are deleted; the résumé is ONE SQUARE SHEET on the ground (the proof
+  marks and panels unchanged, `.sheet-wrap` keeps `isolation: isolate`),
+  the floor under it. The PDF was regenerated (1 page, its text
+  identical). Blank-tape hover lifts the mini 8px with a ground shadow
+  over 220ms.
 - THE SITE IS THREE THINGS (Jon, 2026-09-22): the homepage, the résumé, and
-  the case studies under it. The Catalog + Judge doors, the /writing posts
+  the case studies under it. THE STUDIES STEP BACK (2026-10-23, Jon: "I'd
+  rather just cut the case studies for now"): the Momence way, UNLINKED,
+  NOT DELETED: every /case-studies/* page, `src/lib/case-links.ts`, the
+  study components and their assets stay in the tree, untouched, live at
+  their URLs, no redirects; nothing links to them (no résumé row, no stack
+  tabs, no AwayRail block, out of the sitemap) except the sheet's bare
+  the-console URL line (the print contract). Check after a build:
+  `grep -r 'case-studies/' dist/client --include=index.html` finds only
+  that line and the study pages' own canonical / og tags. The Catalog + Judge doors, the /writing posts
   and the /more phone exhibit are in `junkyard/` (not built, not imported,
   not in the sitemap; their URLs redirect in astro.config.mjs). Never route
   them back or spend context on them unless Jon asks.
