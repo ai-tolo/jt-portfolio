@@ -13,10 +13,18 @@
 //   later paint phase and scramble the PDF text stream out of reading order.
 //   Bullets are normal-flow hanging indents (inline-block ::before marker
 //   with negative margin).
-// - letter-spacing on headings stays <= 0.12em; 0.15em tracking extracts
-//   with injected spaces and breaks ATS section-heading matching.
+// - NO letter-spacing on headings in print (2026-10-23). pypdf tolerated
+//   0.12em, but pdfjs-based parsers (OpenResume, run on the real PDF) read
+//   the tracked glyphs as "E X P E R I E N C E" and then found no sections
+//   at all. Uppercase comes from text-transform, which extracts fine.
+// - Contact separators are NBSP·NBSP inside one text run (2026-10-23): a
+//   plain space at a run boundary printed as a positioning gap, and a
+//   pdfjs reader fused the email into the phone.
 // - Kerning/ligatures off: their advance adjustments also read back as
 //   spaces in extraction.
+// - (2026-10-23) The name and the title print on separate lines, bullets
+//   print as U+2022, and an empty section does not render: a parser reads
+//   the name alone, one standard list, no empty "Selected Builds" heading.
 import "@fontsource/geist/latin-400.css";
 import "@fontsource/geist/latin-500.css";
 import "@fontsource/geist/latin-600.css";
@@ -44,7 +52,7 @@ const isPhone = (s: string) => /^\(?\d{3}\)?[\s.-]?\d{3}[\s.-]?\d{4}$/.test(s.tr
         const phone = isPhone(item);
         return (
           <span class={phone ? "pr-ct pr-print-only" : "pr-ct"}>
-            {i > 0 && <span class="pr-ct-sep"> · </span>}
+            {i > 0 && <span class="pr-ct-sep">&nbsp;·&nbsp;</span>}
             {isUrl(item) ? <a href={`https://www.${item.replace(/^www\./, "")}`}>{item}</a>
               : isEmail(item) ? <a href={`mailto:${item}`}>{item}</a>
               : phone ? <a href={`tel:+1${item.replace(/\D/g, "")}`}>{item}</a>
@@ -63,15 +71,20 @@ const isPhone = (s: string) => /^\(?\d{3}\)?[\s.-]?\d{3}[\s.-]?\d{4}$/.test(s.tr
   {[
     { heading: "Selected Builds", entries: c.builds },
     { heading: "Experience", entries: c.experience },
-  ].map(({ heading, entries }) => (
+  ].filter(({ entries }) => entries.length > 0).map(({ heading, entries }) => (
     <section id={heading === "Experience" ? "experience" : undefined}>
       <h2>{heading}</h2>
       {entries.map((e) => (
         <div class="pr-entry" data-pr-org={e.org}>
+          {/* 2026-10-23: org and dates share the head row and come FIRST in
+              the DOM; the title is its own line after them. Text extractors
+              read the stream in DOM order, so a title between the org and
+              its dates had split the date range onto a line of its own. */}
           <div class="pr-entry-head">
-            <div class="pr-org">{e.org}{e.pos && <span class="pr-pos"><span class="pr-pos-sep"> · </span>{e.pos}</span>}</div>
+            <div class="pr-org">{e.org}</div>
             <div class="pr-dates">{e.dates}</div>
           </div>
+          {e.pos && <div class="pr-pos">{e.pos}</div>}
           <ul>
             {e.bullets.map((b, bi) => <li data-bi={bi}>{b}</li>)}
           </ul>
@@ -112,7 +125,7 @@ const isPhone = (s: string) => /^\(?\d{3}\)?[\s.-]?\d{3}[\s.-]?\d{4}$/.test(s.tr
 
   {/* the label and the prose are separated by a REAL space: extractors that
       read the DOM (not the print) used to join them ("OutsideDiary"). */}
-  <div class="pr-outside"><span class="pr-outside-k">{c.closer.label}</span>{" "}<span set:html={c.closer.html} /></div>
+  {c.closer && <div class="pr-outside"><span class="pr-outside-k">{c.closer.label}</span>{" "}<span set:html={c.closer.html} /></div>}
 </div>
 
 <style is:global>
@@ -167,9 +180,13 @@ const isPhone = (s: string) => /^\(?\d{3}\)?[\s.-]?\d{3}[\s.-]?\d{4}$/.test(s.tr
   .print-resume a { color: inherit; text-decoration: none; }
 
   .print-resume .pr-header { border-bottom: 1.5pt solid #B33A2A; padding-bottom: 5pt; margin-bottom: 10pt; }
-  .print-resume .pr-name-row { display: flex; justify-content: space-between; align-items: baseline; gap: 12pt; }
+  /* 2026-10-23: the name and the title on SEPARATE lines in print. On one
+     baseline row they extracted as one string ("Jonathan Tollefson Design
+     Engineer"), which a parser files as the name. The screen block below
+     keeps its own stacked row. */
+  .print-resume .pr-name-row { display: block; }
   .print-resume .pr-name { font-size: 19pt; font-weight: 700; letter-spacing: -0.02em; line-height: 1; color: #16161c; }
-  .print-resume .pr-role { font-size: 10.5pt; font-weight: 600; color: #B33A2A; letter-spacing: 0.01em; }
+  .print-resume .pr-role { display: block; margin-top: 3pt; font-size: 10.5pt; font-weight: 600; color: #B33A2A; letter-spacing: 0.01em; }
   .print-resume .pr-contact { font-size: 8.75pt; color: #56565e; margin-top: 4pt; letter-spacing: 0.01em; }
 
   /* the rhythm (2026-10-06, density is the enemy): more air between sections
@@ -177,7 +194,7 @@ const isPhone = (s: string) => /^\(?\d{3}\)?[\s.-]?\d{3}[\s.-]?\d{4}$/.test(s.tr
      gaps spend most of it and the page still prints as one. */
   .print-resume section { margin-bottom: 11pt; }
   .print-resume h2 {
-    font-size: 8pt; font-weight: 700; text-transform: uppercase; letter-spacing: 0.12em;
+    font-size: 8.25pt; font-weight: 700; text-transform: uppercase; letter-spacing: 0;
     color: #B33A2A; margin-bottom: 5pt; padding-bottom: 2pt;
     border-bottom: 0.75pt solid #e3dfda;
     line-height: 1.38;
@@ -211,13 +228,18 @@ const isPhone = (s: string) => /^\(?\d{3}\)?[\s.-]?\d{3}[\s.-]?\d{4}$/.test(s.tr
   @media screen {
     #experience { scroll-margin-top: 28px; }
   }
-  .print-resume .pr-pos { font-weight: 500; color: #56565e; }
+  /* 2026-10-23: the title on its OWN line in print (a real parser read
+     "Own products · Design Engineer" as one company string). The screen
+     block below stacks it the same way in the room's mono. */
+  .print-resume .pr-pos { display: block; margin-top: 1pt; font-size: 9.25pt; font-weight: 500; color: #56565e; }
   .print-resume .pr-dates { font-size: 8.5pt; color: #71717a; white-space: nowrap; font-variant-numeric: tabular-nums; }
 
   .print-resume ul { list-style: none; margin-top: 2.5pt; }
   .print-resume li { padding-left: 12pt; margin-bottom: 2.5pt; line-height: 1.33; }
   .print-resume li:last-child { margin-bottom: 0; }
-  .print-resume li::before { content: "\203A"; display: inline-block; width: 12pt; margin-left: -12pt; color: #B33A2A; font-weight: 700; }
+  /* 2026-10-23: a standard bullet in print (U+2022); the \203A glyph let a
+     wrapped line read as an orphan bullet in extraction. Screen keeps its dash. */
+  .print-resume li::before { content: "\2022"; display: inline-block; width: 12pt; margin-left: -12pt; color: #B33A2A; font-weight: 700; }
   .print-resume .pr-link { font-size: 8.75pt; color: #56565e; margin-top: 4pt; }
   .print-resume .pr-link a { font-weight: 600; }
   /* print keeps the sheet's red on these small links (the PDF asset is
@@ -307,7 +329,6 @@ const isPhone = (s: string) => /^\(?\d{3}\)?[\s.-]?\d{3}[\s.-]?\d{4}$/.test(s.tr
     .print-resume .pr-entry-head { gap: 4px 16px; flex-wrap: wrap; }
     .print-resume .pr-org { font: 500 1.25rem/1.3 var(--rb-display); letter-spacing: -0.01em; color: var(--rb-ink); }
     .print-resume .pr-pos { display: block; margin-top: 4px; font: 400 0.75rem/1.5 var(--rb-mono); letter-spacing: 0.04em; color: var(--rb-dim); }
-    .print-resume .pr-pos-sep { display: none; }
     .print-resume .pr-dates { font: 400 0.75rem/1.5 var(--rb-mono); letter-spacing: 0.04em; color: var(--rb-dim); }
     .print-resume ul { margin-top: 12px; }
     .print-resume li { padding-left: 20px; margin-bottom: 8px; font-size: 0.9375rem; line-height: 1.6; }

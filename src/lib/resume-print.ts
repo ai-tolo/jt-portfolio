@@ -3,43 +3,82 @@
 // screen as the paper view and in print as the whole page. The old
 // Notion-driven screen résumé is retired; nothing else reads résumé prose.
 //
+// ════════════════════════════════════════════════════════════════════════
+// DRAFT (2026-10-23, branch resume-sheet): EVERY LINE BELOW IS A DRAFT until
+// Jon approves it. The shape comes from the research in
+// ~/career-strategy/resume-2026-10/ (positioning.md: the gist and the haters):
+// - ONE employment-grade entry on top, "Own products · Design Engineer",
+//   with the five products as its bullets, so a parser reads one current
+//   title and one date range (today's three builds parse as three employers
+//   named after the builds, with the stack as the job title).
+// - The product bullets lead with a plain descriptor and carry the
+//   homepage's name in parentheses, so the reader who then types uxjon.com
+//   meets the same four things. This bends the 2026-09-21 ruling that the
+//   builds' names never appear on the sheet (Finishable / the Engineer / the
+//   Catalog stay banned; SIGNAL, Intake, AudioDex, Signal Studio are the
+//   homepage's public names now). Decided here, 2026-10-23: Jon said
+//   "factor it into the solution"; he kept the title Design Engineer and cut
+//   the Studio line's "I stopped opening Ableton." Everything else below
+//   stands as his to veto on sight, not to approve line by line.
+// - The summary is four sentences, all Jon's own words: the two from
+//   2026-09-21 and the hero's two from 2026-10-22. The "Looking for a product
+//   team…" sentence is cut (no screener scores it; it reads as a mismatch at
+//   non-audio companies).
+// - The blind-test VOTE COUNT is off the sheet (it read as the agent losing
+//   26 of 58 in every simulated screen); the sentence keeps "judged blind,
+//   loudness-matched, against the untouched original". The ledger numbers
+//   stay on the page's proof panel (ProofJudge imports judge-ledger.json).
+// - CUT, 0 of the 30 top postings ask: the athletics closer, Dean's List and
+//   the grant, the Fortune 500 / farmers clause, "serving US Hispanic
+//   households". Each is one word from Jon to restore. (The follower-growth
+//   line was cut and then restored after the fresh reads of 2026-10-23.)
+// - DATES: Raylu is "Jan 2023 – Oct 2023" (a year on both ends for parsers);
+//   Jan is Jon's own fact (commit 759f473, 2026-08-25: "real timeline is
+//   Jan-Oct 2023, on and off"); the Notion Career Context's April is stale.
+// - SKILLS additions, all true of the builds: Vite, Node, Web MIDI,
+//   Snowflake. One category per line (a shared line parsed as one skill
+//   "Claude Code · Design: Figma"). React, Framer and Adobe Creative Suite
+//   are carried from the shipped sheet on Jon's own word (no product on this
+//   page is React); the fact check of 2026-10-23 flagged them.
+// - THE FRESH READS (2026-10-23, ~/career-strategy/resume-2026-10/v2/): the
+//   mastering line had made the agent the blind judge; the record has it
+//   render and Jon vote, so it now reads "which I judge blind". AudioDex is
+//   framed as the pipeline's work ("transcribes, fingerprints…"), the
+//   shipped sheet's verbs. The fact check noted that "But I use them every
+//   day" (his homepage line about the four) sits over a block that includes
+//   the mastering agent, whose last blind vote was 2026-08-16; Jon ruled
+//   2026-10-23: "Keep the line and the mastering agent as they are."
+// ════════════════════════════════════════════════════════════════════════
+//
 // The reader (Jon, 2026-09-21): a design or engineering lead at an AI, audio,
 // or creative-tools company who has never seen uxjon.com and will not click.
 // Every line has to stand without the site.
 //
 // Editorial guardrails (load-bearing, do not regress):
 // - Positioning is "Design Engineer".
-// - Names: each build leads with a plain descriptor ("AI mastering agent").
-//   Finishable / the Engineer / the Catalog / SIGNAL never appear on the
-//   sheet. The URL under the mastering agent is an address, not a name.
+// - Finishable / the Engineer / the Catalog never appear on the sheet. The
+//   URL under the own-products entry is an address, not a name.
 // - The judge story is a KNOWN failure mode (reward-model overoptimization),
-//   never a novel discovery. Never claim more than one rater: the evidence
-//   clause says "one rater, me" and promises nothing further.
+//   never a novel discovery. Never claim more than one rater. The sheet now
+//   carries no vote count at all; the proof panel does.
 // - ITU-R BS.1770 + true-peak only. No BS.1534/MUSHRA. No "learns your
 //   taste" as a live feature.
 // - Every number traces to a case study, Jon's stated facts, or
-//   judge-ledger.json. The ledger figures are IMPORTED below, never typed,
-//   so a snapshot refresh cannot leave the sheet stale (the flagship follows
-//   the same law).
+//   judge-ledger.json (the panel). Never invent, inflate, or round one.
 // - Voice: first person, plain, understated. No em dashes, no hype
-//   adjectives. Banned: setup-then-reveal ("an agent, not a button:"),
-//   "X, not Y" contrasts, aphorisms, two-beat punchlines. At most one
-//   colon-led sentence on the page (the summary's). Nothing refers to the
-//   page or the site. Solo / end-to-end is said once (the catalog).
-// - Every bullet: what I did, to what, with what result, 30 words max. If a
-//   line could sit unchanged on a stranger's résumé, make it specific or cut
-//   it.
+//   adjectives. Banned: setup-then-reveal, "X, not Y" contrasts, aphorisms.
+//   At most one colon-led sentence on the page (the summary's). Nothing
+//   refers to the page or the site except the homepage, named once.
+// - Every bullet: what I did, to what, with what result, about 30 words.
 // - The writing law (Jon, 2026-10-06): only what is necessary; say what a
-//   thing IS (a program, an app, a pipeline) before describing it; one idea
-//   once, so a tool named in a build's stack line is not named again in its
-//   bullets; never explain what a smart reader knows (mastering, dbt,
-//   lineage). After any edit, count the words and run a word-frequency pass.
+//   thing IS before describing it; one idea once; never explain what a
+//   smart reader knows. After any edit, count the words.
 // - One page at TRUE print width (US Letter, 9.7pt body, ~543pt of content
 //   width). Add a line, cut a line. Verify with a headless-Chrome print and
 //   pypdf after any edit (CLAUDE.md, "Résumé subsystem").
-import ledger from "./judge-ledger.json";
+// - US spelling on every visitor-readable string.
 
-/** a bare URL pointer line under a build (no lead-in label: site voice) */
+/** a bare URL pointer line under an entry (no lead-in label: site voice) */
 export interface PrintUrl {
   /** visible URL text, kept short */
   text: string;
@@ -47,9 +86,9 @@ export interface PrintUrl {
 }
 
 export interface PrintEntry {
-  /** builds: the plain descriptor; experience: the employer */
+  /** the employer, or "Own products" for the top entry */
   org: string;
-  /** builds: the stack; experience: the title (the bg-check-verified field) */
+  /** the title (the bg-check-verified field for employers) */
   pos?: string;
   dates: string;
   bullets: string[];
@@ -75,38 +114,18 @@ export interface PrintResumeContent {
    *  is print-only (the component hides it, separator included, on screen) */
   contact: string[];
   summary: string;
+  /** kept for the component's section loop; empty since 2026-10-23 (the
+   *  builds live in experience[0]) and an empty section does not render */
   builds: PrintEntry[];
   experience: PrintEntry[];
   education: PrintSchool[];
-  /** each row of the skills block is a list of labeled groups */
+  /** each row of the skills block is a list of labeled groups; one group per
+   *  row since 2026-10-23 so a parser reads one category per line */
   skillRows: PrintSkillGroup[][];
-  /** the trailing line: a small-caps label, then one line of prose (<em> ok) */
-  closer: { label: string; html: string };
+  /** the trailing line: a small-caps label, then one line of prose (<em> ok);
+   *  absent since 2026-10-23 (DRAFT: the athletics line is cut) */
+  closer?: { label: string; html: string };
 }
-
-// ── the evidence clause reads the ledger (never type these numbers) ──────────
-const MONTHS = [
-  "January", "February", "March", "April", "May", "June",
-  "July", "August", "September", "October", "November", "December",
-];
-const monthOf = (iso: string) => MONTHS[Number(iso.slice(5, 7)) - 1];
-const spanOf = (first: string, last: string) => {
-  const y1 = first.slice(0, 4), y2 = last.slice(0, 4);
-  return y1 === y2
-    ? `${monthOf(first)} to ${monthOf(last)} ${y2}`
-    : `${monthOf(first)} ${y1} to ${monthOf(last)} ${y2}`;
-};
-const blind = ledger.blind;
-if (blind.loudness_matched !== blind.votes) {
-  // the sentence below calls every vote loudness-matched; a refreshed
-  // snapshot that breaks that must be reworded, not printed.
-  throw new Error(
-    `resume-print: ${blind.loudness_matched} of ${blind.votes} blind votes are loudness-matched; reword the evidence clause before building`,
-  );
-}
-const evidence =
-  `Every candidate is now loudness-matched (ITU-R BS.1770, true-peak limited) and judged blind against the untouched original, ` +
-  `which won ${blind.chose_original} of ${blind.votes} votes (one rater, me, ${spanOf(blind.first, blind.last)}).`;
 
 export const printContent: PrintResumeContent = {
   name: "Jonathan Tollefson",
@@ -120,22 +139,28 @@ export const printContent: PrintResumeContent = {
     "Minneapolis, MN",
     "remote (US)",
   ],
-  // Jon's words (2026-09-21), cut 2026-10-06: the title above already says
-  // "Design engineer", and the banking app is the Crediverso entry's to say.
-  // Its colon is the page's one colon-led sentence.
+  // DRAFT. Four sentences, all Jon's: the first two from 2026-09-21 (its
+  // colon is the page's one colon-led sentence), the last two are the
+  // homepage hero's line (2026-10-22).
   summary:
     "Five years across marketing, UX, and enterprise data. " +
     "I now build what I design: front-end, audio tools, and applied AI. " +
-    "Looking for a product team in audio, transcription, or AI.",
-  builds: [
+    "My job doesn't pay me to build these. But I use them every day.",
+  builds: [],
+  experience: [
     {
-      org: "AI mastering agent",
-      pos: "Python, pedalboard, Claude",
+      // DRAFT. The top entry: the five products as one current role, in the
+      // homepage's order, the mastering agent last so the bare URL under the
+      // entry sits under its own line.
+      org: "Own products",
+      pos: "Design Engineer",
       dates: "2026 – Present",
       bullets: [
-        "Built an agent that masters a mix in a stateful, multi-step run, rendering candidates through FabFilter plugins.",
-        "Shelved an active-learning model of my taste when blind tests showed it had learned the bias in my unblinded ratings, the known reward-model overoptimization failure.",
-        evidence,
+        "A catch-all agent (Intake) that turns a voice memo or a text to myself into calendar and reminder changes, or a ticket for me to judge. Python, SQLite, Whisper, Claude.",
+        "An audio catalog (AudioDex). A Python pipeline (Whisper, librosa, Claude) transcribes, fingerprints, deduplicates and classifies about 20,000 of my recordings; a phone app in TypeScript finds any of them by a word.",
+        "A browser instrument (SIGNAL) on my homepage, drums, bass and keys under the computer keyboard; it records a visitor's take as a WAV. TypeScript, Web Audio.",
+        "A browser studio (Signal Studio) in TypeScript and Web Audio. One click samples any instrument I own; it detects tempo and key and prints the loops I keep as stems.",
+        "An AI mastering agent that masters a mix in passes, rendering candidates through FabFilter plugins, which I judge blind, loudness-matched, against the untouched original; the winners make the final master. Python, pedalboard, Claude.",
       ],
       url: {
         text: "uxjon.com/case-studies/the-console",
@@ -143,38 +168,23 @@ export const printContent: PrintResumeContent = {
       },
     },
     {
-      org: "Audio catalog and search",
-      pos: "Python, Whisper, librosa, Claude",
-      dates: "2026 – Present",
-      bullets: [
-        "A pipeline I wrote alone transcribes, fingerprints, deduplicates, and classifies about 20,000 audio files by content; a phone app finds any of them by a word.",
-      ],
-    },
-    {
-      org: "Browser instrument",
-      pos: "TypeScript, Web Audio API",
-      dates: "2026 – Present",
-      bullets: [
-        "Drum and bass patterns under keys played from the computer keyboard; it records takes as WAV files.",
-      ],
-    },
-  ],
-  experience: [
-    {
       org: "CHS Inc.",
       pos: "Business Analyst, AI & BI Engineering",
       dates: "Aug 2023 – Present",
+      // DRAFT. Three lines: the agents and the docs (10,000 employees is the
+      // case study's number), the lineage tool, releases + Alation. The
+      // Fortune 500 / farmers clause is cut.
       bullets: [
-        "Built agents on the internal AI platform, then designed and wrote the docs, guides, and onboarding chat that teach people to use them; other tools are adopting its design system.",
+        "Built agents on the company's internal AI platform, then designed and wrote its docs, guides and onboarding chat for 10,000 employees, in a design system other internal tools are adopting.",
         "Built a Python tool that writes each dbt model's lineage to Excel, Power BI, and stakeholder briefs in one pass.",
-        "Used AI to find data models missing semantic context and added it in Alation with their developers.",
-        "Coordinate releases for the go-to-market data engineering team at a Fortune 500 agricultural cooperative; its AI and BI products serve thousands of employees, farmers, and growers.",
+        "Coordinate releases for the go-to-market data engineering team; used AI to find data models missing semantic context and added it in Alation with their developers.",
       ],
     },
     {
       org: "Raylu, Inc.",
       pos: "Product Designer (Freelance)",
-      dates: "Jan – Oct 2023",
+      // Jan is Jon's (2026-08-25); the Notion April is stale
+      dates: "Jan 2023 – Oct 2023",
       bullets: [
         "Designed the brand, components, and prototypes for an AI startup; the founders carried them into meetings that closed a $4M seed, and engineers built from the same file.",
       ],
@@ -183,9 +193,11 @@ export const printContent: PrintResumeContent = {
       org: "Crediverso",
       pos: "UX Design Lead",
       dates: "Feb 2021 – Jan 2023",
+      // DRAFT. Two lines. The growth line came back 2026-10-23 after the fresh
+      // reads: it is the summary's "marketing" on the page, and the one
+      // before-and-after metric a growth posting asks for.
       bullets: [
-        "Led the design system and onboarding for a bilingual banking app serving US Hispanic households.",
-        "Ran usability tests with 50+ participants; the revised main flow cut bounce from 40% to 25%.",
+        "Led the design system and onboarding for a bilingual banking app on iOS; after usability tests with 50+ participants, the revised main flow cut bounce from 40% to 25%.",
         "Grew the pre-launch channel from 700 to 2,100 followers with A/B-tested messaging.",
       ],
     },
@@ -195,7 +207,7 @@ export const printContent: PrintResumeContent = {
       name: "Harvard University",
       dates: "2022",
       degree: "A.B. in Sociology, secondary field in History of Science",
-      honors: "Dean's List (6×) · Rosenkrantz Discovery Grant",
+      // DRAFT: "Dean's List (6×) · Rosenkrantz Discovery Grant" cut (0 of 30 ask)
     },
     {
       name: "University of Minnesota",
@@ -203,21 +215,13 @@ export const printContent: PrintResumeContent = {
       degree: "Transfer years; returned to Harvard to graduate",
     },
   ],
+  // DRAFT. One category per line.
   skillRows: [
-    [
-      { label: "Build", items: "TypeScript, React, Astro, HTML/CSS, Python, FastAPI, Claude Code" },
-      { label: "Design", items: "Figma, Framer, Adobe Creative Suite" },
-    ],
-    [
-      { label: "Models & Audio", items: "Web Audio API, Claude, Whisper, librosa, demucs, pedalboard" },
-      { label: "Data", items: "SQL, dbt, Power BI, Alation" },
-    ],
+    [{ label: "Build", items: "TypeScript, React, Astro, Vite, HTML, CSS, Node, Python, FastAPI, SQL" }],
+    [{ label: "Audio and AI", items: "Web Audio API, Web MIDI, Claude, Claude Code, Whisper, librosa, demucs, pedalboard" }],
+    [{ label: "Design and data", items: "Figma, Framer, Adobe Creative Suite, dbt, Snowflake, Power BI, Alation" }],
   ],
-  // the Substack line is gone (Jon stopped writing there, 2026-09-23); the
-  // records are "set", never "holds"
-  closer: {
-    label: "Athletics",
-    html:
-      "Six-time state hurdles champion; set Minnesota's all-time 110m record and the University of Minnesota freshman record.",
-  },
+  // DRAFT: the athletics closer is cut (0 of 30 postings ask). The line, for
+  // one word from Jon: "Six-time state hurdles champion; set Minnesota's
+  // all-time 110m record and the University of Minnesota freshman record."
 };
