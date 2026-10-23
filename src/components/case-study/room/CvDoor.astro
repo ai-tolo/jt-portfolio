@@ -13,6 +13,13 @@
 // Paints: the phone ONLY from --cv-* (cv-tokens.css, on this root); the chrome around it ONLY from --rm-* (Room).
 // Styles are is:global with a cv- namespace: the second phone is cloned at runtime and set:html strings carry no scope.
 // A flow counts as WALKED when its last step is reached (dir 2: the shared stepper reaching 5 walks after, 7 before).
+// THE MINI (2026-10-23, Jon: "what if we snag the Crediverso UI walkthrough (or a mini-ish version of it) as an
+// expandable module on the résumé"): `mini` renders the two phones, the shared stepper and the EN · ES flip, and OMITS
+// the gate (its lock, the tie, what tipped it) and the matrix; `data-mini` on the root holds the ≤1100 layout (each
+// phone above its steps, the two side by side) at any viewport, and a container query on the host stacks them where
+// two will not fit. The host maps --rm-* onto its own tokens. The case-study page passes nothing and is unchanged.
+interface Props { mini?: boolean }
+const { mini = false } = Astro.props;
 
 // SCENARIO_TAPS, verbatim (split = before, combined = after); the " · n" rides as the list's own number
 const SCENARIO_TAPS = {
@@ -73,7 +80,7 @@ const L = {
 const uid = `cv-${Math.random().toString(36).slice(2, 7)}`;
 ---
 
-<div class="cv" data-cv data-dir="2" data-lang="en" data-flow="before" data-plan={JSON.stringify(PLAN)}>
+<div class="cv" data-cv data-dir="2" data-lang="en" data-flow="before" data-plan={JSON.stringify(PLAN)} data-mini={mini ? "" : undefined}>
 
   <div class="cv-bar">
     <div class="cv-flows" role="tablist" aria-label="Which nav">
@@ -176,7 +183,7 @@ const uid = `cv-${Math.random().toString(36).slice(2, 7)}`;
     <div class="cv-status" aria-live="polite" data-status></div>
   </div>
 
-  <div class="cv-gate" data-gate="locked">
+  {!mini && <div class="cv-gate" data-gate="locked">
     <div class="cv-lock"><span>send both</span><span class="cv-seen" data-seen="before">before</span><span class="cv-seen" data-seen="after">after</span></div>
     <div class="cv-tie" hidden>
       <div class="cv-tie-q">Both sent. Which one would you ship?</div>
@@ -191,9 +198,9 @@ const uid = `cv-${Math.random().toString(36).slice(2, 7)}`;
         <div class="cv-tip-p">Both SWOTs were defensible, and Split is cleaner for a single user. But the app brings people in through family, so the household belonged on the home screen.</div>
       </div>
     </div>
-  </div>
+  </div>}
 
-  <div class="cv-mx">
+  {!mini && <div class="cv-mx">
     <div class="cv-mx-t"><span class="cv-lbl">the matrix</span></div>
     <div class="cv-mx-grid">
       <span class="cv-mx-0" aria-hidden="true"></span>
@@ -207,7 +214,7 @@ const uid = `cv-${Math.random().toString(36).slice(2, 7)}`;
         </Fragment>
       ))}
     </div>
-  </div>
+  </div>}
 </div>
 
 <script>
@@ -575,6 +582,21 @@ const uid = `cv-${Math.random().toString(36).slice(2, 7)}`;
       position: sticky; bottom: calc(62px + env(safe-area-inset-bottom)); z-index: 2; padding: 10px 0;
       background: var(--rm-paper); border-top: 1px solid var(--cv-hair);
     }
+  }
+
+  /* ═════ THE MINI (2026-10-23, the résumé's proof panel): no gate, no matrix, so the grid is the stage and the
+     nav row; the ≤1100 unit (the phone above its steps) at every viewport. The status reserves two lines so a long
+     step's words never change the module's height (the panel's gap is measured once, on open). Where the host is
+     too narrow for two phones side by side (under 620 of the container), they stack ═════ */
+  .cv[data-mini][data-dir="2"] { grid-template-areas: "stage stage" "nav bar"; }
+  /* align-content: start: after's five steps are shorter than before's seven, and the stretched unit spread the
+     difference over its rows, seating the after phone 24px low */
+  .cv[data-mini][data-dir="2"] .cv-unit { grid-template-columns: minmax(0, 1fr); grid-template-areas: "h" "phone" "steps"; justify-items: center; align-content: start; }
+  .cv[data-mini][data-dir="2"] .cv-unit-h { justify-self: stretch; }
+  .cv[data-mini][data-dir="2"] .cv-steps { padding-top: 0; justify-self: stretch; }
+  .cv[data-mini] .cv-status { flex: 1 1 0; min-width: 0; min-height: 3em; } /* never drops to a row of its own */
+  @container cv-host (max-width: 619px) {
+    .cv[data-mini][data-dir="2"] .cv-stage { grid-template-columns: minmax(0, 1fr); gap: 40px; }
   }
 
   /* ── phones (both directions) ── */
