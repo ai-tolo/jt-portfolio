@@ -286,8 +286,9 @@ session must follow.
   one click"): the chevron opens the WHOLE fold, the evidence and the
   locked paragraphs together, and closes it all; the label-button
   `[data-whole]` and its hidden body are retired. ONE FOLD ANATOMY on every
-  sheet that still folds (Intake and the Studio; AudioDex has NO fold since
-  THE GROUND, 2026-10-22): at rest the hook ALONE and the chevron; open,
+  sheet that still folds (Intake alone since 2026-10-23; AudioDex has NO
+  fold since THE GROUND, 2026-10-22, the Studio none since THE THESIS,
+  2026-10-23): at rest the hook ALONE and the chevron; open,
   said (the clip's first block, `.wk-story-clip > .wk-said`, one rule for
   both) → [the evidence] → the floor line `.wk-rule` (0.9375rem / 1rem
   wide, centred, 62ch, ink). THE WHOLE STORY is on NO sheet since
@@ -330,24 +331,51 @@ session must follow.
   THE FOURTH SHEET, SIGNAL STUDIO (2026-10-13, Jon: "loop that in"): its
   own room `#studio` (`.room`, shown on PHONES too: captures, not the
   instrument; phone `order: 1`, after the work sheets by document order)
-  after `#play` and before `#illustrations`, one `.wk.sheet#build-studio`:
-  kind `suite` → band ("Signal Studio" + a DRAFT dek, `STUDIO_COPY` in
-  objects-copy.ts) → THE OBJECT = three CAPTURE SLOTS in a dissolve
-  Carousel (`dots`, `loop`, `keys` ON since round three: the look room's
-  arrow keycaps copied, "change both or neither"; the capture's title is
-  the placard under the frame in JetBrains Mono, dots 8px above the frame;
-  phones swipe, no keys), one 16:9 frame: while a capture is
-  missing the slot is an HONEST EMPTY FRAME (a 1px outline, square, no
-  fill, its caption centred in the label face: never a fake frame); when
-  `public/builds/studio/radar.webm` · `chip.webm` · `rip.webm` exist at
-  build time (`fs.existsSync`, like the etch asset) the slot plays the
-  muted looping video (only the shown slide plays; reduced motion = paused
-  with controls) → the mono caption → the fold carrying JON'S LOCKED studio
-  piece from builds-copy.ts (`id: "studio"`, "Making music was never the
-  hard part.", 2026-08-31; a `break` was inserted after its second
-  paragraph for the two columns, prose untouched) → under the hood from
-  `SPEC.studio` in depth-copy.ts (DRAFT; every unverified row carries a
-  `// ⚑ Jon:` comment). Spotify is deliberately NOT named anywhere on the
+  after `#play` and before `#illustrations`, one `.wk.sheet#build-studio`.
+  THE THESIS (2026-10-23, Jon across two days: "it could all happen in
+  Ableton, but not in this order … it's the lack of decisions I need to
+  make at every level"; "a sketch, not a lab"; "commitment via
+  constraint"; the older sheet was "a rough draft from long ago"): kind
+  `suite` → band ("Signal Studio" + the dek "I stopped opening Ableton.")
+  → THE OBJECT = ONE 16:9 FLIP CLIP (`.st-clip`, the content's width, the
+  band's 56 above): `public/builds/studio/flip.mp4` by `fs.existsSync`
+  (`FLIP` in StudioOne's frontmatter), WITH SOUND, the drawn 64px key on
+  the frame, plays on a press only, pauses on the next, pauses when the
+  frame leaves the viewport; undated, no caption, no placard; until the
+  file exists the HONEST EMPTY FRAME (1px outline in the dim ink at 18 %,
+  square, the key dimmed, disabled, nothing written on it). Jon drops in a
+  favorite clip when he has one (no dependency on the show being current)
+  → FIVE HIGHLIGHTS (`.st-hl`, a list with no marks; every row a
+  `.sheet-sec`, its hairline above, the first 56 under the clip): a real
+  frame of the Studio (`public/builds/studio/moment-<frame>.webp`, the
+  sheet's inner 14px corner + the 14 % hairline) LEFT and ONE sentence
+  RIGHT in the said line's face (Outfit 400, 1.25rem / 1.5rem) on a wide
+  sheet (≥ 820: 11fr / 9fr, 48 apart, centred on each other; NEVER
+  alternating sides), frame then sentence under 820: hands ("In one click
+  it can sample any instrument you own, so you can take it anywhere.",
+  its one mono caption under the frame "your laptop, a MIDI keyboard, a
+  controller") · radar ("Play any song and it detects the tempo and the
+  key, whether it's a friend on guitar or a playlist on your computer.")
+  · chips ("Anything you play or run through it becomes a loop, and a chip
+  is a loop you've committed to.") · effects ("Fewer knobs than Ableton,
+  on purpose."; one name across the sheet: Ableton, never "DAW") · take
+  ("The loops you keep stack into a song, and the song prints as stems.");
+  the engines frame is unused (the engines are SIGNAL's job; SIGNAL sits
+  directly above, so nothing here re-sells drums, bass, keys or
+  always-recording) → THE DOOR (`.st-door`, 56 under the last row, the
+  label face, centred, NOT lowercased): "@tolo.fm · Saturdays", the handle
+  the sheet's ONLY link (https://www.instagram.com/tolo.fm, `_blank`,
+  noopener; the accent mixed 80 % toward the ink by day, 50 % at night, a
+  1px underline). NO FOLD: `#build-studio` pads its own foot (AudioDex's
+  rule); the hook, the said line, the keep line, the chevron and the whole
+  story left (the locked piece "Making music was never the hard part."
+  stays in builds-copy.ts; `said` / `keep` commented in objects-copy.ts).
+  RETIRED to junkyard/: `StudioMoments.astro` (the six tabbed moments) and
+  `StudioCircumstances.astro` (the circumstances row, kept with its
+  chassis CSS, the studio keycap rules and its script); the strings stay
+  commented in `STUDIO_COPY`. Every line is DRAFT, approved by Jon
+  (`STUDIO_COPY.dek / highlights / door`). 1410 → 2678 tall at 1440,
+  1790 → 2056 at 375. Spotify is deliberately NOT named anywhere on the
   sheet (capturing a streaming service's audio breaks its terms).
   THE SKIM (2026-10-15, the round that began with Jon: "the current scripting
   feels too long to hold anyone's interest … the under the hood area feels
@@ -409,7 +437,8 @@ session must follow.
   junkyard/) and the one-match rule were cut in round five. The words at
   rest on the whole sheet: the kind word, the name, the dek (6), `try it`
   (2), the hook (7). The Studio's fold took the same cut on 2026-10-22
-  (its moments, its circumstances row and its band untouched);
+  and the whole fold left with THE THESIS (2026-10-23, see THE FOURTH
+  SHEET);
   AUDIODEX = THE GROUND (2026-10-22, Jon: "the heart of so many other
   things I've built: the database is required and a prerequisite to have
   something like Intake"): the SHORTEST sheet, NO FOLD: kind `foundation`
@@ -430,16 +459,11 @@ session must follow.
   said line, the `.adh` strip (markup and CSS DELETED) and the whole story
   left; `ARCHIVE_COPY.said/whole/rule` stay commented as the record, the
   locked paragraphs in builds-copy.ts for a case study. 1185 → 1014 tall
-  at 1440 (1591 → 1365 at 375); the STUDIO
-  = six moments of the real thing (`StudioMoments.astro`, tabs) → the
-  notebook line → the circumstances in a row (problem → answer → a play
-  key with sound, honest frames until the files land), its fold THE CUT
-  (2026-10-22): at rest the locked hook "Making music was never the hard
-  part." alone; open, Jon's line → "Make ten thousand songs. Keep ten." as
-  the house `.wk-rule` (Jon, 2026-10-19: "that text margin … looks
-  different than everything else"; `.st-keep`, its accent and its negative
-  margin are deleted), nothing else (1511 → 1410 closed, 2091 → 1568 open
-  at 1440); SIGNAL's card = THE CUT (2026-10-22, Jon of the
+  at 1440 (1591 → 1365 at 375); the STUDIO = THE THESIS (2026-10-23: the
+  band, one FLIP clip with sound, five highlight rows, the door to
+  @tolo.fm, no fold; see THE FOURTH SHEET; the six moments, the
+  circumstances row and THE CUT's fold are in junkyard/ or commented);
+  SIGNAL's card = THE CUT (2026-10-22, Jon of the
   receipt: "that's stupid that I would say that before they even touched
   the instrument"): kind word · SIGNAL → the device → how to play → ONE
   line, `.sc-line`: the dare "You can't play a wrong note." (DRAFT,
