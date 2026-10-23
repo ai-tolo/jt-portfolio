@@ -16,7 +16,10 @@
 //   meets the same four things. This bends the 2026-09-21 ruling that the
 //   builds' names never appear on the sheet (Finishable / the Engineer / the
 //   Catalog stay banned; SIGNAL, Intake, AudioDex, Signal Studio are the
-//   homepage's public names now). Jon's call.
+//   homepage's public names now). Decided here, 2026-10-23: Jon said
+//   "factor it into the solution"; he kept the title Design Engineer and cut
+//   the Studio line's "I stopped opening Ableton." Everything else below
+//   stands as his to veto on sight, not to approve line by line.
 // - The summary is four sentences, all Jon's own words: the two from
 //   2026-09-21 and the hero's two from 2026-10-22. The "Looking for a product
 //   team…" sentence is cut (no screener scores it; it reads as a mismatch at
@@ -28,9 +31,9 @@
 // - CUT, 0 of the 30 top postings ask: the athletics closer, Dean's List and
 //   the grant, the follower-growth bullet, the Fortune 500 / farmers clause,
 //   "serving US Hispanic households". Each is one word from Jon to restore.
-// - DATES: Raylu printed "Jan – Oct 2023" since 09-21; Career Context says
-//   April to October 2023. Printed as "Jan 2023 – Oct 2023" (parsers want a
-//   year on both ends); Jon confirms the month.
+// - DATES: Raylu is "Jan 2023 – Oct 2023" (a year on both ends for parsers);
+//   Jan is Jon's own fact (commit 759f473, 2026-08-25: "real timeline is
+//   Jan-Oct 2023, on and off"); the Notion Career Context's April is stale.
 // - SKILLS additions, all true of the builds: Vite, Node, Web MIDI, Claude
 //   API, Snowflake. One category per line (a shared line parsed as one skill
 //   "Claude Code · Design: Figma").
@@ -169,7 +172,7 @@ export const printContent: PrintResumeContent = {
     {
       org: "Raylu, Inc.",
       pos: "Product Designer (Freelance)",
-      // DRAFT: Jan vs April 2023, Jon confirms
+      // Jan is Jon's (2026-08-25); the Notion April is stale
       dates: "Jan 2023 – Oct 2023",
       bullets: [
         "Designed the brand, components, and prototypes for an AI startup; the founders carried them into meetings that closed a $4M seed, and engineers built from the same file.",
