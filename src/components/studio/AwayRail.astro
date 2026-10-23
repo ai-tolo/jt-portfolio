@@ -31,6 +31,11 @@ interface Props {
   current?: string;
 }
 const { current } = Astro.props;
+// THE ARROW HOME (2026-10-23, Jon: "the red pill 'résumé' shouldn't be in the sidebar on the résumé page, it's
+// redundant now … have an arrow icon underneath the JT logo"): on /resume the rail is the mark, ONE arrow row under
+// it and the switch at the foot; the phone bar is the mark, the arrow and the moon. Any other away page (a study
+// opened directly, 404) keeps résumé as its way out
+const onResume = current === "resume";
 
 // the room's one place: the sheet (the studies' block left 2026-10-23, and the 60px beat with it)
 const SHEET = [{ slug: "resume", word: "résumé", href: "/resume" }];
@@ -53,9 +58,13 @@ const SHEET = [{ slug: "resume", word: "résumé", href: "/resume" }];
       <path d="M79.0212 12.6336L60.3635 12.6336L60.3635 34.0352L54.1658 34.0352L54.1658 12.6336L35.508 12.6336L35.508 7.30743L79.0212 7.30743L79.0212 12.6336Z" />
     </svg>
   </a>
+  {onResume && (
+    <a class="aw-home" href="/" aria-label="Home"><span aria-hidden="true">←</span></a>
+  )}
   {/* the room's place — the homepage rail's exact row (134×44, the word
-      flush right), lit in the ember when it is the current page */}
-  <div class="aw-col">
+      flush right), lit in the ember when it is the current page; not on
+      /resume itself since 2026-10-23 (the arrow above is its way out) */}
+  {!onResume && <div class="aw-col">
     <ul class="aw-list" role="list">
       {SHEET.map((p) => (
         <li>
@@ -69,10 +78,10 @@ const SHEET = [{ slug: "resume", word: "résumé", href: "/resume" }];
         </li>
       ))}
     </ul>
-  </div>
-  {/* phone bar only: the résumé shortcut in the home bar's ember pill */}
-  <a class="aw-cv" href="/resume" aria-current={current === "resume" ? "page" : undefined}
-    >résumé<span class="aw-cv-glyph" aria-hidden="true">↗</span></a>
+  </div>}
+  {/* phone bar only: the résumé shortcut in the home bar's ember pill (not on /resume: the arrow home stands there) */}
+  {!onResume && <a class="aw-cv" href="/resume"
+    >résumé<span class="aw-cv-glyph" aria-hidden="true">↗</span></a>}
   <div class="aw-foot">
     <NightSwitch />
   </div>
@@ -211,6 +220,56 @@ const SHEET = [{ slug: "resume", word: "résumé", href: "/resume" }];
     }
   }
 
+  /* ── THE ARROW HOME (2026-10-23, /resume only): the words' 44px row, the glyph centred under the mark in the rail's
+     ink and mono face; its hover is the mark's own (the brand gradient through the glyph). On the desk it stands
+     directly under the mark and the foot keeps the rail's bottom; on the bar it sits between the mark and the moon */
+  .aw-home {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-sizing: border-box;
+    width: 134px;
+    height: 44px;
+    margin-top: 6px;
+    border-radius: 11px;
+    text-decoration: none;
+    font: 600 1.25rem/1 "IBM Plex Mono", ui-monospace, monospace;
+    color: #26241f;
+    transition: color 560ms ease;
+  }
+  .aw-home span {
+    display: block;
+    padding: 0 2px; /* the clipped gradient needs the glyph's whole box */
+  }
+  .aw-home:hover span,
+  .aw-home:focus-visible span {
+    background: linear-gradient(90deg, #BC56B0 0%, #F71A8F 47%, #F77C59 77%, #FC9755 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+  .aw-home:focus-visible {
+    outline: 2px solid var(--ink, #141210);
+    outline-offset: 2px;
+  }
+  :global(html[data-night]) .aw-home {
+    color: #b4bdcb;
+  }
+  :global(html[data-night]) .aw-home:focus-visible {
+    outline-color: #e8ecf4;
+  }
+  @media screen and (min-width: 900px) {
+    .aw-home + .aw-foot {
+      margin-top: auto;
+    }
+  }
+  @media screen and (max-width: 899px) {
+    .aw-home {
+      width: 44px;
+      margin-top: 0;
+    }
+  }
+
   /* ── the words (the homepage rail's row, value for value) ─────────── */
   .aw-col {
     flex-direction: column;
@@ -317,13 +376,7 @@ const SHEET = [{ slug: "resume", word: "résumé", href: "/resume" }];
     font-size: 0.85em;
     letter-spacing: 0;
   }
-  /* on /resume the pill is the lit "you are here" ring, as at home */
-  .aw-cv[aria-current="page"] {
-    box-shadow: 0 0 0 2px #fbfaf7, 0 0 0 3px var(--ember);
-  }
-  :global(html[data-night]) .aw-cv[aria-current="page"] {
-    box-shadow: 0 0 0 2px #161b24, 0 0 0 3px var(--ember);
-  }
+  /* (the pill's lit "you are here" ring on /resume left with the pill there, 2026-10-23) */
   .aw-cv:focus-visible {
     outline: 2px solid var(--ink, #141210);
     outline-offset: 2px;
