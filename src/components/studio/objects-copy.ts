@@ -27,7 +27,7 @@ export const WATCH_COPY = {
   // 2026-10-22, night (Jon: "'Texts and memos in. Tickets out.' could be better. 'I recently started texting myself
   // a lot and talking to my watch' is more engaging: funny, not self-explanatory (intrigue), sets the scene"): his
   // words; DRAFT only in that he may tune them. Was "Texts and memos in. Tickets out."
-  dek: "I recently started texting myself a lot and talking to my watch.",
+  dek: "I recently started texting myself and talking to my watch.", // 2026-10-23 (Jon: "'a lot' sounds clunky")
   // 2026-10-22 (THE SPINE, round seven of the catch-all): the sheet's own hook, the fold's line at rest, DRAFT in
   // Jon's voice, his to rewrite (his thesis: "a catch-all system that doesn't care about the location or medium of
   // how the information is getting into the system"; of the locked headline: "I don't think it's my best idea that
