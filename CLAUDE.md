@@ -446,7 +446,23 @@ session must follow.
   (5.1:1), bare at night; it stays for the visit. The story, under the
   hood and where it came from left (strings commented in
   signal-card-copy.ts; signal-copy.ts's unmounted BRIEF reads the dare).
-  1727 → 1348 tall at 1440. Every
+  1727 → 1348 tall at 1440. THE FEELING (2026-10-22, late; Jon's razor:
+  "not the safety. it's the feeling of having made something, easily,
+  instantly, tangibly"; register: bold, sincere or funny, matter-of-fact,
+  never literal, serious, dramatic): the dare LEFT (commented in
+  signal-card-copy.ts) and `.sc-line` moved ABOVE how to play, right under
+  the device (the stage's 56 above it, 32 to the hairline): kind word ·
+  SIGNAL → the device → THE MOVES `CARD.moves` "Space = drums. A–L = the
+  white keys. B = bass, and it follows whatever you play." (Jon's content,
+  the `=` form his, DRAFT as set; the display face at 1rem, one line on a
+  wide sheet, a line each under 620 of the sheet) → how to play, nothing
+  else. THE RECEIPT in the moves' slot is Jon's line, NOT draft: "Good or
+  bad, you just made a demo." (same `.saved` watch, accent, role=status,
+  stays the visit). THE FILE: export-view.ts's `songName()` returns
+  `SONG_FILE` = "UXJON.COM CHANGED MY LIFE.wav" for every song (was
+  `signal-<day>-<key>-<mode>-<bpm>bpm.wav`; its arguments and SongInfo
+  kept, the screen's evidence still prints length · key · tempo); neither
+  types.ts nor the gate pins the name. Every
   DRAFT line lives in objects-copy.ts / signal-card-copy.ts, Jon's to
   rewrite; the hoods never print his real rows.
 - THE CATCH-ALL + THE RECORD BUTTON (2026-10-21, branch `intake-v4`, fresh
@@ -938,8 +954,8 @@ session must follow.
   `part="around"` renders ONE `.sheet` (1080 like the others): kind word ·
   SIGNAL → the device stage (`--sig-air` 56px above and below, the sheet's
   own rhythm, not the room gap; the title's own margin is 0 there since
-  THE CUT, 2026-10-22) → how to play (`[data-write-up]`, scroll-margin 32)
-  → the dare / the receipt (see THE SKIM). The powered
+  THE CUT, 2026-10-22) → the moves / the receipt (THE FEELING, see THE
+  SKIM) → how to play (`[data-write-up]`, scroll-margin 32). The powered
   device OVERHANGS the sheet's sides (72px each at 1440; Jon: "I'm fine with
   it jumping off the screen"; everything up to `.live-signal` is `overflow:
   visible`, `.sgm` is `width: max-content`, the document never widens). If
