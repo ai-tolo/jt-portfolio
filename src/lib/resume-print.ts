@@ -29,14 +29,24 @@
 //   loudness-matched, against the untouched original". The ledger numbers
 //   stay on the page's proof panel (ProofJudge imports judge-ledger.json).
 // - CUT, 0 of the 30 top postings ask: the athletics closer, Dean's List and
-//   the grant, the follower-growth bullet, the Fortune 500 / farmers clause,
-//   "serving US Hispanic households". Each is one word from Jon to restore.
+//   the grant, the Fortune 500 / farmers clause, "serving US Hispanic
+//   households". Each is one word from Jon to restore. (The follower-growth
+//   line was cut and then restored after the fresh reads of 2026-10-23.)
 // - DATES: Raylu is "Jan 2023 – Oct 2023" (a year on both ends for parsers);
 //   Jan is Jon's own fact (commit 759f473, 2026-08-25: "real timeline is
 //   Jan-Oct 2023, on and off"); the Notion Career Context's April is stale.
-// - SKILLS additions, all true of the builds: Vite, Node, Web MIDI, Claude
-//   API, Snowflake. One category per line (a shared line parsed as one skill
-//   "Claude Code · Design: Figma").
+// - SKILLS additions, all true of the builds: Vite, Node, Web MIDI,
+//   Snowflake. One category per line (a shared line parsed as one skill
+//   "Claude Code · Design: Figma"). React, Framer and Adobe Creative Suite
+//   are carried from the shipped sheet on Jon's own word (no product on this
+//   page is React); the fact check of 2026-10-23 flagged them.
+// - THE FRESH READS (2026-10-23, ~/career-strategy/resume-2026-10/v2/): the
+//   mastering line had made the agent the blind judge; the record has it
+//   render and Jon vote, so it now reads "which I judge blind". AudioDex is
+//   framed as the pipeline's work ("transcribes, fingerprints…"), the
+//   shipped sheet's verbs. ONE wrinkle left for Jon: "But I use them every
+//   day" is his homepage line about the four; the mastering agent in the
+//   same block last took a blind vote on 2026-08-16.
 // ════════════════════════════════════════════════════════════════════════
 //
 // The reader (Jon, 2026-09-21): a design or engineering lead at an AI, audio,
@@ -146,10 +156,10 @@ export const printContent: PrintResumeContent = {
       dates: "2026 – Present",
       bullets: [
         "A catch-all agent (Intake) that turns a voice memo or a text to myself into calendar and reminder changes, or a ticket for me to judge. Python, SQLite, Whisper, Claude.",
-        "An audio catalog (AudioDex), about 20,000 recordings transcribed, fingerprinted, deduplicated and classified by a Python pipeline (Whisper, librosa, Claude), searchable by a word from a phone app in TypeScript.",
+        "An audio catalog (AudioDex). A Python pipeline (Whisper, librosa, Claude) transcribes, fingerprints, deduplicates and classifies about 20,000 of my recordings; a phone app in TypeScript finds any of them by a word.",
         "A browser instrument (SIGNAL) on my homepage, drums, bass and keys under the computer keyboard; it records a visitor's take as a WAV. TypeScript, Web Audio.",
         "A browser studio (Signal Studio) in TypeScript and Web Audio. One click samples any instrument I own; it detects tempo and key and prints the loops I keep as stems.",
-        "An AI mastering agent that masters a mix in a stateful, multi-step run, rendering candidates through FabFilter plugins and judging them blind, loudness-matched, against the untouched original. Python, pedalboard, Claude.",
+        "An AI mastering agent that masters a mix in passes, rendering candidates through FabFilter plugins, which I judge blind, loudness-matched, against the untouched original; the winners make the final master. Python, pedalboard, Claude.",
       ],
       url: {
         text: "uxjon.com/case-studies/the-console",
@@ -164,7 +174,7 @@ export const printContent: PrintResumeContent = {
       // case study's number), the lineage tool, releases + Alation. The
       // Fortune 500 / farmers clause is cut.
       bullets: [
-        "Built agents on the company's internal AI platform, then designed and wrote the docs, guides and onboarding chat for its 10,000 employees; other internal tools are adopting the design system.",
+        "Built agents on the company's internal AI platform, then designed and wrote its docs, guides and onboarding chat for 10,000 employees, in a design system other internal tools are adopting.",
         "Built a Python tool that writes each dbt model's lineage to Excel, Power BI, and stakeholder briefs in one pass.",
         "Coordinate releases for the go-to-market data engineering team; used AI to find data models missing semantic context and added it in Alation with their developers.",
       ],
@@ -182,9 +192,12 @@ export const printContent: PrintResumeContent = {
       org: "Crediverso",
       pos: "UX Design Lead",
       dates: "Feb 2021 – Jan 2023",
-      // DRAFT. One line; the follower-growth bullet is cut.
+      // DRAFT. Two lines. The growth line came back 2026-10-23 after the fresh
+      // reads: it is the summary's "marketing" on the page, and the one
+      // before-and-after metric a growth posting asks for.
       bullets: [
         "Led the design system and onboarding for a bilingual banking app on iOS; after usability tests with 50+ participants, the revised main flow cut bounce from 40% to 25%.",
+        "Grew the pre-launch channel from 700 to 2,100 followers with A/B-tested messaging.",
       ],
     },
   ],
@@ -204,7 +217,7 @@ export const printContent: PrintResumeContent = {
   // DRAFT. One category per line.
   skillRows: [
     [{ label: "Build", items: "TypeScript, React, Astro, Vite, HTML, CSS, Node, Python, FastAPI, SQL" }],
-    [{ label: "Audio and AI", items: "Web Audio API, Web MIDI, Claude API, Claude Code, Whisper, librosa, demucs, pedalboard" }],
+    [{ label: "Audio and AI", items: "Web Audio API, Web MIDI, Claude, Claude Code, Whisper, librosa, demucs, pedalboard" }],
     [{ label: "Design and data", items: "Figma, Framer, Adobe Creative Suite, dbt, Snowflake, Power BI, Alation" }],
   ],
   // DRAFT: the athletics closer is cut (0 of 30 postings ask). The line, for
