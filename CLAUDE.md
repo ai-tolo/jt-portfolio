@@ -131,7 +131,30 @@ session must follow.
   day and night; one accent hue per module; each tab's panel follows it in
   the DOM. MARKS (2026-10-06): agent → mastering agent bullet 0, judge →
   bullet 2 (the evidence clause), signal → the instrument's bullet 0,
-  parser → CHS bullet 1.
+  parser → CHS bullet 1, crediverso → Crediverso bullet 1 (since
+  2026-10-23: "the revised main flow", the flow whose V1 nav call it
+  walks; the sheet has no bullet naming the nav itself).
+- THE CREDIVERSO WALKTHROUGH (2026-10-23, Jon: "what if we snag the
+  Crediverso UI walkthrough (or a mini-ish version of it) as an expandable
+  module on the résumé"): the fifth proof, `proof-crediverso`
+  (`ProofCrediverso.astro` = `<CvDoor mini />`). CvDoor's `mini` prop
+  renders the two phones, the shared stepper and EN · ES and OMITS the
+  gate (lock, tie, what tipped it) and the matrix; `data-mini` holds the
+  ≤1100 unit (the phone above its steps, the two side by side) at any
+  viewport, pins the unit's rows to the top (`align-content: start`:
+  after's five steps had seated its phone 24px low) and keeps the status
+  in its own two-line slot (`flex: 1 1 0`, min-height 3em: the longest
+  step's words had dropped it to a row of its own, +44px), so walking the
+  seven steps never changes the panel's height (1011 at 1440). The two
+  stack under 620 of the panel (`container: cv-host` on the panel). /resume
+  imports `cv-tokens.css` (the phone keeps Crediverso's own colors, day
+  and night) and maps the door's `--rm-ink/-dim/-paper/-sans/-mono/
+  -display/-measure` onto the panel's `--pf-*` in ONE rule on
+  `.proof-panel[data-proof-panel="crediverso"]`. No words of its own; the
+  mark's accessible name is "walk it", the panel's label "The Crediverso
+  nav, before and after". Like every proof it is desk-only (the panels are
+  `display: none` under 900) and never prints. The case-study page passes
+  nothing and is unchanged.
 - After ANY résumé content change, regenerate
   `public/jonathan-tollefson-resume.pdf` (headless `Page.printToPDF` of
   /resume with `preferCSSPageSize`, then pypdf page-count check). Fit is
