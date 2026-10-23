@@ -136,13 +136,19 @@ export type StudioCapture = {
   /** the one line of answer under it */
   answer: string;
 };
+// THE THESIS (2026-10-23, Jon across two days: "it could all happen in Ableton, but not in this order … it's the lack
+// of decisions I need to make at every level"; "commitment via constraint"): the sheet is the band → one FLIP clip
+// with sound → five highlights, a real frame of the Studio beside one sentence each → the door to the show. No fold.
+// `frame` names public/builds/studio/moment-<frame>.webp (`alt` describes it, the six moments' words); `caption` is
+// the one mono line under a frame (the hands').
+export type StudioHighlight = { frame: string; line: string; alt: string; caption?: string };
 export const STUDIO_COPY: {
   title: string;
   kind: string;
   dek: string;
+  highlights: StudioHighlight[];
+  door: { handle: string; href: string; when: string };
   moments: Moment[];
-  said: string;
-  keep: string;
   captures: StudioCapture[];
 } = {
   title: "Signal Studio",
@@ -153,7 +159,26 @@ export const STUDIO_COPY: {
   // recorded". Every moment line below is from the same interview; the spine is
   // ~/signal-studio-ideation/positioning-2026-10-19.md. Jon: the landing sheet is the priority, "a higher probability
   // of being seen" than the study.)
-  dek: "SIGNAL on steroids: one click away from sounds being made and recorded.",
+  // dek: "SIGNAL on steroids: one click away from sounds being made and recorded.", (2026-10-19 → 2026-10-23)
+  // 2026-10-23, the thesis (DRAFT, approved by Jon; one name across the sheet: Ableton, a word a stranger can look up)
+  dek: "I stopped opening Ableton.",
+  // THE HIGHLIGHTS (2026-10-23, DRAFT, every line approved by Jon): SIGNAL sits directly above, so nothing here
+  // re-sells drums, bass, keys or always-recording; the engines frame is unused (the engines are SIGNAL's job)
+  highlights: [
+    { frame: "hands", line: "In one click it can sample any instrument you own, so you can take it anywhere.",
+      alt: "The keyboard at the foot of the studio with the laptop's letter keys printed on the keys from A to L.",
+      caption: "your laptop, a MIDI keyboard, a controller" },
+    { frame: "radar", line: "Play any song and it detects the tempo and the key, whether it's a friend on guitar or a playlist on your computer.",
+      alt: "The glass at the top reading 94 BPM and the key C minor, both in the radar's coral ink." },
+    { frame: "chips", line: "Anything you play or run through it becomes a loop, and a chip is a loop you've committed to.",
+      alt: "The well under the keyboard holding three chips, RHODES, VOICE and RADIO, each with its waveform and its length in bars." },
+    { frame: "effects", line: "Fewer knobs than Ableton, on purpose.",
+      alt: "The three towers with everything dimmed except each engine's effects: drive, mod, delay and reverb on the drums, the keys and the bass at once." },
+    { frame: "take", line: "The loops you keep stack into a song, and the song prints as stems.",
+      alt: "The jam page's record: a waveform of everything played, with four bars selected between two handles." },
+  ],
+  // THE DOOR (2026-10-23, DRAFT): the show, the sheet's only link
+  door: { handle: "@tolo.fm", href: "https://www.instagram.com/tolo.fm", when: "Saturdays" },
   moments: [
     { id: "engines", label: "the engines", alt: "The three engines side by side: HOUSE on the drums, SYNTH on the keys, 303 on the bass, each with its own filter, pattern and effects.",
       line: "Drums, keys, bass. My synth through the drum engine, my bass through the synth engine: the ultimate consolidation." },
@@ -168,9 +193,10 @@ export const STUDIO_COPY: {
     { id: "hands", label: "the hands", alt: "The keyboard at the foot of the studio with the laptop's letter keys printed on the keys from A to L.",
       line: "Anything that can send MIDI immediately works. The controller is a luxury: my main things at my fingertips, eyes out the window." },
   ],
-  // THE FOLD, under the locked hook: the line in his voice (.wk-said) and the one line beneath it
-  said: "Ableton is for producing ideas that already happened. This is for making the idea exist.",
-  keep: "Make ten thousand songs. Keep ten.",
+  // THE RECORD (2026-10-23): the sheet has no fold since the thesis, so these are no longer rendered. Kept as written:
+  // the fold under the locked hook, the line in his voice (.wk-said) and the one line beneath it
+  // said: "Ableton is for producing ideas that already happened. This is for making the idea exist.",
+  // keep: "Make ten thousand songs. Keep ten.",
   captures: [
     { src: "/builds/studio/plane", problem: "$3,000 of instruments in the bedroom. A laptop on the plane.", answer: "Every synth I own, sampled into keys once. The room travels." },
     { src: "/builds/studio/pianist", problem: "Your friend won't stay in one key.", answer: "The radar names the chord, the scale and the tempo. Play along, no math." },

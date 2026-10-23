@@ -60,6 +60,16 @@ const inPublic = (url?: string | null) =>
   url && fs.existsSync(path.join(process.cwd(), "public", url.replace(/^\//, ""))) ? url : null;
 const CAPTURE_EXT = [".mp4", ".webm"];
 const captures = STUDIO_COPY.captures.map((c) => ({ ...c, src: CAPTURE_EXT.map((e) => inPublic(c.src + e)).find(Boolean) ?? null }));
+// THE FLIP CLIP (2026-10-23, the thesis): the Studio sheet's one object, a clip of the show WITH SOUND, played from
+// its key only. Jon drops a favorite in at public/builds/studio/flip.mp4 when he has one (no dependency on the show
+// being current); until then the slot is the honest empty frame.
+const FLIP = inPublic("/builds/studio/flip.mp4");
+// THE HIGHLIGHTS' FRAMES (2026-10-23): five of the six moment crops (the engines' is unused: SIGNAL's job), their
+// pixels the capture's (2× of a 1106×622 or 760×428 CSS crop)
+const HIGHLIGHTS = STUDIO_COPY.highlights.map((h) => {
+  const wide = ["effects", "hands", "take"].includes(h.frame);
+  return { ...h, src: `/builds/studio/moment-${h.frame}.webp`, width: wide ? 2212 : 1520, height: wide ? 1244 : 856 };
+});
 
 interface Track { src: string | null; title: string; note?: string; year?: number; duration?: string; peaks?: string | null; cover?: string | null; tint?: string | null; }
 const tracks: Track[] = ((soundlab as any).tracks ?? []).filter((t: Track) => t.src);
@@ -532,20 +542,16 @@ const STUDIO = BUILDS.find((b) => b.id === "studio")!;
         can play; the exhibit itself is in junkyard/ */}
   </section>
 
-  {/* ── SIGNAL STUDIO (2026-10-13; THE SURFACE, 2026-10-15): the fourth build,
-      the whole studio SIGNAL is the web-sized part of. One sheet in its own
-      room, after the play room and before illustrations, the house anatomy:
-      the kind word → the band → THE OBJECT IS SIX MOMENTS (six tabs, the
-      lit moment's line, then a 16:9 crop of the real Studio already in the
-      state that makes the point, the rest dimmed, on the look room's
-      chassis; the first on load; nothing moves the page) → THE CIRCUMSTANCES (three capture frames on the look
-      room's chassis, each titled by the problem with one line of answer;
-      WITH SOUND, a drawn play key, plays on a press only, one at a time,
-      stops off-screen; the honest empty frame with its key dimmed and inert
-      until the file exists at build time) → the fold (the locked hook, the
-      line in Jon's voice, one line under it, the whole story behind its
-      label). NO under-the-hood section: the surface is it. Shown on phones
-      too (the still crops to the lit target there). Words: DRAFT, Jon's. */}
+  {/* ── SIGNAL STUDIO (2026-10-13; THE THESIS, 2026-10-23): the fourth build, the whole studio SIGNAL is the
+      web-sized part of, rebuilt from Jon's thesis ("it's the lack of decisions I need to make at every level";
+      "commitment via constraint"). One sheet in its own room, after the play room and before illustrations: the kind
+      word → the band ("I stopped opening Ableton.") → THE OBJECT = one 16:9 FLIP clip WITH SOUND (its key drawn on
+      the frame, plays on a press only, pauses on the next; the honest empty frame, the key dimmed and inert, until
+      the file is in) → FIVE HIGHLIGHTS, each a real frame of the Studio left and one sentence right on a wide sheet,
+      frame then sentence under 820, a hairline above each, no labels, no numbers → THE DOOR, one line to the show.
+      NO FOLD (the hook, the said line, the keep line and the whole story left; the locked paragraphs stay in
+      builds-copy.ts). SIGNAL is the sheet above, so nothing here re-sells drums, bass, keys or always-recording.
+      Shown on phones too. Words: DRAFT, approved by Jon (objects-copy.ts STUDIO_COPY). */}
   {SHOW.has("studio") && <section class="studio room" id="studio" aria-labelledby="build-studio-t">
     <article class="wk sheet" id="build-studio" aria-labelledby="build-studio-t">
       <header class="band">
@@ -553,47 +559,33 @@ const STUDIO = BUILDS.find((b) => b.id === "studio")!;
         <h2 class="band-name" id="build-studio-t">{STUDIO_COPY.title}</h2>
         <p class="band-what">{STUDIO_COPY.dek}</p>
       </header>
-      <StudioMoments moments={STUDIO_COPY.moments} frames={MOMENT_FRAMES} />
-      {/* THE CIRCUMSTANCES (round five, 2026-10-15; Jon: two kinds of arrows and bubbles on one sheet confused the
-          cycling): no chassis, no cycling. The three frames stand in ONE ROW, each with its problem, its answer and
-          its play key; stacked under 820px of sheet. */}
-      <div class="st-row" data-circumstances>
-          {captures.map((c) => (
-            <figure class="st-slot" data-pending={c.src ? undefined : ""}>
-              <div class="st-frame">
-                {c.src && <video class="st-video" src={c.src} playsinline preload="metadata" aria-label={`${c.problem} ${c.answer}`} />}
-                {/* THE PLAY KEY: drawn on every frame; live only once the file is in (AudioDex's rule: gone = the key
-                    drawn, dimmed, inert). A press plays with sound; pressed again it pauses. */}
-                <button class="st-play" type="button" aria-pressed="false" disabled={!c.src}
-                  aria-label={c.src ? `Play, with sound: ${c.problem}` : `Not recorded yet: ${c.problem}`}>
-                  <svg viewBox="0 0 24 24" aria-hidden="true"><path class="st-play-go" d="M8.5 5.5v13l10-6.5z"/><path class="st-play-stop" d="M7.5 6h3.4v12H7.5zM13.1 6h3.4v12h-3.4z"/></svg>
-                </button>
-              </div>
-              {/* the placard: the PROBLEM carries the weight, the one line of answer under it */}
-              <figcaption class="st-placard">
-                <span class="st-problem">{c.problem}</span>
-                <span class="st-answer">{c.answer}</span>
-              </figcaption>
-            </figure>
-          ))}
-      </div>
-      <div class="wk-story" data-story>
-        <p class="wk-lede">{STUDIO.headline}</p>
-        {/* THE FOLD (2026-10-15; 2026-10-19, Jon: "that text margin … looks different than everything else. So I need
-            cohesion across the modules"). THE CUT (2026-10-22, Intake's cut, one rule for every sheet that folds): at
-            rest the locked hook alone and the chevron; open, the said line (the clip's first block, as on Intake) and
-            the keep line as the house's floor line (.wk-rule), NOTHING ELSE: the whole story left the sheet (the
-            locked paragraphs stay in builds-copy.ts). No beats, no hood (the surface above is the hood). */}
-        <div class="wk-story-clip" id="story-studio" inert>
-          <p class="wk-said">
-            <span class="wk-said-q" aria-hidden="true">“</span>{STUDIO_COPY.said}<span class="wk-said-q" aria-hidden="true">”</span>
-          </p>
-          <p class="wk-rule">{STUDIO_COPY.keep}</p>
+      {/* THE CLIP: undated, no caption, no placard; the frame's shape is fixed, so a press never moves the page */}
+      <figure class="st-slot st-clip" data-flip data-pending={FLIP ? undefined : ""}>
+        <div class="st-frame">
+          {FLIP && <video class="st-video" src={FLIP} playsinline preload="metadata" />}
+          <button class="st-play" type="button" aria-pressed="false" disabled={!FLIP}
+            aria-label={FLIP ? "Play, with sound" : "No clip yet"}>
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path class="st-play-go" d="M8.5 5.5v13l10-6.5z"/><path class="st-play-stop" d="M7.5 6h3.4v12H7.5zM13.1 6h3.4v12h-3.4z"/></svg>
+          </button>
         </div>
-        <button class="wk-more" type="button" aria-expanded="false" aria-controls="story-studio" aria-label="Read the whole story">
-          <svg class="wk-chev" viewBox="0 0 20 20" aria-hidden="true"><path d="M5 8l5 5 5-5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
-        </button>
-      </div>
+      </figure>
+      {/* THE HIGHLIGHTS: the frame always on the left (never alternating), the sentence beside it in the said line's
+          face; the hands' frame carries its one mono caption */}
+      <ul class="st-hl">
+        {HIGHLIGHTS.map((h) => (
+          <li class="st-hl-row sheet-sec">
+            <figure class="st-hl-fig">
+              <div class="st-hl-frame">
+                <img src={h.src} width={h.width} height={h.height} alt={h.alt} loading="lazy" decoding="async" />
+              </div>
+              {h.caption && <figcaption class="st-hl-cap">{h.caption}</figcaption>}
+            </figure>
+            <p class="st-hl-line">{h.line}</p>
+          </li>
+        ))}
+      </ul>
+      {/* THE DOOR: the show, the sheet's only link */}
+      <p class="st-door"><a href={STUDIO_COPY.door.href} target="_blank" rel="noopener">{STUDIO_COPY.door.handle}</a> · {STUDIO_COPY.door.when}</p>
     </article>
   </section>}
 
@@ -2305,6 +2297,90 @@ const STUDIO = BUILDS.find((b) => b.id === "studio")!;
     .st-row { margin-top: 40px; }
   }
   /* (the keep line's own rule, .st-keep, is gone since 2026-10-19: the line is the house's .wk-rule) */
+  /* ── THE THESIS (2026-10-23): the clip → the five highlights → the door; no fold, so the sheet pads its own foot
+     (AudioDex's rule: no handle) */
+  #build-studio { padding-bottom: var(--sheet-pad); }
+  /* THE CLIP: the content's whole width, 16:9, the band's 56 above it; the frame, the key and the honest empty frame
+     are the chassis's rules above (.st-frame, .st-play, [data-pending]) */
+  .st-clip .st-frame { width: 100%; }
+  /* THE HIGHLIGHTS: a list with no marks; every row a section (the 12 % hairline above it, 24 / 32 of air), the first
+     hairline the band→object beat under the clip. A wide sheet: the frame left (11 parts), the sentence right (9),
+     48 apart, centred on each other; under 820 of the sheet, the frame then the sentence */
+  .st-hl {
+    list-style: none;
+    margin: 56px 0 0;
+    padding: 0;
+  }
+  .st-hl-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 20px;
+    align-items: center;
+  }
+  .st-hl-row:last-child { padding-bottom: 0; }
+  .st-hl-fig { margin: 0; }
+  /* a real frame: the sheet's inner corner and its hairline, the capture's own dark under it while it loads */
+  .st-hl-frame {
+    aspect-ratio: 16 / 9;
+    overflow: hidden;
+    border-radius: 14px;
+    border: 1px solid color-mix(in oklab, var(--sheet-ink) 14%, transparent);
+    background: #0b0c10;
+    transition: border-color 560ms ease;
+  }
+  .st-hl-frame img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+  /* the hands' caption: the mono caption face, dim, 10 under the frame */
+  .st-hl-cap {
+    margin: 10px 0 0;
+    font: 400 0.75rem/1.4 var(--wk-mono);
+    letter-spacing: 0.04em;
+    color: var(--sheet-dim);
+    transition: color 560ms ease;
+  }
+  /* the sentence: the said line's face and size (Outfit 400, 1.25rem; 1.5rem on a wide sheet), flush left */
+  .st-hl-line {
+    margin: 0;
+    font-family: var(--wk-display);
+    font-size: 1.25rem;
+    font-weight: 400;
+    line-height: 1.35;
+    letter-spacing: -0.005em;
+    text-wrap: pretty;
+    color: var(--mx-ink);
+    transition: color 560ms ease;
+  }
+  @container sheet (min-width: 820px) {
+    .st-hl-row {
+      grid-template-columns: minmax(0, 11fr) minmax(0, 9fr);
+      gap: 48px;
+    }
+    .st-hl-line { font-size: 1.5rem; }
+  }
+  /* THE DOOR: one line at the foot in the label face, centred, 56 under the last row; the handle is the sheet's only
+     link, the house link (the accent mixed toward the ink, a 1px underline) */
+  .st-door {
+    margin: 56px 0 0;
+    text-align: center;
+    font: 500 0.6875rem/1.6 var(--wk-mono);
+    letter-spacing: 0.12em;
+    color: var(--sheet-dim);
+    transition: color 560ms ease;
+  }
+  .st-door a {
+    color: color-mix(in oklab, var(--sheet-acc) 80%, var(--sheet-ink));
+    text-decoration: underline;
+    text-decoration-thickness: 1px;
+    text-underline-offset: 3px;
+    transition: color 560ms ease;
+  }
+  .st-door a:hover { color: var(--sheet-ink); }
+  .st-door a:focus-visible { outline: 2px solid var(--sheet-ink); outline-offset: 3px; border-radius: 2px; }
+  :global(html[data-night]) .st-door a { color: color-mix(in oklab, var(--sheet-acc) 50%, var(--sheet-ink)); }
   /* the chassis's counter would say what the dots say */
   .studio :global(.car-counter) {
     display: none;
@@ -4799,31 +4875,23 @@ const STUDIO = BUILDS.find((b) => b.id === "studio")!;
 </script>
 
 <script>
-  // THE CIRCUMSTANCES (2026-10-15): the Studio sheet's three frames play WITH
-  // SOUND, on a press only (the key on the frame; pressed again it pauses),
-  // one at a time (a start stops the others) and never off-screen (the row
-  // leaving the viewport pauses them). Nothing autoplays, nothing is muted
-  // by default. Nothing to do while every slot is the honest empty frame.
+  // THE FLIP CLIP (2026-10-23, the thesis): the Studio sheet's one clip plays WITH SOUND on a press of its key only;
+  // pressed again it pauses; it never plays off-screen (the frame leaving the viewport pauses it). Nothing autoplays,
+  // nothing is muted by default. Nothing to do while the slot is the honest empty frame.
   {
-    const car = document.querySelector<HTMLElement>("#build-studio [data-circumstances]");
-    const slots = car ? Array.from(car.querySelectorAll<HTMLElement>(".st-slot")) : [];
-    const live = slots.map((s) => ({ s, v: s.querySelector<HTMLVideoElement>(".st-video"), k: s.querySelector<HTMLButtonElement>(".st-play") })).filter((x) => x.v && x.k) as { s: HTMLElement; v: HTMLVideoElement; k: HTMLButtonElement }[];
-    if (car && live.length) {
-      const stopAll = (except?: HTMLVideoElement) => live.forEach(({ v }) => { if (v !== except && !v.paused) v.pause(); });
-      live.forEach(({ s, v, k }) => {
-        v.muted = false;
-        v.volume = 1;
-        const paint = () => { const on = !v.paused && !v.ended; k.setAttribute("aria-pressed", on ? "true" : "false"); s.toggleAttribute("data-playing", on); };
-        v.addEventListener("play", paint);
-        v.addEventListener("pause", paint);
-        v.addEventListener("ended", () => { v.currentTime = 0; paint(); });
-        k.addEventListener("click", () => {
-          if (v.paused || v.ended) { stopAll(v); void v.play().catch(() => {}); }
-          else v.pause();
-        });
-      });
+    const slot = document.querySelector<HTMLElement>("#build-studio [data-flip]");
+    const v = slot?.querySelector<HTMLVideoElement>(".st-video");
+    const k = slot?.querySelector<HTMLButtonElement>(".st-play");
+    if (slot && v && k) {
+      v.muted = false;
+      v.volume = 1;
+      const paint = () => { const on = !v.paused && !v.ended; k.setAttribute("aria-pressed", on ? "true" : "false"); k.setAttribute("aria-label", on ? "Pause" : "Play, with sound"); slot.toggleAttribute("data-playing", on); };
+      v.addEventListener("play", paint);
+      v.addEventListener("pause", paint);
+      v.addEventListener("ended", () => { v.currentTime = 0; paint(); });
+      k.addEventListener("click", () => { if (v.paused || v.ended) void v.play().catch(() => {}); else v.pause(); });
       const scroller = document.querySelector("main");
-      new IntersectionObserver((es) => es.forEach((e) => { if (!e.isIntersecting) stopAll(); }), { root: scroller && getComputedStyle(scroller).overflowY === "auto" ? scroller : null, threshold: 0.2 }).observe(car);
+      new IntersectionObserver((es) => es.forEach((e) => { if (!e.isIntersecting && !v.paused) v.pause(); }), { root: scroller && getComputedStyle(scroller).overflowY === "auto" ? scroller : null, threshold: 0.2 }).observe(slot);
     }
   }
 </script>
