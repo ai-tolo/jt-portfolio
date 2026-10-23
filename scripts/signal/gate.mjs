@@ -23,7 +23,9 @@
 //   box shot DARK (<browser>-standby.png) → a TRUSTED click at the power's centre (page.mouse.click): 'boot' within the
 //   press's own dispatch, 'live' + data-live="1" within 2 s, the boot sound without an error (?mute=1 plays it through a
 //   0-gain: no error is the whole assertion), the lit box (<browser>-live.png): the standby's mean relative luminance
-//   (linear, Rec. 709) at most 55 % of the live's →
+//   (linear, Rec. 709) at most 55 % of the live's [SINCE 2026-10-22, the 2026-10-13 power law: by day standby and live
+//   both stand on SILVER, so their luminance is within 15 % of each other, and under html[data-night] the live casing
+//   is darker than by day (GRAPHITE; <browser>-live-night.png)] →
 //   first sound: a trusted KeyA on the live device, < 200 ms from the key's own timeStamp to rms > −60 dBFS (the gate
 //   measures it: the surface's firstSoundMs marks the power click, its first trusted pointerdown, and is reported,
 //   never judged) → the loop, the throttle, the master stop (R1's own sections) → save/reload: ARMED AND SILENT (bpm +
@@ -622,8 +624,17 @@ async function legR2(k) {
     `${bootNet.length ? bootNet.map((r) => `boot.m4a HTTP ${r.status}${r.len ? ` (${r.len} B)` : ""}`).join(" · ") : "boot.m4a NEVER REQUESTED"} · [signal/power] warnings: ${pwrWarns.length ? pwrWarns.slice(0, 2).join(" | ").slice(0, 200) : "none"} · ${errLine(errs)} · under ?mute=1 it plays through a 0-gain straight to the destination (not heard, never in level())`);
   const lit = await shotBox(page, join(OUT, `${name}-live.png`));
   const rY = lit.Y > 0 ? dark.Y / lit.Y : Infinity, rL = lit.luma > 0 ? dark.luma / lit.luma : Infinity;
-  row("power · standby dark (≤ 55 % of live)", rY <= 0.55,
-    `mean relative luminance of the device box (linear sRGB, Rec. 709): standby ${dark.Y.toFixed(4)} / live ${lit.Y.toFixed(4)} = ${pct(rY)} · gamma luma (Rec. 601): ${dark.luma.toFixed(3)} / ${lit.luma.toFixed(3)} = ${pct(rL)} · ${dark.w}×${dark.h} px${dark.whole && lit.whole ? "" : " (CLIPPED by the viewport)"} · ${dark.file} · ${lit.file}`);
+  // THE 2026-10-13 POWER LAW (2026-10-22): the site never goes night on power; by day a device stands on SILVER in
+  // standby and live alike (within 15 %), and the casing goes GRAPHITE only under html[data-night]: the live box with
+  // the attribute set is darker than by day. The attribute is set and removed here, nothing stored
+  await page.evaluate(() => document.documentElement.setAttribute("data-night", ""));
+  await page.waitForTimeout(900);                               // the casing's 560 ms ink has run
+  const nite = await shotBox(page, join(OUT, `${name}-live-night.png`));
+  await page.evaluate(() => document.documentElement.removeAttribute("data-night"));
+  await page.waitForTimeout(900);
+  const rN = lit.Y > 0 ? nite.Y / lit.Y : Infinity;
+  row("power · silver by day (standby within 15 % of live), graphite at night", Math.abs(1 - rY) <= 0.15 && rN < 1,
+    `mean relative luminance of the device box (linear sRGB, Rec. 709): standby ${dark.Y.toFixed(4)} / live ${lit.Y.toFixed(4)} = ${pct(rY)} (want 85–115 %) · live under html[data-night] ${nite.Y.toFixed(4)} = ${pct(rN)} of the day's (want < 100 %) · gamma luma (Rec. 601): ${dark.luma.toFixed(3)} / ${lit.luma.toFixed(3)} = ${pct(rL)} · ${dark.w}×${dark.h} px${dark.whole && lit.whole && nite.whole ? "" : " (CLIPPED by the viewport)"} · ${dark.file} · ${lit.file} · ${nite.file}`);
 
   // (4) FIRST SOUND: a trusted KeyA on the LIVE device
   step("first sound");
@@ -711,7 +722,8 @@ async function legR2(k) {
   // (10) THE PHONE (Chromium): R1's section
   await phoneRows(k);
 
-  // (11) THE HOMEPAGE (Chromium): the host's night + its scroll-away power-off, on the built site
+  // (11) THE HOMEPAGE (Chromium): power never touches the night (2026-10-13) + the host's scroll-away power-off (the
+  // whole sheet under 0.08 for 160 ms since 2026-10-22), on the built site
   if (name === "chromium") {
     step("home");
     const hc = await browser.newContext({ viewport: { width: 1440, height: 900 }, deviceScaleFactor: 1 });
@@ -731,21 +743,25 @@ async function legR2(k) {
       const ha = await aim(hp, h0);
       await hp.evaluate(ARM_REC, {});
       await hp.mouse.click(ha.x, ha.y);
-      const h1 = await hp.evaluate(WAIT_STATE, { want: "live", night: true, limitMs: 2500 });
+      const h1 = await hp.evaluate(WAIT_STATE, { want: "live", limitMs: 2500 });
       const hk = h1.rec && h1.rec.click, hb = hk ? hk.t : h1.rec.armed;
-      const nOn = when(h1.rec, (e) => e.night, hb), hLive = when(h1.rec, (e) => e.state === "live", hb);
+      const nOn = when(h1.rec, (e) => e.night !== h0.night, hb), hLive = when(h1.rec, (e) => e.state === "live", hb);
       await hp.waitForTimeout(1300);
+      const nAfter = await hp.evaluate(() => document.documentElement.hasAttribute("data-night"));
       const hl = join(OUT, `${name}-home-live.png`);
       await hp.screenshot({ path: hl });
-      row("home · power: night + live ≤ 2 s", h1.state === "live" && h1.night && nOn !== null && nOn <= 2000 && hLive !== null && hLive <= 2000,
-        `trusted click at ${ha.how} (${hk ? `isTrusted ${hk.trusted}, '${hk.after}' within its dispatch` : "NONE reached #pwr"}) → html[data-night] ${rel(nOn)} · live ${rel(hLive)} · data-live ${h1.live ?? "absent"} · ${hl}`);
+      // THE 2026-10-13 POWER LAW (2026-10-22): nightPower is deleted; power must leave html[data-night] as it found it
+      row("home · power: live ≤ 2 s, night unchanged", h1.state === "live" && hLive !== null && hLive <= 2000 && h1.live === "1" && nOn === null && h1.night === h0.night && nAfter === h0.night,
+        `trusted click at ${ha.how} (${hk ? `isTrusted ${hk.trusted}, '${hk.after}' within its dispatch` : "NONE reached #pwr"}) → live ${rel(hLive)} · data-live ${h1.live ?? "absent"} · html[data-night] ${h0.night ? "present" : "absent"} before, ${h1.night ? "present" : "absent"} at live, ${nAfter ? "present" : "absent"} 1.3 s on (${nOn === null ? "never changed" : `CHANGED ${rel(nOn)}`}) · ${hl}`);
       await hp.evaluate(ARM_REC, {});
       const top = await hp.evaluate(SCROLL_TOP);
-      const h2 = await hp.evaluate(WAIT_STATE, { want: "standby", night: false, limitMs: 2500 });
+      const h2 = await hp.evaluate(WAIT_STATE, { want: "standby", limitMs: 2500 });
       const o = h2.rec.origin, hc2 = h2.rec.click;
-      const hpd = when(h2.rec, (e) => e.state === "powerdown", o), hsb = when(h2.rec, (e) => e.state === "standby", o), hday = when(h2.rec, (e) => !e.night, o);
-      row("home · scroll to top: standby + day ≤ 1.5 s", h2.state === "standby" && !h2.night && hsb !== null && hsb <= 1500 && hday !== null && hday <= 1500,
-        `scrollY ${top.from} → ${top.y} · the host pressed the ${PWR} ${hc2 ? `at ${rel(hc2.t - o)} (isTrusted ${hc2.trusted})` : "NEVER"} · powerdown ${rel(hpd)} · data-night gone ${rel(hday)} · standby ${rel(hsb)} (1380 ms of it is the line running back) · data-live ${h2.live ?? "absent"}`);
+      const hpd = when(h2.rec, (e) => e.state === "powerdown", o), hsb = when(h2.rec, (e) => e.state === "standby", o);
+      // THE LOOSENED HOLD (2026-10-22): the host presses only after SIGNAL's sheet has stayed under 0.08 for 160 ms, so
+      // the limit is 1.8 s (was 1.5); the data-night clause left with nightPower (power never sets it)
+      row("home · scroll to top: standby ≤ 1.8 s", h2.state === "standby" && hsb !== null && hsb <= 1800,
+        `scrollY ${top.from} → ${top.y} · the host pressed the ${PWR} ${hc2 ? `at ${rel(hc2.t - o)} (isTrusted ${hc2.trusted}; the 160 ms hold under 0.08 is in it)` : "NEVER"} · powerdown ${rel(hpd)} · standby ${rel(hsb)} (1380 ms of it is the line running back) · data-live ${h2.live ?? "absent"}`);
       row("home · no console errors", herrs.length === 0, errLine(herrs));
     } finally { await hc.close().catch(() => {}); }
   }
@@ -1162,7 +1178,7 @@ async function floorRows({ page, row, step, r4 }) {
   const lo = f.words.filter((x) => x.px < 12 - 0.01);
   row("size floor · words ≥ 12 px", f.words.length > 0 && lo.length === 0,
     `${f.words.length} visible words · ${lo.length} under 12 px · smallest: ${f.words.slice(0, 3).map((x) => `${x.px} px ${x.p}`).join(" | ") || "none found"} · ${unz}`);
-  const nlo = f.nums.filter((x) => x.px < 22 - 0.01);
+  const nlo = f.nums.filter((x) => x.px < 22 - 0.05);   // 0.05 px (2026-10-22): Firefox rounds the zoomed 22 to 21.984
   row("size floor · numerals ≥ 22 px", f.nums.length > 0 && nlo.length === 0,
     `${f.nums.length} visible .sg-screen > b · ${nlo.length} under 22 px · smallest: ${f.nums.slice(0, 3).map((x) => `${x.px} px ${x.p}`).join(" | ") || "none found"}`);
   const top = f.rivals[0];
