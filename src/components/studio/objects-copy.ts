@@ -24,12 +24,18 @@ export const WATCH_COPY = {
   // Tickets out."
   // 2026-10-20, later (WHAT INTAKE REPLACED, branch intake-v3; Jon: "all of my notifications are turned off"): a third
   // beat, "Notifications off.", was added and withdrawn in the pile round (the brief keeps the two-beat line). DRAFT.
-  dek: "Texts and memos in. Tickets out.",
+  // 2026-10-22, night (Jon: "'Texts and memos in. Tickets out.' could be better. 'I recently started texting myself
+  // a lot and talking to my watch' is more engaging: funny, not self-explanatory (intrigue), sets the scene"): his
+  // words; DRAFT only in that he may tune them. Was "Texts and memos in. Tickets out."
+  dek: "I recently started texting myself a lot and talking to my watch.",
   // 2026-10-22 (THE SPINE, round seven of the catch-all): the sheet's own hook, the fold's line at rest, DRAFT in
   // Jon's voice, his to rewrite (his thesis: "a catch-all system that doesn't care about the location or medium of
   // how the information is getting into the system"; of the locked headline: "I don't think it's my best idea that
   // my calendar changed"). The locked headline stays in builds-copy.ts for the case study.
-  hook: "It doesn't care how it got in.",
+  // 2026-10-22, night (Jon of "It doesn't care how it got in.": "Batman coded. Something more like 'What would've
+  // been 30+ clicks is now a one-sentence update', or something more real"): his words; DRAFT only in that he may
+  // tune them.
+  hook: "What would've been 30+ clicks is now a one-sentence update.",
   // 2026-10-19 (THE SORT round: the watch is live only, the wedding moved into the sort's sixth row): the caption
   // under the watch says what the live mode does, in LIVE_COPY's words ("a preview. nothing was added."). DRAFT, his
   // to rewrite. The history of the replay's caption, kept for the record:
