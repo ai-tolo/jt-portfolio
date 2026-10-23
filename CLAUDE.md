@@ -50,9 +50,12 @@ session must follow.
   source, and the casing goes GRAPHITE only under `html[data-night]`
   (material.css): a live device by day stands on SILVER, with the words on
   the bare casing inked for it in power.css's "THE SILVER BY DAY" block;
-  the host clicks `#pwr` when the play ROOM — ONE sheet holding the
-  write-up's head, the device and its tail, round four — fills < 35% of the
-  screen),
+  the host clicks `#pwr` only once SIGNAL's WHOLE SHEET (`.sc`: the device
+  AND how to play) has left the viewport: its intersection ratio under
+  0.08 for 160 ms (2026-10-22, Jon: "loosen it so they can see the
+  directions and not have to restart it"; the 35 %-of-the-screen rule
+  powered off a reader scrolling to how to play); anywhere inside the
+  sheet it never does),
   `#pwr` (the power switch since R4, 92 × 40 since 2026-10-07; the host's
   `.pwr` overrides light it; in standby THE RUN laps its border: a
   cool-gradient ribbon, src/signal/view/pwr-run.ts precomputes a ~20 s
@@ -155,6 +158,13 @@ session must follow.
   after any rewording or the tabs silently detach.
 
 ## Copy + design laws
+- US SPELLING on every visitor-readable string (2026-10-22, Jon: "I've
+  been seeing some euro-spellings popping up lately, 'colour' and other
+  examples"): color, center(ed), gray, labeled, canceled, catalog, behavior,
+  analyze, practice (verb), and the rest. Check dist/ after a build (text
+  and visible attributes); comments, identifiers and tests are out of
+  scope; a British spelling in builds-copy.ts's locked prose is reported,
+  never edited.
 - Honesty first: no "live"/"the actual" labels over authored data; real
   numbers only; claims a skeptic can check. The naming law: **Finishable**
   with the Catalog / the Studio / the Engineer ("console", "bucket", "crown a
@@ -276,11 +286,14 @@ session must follow.
   one click"): the chevron opens the WHOLE fold, the evidence and the
   locked paragraphs together, and closes it all; the label-button
   `[data-whole]` and its hidden body are retired. ONE FOLD ANATOMY on every
-  sheet that still folds (the Studio; Intake's is its own since THE SPINE;
-  AudioDex has NO fold since THE GROUND, 2026-10-22): hook → said → [the evidence] → the floor line `.wk-rule`
-  (0.9375rem / 1rem wide, centred, 62ch, ink) → the whole story (a
-  `.sheet-sec` hairline, a plain `.sheet-t` label "the whole story", the
-  columns). The gaps are ONE set of numbers, set at the shared rules in
+  sheet that still folds (Intake and the Studio; AudioDex has NO fold since
+  THE GROUND, 2026-10-22): at rest the hook ALONE and the chevron; open,
+  said (the clip's first block, `.wk-story-clip > .wk-said`, one rule for
+  both) → [the evidence] → the floor line `.wk-rule` (0.9375rem / 1rem
+  wide, centred, 62ch, ink). THE WHOLE STORY is on NO sheet since
+  2026-10-22 (the Studio's left with THE CUT; the column splitter and
+  `.wk-story-body` / `.wk-p.hinge` / `.wk-list` / `.wk-whole-lead` are
+  deleted; the locked paragraphs stay in builds-copy.ts). The gaps are ONE set of numbers, set at the shared rules in
   StudioOne and never per sheet: said → the clip's first block 36 (44 on
   a wide sheet: 12 + the first block's 24 / 32), every hairline inside the
   fold 24 / 32 under the block above it, evidence → the floor line 36,
@@ -393,8 +406,8 @@ session must follow.
   (junkyard/IntakeSiri.astro); under the hood (`IntakeClock.astro`,
   junkyard/) and the one-match rule were cut in round five. The words at
   rest on the whole sheet: the kind word, the name, the dek (6), `try it`
-  (2), the hook (7). The same cut has not come to the Studio
-  (`StudioMoments`, its row, its `.wk-rule`);
+  (2), the hook (7). The Studio's fold took the same cut on 2026-10-22
+  (its moments, its circumstances row and its band untouched);
   AUDIODEX = THE GROUND (2026-10-22, Jon: "the heart of so many other
   things I've built: the database is required and a prerequisite to have
   something like Intake"): the SHORTEST sheet, NO FOLD: kind `foundation`
@@ -413,11 +426,13 @@ session must follow.
   at 1440 (1591 → 1365 at 375); the STUDIO
   = six moments of the real thing (`StudioMoments.astro`, tabs) → the
   notebook line → the circumstances in a row (problem → answer → a play
-  key with sound, honest frames until the files land), its fold Jon's
-  line → "Make ten thousand songs. Keep ten." as the house `.wk-rule`
-  (Jon, 2026-10-19: "that text margin … looks different than everything
-  else"; `.st-keep`, its accent and its negative margin are deleted) →
-  the whole story; SIGNAL's card = THE CUT (2026-10-22, Jon of the
+  key with sound, honest frames until the files land), its fold THE CUT
+  (2026-10-22): at rest the locked hook "Making music was never the hard
+  part." alone; open, Jon's line → "Make ten thousand songs. Keep ten." as
+  the house `.wk-rule` (Jon, 2026-10-19: "that text margin … looks
+  different than everything else"; `.st-keep`, its accent and its negative
+  margin are deleted), nothing else (1511 → 1410 closed, 2091 → 1568 open
+  at 1440); SIGNAL's card = THE CUT (2026-10-22, Jon of the
   receipt: "that's stupid that I would say that before they even touched
   the instrument"): kind word · SIGNAL → the device → how to play → ONE
   line, `.sc-line`: the dare "You can't play a wrong note." (DRAFT,
@@ -553,7 +568,13 @@ session must follow.
   a press is ignored; after the fifth the lock screen is the date and the
   clock alone, Replay (the house pill) puts everything back in one step
   (`.still` kills the transitions, the cards return to their resting
-  order, the month to page 0). The foot is ONE SLOT, runline · Replay, NO
+  order, the month to page 0). THE COUNT (2026-10-22, the outside read:
+  the wedding "slides under the fade" read as gone): `.ica-more` = "+ N
+  more" (the watch's line: mono 0.6875rem, the muted ink, on the window's
+  paper) centered in the window's fade, outside the masked feed, counting
+  the landed cards whose top is under the fade (`tally()` on each `.in`
+  and on Replay); chosen over pinning, since a landing is prepended at the
+  top and always in view. The foot is ONE SLOT, runline · Replay, NO
   HINT. A MIDDLING SHEET (620–899 of the module, a 1024 desk): the phone
   at 40cqw, Intake's column beside it as on a wide sheet (588 tall; the
   cards at 12.5px, the rows 47). NARROW (< 620): the lock screen 82cqw
@@ -601,7 +622,15 @@ session must follow.
   below the watch moves through a typed run or a nothing run (day and
   night); on a phone the cards land under the watch and push the fold down
   (504px for three cards), nothing above them moves. The live pipeline
-  (`api/intake.ts`, `intake-local.ts`, the schema) is untouched.
+  (`api/intake.ts`, `intake-local.ts`, the schema) is untouched, except
+  THE DATED TAIL (2026-10-22, the outside read typed "…and dentist Thursday
+  at 2" and got one card; keyless, every typed run is the local parse):
+  `intake-local.ts` splits a clause at a comma / "and" before a short
+  phrase carrying its own day AND time (DATED_TAIL, only if the left side
+  is already something) or after one (DATED_HEAD, only if a fresh ask
+  follows, never "put that on the calendar"), and a bare day-and-time
+  phrase of ≤ 8 words is an event. `node scripts/intake-fixtures.mjs`
+  stays 12/12.
 - WORK is OBJECTS (2026-09-18; the ledger/matrix is DEAD): the room holds
   Jon's Claude Design modules, one per build, framed by words — the locked
   headline from builds-copy.ts above (the DRAFT dek under it was removed
@@ -821,6 +850,13 @@ session must follow.
   corner since round six (résumé is the rail's pill, the bar's pill and the
   end room's title). Section ids stay
   work/play/studio/soundlab/illustrations.
+  THE LINE (2026-10-22, Jon's words, final, NOT draft; he turned down a
+  dramatic version as "trying to be Batman"): `.hero-line` "My job doesn't
+  pay me to build these. But I use them every day." in Instrument Sans
+  1rem, the ink (`--night-ink` at night), 12px under the role line; the
+  two are ONE absolutely placed `.role-block` whose foot stands where the
+  role line's did (40px over the cue's words; on phones its old
+  bar-relative bottom, both lines balanced). Inline in StudioOne.
   THE HERO (2026-10-13, round two: Jon: "the down arrow with builds is
   enough by itself"): a full viewport (`min-height: 100svh`, the standard
   `.one > .room` gap to the first room; the round-one PEEK and the second
