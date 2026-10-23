@@ -165,6 +165,42 @@ session must follow.
   and visible attributes); comments, identifiers and tests are out of
   scope; a British spelling in builds-copy.ts's locked prose is reported,
   never edited.
+- THE GLOSS (2026-10-23, Jon: "for any specific product like Ableton, or
+  any niche word, acronym, etc. on the site (there can't be that many) …
+  hovering on the word makes a definition/explanation appear"): ONE list in
+  `src/lib/gloss.ts` (`{ word, line }`, at most TEN, every line one
+  sentence in Jon's register, DRAFT): Ableton · stems · chip · MIDI ·
+  Whisper · take · WAV · BPM · Claude. The word carries the mark, NO
+  glyph: `<Gloss w="…">` renders `button.gl` (inline, the text's own
+  face, size, case and ink; a 1px DOTTED underline in the dim ink at 60 %,
+  offset 0.18em; cursor help; NEVER the accent: it is not a link). Its line
+  floats in ONE fixed paper pop for the page (`.gl-pop`, `src/styles/
+  gloss.css`: the paper #fff / night #1c1c1f, the 14 % hairline, 12px
+  corners, Instrument Sans 0.875rem/1.45, 28ch, 8px under the word, above
+  when there is no room), so it NEVER moves the page. Behavior
+  (`src/lib/gloss-client.ts`, one script, delegated on the document): a
+  hover on a fine pointer shows it after 120 ms and hides it on leave; a
+  click or a tap opens and PINS it (a second tap on the word, a tap
+  elsewhere, Esc or a scroll past 80px closes it; inside 80 it rides with
+  the word); keyboard focus shows it; one open at a time; reduced motion =
+  no fade. Each button's `aria-describedby` points at a hidden span with
+  its line (the client writes them once); the pop is `aria-hidden`. Copy
+  strings stay PLAIN TEXT: `<Glossed text={…} mark={[…]} />` marks the
+  first whole-word occurrence of each named word, and a named word missing
+  from the text FAILS THE BUILD; a script that writes its own markup uses
+  `glossButton()` (the watch). Gloss.astro prints its `<script>` before
+  the button, flush (a newline between them printed a space after the
+  word). MARKED on the homepage: the Studio sheet (Ableton in the dek and
+  the effects row, MIDI in the hands caption, chip, stems; `HL_GLOSS` in
+  StudioOne names each row's words; the hands row's "take" is the verb and
+  stays plain) and the watch's live lines (Claude: the privacy line under
+  the cards, the listening hint, the "without Claude" chip). NEVER the
+  hero, the rail, chrome, the instrument's own surface (its BPM, its export
+  cap) or the drawn app tiles ("Claude ✦"). NOT MARKED YET, Jon's call:
+  /resume (Claude, Whisper, takes, WAV, Ableton, chip) and the case studies
+  (signal-studio: Ableton, take, chip, stems, MIDI, WAV; the-console: take,
+  Ableton, stems, Whisper, Claude; momence: "take-home"); Whisper, WAV and
+  BPM have no homepage occurrence today.
 - Honesty first: no "live"/"the actual" labels over authored data; real
   numbers only; claims a skeptic can check. The naming law: **Finishable**
   with the Catalog / the Studio / the Engineer ("console", "bucket", "crown a
