@@ -116,26 +116,9 @@ export const ARCHIVE_COPY = {
 // his voice (written 2026-10-15); Jon owns every word, edit freely. Spotify is
 // never named on this sheet.
 //
-// THE OBJECT IS SIX MOMENTS (2026-10-15, round four): six 16:9 crops of the
-// real Studio, each already in the state that makes its point, the rest
-// dimmed (StudioMoments.astro; public/builds/studio/moment-<id>.webp). The
-// `label` is the tab's word, the `line` prints while the moment shows, the
-// `alt` describes the frame.
-export type Moment = { id: string; label: string; line: string; alt: string };
-// THE CIRCUMSTANCES: three capture frames, each titled by the PROBLEM with one
-// line of answer. `src` names the file under public/ without its extension:
-// the host keeps the first of .mp4 / .webm that exists at build time, so
-// dropping the file in and rebuilding is the whole upload. With sound; a
-// visible play key; plays on a press only. Until the file exists the frame is
-// the honest empty one (its key drawn, dimmed, inert). Jon records these.
-export type StudioCapture = {
-  /** the file under public/, no extension (e.g. "/builds/studio/plane") */
-  src: string;
-  /** the placard's title: the problem, in his voice */
-  problem: string;
-  /** the one line of answer under it */
-  answer: string;
-};
+// THE SIX MOMENTS (2026-10-15, round four: six tabbed crops of the real Studio, StudioMoments.astro) and THE
+// CIRCUMSTANCES (round five: three capture frames, problem + answer, StudioCircumstances.astro) are in junkyard/ since
+// the thesis (2026-10-23); their strings are kept commented at the foot of STUDIO_COPY as the record.
 // THE THESIS (2026-10-23, Jon across two days: "it could all happen in Ableton, but not in this order … it's the lack
 // of decisions I need to make at every level"; "commitment via constraint"): the sheet is the band → one FLIP clip
 // with sound → five highlights, a real frame of the Studio beside one sentence each → the door to the show. No fold.
@@ -148,8 +131,6 @@ export const STUDIO_COPY: {
   dek: string;
   highlights: StudioHighlight[];
   door: { handle: string; href: string; when: string };
-  moments: Moment[];
-  captures: StudioCapture[];
 } = {
   title: "Signal Studio",
   // the one mono word in the sheet's top-right corner (.sheet-kind)
@@ -179,27 +160,29 @@ export const STUDIO_COPY: {
   ],
   // THE DOOR (2026-10-23, DRAFT): the show, the sheet's only link
   door: { handle: "@tolo.fm", href: "https://www.instagram.com/tolo.fm", when: "Saturdays" },
-  moments: [
-    { id: "engines", label: "the engines", alt: "The three engines side by side: HOUSE on the drums, SYNTH on the keys, 303 on the bass, each with its own filter, pattern and effects.",
-      line: "Drums, keys, bass. My synth through the drum engine, my bass through the synth engine: the ultimate consolidation." },
-    { id: "effects", label: "the effects", alt: "The same three towers with everything dimmed except each engine's effects: drive, mod, delay and reverb on the drums, the keys and the bass at once.",
-      line: "Every effect on every instrument, on one page, and one click changes all of them. Ableton makes you click a row, expand the rack and open a window." },
-    { id: "take", label: "the take", alt: "The jam page's record: a waveform of everything played, with four bars selected between two handles.",
-      line: "It was already listening. How much would you pay for every session you thought was recording and wasn't?" },
-    { id: "chips", label: "the chips", alt: "The well under the keyboard holding three chips, RHODES, VOICE and RADIO, each with its waveform and its length in bars.",
-      line: "Anything you're listening to: one click and it's a chip, on the bars, in its spot. Grab it, loop it, compartmentalize it." },
-    { id: "radar", label: "the radar", alt: "The glass at the top reading 94 BPM and the key C minor, both in the radar's coral ink.",
-      line: "Ableton doesn't even care about key. The radar hears the room and names the chord, the scale, the tempo, so I can join the friend who won't stay in one key." },
-    { id: "hands", label: "the hands", alt: "The keyboard at the foot of the studio with the laptop's letter keys printed on the keys from A to L.",
-      line: "Anything that can send MIDI immediately works. The controller is a luxury: my main things at my fingertips, eyes out the window." },
-  ],
+  // THE RECORD (2026-10-23): the six moments' tabs, lines and alts (StudioMoments.astro, junkyard/), no longer rendered
+  // moments: [
+  //   { id: "engines", label: "the engines", alt: "The three engines side by side: HOUSE on the drums, SYNTH on the keys, 303 on the bass, each with its own filter, pattern and effects.",
+  //     line: "Drums, keys, bass. My synth through the drum engine, my bass through the synth engine: the ultimate consolidation." },
+  //   { id: "effects", label: "the effects", alt: "The same three towers with everything dimmed except each engine's effects: drive, mod, delay and reverb on the drums, the keys and the bass at once.",
+  //     line: "Every effect on every instrument, on one page, and one click changes all of them. Ableton makes you click a row, expand the rack and open a window." },
+  //   { id: "take", label: "the take", alt: "The jam page's record: a waveform of everything played, with four bars selected between two handles.",
+  //     line: "It was already listening. How much would you pay for every session you thought was recording and wasn't?" },
+  //   { id: "chips", label: "the chips", alt: "The well under the keyboard holding three chips, RHODES, VOICE and RADIO, each with its waveform and its length in bars.",
+  //     line: "Anything you're listening to: one click and it's a chip, on the bars, in its spot. Grab it, loop it, compartmentalize it." },
+  //   { id: "radar", label: "the radar", alt: "The glass at the top reading 94 BPM and the key C minor, both in the radar's coral ink.",
+  //     line: "Ableton doesn't even care about key. The radar hears the room and names the chord, the scale, the tempo, so I can join the friend who won't stay in one key." },
+  //   { id: "hands", label: "the hands", alt: "The keyboard at the foot of the studio with the laptop's letter keys printed on the keys from A to L.",
+  //     line: "Anything that can send MIDI immediately works. The controller is a luxury: my main things at my fingertips, eyes out the window." },
+  // ],
   // THE RECORD (2026-10-23): the sheet has no fold since the thesis, so these are no longer rendered. Kept as written:
   // the fold under the locked hook, the line in his voice (.wk-said) and the one line beneath it
   // said: "Ableton is for producing ideas that already happened. This is for making the idea exist.",
   // keep: "Make ten thousand songs. Keep ten.",
-  captures: [
-    { src: "/builds/studio/plane", problem: "$3,000 of instruments in the bedroom. A laptop on the plane.", answer: "Every synth I own, sampled into keys once. The room travels." },
-    { src: "/builds/studio/pianist", problem: "Your friend won't stay in one key.", answer: "The radar names the chord, the scale and the tempo. Play along, no math." },
-    { src: "/builds/studio/window", problem: "The laptop's in the other room and you're looking out the window.", answer: "The controller: voices, drums in, drums out, the EQ under a thumb. Eyes stay on the window." },
-  ],
+  // THE RECORD (2026-10-23): the circumstances' three frames (junkyard/StudioCircumstances.astro), no longer rendered
+  // captures: [
+  //   { src: "/builds/studio/plane", problem: "$3,000 of instruments in the bedroom. A laptop on the plane.", answer: "Every synth I own, sampled into keys once. The room travels." },
+  //   { src: "/builds/studio/pianist", problem: "Your friend won't stay in one key.", answer: "The radar names the chord, the scale and the tempo. Play along, no math." },
+  //   { src: "/builds/studio/window", problem: "The laptop's in the other room and you're looking out the window.", answer: "The controller: voices, drums in, drums out, the EQ under a thumb. Eyes stay on the window." },
+  // ],
 };

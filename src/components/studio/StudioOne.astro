@@ -27,15 +27,6 @@ import IntakeCatchAll from "../IntakeCatchAll.astro";
 import IntakeProof from "../IntakeProof.astro";
 import AudioDexDoor from "../AudioDexDoor.astro";
 import SignalCard from "../signal/SignalCard.astro";
-// SIX MOMENTS (2026-10-15, round four): the Studio sheet's object, six crops
-// of the real thing each in the state that makes its point (StudioMoments.astro;
-// the words in objects-copy.ts). The frames' pixels are the capture's (2× of
-// a 1106×622 or 760×428 CSS crop; scratchpad cap/moments.mjs + take.mjs).
-import StudioMoments from "./StudioMoments.astro";
-const MOMENT_FRAMES = Object.fromEntries(STUDIO_COPY.moments.map((m) => {
-  const wide = ["engines", "effects", "hands", "take"].includes(m.id);
-  return [m.id, { src: `/builds/studio/moment-${m.id}.webp`, width: wide ? 2212 : 1520, height: wide ? 1244 : 856, alt: m.alt }];
-}));
 // the sentence printed once in the fold, SHORT since round six (2026-10-22; src/data/intake-run.json → proof, DRAFT)
 import WATCH_RUN from "../../data/intake-run.json";
 // the memo the two phones search for (src/data/audiodex-scene.json): the tape it became comes out of the phone
@@ -51,15 +42,10 @@ import "../../styles/sheet.css";
 const pub = (f: string) => path.join(process.cwd(), "public", "studio", f);
 const exists = (f: string) => fs.existsSync(pub(f));
 const etchAsset = ["etch.svg", "etch.webp", "etch.png"].filter(exists).map((f) => `/studio/${f}`)[0];
-// SIGNAL STUDIO's captures (2026-10-13; the circumstances, 2026-10-15): a
-// capture's `src` in objects-copy.ts names a file under public/ without its
-// extension; the first of .mp4 / .webm that is there at build time is kept, so
-// a slot whose recording has not landed renders the honest empty frame, never
-// a broken video. Dropping the file in and rebuilding is the whole upload.
+// a file under public/ if it is there at build time, else null: a slot whose recording has not landed renders the
+// honest empty frame, never a broken video. Dropping the file in and rebuilding is the whole upload.
 const inPublic = (url?: string | null) =>
   url && fs.existsSync(path.join(process.cwd(), "public", url.replace(/^\//, ""))) ? url : null;
-const CAPTURE_EXT = [".mp4", ".webm"];
-const captures = STUDIO_COPY.captures.map((c) => ({ ...c, src: CAPTURE_EXT.map((e) => inPublic(c.src + e)).find(Boolean) ?? null }));
 // THE FLIP CLIP (2026-10-23, the thesis): the Studio sheet's one object, a clip of the show WITH SOUND, played from
 // its key only. Jon drops a favorite in at public/builds/studio/flip.mp4 when he has one (no dependency on the show
 // being current); until then the slot is the honest empty frame.
@@ -2098,89 +2084,17 @@ const STUDIO = BUILDS.find((b) => b.id === "studio")!;
      Its hue: a deeper sapphire than SIGNAL's #4fd1ff, the same family, one
      step toward ink, so the instrument and the studio read as kin and apart */
   #build-studio { --sheet-acc: #2a5bd7; }
-  /* (the chassis rules below are :global since round four, 2026-10-15: StudioMoments.astro stands its six frames on
-     the same .st-obj / .st-slot / .st-frame chassis, and a scoped rule never reaches a child component's elements) */
-  /* THE OBJECT on THE LOOK ROOM'S CHASSIS (Jon, round three, 2026-10-13:
-     "the tiny carousel buttons aren't sufficient … adopt the arrow key
-     buttons from the Illustrations UI"): one 16:9 frame with the look
-     room's two keycaps standing outside it, 24px up from its foot, the dots
-     8px above it, the placard 14px under it. .st-obj is a container so the
-     keys stand on the frame's own geometry in pure CSS (the look room
-     measures a picture of unknown shape; this frame's shape is fixed). */
-  :global(.st-obj) {
-    container: st / inline-size;
-    width: 100%;
-    margin: 56px auto 0; /* the surface's caption → the frames (the band→object beat) */
-    padding-top: 32px; /* the dots' 8 + 24 above the frame */
-    /* the look room's key (.look-band's --kc-*), unchanged in size and
-       travel; its faces are mixed over the SHEET's card instead of the
-       room's ground, since this one stands on paper. A copy: change both
-       or neither */
-    --kc: 61px;
-    --kc-sx: 7px;
-    --kc-sy: 9px;
-    --kc-r: 6px;
-    --kc-gap: 20px;
-    --kc-rise: 24px;
-    --kc-glyph: 29px;
-    --kc-inset: 4px;
-    --kc-ink: var(--sheet-ink);
-    --kc-face-hi: color-mix(in srgb, var(--kc-ink) 2%, var(--sheet-card));
-    --kc-face: color-mix(in srgb, var(--kc-ink) 5%, var(--sheet-card));
-    --kc-face-hover-hi: var(--sheet-card);
-    --kc-face-hover: color-mix(in srgb, var(--kc-ink) 1.5%, var(--sheet-card));
-    --kc-face-down: color-mix(in srgb, var(--kc-ink) 8%, var(--sheet-card));
-    --kc-bevel-hi: var(--sheet-card);
-    --kc-bevel-lo: color-mix(in srgb, var(--kc-ink) 14%, var(--sheet-card));
-    --kc-seam: color-mix(in srgb, var(--kc-ink) 26%, transparent);
-    --kc-skirt-c: color-mix(in srgb, var(--kc-ink) 15%, var(--sheet-card));
-    --kc-lip: color-mix(in srgb, var(--kc-ink) 26%, var(--sheet-card));
-    --kc-contact: color-mix(in srgb, var(--kc-ink) 22%, transparent);
-    --kc-ghost: color-mix(in srgb, var(--kc-ink) 34%, transparent);
-    /* the frame's width: the content's on phones (no keys); on desks the
-       content less one key's room a side (its gap, its body, its cap), so
-       the keys' outer faces stand on the content's edges, the sheet's 56px
-       gutter clear beyond them (cqw resolve against .st-obj where used) */
-    --st-room: calc(var(--kc-gap) + var(--kc-sx) + var(--kc));
-    --st-fw: 100cqw;
-  }
-  /* night: the look room's carbon recipe over the night card */
-  :global(html[data-night] .st-obj) {
-    --kc-face-hi: color-mix(in srgb, var(--kc-ink) 15%, var(--sheet-card));
-    --kc-face: color-mix(in srgb, var(--kc-ink) 10%, var(--sheet-card));
-    --kc-face-hover-hi: color-mix(in srgb, var(--kc-ink) 22%, var(--sheet-card));
-    --kc-face-hover: color-mix(in srgb, var(--kc-ink) 15%, var(--sheet-card));
-    --kc-face-down: color-mix(in srgb, var(--kc-ink) 8%, var(--sheet-card));
-    --kc-bevel-hi: color-mix(in srgb, var(--kc-ink) 26%, var(--sheet-card));
-    --kc-bevel-lo: color-mix(in srgb, var(--kc-ink) 5%, var(--sheet-card));
-    --kc-seam: color-mix(in srgb, var(--kc-ink) 30%, transparent);
-    --kc-skirt-c: color-mix(in srgb, var(--kc-ink) 6.5%, var(--sheet-card));
-    --kc-lip: color-mix(in srgb, var(--kc-ink) 17%, var(--sheet-card));
-    --kc-contact: rgb(0 0 0 / 0.7);
-    --kc-ghost: color-mix(in srgb, var(--kc-ink) 30%, transparent);
-  }
-  @media (min-width: 900px) {
-    :global(.st-obj) {
-      --st-fw: calc(100cqw - 2 * var(--st-room));
-    }
-  }
-  @media (max-width: 899px) {
-    :global(.st-obj) { margin-top: 40px; }
-  }
-  .studio :global(.car) {
-    position: relative;
-  }
-  /* the slide: the frame, then the placard 14px under it (the look room's .lk) */
-  :global(.st-slot) {
+  /* THE CLIP'S SLOT (2026-10-13; the chassis, the six moments and the circumstances' row are in junkyard/ since the
+     thesis, 2026-10-23, so these rules are the sheet's own again, not :global) */
+  .st-slot {
     display: flex;
     flex-direction: column;
     align-items: center;
     gap: 14px;
     margin: 0;
   }
-  :global(.st-frame) {
+  .st-frame {
     box-sizing: border-box;
-    width: var(--st-fw);
     aspect-ratio: 16 / 9;
     overflow: hidden;
     display: grid;
@@ -2195,7 +2109,7 @@ const STUDIO = BUILDS.find((b) => b.id === "studio")!;
     background: #0b0c10;
   }
   /* a frame with its file: the sheet's inner corner, a hairline; the key sits on the picture */
-  :global(.st-slot:not([data-pending]) .st-frame) {
+  .st-slot:not([data-pending]) .st-frame {
     border-radius: 14px;
     border: 1px solid color-mix(in oklab, var(--sheet-ink) 14%, transparent);
     background: #0b0c10;
@@ -2235,68 +2149,12 @@ const STUDIO = BUILDS.find((b) => b.id === "studio")!;
     cursor: default;
   }
   .st-slot[data-pending] .st-play svg { opacity: 0.8; }
-  @media (pointer: coarse) {
-    :global(.st-frame) {
-      touch-action: pan-y; /* a sideways drag is the chassis's swipe */
-    }
-  }
   /* THE HONEST EMPTY FRAME (no file at build time): a hairline in the sheet's dim ink at 18 %, square, no fill, no
      shadow, the drawn key dimmed and inert at its centre. Nothing that pretends to be a frame. */
   .st-slot[data-pending] .st-frame {
     border: 1px solid color-mix(in oklab, var(--sheet-dim) 18%, transparent);
     transition: border-color 560ms ease;
   }
-  /* THE PLACARD: the PROBLEM carries the weight (the hook's face, a step smaller), the one line of answer beneath
-     in the body face, dim */
-  .st-placard {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 8px;
-    max-width: min(var(--st-fw), 40ch);
-    margin-top: 6px;
-    text-align: center;
-  }
-  .st-problem {
-    font: 500 1.25rem/1.25 var(--wk-display);
-    letter-spacing: -0.01em;
-    color: var(--sheet-ink);
-    text-wrap: balance;
-    transition: color 560ms ease;
-  }
-  .st-answer {
-    max-width: 48ch;
-    font: 400 0.9375rem/1.5 var(--sheet-sans);
-    color: var(--sheet-dim);
-    text-wrap: pretty;
-    transition: color 560ms ease;
-  }
-  @container (min-width: 820px) {
-    .st-problem { font-size: 1.375rem; }
-    .st-answer { font-size: 1rem; }
-  }
-  /* THE ROW (round five): three frames across on a wide sheet, 24px apart, 56px under the moments (the band→object
-     beat); one column under 820px of sheet. Each frame is its column's width; the key and the placard scale down a
-     step for the smaller frame. */
-  .st-row {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr);
-    gap: 36px 24px;
-    margin: 56px auto 0;
-  }
-  .st-row .st-frame { width: 100%; }
-  .st-row .st-play { width: 48px; height: 48px; }
-  .st-row .st-play svg { width: 22px; height: 22px; }
-  .st-row .st-placard { max-width: none; margin-top: 2px; gap: 6px; }
-  @container (min-width: 820px) {
-    .st-row { grid-template-columns: repeat(3, minmax(0, 1fr)); }
-    .st-row .st-problem { font-size: 1.0625rem; }
-    .st-row .st-answer { font-size: 0.875rem; }
-  }
-  @media (max-width: 899px) {
-    .st-row { margin-top: 40px; }
-  }
-  /* (the keep line's own rule, .st-keep, is gone since 2026-10-19: the line is the house's .wk-rule) */
   /* ── THE THESIS (2026-10-23): the clip → the five highlights → the door; no fold, so the sheet pads its own foot
      (AudioDex's rule: no handle) */
   #build-studio { padding-bottom: var(--sheet-pad); }
@@ -2381,163 +2239,6 @@ const STUDIO = BUILDS.find((b) => b.id === "studio")!;
   .st-door a:hover { color: var(--sheet-ink); }
   .st-door a:focus-visible { outline: 2px solid var(--sheet-ink); outline-offset: 3px; border-radius: 2px; }
   :global(html[data-night]) .st-door a { color: color-mix(in oklab, var(--sheet-acc) 50%, var(--sheet-ink)); }
-  /* the chassis's counter would say what the dots say */
-  .studio :global(.car-counter) {
-    display: none;
-  }
-  /* the dots ABOVE the frame, centred, 8px clear of it (the look room's
-     row); the lit dot takes the sheet's hue */
-  .studio :global(.car-dots) {
-    position: absolute;
-    left: 50%;
-    top: calc(-8px - 24px);
-    transform: translateX(-50%);
-    z-index: 2;
-    color: var(--sheet-dim);
-    --car-dot-on: var(--sheet-acc);
-  }
-  /* phones: no keys, the frame swipes (the look room's rule) */
-  @media (max-width: 899px) {
-    .studio :global(.car-nav) {
-      display: none;
-    }
-  }
-  /* desks: THE KEYS, the look room's to the pixel (VISUALS KEYS,
-     2026-09-09): a 61px cap on a 7 × 9 oblique body, the stem-and-head
-     arrow, the press that seats the body, each key 20px outside the frame
-     with its body toward it, the bodies 24px above the frame's foot */
-  @media (min-width: 900px) {
-    .studio :global(.car-nav) {
-      position: static;
-      margin: 0;
-    }
-    .studio :global(.car-btn) {
-      position: absolute;
-      z-index: 2;
-      box-sizing: border-box;
-      width: var(--kc);
-      height: var(--kc);
-      margin: 0;
-      padding: 0;
-      top: calc(var(--st-fw) * 9 / 16 - var(--kc-rise) - var(--kc-sy) - var(--kc));
-      transform: none;
-      display: grid;
-      place-items: center;
-      appearance: none;
-      border: 1px solid var(--kc-seam);
-      border-radius: var(--kc-r);
-      color: var(--kc-ink);
-      background: linear-gradient(180deg, var(--kc-face-hi), var(--kc-face));
-      opacity: 1;
-      cursor: pointer;
-      box-shadow:
-        inset 1px 1px 0 var(--kc-bevel-hi),
-        inset -1px -1px 0 var(--kc-bevel-lo),
-        1px 1px 0 var(--kc-skirt-c),
-        2px 2px 0 var(--kc-skirt-c),
-        2px 3px 0 var(--kc-skirt-c),
-        3px 4px 0 var(--kc-skirt-c),
-        4px 5px 0 var(--kc-skirt-c),
-        5px 6px 0 var(--kc-skirt-c),
-        5px 7px 0 var(--kc-skirt-c),
-        6px 8px 0 var(--kc-skirt-c),
-        7px 9px 0 var(--kc-lip),
-        9px 12px 6px -3px var(--kc-contact);
-      transition: transform 70ms cubic-bezier(0.2, 0.7, 0.3, 1), box-shadow 70ms cubic-bezier(0.2, 0.7, 0.3, 1), background 120ms ease;
-    }
-    .studio :global([data-car-prev]) {
-      left: auto;
-      right: calc(50% + var(--st-fw) / 2 + var(--kc-gap) + var(--kc-sx));
-    }
-    .studio :global([data-car-next]) {
-      right: auto;
-      left: calc(50% + var(--st-fw) / 2 + var(--kc-gap) + var(--kc-sx));
-      box-shadow:
-        inset -1px 1px 0 var(--kc-bevel-hi),
-        inset 1px -1px 0 var(--kc-bevel-lo),
-        -1px 1px 0 var(--kc-skirt-c),
-        -2px 2px 0 var(--kc-skirt-c),
-        -2px 3px 0 var(--kc-skirt-c),
-        -3px 4px 0 var(--kc-skirt-c),
-        -4px 5px 0 var(--kc-skirt-c),
-        -5px 6px 0 var(--kc-skirt-c),
-        -5px 7px 0 var(--kc-skirt-c),
-        -6px 8px 0 var(--kc-skirt-c),
-        -7px 9px 0 var(--kc-lip),
-        -9px 12px 6px -3px var(--kc-contact);
-    }
-    .studio :global(.car-btn > svg) {
-      display: none;
-    }
-    .studio :global(.car-btn)::before {
-      content: "";
-      position: absolute;
-      inset: -4px;
-    }
-    .studio :global(.car-btn)::after {
-      content: "";
-      position: relative;
-      top: 0;
-      left: calc(-1 * var(--kc-inset));
-      width: var(--kc-glyph);
-      height: var(--kc-glyph);
-      background: currentColor;
-      -webkit-mask: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect x='3.5' y='14.4' width='15' height='3.2' rx='1.6'/><path d='M16.5 6.4 29 16 16.5 25.6z'/></svg>") center / contain no-repeat;
-      mask: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect x='3.5' y='14.4' width='15' height='3.2' rx='1.6'/><path d='M16.5 6.4 29 16 16.5 25.6z'/></svg>") center / contain no-repeat;
-      transition: opacity 120ms ease;
-    }
-    .studio :global([data-car-prev])::after {
-      left: var(--kc-inset);
-      transform: scaleX(-1);
-    }
-    .studio :global(.car-btn:hover:not(:disabled)) {
-      border-color: var(--kc-seam);
-      background: linear-gradient(180deg, var(--kc-face-hover-hi), var(--kc-face-hover));
-    }
-    .studio :global(.car-btn:active:not(:disabled)),
-    .studio :global(.car-btn[data-pressed]) {
-      transform: translate(calc(var(--kc-sx) - 1px), calc(var(--kc-sy) - 2px));
-      background: linear-gradient(180deg, var(--kc-face), var(--kc-face-down));
-      box-shadow:
-        inset 1px 1px 0 var(--kc-bevel-hi),
-        inset -1px -1px 0 var(--kc-bevel-lo),
-        1px 1px 0 var(--kc-skirt-c),
-        1px 2px 0 var(--kc-lip),
-        2px 3px 2px -1px var(--kc-contact);
-    }
-    .studio :global([data-car-next]:active:not(:disabled)),
-    .studio :global([data-car-next][data-pressed]) {
-      transform: translate(calc(1px - var(--kc-sx)), calc(var(--kc-sy) - 2px));
-      box-shadow:
-        inset -1px 1px 0 var(--kc-bevel-hi),
-        inset 1px -1px 0 var(--kc-bevel-lo),
-        -1px 1px 0 var(--kc-skirt-c),
-        -1px 2px 0 var(--kc-lip),
-        -2px 3px 2px -1px var(--kc-contact);
-    }
-    .studio :global(.car-btn:focus-visible) {
-      border-color: var(--kc-seam);
-      background: linear-gradient(180deg, var(--kc-face-hi), var(--kc-face));
-      outline: 2px solid var(--kc-ink);
-      outline-offset: 3px;
-    }
-    .studio :global(.car-btn:disabled) {
-      opacity: 1;
-      cursor: default;
-      background: linear-gradient(180deg, var(--kc-face-hi), var(--kc-face));
-    }
-    .studio :global(.car-btn:disabled)::after {
-      background: var(--kc-ghost);
-    }
-  }
-  @media (prefers-reduced-motion: reduce) {
-    .studio :global(.car-btn),
-    .studio :global(.car-btn)::after {
-      transition: none;
-    }
-  }
-
-
   /* (the writing tiles left with their section, 2026-08-31 — the
      /writing/<slug> pages keep their own styles) */
 

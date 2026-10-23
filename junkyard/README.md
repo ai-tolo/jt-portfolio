@@ -43,3 +43,12 @@ The site is the homepage, the résumé, and the case studies under it.
   wedding sentence, drawn on the paper; retired the same day in round seven (THE SPINE; Jon's thesis: "a catch-all
   system that doesn't care about the location or medium of how the information is getting into the system"): the
   fold's second answer is BY HAND, the pile of New Event sheets, beside Intake's week. A record, not a part
+- StudioMoments.astro — SIX MOMENTS OF THE REAL STUDIO (2026-10-15, the Studio sheet's round four): six tabs over six
+  16:9 crops of the Studio, each with its line; retired 2026-10-23 with THE THESIS (Jon: "it's the lack of decisions I
+  need to make at every level"; "commitment via constraint"): the sheet is one FLIP clip and five highlight rows, five
+  of the six crops beside one sentence each (the engines' is unused, SIGNAL's job). The crops stay in
+  public/builds/studio/; its strings are commented in objects-copy.ts. A record, not a part
+- StudioCircumstances.astro — THE CIRCUMSTANCES (2026-10-15, round five): the Studio sheet's row of three capture
+  frames (plane · pianist · window), problem + answer, with sound from a drawn key; it lived inline in StudioOne.astro
+  and is kept here as it was (markup, frontmatter, the look room's chassis CSS it stood on, the keycaps' studio rules,
+  its script). Retired 2026-10-23 with THE THESIS; the files never landed. A record, not a part

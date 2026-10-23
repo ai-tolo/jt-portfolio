@@ -1,0 +1,351 @@
+---
+/**
+ * THE CIRCUMSTANCES (2026-10-15, round five; retired 2026-10-23 with the thesis). A RECORD, NOT A PART: the Studio
+ * sheet's row of three capture frames (plane · pianist · window), each titled by the problem with one line of answer,
+ * WITH SOUND from a drawn key, plays on a press only, one at a time. It lived inline in StudioOne.astro; its markup,
+ * its frontmatter, its CSS (the look room's chassis it stood on, the placards, the row, the keycaps' studio rules)
+ * and its script are kept here as they were. The strings are commented in objects-copy.ts (STUDIO_COPY.captures).
+ * Nothing imports this file and its imports no longer resolve from here.
+ */
+// SIGNAL STUDIO's captures (2026-10-13; the circumstances, 2026-10-15): a
+// capture's `src` in objects-copy.ts names a file under public/ without its
+// extension; the first of .mp4 / .webm that is there at build time is kept, so
+// a slot whose recording has not landed renders the honest empty frame, never
+// a broken video. Dropping the file in and rebuilding is the whole upload.
+const inPublic = (url?: string | null) =>
+  url && fs.existsSync(path.join(process.cwd(), "public", url.replace(/^\//, ""))) ? url : null;
+const CAPTURE_EXT = [".mp4", ".webm"];
+const captures = STUDIO_COPY.captures.map((c) => ({ ...c, src: CAPTURE_EXT.map((e) => inPublic(c.src + e)).find(Boolean) ?? null }));
+---
+
+      {/* THE CIRCUMSTANCES (round five, 2026-10-15; Jon: two kinds of arrows and bubbles on one sheet confused the
+          cycling): no chassis, no cycling. The three frames stand in ONE ROW, each with its problem, its answer and
+          its play key; stacked under 820px of sheet. */}
+      <div class="st-row" data-circumstances>
+          {captures.map((c) => (
+            <figure class="st-slot" data-pending={c.src ? undefined : ""}>
+              <div class="st-frame">
+                {c.src && <video class="st-video" src={c.src} playsinline preload="metadata" aria-label={`${c.problem} ${c.answer}`} />}
+                {/* THE PLAY KEY: drawn on every frame; live only once the file is in (AudioDex's rule: gone = the key
+                    drawn, dimmed, inert). A press plays with sound; pressed again it pauses. */}
+                <button class="st-play" type="button" aria-pressed="false" disabled={!c.src}
+                  aria-label={c.src ? `Play, with sound: ${c.problem}` : `Not recorded yet: ${c.problem}`}>
+                  <svg viewBox="0 0 24 24" aria-hidden="true"><path class="st-play-go" d="M8.5 5.5v13l10-6.5z"/><path class="st-play-stop" d="M7.5 6h3.4v12H7.5zM13.1 6h3.4v12h-3.4z"/></svg>
+                </button>
+              </div>
+              {/* the placard: the PROBLEM carries the weight, the one line of answer under it */}
+              <figcaption class="st-placard">
+                <span class="st-problem">{c.problem}</span>
+                <span class="st-answer">{c.answer}</span>
+              </figcaption>
+            </figure>
+          ))}
+      </div>
+
+<style>
+  /* THE OBJECT on THE LOOK ROOM'S CHASSIS (Jon, round three, 2026-10-13:
+     "the tiny carousel buttons aren't sufficient … adopt the arrow key
+     buttons from the Illustrations UI"): one 16:9 frame with the look
+     room's two keycaps standing outside it, 24px up from its foot, the dots
+     8px above it, the placard 14px under it. .st-obj is a container so the
+     keys stand on the frame's own geometry in pure CSS (the look room
+     measures a picture of unknown shape; this frame's shape is fixed). */
+  :global(.st-obj) {
+    container: st / inline-size;
+    width: 100%;
+    margin: 56px auto 0; /* the surface's caption → the frames (the band→object beat) */
+    padding-top: 32px; /* the dots' 8 + 24 above the frame */
+    /* the look room's key (.look-band's --kc-*), unchanged in size and
+       travel; its faces are mixed over the SHEET's card instead of the
+       room's ground, since this one stands on paper. A copy: change both
+       or neither */
+    --kc: 61px;
+    --kc-sx: 7px;
+    --kc-sy: 9px;
+    --kc-r: 6px;
+    --kc-gap: 20px;
+    --kc-rise: 24px;
+    --kc-glyph: 29px;
+    --kc-inset: 4px;
+    --kc-ink: var(--sheet-ink);
+    --kc-face-hi: color-mix(in srgb, var(--kc-ink) 2%, var(--sheet-card));
+    --kc-face: color-mix(in srgb, var(--kc-ink) 5%, var(--sheet-card));
+    --kc-face-hover-hi: var(--sheet-card);
+    --kc-face-hover: color-mix(in srgb, var(--kc-ink) 1.5%, var(--sheet-card));
+    --kc-face-down: color-mix(in srgb, var(--kc-ink) 8%, var(--sheet-card));
+    --kc-bevel-hi: var(--sheet-card);
+    --kc-bevel-lo: color-mix(in srgb, var(--kc-ink) 14%, var(--sheet-card));
+    --kc-seam: color-mix(in srgb, var(--kc-ink) 26%, transparent);
+    --kc-skirt-c: color-mix(in srgb, var(--kc-ink) 15%, var(--sheet-card));
+    --kc-lip: color-mix(in srgb, var(--kc-ink) 26%, var(--sheet-card));
+    --kc-contact: color-mix(in srgb, var(--kc-ink) 22%, transparent);
+    --kc-ghost: color-mix(in srgb, var(--kc-ink) 34%, transparent);
+    /* the frame's width: the content's on phones (no keys); on desks the
+       content less one key's room a side (its gap, its body, its cap), so
+       the keys' outer faces stand on the content's edges, the sheet's 56px
+       gutter clear beyond them (cqw resolve against .st-obj where used) */
+    --st-room: calc(var(--kc-gap) + var(--kc-sx) + var(--kc));
+    --st-fw: 100cqw;
+  }
+  /* night: the look room's carbon recipe over the night card */
+  :global(html[data-night] .st-obj) {
+    --kc-face-hi: color-mix(in srgb, var(--kc-ink) 15%, var(--sheet-card));
+    --kc-face: color-mix(in srgb, var(--kc-ink) 10%, var(--sheet-card));
+    --kc-face-hover-hi: color-mix(in srgb, var(--kc-ink) 22%, var(--sheet-card));
+    --kc-face-hover: color-mix(in srgb, var(--kc-ink) 15%, var(--sheet-card));
+    --kc-face-down: color-mix(in srgb, var(--kc-ink) 8%, var(--sheet-card));
+    --kc-bevel-hi: color-mix(in srgb, var(--kc-ink) 26%, var(--sheet-card));
+    --kc-bevel-lo: color-mix(in srgb, var(--kc-ink) 5%, var(--sheet-card));
+    --kc-seam: color-mix(in srgb, var(--kc-ink) 30%, transparent);
+    --kc-skirt-c: color-mix(in srgb, var(--kc-ink) 6.5%, var(--sheet-card));
+    --kc-lip: color-mix(in srgb, var(--kc-ink) 17%, var(--sheet-card));
+    --kc-contact: rgb(0 0 0 / 0.7);
+    --kc-ghost: color-mix(in srgb, var(--kc-ink) 30%, transparent);
+  }
+  @media (min-width: 900px) {
+    :global(.st-obj) {
+      --st-fw: calc(100cqw - 2 * var(--st-room));
+    }
+  }
+  @media (max-width: 899px) {
+    :global(.st-obj) { margin-top: 40px; }
+  }
+  .studio :global(.car) {
+    position: relative;
+  }
+  /* THE PLACARD: the PROBLEM carries the weight (the hook's face, a step smaller), the one line of answer beneath
+     in the body face, dim */
+  .st-placard {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    max-width: min(var(--st-fw), 40ch);
+    margin-top: 6px;
+    text-align: center;
+  }
+  .st-problem {
+    font: 500 1.25rem/1.25 var(--wk-display);
+    letter-spacing: -0.01em;
+    color: var(--sheet-ink);
+    text-wrap: balance;
+    transition: color 560ms ease;
+  }
+  .st-answer {
+    max-width: 48ch;
+    font: 400 0.9375rem/1.5 var(--sheet-sans);
+    color: var(--sheet-dim);
+    text-wrap: pretty;
+    transition: color 560ms ease;
+  }
+  @container (min-width: 820px) {
+    .st-problem { font-size: 1.375rem; }
+    .st-answer { font-size: 1rem; }
+  }
+  /* THE ROW (round five): three frames across on a wide sheet, 24px apart, 56px under the moments (the band→object
+     beat); one column under 820px of sheet. Each frame is its column's width; the key and the placard scale down a
+     step for the smaller frame. */
+  .st-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 36px 24px;
+    margin: 56px auto 0;
+  }
+  .st-row .st-frame { width: 100%; }
+  .st-row .st-play { width: 48px; height: 48px; }
+  .st-row .st-play svg { width: 22px; height: 22px; }
+  .st-row .st-placard { max-width: none; margin-top: 2px; gap: 6px; }
+  @container (min-width: 820px) {
+    .st-row { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    .st-row .st-problem { font-size: 1.0625rem; }
+    .st-row .st-answer { font-size: 0.875rem; }
+  }
+  @media (max-width: 899px) {
+    .st-row { margin-top: 40px; }
+  }
+  /* the chassis's counter would say what the dots say */
+  .studio :global(.car-counter) {
+    display: none;
+  }
+  /* the dots ABOVE the frame, centred, 8px clear of it (the look room's
+     row); the lit dot takes the sheet's hue */
+  .studio :global(.car-dots) {
+    position: absolute;
+    left: 50%;
+    top: calc(-8px - 24px);
+    transform: translateX(-50%);
+    z-index: 2;
+    color: var(--sheet-dim);
+    --car-dot-on: var(--sheet-acc);
+  }
+  /* phones: no keys, the frame swipes (the look room's rule) */
+  @media (max-width: 899px) {
+    .studio :global(.car-nav) {
+      display: none;
+    }
+  }
+  /* desks: THE KEYS, the look room's to the pixel (VISUALS KEYS,
+     2026-09-09): a 61px cap on a 7 × 9 oblique body, the stem-and-head
+     arrow, the press that seats the body, each key 20px outside the frame
+     with its body toward it, the bodies 24px above the frame's foot */
+  @media (min-width: 900px) {
+    .studio :global(.car-nav) {
+      position: static;
+      margin: 0;
+    }
+    .studio :global(.car-btn) {
+      position: absolute;
+      z-index: 2;
+      box-sizing: border-box;
+      width: var(--kc);
+      height: var(--kc);
+      margin: 0;
+      padding: 0;
+      top: calc(var(--st-fw) * 9 / 16 - var(--kc-rise) - var(--kc-sy) - var(--kc));
+      transform: none;
+      display: grid;
+      place-items: center;
+      appearance: none;
+      border: 1px solid var(--kc-seam);
+      border-radius: var(--kc-r);
+      color: var(--kc-ink);
+      background: linear-gradient(180deg, var(--kc-face-hi), var(--kc-face));
+      opacity: 1;
+      cursor: pointer;
+      box-shadow:
+        inset 1px 1px 0 var(--kc-bevel-hi),
+        inset -1px -1px 0 var(--kc-bevel-lo),
+        1px 1px 0 var(--kc-skirt-c),
+        2px 2px 0 var(--kc-skirt-c),
+        2px 3px 0 var(--kc-skirt-c),
+        3px 4px 0 var(--kc-skirt-c),
+        4px 5px 0 var(--kc-skirt-c),
+        5px 6px 0 var(--kc-skirt-c),
+        5px 7px 0 var(--kc-skirt-c),
+        6px 8px 0 var(--kc-skirt-c),
+        7px 9px 0 var(--kc-lip),
+        9px 12px 6px -3px var(--kc-contact);
+      transition: transform 70ms cubic-bezier(0.2, 0.7, 0.3, 1), box-shadow 70ms cubic-bezier(0.2, 0.7, 0.3, 1), background 120ms ease;
+    }
+    .studio :global([data-car-prev]) {
+      left: auto;
+      right: calc(50% + var(--st-fw) / 2 + var(--kc-gap) + var(--kc-sx));
+    }
+    .studio :global([data-car-next]) {
+      right: auto;
+      left: calc(50% + var(--st-fw) / 2 + var(--kc-gap) + var(--kc-sx));
+      box-shadow:
+        inset -1px 1px 0 var(--kc-bevel-hi),
+        inset 1px -1px 0 var(--kc-bevel-lo),
+        -1px 1px 0 var(--kc-skirt-c),
+        -2px 2px 0 var(--kc-skirt-c),
+        -2px 3px 0 var(--kc-skirt-c),
+        -3px 4px 0 var(--kc-skirt-c),
+        -4px 5px 0 var(--kc-skirt-c),
+        -5px 6px 0 var(--kc-skirt-c),
+        -5px 7px 0 var(--kc-skirt-c),
+        -6px 8px 0 var(--kc-skirt-c),
+        -7px 9px 0 var(--kc-lip),
+        -9px 12px 6px -3px var(--kc-contact);
+    }
+    .studio :global(.car-btn > svg) {
+      display: none;
+    }
+    .studio :global(.car-btn)::before {
+      content: "";
+      position: absolute;
+      inset: -4px;
+    }
+    .studio :global(.car-btn)::after {
+      content: "";
+      position: relative;
+      top: 0;
+      left: calc(-1 * var(--kc-inset));
+      width: var(--kc-glyph);
+      height: var(--kc-glyph);
+      background: currentColor;
+      -webkit-mask: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect x='3.5' y='14.4' width='15' height='3.2' rx='1.6'/><path d='M16.5 6.4 29 16 16.5 25.6z'/></svg>") center / contain no-repeat;
+      mask: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect x='3.5' y='14.4' width='15' height='3.2' rx='1.6'/><path d='M16.5 6.4 29 16 16.5 25.6z'/></svg>") center / contain no-repeat;
+      transition: opacity 120ms ease;
+    }
+    .studio :global([data-car-prev])::after {
+      left: var(--kc-inset);
+      transform: scaleX(-1);
+    }
+    .studio :global(.car-btn:hover:not(:disabled)) {
+      border-color: var(--kc-seam);
+      background: linear-gradient(180deg, var(--kc-face-hover-hi), var(--kc-face-hover));
+    }
+    .studio :global(.car-btn:active:not(:disabled)),
+    .studio :global(.car-btn[data-pressed]) {
+      transform: translate(calc(var(--kc-sx) - 1px), calc(var(--kc-sy) - 2px));
+      background: linear-gradient(180deg, var(--kc-face), var(--kc-face-down));
+      box-shadow:
+        inset 1px 1px 0 var(--kc-bevel-hi),
+        inset -1px -1px 0 var(--kc-bevel-lo),
+        1px 1px 0 var(--kc-skirt-c),
+        1px 2px 0 var(--kc-lip),
+        2px 3px 2px -1px var(--kc-contact);
+    }
+    .studio :global([data-car-next]:active:not(:disabled)),
+    .studio :global([data-car-next][data-pressed]) {
+      transform: translate(calc(1px - var(--kc-sx)), calc(var(--kc-sy) - 2px));
+      box-shadow:
+        inset -1px 1px 0 var(--kc-bevel-hi),
+        inset 1px -1px 0 var(--kc-bevel-lo),
+        -1px 1px 0 var(--kc-skirt-c),
+        -1px 2px 0 var(--kc-lip),
+        -2px 3px 2px -1px var(--kc-contact);
+    }
+    .studio :global(.car-btn:focus-visible) {
+      border-color: var(--kc-seam);
+      background: linear-gradient(180deg, var(--kc-face-hi), var(--kc-face));
+      outline: 2px solid var(--kc-ink);
+      outline-offset: 3px;
+    }
+    .studio :global(.car-btn:disabled) {
+      opacity: 1;
+      cursor: default;
+      background: linear-gradient(180deg, var(--kc-face-hi), var(--kc-face));
+    }
+    .studio :global(.car-btn:disabled)::after {
+      background: var(--kc-ghost);
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .studio :global(.car-btn),
+    .studio :global(.car-btn)::after {
+      transition: none;
+    }
+  }
+</style>
+
+<script>
+  // THE CIRCUMSTANCES (2026-10-15): the Studio sheet's three frames play WITH
+  // SOUND, on a press only (the key on the frame; pressed again it pauses),
+  // one at a time (a start stops the others) and never off-screen (the row
+  // leaving the viewport pauses them). Nothing autoplays, nothing is muted
+  // by default. Nothing to do while every slot is the honest empty frame.
+  {
+    const car = document.querySelector<HTMLElement>("#build-studio [data-circumstances]");
+    const slots = car ? Array.from(car.querySelectorAll<HTMLElement>(".st-slot")) : [];
+    const live = slots.map((s) => ({ s, v: s.querySelector<HTMLVideoElement>(".st-video"), k: s.querySelector<HTMLButtonElement>(".st-play") })).filter((x) => x.v && x.k) as { s: HTMLElement; v: HTMLVideoElement; k: HTMLButtonElement }[];
+    if (car && live.length) {
+      const stopAll = (except?: HTMLVideoElement) => live.forEach(({ v }) => { if (v !== except && !v.paused) v.pause(); });
+      live.forEach(({ s, v, k }) => {
+        v.muted = false;
+        v.volume = 1;
+        const paint = () => { const on = !v.paused && !v.ended; k.setAttribute("aria-pressed", on ? "true" : "false"); s.toggleAttribute("data-playing", on); };
+        v.addEventListener("play", paint);
+        v.addEventListener("pause", paint);
+        v.addEventListener("ended", () => { v.currentTime = 0; paint(); });
+        k.addEventListener("click", () => {
+          if (v.paused || v.ended) { stopAll(v); void v.play().catch(() => {}); }
+          else v.pause();
+        });
+      });
+      const scroller = document.querySelector("main");
+      new IntersectionObserver((es) => es.forEach((e) => { if (!e.isIntersecting) stopAll(); }), { root: scroller && getComputedStyle(scroller).overflowY === "auto" ? scroller : null, threshold: 0.2 }).observe(car);
+    }
+  }
+</script>
