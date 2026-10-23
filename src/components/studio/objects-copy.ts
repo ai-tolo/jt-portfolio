@@ -86,11 +86,16 @@ export const ARCHIVE_COPY = {
   // DRAFT (2026-10-13), Jon owns the word: the build's kind, the one mono word over its name (the sheet's eyebrow).
   // THE GROUND (2026-10-22): `foundation` (was "app"): the database Intake and the Studio stand on
   kind: "foundation",
-  // the band's line: what it is, first. THE GROUND (2026-10-22): two short sentences, Whisper named once. DRAFT, Jon
-  // edits; was "An app that reads every recording I've made, names each one by what's inside it, and makes them
+  // the band's line: what it is, first. 2026-10-22, night (Jon of THE GROUND's "Every recording I own, transcribed by
+  // Whisper, measured and named. Intake and the Studio stand on it.": "sucks. It should set the scene better than
+  // trying to sound cool"). DRAFT from his brainstorm, two short sentences; his two lines, either his to swap in:
+  //   "Computers are surprisingly effective at deciphering audio files. This audio database utilizes the information
+  //    code can confidently extract (transcripts, bpm, key, waveform render, etc.)"
+  //   "All the audio. But HD. And searchable."
+  // Earlier: "An app that reads every recording I've made, names each one by what's inside it, and makes them
   // searchable the way photos are." (and before that "Every recording I've made, read and named by what's inside it,
   // and searchable the way photos are.")
-  dek: "Every recording I own, transcribed by Whisper, measured and named. Intake and the Studio stand on it.",
+  dek: "Computers are surprisingly good at listening. Every recording I own, transcribed, keyed and searchable.",
   // THE FLOOR LINE (2026-10-22, THE GROUND): the sheet's last line, the two names in-page links to the sheets that
   // read it (#build-watch above, #build-studio below). DRAFT, his to rewrite: "Read by Intake above and the Studio below."
   floor: { lead: "Read by ", up: "Intake", mid: " above and ", down: "the Studio", tail: " below." },
