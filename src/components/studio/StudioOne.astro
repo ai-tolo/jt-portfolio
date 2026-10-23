@@ -20,7 +20,7 @@ import illustrations from "./rooms/illustrations-manifest.json";
 import Signal from "../signal/Signal.astro";
 import Transport from "../Transport.astro";
 import Carousel from "../Carousel.astro";
-import { BUILDS, type BuildBlock } from "./builds-copy";
+import { BUILDS } from "./builds-copy";
 import IntakeHero from "../IntakeHero.astro";
 // THE BOARD (2026-10-19, late): the Intake sheet's object, four scenes turning by themselves (the sort is in junkyard/)
 import IntakeCatchAll from "../IntakeCatchAll.astro";
@@ -222,15 +222,9 @@ const BAR = NAV.flatMap((g) =>
 // never the hard part.", 2026-08-31): his words, not a draft (2026-10-13; a
 // draft piece was written and then withdrawn once his was found)
 const STUDIO = BUILDS.find((b) => b.id === "studio")!;
-// a story's columns: its blocks split at every `break` (the room's card sets
-// them side by side on desks, stacked on phones); media slots don't print here
-type StoryBlock = Extract<BuildBlock, { type: "p" | "list" }>;
-const columns = (blocks: BuildBlock[]): StoryBlock[][] =>
-  blocks.reduce<StoryBlock[][]>((cols, blk) => {
-    if (blk.type === "break") cols.push([]);
-    else if (blk.type === "p" || blk.type === "list") cols[cols.length - 1].push(blk);
-    return cols;
-  }, [[]]);
+// THE WHOLE STORY is printed on no sheet since 2026-10-22 (Intake round seven, AudioDex THE GROUND, the Studio THE
+// CUT): the column splitter and its CSS (.wk-story-body, .wk-p.hinge, .wk-list, .wk-whole-lead) are deleted; the
+// locked paragraphs stay in builds-copy.ts
 ---
 
 <a class="skip" href="#work">Skip to the builds</a>
@@ -581,26 +575,15 @@ const columns = (blocks: BuildBlock[]): StoryBlock[][] =>
       <div class="wk-story" data-story>
         <p class="wk-lede">{STUDIO.headline}</p>
         {/* THE FOLD (2026-10-15; 2026-10-19, Jon: "that text margin … looks different than everything else. So I need
-            cohesion across the modules"): the line in Jon's voice outside the clip (the preview's second line), then
-            the keep line as the house's floor line (.wk-rule, no size or hue of its own), then the whole story. No
-            beats, no hood (the surface above is the hood). */}
-        <p class="wk-said">
-          <span class="wk-said-q" aria-hidden="true">“</span>{STUDIO_COPY.said}<span class="wk-said-q" aria-hidden="true">”</span>
-        </p>
+            cohesion across the modules"). THE CUT (2026-10-22, Intake's cut, one rule for every sheet that folds): at
+            rest the locked hook alone and the chevron; open, the said line (the clip's first block, as on Intake) and
+            the keep line as the house's floor line (.wk-rule), NOTHING ELSE: the whole story left the sheet (the
+            locked paragraphs stay in builds-copy.ts). No beats, no hood (the surface above is the hood). */}
         <div class="wk-story-clip" id="story-studio" inert>
+          <p class="wk-said">
+            <span class="wk-said-q" aria-hidden="true">“</span>{STUDIO_COPY.said}<span class="wk-said-q" aria-hidden="true">”</span>
+          </p>
           <p class="wk-rule">{STUDIO_COPY.keep}</p>
-          <div class="sheet-sec">
-            <p class="sheet-t">the whole story</p>
-            <div class="wk-story-body sheet-cols">
-              {columns(STUDIO.blocks).map((col) => (
-                <div class="sheet-col">
-                  {col.map((blk) =>
-                    blk.type === "p" ? <p class:list={["wk-p", "sheet-p", { hinge: blk.hinge }]} set:html={blk.html} /> : <ul class="wk-list">{blk.items.map((it) => <li set:html={it} />)}</ul>
-                  )}
-                </div>
-              ))}
-            </div>
-          </div>
         </div>
         <button class="wk-more" type="button" aria-expanded="false" aria-controls="story-studio" aria-label="Read the whole story">
           <svg class="wk-chev" viewBox="0 0 20 20" aria-hidden="true"><path d="M5 8l5 5 5-5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
@@ -1919,13 +1902,6 @@ const columns = (blocks: BuildBlock[]): StoryBlock[][] =>
   .wk-story[data-open] .wk-story-clip {
     height: auto;
   }
-  /* the story's two columns and paragraphs are .sheet-cols / .sheet-col /
-     .sheet-p (src/styles/sheet.css); .wk-p marks the hinge line */
-  .wk-story-body {
-    /* under its plain label (the label's own 24 above it, as on SIGNAL's
-       sections); the sheet carries the side gutter */
-    padding: 0 0 var(--sp-8);
-  }
   /* ONE RHYTHM IN EVERY FOLD (2026-10-19, Jon: "I need cohesion across the
      modules"): hook → said → [the evidence] → the floor line → the whole
      story, the same numbers on all three sheets, set HERE and never per
@@ -1939,39 +1915,15 @@ const columns = (blocks: BuildBlock[]): StoryBlock[][] =>
   .wk-story-clip > .sheet-sec { margin-top: var(--sp-6); }
   .wk-story-clip > .sheet-sec:not(:last-child) { padding-bottom: 0; }
   /* the Intake fold (round five, 2026-10-22): the wedding sentence is the clip's first block; the figures stand the
-     same distance under it */
-  #build-watch .wk-story-clip > .wk-said { margin: var(--sp-6) auto var(--sp-6); }
+     same distance under it. The Studio's since THE CUT (2026-10-22): one rule for every sheet that folds */
+  .wk-story-clip > .wk-said { margin: var(--sp-6) auto var(--sp-6); }
   @container (min-width: 820px) {
     .wk-lede {
       margin-top: var(--sp-12);
     }
     .wk-story-clip > :first-child,
     .wk-story-clip > .sheet-sec { margin-top: var(--sp-8); }
-    #build-watch .wk-story-clip > .wk-said { margin-top: var(--sp-8); margin-bottom: var(--sp-8); }
-  }
-  /* the hinge line, in the Intake's red */
-  .wk-p.hinge {
-    color: #ff6b4a;
-    margin-block: var(--sp-6);
-  }
-  .wk-p.hinge em { font-style: italic; }
-  .wk-list {
-    margin: 0 0 var(--sp-4);
-    padding: 0 0 0 1.1em;
-    font-size: 1rem;
-    line-height: 1.6;
-    color: var(--mx-ink);
-  }
-  .wk-list li { margin: 0 0 6px; padding-left: 0.2em; }
-  .wk-list li::marker { color: var(--mx-dim); }
-  /* the kind, in the room's mono label face (the run's transcript · verdict · ticket · deck) */
-  .wk-list .k {
-    display: inline-block;
-    margin-right: 0.45em;
-    font: 500 0.6875rem/1 var(--wk-mono);
-    letter-spacing: 0.12em;
-    color: var(--mx-dim);
-    transform: translateY(-1px);
+    .wk-story-clip > .wk-said { margin-top: var(--sp-8); margin-bottom: var(--sp-8); }
   }
   /* ── THE WEDDING FOLD (2026-10-15): the sentence once, then the same sentence to two machines. The sentence is set
      in the hook's face a step smaller, centred, with its quote marks hung; the two sides are figures on the sheet,
@@ -1994,7 +1946,6 @@ const columns = (blocks: BuildBlock[]): StoryBlock[][] =>
   .wk-said-q { color: var(--sheet-acc); font-weight: 500; }
   /* round six (2026-10-22): the two drawn answers (IntakeProof) stand the clip's block distance under the sentence
      (the `0:31 · from the wrist` fact of round six left in round seven). The screenshot figures (.vs) are gone */
-  .wk-whole-lead { font-weight: 600; }
   /* THE FLOOR LINE: the last line before the whole story on all three
      sheets (Intake's one-match rule, AudioDex's floor, the Studio's keep
      line since 2026-10-19) */
