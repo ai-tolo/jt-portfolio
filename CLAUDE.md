@@ -129,11 +129,12 @@ session must follow.
 - The proofs sit on the room's ground (no dark slab): `.proof-panel` hands
   each module `--pf-ink/-dim/-ground/-card/-line/-soft` and the three faces,
   day and night; one accent hue per module; each tab's panel follows it in
-  the DOM. MARKS (2026-10-06): agent → mastering agent bullet 0, judge →
-  bullet 2 (the evidence clause), signal → the instrument's bullet 0,
-  parser → CHS bullet 1, crediverso → Crediverso bullet 1 (since
-  2026-10-23: "the revised main flow", the flow whose V1 nav call it
-  walks; the sheet has no bullet naming the nav itself).
+  the DOM. MARKS (2026-10-23, branch resume-sheet, DRAFT): the builds are
+  the bullets of ONE top entry `data-pr-org="Own products"` (title Design
+  Engineer, 2026 – Present); agent AND judge → its bullet 4 (the mastering
+  agent, one tab each side), signal → its bullet 2 (the instrument), parser
+  → CHS bullet 1, crediverso → Crediverso bullet 0 ("the revised main
+  flow", the flow whose V1 nav call it walks; the growth line is bullet 1).
 - THE CREDIVERSO WALKTHROUGH (2026-10-23, Jon: "what if we snag the
   Crediverso UI walkthrough (or a mini-ish version of it) as an expandable
   module on the résumé"): the fifth proof, `proof-crediverso`
@@ -162,15 +163,46 @@ session must follow.
 - Proof numbers come from `src/lib/judge-ledger.json`, a dated snapshot of
   the real harness DB (`~/automation/data/inventory.db` on the M1:
   `mix_judgements` / `mix_jobs` / `mix_variants`). Refresh by re-querying;
-  never invent or "round" these numbers. The sheet's evidence clause
-  IMPORTS them inside resume-print.ts (votes, originals kept, date range);
-  never type them into the prose.
-- Names on the sheet (Jon, 2026-09-21): each build leads with a plain
-  descriptor ("AI mastering agent", "Audio catalog and search", "Browser
-  instrument"). Finishable / the Engineer / the Catalog / SIGNAL never
+  never invent or "round" these numbers. Since 2026-10-23 (DRAFT) the sheet
+  carries NO vote count: every simulated screen read "the original won 26
+  of 58" as the agent losing. The sentence reads "which I judge blind,
+  loudness-matched, against the untouched original" (the agent renders,
+  Jon votes: the fact check caught a draft that made the agent the judge);
+  the ledger shows on the judge's proof panel only.
+- Names on the sheet (Jon, 2026-09-21; bent 2026-10-23, DRAFT, Jon's call):
+  each build leads with a plain descriptor ("A catch-all agent", "An audio
+  catalog", "A browser instrument", "A browser studio", "An AI mastering
+  agent") and carries the homepage's public name in parentheses (Intake,
+  AudioDex, SIGNAL, Signal Studio), so the reader who then types uxjon.com
+  meets the same things. Finishable / the Engineer / the Catalog never
   appear on the résumé; the naming law below is for the site's surfaces,
   not the sheet. The reader is a cold design/engineering lead who will not
   click: every bullet stands without the site.
+- THE SHAPE (2026-10-23, DRAFT, from the read of the 86 live postings on the
+  bench and four fresh reads of the result, ~/career-strategy/resume-2026-10/
+  positioning.md and v2/test-results-v2.md): Experience opens with ONE
+  employment-grade entry, "Own products · Design Engineer · 2026 – Present",
+  the five products as its bullets (Intake, AudioDex, SIGNAL, Signal Studio,
+  the mastering agent; the bare URL line under the entry is the mastering
+  agent's study). Parsers derive the current title, years and recency from
+  employment entries only; the old "Selected Builds" section parsed as three
+  employers with the stack as the job title. `builds` is empty and an empty
+  section does not render. Cut as unasked by 0 of the 30 top postings: the
+  athletics closer, Dean's List and the grant, the Fortune 500 / farmers
+  clause (the Crediverso growth line came back as the summary's
+  "marketing"). Skills print one category per line.
+- THE PRINT CONTRACT GREW (2026-10-23, proven on a real pdfjs parser,
+  OpenResume, which on the earlier PDF found NO sections): headings carry
+  NO letter-spacing in print (tracked glyphs read as "E X P E R I E N C E";
+  pypdf had tolerated 0.12em, pdfjs does not); contact separators are
+  NBSP·NBSP inside one text run (a space at a run boundary printed as a
+  positioning gap and fused the email into the phone); the entry head is
+  org + dates on one row FIRST in the DOM, the title its own line after
+  (extractors read the stream in DOM order, and a title between org and
+  dates split the date range onto its own line); the name and the title
+  print on separate lines; bullets print as U+2022. Screen keeps its stacked
+  mono row and its dash. The parser now reads every section, company, title
+  and date range.
 - Org names do NOT link (2026-09-21). The one bare URL line under the
   mastering agent (uxjon.com/case-studies/the-console) is the sheet's only
   link and the ONLY link to a study left anywhere on the site. The
