@@ -9,11 +9,12 @@
 // shortcut TO the résumé; inside the résumé room that reason is spent —
 // the PDF action stays on the sheet).
 //
-// THE ROOM MODEL: /resume and the studies are one room, so every away
-// page carries the same column — résumé, then the studies from
-// case-links.ts — with the CURRENT page lit exactly like a home rail row
-// (the-console is unrouted 2026-10-15, Momence pattern: page live,
-// linked from the sheet's evidence line only).
+// THE ROOM MODEL: /resume and the studies were one room (2026-10-15); since
+// 2026-10-23 the studies step back the Momence way (Jon: "I'd rather just
+// cut the case studies for now"): live at their URLs, reached by nothing,
+// so the column is the JT mark and résumé alone, lit exactly like a home
+// rail row when it is the current page. A study opened directly still
+// takes its `current` and simply lights nothing.
 //
 // THE JT MARK at the head is the way home: the favicon's letterforms in
 // the rail's ink (the one pictogram left sitewide — logo-goes-home is
@@ -23,25 +24,16 @@
 // the away phone bar's dedicated round is still owed (Jon, 2026-10-15).
 // Screen-only throughout: the bar and rail must never print.
 import NightSwitch from "./NightSwitch.astro";
-import { CASE_LINKS } from "../../lib/case-links";
 
 interface Props {
-  /** The lit row: which of the room's places this page is. Omit on
-   *  pages outside the room (/signal, 404, momence, the-console). */
+  /** The lit row: "resume" on /resume; anything else (a study's slug, or
+   *  omitted on /signal, 404) lights nothing. */
   current?: string;
 }
 const { current } = Astro.props;
 
-// the room's places, in the résumé's order: the sheet ALONE, then the
-// studies (four since 2026-10-15: signal-studio leads) as ONE block (Jon, 2026-10-15: "résumé on its own …
-// this communicates the real estate the résumé has on the page"; "the
-// three case studies are conceptualized as one block … they're all
-// visible in one view")
+// the room's one place: the sheet (the studies' block left 2026-10-23, and the 60px beat with it)
 const SHEET = [{ slug: "resume", word: "résumé", href: "/resume" }];
-// the row's word: a study's own `word` where the slug would not fit the
-// 134px row (signal-studio → `studio`, the homepage rail's word), else
-// the slug
-const STUDIES = CASE_LINKS.map(({ slug, word }) => ({ slug, word: word ?? slug, href: `/case-studies/${slug}` }));
 ---
 
 <nav class="awayrail" aria-label="Site">
@@ -61,25 +53,22 @@ const STUDIES = CASE_LINKS.map(({ slug, word }) => ({ slug, word: word ?? slug, 
       <path d="M79.0212 12.6336L60.3635 12.6336L60.3635 34.0352L54.1658 34.0352L54.1658 12.6336L35.508 12.6336L35.508 7.30743L79.0212 7.30743L79.0212 12.6336Z" />
     </svg>
   </a>
-  {/* the room's places — the homepage rail's exact row (134×44, the word
-      flush right), the current page lit as an ink pill; résumé stands
-      alone, the studies clump as one block */}
+  {/* the room's place — the homepage rail's exact row (134×44, the word
+      flush right), lit in the ember when it is the current page */}
   <div class="aw-col">
-    {[SHEET, STUDIES].map((block) => (
-      <ul class="aw-list" role="list">
-        {block.map((p) => (
-          <li>
-            <a
-              class:list={["aw-item", { "aw-res": p.slug === "resume" }]}
-              href={p.href}
-              aria-current={current === p.slug ? "page" : undefined}
-            >
-              <span class="aw-word">{p.word}</span>
-            </a>
-          </li>
-        ))}
-      </ul>
-    ))}
+    <ul class="aw-list" role="list">
+      {SHEET.map((p) => (
+        <li>
+          <a
+            class:list={["aw-item", { "aw-res": p.slug === "resume" }]}
+            href={p.href}
+            aria-current={current === p.slug ? "page" : undefined}
+          >
+            <span class="aw-word">{p.word}</span>
+          </a>
+        </li>
+      ))}
+    </ul>
   </div>
   {/* phone bar only: the résumé shortcut in the home bar's ember pill */}
   <a class="aw-cv" href="/resume" aria-current={current === "resume" ? "page" : undefined}
@@ -225,16 +214,11 @@ const STUDIES = CASE_LINKS.map(({ slug, word }) => ({ slug, word: word ?? slug, 
   /* ── the words (the homepage rail's row, value for value) ─────────── */
   .aw-col {
     flex-direction: column;
-    /* the gap between the BLOCKS: résumé alone above, the studies below
-       (Jon, 2026-10-15: the distance says the résumé's real estate) */
-    gap: 60px;
     width: 134px;
   }
   .aw-list {
     display: flex;
     flex-direction: column;
-    /* inside a block the rows clump: the three studies read as ONE unit
-       (home's column breathes at 30) */
     gap: 14px;
     margin: 0;
     padding: 0;

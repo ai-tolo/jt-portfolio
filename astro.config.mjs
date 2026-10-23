@@ -30,8 +30,9 @@ export default defineConfig({
   adapter: vercel(),
   integrations: [
     sitemap({
-      // momence is deliberately off-shelf: live at its URL, not advertised.
-      filter: (page) => !page.includes('/case-studies/momence'),
+      // the case studies are off-shelf (momence since 2026-09; every study since 2026-10-23, Jon: "I'd rather just
+      // cut the case studies for now"): live at their URLs, not advertised.
+      filter: (page) => !page.includes('/case-studies/'),
     }),
   ],
   build: {
