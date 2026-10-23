@@ -17,13 +17,17 @@ export const CARD = {
   // DRAFT (2026-10-13), Jon owns the word: the build's kind, the one mono word over the card's title (the eyebrow);
   // the story's first sentence and the résumé ("browser instrument") already call it that
   kind: "instrument",
-  // THE CUT (2026-10-22, Jon: "Claude built that, and that's stupid that I would say that before they even touched the
-  // instrument"): at rest the card is how to play and ONE line, the dare. DRAFT in his voice, cut to one sentence from
-  // his longer dare; his to extend.
-  dare: "You can't play a wrong note.",
-  // THE RECEIPT returns only when it is true: printed in the dare's slot the moment the export cap hands a WAV to the
-  // browser (SignalCard's script). DRAFT, his words from the 2026-10-15 interview.
-  receipt: "Your first song is in your downloads.",
+  // THE FEELING (2026-10-22, late; Jon's razor: "not the safety. it's the feeling of having made something, easily,
+  // instantly, tangibly"): at rest, under the device, THREE MOVES as the card's one block, then how to play. Jon's
+  // content ("Space = Drums. A-L are the white keys. B = Bass (it follows whatever you're playing on the keys)"), the
+  // `=` form his; DRAFT as set. One line on a wide sheet, a line each on a narrow one.
+  moves: ["Space = drums.", "A–L = the white keys.", "B = bass, and it follows whatever you play."],
+  // THE RECEIPT, printed in the moves' slot the moment the export cap hands a WAV to the browser (SignalCard's
+  // script), for the rest of the visit. Jon's words, NOT draft.
+  receipt: "Good or bad, you just made a demo.",
+  // THE RECORD (2026-10-22, late): the dare of THE CUT and the receipt before Jon's.
+  // dare: "You can't play a wrong note.",
+  // receipt: "Your first song is in your downloads.",
   howTitle: "how to play",
   // THE RECORD (2026-10-22): no longer rendered; THE CUT took the story, under the hood and where it came from off the
   // card. Kept as written.

@@ -3,7 +3,7 @@
 // UNIT in a dark well — the song's SCREEN (its clock, 22 px amber, no caption: your song is this long) and the CAP that
 // prints it, two parts of one size. The instrument keeps everything (take.ts), so there is nothing to arm: the unit is
 // DORMANT until a sound has been made, then the LED and the cap's inner glow breathe. A press prints the take as a WAV
-// named for the day, the key and the tempo, and runs THE PRINT (payoff.ts, Jon's pick of 2026-10-05: the device
+// named UXJON.COM CHANGED MY LIFE.wav (2026-10-22; was the day, the key and the tempo), and runs THE PRINT (payoff.ts, Jon's pick of 2026-10-05: the device
 // celebrates in its own grammar — a band of light crosses the chassis, the titles and the piano's lamps light under it),
 // then hands the file to the browser as a download as the band leaves; after `saved` the screen keeps the evidence
 // (the length · the key · the tempo, one line each) before the clock comes back. The words on the cap say what happens:
@@ -25,11 +25,12 @@ export const fmtClock = (s: number): string => {
   return `${Math.floor(t / 60)}:${String(t % 60).padStart(2, '0')}`;
 };
 export const dayOf = (when = new Date()): string => `${when.getFullYear()}-${String(when.getMonth() + 1).padStart(2, '0')}-${String(when.getDate()).padStart(2, '0')}`;
-/** The file's name: the day, the key, the tempo. */
-export function songName(key: number, scale: string, bpm: number, when = new Date()): string {
-  const k = (KEY_NAMES[((key % 12) + 12) % 12] || 'C').replace('#', 's');
-  const mode = scale === 'minor' ? 'minor' : 'major';
-  return `signal-${dayOf(when)}-${k}-${mode}-${Math.round(bpm)}bpm.wav`;
+/** The file's name. 2026-10-22 (Jon: the file named "something alive", his example): ONE name for every song, so his
+ *  address travels with the file; was `signal-<day>-<key>-<mode>-<bpm>bpm.wav`. The arguments stay (the call site and
+ *  SongInfo are untouched); the day, the key and the tempo still print on the screen's evidence. */
+export const SONG_FILE = 'UXJON.COM CHANGED MY LIFE.wav';
+export function songName(_key: number, _scale: string, _bpm: number, _when = new Date()): string {
+  return SONG_FILE;
 }
 const firstTime = (): boolean => { try { return localStorage.getItem(FIRST_KEY) !== '1'; } catch { return false; } };
 const markFirst = (): void => { try { localStorage.setItem(FIRST_KEY, '1'); } catch { /* a locked store: every song is the first */ } };

@@ -26,6 +26,9 @@
  * but its export cap takes `.saved` in the same tick it hands the WAV to the browser (export-view.ts `land()`); the
  * card watches the export corner for that class and prints the receipt IN THE DARE'S SLOT (one grid cell, so nothing
  * moves), in the card's accent, for the rest of the visit. The instrument itself is untouched.
+ * THE FEELING (2026-10-22, late; Jon: "not the safety. it's the feeling of having made something, easily, instantly,
+ * tangibly"): the dare leaves; the slot is THREE MOVES (his content, DRAFT) and moves ABOVE how to play, right under
+ * the device; the receipt in it is his line, "Good or bad, you just made a demo."
  */
 import "../../styles/sheet.css";
 import { CARD } from "./signal-card-copy.ts";
@@ -43,16 +46,16 @@ const around = part === "around";
 
   {around && <slot />}
 
+  {/* THE MOVES (2026-10-22, late): one slot under the device. At rest the three moves; once a song is printed, the
+      receipt in its place (the script below fills it, so a screen reader hears it then) */}
+  <div class="sc-line">
+    <p class="sc-moves">{CARD.moves.map((m, i) => <span>{i > 0 && " "}{m}</span>)}</p>
+    <p class="sc-receipt" role="status" data-line={CARD.receipt}></p>
+  </div>
+
   <div class="sheet-sec sc-how" data-write-up={around ? "" : undefined}>
     <p class="sheet-t" id="how-to-play">{CARD.howTitle}</p>
     <HowToPlay />
-  </div>
-
-  {/* THE CUT (2026-10-22): one slot under how to play. At rest the dare; once a song is printed, the receipt in its
-      place (the script below fills it, so a screen reader hears it then) */}
-  <div class="sc-line">
-    <p class="sc-dare">{CARD.dare}</p>
-    <p class="sc-receipt" role="status" data-line={CARD.receipt}></p>
   </div>
 </div>
 
@@ -105,24 +108,29 @@ const around = part === "around";
   /* THE CUT (2026-10-22): the title → the device is the device stage's own 56 (StudioOne), as band → object on the
      work sheets; on /signal the title → how to play's hairline keeps the 40 */
   .sc[data-part="around"] .sc-title { margin-bottom: 0; }
-  /* THE LINE: the dare and the receipt in ONE grid cell (the work sheets' foot: one slot, so nothing below moves),
-     set as the house floor line (.wk-rule: centred, 1rem/1.6, 62ch); the diagram → it 56 (how to play's 32 + 24),
-     the card's pad beneath */
+  /* THE LINE: the moves and the receipt in ONE grid cell (one slot, so nothing below moves), in the display face at
+     the house floor line's size (1rem/1.6, centered, 62ch). Since THE FEELING (2026-10-22, late) it stands under the
+     device: the stage's own 56 above it (StudioOne; on /signal the title's 40), 32 to how to play's hairline */
   .sc-line {
     display: grid;
-    margin: 24px auto 0;
+    margin: 0 auto 32px;
     max-width: 62ch;
     text-align: center;
   }
   .sc-line > p {
     grid-area: 1 / 1;
     margin: 0;
+    font-family: var(--sheet-display);
     font-size: 1rem;
     line-height: 1.6;
     text-wrap: balance;
     transition: opacity 0.4s ease;
   }
-  .sc-dare { color: var(--sheet-ink); }
+  .sc-moves { color: var(--sheet-ink); }
+  /* a narrow sheet: a line each */
+  @container sheet (max-width: 619px) {
+    .sc-moves > span { display: block; }
+  }
   /* the receipt: the card's sapphire mixed toward the ink until 4.5:1 on the paper by day (the hints' recipe), bare
      at night, where the sapphire is already light on dark */
   .sc-receipt {
@@ -132,7 +140,7 @@ const around = part === "around";
     opacity: 0;
   }
   :global(html[data-night]) .sc-receipt { --rc-mix: 100%; }
-  .sc[data-printed] .sc-dare { opacity: 0; }
+  .sc[data-printed] .sc-moves { opacity: 0; }
   .sc[data-printed] .sc-receipt { opacity: 1; }
   @media (prefers-reduced-motion: reduce) {
     .sc-line > p { transition: none; }
