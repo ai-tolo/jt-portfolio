@@ -145,7 +145,7 @@ export const printContent: PrintResumeContent = {
         "A catch-all agent (Intake) that turns a voice memo or a text to myself into calendar and reminder changes, or a ticket for me to judge. Python, SQLite, Whisper, Claude.",
         "An audio catalog (AudioDex), about 20,000 recordings transcribed, fingerprinted, deduplicated and classified by a Python pipeline (Whisper, librosa, Claude), searchable by a word from a phone app in TypeScript.",
         "A browser instrument (SIGNAL) on my homepage, drums, bass and keys under the computer keyboard; it records a visitor's take as a WAV. TypeScript, Web Audio.",
-        "A browser studio (Signal Studio) in TypeScript and Web Audio. One click samples any instrument I own; it detects tempo and key and prints the loops as stems. I stopped opening Ableton.",
+        "A browser studio (Signal Studio) in TypeScript and Web Audio. One click samples any instrument I own; it detects tempo and key and prints the loops I keep as stems.",
         "An AI mastering agent that masters a mix in a stateful, multi-step run, rendering candidates through FabFilter plugins and judging them blind, loudness-matched, against the untouched original. Python, pedalboard, Claude.",
       ],
       url: {
