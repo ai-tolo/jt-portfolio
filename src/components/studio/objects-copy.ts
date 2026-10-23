@@ -96,8 +96,8 @@ export const ARCHIVE_COPY = {
   // searchable the way photos are." (and before that "Every recording I've made, read and named by what's inside it,
   // and searchable the way photos are.")
   dek: "Computers are surprisingly good at listening. Every recording I own, transcribed, keyed and searchable.",
-  // THE FLOOR LINE (2026-10-22, THE GROUND): the sheet's last line, the two names in-page links to the sheets that
-  // read it (#build-watch above, #build-studio below). DRAFT, his to rewrite: "Read by Intake above and the Studio below."
+  // THE FLOOR LINE (2026-10-22, THE GROUND): the sheet's last line naming the sheets that read it. DRAFT, his to
+  // rewrite: "Read by Intake above and the Studio below." Plain words since 2026-10-22, night (the links are gone)
   floor: { lead: "Read by ", up: "Intake", mid: " above and ", down: "the Studio", tail: " below." },
   // THE RECORD (2026-10-22): the sheet has no fold since THE GROUND, so these are no longer rendered. Kept as written:
   // 2026-10-15, the interview: Jon's words. The line under the hook answered "recording your family is the creepy
