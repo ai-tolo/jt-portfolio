@@ -372,7 +372,9 @@ session must follow.
   watch (right now, you: `try it`) and the fold (WHAT COMES OUT: one
   breath, five changes, against what that would have cost by hand). THE
   HOOK at rest is the sheet's own, `WATCH_COPY.hook` in objects-copy.ts
-  (`It doesn't care how it got in.`, DRAFT), printed in `.wk-lede` instead
+  (since 2026-10-22, night, Jon's words: `What would've been 30+ clicks is
+  now a one-sentence update.`; was `It doesn't care how it got in.`, his
+  "Batman coded"), printed in `.wk-lede` instead
   of the locked headline, which stays in builds-copy.ts for the case study
   (the other sheets keep their locked headlines). At rest the hook ALONE
   and the chevron (THE CUT, round five, Jon: "the bottom section is still
@@ -411,15 +413,20 @@ session must follow.
   AUDIODEX = THE GROUND (2026-10-22, Jon: "the heart of so many other
   things I've built: the database is required and a prerequisite to have
   something like Intake"): the SHORTEST sheet, NO FOLD: kind `foundation`
-  → band (AudioDex + the DRAFT dek "Every recording I own, transcribed by
-  Whisper, measured and named. Intake and the Studio stand on it.", Whisper
-  named once) → AudioDexDoor unchanged (the one beat: the ground knows what
+  → band (AudioDex + the DRAFT dek, since 2026-10-22, night, from Jon's
+  brainstorm (his two lines in the comment): "Computers are surprisingly
+  good at listening. Every recording I own, transcribed, keyed and
+  searchable."; THE GROUND's "…transcribed by Whisper, measured and named.
+  Intake and the Studio stand on it." he called "trying to sound cool")
+  → AudioDexDoor unchanged (the one beat: the ground knows what
   a recording is, not what it's called) → ONE floor line `.adx-floor`
   (.wk-rule's size, centred, object → it 56, the sheet's pad under it;
   `#build-archive` pads its own bottom, having no handle): "Read by Intake
   above and the Studio below." (DRAFT, `ARCHIVE_COPY.floor`), the two names
-  in-page links (#build-watch · #build-studio) in the label face, the amber
-  mixed 88 / 92 % toward the ink, a 1px underline, no arrows. The hook, the
+  PLAIN WORDS in the line's own face since 2026-10-22, night (Jon: "this is
+  consumed top to bottom; it doesn't make sense to jump backwards or skip
+  the SIGNAL instrument"; the links, their amber and underline are gone;
+  never link a sheet to a sheet). The hook, the
   said line, the `.adh` strip (markup and CSS DELETED) and the whole story
   left; `ARCHIVE_COPY.said/whole/rule` stay commented as the record, the
   locked paragraphs in builds-copy.ts for a case study. 1185 → 1014 tall
@@ -485,7 +492,9 @@ session must follow.
   dark ground, each with its source spine, age, the phone glyph, the kind's
   chip or the receipt's green ✓ and compact line, the X, the tiles Claude ✦
   · Zzzz · Add to…; ROWS; LOG). The Intake sheet reads kind `program` →
-  band ("Intake" + the DRAFT dek "Texts and memos in. Tickets out.") → THE
+  band ("Intake" + the dek, Jon's words since 2026-10-22, night: "I
+  recently started texting myself a lot and talking to my watch."; was
+  "Texts and memos in. Tickets out.") → THE
   CATCH-ALL → THE WATCH → the fold exactly as `fold` left it. THE SORT, THE
   BOARD, THE SEND and THE PILE are RETIRED to junkyard/ (IntakeSort,
   IntakeBoard, IntakeThread, IntakePile and their json); their images live
@@ -867,12 +876,22 @@ session must follow.
   end room's title). Section ids stay
   work/play/studio/soundlab/illustrations.
   THE LINE (2026-10-22, Jon's words, final, NOT draft; he turned down a
-  dramatic version as "trying to be Batman"): `.hero-line` "My job doesn't
-  pay me to build these. But I use them every day." in Instrument Sans
-  1rem, the ink (`--night-ink` at night), 12px under the role line; the
-  two are ONE absolutely placed `.role-block` whose foot stands where the
-  role line's did (40px over the cue's words; on phones its old
-  bar-relative bottom, both lines balanced). Inline in StudioOne.
+  dramatic version as "trying to be Batman"): "My job doesn't pay me to
+  build these. But I use them every day." Since 2026-10-22, night (Jon:
+  "too much text on the landing screen … in its own view beneath the
+  arrows, almost like how résumé on the bottom has its own real estate, so
+  that when they see it, it's all they're seeing. Think about what's all
+  visible at any one moment and be intentional") it is NOT in the hero
+  (the hero is the name, the role line and the cue, as before it): it is
+  its OWN ROOM `section.room.line#line` right after the hero, a full
+  viewport (100svh; minus the bar on phones, `order: 0` there), the
+  sentence ALONE on the page's center line in the end room's title face
+  (`.line-say`: Outfit 500 40px / 28px on phones, line-height 1.2,
+  −0.02em, 22ch, balanced, the ink; `--night-ink` at night), the one room
+  gap above and below. NOT a rail target (no NAV row, no BUILD_ORDER, no
+  `[data-for]`): the comet crosses it as ground between the hero's knot and
+  intake's, nothing lit. Framed it is the only thing on screen (900 tall
+  at 1440 × 900, 752 at 375). Inline in StudioOne.
   THE HERO (2026-10-13, round two: Jon: "the down arrow with builds is
   enough by itself"): a full viewport (`min-height: 100svh`, the standard
   `.one > .room` gap to the first room; the round-one PEEK and the second
