@@ -166,6 +166,9 @@ const landPages = JSON.stringify(Object.fromEntries(lands.map((l) => [l.id, page
           </article>
         ))}
       </div>
+      {/* THE COUNT (2026-10-22, the outside read: "the wedding slides under the fade" read as the card disappearing):
+          the window says what went under its fade, "+ N more", the watch's line; empty while nothing has */}
+      <p class="ica-more" data-more-count></p>
     </div>
 
     {/* THE MONTH (Jon: "we're missing the beauty of the calendar … that also changes"; the ribbon was "not good
@@ -395,6 +398,15 @@ const landPages = JSON.stringify(Object.fromEntries(lands.map((l) => [l.id, page
     -webkit-mask-image: linear-gradient(to bottom, #000 calc(100% - 2.6em), transparent calc(100% - 0.5em));
     mask-image: linear-gradient(to bottom, #000 calc(100% - 2.6em), transparent calc(100% - 0.5em));
   }
+  /* THE COUNT (2026-10-22): one quiet line centered in the fade at the window's foot, the watch's `+ N more` (its
+     face, size and dim), outside the masked feed so it stays legible; it fades in with the first card under the fade */
+  .ica-more {
+    position: absolute; left: 50%; bottom: 0.35em; transform: translateX(-50%); margin: 0; padding: 0 0.75em;
+    white-space: nowrap; pointer-events: none; border-radius: 999px; background: var(--cm-ground); /* the window's paper under the word, over the faded card */
+    font: 500 0.6875rem/1.5 var(--mono); letter-spacing: 0.04em; color: var(--tk-muted);
+    opacity: 0; transition: opacity 260ms ease;
+  }
+  .ica-more[data-n] { opacity: 1; }
   /* a card: the spine, the line, the radius, the meta row, the title, one line (the app's proportions at the scale) */
   .tk {
     box-sizing: border-box; padding: 0.7143em 1em 0.6429em; border: 1px solid var(--tk-line); border-left: 3px solid var(--src, var(--tk-line));
@@ -505,10 +517,10 @@ const landPages = JSON.stringify(Object.fromEntries(lands.map((l) => [l.id, page
   }
 
   /* a replay puts everything back in one step, no stagger */
-  .still .ntf, .still .tk, .still .cm-track, .still .cm-bar, .still .more, .still .mwords .w { transition: none; }
+  .still .ntf, .still .tk, .still .cm-track, .still .cm-bar, .still .more, .still .mwords .w, .still .ica-more { transition: none; }
   @media (prefers-reduced-motion: reduce) {
     .ntf::before, .ntf::after { animation: none; opacity: 0.75; }
-    .ntf, .tk, .tk.in, .cm-track, .cm-bar, .more, .mwords .w, .ntf.closing { transition: none; }
+    .ntf, .tk, .tk.in, .cm-track, .cm-bar, .more, .mwords .w, .ntf.closing, .ica-more { transition: none; }
     .playing .mwave i { animation: none; transform: scaleY(0.6); }
   }
 </style>
@@ -537,6 +549,15 @@ const landPages = JSON.stringify(Object.fromEntries(lands.map((l) => [l.id, page
     const feed = root.querySelector('[data-feed]');
     const cards = Array.from(root.querySelectorAll('[data-card]'));
     const cardOrder = cards.slice();
+    // THE COUNT (2026-10-22): the landed cards that start under the fade (the window's last 2.6em) are "+ N more"
+    const moreEl = root.querySelector('[data-more-count]');
+    const tally = () => {
+      if (!moreEl) return;
+      const fs = parseFloat(getComputedStyle(feed).fontSize) || 14;
+      const n = cards.filter((c) => c.classList.contains('in') && c.offsetTop >= feed.clientHeight - 2.6 * fs).length;
+      if (n) { moreEl.textContent = `+ ${n} more`; moreEl.setAttribute('data-n', ''); }
+      else moreEl.removeAttribute('data-n');
+    };
     const cardOf = (id) => cards.find((c) => c.dataset.card === id);
     const items = Array.from(root.querySelectorAll('.ntf'));
     const calEl = root.querySelector('[data-cal]');
@@ -571,7 +592,7 @@ const landPages = JSON.stringify(Object.fromEntries(lands.map((l) => [l.id, page
     const fly = (fromEl, card, onLand) => {
       place(card);
       root.classList.add('started');
-      if (reduce.matches) { card.classList.add('in'); onLand && onLand(); return 0; }
+      if (reduce.matches) { card.classList.add('in'); tally(); onLand && onLand(); return 0; }
       const a = rel(fromEl), b = rel(card);
       const shift = b.h + parseFloat(getComputedStyle(feed).gap) || 0;
       if (feed.querySelectorAll('.in').length) feed.animate([{ transform: `translateY(${-shift}px)` }, { transform: 'none' }], { duration: 360, easing: 'cubic-bezier(0.2, 0.8, 0.2, 1)' });
@@ -596,7 +617,7 @@ const landPages = JSON.stringify(Object.fromEntries(lands.map((l) => [l.id, page
         { transform: `translate(${b.x}px, ${b.y}px) scale(${s})`, opacity: 1, offset: 0.8 },
         { transform: `translate(${b.x}px, ${b.y}px) scale(${s})`, opacity: 0 },
       ], { duration: FLY, easing: 'cubic-bezier(0.3, 0.6, 0.3, 1)', fill: 'forwards' });
-      later(FLY * 0.72, () => { card.classList.add('in'); });
+      later(FLY * 0.72, () => { card.classList.add('in'); tally(); });
       anim.onfinish = () => { wrap.remove(); onLand && onLand(); };
       return FLY;
     };
@@ -706,6 +727,7 @@ const landPages = JSON.stringify(Object.fromEntries(lands.map((l) => [l.id, page
       // the cards back to their resting order, unseen
       cards.forEach((c) => c.classList.remove('in'));
       cardOrder.forEach((c) => feed.appendChild(c));
+      tally();
       root.querySelectorAll('[data-bar]').forEach((b) => b.removeAttribute('data-on'));
       calEl.style.setProperty('--p', '0');
       void root.offsetWidth;

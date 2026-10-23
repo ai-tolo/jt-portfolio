@@ -29,6 +29,14 @@ const RE_PREAMBLE = /^(?:ok(?:ay)?|alright|all right|right|so|um+|uh+|hey|hi|not
 const CONNECTORS = /\s*(?:,\s*)?\b(?:and then|and also|and after that|also|oh and|oh,? and|plus|then|next|secondly|second|thirdly|third|lastly|last thing|another thing|one more thing|first of all|first)\b,?\s+/gi;
 const AND_SUBJECT = /\s*,?\s+and\s+(?=(?:i|i'?m|i'?ve|we|remind|put|add|what if|maybe|don'?t|make sure|the \w+ (?:in|on|at|needs?|is|moved)|there'?s)\b)|\s*,\s+(?=(?:i should|i need|i have to|i'?ve got to|i want to|i'?d like to|we should|we need|remind me|what if|maybe we|maybe i|don'?t forget|make sure)\b)/gi;
 
+// A DATED TAIL (2026-10-22, the outside read: "Call mom tomorrow and dentist Thursday at 2" came back as ONE task
+// card): a comma or an "and" before a short phrase that carries its own day AND time ("dentist Thursday at 2") opens
+// a clause of its own when what stands before it is already something ("dinner with Sam and Jo Friday at 7" stays
+// one). The mirror, DATED_HEAD: a day and a time closing a phrase close its clause when a fresh ask follows ("dentist
+// Thursday at 2 and pick up milk"), never a pointer back ("…to Thursday at two, put that on the calendar").
+const DATED_TAIL = new RegExp(`\\s*(?:,\\s*(?:and\\s+)?|\\s+and\\s+)(?=(?:[a-z']+ ){1,2}(?:${DAY})[ ,]+(?:at |around |by )?${TIME})`, 'gi');
+const DATED_HEAD = new RegExp(`(?<=\\b(?:${DAY})[ ,]+(?:at |around |by )?${TIME})\\s*(?:,\\s*(?:and\\s+)?|\\s+and\\s+)`, 'gi');
+
 const cap = (s: string): string => (s ? s[0].toUpperCase() + s.slice(1) : s);
 const clean = (s: string): string => s.replace(/\s+/g, ' ').replace(/^[\s,;:.!?-]+|[\s,;:.!?-]+$/g, '').trim();
 const cut = (s: string, max: number): string => {
@@ -38,12 +46,34 @@ const cut = (s: string, max: number): string => {
   return (at > max * 0.5 ? c.slice(0, at) : c).replace(/[,;:\s]+$/, '') + '…';
 };
 
+/** A part split at its dated joins, each join kept only when both sides stand (DATED_TAIL / DATED_HEAD above). */
+function splitDated(p: string): string[] {
+  const cuts = [...p.matchAll(DATED_TAIL)].map((m) => ({ at: m.index!, len: m[0].length, head: false }))
+    .concat([...p.matchAll(DATED_HEAD)].map((m) => ({ at: m.index!, len: m[0].length, head: true })))
+    .sort((a, b) => a.at - b.at);
+  const out: string[] = [];
+  let from = 0;
+  cuts.forEach((c, i) => {
+    if (c.at < from) return;
+    const left = p.slice(from, c.at);
+    const right = p.slice(c.at + c.len, i + 1 < cuts.length ? cuts[i + 1].at : p.length);
+    const ok = c.head
+      ? (RE_IMPERATIVE.test(clean(right.replace(SUBJECT, ''))) || RE_TASK_CUE.test(right)) && !RE_CALENDAR.test(right) && !RE_REMIND.test(right)
+      : classify(clean(left.replace(RE_PREAMBLE, ''))).kind !== 'drop';
+    if (!ok) return;
+    out.push(left);
+    from = c.at + c.len;
+  });
+  out.push(p.slice(from));
+  return out;
+}
+
 /** The memo as clauses: sentences first, then the spoken joins inside each. Preamble clauses ("okay, brain dump") fall away. */
 export function clauses(text: string): string[] {
   const out: string[] = [];
   const sentences = text.replace(/\s+/g, ' ').split(/(?<=[.!?])\s+|\n+/);
   for (const s of sentences) {
-    const parts = s.split(CONNECTORS).flatMap((p) => p.split(AND_SUBJECT));
+    const parts = s.split(CONNECTORS).flatMap((p) => p.split(AND_SUBJECT)).flatMap(splitDated);
     for (const p of parts) {
       let c = clean(p.replace(RE_PREAMBLE, ''));
       c = clean(c.replace(RE_PREAMBLE, ''));
@@ -122,6 +152,11 @@ export function classify(clause: string): { kind: Kind | 'store' | 'drop'; when?
     const when = whenOf(c);
     const complete = !!when && (remind ? RE_DAY.test(c) || RE_TIME.test(c) : RE_DAY.test(c) && RE_TIME.test(c) || /\bmoved|rescheduled\b/i.test(c) && !!when);
     return { kind: remind ? 'reminder' : 'event', when, complete };
+  }
+  // a bare appointment (2026-10-22): a short phrase with a day and a time and nothing asked of it ("dentist Thursday
+  // at 2") is an event, as the calendar cue would make it
+  if (c.split(' ').length <= 8 && RE_DAY.test(c) && RE_TIME.test(c) && !RE_TASK_CUE.test(c) && !RE_IMPERATIVE.test(clean(c.replace(SUBJECT, ''))) && !RE_IDEA.test(c)) {
+    return { kind: 'event', when: whenOf(c), complete: true };
   }
   if (RE_IDEA.test(c)) return { kind: 'idea' };
   if (RE_TASK_CUE.test(c) || RE_IMPERATIVE.test(clean(c.replace(SUBJECT, '')))) return { kind: 'task' };
