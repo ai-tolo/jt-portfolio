@@ -4,18 +4,21 @@
 // every device, the line floats under the word and never moves the page (Gloss.astro, gloss-client.ts).
 //
 // ONE LIST, at most TEN entries, every line one sentence in Jon's register (plain, like explaining it at a bar).
-// ⚠️ DRAFT: Jon approved these nine on 2026-10-23; his to rewrite. The résumé page and the case studies carry their
-// own jargon (mastering · Web Audio · React · TypeScript) for a reader who knows it: not marked, his call pending.
+// ⚠️ DRAFT, round three (2026-10-23; Jon of round two: "tacky and weird, and imprecise when it could be more specific …
+// they're bad"): PRECISE and plain, a fact a stranger can check, no metaphors, no jokes, at most two short sentences;
+// 'many' or a number instead of any universal claim. His to rewrite.
+// The résumé page and the case studies carry their own jargon (mastering · Web Audio · React · TypeScript) for a
+// reader who knows it: not marked, his call pending.
 export const GLOSS = [
-  { word: "Ableton", line: "the software most producers make music in; great at finishing songs." },
-  { word: "stems", line: "one audio file per instrument, so a song can be remixed later." },
-  { word: "chip", line: "a loop you've committed to." },
-  { word: "MIDI", line: "the plug that lets any keyboard talk to any instrument." },
-  { word: "Whisper", line: "the free program that turns speech into text." },
-  { word: "take", line: "a recording kept the moment you stop playing." },
-  { word: "WAV", line: "the plain audio file a song is saved as; it opens anywhere." },
-  { word: "BPM", line: "beats per minute: the tempo." },
-  { word: "Claude", line: "the AI that reads the memo and writes the tickets." },
+  { word: "Ableton", line: "Ableton Live: music production software, widely used for recording, arranging and performing. Built for finishing songs." },
+  { word: "stems", line: "A song exported as separate audio files, one per instrument or group (drums, bass, keys, vocals), so each can be mixed on its own." },
+  { word: "chip", line: "In Signal Studio, a short loop (usually four bars) that has been grabbed, named and committed. From then on it is played, not edited." },
+  { word: "MIDI", line: "The standard that lets keyboards, controllers and music software exchange notes and control signals. It carries the instructions, not the sound." },
+  { word: "Whisper", line: "OpenAI's open-source speech-recognition model. It runs on a local machine and turns recordings into text." },
+  { word: "take", line: "One continuous recording of a performance. Several takes of the same part are kept and compared." },
+  { word: "WAV", line: "An uncompressed audio file: full quality, large. MP3 is the compressed kind." },
+  { word: "BPM", line: "Beats per minute, the tempo of a song. A typical resting heartbeat is 60 to 100 BPM; most pop songs sit between 90 and 130." },
+  { word: "Claude", line: "Anthropic's AI model. Intake sends it the transcript or the text, and it returns the tickets: events, tasks and reminders." },
 ] as const;
 export type GlossWord = (typeof GLOSS)[number]["word"];
 
